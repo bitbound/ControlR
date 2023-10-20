@@ -1,0 +1,213 @@
+﻿@inject IAppState AppState
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+@inject IHttpConfigurer HttpConfigurer
+@inject IFilePicker FilePicker
+@inject ILogger<KeyCreatorForm> Logger
+
+
+<MudGrid Justify="Justify.Center">
+    <MudItem>
+        <MudPaper MinWidth="350px" MaxWidth="600px">
+            <MudForm @ref="_createForm" @bind-IsValid="@_isFormValid">
+                <MudCard>
+                    <MudCardHeader Class="d-block">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
+                            Generate Keypair
+                        </MudText>
+                        <MudText GutterBottom Class="mb-2">
+                            Create or import a public/private keypair.
+                        </MudText>
+                        <MudText GutterBottom Class="mb-2">
+                            Only the public key is sent to the server.  The private key stays in secure
+                            storage on your local device and is used to sign outgoing messages.
+                        </MudText>
+                        <MudText GutterBottom Class="mb-2">
+                            Remote devices that have your public key installed can verify your messages.
+                        </MudText>
+                        <MudText>
+                            The server does not store any data about keys or devices.
+                        </MudText>
+                    </MudCardHeader>
+
+                    <MudCardContent>
+
+                        <MudTextField T="string"
+                                      @bind-Value="_username"
+                                      Label="Username"
+                                      HelperText="A friendly name that remote devices will see"
+                                      Immediate="true"
+                                      InputType="InputType.Text"
+                                      OnKeyDown="InputKeyDown"
+                                      Required
+                                      Validation="(string e) => ValidateUsername(e)" />
+
+                        <MudTextField T="string"
+                                      @bind-Value="_passphrase"
+                                      Label="Passphrase"
+                                      HelperText="Enter a PIN or password to protected your private key."
+                                      Immediate="true"
+                                      InputType="InputType.Password"
+                                      OnKeyDown="InputKeyDown"
+                                      Required
+                                      Validation="(string e) => ValidatePassphrase(e)" />
+
+                        <MudCheckBox @bind-Checked="RememberPassphrase"
+                                     Label="Remember on this device" />
+                    </MudCardContent>
+
+                    <MudCardActions Class="justify-end">
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Default"
+                                   Class="me-2"
+                                   OnClick="ImportButtonClicked">
+                            Import
+                        </MudButton>
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="!_isFormValid || _requestPending"
+                                   OnClick="SubmitButtonClicked">
+                            Submit
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudForm>
+
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+                        @code {
+    #nullable disable
+    private MudForm _createForm;
+    private string _passphrase;
+    private string _username;
+    #nullable enable
+
+    private bool _isFormValid;
+    private bool _requestPending;
+
+    private bool RememberPassphrase
+    {
+        get => Settings.RememberPassphrase;
+        set => Settings.RememberPassphrase = value;
+    }
+
+    private async Task ImportButtonClicked(MouseEventArgs args)
+    {
+        var fileType = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>()
+            {
+                [DevicePlatform.Android] = new[] { "*/*" },
+                [DevicePlatform.WinUI] = new[] { ".crkeys" }
+            });
+
+        var pickOptions = new PickOptions()
+            {
+                PickerTitle = "Import ControlR Keys",
+                FileTypes = fileType
+            };
+
+        var result = await FilePicker.PickAsync(pickOptions);
+
+        if (result is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var cts = new CancellationTokenSource(5_000);
+            using var fs = await result.OpenReadAsync();
+            var export = await MessagePackSerializer.DeserializeAsync<KeypairExport>(fs, cancellationToken: cts.Token);
+            await Settings.UpdateKeypair(export);
+            Snackbar.Add("Keys imported successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while importing keys.");
+            Snackbar.Add("Failed to import keys", Severity.Error);
+        }
+    }
+
+    private async Task InputKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await Create();
+        }
+    }
+
+    private async Task SubmitButtonClicked(MouseEventArgs args)
+    {
+        await Create();
+    }
+
+    private async Task Create()
+    {
+        try
+        {
+            _requestPending = true;
+            using var _ = AppState.IncrementBusyCounter(() =>
+            {
+                _requestPending = false;
+                InvokeAsync(StateHasChanged);
+            });
+
+            var keypair = AppState.Encryptor.GenerateKeys(_passphrase);
+            var keyDto = new PublicKeyDto()
+                {
+                    PublicKey = keypair.PublicKey,
+                    Username = _username
+                };
+
+            HttpConfigurer.UpdateClientAuthorizations(keyDto);
+
+            if (RememberPassphrase)
+            {
+                await Settings.SetPassphrase(_passphrase);
+            }
+
+            Snackbar.Add("Keypair created", Severity.Success);
+            await Settings.UpdateKeypair(_username, keypair);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while creating keypair.");
+            Snackbar.Add("Failed to create keypair", Severity.Error);
+        }
+    }
+
+
+    private string? ValidateUsername(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Username is required.";
+        }
+
+        if (AppConstants.UsernameValidator().IsMatch(input))
+        {
+            return "Username can only contain letters, numbers, underscores, and hyphens.";
+        }
+
+        return null;
+    }
+
+    private string? ValidatePassphrase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Passphrase is required.";
+        }
+
+
+        if (input is null || input.Length < 4 || input.Length > 64)
+        {
+            return "Passphrase must be between 4 and 64 characters.";
+        }
+        return null;
+    }
+
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #32333d;">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ControlR</title>
+    <base href="/" />
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="ControlR.Viewer.styles.css" rel="stylesheet" />
+    <link href="site.css" rel="stylesheet" />
+</head>
+
+<body ondragstart="return false;" ondrop="return false;">
+
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">
+        <style>
+            .middle-of-page {
+                display: inline-block;
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                color: whitesmoke;
+                font-family: sans-serif;
+            }
+
+            .signal {
+                display: inline-block;
+                border: 6px solid whitesmoke;
+                border-radius: 100%;
+                height: 50px;
+                width: 50px;
+                opacity: 0;
+                animation: pulsate 1s ease-out;
+                animation-iteration-count: infinite;
+            }
+
+            @keyframes pulsate {
+                0% {
+                    transform: scale(.1);
+                    opacity: 0.0;
+                }
+
+                50% {
+                    opacity: 1;
+                }
+
+                100% {
+                    transform: scale(1.2);
+                    opacity: 0;
+                }
+            }
+        </style>
+        <div class="middle-of-page">
+            <h2 style="margin-bottom: 15px">Loading</h2>
+            <div class="signal"></div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="interop.js"></script>
+</body>
+
+</html>

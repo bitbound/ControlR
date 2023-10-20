@@ -1,0 +1,32 @@
+﻿@page "/"
+@inject ISettings Settings
+@inject IAppState AppState
+@inject IMessenger Messenger
+
+<PageTitle>Home</PageTitle>
+
+@switch (AppState.AuthenticationState)
+{
+    case AuthenticationState.LocalKeysStored:
+        <LoadKeyForm />
+        break;
+    case AuthenticationState.NoKeysPresent:
+        <KeyCreatorForm />
+        break;
+    case AuthenticationState.PrivateKeyLoaded:
+        <Dashboard />
+        break;
+    default:
+        <MudText Typo="Typo.h5">Unexpected application state.</MudText>
+        break;
+}
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        Messenger.RegisterParameterless(this, ParameterlessMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
+        base.OnInitializedAsync();
+    }
+
+}

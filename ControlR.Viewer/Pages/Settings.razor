@@ -1,0 +1,48 @@
+﻿@page "/settings"
+@inject ISettings SettingsStore
+@inject ISnackbar Snackbar
+
+<PageTitle>Settings</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Settings
+</MudText>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Username
+    </MudText>
+    <MudTextField T="string"
+                  @bind-Value="Username"
+                  Label="For display purposes only">
+
+    </MudTextField>
+</div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Remember Me
+    </MudText>
+    <MudCheckBox @bind-Checked="RememberPassphrase"
+                 Label="Remember private key passphrase on this device" />
+</div>
+
+
+@code {
+    private bool RememberPassphrase
+    {
+        get => SettingsStore.RememberPassphrase;
+        set => SettingsStore.RememberPassphrase = value;
+    }
+
+    private string Username
+    {
+        get => SettingsStore.Username;
+        set
+        {
+            SettingsStore.Username = value;
+            Snackbar.Add("Username updated", Severity.Success);
+        }
+    }
+}

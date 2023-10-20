@@ -1,0 +1,23 @@
+.content-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 15px;
+}
+
+
+/* typical phone screen resolution */
+@media only screen and (max-width : 667px) {
+    .content-grid {
+        grid-template-columns: none;
+        grid-template-rows: auto 1fr;
+        column-gap: normal;
+        row-gap: 15px;
+    }
+
+}
+/* landscape orientation */
+@media only screen and (min-width : 375px) and (max-width : 667px) and (orientation : landscape) {
+}
+/* portrait orientation */
+@media only screen and (min-width : 375px) and (max-width : 667px) and (orientation : portrait) {
+}

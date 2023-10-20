@@ -1,0 +1,26 @@
+﻿@page "/about"
+@inject IVersionTracking VersionTracking
+
+<PageTitle>About</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    About
+</MudText>
+
+
+<div class="about-grid">
+    <div>
+        <MudText Color="Color.Primary">
+            Version:
+        </MudText>
+    </div>
+    <div>
+        <MudText>
+            @(VersionTracking.CurrentVersion)
+        </MudText>
+    </div>
+</div>
+
+@code {
+
+}

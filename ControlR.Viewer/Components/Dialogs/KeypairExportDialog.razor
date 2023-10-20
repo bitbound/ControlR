@@ -1,0 +1,138 @@
+﻿@inject IDialogService Dialogs
+@inject ISettings Settings
+@inject IAppState AppState
+@inject ControlR.Devices.Common.Services.IFileSystem FileIO
+@inject ILogger<KeypairExportDialog> Logger
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
+            <MudCard>
+                <MudCardHeader Class="d-block">
+                    <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
+                        Export Keypair
+                    </MudText>
+                    <MudText>
+                        Export your public/private keypair to a file, which can
+                        be imported on other devices.
+                    </MudText>
+                    <MudText>
+                        Your private key is encrypted within the file using the
+                        same passphrase that you used when you created it.  If 
+                        you store this file long-term, it's recommended that you
+                        put it in a secure location, such as a password vault.
+                    </MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTextField T="string"
+                                  @bind-Value="KeyExportPath"
+                                  Label="Export Location"
+                                  HelperText="Enter the folder where the export will be saved."
+                                  InputType="InputType.Text"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(Icons.Material.Filled.Folder)"
+                                  OnAdornmentClick="OpenFolderDialog"
+                                  Validation="@((string val) => ValidateExportPath(val))"
+                                  Required />
+
+                </MudCardContent>
+                <MudCardActions Class="justify-end">
+                    <MudButton ButtonType="ButtonType.Button"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="!_formIsValid"
+                               OnClick="SubmitButtonClicked">
+                        Submit
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _formIsValid;
+    private MudForm? _form;
+
+#nullable disable
+    [CascadingParameter]
+    public MudDialogInstance MudDialog { get; set; }
+#nullable enable
+
+    private string KeyExportPath
+    {
+        get => Settings.KeypairExportPath;
+        set => Settings.KeypairExportPath = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        _formIsValid = FileIO.DirectoryExists(KeyExportPath);
+        base.OnInitialized();
+    }
+
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task OpenFolderDialog()
+    {
+        var result = await FolderPicker.Default.PickAsync(KeyExportPath, CancellationToken.None);
+        if (result.Exception is not null)
+        {
+            Logger.LogError(result.Exception, "Error while picking export folder.");
+            await Dialogs.ShowMessageBox("Folder Error", "An error occurred in the folder picker.");
+            return;
+        }
+
+        KeyExportPath = result.Folder?.Path ?? KeyExportPath;
+
+        await InvokeAsync(StateHasChanged);
+        await (_form?.Validate()).OrCompleted();
+    }
+
+    private async Task PassphraseInputKeypress(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await Submit();
+        }
+    }
+
+    private async Task SubmitButtonClicked(MouseEventArgs args)
+    {
+        await Submit();   
+    }
+
+    private async Task Submit()
+    {
+        try
+        {
+            if (!FileIO.DirectoryExists(KeyExportPath))
+            {
+                await Dialogs.ShowMessageBox("Path Not Found", "The folder path doesn't exist.");
+                return;
+            }
+
+            var keyExport = AppState.Encryptor.ExportKeypair(Settings.Username);
+            var exportPath = Path.Combine(KeyExportPath, $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys");
+
+            await FileIO.WriteAllBytesAsync(exportPath, MessagePackSerializer.Serialize(keyExport.Value));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while attempting to export and save keys.");
+            await Dialogs.ShowMessageBox("Error", "An error occurred while exporting the key.");
+            MudDialog.Close(DialogResult.Cancel());
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private bool ValidateExportPath(string path)
+    {
+        return FileIO.DirectoryExists(path);
+    }
+}

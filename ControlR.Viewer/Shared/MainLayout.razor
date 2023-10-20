@@ -1,0 +1,100 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client;
+@inherits LayoutComponentBase
+@inject IMessenger Messenger
+@inject IAppState AppState
+@inject IViewerHubConnection ViewerHub
+@inject ISnackbar Snackbar
+
+<MudThemeProvider IsDarkMode />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudSpacer />
+        @if (AppState.IsBusy)
+        {
+            <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
+                <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
+            </MudTooltip>
+        }
+        else
+        {
+            switch (ViewerHub.ConnectionState)
+            {
+                case HubConnectionState.Connected:
+                    <MudTooltip Text="Connected">
+                        <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+                    </MudTooltip>
+                    break;
+                case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+                    <MudTooltip Text="Reconnecting">
+                        <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
+                    </MudTooltip>
+                    break;
+                case HubConnectionState.Disconnected:
+                    <MudTooltip Text="Disconnected">
+                        <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+                    </MudTooltip>
+                    break;
+                default:
+                    break;
+            }
+        }
+        <MudTooltip Text="Website">
+            <MudIconButton Icon="@(Icons.Material.Filled.WebAsset)" Color="Color.Inherit" Href="https://controlr.app/" Target="_blank" />
+        </MudTooltip>
+        <MudTooltip Text="GitHub">
+            <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/lucent-sea/controlr/" Target="_blank" />
+        </MudTooltip>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+        <MudDrawerHeader>
+            <MudImage Src="/assets/appicon.png" Height="30" Style="margin-right: 10px;" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="my-8 pt-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<RemoteControlSessionHarness />
+
+@code {
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Messenger.RegisterParameterless(this, HandleParameterless);
+        Messenger.Register<ToastMessage>(this, HandleToastMessage);
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task HandleParameterless(ParameterlessMessageKind kind)
+    {
+        switch (kind)
+        {
+            case ParameterlessMessageKind.PendingOperationsChanged:
+            case ParameterlessMessageKind.HubConnectionStateChanged:
+                await InvokeAsync(StateHasChanged);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void HandleToastMessage(object sender, ToastMessage toast)
+    {
+        Snackbar.Add(toast.Message, toast.Severity);
+    }
+}

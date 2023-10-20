@@ -1,0 +1,294 @@
+﻿@using ControlR.Shared.Collections;
+@using System.Collections.ObjectModel;
+@using System.Collections.Concurrent;
+
+@inject IViewerHubConnection ViewerHub
+@inject IMessenger Messenger
+@inject ISnackbar Snackbar
+@inject IDeviceCache DeviceCache
+@inject IDialogService DialogService
+@inject IAppState AppState
+@inject ILogger<Dashboard> Logger
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Devices
+</MudText>
+
+<MudDataGrid T="DeviceDto"
+             Items="DeviceCache.Devices"
+             SortMode="SortMode.Multiple"
+             QuickFilter="QuickFilter"
+             Loading="_loading"
+             Hideable="true"
+             SortDefinitions="_sortDefinitions"
+             ShowColumnOptions="true"
+             Filterable="true">
+
+    <ToolBarContent>
+
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchText" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+
+        <MudTooltip Text="Refresh">
+            <MudIconButton Variant="Variant.Filled"
+                           Color="Color.Info"
+                           Class="ml-4"
+                           Icon="@(Icons.Material.Filled.Refresh)"
+                           OnClick="Refresh" />
+        </MudTooltip>
+    </ToolBarContent>
+
+    <Columns>
+
+        <TemplateColumn T="DeviceDto"
+                        Sortable="false"
+                        Filterable="false"
+                        ShowColumnOptions="false"
+                        Title="Actions">
+
+            <CellTemplate>
+                <MudTooltip Text="Actions">
+                    <MudMenu Variant="Variant.Filled" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
+                        @if (context.Item.IsOnline)
+                        {
+                            <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
+                                     IconColor="Color.Info"
+                                     OnClick="@(() => RemoteControlClicked(context.Item))">
+                                Remote Control
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
+                                     IconColor="Color.Error"
+                                     OnClick="@(() => ShutdownClicked(context.Item))">
+                                Shutdown
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
+                                     IconColor="Color.Error"
+                                     OnClick="@(() => RestartClicked(context.Item))">
+                                Restart
+                            </MudMenuItem>
+                        }
+                        else
+                        {
+                            <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
+                                     IconColor="Color.Error"
+                                     OnClick="@(() => RemoveDevice(context.Item))">
+                                Remove
+                            </MudMenuItem>
+                        }
+                    </MudMenu>
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto"
+                        StickyLeft="true"
+                        Title="Name">
+            <CellTemplate>
+                @if (string.IsNullOrWhiteSpace(context.Item.Alias))
+                {
+                    @(context.Item.Name)
+                }
+                else
+                {
+                    @($"{context.Item.Name} ({context.Item.Alias})")
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto"
+                        Field="@(nameof(DeviceDto.IsOnline))"
+                        Title="Online">
+            <CellTemplate>
+                @if (context.Item.IsOnline)
+                {
+                    <MudTooltip Text="Online">
+                        <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudTooltip Text="Offline">
+                        <MudIcon Icon="@(Icons.Material.Filled.Cancel)" Color="@(Color.Error)" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x!.CurrentUser" Title="Current User" />
+
+        <TemplateColumn T="DeviceDto" Title="CPU">
+            <CellTemplate>
+                @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto" Title="Memory">
+            <CellTemplate>
+                @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto" Title="Storage">
+            <CellTemplate>
+                @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto" Title="Total Memory (GB)">
+            <CellTemplate>
+                @($"{context.Item.TotalMemory:N2}")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DeviceDto" Title="Total Storage (GB)">
+            <CellTemplate>
+                @($"{context.Item.TotalStorage:N0}")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x!.AgentVersion" Title="Agent Version" />
+
+        <PropertyColumn Property="x => x!.LastSeen" Title="Last Seen" />
+
+        <PropertyColumn Property="x => x!.Platform" Title="Platform" />
+
+        <PropertyColumn Property="x => x!.OsDescription" Title="OS" />
+
+        <PropertyColumn Property="x => x!.OsArchitecture" Title="Arch" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private readonly Dictionary<string, SortDefinition<DeviceDto>> _sortDefinitions = new()
+        {
+            ["IsOnline"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.IsOnline), true, 0, x => x.IsOnline),
+            ["Name"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.Name), false, 1, x => x.Name)
+        };
+    private bool _loading = true;
+    private string? _searchText;
+
+    private Func<DeviceDto, bool> QuickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        return JsonSerializer.Serialize(x).Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+    };
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var _ = AppState.IncrementBusyCounter();
+        Messenger.RegisterParameterless(this, HandleParameterlessMessage);
+
+        await base.OnInitializedAsync();
+
+        _loading = false;
+    }
+
+    private async Task RemoteControlClicked(DeviceDto device)
+    {
+        switch (device.Platform)
+        {
+            case SystemPlatform.Windows:
+                var sessionResult = await ViewerHub.GetWindowsSessions(device);
+                if (!sessionResult.IsSuccess)
+                {
+                    Logger.LogResult(sessionResult);
+                    Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
+                    return;
+                }
+
+                var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
+                var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+                var result = await dialogRef.Result;
+                if (result.Canceled)
+                {
+                    return;
+                }
+
+                if (result.Data is int sessionId)
+                {
+                    var remoteControlSession = new RemoteControlSession(device, sessionId);
+                    AppState.RemoteControlSessions.Add(remoteControlSession);
+                }
+                break;
+            default:
+                Snackbar.Add("Platform is not supported", Severity.Warning);
+                break;
+        }
+
+    }
+
+    private async Task RemoveDevice(DeviceDto device)
+    {
+        await DeviceCache.Remove(device);
+        Snackbar.Add("Device removed.", Severity.Success);
+    }
+    private async Task RestartClicked(DeviceDto device)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Restart",
+            $"Are you sure you want to restart {device.Name}?",
+            "Yes",
+            "No");
+
+        if (result != true)
+        {
+            return;
+        }
+
+        await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Restart);
+    }
+
+    private async Task ShutdownClicked(DeviceDto device)
+    {
+        var result = await DialogService.ShowMessageBox(
+           "Confirm Shutdown",
+           $"Are you sure you want to shut down {device.Name}?",
+           "Yes",
+           "No");
+
+        if (result != true)
+        {
+            return;
+        }
+
+        await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
+    }
+
+
+    private async Task HandleParameterlessMessage(ParameterlessMessageKind kind)
+    {
+        switch (kind)
+        {
+            case ParameterlessMessageKind.DevicesCacheUpdated:
+                {
+                    Debouncer.Debounce(TimeSpan.FromSeconds(1), () => InvokeAsync(StateHasChanged));
+                }
+                break;
+            case ParameterlessMessageKind.HubConnectionStateChanged:
+                {
+                    if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+                    {
+                        await Refresh();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private async Task Refresh()
+    {
+        using var _ = AppState.IncrementBusyCounter();
+        await DeviceCache.SetAllOffline();
+        await InvokeAsync(StateHasChanged);
+        await ViewerHub.RequestDeviceUpdates();
+        Snackbar.Add("Device refresh requested", Severity.Success);
+    }
+}

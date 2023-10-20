@@ -1,0 +1,29 @@
+﻿@using System.Collections.Specialized
+@implements IDisposable
+@inject IAppState AppState
+@inject IMessenger Messenger
+
+<div class="remote-session-harness">
+    @foreach (var session in AppState.RemoteControlSessions)
+    {
+        <RemoteDisplay Session="@session" />
+    }
+</div>
+
+@code {
+    public void Dispose()
+    {
+        AppState.RemoteControlSessions.CollectionChanged -= OnRemoteSessionsChanged;
+    }
+
+    protected override void OnInitialized()
+    {
+        AppState.RemoteControlSessions.CollectionChanged += OnRemoteSessionsChanged;
+        base.OnInitializedAsync();
+    }
+
+    private async void OnRemoteSessionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+}

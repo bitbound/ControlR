@@ -1,0 +1,87 @@
+﻿@page "/deploy"
+
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+
+<PageTitle>Deploy</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Deploy Scripts
+</MudText>
+
+<MudText Typo="Typo.subtitle1" GutterBottom>
+    Run these scripts on a remote device to install the agent.
+    It will be configured with your public key, allowing you to access the device.
+</MudText>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Windows (PowerShell)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to deploy an agent"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyWindowsScript"
+                  Adornment="Adornment.End"
+                  Value="_windowsDeployScript"
+                  Class="mb-5"/>
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Ubuntu (Bash)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to deploy an agent"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyUbuntuScript"
+                  Adornment="Adornment.End"
+                  Value="_ubuntuDeployScript" />
+</div>
+
+
+@code {
+    private string _windowsDeployScript = string.Empty;
+    private string _ubuntuDeployScript = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _windowsDeployScript = CreateWindowsScript(Settings.PublicKeyBase64);
+        _ubuntuDeployScript = CreateUbuntuScript(Settings.PublicKeyBase64);
+
+        base.OnInitialized();
+    }
+
+    private async Task CopyWindowsScript()
+    {
+        await Clipboard.Default.SetTextAsync(_windowsDeployScript);
+        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+    }
+
+    private async Task CopyUbuntuScript()
+    {
+        await Clipboard.Default.SetTextAsync(_ubuntuDeployScript);
+        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+    }
+
+    private string CreateWindowsScript(string publicKey)
+    {
+        return
+            "$ProgressPreference = \"SilentlyContinue\"; " +
+            $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+            $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install -a {publicKey}\" -Verb RunAs;";
+    }
+
+    private string CreateUbuntuScript(string publicKey)
+    {
+        return
+            $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
+            "sudo chmod +x /tmp/ControlR.Agent && " +
+            $"sudo /tmp/ControlR.Agent install -a {publicKey}";
+    }
+}

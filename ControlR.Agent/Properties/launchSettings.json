@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ControlR.Agent": {
+      "commandName": "Project",
+      "commandLineArgs": "run",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ControlRServerUri": "http://localhost:5120"
+      }
+    }
+  }
+}

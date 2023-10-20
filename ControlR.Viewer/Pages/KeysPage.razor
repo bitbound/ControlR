@@ -1,0 +1,99 @@
+﻿@page "/keys"
+
+@inject NavigationManager NavManager
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+@inject IDialogService Dialogs
+@inject IHttpConfigurer HttpConfigurer
+@inject IAppState AppState
+@inject IMessenger Messenger
+
+
+<PageTitle>Key Management</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Key Management
+</MudText>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Public Key
+    </MudText>
+    <MudTextField 
+        T="string" 
+        Label="Your Public Key"
+        ReadOnly="true" 
+        Variant="Variant.Filled" 
+        AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+        OnAdornmentClick="CopyPublicKey"
+        Adornment="Adornment.End"
+        Value="_publicKey" />
+</div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Export
+    </MudText>
+    <MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="ExportKeypair">
+        Export Keypair
+    </MudButton>
+</div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Remove
+    </MudText>
+    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair">
+        Remove Keypair
+    </MudButton>
+</div>
+
+@code {
+    private string _publicKey = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _publicKey = Settings.PublicKeyBase64;
+
+        base.OnInitialized();
+    }
+
+    private async Task CopyPublicKey()
+    {
+        await Clipboard.Default.SetTextAsync(_publicKey);
+        Snackbar.Add("Public key copied to clipboard", Severity.Success);
+    }
+
+    private async Task ExportKeypair()
+    {
+        var dialogRef = await Dialogs.ShowAsync<KeypairExportDialog>("Export Keypair");
+        if (dialogRef is null)
+        {
+            return;
+        }
+        var result = await dialogRef.Result;
+        if (result?.Data is bool boolValue && boolValue)
+        {
+            Snackbar.Add("Exported keys successfully", Severity.Success);
+        }
+    }
+
+    private async Task RemoveKeypair()
+    {
+        var result = await Dialogs.ShowMessageBox(
+            "Confirm Removal",
+            "Are you sure you want to remove your keys?  This cannot be undone.",
+            yesText: "Yes",
+            noText: "No"
+        );
+
+        if (result != true)
+        {
+            return;
+        }
+
+        AppState.Encryptor.Reset();
+        await Settings.Clear();
+        NavManager.NavigateTo(string.Empty, false);
+    }
+}

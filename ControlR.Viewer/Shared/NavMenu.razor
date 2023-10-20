@@ -1,0 +1,32 @@
+﻿@inject IMessenger Messenger
+@inject IAppState AppState
+
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+        Home
+    </MudNavLink>
+    <MudNavLink Href="keys" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key" Disabled="!AppState.IsAuthenticated">
+        Keys
+    </MudNavLink>
+    <MudNavLink Href="deploy" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch" Disabled="!AppState.IsAuthenticated">
+        Deploy
+    </MudNavLink>
+    <MudNavLink Href="logs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.DocumentScanner">
+        Logs
+    </MudNavLink>
+    <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+        Settings
+    </MudNavLink>
+    <MudNavLink Href="about" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
+        About
+    </MudNavLink>
+</MudNavMenu>
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        Messenger.RegisterParameterless(this, ParameterlessMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
+    }
+}

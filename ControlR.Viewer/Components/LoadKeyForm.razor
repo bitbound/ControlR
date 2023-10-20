@@ -1,0 +1,147 @@
+﻿@inject IAppState AppState
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+@inject IMessenger Messenger
+@inject IKeyApi KeyApi
+@inject IHttpConfigurer HttpConfigurer
+
+<MudGrid Justify="Justify.Center">
+    <MudItem>
+        <MudPaper MinWidth="350px" MaxWidth="600px">
+            <MudForm @ref="_loginForm" @bind-IsValid="@_formIsValid">
+                <MudCard>
+                    <MudCardHeader Class="d-block">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
+                            Decrypt Private Key
+                        </MudText>
+                        <MudText>
+                            You must decrypt your locally-stored private key
+                            before you can make any requests to the server.
+                        </MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudTextField T="string"
+                                      @bind-Value="_passphrase"
+                                      Label="Passphrase"
+                                      HelperText="Enter your PIN or password."
+                                      Immediate="true"
+                                      InputType="InputType.Password"
+                                      OnKeyDown="PassphraseInputKeyDown"
+                                      Required />
+
+                        <MudCheckBox @bind-Checked="RememberPassphrase"
+                                     Label="Remember on this device" />
+                    </MudCardContent>
+                    <MudCardActions Class="justify-end">
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="!_formIsValid || _requestPending"
+                                   OnClick="SubmitButtonClicked">
+                            Submit
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudForm>
+
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+ @code {
+    private string? _passphrase;
+    private MudForm? _loginForm;
+    private bool _formIsValid;
+    private bool _requestPending;
+
+    private bool RememberPassphrase
+    {
+        get => Settings.RememberPassphrase;
+        set => Settings.RememberPassphrase = value;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (Settings.RememberPassphrase)
+        {
+            _passphrase = await Settings.GetPassphrase();
+
+            if (string.IsNullOrWhiteSpace(_passphrase))
+            {
+                Snackbar.Add("Stored passphrase is empty", Severity.Warning);
+                return;
+            }
+
+            _formIsValid = true;
+            await LoadKeys(false);
+        }
+    }
+
+    private async Task PassphraseInputKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await LoadKeys(true);
+        }
+    }
+
+    private async Task SubmitButtonClicked(MouseEventArgs args)
+    {
+        await LoadKeys(true);
+    }
+
+    private async Task LoadKeys(bool showDecryptionToast)
+    {
+        if (!_formIsValid || string.IsNullOrWhiteSpace(_passphrase))
+        {
+            return;
+        }
+
+        _requestPending = true;
+
+        using var _ = AppState.IncrementBusyCounter(() =>
+        {
+            _requestPending = false;
+            InvokeAsync(StateHasChanged);
+        });
+
+        var privateKey = await Settings.GetEncryptedPrivateKey();
+        var result = AppState.Encryptor.ImportPrivateKey(_passphrase, privateKey);
+        if (result.IsSuccess)
+        {
+            var keyDto = new PublicKeyDto()
+                {
+                    PublicKey = result.Value.PublicKey,
+                    Username = Settings.Username
+                };
+            HttpConfigurer.UpdateClientAuthorizations(keyDto);
+
+            var verifyResult = await KeyApi.VerifyKeys();
+            if (verifyResult.IsSuccess)
+            {
+                if (RememberPassphrase)
+                {
+                    await Settings.SetPassphrase(_passphrase);
+                }
+
+                if (showDecryptionToast)
+                {
+                    Snackbar.Add("Private key decrypted", Severity.Success);
+                }
+            
+                Messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+            }
+            else
+            {
+                Snackbar.Add("Verification with server failed", Severity.Error);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Passphrase is incorrect", Severity.Error);
+        }
+    }
+}

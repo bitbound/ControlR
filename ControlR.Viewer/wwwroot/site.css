@@ -1,0 +1,19 @@
+﻿.text-end {
+    text-align: end;
+}
+
+.text-start {
+    text-align: start;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.d-grid {
+    display: grid;
+}
+
+.z9001 {
+    z-index: 9001 !important;
+}
