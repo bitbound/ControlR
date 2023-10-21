@@ -4,9 +4,7 @@ using ControlR.Shared.Dtos;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Enums;
 using ControlR.Viewer.Extensions;
-using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
-using System.Collections.ObjectModel;
 
 namespace ControlR.Viewer.Services;
 
@@ -22,8 +20,8 @@ internal interface IAppState
     int PendingOperations { get; }
 
     PublicKeyDto GetPublicKeyDto();
+
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
-    ObservableCollection<RemoteControlSession> RemoteControlSessions { get; }
 }
 
 internal class AppState : IAppState
@@ -69,8 +67,6 @@ internal class AppState : IAppState
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.PrivateKeyLoaded;
     public bool IsBusy => _busyCounter > 0;
     public int PendingOperations => _busyCounter;
-
-    public ObservableCollection<RemoteControlSession> RemoteControlSessions { get; } = [];
 
     public PublicKeyDto GetPublicKeyDto()
     {

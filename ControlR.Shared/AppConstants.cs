@@ -24,35 +24,7 @@ public static partial class AppConstants
         }
     }
 
-    public static string RemoteControlFileName
-    {
-        get
-        {
-            return EnvironmentHelper.Instance.Platform switch
-            {
-                SystemPlatform.Windows => "controlr-streamer.exe",
-                SystemPlatform.Linux => "controlr-streamer",
-                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
-                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
-                _ => throw new PlatformNotSupportedException(),
-            };
-        }
-    }
-
-    public static string RemoteControlZipFileName
-    {
-        get
-        {
-            return EnvironmentHelper.Instance.Platform switch
-            {
-                SystemPlatform.Windows => "controlr-streamer-win.zip",
-                SystemPlatform.Linux => "controlr-streamer-linux.zip",
-                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
-                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
-                _ => throw new PlatformNotSupportedException(),
-            };
-        }
-    }
+    public static string DownloadsUri => "https://controlr.app";
 
     public static string ServerUri
     {
@@ -72,6 +44,35 @@ public static partial class AppConstants
         }
     }
 
+    public static string VncFileName
+    {
+        get
+        {
+            return EnvironmentHelper.Instance.Platform switch
+            {
+                SystemPlatform.Windows => "winvnc.exe",
+                SystemPlatform.Linux => "vncserver",
+                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
+                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
+                _ => throw new PlatformNotSupportedException(),
+            };
+        }
+    }
+
+    public static string VncZipFileName
+    {
+        get
+        {
+            return EnvironmentHelper.Instance.Platform switch
+            {
+                SystemPlatform.Windows => "winvnc.zip",
+                SystemPlatform.Linux => "vncserver.zip",
+                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
+                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
+                _ => throw new PlatformNotSupportedException(),
+            };
+        }
+    }
 
     [GeneratedRegex("[^A-Za-z0-9_-]")]
     public static partial Regex UsernameValidator();

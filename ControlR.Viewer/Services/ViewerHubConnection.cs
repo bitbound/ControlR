@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
-public interface IViewerHubConnection : IViewerHubClient, IHubConnectionBase
+public interface IViewerHubConnection : IHubConnectionBase
 {
     Task CloseStreamingSession(Guid sessionId);
 
@@ -25,7 +25,7 @@ public interface IViewerHubConnection : IViewerHubClient, IHubConnectionBase
 
     Task<Result<IceServer[]>> GetIceServers();
 
-    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default");
+    Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
@@ -49,7 +49,7 @@ internal class ViewerHubConnection(
     IAppState appState,
     ISettings settings,
     IDeviceCache devicesCache,
-    ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection
+    ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection, IViewerHubClient
 {
     private readonly IAppState _appState = appState;
     private readonly IDeviceCache _devicesCache = devicesCache;
@@ -83,19 +83,18 @@ internal class ViewerHubConnection(
         }
     }
 
-    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default")
+    public async Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
     {
         try
         {
-            var streamingSessionRequest = new StreamerSessionRequestDto(
+            var vncSession = new VncSessionRequest(
                 sessionId,
-                targetSystemSession,
-                targetDesktop,
+                sessionPassword,
                 Connection.ConnectionId);
 
-            var signedDto = _appState.Encryptor.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest);
+            var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
 
-            var result = await Connection.InvokeAsync<Result<StreamerHubSession>>("GetStreamingSession", agentConnectionId, sessionId, signedDto);
+            var result = await Connection.InvokeAsync<Result>("GetVncSession", agentConnectionId, sessionId, signedDto);
             if (!result.IsSuccess)
             {
                 _logger.LogResult(result);
@@ -105,7 +104,7 @@ internal class ViewerHubConnection(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting remote streaming session.");
-            return Result.Fail<StreamerHubSession>(ex);
+            return Result.Fail(ex);
         }
     }
 
@@ -152,15 +151,15 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveRemoteControlDownloadProgress(Guid streamingSessionId, double downloadProgress)
-    {
-        _messenger.Send(new RemoteControlDownloadProgressMessage(streamingSessionId, downloadProgress));
-        return Task.CompletedTask;
-    }
-
     public Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
     {
         _messenger.Send(new RtcSessionDescriptionMessage(sessionId, sessionDescription));
+        return Task.CompletedTask;
+    }
+
+    public Task ReceiveVncDownloadProgress(Guid streamingSessionId, double downloadProgress)
+    {
+        _messenger.Send(new RemoteControlDownloadProgressMessage(streamingSessionId, downloadProgress));
         return Task.CompletedTask;
     }
 
@@ -228,7 +227,7 @@ internal class ViewerHubConnection(
         connection.Reconnecting += Connection_Reconnecting;
         connection.Reconnected += Connection_Reconnected;
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
-        connection.On<Guid, double>(nameof(ReceiveRemoteControlDownloadProgress), ReceiveRemoteControlDownloadProgress);
+        connection.On<Guid, double>(nameof(ReceiveVncDownloadProgress), ReceiveVncDownloadProgress);
         connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
         connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
         connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
@@ -260,7 +259,7 @@ internal class ViewerHubConnection(
 
     private async Task HandleAuthStateChanged()
     {
-        await Stop(_appState.AppExiting);
+        await StopConnection(_appState.AppExiting);
 
         if (_appState.AuthenticationState == Enums.AuthenticationState.PrivateKeyLoaded)
         {

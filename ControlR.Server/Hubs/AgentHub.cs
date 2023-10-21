@@ -6,19 +6,23 @@ using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using System.Buffers;
+using System.Net.WebSockets;
 
 namespace ControlR.Server.Hubs;
 
 public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> viewerHubContext,
-    IStreamerSessionCache streamerSessionCache,
+    IProxyStreamStore proxyStreamStore,
     IOptionsMonitor<AppOptions> appOptions,
     ISystemTime systemTime,
+    IHostApplicationLifetime appLifetime,
     ILogger<AgentHub> logger) : Hub<IAgentHubClient>
 {
+    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly ILogger<AgentHub> _logger = logger;
-    private readonly IStreamerSessionCache _streamerSessionCache = streamerSessionCache;
+    private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
     private readonly ISystemTime _systemTime = systemTime;
     private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHubContext;
 
@@ -44,21 +48,41 @@ public class AgentHub(
         return [.. _appOptions.CurrentValue.IceServers];
     }
 
-    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
+    public async IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId)
     {
-        if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+        if (!_proxyStreamStore.TryGet(sessionId, out var signaler))
         {
-            _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
-            return;
+            yield break;
         }
 
-        if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+        try
         {
-            _logger.LogError("Viewer connection ID is unexpectedly empty.");
-            return;
-        }
+            if (!await signaler.ReadySignal.WaitAsync(TimeSpan.FromSeconds(30)))
+            {
+                yield break;
+            }
 
-        await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId, desktopName);
+            if (signaler.NoVncWebsocket is not WebSocket ws)
+            {
+                _logger.LogWarning("WebSocket was null when it should have been populated.");
+                yield break;
+            }
+
+            while (ws.State == WebSocketState.Open &&
+                    !_appLifetime.ApplicationStopping.IsCancellationRequested)
+            {
+                var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+
+                var readResult = await ws.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                yield return buffer[0..readResult.Count];
+
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+        finally
+        {
+            signaler.EndSignal.Release();
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -79,9 +103,46 @@ public class AgentHub(
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double downloadProgress)
+    public async Task SendVncDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double downloadProgress)
     {
-        await _viewerHub.Clients.Client(viewerConnectionId).ReceiveRemoteControlDownloadProgress(streamingSessionId, downloadProgress);
+        await _viewerHub.Clients.Client(viewerConnectionId).ReceiveVncDownloadProgress(streamingSessionId, downloadProgress);
+    }
+
+    public async Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream)
+    {
+        if (!_proxyStreamStore.TryGet(sessionId, out var signaler))
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await signaler.ReadySignal.WaitAsync(TimeSpan.FromSeconds(30)))
+            {
+                return;
+            }
+
+            if (signaler.NoVncWebsocket is not WebSocket ws)
+            {
+                _logger.LogWarning("WebSocket was null when it should have been populated.");
+                return;
+            }
+
+            await foreach (var chunk in outgoingStream)
+            {
+                if (ws.State != WebSocketState.Open ||
+                    _appLifetime.ApplicationStopping.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await ws.SendAsync(chunk, WebSocketMessageType.Binary, true, _appLifetime.ApplicationStopping);
+            }
+        }
+        finally
+        {
+            signaler.EndSignal.Release();
+        }
     }
 
     public async Task UpdateDevice(DeviceDto device)

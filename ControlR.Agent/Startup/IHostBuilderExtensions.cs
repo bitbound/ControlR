@@ -1,4 +1,5 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services;
 using ControlR.Agent.Services.Linux;
@@ -9,7 +10,6 @@ using ControlR.Devices.Common.Services.Linux;
 using ControlR.Devices.Common.Services.Windows;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
-using SimpleIpc;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Agent.Startup;
+
 internal static class IHostBuilderExtensions
 {
     internal static IHostBuilder AddControlRAgent(this IHostBuilder builder, StartupMode startupMode)
@@ -55,26 +56,17 @@ internal static class IHostBuilderExtensions
 
             services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
-
             if (startupMode == StartupMode.Run)
             {
-                if (OperatingSystem.IsWindows())
-                {
-                    services.AddHostedService<StreamingSessionWatcher>();
-                }
-
                 services.AddSingleton<IAgentUpdater, AgentUpdater>();
                 services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
                 services.AddHostedService<AgentHeartbeatTimer>();
                 services.AddHostedService<DtoHandler>();
+                services.AddHostedService<LocalProxy>();
                 services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
                 services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-            }
-
-            if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindows())
-            {
-                services.AddSingleton<IInputDesktopReporter, InputDesktopReporter>();
+                services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
             }
 
             services.AddSingleton<IProcessInvoker, ProcessInvoker>();
@@ -83,21 +75,21 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IProcessInvoker, ProcessInvoker>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
             services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
-            services.AddSimpleIpc();
+            services.AddSingleton(WeakReferenceMessenger.Default);
 
             if (OperatingSystem.IsWindows())
             {
-                services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
+                services.AddSingleton<IVncProcessCache, StreamingSessionCache>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
-                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
+                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
             }
             else if (OperatingSystem.IsLinux())
             {
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
-                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherLinux>();
+                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherLinux>();
                 services.AddSingleton<IPowerControl, PowerControlLinux>();
             }
             else

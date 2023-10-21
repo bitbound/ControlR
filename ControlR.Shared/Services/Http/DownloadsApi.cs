@@ -6,8 +6,11 @@ namespace ControlR.Shared.Services.Http;
 internal interface IDownloadsApi
 {
     Task<Result> DownloadAgent(string destinationPath);
+
     Task<Result> DownloadRemoteControl(string destinationPath);
-    Task<Result> DownloadRemoteControlZip(string destinationPath, Func<double, Task>? onDownloadProgress);
+
+    Task<Result> DownloadVncZipFile(string destinationPath, Func<double, Task>? onDownloadProgress);
+
     Task<Result<string>> GetAgentEtag();
 }
 
@@ -34,36 +37,11 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result<string>> GetAgentEtag()
-    {
-        try
-        {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Head,
-                $"{AppConstants.ServerUri}/downloads/{AppConstants.AgentFileName}");
-
-            using var response = await _client.SendAsync(request);
-            var etag = response.Headers.ETag?.Tag;
-
-            if (string.IsNullOrWhiteSpace(etag))
-            {
-                return Result.Fail<string>("Etag from HEAD request is empty.");
-            }
-
-            return Result.Ok(etag);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking agent etag.");
-            return Result.Fail<string>(ex);
-        }
-    }
-
     public async Task<Result> DownloadRemoteControl(string destinationPath)
     {
         try
         {
-            using var webStream = await _client.GetStreamAsync($"{AppConstants.ServerUri}/downloads/{AppConstants.RemoteControlFileName}");
+            using var webStream = await _client.GetStreamAsync($"{AppConstants.ServerUri}/downloads/{AppConstants.VncFileName}");
             using var fs = new FileStream(destinationPath, FileMode.Create);
             await webStream.CopyToAsync(fs);
             return Result.Ok();
@@ -75,11 +53,11 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result> DownloadRemoteControlZip(string destinationPath, Func<double, Task>? onDownloadProgress)
+    public async Task<Result> DownloadVncZipFile(string destinationPath, Func<double, Task>? onDownloadProgress)
     {
         try
         {
-            var zipUrl = $"{AppConstants.ServerUri}/downloads/{AppConstants.RemoteControlZipFileName}";
+            var zipUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.VncZipFileName}";
 
             using var message = new HttpRequestMessage(HttpMethod.Head, zipUrl);
             using var response = await _client.SendAsync(message);
@@ -110,6 +88,31 @@ internal class DownloadsApi(
         {
             _logger.LogError(ex, "Error while downloading remote control client.");
             return Result.Fail(ex);
+        }
+    }
+
+    public async Task<Result<string>> GetAgentEtag()
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Head,
+                $"{AppConstants.ServerUri}/downloads/{AppConstants.AgentFileName}");
+
+            using var response = await _client.SendAsync(request);
+            var etag = response.Headers.ETag?.Tag;
+
+            if (string.IsNullOrWhiteSpace(etag))
+            {
+                return Result.Fail<string>("Etag from HEAD request is empty.");
+            }
+
+            return Result.Ok(etag);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while checking agent etag.");
+            return Result.Fail<string>(ex);
         }
     }
 }

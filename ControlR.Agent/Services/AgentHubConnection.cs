@@ -1,4 +1,6 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Interfaces;
+using ControlR.Agent.Messages;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
@@ -21,13 +23,15 @@ using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Services;
 
-internal interface IAgentHubConnection : IAgentHubClient, IHubConnectionBase
+internal interface IAgentHubConnection : IHubConnectionBase
 {
+    IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId);
+
     Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
 
     Task SendDeviceHeartbeat();
 
-    Task Start();
+    Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream);
 }
 
 internal class AgentHubConnection(
@@ -40,9 +44,11 @@ internal class AgentHubConnection(
      IOptionsMonitor<AppOptions> appOptions,
      ICpuUtilizationSampler cpuSampler,
      IEncryptionSessionFactory encryptionFactory,
-     IRemoteControlLauncher remoteControlLauncher,
+     IVncSessionLauncher vncSessionLauncher,
      IAgentUpdater updater,
-     ILogger<AgentHubConnection> logger) : HubConnectionBase(scopeFactory, logger), IAgentHubConnection
+     IMessenger messenger,
+     ILogger<AgentHubConnection> logger)
+        : HubConnectionBase(scopeFactory, logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
     private readonly IHostApplicationLifetime _appLifetime = appLifetime;
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
@@ -51,11 +57,12 @@ internal class AgentHubConnection(
     private readonly IEncryptionSessionFactory _encryptionFactory = encryptionFactory;
     private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
     private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly IMessenger _messenger = messenger;
     private readonly IProcessInvoker _processes = processes;
-    private readonly IRemoteControlLauncher _remoteControlLauncher = remoteControlLauncher;
     private readonly IAgentUpdater _updater = updater;
+    private readonly IVncSessionLauncher _vncSessionLauncher = vncSessionLauncher;
 
-    public async Task<bool> GetStreamingSession(SignedPayloadDto signedDto)
+    public async Task<bool> GetVncSession(SignedPayloadDto signedDto)
     {
         try
         {
@@ -64,24 +71,22 @@ internal class AgentHubConnection(
                 return false;
             }
 
-            var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
+            var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
 
             double downloadProgress = 0;
 
-            var result = await _remoteControlLauncher.CreateSession(
-                dto.StreamingSessionId,
-                signedDto.PublicKey,
-                dto.TargetSystemSession,
-                dto.TargetDesktop ?? string.Empty,
+            var result = await _vncSessionLauncher.CreateSession(
+                dto.SessionId,
+                dto.SessionPassword,
                 async progress =>
                 {
-                    if (progress == 1 || progress - downloadProgress > .05)
+                    if (progress == 1 || progress - downloadProgress > .1)
                     {
                         downloadProgress = progress;
                         await Connection
                             .InvokeAsync(
-                                "SendRemoteControlDownloadProgress",
-                                dto.StreamingSessionId,
+                                "SendVncDownloadProgress",
+                                dto.SessionId,
                                 dto.ViewerConnectionId,
                                 downloadProgress)
                             .ConfigureAwait(false);
@@ -92,7 +97,12 @@ internal class AgentHubConnection(
             if (!result.IsSuccess)
             {
                 _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
+                return false;
             }
+
+            _messenger
+                .Send(new VncRequestMessage(dto.SessionId, 5900, result.Value.Id))
+                .AndForget();
 
             return result.IsSuccess;
         }
@@ -100,6 +110,19 @@ internal class AgentHubConnection(
         {
             _logger.LogError(ex, "Error while creating streaming session.");
             return false;
+        }
+    }
+
+    public IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId)
+    {
+        try
+        {
+            return Connection.StreamAsync<byte[]>("GetVncStream", sessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting VNC stream.");
+            return Array.Empty<byte[]>().ToAsyncEnumerable();
         }
     }
 
@@ -170,15 +193,26 @@ internal class AgentHubConnection(
         }
     }
 
-    public async Task Start()
+    public async Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream)
     {
-        await Connect(
-            $"{AppConstants.ServerUri}/hubs/agent",
-            ConfigureConnection,
-            ConfigureHttpOptions,
-            _appLifetime.ApplicationStopping);
+        try
+        {
+            await Connection.InvokeAsync("SendVncStream", sessionId, outgoingStream);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending VNC stream.");
+        }
+    }
 
-        await SendDeviceHeartbeat();
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await StartImpl();
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await StopConnection(cancellationToken);
     }
 
     private void ConfigureConnection(HubConnection hubConnection)
@@ -192,7 +226,7 @@ internal class AgentHubConnection(
 #pragma warning restore CA1416 // Validate platform compatibility
         }
 
-        hubConnection.On<SignedPayloadDto, bool>(nameof(GetStreamingSession), GetStreamingSession);
+        hubConnection.On<SignedPayloadDto, bool>(nameof(GetVncSession), GetVncSession);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
@@ -203,6 +237,17 @@ internal class AgentHubConnection(
     {
         await SendDeviceHeartbeat();
         await _updater.CheckForUpdate();
+    }
+
+    private async Task StartImpl()
+    {
+        await Connect(
+            $"{AppConstants.ServerUri}/hubs/agent",
+            ConfigureConnection,
+            ConfigureHttpOptions,
+             _appLifetime.ApplicationStopping);
+
+        await SendDeviceHeartbeat();
     }
 
     private bool VerifyPayload(SignedPayloadDto signedDto)

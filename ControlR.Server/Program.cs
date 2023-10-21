@@ -1,6 +1,7 @@
 using ControlR.Server.Auth;
 using ControlR.Server.Data;
 using ControlR.Server.Hubs;
+using ControlR.Server.Middleware;
 using ControlR.Server.Models;
 using ControlR.Server.Services;
 using ControlR.Shared;
@@ -67,7 +68,7 @@ builder.Services
 
 builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
-builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCache>();
+builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 
 builder.Host.UseSystemd();
 
@@ -103,6 +104,14 @@ else
 
 ConfigureStaticFiles(app);
 
+app.UseWhen(
+    x => x.Request.Path.StartsWithSegments("/novnc-proxy"),
+    builder =>
+    {
+        builder.UseWebSockets();
+        builder.UseMiddleware<NoVncMiddleware>();
+    });
+
 app.UseRouting();
 
 app.UseAuthentication();
@@ -112,7 +121,6 @@ app.MapControllers();
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
-app.MapHub<StreamerHub>("/hubs/desktop");
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
 using (var scope = scopeFactory.CreateScope())

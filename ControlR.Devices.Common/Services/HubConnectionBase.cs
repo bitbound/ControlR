@@ -6,14 +6,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Devices.Common.Services;
+
 public interface IHubConnectionBase
 {
     event EventHandler<SignedPayloadDto>? DtoReceived;
+
     HubConnectionState ConnectionState { get; }
     bool IsConnected { get; }
 
     Task ReceiveDto(SignedPayloadDto dto);
-    Task Stop(CancellationToken cancellationToken);
+
+    Task StopConnection(CancellationToken cancellationToken);
 }
 
 public abstract class HubConnectionBase(
@@ -23,8 +26,8 @@ public abstract class HubConnectionBase(
     protected readonly ILogger<HubConnectionBase> _logger = logger;
     protected readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private CancellationToken _cancellationToken;
-    private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
     private HubConnection? _connection;
+    private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
 
     public event EventHandler<SignedPayloadDto>? DtoReceived;
 
@@ -78,7 +81,7 @@ public abstract class HubConnectionBase(
         connectionConfig.Invoke(_connection);
 
         _logger.LogInformation("Starting connection to {HubUrl}.", hubUrl);
-        await StartConnection();
+        await StartConnection(cancellationToken);
     }
 
     public Task ReceiveDto(SignedPayloadDto dto)
@@ -99,7 +102,7 @@ public abstract class HubConnectionBase(
         await Connect(hubUrl, connectionConfig, optionsConfig, _onConnectFailure, _cancellationToken);
     }
 
-    public async Task Stop(CancellationToken cancellationToken)
+    public async Task StopConnection(CancellationToken cancellationToken)
     {
         if (_connection is not null)
         {
@@ -112,12 +115,12 @@ public abstract class HubConnectionBase(
         await WaitHelper.WaitForAsync(() => IsConnected, TimeSpan.MaxValue);
     }
 
-
     private Task HubConnection_Closed(Exception? arg)
     {
         _logger.LogWarning(arg, "Hub connection closed.");
         return Task.CompletedTask;
     }
+
     private Task HubConnection_Reconnected(string? arg)
     {
         _logger.LogInformation("Reconnected to desktop hub.  New connection ID: {id}", arg);
@@ -130,7 +133,7 @@ public abstract class HubConnectionBase(
         return Task.CompletedTask;
     }
 
-    private async Task StartConnection()
+    private async Task StartConnection(CancellationToken cancellationToken)
     {
         if (_connection is null)
         {
@@ -138,13 +141,13 @@ public abstract class HubConnectionBase(
             return;
         }
 
-        while (!_cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 _logger.LogInformation("Connecting to server.");
 
-                await _connection.StartAsync(_cancellationToken);
+                await _connection.StartAsync(cancellationToken);
 
                 _logger.LogInformation("Connected to server.");
 
@@ -160,9 +163,10 @@ public abstract class HubConnectionBase(
                 _logger.LogError(ex, "Error in hub connection.");
                 await _onConnectFailure.Invoke($"Connection error.  Message: {ex.Message}");
             }
-            await Task.Delay(3_000, _cancellationToken);
+            await Task.Delay(3_000, cancellationToken);
         }
     }
+
     private class RetryPolicy : IRetryPolicy
     {
         public TimeSpan? NextRetryDelay(RetryContext retryContext)

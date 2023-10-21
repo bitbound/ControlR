@@ -40,18 +40,20 @@ public static class MauiProgram
         builder.Logging.AddProvider(new FileLoggerProvider());
         // TODO: In-memory logger.
 
-        builder.Services.AddSingleton(_ => SecureStorage.Default);
-        builder.Services.AddSingleton(_ => Preferences.Default);
-        builder.Services.AddSingleton(_ => FileSystem.Current);
-        builder.Services.AddSingleton(_ => FilePicker.Default);
+        builder.Services.AddSingleton(SecureStorage.Default);
+        builder.Services.AddSingleton(Preferences.Default);
+        builder.Services.AddSingleton(FileSystem.Current);
+        builder.Services.AddSingleton(FilePicker.Default);
+        builder.Services.AddSingleton(Browser.Default);
+        builder.Services.AddSingleton(Clipboard.Default);
 
-        builder.Services.AddSingleton(_ => VersionTracking.Default);
+        builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
-        builder.Services.AddSingleton<IMessenger>(_ => WeakReferenceMessenger.Default);
+        builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
         builder.Services.AddSingleton<ISettings, Settings>();
         builder.Services.AddSingleton<IAppState, AppState>();
-        builder.Services.AddSingleton<IEnvironmentHelper>(_ = EnvironmentHelper.Instance);
+        builder.Services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
         builder.Services.AddSingleton<IViewerHubConnection, ViewerHubConnection>();
         builder.Services.AddSingleton<IDeviceCache, DeviceCache>();
         builder.Services.AddSingleton<IJsInterop, JsInterop>();

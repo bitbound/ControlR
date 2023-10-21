@@ -1,0 +1,9 @@
+[submodule "wwwroot/novnc"]
+	path = wwwroot/novnc
+	url = https://github.com/novnc/noVNC
+[submodule "ControlR.RelayNode/wwwroot/novnc"]
+	path = ControlR.RelayNode/wwwroot/novnc
+	url = https://github.com/novnc/noVNC
+[submodule "ControlR.Server/wwwroot/novnc"]
+	path = ControlR.Server/wwwroot/novnc
+	url = https://github.com/novnc/noVNC

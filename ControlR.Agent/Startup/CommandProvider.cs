@@ -1,7 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services;
-using ControlR.Agent.Services.Windows;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,6 +8,7 @@ using System.CommandLine;
 using System.Reflection;
 
 namespace ControlR.Agent.Startup;
+
 internal class CommandProvider
 {
     internal static Command GetInstallCommand(string[] args)
@@ -31,19 +31,6 @@ internal class CommandProvider
         }, authorizedKeyOption);
 
         return installCommand;
-
-    }
-    internal static Command GetUninstallCommand(string[] args)
-    {
-        var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.");
-        unInstallCommand.SetHandler(async () =>
-        {
-            var host = CreateHost(StartupMode.Uninstall, args);
-            var installer = host.Services.GetRequiredService<IAgentInstaller>();
-            await installer.Uninstall();
-            await host.RunAsync();
-        });
-        return unInstallCommand;
     }
 
     internal static Command GetRunCommand(string[] args)
@@ -68,49 +55,23 @@ internal class CommandProvider
             }
 
             var hubConnection = host.Services.GetRequiredService<IAgentHubConnection>();
-            await hubConnection.Start();
             await host.RunAsync();
         });
 
         return runCommand;
     }
 
-    internal static Command GetSidecarCommand(string[] args)
+    internal static Command GetUninstallCommand(string[] args)
     {
-        var agentPipeOption = new Option<string>(
-            new[] { "-a", "--agent-pipe" },
-            "The agent pipe name to which the watcher should connect.")
+        var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.");
+        unInstallCommand.SetHandler(async () =>
         {
-            IsRequired = true
-        };
-
-        var parentIdOption = new Option<int>(
-            new[] { "-p", "--parent-id" },
-            "The calling process's ID.")
-        {
-            IsRequired = true
-        };
-
-        var sidecarCommand = new Command("sidecar", "Watches for desktop changes (winlogon/UAC) for the streamer process.")
-        {
-            agentPipeOption,
-            parentIdOption
-        };
-
-        sidecarCommand.SetHandler(async (agentPipeName, parentProcessId) =>
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                Console.WriteLine("This command is only available on Windows.");
-                return;
-            }
-            var host = CreateHost(StartupMode.Sidecar, args);
-            var desktopReporter = host.Services.GetRequiredService<IInputDesktopReporter>();
-            await desktopReporter.Start(agentPipeName, parentProcessId);
+            var host = CreateHost(StartupMode.Uninstall, args);
+            var installer = host.Services.GetRequiredService<IAgentInstaller>();
+            await installer.Uninstall();
             await host.RunAsync();
-        }, agentPipeOption, parentIdOption);
-
-        return sidecarCommand;
+        });
+        return unInstallCommand;
     }
 
     private static IHost CreateHost(StartupMode startupMode, string[] args)

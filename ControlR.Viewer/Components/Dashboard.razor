@@ -8,6 +8,7 @@
 @inject IDeviceCache DeviceCache
 @inject IDialogService DialogService
 @inject IAppState AppState
+@inject IClipboard Clipboard
 @inject ILogger<Dashboard> Logger
 
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
@@ -191,34 +192,38 @@
 
     private async Task RemoteControlClicked(DeviceDto device)
     {
-        switch (device.Platform)
+        try
         {
-            case SystemPlatform.Windows:
-                var sessionResult = await ViewerHub.GetWindowsSessions(device);
-                if (!sessionResult.IsSuccess)
-                {
-                    Logger.LogResult(sessionResult);
-                    Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
-                    return;
-                }
+            var sessionPassword = RandomGenerator.GenerateString(8);
+            var sessionId = Guid.NewGuid();
 
-                var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
-                var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
-                var result = await dialogRef.Result;
-                if (result.Canceled)
-                {
-                    return;
-                }
+            Logger.LogInformation("Creating VNC session");
+            Snackbar.Add("Requesting VNC session", Severity.Info);
 
-                if (result.Data is int sessionId)
-                {
-                    var remoteControlSession = new RemoteControlSession(device, sessionId);
-                    AppState.RemoteControlSessions.Add(remoteControlSession);
-                }
-                break;
-            default:
-                Snackbar.Add("Platform is not supported", Severity.Warning);
-                break;
+            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, sessionPassword);
+
+            if (!vncSessionResult.IsSuccess)
+            {
+                Snackbar.Add(vncSessionResult.Reason, Severity.Error);
+                return;
+            }
+
+            var dialogParams = new DialogParameters() 
+            { 
+                ["DeviceName"] = device.Name,
+                ["Password"] = sessionPassword,
+                ["SessionId"] = sessionId
+            };
+
+            await Clipboard.SetTextAsync(sessionPassword);
+            Snackbar.Add("Password copied to clipboard", Severity.Success);
+
+            await DialogService.ShowAsync<VncConnectDialog>("Start Session", dialogParams);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while requesting VNC session.");
+            Snackbar.Add("An error occurred while requesting a VNC session", Severity.Error);
         }
 
     }

@@ -4,7 +4,7 @@ public enum DtoType
 {
     None = 0,
     PublicKey = 1,
-    StreamingSessionRequest = 2,
+    VncSessionRequest = 2,
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
     RtcSessionDescription = 5,

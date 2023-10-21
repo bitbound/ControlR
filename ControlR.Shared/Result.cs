@@ -4,34 +4,40 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
-
 namespace ControlR.Shared;
 
 /// <summary>
 /// Describes the success or failure of any kind of operation.
 /// </summary>
-[MessagePackObject]
+[MessagePackObject(true)]
 public class Result
 {
     [JsonConstructor]
-    private Result(bool isSuccess, string reason = "", Exception? exception = null)
+    [SerializationConstructor]
+    public Result(bool isSuccess, string reason = "")
     {
-        if (!isSuccess && exception is null && string.IsNullOrWhiteSpace(reason))
+        if (!isSuccess && string.IsNullOrWhiteSpace(reason))
         {
             throw new ArgumentException("A reason or exception must be supplied for an unsuccessful result.");
         }
 
         IsSuccess = isSuccess;
-        Exception = exception;
-        Reason = string.IsNullOrWhiteSpace(reason) ?
-            exception?.Message ?? string.Empty :
-            reason;
+        Reason = reason;
     }
 
-    [MsgPackKey]
+    private Result(Exception ex)
+    {
+        IsSuccess = false;
+        Reason = ex.Message;
+        Exception = ex;
+    }
+
+    [IgnoreDataMember]
+    [IgnoreMember]
     public Exception? Exception { get; init; }
 
     [IgnoreDataMember]
+    [IgnoreMember]
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool HadException => Exception is not null;
 
@@ -42,7 +48,6 @@ public class Result
     [MsgPackKey]
     public string Reason { get; init; } = string.Empty;
 
-
     public static Result Fail(string reason)
     {
         return new Result(false, reason);
@@ -50,7 +55,7 @@ public class Result
 
     public static Result Fail(Exception ex)
     {
-        return new Result(false, string.Empty, ex);
+        return new Result(ex);
     }
 
     public static Result<T> Fail<T>(string reason)
@@ -74,20 +79,18 @@ public class Result
     }
 }
 
-
 /// <summary>
 /// Describes the success or failure of any kind of operation.
 /// </summary>
-[MessagePackObject]
+[MessagePackObject(true)]
 public class Result<T>
 {
     [JsonConstructor]
-    public Result(T? value, bool isSuccess, Exception? exception, string reason)
+    [SerializationConstructor]
+    public Result(T? value, bool isSuccess, string reason)
     {
         Value = value;
         IsSuccess = isSuccess;
-        Exception = exception;
-        Value = value;
         Reason = reason;
     }
 
@@ -123,10 +126,12 @@ public class Result<T>
         Reason = reason;
     }
 
-    [MsgPackKey]
+    [IgnoreDataMember]
+    [IgnoreMember]
     public Exception? Exception { get; init; }
 
     [IgnoreDataMember]
+    [IgnoreMember]
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool HadException => Exception is not null;
 
@@ -141,4 +146,3 @@ public class Result<T>
     [MsgPackKey]
     public T? Value { get; init; }
 }
-

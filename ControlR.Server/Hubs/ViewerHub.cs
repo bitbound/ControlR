@@ -5,7 +5,6 @@ using ControlR.Server.Services;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
-using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -17,16 +16,14 @@ namespace ControlR.Server.Hubs;
 [Authorize]
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> agentHubContext,
-    IHubContext<StreamerHub, IStreamerHubClient> streamerHubContext,
-    IStreamerSessionCache streamerSessionCache,
+    IProxyStreamStore proxyStreamStore,
     IOptionsMonitor<AppOptions> appOptions,
     ILogger<ViewerHub> logger) : Hub<IViewerHubClient>
 {
     private readonly IHubContext<AgentHub, IAgentHubClient> _agentHub = agentHubContext;
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly ILogger<ViewerHub> _logger = logger;
-    private readonly IHubContext<StreamerHub, IStreamerHubClient> _streamerHub = streamerHubContext;
-    private readonly IStreamerSessionCache _streamerSessionCache = streamerSessionCache;
+    private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
 
     public Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
     {
@@ -38,40 +35,32 @@ public class ViewerHub(
         return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
     }
 
-    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
+    public async Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
             if (!VerifyPayload(sessionRequestDto, out _))
             {
-                return Result.Fail<StreamerHubSession>(string.Empty);
+                return Result.Fail(string.Empty);
             }
+
+            var signaler = new StreamSignaler(sessionId);
+            _proxyStreamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
 
             var sessionSuccess = await _agentHub.Clients
                    .Client(agentConnectionId)
-                   .GetStreamingSession(sessionRequestDto);
+                   .GetVncSession(sessionRequestDto);
 
             if (!sessionSuccess)
             {
-                return Result.Fail<StreamerHubSession>("Failed to acquire streaming session.");
+                return Result.Fail("Failed to acquire VNC session.");
             }
 
-            await WaitHelper.WaitForAsync(
-                () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
-                TimeSpan.FromSeconds(30));
-
-            if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
-            {
-                return Result.Fail<StreamerHubSession>("Timed out while waiting for streaming to start.");
-            }
-
-            session.AgentConnectionId = agentConnectionId;
-            session.ViewerConnectionId = Context.ConnectionId;
-            return Result.Ok(session);
+            return Result.Ok();
         }
         catch (Exception ex)
         {
-            return Result.Fail<StreamerHubSession>(ex);
+            return Result.Fail(ex);
         }
     }
 
@@ -130,26 +119,6 @@ public class ViewerHub(
         }
 
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
-    }
-
-    public async Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto)
-    {
-        using var scope = _logger.BeginMemberScope();
-
-        if (!VerifyPayload(signedDto, out _))
-        {
-            return;
-        }
-
-        if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
-        {
-            _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
-            return;
-        }
-
-        await _streamerHub.Clients
-            .Client(session.StreamerConnectionId)
-            .ReceiveDto(signedDto);
     }
 
     private bool VerifyPayload(SignedPayloadDto signedDto, out string publicKey)

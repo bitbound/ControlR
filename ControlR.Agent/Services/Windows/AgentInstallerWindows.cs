@@ -1,18 +1,18 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.Runtime.Versioning;
-using System.Security.Principal;
-using ControlR.Agent.Interfaces;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Services;
+using ControlR.Shared;
 using ControlR.Shared.Extensions;
-using System.Diagnostics;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
-using ControlR.Agent.Services.Base;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
-using ControlR.Shared;
+using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.Principal;
 using System.ServiceProcess;
-using ControlR.Shared.Helpers;
 
 namespace ControlR.Agent.Services.Windows;
 
@@ -27,12 +27,12 @@ internal class AgentInstallerWindows(
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
-    private readonly string _serviceName = "ControlR.Agent";
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerWindows> _logger = logger;
     private readonly IProcessInvoker _processes = processes;
+    private readonly string _serviceName = "ControlR.Agent";
 
     public async Task Install(string? authorizedPublicKey = null)
     {
@@ -45,7 +45,7 @@ internal class AgentInstallerWindows(
         try
         {
             _logger.LogInformation("Install started.");
-          
+
             if (!CheckIsAdministrator())
             {
                 _logger.LogError("Install command must be run as administrator.");
@@ -149,7 +149,6 @@ internal class AgentInstallerWindows(
             return;
         }
 
-
         try
         {
             _logger.LogInformation("Uninstall started.");
@@ -177,7 +176,6 @@ internal class AgentInstallerWindows(
                 _logger.LogError("{msg}", deleteResult.Reason);
                 return;
             }
-
 
             for (var i = 0; i <= 5; i++)
             {
@@ -297,7 +295,7 @@ internal class AgentInstallerWindows(
             }
             else
             {
-                _logger.LogInformation("No existing servie found.");
+                _logger.LogInformation("No existing service found.");
             }
             if (existingService?.CanStop == true)
             {
@@ -309,13 +307,6 @@ internal class AgentInstallerWindows(
             var procs = _processes
                 .GetProcessesByName("ControlR.Agent")
                 .Where(x => x.Id != Environment.ProcessId);
-
-            foreach (var proc in procs)
-            {
-                proc.Kill();
-            }
-
-            procs = _processes.GetProcessesByName("controlr-streamer");
 
             foreach (var proc in procs)
             {
