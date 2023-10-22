@@ -24,14 +24,14 @@ internal class CommandProvider
         var portOption = new Option<int>(
             _portAlias,
             () => 5900,
-            "The port to use for the spawned VNC.  ControlR will proxy viewer connections to this port.");
+            "The port to use for VNC connections.  ControlR will proxy viewer connections to this port.");
 
         var autoInstallOption = new Option<bool>(
              _autoInstallVncAlis,
              () => true,
-             "Whether to automatically install and run a temporary VNC server with a random, temporary password.  " +
-             "Each session will have a new random password.  Set this to false to use an existing server without  " +
-             "altering it.  Only works on Windows and X11.");
+             "Windows only.  Whether to automatically install and run a temporary VNC server with a random, temporary " +
+             "password. Each session will have a new random password. Set this to false to use an existing server  " +
+             "without altering it.");
 
         var installCommand = new Command("install", "Install the ControlR service.")
         {

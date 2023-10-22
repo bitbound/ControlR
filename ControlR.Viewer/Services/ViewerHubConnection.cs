@@ -23,21 +23,15 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId);
 
-    Task<Result<IceServer[]>> GetIceServers();
-
-    Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
+    Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
-
-    Task InvokeCtrlAltDel(string deviceId);
 
     Task RequestDeviceUpdates();
 
     Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
-
-    Task SendRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription);
 
     Task Start(CancellationToken cancellationToken);
 }
@@ -83,7 +77,7 @@ internal class ViewerHubConnection(
         }
     }
 
-    public async Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
+    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
     {
         try
         {
@@ -94,17 +88,17 @@ internal class ViewerHubConnection(
 
             var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
 
-            var result = await Connection.InvokeAsync<Result>("GetVncSession", agentConnectionId, sessionId, signedDto);
-            if (!result.IsSuccess)
+            var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
+            if (!result.SessionCreated)
             {
-                _logger.LogResult(result);
+                _logger.LogError("Failed to get VNC session.");
             }
             return result;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting remote streaming session.");
-            return Result.Fail(ex);
+            return new(false);
         }
     }
 
@@ -123,37 +117,10 @@ internal class ViewerHubConnection(
         }
     }
 
-    public async Task InvokeCtrlAltDel(string deviceId)
-    {
-        await TryInvoke(async () =>
-        {
-            var signedDto = _appState.Encryptor.CreateRandomSignedDto(DtoType.InvokeCtrlAltDel);
-            await Connection.InvokeAsync("SendSignedDtoToAgent", deviceId, signedDto);
-        });
-    }
-
-    public Task ReceiveDesktopChanged(Guid sessionId, string desktopName)
-    {
-        _messenger.Send(new DesktopChangedMessage(sessionId, desktopName));
-        return Task.CompletedTask;
-    }
-
     public Task ReceiveDeviceUpdate(DeviceDto device)
     {
         _devicesCache.AddOrUpdate(device);
         _messenger.SendParameterlessMessage(ParameterlessMessageKind.DevicesCacheUpdated);
-        return Task.CompletedTask;
-    }
-
-    public Task ReceiveIceCandidate(Guid sessionId, string candidateJson)
-    {
-        _messenger.Send(new IceCandidateMessage(sessionId, candidateJson));
-        return Task.CompletedTask;
-    }
-
-    public Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
-    {
-        _messenger.Send(new RtcSessionDescriptionMessage(sessionId, sessionDescription));
         return Task.CompletedTask;
     }
 
@@ -186,15 +153,6 @@ internal class ViewerHubConnection(
         });
     }
 
-    public async Task SendRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
-    {
-        await TryInvoke(async () =>
-        {
-            var signedDto = _appState.Encryptor.CreateSignedDto(sessionDescription, DtoType.RtcSessionDescription);
-            await Connection.InvokeAsync("SendSignedDtoToStreamer", sessionId, signedDto);
-        });
-    }
-
     public async Task Start(CancellationToken cancellationToken)
     {
         _messenger.UnregisterAll(this);
@@ -221,9 +179,6 @@ internal class ViewerHubConnection(
         connection.Reconnecting += Connection_Reconnecting;
         connection.Reconnected += Connection_Reconnected;
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
-        connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
-        connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
-        connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

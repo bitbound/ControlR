@@ -2,7 +2,6 @@
 using ControlR.Server.Extensions;
 using ControlR.Server.Models;
 using ControlR.Server.Services;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
@@ -35,32 +34,28 @@ public class ViewerHub(
         return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
     }
 
-    public async Task<Result> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
+    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
             if (!VerifyPayload(sessionRequestDto, out _))
             {
-                return Result.Fail(string.Empty);
+                return new(false);
             }
 
             var signaler = new StreamSignaler(sessionId);
             _proxyStreamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
 
-            var sessionSuccess = await _agentHub.Clients
+            var sessionResult = await _agentHub.Clients
                    .Client(agentConnectionId)
                    .GetVncSession(sessionRequestDto);
 
-            if (!sessionSuccess)
-            {
-                return Result.Fail("Failed to acquire VNC session.");
-            }
-
-            return Result.Ok();
+            return sessionResult;
         }
         catch (Exception ex)
         {
-            return Result.Fail(ex);
+            _logger.LogError(ex, "Error while requesting VNC session.");
+            return new(false);
         }
     }
 

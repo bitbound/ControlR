@@ -4,6 +4,7 @@ using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
@@ -60,7 +61,12 @@ internal class AgentInstallerLinux(
             var fileName = Path.GetFileName(exePath);
             var targetPath = Path.Combine(_installDir, AppConstants.AgentFileName);
             _fileSystem.CreateDirectory(_installDir);
-            _fileSystem.CopyFile(exePath, targetPath, true);
+
+            TryHelper.Retry(
+                () =>
+                {
+                    _fileSystem.CopyFile(exePath, targetPath, true);
+                }, 5, TimeSpan.FromSeconds(1));
 
             var serviceFile = GetServiceFile().Trim();
 
@@ -68,10 +74,12 @@ internal class AgentInstallerLinux(
             await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
             await WriteEtag(_installDir);
 
+            _logger.LogInformation("Enabling service.");
             await _processInvoker
                 .Start("sudo", "systemctl enable controlr.agent.service")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);
 
+            _logger.LogInformation("Restarting service.");
             await _processInvoker
                 .Start("sudo", "systemctl restart controlr.agent.service")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);

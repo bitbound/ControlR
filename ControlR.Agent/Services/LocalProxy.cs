@@ -39,13 +39,31 @@ internal class LocalProxy(
 
     private async Task HandleVncRequestMessage(VncProxyRequestMessage message)
     {
-        if (message.VncProcessId.HasValue)
+        var sessionId = message.Session.SessionId;
+
+        try
         {
-            await StartProxy(message.SessionId, message.VncProcessId.Value);
+            var tcpClient = new TcpClient();
+            await TryHelper.Retry(
+                async () =>
+                {
+                    await tcpClient.ConnectAsync("127.0.0.1", _appOptions.CurrentValue.VncPort);
+                },
+                tryCount: 3,
+                retryDelay: TimeSpan.FromSeconds(3));
+
+            var outgoingTask = ReadFromClient(tcpClient, sessionId);
+            var incomingTask = ReadFromHub(tcpClient, sessionId);
+
+            await Task.WhenAny(outgoingTask, incomingTask);
         }
-        else
+        catch (Exception ex)
         {
-            await StartProxy(message.SessionId);
+            _logger.LogError(ex, "Error while proxying stream.");
+        }
+        finally
+        {
+            await message.Session.CleanupFunc.Invoke();
         }
     }
 
@@ -87,37 +105,6 @@ internal class LocalProxy(
                 break;
             }
             await tcpClient.Client.SendAsync(chunk);
-        }
-    }
-
-    private async Task StartProxy(Guid sessionId, int vncProcessId)
-    {
-        using var vncProcess = _processInvoker.GetProcessById(vncProcessId);
-        await StartProxy(sessionId);
-        vncProcess.Kill();
-    }
-
-    private async Task StartProxy(Guid sessionId)
-    {
-        try
-        {
-            var tcpClient = new TcpClient();
-            await TryHelper.Retry(
-                async () =>
-                {
-                    await tcpClient.ConnectAsync("127.0.0.1", _appOptions.CurrentValue.VncPort);
-                },
-                tryCount: 3,
-                retryDelay: TimeSpan.FromSeconds(3));
-
-            var outgoingTask = ReadFromClient(tcpClient, sessionId);
-            var incomingTask = ReadFromHub(tcpClient, sessionId);
-
-            await Task.WhenAny(outgoingTask, incomingTask);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while proxying stream.");
         }
     }
 }

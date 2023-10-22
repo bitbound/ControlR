@@ -1,9 +1,9 @@
-﻿using ControlR.Shared;
-using System.Diagnostics;
+﻿using ControlR.Agent.Models;
+using ControlR.Shared;
 
 namespace ControlR.Agent.Interfaces;
 
 internal interface IVncSessionLauncher
 {
-    Task<Result<Process>> CreateSession(Guid sessionId, string password);
+    Task<Result<VncSession>> CreateSession(Guid sessionId, string password);
 }

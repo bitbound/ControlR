@@ -1,2 +1,4 @@
-﻿namespace ControlR.Agent.Messages;
-internal record VncProxyRequestMessage(Guid SessionId, int? VncProcessId = null);
+﻿using ControlR.Agent.Models;
+
+namespace ControlR.Agent.Messages;
+internal record VncProxyRequestMessage(VncSession Session);

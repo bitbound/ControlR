@@ -1,22 +1,15 @@
-﻿using System.Diagnostics;
+﻿namespace ControlR.Agent.Models;
 
-namespace ControlR.Agent.Models;
-
-internal class VncSession(Guid sessionId) : IDisposable
+internal class VncSession(Guid sessionId, Func<Task> cleanupFunc) : IAsyncDisposable
 {
+    public Func<Task> CleanupFunc { get; init; } = cleanupFunc;
     public Guid SessionId { get; } = sessionId;
-    public Process? VncProcess { get; set; }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         try
         {
-            VncProcess?.Kill();
-        }
-        catch { }
-        try
-        {
-            VncProcess?.Dispose();
+            await CleanupFunc.Invoke();
         }
         catch { }
     }

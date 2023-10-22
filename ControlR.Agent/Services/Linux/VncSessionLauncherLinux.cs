@@ -2,6 +2,7 @@
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,15 +29,15 @@ internal class VncSessionLauncherLinux : IVncSessionLauncher
         _logger = logger;
     }
 
-    public async Task<Result<Process>> CreateSession(Guid sessionId, string password)
+    public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
     {
         await _createSessionLock.WaitAsync();
 
         try
         {
-            var session = new VncSession(sessionId);
-
             StopProcesses();
+
+            await InstallVnc();
 
             await CreatePassword(password);
 
@@ -57,14 +58,23 @@ internal class VncSessionLauncherLinux : IVncSessionLauncher
 
             if (vncProcess is null)
             {
-                return Result.Fail<Process>("VNC server failed to start.");
+                return Result.Fail<VncSession>("VNC server failed to start.");
             }
-            return Result.Ok(vncProcess);
+
+            var session = new VncSession(
+                sessionId,
+                () =>
+                {
+                    vncProcess.KillAndDispose();
+                    return Task.CompletedTask;
+                });
+
+            return Result.Ok(session);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating VNC session.");
-            return Result.Fail<Process>("An error occurred while VNC control.");
+            return Result.Fail<VncSession>("An error occurred while VNC control.");
         }
         finally
         {

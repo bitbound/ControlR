@@ -203,15 +203,20 @@
 
             var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, sessionPassword);
 
-            if (!vncSessionResult.IsSuccess)
+            if (!vncSessionResult.SessionCreated)
             {
-                Snackbar.Add(vncSessionResult.Reason, Severity.Error);
+                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
                 return;
             }
 
-            await Browser.OpenAsync(
-                $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}" + 
-                $"&password={sessionPassword}&autoconnect=true&show_dot=true");
+            var targetUrl = $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}&show_dot=true";
+
+            if (vncSessionResult.AutoInstallUsed == true)
+            {
+                targetUrl += $"&password={sessionPassword}&autoconnect=true";
+            }
+
+            await Browser.OpenAsync(targetUrl);
         }
         catch (Exception ex)
         {

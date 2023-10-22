@@ -3,6 +3,7 @@ using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
@@ -41,24 +42,22 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         _logger = logger;
     }
 
-    public async Task<Result<Process>> CreateSession(Guid sessionId, string password)
+    public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
     {
         await _createSessionLock.WaitAsync();
 
         try
         {
-            var session = new VncSession(sessionId);
-
             var startupDir = _environment.StartupDirectory;
             var vncDir = Path.Combine(startupDir, "winvnc");
-            var binaryPath = Path.Combine(vncDir, AppConstants.VncFileName);
+            var vncFilePath = Path.Combine(vncDir, AppConstants.VncFileName);
 
-            if (!_fileSystem.FileExists(binaryPath))
+            if (!_fileSystem.FileExists(vncFilePath))
             {
                 var result = await DownloadVnc();
                 if (!result.IsSuccess)
                 {
-                    return Result.Fail<Process>(result.Reason);
+                    return Result.Fail<VncSession>(result.Reason);
                 }
             }
 
@@ -69,34 +68,72 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
             await SetIniOption("PortNumber", $"{_appOptions.CurrentValue.VncPort}");
             await SetIniOption("LoopbackOnly", $"{1}");
 
-            var args = string.Empty;
-
             if (_processes.GetCurrentProcess().SessionId == 0)
             {
-                args = "-service";
+                var createString = $"sc.exe create WinVNC binPath= \"\\\"{vncFilePath}\\\" -service\"";
+                var startString = $"sc.exe start WinVNC";
+
+                var psi = new ProcessStartInfo()
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c {createString} & {startString}",
+                    UseShellExecute = true
+                };
+                await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
+                var startResult = WaitHelper.WaitFor(
+                    () =>
+                    {
+                        return _processes
+                            .GetProcesses()
+                            .Any(x =>
+                                x.ProcessName.Equals("WinVNC", StringComparison.OrdinalIgnoreCase));
+                    }, TimeSpan.FromSeconds(10));
+
+                if (!startResult)
+                {
+                    return Result.Fail<VncSession>("VNC session failed to start.");
+                }
+
+                var session = new VncSession(
+                    sessionId,
+                    async () =>
+                    {
+                        StopProcesses();
+                        var psi = new ProcessStartInfo()
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = $"/c sc.exe delete WinVNC",
+                            UseShellExecute = true
+                        };
+                        await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+                    });
+                return Result.Ok(session);
             }
-
-            var psi = new ProcessStartInfo()
+            else
             {
-                FileName = binaryPath,
-                Arguments = args,
-                WorkingDirectory = vncDir,
-                UseShellExecute = true
-            };
+                var process = _processes.Start(vncFilePath, "-run", true);
 
-            var process = _processes.Start(psi);
+                if (process?.HasExited != false)
+                {
+                    return Result.Fail<VncSession>("VNC session failed to start.");
+                }
 
-            if (process?.HasExited != false)
-            {
-                return Result.Fail<Process>("VNC session failed to start.");
+                var session = new VncSession(
+                    sessionId,
+                    () =>
+                    {
+                        process.KillAndDispose();
+                        return Task.CompletedTask;
+                    });
+
+                return Result.Ok(session);
             }
-
-            return Result.Ok(process);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating VNC session.");
-            return Result.Fail<Process>("An error occurred while VNC control.");
+            return Result.Fail<VncSession>("An error occurred while VNC control.");
         }
         finally
         {
@@ -180,7 +217,12 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
     private void StopProcesses()
     {
-        foreach (var proc in _processes.GetProcessesByName("winvnc"))
+        var processes = _processes
+            .GetProcesses()
+            .Where(x =>
+                x.ProcessName.Equals("WinVNC", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var proc in processes)
         {
             try
             {
@@ -188,7 +230,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to stop existing winvnc process.");
+                _logger.LogWarning(ex, "Failed to stop existing WinVNC process.");
             }
         }
     }

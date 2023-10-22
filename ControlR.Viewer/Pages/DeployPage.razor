@@ -51,9 +51,10 @@
             Auto-Install VNC Server
         </MudText>
         <MudText Typo="Typo.body1">
-            This will cause the ControlR agent to automically install and run a temporary
-            VNC server for each session.  The VNC server will be closed afterward.  Each
-            session will get a new, random password that gets passed in automatically.
+            Windows only.  This will cause the ControlR agent to automically install and
+            run a temporary VNC server for each session.  The VNC server will be closed 
+            afterward.  Each session will get a new, random password that gets passed in 
+            automatically.
         </MudText>
         <MudCheckBox @bind-Checked="_autoInstallVnc" Class="mb-3" />
 
@@ -62,7 +63,7 @@
         </MudText>
         <MudText Typo="Typo.body1">
             The VNC port to use, to which the ControlR agent will proxy connections.  If
-            auot-install is disabled, ControlR expects there to already be a VNC server
+            auto-install is disabled, ControlR expects there to already be a VNC server
             running on this port.
         </MudText>
         <MudTextField T="int" @bind-Value="_vncPort" />
@@ -91,11 +92,9 @@
     {
         get
         {
-            var autoInstallOption = _autoInstallVnc ? "-i " : "";
-
             return $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
                 "sudo chmod +x /tmp/ControlR.Agent && " +
-                $"sudo /tmp/ControlR.Agent install {autoInstallOption}-p {_vncPort} -a {Settings.PublicKeyBase64}";
+                $"sudo /tmp/ControlR.Agent install -p {_vncPort} -a {Settings.PublicKeyBase64}";
         }
     }
 

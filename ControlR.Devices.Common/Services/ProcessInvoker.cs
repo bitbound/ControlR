@@ -1,6 +1,7 @@
 ﻿using ControlR.Devices.Common.Native.Windows;
 using ControlR.Shared;
 using ControlR.Shared.Enums;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -10,19 +11,28 @@ namespace ControlR.Devices.Common.Services;
 public interface IProcessInvoker
 {
     Process GetCurrentProcess();
+
     Process GetProcessById(int processId);
+
     Process[] GetProcesses();
 
     Process[] GetProcessesByName(string processName);
 
     Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
+
     Task<Result> LaunchRemoteControl(string serverUrl, Guid requestId, string requesterConnectionId);
+
     Process? LaunchUri(Uri uri);
 
     Process Start(string fileName);
+
     Process Start(string fileName, string arguments);
+
     Process? Start(string fileName, string arguments, bool useShellExec);
+
     Process? Start(ProcessStartInfo startInfo);
+
+    Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
 }
 
 public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
@@ -84,7 +94,6 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
         }
     }
 
-
     public async Task<Result> LaunchRemoteControl(string serverUrl, Guid requestId, string requesterConnectionId)
     {
         try
@@ -97,6 +106,7 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
                 case SystemPlatform.Browser:
                 default:
                     break;
+
                 case SystemPlatform.Windows:
                     {
                         var result = LaunchDesktopStreamerWindows(serverUrl, requestId, requesterConnectionId);
@@ -163,6 +173,15 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
         return Process.Start(psi);
     }
 
+    public async Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout)
+    {
+        var process = Process.Start(startInfo);
+        Guard.IsNotNull(process);
+
+        using var cts = new CancellationTokenSource(timeout);
+        await process.WaitForExitAsync(cts.Token);
+    }
+
     private Task LaunchDesktopStreamerLinux(string serverUrl, Guid requestId, string requesterConnectionId)
     {
         throw new NotImplementedException();
@@ -200,6 +219,5 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
         {
             return Result.Fail(ex);
         }
-
     }
 }

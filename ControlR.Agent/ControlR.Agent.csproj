@@ -39,8 +39,4 @@
     <ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo Checking if exists: &quot;$(TargetDir)RemoteControl&quot;&#xD;&#xA;IF EXIST &quot;$(TargetDir)RemoteControl&quot; (&#xD;&#xA;    rmdir /s /q &quot;$(TargetDir)RemoteControl&quot;&#xD;&#xA;) else (&#xD;&#xA;    echo No RemoteControl dir to delete.&#xD;&#xA;)" />
-  </Target>
-
 </Project>
