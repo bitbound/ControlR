@@ -5,8 +5,5 @@ namespace ControlR.Agent.Interfaces;
 
 internal interface IVncSessionLauncher
 {
-    Task<Result<Process>> CreateSession(
-        Guid sessionId,
-        string password,
-        Func<double, Task>? onDownloadProgress = null);
+    Task<Result<Process>> CreateSession(Guid sessionId, string password);
 }

@@ -22,12 +22,11 @@
 
     <MudTextField T="string"
                   Label="Copy and paste to deploy an agent"
-                  ReadOnly="true"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyWindowsScript"
                   Adornment="Adornment.End"
-                  Value="_windowsDeployScript"
+                  Value="WindowsDeployScript"
                   Class="mb-5"/>
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -36,52 +35,80 @@
 
     <MudTextField T="string"
                   Label="Copy and paste to deploy an agent"
-                  ReadOnly="true"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyUbuntuScript"
                   Adornment="Adornment.End"
-                  Value="_ubuntuDeployScript" />
+                  Value="UbuntuDeployScript"
+                  Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Options
+    </MudText>
+
+    <div class="options-grid">
+        <MudText Typo="Typo.subtitle2" Color="Color.Info">
+            Auto-Install VNC Server
+        </MudText>
+        <MudText Typo="Typo.body1">
+            This will cause the ControlR agent to automically install and run a temporary
+            VNC server for each session.  The VNC server will be closed afterward.  Each
+            session will get a new, random password that gets passed in automatically.
+        </MudText>
+        <MudCheckBox @bind-Checked="_autoInstallVnc" Class="mb-3" />
+
+        <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom>
+            VNC Port
+        </MudText>
+        <MudText Typo="Typo.body1">
+            The VNC port to use, to which the ControlR agent will proxy connections.  If
+            auot-install is disabled, ControlR expects there to already be a VNC server
+            running on this port.
+        </MudText>
+        <MudTextField T="int" @bind-Value="_vncPort" />
+    </div>
+
 </div>
 
 
 @code {
-    private string _windowsDeployScript = string.Empty;
-    private string _ubuntuDeployScript = string.Empty;
+    private bool _autoInstallVnc = true;
+    private int _vncPort = 5900;
 
-    protected override void OnInitialized()
+    private string WindowsDeployScript
     {
-        _windowsDeployScript = CreateWindowsScript(Settings.PublicKeyBase64);
-        _ubuntuDeployScript = CreateUbuntuScript(Settings.PublicKeyBase64);
+        get
+        {
+            var autoInstallOption = _autoInstallVnc ? "-i " : "";
 
-        base.OnInitialized();
+            return "$ProgressPreference = \"SilentlyContinue\"; " +
+                $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+                $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
+                $"{autoInstallOption}-p {_vncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
+        }
     }
+    private string UbuntuDeployScript
+    {
+        get
+        {
+            var autoInstallOption = _autoInstallVnc ? "-i " : "";
+
+            return $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
+                "sudo chmod +x /tmp/ControlR.Agent && " +
+                $"sudo /tmp/ControlR.Agent install {autoInstallOption}-p {_vncPort} -a {Settings.PublicKeyBase64}";
+        }
+    }
+
 
     private async Task CopyWindowsScript()
     {
-        await Clipboard.Default.SetTextAsync(_windowsDeployScript);
+        await Clipboard.Default.SetTextAsync(WindowsDeployScript);
         Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyUbuntuScript()
     {
-        await Clipboard.Default.SetTextAsync(_ubuntuDeployScript);
+        await Clipboard.Default.SetTextAsync(UbuntuDeployScript);
         Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
-    }
-
-    private string CreateWindowsScript(string publicKey)
-    {
-        return
-            "$ProgressPreference = \"SilentlyContinue\"; " +
-            $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
-            $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install -a {publicKey}\" -Verb RunAs;";
-    }
-
-    private string CreateUbuntuScript(string publicKey)
-    {
-        return
-            $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
-            "sudo chmod +x /tmp/ControlR.Agent && " +
-            $"sudo /tmp/ControlR.Agent install -a {publicKey}";
     }
 }

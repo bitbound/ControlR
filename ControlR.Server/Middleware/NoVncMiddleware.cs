@@ -38,8 +38,8 @@ public class NoVncMiddleware(
 
         signaler.NoVncWebsocket = websocket;
         // Two threads will be waiting.
-        signaler.ReadySignal.Release();
-        signaler.ReadySignal.Release();
+        signaler.NoVncViewerReady.Release();
+        signaler.NoVncViewerReady.Release();
         await signaler.EndSignal.WaitAsync(_appLifetime.ApplicationStopping);
     }
 }

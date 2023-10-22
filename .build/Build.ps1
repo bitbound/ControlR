@@ -15,8 +15,6 @@ param (
 
     [switch]$BuildViewer,
 
-    [switch]$BuildStreamer,
-
     [switch]$IncrementAndroidVersion
 )
 
@@ -52,17 +50,6 @@ if ($BuildAgent){
     &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\ControlR.Agent.exe"
 }
 
-if ($BuildStreamer) {
-    [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
-    $Package = $PackageJson | ConvertFrom-Json
-    $Package.version = $Now.ToString("yyyy.MM.ddHHmm")
-    [string]$PackageJson = $Package | ConvertTo-Json
-    [System.IO.File]::WriteAllText("$Root\ControlR.Streamer\package.json", $PackageJson)
-    Push-Location "$Root\ControlR.Streamer"
-    npm install
-    npm run make-pwsh
-    Pop-Location
-}
 
 if ($BuildViewer) {
     if ($IncrementAndroidVersion) {

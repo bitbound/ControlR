@@ -5,14 +5,21 @@ namespace ControlR.Devices.Common.Services;
 public interface IFileSystem
 {
     Task AppendAllLinesAsync(string path, IEnumerable<string> lines);
+
     void CopyFile(string sourceFile, string destinationFile, bool overwrite);
+
     DirectoryInfo CreateDirectory(string directoryPath);
 
     Stream CreateFile(string filePath);
+
     FileStream CreateFileStream(string filePath, FileMode mode);
+
     void DeleteDirectory(string directoryPath, bool recursive);
+
     void DeleteFile(string filePath);
+
     bool DirectoryExists(string directoryPath);
+
     bool FileExists(string path);
 
     string[] GetFiles(string path);
@@ -26,21 +33,30 @@ public interface IFileSystem
     FileVersionInfo GetFileVersionInfo(string filePath);
 
     void MoveFile(string sourceFile, string destinationFile, bool overwrite);
+
     FileStream OpenFileStream(string path, FileMode mode, FileAccess access);
 
     Task<byte[]> ReadAllBytesAsync(string path);
+
+    Task<string[]> ReadAllLinesAsync(string path);
+
     string ReadAllText(string filePath);
+
     Task<string> ReadAllTextAsync(string path);
+
     Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1);
 
-    void WriteAllText(string filePath, string contents);
-    Task WriteAllTextAsync(string path, string content);
     Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default);
+
+    Task WriteAllLines(string path, List<string> lines);
+
+    void WriteAllText(string filePath, string contents);
+
+    Task WriteAllTextAsync(string path, string content);
 }
 
 public class FileSystem : IFileSystem
 {
-
     public Task AppendAllLinesAsync(string path, IEnumerable<string> lines)
     {
         return File.AppendAllLinesAsync(path, lines);
@@ -126,6 +142,11 @@ public class FileSystem : IFileSystem
         return await File.ReadAllBytesAsync(path);
     }
 
+    public async Task<string[]> ReadAllLinesAsync(string path)
+    {
+        return await File.ReadAllLinesAsync(path);
+    }
+
     public string ReadAllText(string filePath)
     {
         return File.ReadAllText(filePath);
@@ -157,7 +178,12 @@ public class FileSystem : IFileSystem
 
     public Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default)
     {
-        return File.WriteAllBytesAsync(path, buffer);
+        return File.WriteAllBytesAsync(path, buffer, cancellationToken);
+    }
+
+    public Task WriteAllLines(string path, List<string> lines)
+    {
+        return File.WriteAllLinesAsync(path, lines);
     }
 
     public void WriteAllText(string filePath, string contents)

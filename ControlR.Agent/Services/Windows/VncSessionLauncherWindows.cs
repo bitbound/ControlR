@@ -2,9 +2,11 @@
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.Versioning;
@@ -15,6 +17,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows")]
 internal class VncSessionLauncherWindows : IVncSessionLauncher
 {
+    private readonly IOptionsMonitor<AppOptions> _appOptions;
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
     private readonly IDownloadsApi _downloadsApi;
     private readonly IEnvironmentHelper _environment;
@@ -27,19 +30,18 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         IProcessInvoker processInvoker,
         IDownloadsApi downloadsApi,
         IEnvironmentHelper environment,
+        IOptionsMonitor<AppOptions> appOptions,
         ILogger<VncSessionLauncherWindows> logger)
     {
         _fileSystem = fileSystem;
         _processes = processInvoker;
         _downloadsApi = downloadsApi;
         _environment = environment;
+        _appOptions = appOptions;
         _logger = logger;
     }
 
-    public async Task<Result<Process>> CreateSession(
-        Guid sessionId,
-        string password,
-        Func<double, Task>? onDownloadProgress = null)
+    public async Task<Result<Process>> CreateSession(Guid sessionId, string password)
     {
         await _createSessionLock.WaitAsync();
 
@@ -53,7 +55,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
             if (!_fileSystem.FileExists(binaryPath))
             {
-                var result = await DownloadVnc(password, onDownloadProgress);
+                var result = await DownloadVnc();
                 if (!result.IsSuccess)
                 {
                     return Result.Fail<Process>(result.Reason);
@@ -62,20 +64,29 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
             StopProcesses();
 
-            var createPasswordPath = Path.Combine(_environment.StartupDirectory, "winvnc", "createpassword.exe");
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await _processes.Start(createPasswordPath, password).WaitForExitAsync(cts.Token);
+            await CreatePassword(password);
+
+            await SetIniOption("PortNumber", $"{_appOptions.CurrentValue.VncPort}");
+            await SetIniOption("LoopbackOnly", $"{1}");
+
+            var args = string.Empty;
+
+            if (_processes.GetCurrentProcess().SessionId == 0)
+            {
+                args = "-service";
+            }
 
             var psi = new ProcessStartInfo()
             {
                 FileName = binaryPath,
+                Arguments = args,
                 WorkingDirectory = vncDir,
                 UseShellExecute = true
             };
 
             var process = _processes.Start(psi);
 
-            if (process is null)
+            if (process?.HasExited != false)
             {
                 return Result.Fail<Process>("VNC session failed to start.");
             }
@@ -115,12 +126,19 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         return Result.Fail<string>("Not found.");
     }
 
-    private async Task<Result> DownloadVnc(string password, Func<double, Task>? onDownloadProgress)
+    private async Task CreatePassword(string password)
+    {
+        var createPasswordPath = Path.Combine(_environment.StartupDirectory, "winvnc", "createpassword.exe");
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _processes.Start(createPasswordPath, password).WaitForExitAsync(cts.Token);
+    }
+
+    private async Task<Result> DownloadVnc()
     {
         try
         {
             var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.VncZipFileName);
-            var result = await _downloadsApi.DownloadVncZipFile(targetPath, onDownloadProgress);
+            var result = await _downloadsApi.DownloadVncZipFile(targetPath);
             if (!result.IsSuccess)
             {
                 return result;
@@ -133,6 +151,30 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         {
             _logger.LogError(ex, "Error while extracting remote control archive.");
             return Result.Fail(ex);
+        }
+    }
+
+    private async Task SetIniOption(string option, string value)
+    {
+        try
+        {
+            var iniPath = Path.Combine(_environment.StartupDirectory, "winvnc", "UltraVNC.ini");
+            var lines = (await _fileSystem.ReadAllLinesAsync(iniPath)).ToList();
+
+            if (lines.TryReplace(
+                   $"{option}={value}",
+                   x => x.StartsWith(option)))
+            {
+                await _fileSystem.WriteAllLines(iniPath, lines);
+                return;
+            }
+
+            lines.Add($"{option}={value}");
+            await _fileSystem.WriteAllLines(iniPath, lines);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set option in the ini file.");
         }
     }
 

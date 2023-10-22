@@ -73,25 +73,8 @@ internal class AgentHubConnection(
 
             var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
 
-            double downloadProgress = 0;
-
-            var result = await _vncSessionLauncher.CreateSession(
-                dto.SessionId,
-                dto.SessionPassword,
-                async progress =>
-                {
-                    if (progress == 1 || progress - downloadProgress > .1)
-                    {
-                        downloadProgress = progress;
-                        await Connection
-                            .InvokeAsync(
-                                "SendVncDownloadProgress",
-                                dto.SessionId,
-                                dto.ViewerConnectionId,
-                                downloadProgress)
-                            .ConfigureAwait(false);
-                    }
-                })
+            var result = await _vncSessionLauncher
+                .CreateSession(dto.SessionId, dto.SessionPassword)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -101,7 +84,7 @@ internal class AgentHubConnection(
             }
 
             _messenger
-                .Send(new VncRequestMessage(dto.SessionId, 5900, result.Value.Id))
+                .Send(new VncProxyRequestMessage(dto.SessionId, result.Value.Id))
                 .AndForget();
 
             return result.IsSuccess;

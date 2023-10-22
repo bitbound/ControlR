@@ -18,7 +18,7 @@ internal abstract class AgentInstallerBase(
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly ILogger<AgentInstallerBase> _logger = logger;
 
-    protected async Task UpdateAppSettings(string installDir, string? authorizedKey)
+    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int vncPort, bool autoInstallVnc)
     {
         using var _ = _logger.BeginMemberScope();
 
@@ -41,6 +41,12 @@ internal abstract class AgentInstallerBase(
         {
             _logger.LogInformation("No appsettings found.  Creating a new one.");
         }
+
+        _logger.LogInformation("Setting VNC port to {VncPort}.", vncPort);
+        appSettings.AppOptions.VncPort = vncPort;
+
+        _logger.LogInformation("Setting auto-install of VNC to {AutoInstallVnc}.", autoInstallVnc);
+        appSettings.AppOptions.AutoInstallVnc = autoInstallVnc;
 
         if (!string.IsNullOrWhiteSpace(authorizedKey))
         {

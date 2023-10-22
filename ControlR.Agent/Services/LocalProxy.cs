@@ -1,9 +1,11 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Messages;
+using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Net.Sockets;
 
@@ -14,17 +16,19 @@ internal class LocalProxy(
     IHostApplicationLifetime appLifetime,
     IMessenger messenger,
     IProcessInvoker processInvoker,
+    IOptionsMonitor<AppOptions> appOptions,
     ILogger<LocalProxy> logger) : IHostedService
 {
     private readonly IAgentHubConnection _agentHub = agentHub;
     private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly ILogger<LocalProxy> _logger = logger;
     private readonly IMessenger _messenger = messenger;
     private readonly IProcessInvoker _processInvoker = processInvoker;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _messenger.Register<VncRequestMessage>(this, HandleVncRequestMessage);
+        _messenger.Register<VncProxyRequestMessage>(this, HandleVncRequestMessage);
         return Task.CompletedTask;
     }
 
@@ -33,9 +37,16 @@ internal class LocalProxy(
         return Task.CompletedTask;
     }
 
-    private async Task HandleVncRequestMessage(VncRequestMessage message)
+    private async Task HandleVncRequestMessage(VncProxyRequestMessage message)
     {
-        await StartProxy(message.SessionId, message.Port, message.VncProcessId);
+        if (message.VncProcessId.HasValue)
+        {
+            await StartProxy(message.SessionId, message.VncProcessId.Value);
+        }
+        else
+        {
+            await StartProxy(message.SessionId);
+        }
     }
 
     private async Task ReadFromClient(TcpClient tcpClient, Guid sessionId)
@@ -79,16 +90,22 @@ internal class LocalProxy(
         }
     }
 
-    private async Task StartProxy(Guid sessionId, int port, int vncProcessId)
+    private async Task StartProxy(Guid sessionId, int vncProcessId)
     {
-        var vncProcess = _processInvoker.GetProcessById(vncProcessId);
+        using var vncProcess = _processInvoker.GetProcessById(vncProcessId);
+        await StartProxy(sessionId);
+        vncProcess.Kill();
+    }
+
+    private async Task StartProxy(Guid sessionId)
+    {
         try
         {
             var tcpClient = new TcpClient();
             await TryHelper.Retry(
                 async () =>
                 {
-                    await tcpClient.ConnectAsync("127.0.0.1", port);
+                    await tcpClient.ConnectAsync("127.0.0.1", _appOptions.CurrentValue.VncPort);
                 },
                 tryCount: 3,
                 retryDelay: TimeSpan.FromSeconds(3));
@@ -101,11 +118,6 @@ internal class LocalProxy(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while proxying stream.");
-        }
-        finally
-        {
-            vncProcess.Kill();
-            vncProcess.Dispose();
         }
     }
 }

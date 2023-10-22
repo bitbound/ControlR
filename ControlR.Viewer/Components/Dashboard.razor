@@ -10,6 +10,7 @@
 @inject IAppState AppState
 @inject IClipboard Clipboard
 @inject ILogger<Dashboard> Logger
+@inject IBrowser Browser
 
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
     Devices
@@ -208,17 +209,9 @@
                 return;
             }
 
-            var dialogParams = new DialogParameters() 
-            { 
-                ["DeviceName"] = device.Name,
-                ["Password"] = sessionPassword,
-                ["SessionId"] = sessionId
-            };
-
-            await Clipboard.SetTextAsync(sessionPassword);
-            Snackbar.Add("Password copied to clipboard", Severity.Success);
-
-            await DialogService.ShowAsync<VncConnectDialog>("Start Session", dialogParams);
+            await Browser.OpenAsync(
+                $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}" + 
+                $"&password={sessionPassword}&autoconnect=true&show_dot=true");
         }
         catch (Exception ex)
         {

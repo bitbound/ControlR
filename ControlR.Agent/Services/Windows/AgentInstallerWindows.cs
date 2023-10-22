@@ -34,7 +34,7 @@ internal class AgentInstallerWindows(
     private readonly IProcessInvoker _processes = processes;
     private readonly string _serviceName = "ControlR.Agent";
 
-    public async Task Install(string? authorizedPublicKey = null)
+    public async Task Install(string? authorizedPublicKey = null, int vncPort = 5900, bool autoInstallVnc = true)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -73,26 +73,6 @@ internal class AgentInstallerWindows(
                 await TryHelper.Retry(
                     () =>
                     {
-                        if (_fileSystem.DirectoryExists(Path.Combine(_installDir, "RemoteControl")))
-                        {
-                            _fileSystem.DeleteDirectory(Path.Combine(_installDir, "RemoteControl"), true);
-                        }
-                        return Task.CompletedTask;
-                    },
-                    tryCount: 5,
-                    retryDelay: TimeSpan.FromSeconds(1));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unable to remove streamer so it can be updated.  Aborting.");
-                return;
-            }
-
-            try
-            {
-                await TryHelper.Retry(
-                    () =>
-                    {
                         _logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);
                         _fileSystem.CopyFile(exePath, targetPath, true);
                         return Task.CompletedTask;
@@ -106,7 +86,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(_installDir, authorizedPublicKey);
+            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
             await WriteEtag(_installDir);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";

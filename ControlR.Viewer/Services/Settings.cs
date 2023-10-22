@@ -14,13 +14,19 @@ internal interface ISettings
     string PublicKeyBase64 { get; }
     bool RememberPassphrase { get; set; }
     string Username { get; set; }
+
     Task Clear();
 
     Task<byte[]> GetEncryptedPrivateKey();
+
     Task<string> GetPassphrase();
+
     Task SetEncryptedPrivateKey(byte[] value);
+
     Task SetPassphrase(string passphrase);
+
     Task UpdateKeypair(string username, UserKeyPair keypair);
+
     Task UpdateKeypair(KeypairExport export);
 }
 
@@ -119,8 +125,8 @@ internal class Settings(
     public async Task UpdateKeypair(KeypairExport export)
     {
         Username = export.Username;
-        PublicKey = export.PublicKey;
-        await SetEncryptedPrivateKey(export.EncryptedPrivateKey);
+        PublicKey = Convert.FromBase64String(export.PublicKey);
+        await SetEncryptedPrivateKey(Convert.FromBase64String(export.EncryptedPrivateKey));
         _messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
     }
 }

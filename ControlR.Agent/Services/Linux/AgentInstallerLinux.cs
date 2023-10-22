@@ -23,14 +23,14 @@ internal class AgentInstallerLinux(
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IOptions<AppOptions> _appOptions = appOptions;
+    private readonly IEnvironmentHelper _environment = environmentHelper;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerLinux> _logger = logger;
     private readonly IProcessInvoker _processInvoker = processInvoker;
-    private readonly IEnvironmentHelper _environment = environmentHelper;
 
-    public async Task Install(string? authorizedPublicKey = null)
+    public async Task Install(string? authorizedPublicKey = null, int vncPort = 5900, bool autoInstallVnc = true)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -62,16 +62,10 @@ internal class AgentInstallerLinux(
             _fileSystem.CreateDirectory(_installDir);
             _fileSystem.CopyFile(exePath, targetPath, true);
 
-            if (_fileSystem.DirectoryExists(Path.Combine(_installDir, "RemoteControl")))
-            {
-                _fileSystem.DeleteDirectory(Path.Combine(_installDir, "RemoteControl"), true);
-            }
-
             var serviceFile = GetServiceFile().Trim();
 
-
             await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
-            await UpdateAppSettings(_installDir, authorizedPublicKey);
+            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
             await WriteEtag(_installDir);
 
             await _processInvoker

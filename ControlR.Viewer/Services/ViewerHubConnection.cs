@@ -157,12 +157,6 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveVncDownloadProgress(Guid streamingSessionId, double downloadProgress)
-    {
-        _messenger.Send(new RemoteControlDownloadProgressMessage(streamingSessionId, downloadProgress));
-        return Task.CompletedTask;
-    }
-
     public async Task RequestDeviceUpdates()
     {
         await TryInvoke(async () =>
@@ -227,7 +221,6 @@ internal class ViewerHubConnection(
         connection.Reconnecting += Connection_Reconnecting;
         connection.Reconnected += Connection_Reconnected;
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
-        connection.On<Guid, double>(nameof(ReceiveVncDownloadProgress), ReceiveVncDownloadProgress);
         connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
         connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
         connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);

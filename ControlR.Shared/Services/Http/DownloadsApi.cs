@@ -1,5 +1,4 @@
-﻿using ControlR.Shared.IO;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace ControlR.Shared.Services.Http;
 
@@ -9,7 +8,7 @@ internal interface IDownloadsApi
 
     Task<Result> DownloadRemoteControl(string destinationPath);
 
-    Task<Result> DownloadVncZipFile(string destinationPath, Func<double, Task>? onDownloadProgress);
+    Task<Result> DownloadVncZipFile(string destinationPath);
 
     Task<Result<string>> GetAgentEtag();
 }
@@ -53,7 +52,7 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result> DownloadVncZipFile(string destinationPath, Func<double, Task>? onDownloadProgress)
+    public async Task<Result> DownloadVncZipFile(string destinationPath)
     {
         try
         {
@@ -61,26 +60,12 @@ internal class DownloadsApi(
 
             using var message = new HttpRequestMessage(HttpMethod.Head, zipUrl);
             using var response = await _client.SendAsync(message);
-            var totalSize = response.Content.Headers.ContentLength ?? 100_000_000; // rough estimate.
 
             using var webStream = await _client.GetStreamAsync(zipUrl);
-            using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
 
-            fs.TotalBytesWrittenChanged += async (sender, written) =>
-            {
-                if (onDownloadProgress is not null)
-                {
-                    var progress = (double)written / totalSize;
-                    await onDownloadProgress.Invoke(progress);
-                }
-            };
+            using var fs = new FileStream(destinationPath, FileMode.Create);
 
             await webStream.CopyToAsync(fs);
-
-            if (onDownloadProgress is not null)
-            {
-                await onDownloadProgress.Invoke(1);
-            }
 
             return Result.Ok();
         }

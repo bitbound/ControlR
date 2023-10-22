@@ -119,7 +119,7 @@
             var keyExport = AppState.Encryptor.ExportKeypair(Settings.Username);
             var exportPath = Path.Combine(KeyExportPath, $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys");
 
-            await FileIO.WriteAllBytesAsync(exportPath, MessagePackSerializer.Serialize(keyExport.Value));
+            await FileIO.WriteAllTextAsync(exportPath, JsonSerializer.Serialize(keyExport.Value));
         }
         catch (Exception ex)
         {

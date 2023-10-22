@@ -53,7 +53,7 @@ public class ProxyStreamStore(ILogger<ProxyStreamStore> logger) : IProxyStreamSt
     public async Task<Result<StreamSignaler>> WaitForStreamSession(Guid sessionId, TimeSpan timeout)
     {
         var session = _proxyStreams.GetOrAdd(sessionId, key => new StreamSignaler(sessionId));
-        var waitResult = await session.ReadySignal.WaitAsync(timeout);
+        var waitResult = await session.NoVncViewerReady.WaitAsync(timeout);
 
         if (!waitResult)
         {

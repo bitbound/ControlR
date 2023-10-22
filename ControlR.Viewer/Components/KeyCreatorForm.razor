@@ -79,7 +79,7 @@
     </MudItem>
 </MudGrid>
 
-                        @code {
+ @code {
     #nullable disable
     private MudForm _createForm;
     private string _passphrase;
@@ -120,8 +120,11 @@
         {
             using var cts = new CancellationTokenSource(5_000);
             using var fs = await result.OpenReadAsync();
-            var export = await MessagePackSerializer.DeserializeAsync<KeypairExport>(fs, cancellationToken: cts.Token);
-            await Settings.UpdateKeypair(export);
+            var importedKeys = await JsonSerializer.DeserializeAsync<KeypairExport>(fs, cancellationToken: cts.Token);
+
+            Guard.IsNotNull(importedKeys);
+
+            await Settings.UpdateKeypair(importedKeys);
             Snackbar.Add("Keys imported successfully.", Severity.Success);
         }
         catch (Exception ex)

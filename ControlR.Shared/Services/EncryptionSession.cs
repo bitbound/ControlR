@@ -77,8 +77,8 @@ public class EncryptionSession(ILogger<EncryptionSession> logger) : IEncryptionS
 
         var export = new KeypairExport()
         {
-            EncryptedPrivateKey = _currentKeys.EncryptedPrivateKey,
-            PublicKey = _currentKeys.PublicKey,
+            EncryptedPrivateKey = Convert.ToBase64String(_currentKeys.EncryptedPrivateKey),
+            PublicKey = Convert.ToBase64String(_currentKeys.PublicKey),
             Username = username
         };
         return Result.Ok(export);

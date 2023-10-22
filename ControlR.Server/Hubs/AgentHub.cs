@@ -57,7 +57,7 @@ public class AgentHub(
 
         try
         {
-            if (!await signaler.ReadySignal.WaitAsync(TimeSpan.FromSeconds(30)))
+            if (!await signaler.NoVncViewerReady.WaitAsync(TimeSpan.FromSeconds(30)))
             {
                 yield break;
             }
@@ -103,11 +103,6 @@ public class AgentHub(
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task SendVncDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double downloadProgress)
-    {
-        await _viewerHub.Clients.Client(viewerConnectionId).ReceiveVncDownloadProgress(streamingSessionId, downloadProgress);
-    }
-
     public async Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream)
     {
         if (!_proxyStreamStore.TryGet(sessionId, out var signaler))
@@ -117,7 +112,7 @@ public class AgentHub(
 
         try
         {
-            if (!await signaler.ReadySignal.WaitAsync(TimeSpan.FromSeconds(30)))
+            if (!await signaler.NoVncViewerReady.WaitAsync(TimeSpan.FromSeconds(30)))
             {
                 return;
             }

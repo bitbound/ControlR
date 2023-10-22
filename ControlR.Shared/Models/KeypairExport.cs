@@ -7,10 +7,10 @@ namespace ControlR.Shared.Models;
 public class KeypairExport
 {
     [MsgPackKey]
-    public required byte[] EncryptedPrivateKey { get; init; }
+    public required string EncryptedPrivateKey { get; init; }
 
     [MsgPackKey]
-    public required byte[] PublicKey { get; init; }
+    public required string PublicKey { get; init; }
 
     [MsgPackKey]
     public required string Username { get; init; }
