@@ -18,7 +18,7 @@ internal abstract class AgentInstallerBase(
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly ILogger<AgentInstallerBase> _logger = logger;
 
-    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int vncPort, bool autoInstallVnc)
+    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int? vncPort, bool? autoInstallVnc)
     {
         using var _ = _logger.BeginMemberScope();
 
@@ -42,13 +42,16 @@ internal abstract class AgentInstallerBase(
             _logger.LogInformation("No appsettings found.  Creating a new one.");
         }
 
-        _logger.LogInformation("Setting VNC port to {VncPort}.", vncPort);
-        appSettings.AppOptions.VncPort = vncPort;
+        var updatedVncPort = vncPort ?? appSettings.AppOptions.VncPort ?? 5900;
+        _logger.LogInformation("Setting VNC port to {VncPort}.", updatedVncPort);
+        appSettings.AppOptions.VncPort = updatedVncPort;
 
-        _logger.LogInformation("Setting auto-install of VNC to {AutoInstallVnc}.", autoInstallVnc);
-        appSettings.AppOptions.AutoInstallVnc = autoInstallVnc;
+        var updatedAutoInstall = autoInstallVnc ?? appSettings.AppOptions.AutoInstallVnc ?? false;
+        _logger.LogInformation("Setting auto-install of VNC to {AutoInstallVnc}.", updatedAutoInstall);
+        appSettings.AppOptions.AutoInstallVnc = updatedAutoInstall;
 
-        if (!string.IsNullOrWhiteSpace(authorizedKey))
+        if (!string.IsNullOrWhiteSpace(authorizedKey) &&
+            !appSettings.AppOptions.AuthorizedKeys.Contains(authorizedKey))
         {
             _logger.LogInformation("Adding key passed in from arguments.");
             appSettings.AppOptions.AuthorizedKeys.Add(authorizedKey);

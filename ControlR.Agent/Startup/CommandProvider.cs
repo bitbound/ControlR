@@ -12,7 +12,7 @@ namespace ControlR.Agent.Startup;
 internal class CommandProvider
 {
     private static readonly string[] _authorizedKeyAlias = ["-a", "--authorized-key"];
-    private static readonly string[] _autoInstallVncAlis = ["-i", "--auto-install"];
+    private static readonly string[] _autoInstallVncAlias = ["-i", "--auto-install"];
     private static readonly string[] _portAlias = ["-p", "--port"];
 
     internal static Command GetInstallCommand(string[] args)
@@ -21,14 +21,12 @@ internal class CommandProvider
             _authorizedKeyAlias,
             "An optional public key to preconfigure with authorization to this device.");
 
-        var portOption = new Option<int>(
+        var portOption = new Option<int?>(
             _portAlias,
-            () => 5900,
             "The port to use for VNC connections.  ControlR will proxy viewer connections to this port.");
 
-        var autoInstallOption = new Option<bool>(
-             _autoInstallVncAlis,
-             () => true,
+        var autoInstallOption = new Option<bool?>(
+             _autoInstallVncAlias,
              "Windows only.  Whether to automatically install and run a temporary VNC server with a random, temporary " +
              "password. Each session will have a new random password. Set this to false to use an existing server  " +
              "without altering it.");

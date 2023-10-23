@@ -55,26 +55,30 @@
                         @if (context.Item.IsOnline)
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                                     IconColor="Color.Info"
-                                     OnClick="@(() => RemoteControlClicked(context.Item))">
+                                         IconColor="Color.Info"
+                                         OnClick="@(() => RemoteControlClicked(context.Item))"
+                                         OnTouch="@(() => RemoteControlClicked(context.Item))">
                                 Remote Control
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
-                                     IconColor="Color.Error"
-                                     OnClick="@(() => ShutdownClicked(context.Item))">
+                                         IconColor="Color.Error"
+                                         OnClick="@(() => ShutdownClicked(context.Item))"
+                                         OnTouch="@(() => ShutdownClicked(context.Item))">
                                 Shutdown
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
-                                     IconColor="Color.Error"
-                                     OnClick="@(() => RestartClicked(context.Item))">
+                                         IconColor="Color.Error"
+                                         OnClick="@(() => RestartClicked(context.Item))"
+                                         OnTouch="@(() => RestartClicked(context.Item))">
                                 Restart
                             </MudMenuItem>
                         }
                         else
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
-                                     IconColor="Color.Error"
-                                     OnClick="@(() => RemoveDevice(context.Item))">
+                                         IconColor="Color.Error"
+                                         OnClick="@(() => RemoveDevice(context.Item))"
+                                         OnTouch="@(() => RemoveDevice(context.Item))">
                                 Remove
                             </MudMenuItem>
                         }

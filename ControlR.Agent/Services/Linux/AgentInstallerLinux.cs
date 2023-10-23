@@ -8,6 +8,7 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace ControlR.Agent.Services.Linux;
 
@@ -28,7 +29,7 @@ internal class AgentInstallerLinux(
     private readonly IProcessInvoker _processInvoker = processInvoker;
     private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
-    public async Task Install(string? authorizedPublicKey = null, int vncPort = 5900, bool autoInstallVnc = true)
+    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoInstallVnc = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -64,15 +65,20 @@ internal class AgentInstallerLinux(
             await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
             await WriteEtag(_installDir);
 
+            var psi = new ProcessStartInfo()
+            {
+                FileName = "sudo",
+                Arguments = "systemctl enable controlr.agent.service",
+                WorkingDirectory = "/tmp",
+                UseShellExecute = true
+            };
+
             _logger.LogInformation("Enabling service.");
-            await _processInvoker
-                .Start("sudo", "systemctl enable controlr.agent.service")
-                .WaitForExitAsync(_lifetime.ApplicationStopping);
+            await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Restarting service.");
-            await _processInvoker
-                .Start("sudo", "systemctl restart controlr.agent.service")
-                .WaitForExitAsync(_lifetime.ApplicationStopping);
+            psi.Arguments = "systemctl restart controlr.agent.service";
+            await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Install completed.");
         }
@@ -156,11 +162,18 @@ internal class AgentInstallerLinux(
             if (_fileSystem.FileExists(_serviceFilePath))
             {
                 _logger.LogInformation("Stopping existing service.");
-                await _processInvoker
-                     .Start("sudo", "systemctl stop controlr.agent.service")
-                     .WaitForExitAsync(_lifetime.ApplicationStopping);
+                var psi = new ProcessStartInfo()
+                {
+                    FileName = "sudo",
+                    Arguments = "systemctl stop controlr.agent.service",
+                    WorkingDirectory = "/tmp",
+                    UseShellExecute = true
+                };
+
+                await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(5));
             }
 
+            _logger.LogInformation("Stopping processes.");
             var procs = _processInvoker
                 .GetProcessesByName("ControlR.Agent")
                 .Where(x => x.Id != Environment.ProcessId);

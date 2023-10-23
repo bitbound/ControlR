@@ -77,9 +77,13 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Update found. Downloading update.");
 
-            var tempFile = $"{Guid.NewGuid()}-{AppConstants.AgentFileName}";
-            var tempDir = _fileSystem.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update")).FullName;
-            var tempPath = Path.Combine(tempDir, tempFile);
+            var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update"));
+            var tempPath = Path.Combine(tempDir.FullName, AppConstants.AgentFileName);
+
+            if (_fileSystem.FileExists(tempPath))
+            {
+                _fileSystem.DeleteFile(tempPath);
+            }
 
             var result = await _downloadsApi.DownloadAgent(tempPath);
             if (!result.IsSuccess)
@@ -103,7 +107,6 @@ internal class AgentUpdater(
                         thumbprint);
                     return;
                 }
-
             }
 
             _logger.LogInformation("Launching installer.");
@@ -119,7 +122,7 @@ internal class AgentUpdater(
                     .Start("sudo", $"chmod +x {tempPath}")
                     .WaitForExitAsync(cancellationToken);
 
-                _processInvoker.Start("sudo", $"{tempPath} install");
+                _processInvoker.Start("sudo", $"nohup {tempPath} install &", true);
             }
         }
         catch (Exception ex)
@@ -138,7 +141,6 @@ internal class AgentUpdater(
         {
             return;
         }
-
 
         await CheckForUpdate(stoppingToken);
 

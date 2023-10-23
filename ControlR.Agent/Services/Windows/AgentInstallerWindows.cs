@@ -34,7 +34,7 @@ internal class AgentInstallerWindows(
     private readonly IProcessInvoker _processes = processes;
     private readonly string _serviceName = "ControlR.Agent";
 
-    public async Task Install(string? authorizedPublicKey = null, int vncPort = 5900, bool autoInstallVnc = true)
+    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoInstallVnc = null)
     {
         if (!await _installLock.WaitAsync(0))
         {

@@ -43,11 +43,23 @@ internal class LocalProxy(
 
         try
         {
+            var vncPort = _appOptions.CurrentValue.VncPort;
+
+            if (vncPort is null)
+            {
+                _logger.LogError("VNC port is empty in appsettings.  Aborting VNC proxy.");
+                return;
+            }
+
+            _logger.LogInformation("Starting proxy for session ID {SessionID} to port {VncPort}.",
+                sessionId,
+                vncPort);
+
             var tcpClient = new TcpClient();
             await TryHelper.Retry(
                 async () =>
                 {
-                    await tcpClient.ConnectAsync("127.0.0.1", _appOptions.CurrentValue.VncPort);
+                    await tcpClient.ConnectAsync("127.0.0.1", vncPort.Value);
                 },
                 tryCount: 3,
                 retryDelay: TimeSpan.FromSeconds(3));
