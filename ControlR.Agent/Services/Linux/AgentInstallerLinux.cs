@@ -1,5 +1,4 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Agent.Models;
 using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
@@ -9,7 +8,6 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Services.Linux;
 
@@ -19,17 +17,16 @@ internal class AgentInstallerLinux(
     IProcessInvoker processInvoker,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
-    IOptions<AppOptions> appOptions,
     ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
-    private readonly IOptions<AppOptions> _appOptions = appOptions;
     private readonly IEnvironmentHelper _environment = environmentHelper;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerLinux> _logger = logger;
     private readonly IProcessInvoker _processInvoker = processInvoker;
+    private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
     public async Task Install(string? authorizedPublicKey = null, int vncPort = 5900, bool autoInstallVnc = true)
     {
@@ -48,14 +45,7 @@ internal class AgentInstallerLinux(
                 _logger.LogError("Install command must be run with sudo.");
             }
 
-            var serviceFilePath = "/etc/systemd/system/controlr.agent.service";
-
-            if (_fileSystem.FileExists(serviceFilePath))
-            {
-                await _processInvoker
-                     .Start("sudo", "systemctl stop controlr.agent.service")
-                     .WaitForExitAsync(_lifetime.ApplicationStopping);
-            }
+            await StopProcesses();
 
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
@@ -70,7 +60,7 @@ internal class AgentInstallerLinux(
 
             var serviceFile = GetServiceFile().Trim();
 
-            await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
+            await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
             await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
             await WriteEtag(_installDir);
 
@@ -157,5 +147,35 @@ internal class AgentInstallerLinux(
             "RestartSec=10\n\n" +
             "[Install]\n" +
             "WantedBy=graphical.target";
+    }
+
+    private async Task<Result> StopProcesses()
+    {
+        try
+        {
+            if (_fileSystem.FileExists(_serviceFilePath))
+            {
+                _logger.LogInformation("Stopping existing service.");
+                await _processInvoker
+                     .Start("sudo", "systemctl stop controlr.agent.service")
+                     .WaitForExitAsync(_lifetime.ApplicationStopping);
+            }
+
+            var procs = _processInvoker
+                .GetProcessesByName("ControlR.Agent")
+                .Where(x => x.Id != Environment.ProcessId);
+
+            foreach (var proc in procs)
+            {
+                proc.Kill();
+            }
+
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while stopping service and processes.");
+            return Result.Fail(ex);
+        }
     }
 }

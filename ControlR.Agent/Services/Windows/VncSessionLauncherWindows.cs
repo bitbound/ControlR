@@ -63,10 +63,33 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
             StopProcesses();
 
+            var iniPath = Path.Combine(_environment.StartupDirectory, "winvnc", "UltraVNC.ini");
+            if (_fileSystem.FileExists(iniPath))
+            {
+                _fileSystem.DeleteFile(iniPath);
+            }
+
             await CreatePassword(password);
 
-            await SetIniOption("PortNumber", $"{_appOptions.CurrentValue.VncPort}");
-            await SetIniOption("LoopbackOnly", $"{1}");
+            var iniCreated = await WaitHelper.WaitForAsync(
+                () => _fileSystem.FileExists(iniPath),
+                TimeSpan.FromSeconds(5));
+
+            if (!iniCreated)
+            {
+                return Result.Fail<VncSession>("Failed to create password and ini file.");
+            }
+
+            await _fileSystem.AppendAllLinesAsync(
+                iniPath,
+                new[]
+                {
+                    "\n",
+                    "[admin]",
+                    $"PortNumber={_appOptions.CurrentValue.VncPort}",
+                    "LoopbackOnly=1",
+                    "DisableTrayIcon=1"
+                });
 
             if (_processes.GetCurrentProcess().SessionId == 0)
             {
@@ -188,30 +211,6 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         {
             _logger.LogError(ex, "Error while extracting remote control archive.");
             return Result.Fail(ex);
-        }
-    }
-
-    private async Task SetIniOption(string option, string value)
-    {
-        try
-        {
-            var iniPath = Path.Combine(_environment.StartupDirectory, "winvnc", "UltraVNC.ini");
-            var lines = (await _fileSystem.ReadAllLinesAsync(iniPath)).ToList();
-
-            if (lines.TryReplace(
-                   $"{option}={value}",
-                   x => x.StartsWith(option)))
-            {
-                await _fileSystem.WriteAllLines(iniPath, lines);
-                return;
-            }
-
-            lines.Add($"{option}={value}");
-            await _fileSystem.WriteAllLines(iniPath, lines);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to set option in the ini file.");
         }
     }
 
