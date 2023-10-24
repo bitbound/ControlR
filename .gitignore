@@ -368,3 +368,4 @@ FodyWeavers.xsd
 /ControlR.Server/wwwroot/downloads/**
 /ControlR.Viewer/controlr.keystore
 /ControlR.Server/wwwroot/downloads/ControlR.Agent.exe
+ControlR.Server/wwwroot/novnc/
