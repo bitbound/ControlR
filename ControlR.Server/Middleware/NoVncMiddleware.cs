@@ -72,6 +72,15 @@ public class NoVncMiddleware(
         {
             ArrayPool<byte>.Shared.Return(buffer);
             _ = _proxyStreamStore.TryRemove(sessionId, out _);
+
+            if (signaler.NoVncWebsocket.State == WebSocketState.Open)
+            {
+                await signaler.NoVncWebsocket.SendAsync(
+                    Array.Empty<byte>(),
+                    WebSocketMessageType.Close,
+                    true,
+                    _appLifetime.ApplicationStopping);
+            }
         }
     }
 }

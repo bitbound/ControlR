@@ -72,6 +72,15 @@ public class AgentVncMiddleware(
         {
             ArrayPool<byte>.Shared.Return(buffer);
             _ = _proxyStreamStore.TryRemove(sessionId, out _);
+
+            if (signaler.AgentVncWebsocket.State == WebSocketState.Open)
+            {
+                await signaler.AgentVncWebsocket.SendAsync(
+                    Array.Empty<byte>(),
+                    WebSocketMessageType.Close,
+                    true,
+                    _appLifetime.ApplicationStopping);
+            }
         }
     }
 }

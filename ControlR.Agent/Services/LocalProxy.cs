@@ -69,20 +69,19 @@ internal class LocalProxy(
             var websocketEndpoint = new Uri($"{AppConstants.ServerUri.Replace("http", "ws")}/agentvnc-proxy/{sessionId}");
             await ws.ConnectAsync(websocketEndpoint, _appLifetime.ApplicationStopping);
 
-            ProxyConnections(ws, tcpClient).AndForget();
+            ProxyConnections(message, ws, tcpClient).AndForget();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while proxying stream.");
             ws.Dispose();
         }
-        finally
-        {
-            await message.Session.CleanupFunc.Invoke();
-        }
     }
 
-    private async Task ProxyConnections(WebSocket serverConnection, TcpClient localConnection)
+    private async Task ProxyConnections(
+        VncProxyRequestMessage message,
+        WebSocket serverConnection,
+        TcpClient localConnection)
     {
         try
         {
@@ -99,6 +98,7 @@ internal class LocalProxy(
         {
             serverConnection.Dispose();
             localConnection.Dispose();
+            await message.Session.CleanupFunc.Invoke();
         }
     }
 
