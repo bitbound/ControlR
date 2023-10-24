@@ -8,12 +8,14 @@ namespace ControlR.Viewer.Services;
 
 internal interface ISettings
 {
+    bool AutoInstallVnc { get; set; }
     string KeypairExportPath { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
     string PublicKeyBase64 { get; }
     bool RememberPassphrase { get; set; }
     string Username { get; set; }
+    int VncPort { get; set; }
 
     Task Clear();
 
@@ -39,6 +41,12 @@ internal class Settings(
     private readonly IPreferences _preferences = preferences;
     private readonly ISecureStorage _secureStorage = secureStorage;
     private byte[] _privateKey = [];
+
+    public bool AutoInstallVnc
+    {
+        get => _preferences.Get(nameof(AutoInstallVnc), false);
+        set => _preferences.Set(nameof(AutoInstallVnc), value);
+    }
 
     public string KeypairExportPath
     {
@@ -76,6 +84,12 @@ internal class Settings(
     {
         get => _preferences.Get(nameof(Username), string.Empty);
         set => _preferences.Set(nameof(Username), value);
+    }
+
+    public int VncPort
+    {
+        get => _preferences.Get(nameof(VncPort), 5900);
+        set => _preferences.Set(nameof(VncPort), value);
     }
 
     public Task Clear()

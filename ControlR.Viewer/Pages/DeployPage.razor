@@ -56,7 +56,7 @@
             afterward.  Each session will get a new, random password that gets passed in 
             automatically.
         </MudText>
-        <MudCheckBox @bind-Checked="_autoInstallVnc" Class="mb-3" />
+        <MudCheckBox @bind-Checked="Settings.AutoInstallVnc" Class="mb-3" />
 
         <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom>
             VNC Port
@@ -66,26 +66,23 @@
             auto-install is disabled, ControlR expects there to already be a VNC server
             running on this port.
         </MudText>
-        <MudTextField T="int" @bind-Value="_vncPort" />
+        <MudTextField T="int" @bind-Value="Settings.VncPort" />
     </div>
 
 </div>
 
 
 @code {
-    private bool _autoInstallVnc = true;
-    private int _vncPort = 5900;
-
     private string WindowsDeployScript
     {
         get
         {
-            var autoInstallOption = _autoInstallVnc ? "-i " : "";
+            var autoInstallOption = Settings.AutoInstallVnc ? "-i " : "";
 
             return "$ProgressPreference = \"SilentlyContinue\"; " +
                 $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
-                $"{autoInstallOption}-p {_vncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
+                $"{autoInstallOption}-p {Settings.VncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
         }
     }
     private string UbuntuDeployScript
@@ -94,7 +91,7 @@
         {
             return $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
                 "sudo chmod +x /tmp/ControlR.Agent && " +
-                $"sudo /tmp/ControlR.Agent install -p {_vncPort} -a {Settings.PublicKeyBase64}";
+                $"sudo /tmp/ControlR.Agent install -p {Settings.VncPort} -a {Settings.PublicKeyBase64}";
         }
     }
 

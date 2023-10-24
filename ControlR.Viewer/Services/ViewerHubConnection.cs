@@ -3,7 +3,6 @@ using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
-using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
@@ -19,17 +18,11 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task CloseStreamingSession(Guid sessionId);
-
-    Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId);
-
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
     Task RequestDeviceUpdates();
-
-    Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
 
@@ -50,17 +43,6 @@ internal class ViewerHubConnection(
     private readonly IHttpConfigurer _httpConfigurer = httpConfigurer;
     private readonly IMessenger _messenger = messenger;
     private readonly ISettings _settings = settings;
-
-    public async Task CloseStreamingSession(Guid sessionId)
-    {
-        var signedDto = _appState.Encryptor.CreateRandomSignedDto(DtoType.CloseStreamingSession);
-        await Connection.InvokeAsync("SendSignedDtoToStreamer", sessionId, signedDto);
-    }
-
-    public Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId)
-    {
-        return Result.Fail<DisplayDto[]>("Not implemented.").AsTaskResult();
-    }
 
     public async Task<Result<IceServer[]>> GetIceServers()
     {
@@ -134,22 +116,13 @@ internal class ViewerHubConnection(
         });
     }
 
-    public async Task SendIceCandidate(Guid sessionId, string iceCandidateJson)
-    {
-        await TryInvoke(async () =>
-        {
-            var signedDto = _appState.Encryptor.CreateSignedDto(iceCandidateJson, DtoType.RtcIceCandidate);
-            await Connection.InvokeAsync("SendSignedDtoToStreamer", sessionId, signedDto);
-        });
-    }
-
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
     {
         await TryInvoke(async () =>
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
             var signedDto = _appState.Encryptor.CreateSignedDto(powerDto, DtoType.PowerStateChange);
-            await Connection.InvokeAsync("SendSignedDtoToAgent", device.ConnectionId, signedDto);
+            await Connection.InvokeAsync("SendSignedDtoToAgent", device.Id, signedDto);
         });
     }
 
