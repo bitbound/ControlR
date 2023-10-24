@@ -1,1 +1,6 @@
 SendSAS
+WTSQuerySessionInformation
+WTSGetActiveConsoleSessionId
+WTSEnumerateSessions
+WTSOpenServer
+WTS_CURRENT_SERVER_HANDLE

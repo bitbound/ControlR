@@ -120,7 +120,7 @@ internal class AgentHubConnection(
         }
     }
 
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform("windows6.0.6000")]
     public Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto)
     {
         if (!VerifyPayload(signedDto))

@@ -3,9 +3,11 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
+using System.Runtime.Versioning;
 
 namespace ControlR.Devices.Common.Services.Windows;
 
+[SupportedOSPlatform("windows6.0.6000")]
 internal class DeviceDataGeneratorWin(
     IEnvironmentHelper environmentHelper,
     ILogger<DeviceDataGeneratorWin> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
