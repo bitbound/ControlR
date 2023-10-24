@@ -10,11 +10,17 @@ read -p "Enter a display to use: " DisplayNum
 read -p "Enter password to use for VNC server: " VncPassword
 
 apt update
-apt install -y tightvncserver
+apt install -y xfce4 xfce4-goodies tightvncserver
 mkdir -p /home/$Username/.vnc/passwd
 echo $VncPassword | vncpasswd -f > /home/$Username/.vnc/passwd
 chown $Username /home/$Username/.vnc/passwd
 chmod 700 /home/$Username/.vnc/passwd
+
+xstartup="#!/bin/bash
+xrdb \$HOME/.Xresources
+startxfce4 &"
+
+echo "$xstartup" > /home/$Username/.vnc/xstartup
 
 serviceConfig="[Unit]
 Description=Start TightVNC server at startup
