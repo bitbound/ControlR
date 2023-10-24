@@ -2,24 +2,25 @@
 using ControlR.Agent.Messages;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
+using ControlR.Shared;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 
 namespace ControlR.Agent.Services;
 
 internal class LocalProxy(
-    IAgentHubConnection agentHub,
     IHostApplicationLifetime appLifetime,
     IMessenger messenger,
     IProcessInvoker processInvoker,
     IOptionsMonitor<AppOptions> appOptions,
     ILogger<LocalProxy> logger) : IHostedService
 {
-    private readonly IAgentHubConnection _agentHub = agentHub;
     private readonly IHostApplicationLifetime _appLifetime = appLifetime;
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly ILogger<LocalProxy> _logger = logger;
@@ -40,6 +41,7 @@ internal class LocalProxy(
     private async Task HandleVncRequestMessage(VncProxyRequestMessage message)
     {
         var sessionId = message.Session.SessionId;
+        var ws = new ClientWebSocket();
 
         try
         {
@@ -64,14 +66,15 @@ internal class LocalProxy(
                 tryCount: 3,
                 retryDelay: TimeSpan.FromSeconds(3));
 
-            var outgoingTask = ReadFromClient(tcpClient, sessionId);
-            var incomingTask = ReadFromHub(tcpClient, sessionId);
+            var websocketEndpoint = new Uri($"{AppConstants.ServerUri.Replace("http", "ws")}/agentvnc-proxy/{sessionId}");
+            await ws.ConnectAsync(websocketEndpoint, _appLifetime.ApplicationStopping);
 
-            await Task.WhenAny(outgoingTask, incomingTask);
+            ProxyConnections(ws, tcpClient).AndForget();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while proxying stream.");
+            ws.Dispose();
         }
         finally
         {
@@ -79,44 +82,87 @@ internal class LocalProxy(
         }
     }
 
-    private async Task ReadFromClient(TcpClient tcpClient, Guid sessionId)
+    private async Task ProxyConnections(WebSocket serverConnection, TcpClient localConnection)
     {
-        using var endSignal = new SemaphoreSlim(0, 1);
-        async IAsyncEnumerable<byte[]> ReadFromTcpClient()
+        try
         {
-            while (tcpClient.Connected &&
-                   !_appLifetime.ApplicationStopping.IsCancellationRequested)
-            {
-                var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+            var localReadTask = ReadFromLocal(localConnection, serverConnection);
+            var serverReadTask = ReadFromServer(serverConnection, localConnection);
 
-                var bytesReceived = await tcpClient.Client.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+            await Task.WhenAny(localReadTask, serverReadTask);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while proxying connections.");
+        }
+        finally
+        {
+            serverConnection.Dispose();
+            localConnection.Dispose();
+        }
+    }
+
+    private async Task ReadFromLocal(TcpClient localConnection, WebSocket serverConnection)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+
+        try
+        {
+            while (localConnection.Connected &&
+                serverConnection.State == WebSocketState.Open &&
+                !_appLifetime.ApplicationStopping.IsCancellationRequested)
+            {
+                var bytesReceived = await localConnection.Client.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
                 if (bytesReceived == 0)
                 {
                     continue;
                 }
-                yield return buffer[0..bytesReceived];
 
-                ArrayPool<byte>.Shared.Return(buffer);
+                await serverConnection.SendAsync(
+                    buffer.AsMemory()[0..bytesReceived],
+                    WebSocketMessageType.Binary,
+                    true,
+                    _appLifetime.ApplicationStopping);
             }
-
-            endSignal.Release();
         }
-
-        await _agentHub.SendVncStream(sessionId, ReadFromTcpClient());
-        await endSignal.WaitAsync(_appLifetime.ApplicationStopping);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while reading from local connection.");
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
-    private async Task ReadFromHub(TcpClient tcpClient, Guid sessionId)
+    private async Task ReadFromServer(WebSocket serverConnection, TcpClient localConnection)
     {
-        var incomingStream = _agentHub.GetVncStream(sessionId);
-        await foreach (var chunk in incomingStream)
+        var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+
+        try
         {
-            if (!tcpClient.Connected ||
-                _appLifetime.ApplicationStopping.IsCancellationRequested)
+            while (localConnection.Connected &&
+              serverConnection.State == WebSocketState.Open &&
+              !_appLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                break;
+                var result = await serverConnection.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                if (result.Count == 0)
+                {
+                    continue;
+                }
+
+                await localConnection.Client.SendAsync(
+                    buffer.AsMemory()[0..result.Count],
+                    _appLifetime.ApplicationStopping);
             }
-            await tcpClient.Client.SendAsync(chunk);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while reading from server connection.");
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }

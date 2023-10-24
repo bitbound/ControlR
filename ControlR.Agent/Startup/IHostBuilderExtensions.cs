@@ -79,7 +79,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
             services.AddSingleton(WeakReferenceMessenger.Default);
 
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
                 services.AddSingleton<IVncProcessCache, StreamingSessionCache>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();

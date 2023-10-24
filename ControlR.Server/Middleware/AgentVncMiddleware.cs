@@ -5,7 +5,7 @@ using System.Net.WebSockets;
 
 namespace ControlR.Server.Middleware;
 
-public class NoVncMiddleware(
+public class AgentVncMiddleware(
     RequestDelegate next,
     IHostApplicationLifetime appLifetime,
     IProxyStreamStore proxyStreamStore)
@@ -24,7 +24,7 @@ public class NoVncMiddleware(
 
         var websocket = await context.WebSockets.AcceptWebSocketAsync();
 
-        if (!context.Request.Path.StartsWithSegments("/novnc-proxy"))
+        if (!context.Request.Path.StartsWithSegments("/agentvnc-proxy"))
         {
             await _next(context);
             return;
@@ -39,30 +39,30 @@ public class NoVncMiddleware(
             return;
         }
 
-        signaler.NoVncWebsocket = websocket;
-        signaler.NoVncViewerReady.Release();
+        signaler.AgentVncWebsocket = websocket;
+        signaler.AgentVncReady.Release();
 
         using var signalExpiration = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-        await signaler.AgentVncReady.WaitAsync(signalExpiration.Token);
+        await signaler.NoVncViewerReady.WaitAsync(signalExpiration.Token);
 
-        Guard.IsNotNull(signaler.AgentVncWebsocket);
+        Guard.IsNotNull(signaler.NoVncWebsocket);
 
         var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
 
         try
         {
             while (signaler.AgentVncWebsocket.State == WebSocketState.Open &&
-             signaler.NoVncWebsocket.State == WebSocketState.Open &&
-             !_appLifetime.ApplicationStopping.IsCancellationRequested)
+                signaler.NoVncWebsocket.State == WebSocketState.Open &&
+                !_appLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                var result = await signaler.NoVncWebsocket.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                var result = await signaler.AgentVncWebsocket.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
                 if (result.Count == 0)
                 {
                     continue;
                 }
 
-                await signaler.AgentVncWebsocket.SendAsync(
-                    buffer.AsMemory()[0..result.Count],
+                await signaler.NoVncWebsocket.SendAsync(
+                    buffer.AsMemory()[..result.Count],
                     WebSocketMessageType.Binary,
                     true,
                     _appLifetime.ApplicationStopping);

@@ -6,8 +6,6 @@ using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using System.Buffers;
-using System.Net.WebSockets;
 
 namespace ControlR.Server.Hubs;
 
@@ -48,43 +46,6 @@ public class AgentHub(
         return [.. _appOptions.CurrentValue.IceServers];
     }
 
-    public async IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId)
-    {
-        if (!_proxyStreamStore.TryGet(sessionId, out var signaler))
-        {
-            yield break;
-        }
-
-        try
-        {
-            if (!await signaler.NoVncViewerReady.WaitAsync(TimeSpan.FromSeconds(30)))
-            {
-                yield break;
-            }
-
-            if (signaler.NoVncWebsocket is not WebSocket ws)
-            {
-                _logger.LogWarning("WebSocket was null when it should have been populated.");
-                yield break;
-            }
-
-            while (ws.State == WebSocketState.Open &&
-                    !_appLifetime.ApplicationStopping.IsCancellationRequested)
-            {
-                var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
-
-                var readResult = await ws.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
-                yield return buffer[0..readResult.Count];
-
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-        }
-        finally
-        {
-            signaler.EndSignal.Release();
-        }
-    }
-
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         if (Device is DeviceDto cachedDevice)
@@ -101,43 +62,6 @@ public class AgentHub(
         }
 
         await base.OnDisconnectedAsync(exception);
-    }
-
-    public async Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream)
-    {
-        if (!_proxyStreamStore.TryGet(sessionId, out var signaler))
-        {
-            return;
-        }
-
-        try
-        {
-            if (!await signaler.NoVncViewerReady.WaitAsync(TimeSpan.FromSeconds(30)))
-            {
-                return;
-            }
-
-            if (signaler.NoVncWebsocket is not WebSocket ws)
-            {
-                _logger.LogWarning("WebSocket was null when it should have been populated.");
-                return;
-            }
-
-            await foreach (var chunk in outgoingStream)
-            {
-                if (ws.State != WebSocketState.Open ||
-                    _appLifetime.ApplicationStopping.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                await ws.SendAsync(chunk, WebSocketMessageType.Binary, true, _appLifetime.ApplicationStopping);
-            }
-        }
-        finally
-        {
-            signaler.EndSignal.Release();
-        }
     }
 
     public async Task UpdateDevice(DeviceDto device)

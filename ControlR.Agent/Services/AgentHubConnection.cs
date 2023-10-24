@@ -77,9 +77,7 @@ internal class AgentHubConnection(
                 _appOptions.CurrentValue.AutoInstallVnc != true)
             {
                 var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
-                _messenger
-                    .Send(new VncProxyRequestMessage(session))
-                    .AndForget();
+                await _messenger.Send(new VncProxyRequestMessage(session));
 
                 return new(true, false);
             }
@@ -94,9 +92,7 @@ internal class AgentHubConnection(
                 return new(false);
             }
 
-            _messenger
-                .Send(new VncProxyRequestMessage(result.Value))
-                .AndForget();
+            await _messenger.Send(new VncProxyRequestMessage(result.Value));
 
             return new(true, true);
         }

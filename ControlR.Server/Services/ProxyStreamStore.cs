@@ -1,5 +1,4 @@
 ﻿using ControlR.Server.Models;
-using ControlR.Shared;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
@@ -16,8 +15,6 @@ public interface IProxyStreamStore
     bool TryGet(Guid sessionId, [NotNullWhen(true)] out StreamSignaler? signaler);
 
     bool TryRemove(Guid sessionId, [NotNullWhen(true)] out StreamSignaler? signaler);
-
-    Task<Result<StreamSignaler>> WaitForStreamSession(Guid sessionId, TimeSpan timeout);
 }
 
 public class ProxyStreamStore(ILogger<ProxyStreamStore> logger) : IProxyStreamStore
@@ -48,25 +45,5 @@ public class ProxyStreamStore(ILogger<ProxyStreamStore> logger) : IProxyStreamSt
     public bool TryRemove(Guid sessionId, [NotNullWhen(true)] out StreamSignaler? signaler)
     {
         return _proxyStreams.TryRemove(sessionId, out signaler);
-    }
-
-    public async Task<Result<StreamSignaler>> WaitForStreamSession(Guid sessionId, TimeSpan timeout)
-    {
-        var session = _proxyStreams.GetOrAdd(sessionId, key => new StreamSignaler(sessionId));
-        var waitResult = await session.NoVncViewerReady.WaitAsync(timeout);
-
-        if (!waitResult)
-        {
-            _logger.LogError("Timed out while waiting for session.");
-            return Result.Fail<StreamSignaler>("Timed out while waiting for session.");
-        }
-
-        if (session.Stream is null)
-        {
-            _logger.LogError("Stream failed to start.");
-            return Result.Fail<StreamSignaler>("Stream failed to start.");
-        }
-
-        return Result.Ok(session);
     }
 }
