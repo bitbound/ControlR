@@ -75,14 +75,6 @@ builder.Host.UseSystemd();
 var app = builder.Build();
 
 app.UseForwardedHeaders();
-app.UseCors(builder =>
-{
-    builder
-        .WithOrigins("http://localhost:3000")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
-});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -110,6 +102,14 @@ app.UseWhen(
     {
         builder.UseWebSockets();
         builder.UseMiddleware<NoVncMiddleware>();
+    });
+
+app.UseWhen(
+    x => x.Request.Path.StartsWithSegments("/agentvnc-proxy"),
+    builder =>
+    {
+        builder.UseWebSockets();
+        builder.UseMiddleware<AgentVncMiddleware>();
     });
 
 app.UseRouting();
