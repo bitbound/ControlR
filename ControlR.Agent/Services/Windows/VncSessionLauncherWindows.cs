@@ -152,6 +152,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
                 $"/i \"{targetPath}\" /quiet /norestart ADDLOCAL=Server " +
                 $"SET_LOOPBACKONLY=1 VALUE_OF_LOOPBACKONLY=1 " +
                 $"SET_ALLOWLOOPBACK=1 VALUE_OF_ALLOWLOOPBACK=1 " +
+                $"SET_REMOVEWALLPAPER=1 VALUE_OF_REMOVEWALLPAPER=0" +
                 $"SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=0";
 
             var psi = new ProcessStartInfo()
