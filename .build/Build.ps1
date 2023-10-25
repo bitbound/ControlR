@@ -13,9 +13,7 @@ param (
 
     [switch]$BuildAgent,
 
-    [switch]$BuildViewer,
-
-    [switch]$IncrementAndroidVersion
+    [switch]$BuildViewer
 )
 
 $InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
@@ -24,7 +22,8 @@ $MSBuildPath = (&"$VsWhere" -latest -products * -find "\MSBuild\Current\Bin\MSBu
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
 $Now = [System.DateTime]::UtcNow
-$CurrentVersion = $Now.ToString("yyyy.MM.dd.HHmm")
+$CurrentVersionString = $Now.ToString("yyyy.MM.dd.HHmm")
+$CurrentVersion = [System.Version]::Parse($CurrentVersionString)
 
 if (!(Test-Path $CertificatePath)) {
     Write-Error "Certificate not found."
@@ -44,33 +43,26 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 }
 
 if ($BuildAgent){
-    dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-    dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Start-Sleep -Seconds 1
     &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\ControlR.Agent.exe"
 }
 
 
 if ($BuildViewer) {
-    if ($IncrementAndroidVersion) {
-        $Csproj = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\ControlR.Viewer.csproj"
-        $AppVersion = $Csproj.Node.SelectNodes("//ApplicationVersion")
-        $AppVersionInt = [int]::Parse($AppVersion[0].InnerText)
-        $AppVersionInt++
-        $AppVersion[0].InnerText = $AppVersionInt;
-    
-        $DisplayVersion = $Csproj.Node.SelectNodes("//ApplicationDisplayVersion")
-        $DisplayVersionObj = [System.Version]::Parse($DisplayVersion[0].InnerText)
-        $DisplayVersionObj = [System.Version]::new($DisplayVersionObj.Major, $AppVersionInt)
-        $DisplayVersion[0].InnerText = $DisplayVersionObj.ToString(2)
-    
-        Set-Content -Path  "$Root\ControlR.Viewer\ControlR.Viewer.csproj" -Value $Csproj.Node.OuterXml.Trim()
-    }
+    $Csproj = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\ControlR.Viewer.csproj"
+    $AppVersion = $Csproj.Node.SelectNodes("//ApplicationVersion")
+    $AppVersion[0].InnerText = "1";
+
+    $DisplayVersion = $Csproj.Node.SelectNodes("//ApplicationDisplayVersion")
+    $DisplayVersion[0].InnerText = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build)$($CurrentVersion.Revision)"
+    Set-Content -Path  "$Root\ControlR.Viewer\ControlR.Viewer.csproj" -Value $Csproj.Node.OuterXml.Trim()
 
     $Manifest = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest"
-    $Version = [System.Version]::Parse($Manifest.Node.Package.Identity.Version)
-    $NewVersion = [System.Version]::new($Version.Major, $Version.Minor, $Version.Build + 1, $Version.Revision)
-    $Manifest.Node.Package.Identity.Version = $NewVersion.ToString()
+    #$Version = [System.Version]::Parse($Manifest.Node.Package.Identity.Version)
+    #$NewVersion = [System.Version]::new($Version.Major, $Version.Minor, $Version.Build + 1, $Version.Revision)
+    $Manifest.Node.Package.Identity.Version = $CurrentVersion.ToString()
     Set-Content -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest" -Value $Manifest.Node.OuterXml.Trim()
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
     dotnet publish -p:PublishProfile=msix --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"

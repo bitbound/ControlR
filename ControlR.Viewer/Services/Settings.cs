@@ -3,12 +3,14 @@ using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
+using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
 internal interface ISettings
 {
     bool AutoInstallVnc { get; set; }
+    bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
@@ -44,14 +46,20 @@ internal class Settings(
 
     public bool AutoInstallVnc
     {
-        get => _preferences.Get(nameof(AutoInstallVnc), false);
-        set => _preferences.Set(nameof(AutoInstallVnc), value);
+        get => GetPref(false);
+        set => SetPref(value);
+    }
+
+    public bool HideOfflineDevices
+    {
+        get => GetPref(true);
+        set => SetPref(value);
     }
 
     public string KeypairExportPath
     {
-        get => _preferences.Get(nameof(KeypairExportPath), string.Empty);
-        set => _preferences.Set(nameof(KeypairExportPath), value);
+        get => GetPref(string.Empty);
+        set => SetPref(value);
     }
 
     public byte[] PrivateKey
@@ -68,28 +76,28 @@ internal class Settings(
 
     public string PublicKeyBase64
     {
-        get => _preferences.Get(nameof(PublicKeyBase64), string.Empty);
-        set => _preferences.Set(nameof(PublicKeyBase64), value);
+        get => GetPref(string.Empty);
+        set => SetPref(value);
     }
 
     public bool RememberPassphrase
     {
-        get => _preferences.Get(nameof(RememberPassphrase), false);
-        set => _preferences.Set(nameof(RememberPassphrase), value);
+        get => GetPref(false);
+        set => SetPref(value);
     }
 
     public string ServerUri => _preferences.Get(nameof(ServerUri), AppConstants.ServerUri);
 
     public string Username
     {
-        get => _preferences.Get(nameof(Username), string.Empty);
-        set => _preferences.Set(nameof(Username), value);
+        get => GetPref(string.Empty);
+        set => SetPref(value);
     }
 
     public int VncPort
     {
-        get => _preferences.Get(nameof(VncPort), 5900);
-        set => _preferences.Set(nameof(VncPort), value);
+        get => GetPref(5900);
+        set => SetPref(value);
     }
 
     public Task Clear()
@@ -142,5 +150,15 @@ internal class Settings(
         PublicKey = Convert.FromBase64String(export.PublicKey);
         await SetEncryptedPrivateKey(Convert.FromBase64String(export.EncryptedPrivateKey));
         _messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+    }
+
+    private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
+    {
+        return _preferences.Get<T>(callerMemberName, defaultValue);
+    }
+
+    private void SetPref<T>(T newValue, [CallerMemberName] string callerMemmberName = "")
+    {
+        _preferences.Set(callerMemmberName, newValue);
     }
 }

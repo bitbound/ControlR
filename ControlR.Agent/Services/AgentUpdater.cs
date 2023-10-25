@@ -122,7 +122,7 @@ internal class AgentUpdater(
                     .Start("sudo", $"chmod +x {tempPath}")
                     .WaitForExitAsync(cancellationToken);
 
-                _processInvoker.Start("sudo", $"nohup {tempPath} install &", true);
+                _processInvoker.Start("sudo", $"{tempPath} install &", true);
             }
         }
         catch (Exception ex)

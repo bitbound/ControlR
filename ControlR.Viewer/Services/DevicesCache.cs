@@ -1,4 +1,5 @@
 ﻿using ControlR.Shared.Dtos;
+using ControlR.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -31,7 +32,7 @@ internal class DeviceCache : IDeviceCache
         _deviceCachePath = Path.Combine(fileSystem.AppDataDirectory, "DeviceCache.json");
         _logger = logger;
 
-        _ = Task.Run(TryLoadCache);
+        Task.Run(TryLoadCache).AndForget();
     }
 
     public IEnumerable<DeviceDto> Devices => _cache.Values;
