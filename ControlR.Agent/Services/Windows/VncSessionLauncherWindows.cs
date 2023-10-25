@@ -1,16 +1,16 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
+using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
-using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Runtime.Versioning;
+using System.ServiceProcess;
 using Result = ControlR.Shared.Result;
 
 namespace ControlR.Agent.Services.Windows;
@@ -21,6 +21,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
     private readonly IOptionsMonitor<AppOptions> _appOptions;
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
     private readonly IDownloadsApi _downloadsApi;
+    private readonly IElevationChecker _elevationChecker;
     private readonly IEnvironmentHelper _environment;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VncSessionLauncherWindows> _logger;
@@ -31,6 +32,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         IProcessInvoker processInvoker,
         IDownloadsApi downloadsApi,
         IEnvironmentHelper environment,
+        IElevationChecker elevationChecker,
         IOptionsMonitor<AppOptions> appOptions,
         ILogger<VncSessionLauncherWindows> logger)
     {
@@ -39,6 +41,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         _downloadsApi = downloadsApi;
         _environment = environment;
         _appOptions = appOptions;
+        _elevationChecker = elevationChecker;
         _logger = logger;
     }
 
@@ -48,110 +51,58 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
         try
         {
-            var startupDir = _environment.StartupDirectory;
-            var vncDir = Path.Combine(startupDir, "winvnc");
-            var vncFilePath = Path.Combine(vncDir, AppConstants.VncFileName);
+            var tvnServerPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "TightVNC",
+                "tvnserver.exe");
 
-            if (!_fileSystem.FileExists(vncFilePath))
+            if (!_fileSystem.FileExists(tvnServerPath))
             {
-                var result = await DownloadVnc();
+                var result = await DownloadAndInstallTightVnc();
                 if (!result.IsSuccess)
                 {
                     return Result.Fail<VncSession>(result.Reason);
                 }
             }
 
-            StopProcesses();
+            var silentArgs = _elevationChecker.IsElevated() ?
+                " -silent" :
+                "";
 
-            var iniPath = Path.Combine(_environment.StartupDirectory, "winvnc", "UltraVNC.ini");
-            if (_fileSystem.FileExists(iniPath))
+            var service = ServiceController
+                .GetServices()
+                .FirstOrDefault(x => x.ServiceName == "tvnserver");
+
+            if (service?.Status != ServiceControllerStatus.Running)
             {
-                _fileSystem.DeleteFile(iniPath);
+                await _processes.StartAndWaitForExit(tvnServerPath, $"-reinstall{silentArgs}", true, TimeSpan.FromSeconds(5));
+                await _processes.StartAndWaitForExit(tvnServerPath, $"-start{silentArgs}", true, TimeSpan.FromSeconds(5));
             }
 
-            await CreatePassword(password);
+            var startResult = WaitHelper.WaitFor(
+                   () =>
+                   {
+                       return _processes
+                           .GetProcesses()
+                           .Any(x =>
+                               x.ProcessName.Equals("tvnserver", StringComparison.OrdinalIgnoreCase));
+                   }, TimeSpan.FromSeconds(10));
 
-            var iniCreated = await WaitHelper.WaitForAsync(
-                () => _fileSystem.FileExists(iniPath),
-                TimeSpan.FromSeconds(5));
-
-            if (!iniCreated)
+            if (!startResult)
             {
-                return Result.Fail<VncSession>("Failed to create password and ini file.");
+                return Result.Fail<VncSession>("VNC session failed to start.");
             }
 
-            await _fileSystem.AppendAllLinesAsync(
-                iniPath,
-                new[]
-                {
-                    "\n",
-                    "[admin]",
-                    $"PortNumber={_appOptions.CurrentValue.VncPort}",
-                    "LoopbackOnly=1",
-                    "DisableTrayIcon=1"
-                });
+            var session = new VncSession(
+               sessionId,
+               async () =>
+               {
+                   await _processes.StartAndWaitForExit(tvnServerPath, $"-stop{silentArgs}", true, TimeSpan.FromSeconds(5));
+                   await _processes.StartAndWaitForExit(tvnServerPath, $"-remove{silentArgs}", true, TimeSpan.FromSeconds(5));
+                   StopProcesses();
+               });
 
-            if (_processes.GetCurrentProcess().SessionId == 0)
-            {
-                var createString = $"sc.exe create WinVNC binPath= \"\\\"{vncFilePath}\\\" -service\"";
-                var startString = $"sc.exe start WinVNC";
-
-                var psi = new ProcessStartInfo()
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c {createString} & {startString}",
-                    UseShellExecute = true
-                };
-                await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-
-                var startResult = WaitHelper.WaitFor(
-                    () =>
-                    {
-                        return _processes
-                            .GetProcesses()
-                            .Any(x =>
-                                x.ProcessName.Equals("WinVNC", StringComparison.OrdinalIgnoreCase));
-                    }, TimeSpan.FromSeconds(10));
-
-                if (!startResult)
-                {
-                    return Result.Fail<VncSession>("VNC session failed to start.");
-                }
-
-                var session = new VncSession(
-                    sessionId,
-                    async () =>
-                    {
-                        StopProcesses();
-                        var psi = new ProcessStartInfo()
-                        {
-                            FileName = "cmd.exe",
-                            Arguments = $"/c sc.exe delete WinVNC",
-                            UseShellExecute = true
-                        };
-                        await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-                    });
-                return Result.Ok(session);
-            }
-            else
-            {
-                var process = _processes.Start(vncFilePath, "-run", true);
-
-                if (process?.HasExited != false)
-                {
-                    return Result.Fail<VncSession>("VNC session failed to start.");
-                }
-
-                var session = new VncSession(
-                    sessionId,
-                    () =>
-                    {
-                        process.KillAndDispose();
-                        return Task.CompletedTask;
-                    });
-
-                return Result.Ok(session);
-            }
+            return Result.Ok(session);
         }
         catch (Exception ex)
         {
@@ -186,25 +137,33 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         return Result.Fail<string>("Not found.");
     }
 
-    private async Task CreatePassword(string password)
-    {
-        var createPasswordPath = Path.Combine(_environment.StartupDirectory, "winvnc", "createpassword.exe");
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await _processes.Start(createPasswordPath, password).WaitForExitAsync(cts.Token);
-    }
-
-    private async Task<Result> DownloadVnc()
+    private async Task<Result> DownloadAndInstallTightVnc()
     {
         try
         {
-            var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.VncZipFileName);
-            var result = await _downloadsApi.DownloadVncZipFile(targetPath);
+            var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.TightVncMsiFileName);
+            var result = await _downloadsApi.DownloadTightVncMsi(targetPath);
             if (!result.IsSuccess)
             {
                 return result;
             }
 
-            ZipFile.ExtractToDirectory(targetPath, _environment.StartupDirectory, true);
+            var args =
+                $"/i \"{targetPath}\" /quiet /norestart ADDLOCAL=Server " +
+                $"SET_LOOPBACKONLY=1 VALUE_OF_LOOPBACKONLY=1 " +
+                $"SET_ALLOWLOOPBACK=1 VALUE_OF_ALLOWLOOPBACK=1 " +
+                $"SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=0";
+
+            var psi = new ProcessStartInfo()
+            {
+                FileName = "msiexec.exe",
+                Arguments = args,
+                UseShellExecute = true,
+                Verb = "RunAs"
+            };
+
+            await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
             return Result.Ok();
         }
         catch (Exception ex)
@@ -219,7 +178,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         var processes = _processes
             .GetProcesses()
             .Where(x =>
-                x.ProcessName.Equals("WinVNC", StringComparison.OrdinalIgnoreCase));
+                x.ProcessName.Equals("tvnserver", StringComparison.OrdinalIgnoreCase));
 
         foreach (var proc in processes)
         {
@@ -229,7 +188,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to stop existing WinVNC process.");
+                _logger.LogWarning(ex, "Failed to stop existing TightVNC process.");
             }
         }
     }

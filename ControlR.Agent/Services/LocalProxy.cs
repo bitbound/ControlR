@@ -83,6 +83,7 @@ internal class LocalProxy(
         WebSocket serverConnection,
         TcpClient localConnection)
     {
+        using var logScope = _logger.BeginScope("Proxying session ID {VncProxySessionId}.", message.Session.SessionId);
         try
         {
             var localReadTask = ReadFromLocal(localConnection, serverConnection);
@@ -96,6 +97,7 @@ internal class LocalProxy(
         }
         finally
         {
+            _logger.LogInformation("Proxy session ended.  Cleaning up connections.");
             serverConnection.Dispose();
             localConnection.Dispose();
             await message.Session.CleanupFunc.Invoke();
@@ -131,6 +133,7 @@ internal class LocalProxy(
         }
         finally
         {
+            _logger.LogInformation("Read from local connection ended.");
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
@@ -162,6 +165,7 @@ internal class LocalProxy(
         }
         finally
         {
+            _logger.LogInformation("Read from server ended.");
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }

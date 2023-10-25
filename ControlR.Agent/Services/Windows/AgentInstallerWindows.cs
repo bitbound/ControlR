@@ -1,6 +1,7 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Services;
+using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.Runtime.Versioning;
-using System.Security.Principal;
 using System.ServiceProcess;
 
 namespace ControlR.Agent.Services.Windows;
@@ -23,9 +23,11 @@ internal class AgentInstallerWindows(
     IFileSystem fileSystem,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
+    IElevationChecker elevationChecker,
     ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
+    private readonly IElevationChecker _elevationChecker = elevationChecker;
     private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
@@ -46,7 +48,7 @@ internal class AgentInstallerWindows(
         {
             _logger.LogInformation("Install started.");
 
-            if (!CheckIsAdministrator())
+            if (!_elevationChecker.IsElevated())
             {
                 _logger.LogError("Install command must be run as administrator.");
                 return;
@@ -133,7 +135,7 @@ internal class AgentInstallerWindows(
         {
             _logger.LogInformation("Uninstall started.");
 
-            if (!CheckIsAdministrator())
+            if (!_elevationChecker.IsElevated())
             {
                 _logger.LogError("Uninstall command must be run as administrator.");
                 return;
@@ -193,13 +195,6 @@ internal class AgentInstallerWindows(
             _lifetime.StopApplication();
             _installLock.Release();
         }
-    }
-
-    private static bool CheckIsAdministrator()
-    {
-        var identity = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
-        return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static RegistryKey GetRegistryBaseKey()

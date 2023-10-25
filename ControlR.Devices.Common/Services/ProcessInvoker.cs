@@ -1,6 +1,5 @@
 ﻿using ControlR.Shared;
 using ControlR.Shared.Helpers;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace ControlR.Devices.Common.Services;
@@ -28,12 +27,12 @@ public interface IProcessInvoker
     Process? Start(ProcessStartInfo startInfo);
 
     Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
+
+    Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout);
 }
 
-public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
+public class ProcessInvoker : IProcessInvoker
 {
-    private readonly ILogger<ProcessInvoker> _logger = logger;
-
     public Process GetCurrentProcess()
     {
         return Process.GetCurrentProcess();
@@ -111,10 +110,7 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
 
     public Process? Start(ProcessStartInfo startInfo)
     {
-        if (startInfo is null)
-        {
-            throw new ArgumentNullException(nameof(startInfo));
-        }
+        Guard.IsNotNull(startInfo);
         return Process.Start(startInfo);
     }
 
@@ -131,10 +127,30 @@ public class ProcessInvoker(ILogger<ProcessInvoker> logger) : IProcessInvoker
 
     public async Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout)
     {
-        var process = Process.Start(startInfo);
+        using var process = Process.Start(startInfo);
         Guard.IsNotNull(process);
 
         using var cts = new CancellationTokenSource(timeout);
+        await process.WaitForExitAsync(cts.Token);
+
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"Process exited with code {process.ExitCode}.");
+        }
+    }
+
+    public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout)
+    {
+        var psi = new ProcessStartInfo()
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            UseShellExecute = useShellExec,
+        };
+
+        using var cts = new CancellationTokenSource(timeout);
+        using var process = Process.Start(psi);
+        Guard.IsNotNull(process);
         await process.WaitForExitAsync(cts.Token);
     }
 }

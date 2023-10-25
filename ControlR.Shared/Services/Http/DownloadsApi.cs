@@ -6,9 +6,7 @@ internal interface IDownloadsApi
 {
     Task<Result> DownloadAgent(string destinationPath);
 
-    Task<Result> DownloadRemoteControl(string destinationPath);
-
-    Task<Result> DownloadVncZipFile(string destinationPath);
+    Task<Result> DownloadTightVncMsi(string destinationPath);
 
     Task<Result<string>> GetAgentEtag();
 }
@@ -36,32 +34,13 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result> DownloadRemoteControl(string destinationPath)
+    public async Task<Result> DownloadTightVncMsi(string destinationPath)
     {
         try
         {
-            using var webStream = await _client.GetStreamAsync($"{AppConstants.ServerUri}/downloads/{AppConstants.VncFileName}");
-            using var fs = new FileStream(destinationPath, FileMode.Create);
-            await webStream.CopyToAsync(fs);
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while downloading remote control client.");
-            return Result.Fail(ex);
-        }
-    }
+            var fileUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.TightVncMsiFileName}";
 
-    public async Task<Result> DownloadVncZipFile(string destinationPath)
-    {
-        try
-        {
-            var zipUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.VncZipFileName}";
-
-            using var message = new HttpRequestMessage(HttpMethod.Head, zipUrl);
-            using var response = await _client.SendAsync(message);
-
-            using var webStream = await _client.GetStreamAsync(zipUrl);
+            using var webStream = await _client.GetStreamAsync(fileUrl);
 
             using var fs = new FileStream(destinationPath, FileMode.Create);
 

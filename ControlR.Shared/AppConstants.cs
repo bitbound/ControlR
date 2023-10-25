@@ -44,33 +44,16 @@ public static partial class AppConstants
         }
     }
 
-    public static string VncFileName
+    public static string TightVncMsiFileName
     {
         get
         {
-            return EnvironmentHelper.Instance.Platform switch
+            if (Environment.Is64BitOperatingSystem)
             {
-                SystemPlatform.Windows => "winvnc.exe",
-                SystemPlatform.Linux => "vncserver",
-                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
-                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
-                _ => throw new PlatformNotSupportedException(),
-            };
-        }
-    }
+                return "tightvnc-x64.msi";
+            }
 
-    public static string VncZipFileName
-    {
-        get
-        {
-            return EnvironmentHelper.Instance.Platform switch
-            {
-                SystemPlatform.Windows => "winvnc.zip",
-                SystemPlatform.Linux => "vncserver.zip",
-                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
-                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
-                _ => throw new PlatformNotSupportedException(),
-            };
+            return "tightvnc-x86.msi";
         }
     }
 

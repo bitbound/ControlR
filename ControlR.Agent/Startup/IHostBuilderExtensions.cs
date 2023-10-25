@@ -86,6 +86,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
+                services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
             }
             else if (OperatingSystem.IsLinux())
             {
@@ -93,6 +94,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherLinux>();
                 services.AddSingleton<IPowerControl, PowerControlLinux>();
+                services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
             }
             else
             {
