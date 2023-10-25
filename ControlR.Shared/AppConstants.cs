@@ -44,18 +44,7 @@ public static partial class AppConstants
         }
     }
 
-    public static string TightVncMsiFileName
-    {
-        get
-        {
-            if (Environment.Is64BitOperatingSystem)
-            {
-                return "tightvnc-x64.msi";
-            }
-
-            return "tightvnc-x86.msi";
-        }
-    }
+    public static string TightVncMsiFileName { get; } = "tightvnc.msi";
 
     [GeneratedRegex("[^A-Za-z0-9_-]")]
     public static partial Regex UsernameValidator();

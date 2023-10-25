@@ -52,7 +52,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         try
         {
             var tvnServerPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
                 "TightVNC",
                 "tvnserver.exe");
 

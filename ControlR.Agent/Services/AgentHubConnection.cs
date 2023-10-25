@@ -25,13 +25,9 @@ namespace ControlR.Agent.Services;
 
 internal interface IAgentHubConnection : IHubConnectionBase
 {
-    IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId);
-
     Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
 
     Task SendDeviceHeartbeat();
-
-    Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream);
 }
 
 internal class AgentHubConnection(
@@ -62,13 +58,13 @@ internal class AgentHubConnection(
     private readonly IAgentUpdater _updater = updater;
     private readonly IVncSessionLauncher _vncSessionLauncher = vncSessionLauncher;
 
-    public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
+    public async Task<bool> GetVncSession(SignedPayloadDto signedDto)
     {
         try
         {
             if (!VerifyPayload(signedDto))
             {
-                return new(false);
+                return false;
             }
 
             var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
@@ -79,7 +75,7 @@ internal class AgentHubConnection(
                 var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
                 await _messenger.Send(new VncProxyRequestMessage(session));
 
-                return new(true, false);
+                return true;
             }
 
             var result = await _vncSessionLauncher
@@ -89,30 +85,17 @@ internal class AgentHubConnection(
             if (!result.IsSuccess)
             {
                 _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
-                return new(false);
+                return false;
             }
 
             await _messenger.Send(new VncProxyRequestMessage(result.Value));
 
-            return new(true, true);
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating streaming session.");
-            return new VncSessionRequestResult(false);
-        }
-    }
-
-    public IAsyncEnumerable<byte[]> GetVncStream(Guid sessionId)
-    {
-        try
-        {
-            return Connection.StreamAsync<byte[]>("GetVncStream", sessionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting VNC stream.");
-            return Array.Empty<byte[]>().ToAsyncEnumerable();
+            return false;
         }
     }
 
@@ -216,7 +199,7 @@ internal class AgentHubConnection(
 #pragma warning restore CA1416 // Validate platform compatibility
         }
 
-        hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
+        hubConnection.On<SignedPayloadDto, bool>(nameof(GetVncSession), GetVncSession);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

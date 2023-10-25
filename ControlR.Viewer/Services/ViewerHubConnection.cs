@@ -18,7 +18,7 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
+    Task<bool> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
@@ -59,7 +59,7 @@ internal class ViewerHubConnection(
         }
     }
 
-    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
+    public async Task<bool> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
     {
         try
         {
@@ -70,8 +70,8 @@ internal class ViewerHubConnection(
 
             var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
 
-            var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
-            if (!result.SessionCreated)
+            var result = await Connection.InvokeAsync<bool>("GetVncSession", agentConnectionId, sessionId, signedDto);
+            if (!result)
             {
                 _logger.LogError("Failed to get VNC session.");
             }
@@ -80,7 +80,7 @@ internal class ViewerHubConnection(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting remote streaming session.");
-            return new(false);
+            return false;
         }
     }
 
