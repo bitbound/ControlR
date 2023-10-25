@@ -7,8 +7,8 @@ using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Diagnostics;
+using Microsoft.Win32;
+using System.IO.Compression;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using Result = ControlR.Shared.Result;
@@ -18,7 +18,6 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows")]
 internal class VncSessionLauncherWindows : IVncSessionLauncher
 {
-    private readonly IOptionsMonitor<AppOptions> _appOptions;
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
     private readonly IDownloadsApi _downloadsApi;
     private readonly IElevationChecker _elevationChecker;
@@ -33,14 +32,12 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         IDownloadsApi downloadsApi,
         IEnvironmentHelper environment,
         IElevationChecker elevationChecker,
-        IOptionsMonitor<AppOptions> appOptions,
         ILogger<VncSessionLauncherWindows> logger)
     {
         _fileSystem = fileSystem;
         _processes = processInvoker;
         _downloadsApi = downloadsApi;
         _environment = environment;
-        _appOptions = appOptions;
         _elevationChecker = elevationChecker;
         _logger = logger;
     }
@@ -52,18 +49,20 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         try
         {
             var tvnServerPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                _environment.StartupDirectory,
                 "TightVNC",
                 "tvnserver.exe");
 
             if (!_fileSystem.FileExists(tvnServerPath))
             {
-                var result = await DownloadAndInstallTightVnc();
+                var result = await DownloadTightVnc();
                 if (!result.IsSuccess)
                 {
                     return Result.Fail<VncSession>(result.Reason);
                 }
             }
+
+            SetRegKeys();
 
             var silentArgs = _elevationChecker.IsElevated() ?
                 " -silent" :
@@ -137,39 +136,36 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         return Result.Fail<string>("Not found.");
     }
 
-    private async Task<Result> DownloadAndInstallTightVnc()
+    private static void SetRegKeys()
+    {
+        using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+        using var serverKey = hklm.CreateSubKey("SOFTWARE\\TightVNC\\Server");
+        serverKey.SetValue("AllowLoopback", 1);
+        serverKey.SetValue("LoopbackOnly", 1);
+        serverKey.SetValue("UseVncAuthentication", 0);
+        serverKey.SetValue("RemoveWallpaper", 0);
+    }
+
+    private async Task<Result> DownloadTightVnc()
     {
         try
         {
-            var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.TightVncMsiFileName);
-            var result = await _downloadsApi.DownloadTightVncMsi(targetPath);
+            var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.TightVncZipName);
+            var result = await _downloadsApi.DownloadTightVncZip(targetPath);
             if (!result.IsSuccess)
             {
                 return result;
             }
 
-            var args =
-                $"/i \"{targetPath}\" /quiet /norestart ADDLOCAL=Server " +
-                $"SET_LOOPBACKONLY=1 VALUE_OF_LOOPBACKONLY=1 " +
-                $"SET_ALLOWLOOPBACK=1 VALUE_OF_ALLOWLOOPBACK=1 " +
-                $"SET_REMOVEWALLPAPER=1 VALUE_OF_REMOVEWALLPAPER=0" +
-                $"SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=0";
-
-            var psi = new ProcessStartInfo()
-            {
-                FileName = "msiexec.exe",
-                Arguments = args,
-                UseShellExecute = true,
-                Verb = "RunAs"
-            };
-
-            await _processes.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+            var extractDir = Path.Combine(_environment.StartupDirectory, "TightVNC");
+            Directory.CreateDirectory(extractDir);
+            ZipFile.ExtractToDirectory(targetPath, extractDir);
 
             return Result.Ok();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while extracting remote control archive.");
+            _logger.LogError(ex, "Error while downloading and installing TightVNC.");
             return Result.Fail(ex);
         }
     }

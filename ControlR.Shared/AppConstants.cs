@@ -44,7 +44,7 @@ public static partial class AppConstants
         }
     }
 
-    public static string TightVncMsiFileName { get; } = "tightvnc.msi";
+    public static string TightVncZipName { get; } = "tvnserver.zip";
 
     [GeneratedRegex("[^A-Za-z0-9_-]")]
     public static partial Regex UsernameValidator();

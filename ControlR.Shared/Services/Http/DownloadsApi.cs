@@ -6,7 +6,7 @@ internal interface IDownloadsApi
 {
     Task<Result> DownloadAgent(string destinationPath);
 
-    Task<Result> DownloadTightVncMsi(string destinationPath);
+    Task<Result> DownloadTightVncZip(string destinationPath);
 
     Task<Result<string>> GetAgentEtag();
 }
@@ -34,11 +34,11 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result> DownloadTightVncMsi(string destinationPath)
+    public async Task<Result> DownloadTightVncZip(string destinationPath)
     {
         try
         {
-            var fileUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.TightVncMsiFileName}";
+            var fileUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.TightVncZipName}";
 
             using var webStream = await _client.GetStreamAsync(fileUrl);
 
@@ -50,7 +50,7 @@ internal class DownloadsApi(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while downloading remote control client.");
+            _logger.LogError(ex, "Error while downloading TightVNC.");
             return Result.Fail(ex);
         }
     }
