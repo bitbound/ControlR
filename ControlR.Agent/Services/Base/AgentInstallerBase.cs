@@ -48,7 +48,8 @@ internal abstract class AgentInstallerBase(
 
         var updatedAutoRunVnc = autoRunVnc ?? appSettings.AppOptions.AutoRunVnc ?? false;
         _logger.LogInformation("Setting auto-run of VNC to {AutoRunVnc}.", updatedAutoRunVnc);
-        appSettings.AppOptions.AutoRunVnc = updatedAutoRunVnc;
+        // TODO: Remove this override later.
+        appSettings.AppOptions.AutoRunVnc = true;
 
         if (!string.IsNullOrWhiteSpace(authorizedKey) &&
             !appSettings.AppOptions.AuthorizedKeys.Contains(authorizedKey))

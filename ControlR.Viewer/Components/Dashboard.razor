@@ -18,8 +18,8 @@
 </MudText>
 
 <div>
-    <MudCheckBox T="bool" 
-                 Checked="Settings.HideOfflineDevices" 
+    <MudCheckBox T="bool"
+                 Checked="Settings.HideOfflineDevices"
                  CheckedChanged="HideOfflineDevicesChanged"
                  Label="Hide Offline Devices" />
 </div>
@@ -147,28 +147,54 @@
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn T="DeviceDto" Title="Total Memory (GB)">
-            <CellTemplate>
-                @($"{context.Item.TotalMemory:N2}")
-            </CellTemplate>
-        </TemplateColumn>
-
-        <TemplateColumn T="DeviceDto" Title="Total Storage (GB)">
-            <CellTemplate>
-                @($"{context.Item.TotalStorage:N0}")
-            </CellTemplate>
-        </TemplateColumn>
-
-        <PropertyColumn Property="x => x!.AgentVersion" Title="Agent Version" />
-
-        <PropertyColumn Property="x => x!.LastSeen" Title="Last Seen" />
-
-        <PropertyColumn Property="x => x!.Platform" Title="Platform" />
-
-        <PropertyColumn Property="x => x!.OsDescription" Title="OS" />
-
-        <PropertyColumn Property="x => x!.OsArchitecture" Title="Arch" />
+        <HierarchyColumn T="DeviceDto" />
     </Columns>
+    <ChildRowContent>
+        <div class="child-content-grid">
+            <div>
+                Total Memory:
+            </div>
+            <div>
+                @($"{context.Item.TotalMemory:N2}") GB
+            </div>
+            <div>
+                Total Storage:
+            </div>
+            <div>
+                @($"{context.Item.TotalStorage:N0}") GB
+            </div>
+            <div>
+                Agent Version:
+            </div>
+            <div>
+                @(context.Item.AgentVersion)
+            </div>
+            <div>
+                Last Seen:
+            </div>
+            <div>
+                @(context.Item.LastSeen)
+            </div>
+            <div>
+                Platform:
+            </div>
+            <div>
+                @(context.Item.Platform)
+            </div>
+            <div>
+                OS Description:
+            </div>
+            <div>
+                @(context.Item.OsDescription)
+            </div>
+            <div>
+                OS Architecture:
+            </div>
+            <div>
+                @(context.Item.OsArchitecture)
+            </div>
+        </div>
+    </ChildRowContent>
 </MudDataGrid>
 
 @code {
