@@ -1,7 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Messages;
 using ControlR.Agent.Models;
-using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
@@ -17,7 +16,6 @@ namespace ControlR.Agent.Services;
 internal class LocalProxy(
     IHostApplicationLifetime appLifetime,
     IMessenger messenger,
-    IProcessInvoker processInvoker,
     IOptionsMonitor<AppOptions> appOptions,
     ILogger<LocalProxy> logger) : IHostedService
 {
@@ -25,7 +23,6 @@ internal class LocalProxy(
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly ILogger<LocalProxy> _logger = logger;
     private readonly IMessenger _messenger = messenger;
-    private readonly IProcessInvoker _processInvoker = processInvoker;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -99,7 +96,7 @@ internal class LocalProxy(
             _logger.LogInformation("Proxy session ended.  Cleaning up connections.  Session ID: {SessionID}", message.Session.SessionId);
             serverConnection.Dispose();
             localConnection.Dispose();
-            await message.Session.CleanupFunc.Invoke();
+            await message.Session.DisposeAsync();
         }
     }
 

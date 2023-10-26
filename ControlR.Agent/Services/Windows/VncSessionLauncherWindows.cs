@@ -42,7 +42,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         _logger = logger;
     }
 
-    public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
+    public async Task<Result<VncSession>> CreateSession(Guid sessionId)
     {
         await _createSessionLock.WaitAsync();
 

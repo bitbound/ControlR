@@ -225,13 +225,12 @@
     {
         try
         {
-            var sessionPassword = RandomGenerator.GenerateString(8);
             var sessionId = Guid.NewGuid();
 
             Logger.LogInformation("Creating VNC session");
             Snackbar.Add("Requesting VNC session", Severity.Info);
 
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, sessionPassword);
+            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId);
 
             if (!vncSessionResult)
             {

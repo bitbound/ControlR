@@ -18,7 +18,7 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task<bool> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword);
+    Task<bool> GetVncSession(string agentConnectionId, Guid sessionId);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
@@ -44,28 +44,12 @@ internal class ViewerHubConnection(
     private readonly IMessenger _messenger = messenger;
     private readonly ISettings _settings = settings;
 
-    public async Task<Result<IceServer[]>> GetIceServers()
-    {
-        try
-        {
-            var signedDto = _appState.Encryptor.CreateRandomSignedDto(DtoType.None);
-            var iceServers = await Connection.InvokeAsync<IceServer[]>("GetIceServers", signedDto);
-            return Result.Ok(iceServers);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting ICE servers..");
-            return Result.Fail<IceServer[]>(ex);
-        }
-    }
-
-    public async Task<bool> GetVncSession(string agentConnectionId, Guid sessionId, string sessionPassword)
+    public async Task<bool> GetVncSession(string agentConnectionId, Guid sessionId)
     {
         try
         {
             var vncSession = new VncSessionRequest(
                 sessionId,
-                sessionPassword,
                 Connection.ConnectionId);
 
             var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
