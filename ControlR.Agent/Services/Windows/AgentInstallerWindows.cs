@@ -36,7 +36,7 @@ internal class AgentInstallerWindows(
     private readonly IProcessInvoker _processes = processes;
     private readonly string _serviceName = "ControlR.Agent";
 
-    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoInstallVnc = null)
+    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -88,7 +88,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoInstallVnc);
+            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoRunVnc);
             await WriteEtag(_installDir);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";

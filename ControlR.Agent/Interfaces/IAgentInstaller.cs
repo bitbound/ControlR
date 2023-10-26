@@ -5,7 +5,7 @@ public interface IAgentInstaller
     Task Install(
         string? authorizedPublicKey = null,
         int? vncPort = null,
-        bool? autoInstallVnc = null);
+        bool? autoRunVnc = null);
 
     Task Uninstall();
 }

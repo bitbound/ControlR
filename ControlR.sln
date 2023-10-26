@@ -27,6 +27,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent.Tests", "tes
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ControlR.Website", "ControlR.Website\ControlR.Website.esproj", "{14BABACA-6831-47FD-B1E1-71201BA669AE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B85287-C904-4672-821E-D0B96BBDF89C}"
+	ProjectSection(SolutionItems) = preProject
+		.build\Build.ps1 = .build\Build.ps1
+		.build\CreateKeystore.cmd = .build\CreateKeystore.cmd
+		.build\install-tightvnc.sh = .build\install-tightvnc.sh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,9 +83,10 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{8E0D0D8D-9342-4A55-9547-2AE4FC122DA8} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
+		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal

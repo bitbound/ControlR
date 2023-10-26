@@ -70,7 +70,7 @@ internal class AgentHubConnection(
             var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
 
             if (!OperatingSystem.IsWindows() ||
-                _appOptions.CurrentValue.AutoInstallVnc != true)
+                _appOptions.CurrentValue.AutoRunVnc != true)
             {
                 var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
                 await _messenger.Send(new VncProxyRequestMessage(session));

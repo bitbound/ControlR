@@ -136,16 +136,6 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         return Result.Fail<string>("Not found.");
     }
 
-    private static void SetRegKeys()
-    {
-        using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
-        using var serverKey = hklm.CreateSubKey("SOFTWARE\\TightVNC\\Server");
-        serverKey.SetValue("AllowLoopback", 1);
-        serverKey.SetValue("LoopbackOnly", 1);
-        serverKey.SetValue("UseVncAuthentication", 0);
-        serverKey.SetValue("RemoveWallpaper", 0);
-    }
-
     private async Task<Result> DownloadTightVnc()
     {
         try
@@ -168,6 +158,21 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
             _logger.LogError(ex, "Error while downloading and installing TightVNC.");
             return Result.Fail(ex);
         }
+    }
+
+    private void SetRegKeys()
+    {
+        if (!_elevationChecker.IsElevated())
+        {
+            return;
+        }
+
+        using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+        using var serverKey = hklm.CreateSubKey("SOFTWARE\\TightVNC\\Server");
+        serverKey.SetValue("AllowLoopback", 1);
+        serverKey.SetValue("LoopbackOnly", 1);
+        serverKey.SetValue("UseVncAuthentication", 0);
+        serverKey.SetValue("RemoveWallpaper", 0);
     }
 
     private void StopProcesses()

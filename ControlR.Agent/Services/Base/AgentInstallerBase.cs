@@ -18,7 +18,7 @@ internal abstract class AgentInstallerBase(
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly ILogger<AgentInstallerBase> _logger = logger;
 
-    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int? vncPort, bool? autoInstallVnc)
+    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int? vncPort, bool? autoRunVnc)
     {
         using var _ = _logger.BeginMemberScope();
 
@@ -46,9 +46,9 @@ internal abstract class AgentInstallerBase(
         _logger.LogInformation("Setting VNC port to {VncPort}.", updatedVncPort);
         appSettings.AppOptions.VncPort = updatedVncPort;
 
-        var updatedAutoInstall = autoInstallVnc ?? appSettings.AppOptions.AutoInstallVnc ?? false;
-        _logger.LogInformation("Setting auto-install of VNC to {AutoInstallVnc}.", updatedAutoInstall);
-        appSettings.AppOptions.AutoInstallVnc = updatedAutoInstall;
+        var updatedAutoRunVnc = autoRunVnc ?? appSettings.AppOptions.AutoRunVnc ?? false;
+        _logger.LogInformation("Setting auto-run of VNC to {AutoRunVnc}.", updatedAutoRunVnc);
+        appSettings.AppOptions.AutoRunVnc = updatedAutoRunVnc;
 
         if (!string.IsNullOrWhiteSpace(authorizedKey) &&
             !appSettings.AppOptions.AuthorizedKeys.Contains(authorizedKey))

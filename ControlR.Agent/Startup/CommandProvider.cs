@@ -12,7 +12,7 @@ namespace ControlR.Agent.Startup;
 internal class CommandProvider
 {
     private static readonly string[] _authorizedKeyAlias = ["-a", "--authorized-key"];
-    private static readonly string[] _autoInstallVncAlias = ["-i", "--auto-install"];
+    private static readonly string[] _autoRunVnc = ["-r", "--auto-run"];
     private static readonly string[] _portAlias = ["-p", "--port"];
 
     internal static Command GetInstallCommand(string[] args)
@@ -25,17 +25,17 @@ internal class CommandProvider
             _portAlias,
             "The port to use for VNC connections.  ControlR will proxy viewer connections to this port.");
 
-        var autoInstallOption = new Option<bool?>(
-             _autoInstallVncAlias,
-             "Windows only.  Whether to automatically install and run a temporary VNC server with a random, temporary " +
-             "password. Each session will have a new random password. Set this to false to use an existing server  " +
-             "without altering it.");
+        var autoRunOption = new Option<bool?>(
+             _autoRunVnc,
+             "Windows only.  Whether to automatically download (if needed) and run a temporary TightVNC server. " +
+             "The server is run in loopback-only mode and is shutdown after each session.  Set this to false " +
+             "to use an existing server.");
 
         var installCommand = new Command("install", "Install the ControlR service.")
         {
             authorizedKeyOption,
             portOption,
-            autoInstallOption
+            autoRunOption
         };
 
         installCommand.SetHandler(async (authorizedKey, vncPort, auotInstallVnc) =>
@@ -44,7 +44,7 @@ internal class CommandProvider
             var installer = host.Services.GetRequiredService<IAgentInstaller>();
             await installer.Install(authorizedKey, vncPort, auotInstallVnc);
             await host.RunAsync();
-        }, authorizedKeyOption, portOption, autoInstallOption);
+        }, authorizedKeyOption, portOption, autoRunOption);
 
         return installCommand;
     }
