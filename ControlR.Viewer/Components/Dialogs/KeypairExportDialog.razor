@@ -53,14 +53,12 @@
     </DialogActions>
 </MudDialog>
 
-@code {
+ @code {
     private bool _formIsValid;
     private MudForm? _form;
 
-#nullable disable
     [CascadingParameter]
-    public MudDialogInstance MudDialog { get; set; }
-#nullable enable
+    public required MudDialogInstance MudDialog { get; set; }
 
     private string KeyExportPath
     {
@@ -68,10 +66,15 @@
         set => Settings.KeypairExportPath = value;
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _formIsValid = FileIO.DirectoryExists(KeyExportPath);
-        base.OnInitialized();
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            _formIsValid = FileIO.DirectoryExists(KeyExportPath);
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
 

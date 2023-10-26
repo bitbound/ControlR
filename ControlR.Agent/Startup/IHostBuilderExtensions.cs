@@ -78,6 +78,7 @@ internal static class IHostBuilderExtensions
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
             services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
             services.AddSingleton(WeakReferenceMessenger.Default);
+            services.AddSingleton<ISystemTime, SystemTime>();
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {

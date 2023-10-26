@@ -4,40 +4,17 @@ public interface ISystemTime
 {
     DateTimeOffset Now { get; }
 
-    DateTimeOffset Offset(TimeSpan offset);
-    void Restore();
-    void Set(DateTimeOffset time);
+    DateTimeOffset UtcNow { get; }
+
+    TimeSpan GetElapsedTime(long startingTimestamp, long endingTimestamp);
+
+    TimeSpan GetElapsedTime(long startingTimestamp);
+
+    long GetTimestamp();
 }
 
-public class SystemTime : ISystemTime
+public class SystemTime : TimeProvider, ISystemTime
 {
-    private TimeSpan _offset;
-    private DateTimeOffset? _time;
-
-    public DateTimeOffset Now
-    {
-        get
-        {
-            var baseTime = _time ?? DateTimeOffset.Now;
-            return baseTime.Add(_offset);
-        }
-    }
-
-    public DateTimeOffset Offset(TimeSpan offset)
-    {
-        _offset = _offset.Add(offset);
-        return Now;
-    }
-
-    public void Restore()
-    {
-        _offset = TimeSpan.Zero;
-        _time = null;
-    }
-
-    public void Set(DateTimeOffset time)
-    {
-        _offset = TimeSpan.Zero;
-        _time = time;
-    }
+    public DateTimeOffset Now => GetLocalNow();
+    public DateTimeOffset UtcNow => GetUtcNow();
 }

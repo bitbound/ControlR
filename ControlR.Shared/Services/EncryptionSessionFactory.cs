@@ -7,12 +7,13 @@ public interface IEncryptionSessionFactory
     IEncryptionSession CreateSession();
 }
 
-internal class EncryptionSessionFactory(ILoggerFactory loggerFactory) : IEncryptionSessionFactory
+internal class EncryptionSessionFactory(ISystemTime systemTime, ILoggerFactory loggerFactory) : IEncryptionSessionFactory
 {
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
+    private readonly ISystemTime _systemTime = systemTime;
 
     public IEncryptionSession CreateSession()
     {
-        return new EncryptionSession(_loggerFactory.CreateLogger<EncryptionSession>());
+        return new EncryptionSession(_systemTime, _loggerFactory.CreateLogger<EncryptionSession>());
     }
 }

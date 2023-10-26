@@ -24,7 +24,7 @@ public class DigitalSignatureAuthenticationHandler(
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         using var _ = _logger.BeginScope(nameof(HandleAuthenticateAsync));
-
+        _logger.LogInformation("Start auth handler.");
         var authHeader = Context.Request.Headers.Authorization.FirstOrDefault(x =>
             x?.StartsWith(AuthSchemes.DigitalSignature) == true);
 
@@ -92,8 +92,8 @@ public class DigitalSignatureAuthenticationHandler(
 
         var claims = new Claim[]
         {
-            new Claim(ClaimNames.PublicKey, signedDto.PublicKeyBase64),
-            new Claim(ClaimNames.Username, account.Username),
+            new(ClaimNames.PublicKey, signedDto.PublicKeyBase64),
+            new(ClaimNames.Username, account.Username),
         };
 
         var identity = new ClaimsIdentity(claims, AuthSchemes.DigitalSignature);

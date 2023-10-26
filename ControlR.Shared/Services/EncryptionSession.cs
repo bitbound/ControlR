@@ -39,10 +39,11 @@ public interface IEncryptionSession : IDisposable
     bool Verify(SignedPayloadDto signedDto);
 }
 
-public class EncryptionSession(ILogger<EncryptionSession> logger) : IEncryptionSession
+public class EncryptionSession(ISystemTime systemTime, ILogger<EncryptionSession> logger) : IEncryptionSession
 {
     private readonly ILogger<EncryptionSession> _logger = logger;
     private readonly PbeParameters _pbeParameters = new(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA512, 5_000);
+    private readonly ISystemTime _systemTime = systemTime;
     private UserKeyPair? _backupKeys;
     private RSAParameters? _backupParams;
     private UserKeyPair? _currentKeys;
@@ -180,7 +181,30 @@ public class EncryptionSession(ILogger<EncryptionSession> logger) : IEncryptionS
     public bool Verify(SignedPayloadDto signedDto)
     {
         ImportPublicKey(signedDto.PublicKey);
-        return Verify(signedDto.Payload, signedDto.Signature);
+        if (!Verify(signedDto.Payload, signedDto.Signature))
+        {
+            return false;
+        }
+
+        // TODO: Remove after devices have updated.
+        if (signedDto.Timestamp is null)
+        {
+            return true;
+        }
+
+        if (signedDto.TimestampSignature is null)
+        {
+            return false;
+        }
+
+        if (!Verify(signedDto.Timestamp, signedDto.TimestampSignature))
+        {
+            return false;
+        }
+
+        var timestamp = MessagePackSerializer.Deserialize<DateTimeOffset>(signedDto.Timestamp);
+        // Timestamp shouldn't be any older than 10 seconds.
+        return timestamp > _systemTime.Now.AddSeconds(-10);
     }
 
     private SignedPayloadDto CreateSignedDtoImpl(byte[] payload, DtoType dtoType)
@@ -190,6 +214,9 @@ public class EncryptionSession(ILogger<EncryptionSession> logger) : IEncryptionS
             throw new InvalidOperationException("A keypair must be generated before DTOs can be signed.");
         }
 
+        var timestamp = MessagePackSerializer.Serialize(_systemTime.Now);
+        var timestampSignature = Sign(timestamp);
+
         var signature = Sign(payload);
         return new SignedPayloadDto()
         {
@@ -197,7 +224,9 @@ public class EncryptionSession(ILogger<EncryptionSession> logger) : IEncryptionS
             Payload = payload,
             Signature = signature,
             PublicKey = CurrentState.PublicKey,
-            PublicKeyPem = _rsa.ExportSubjectPublicKeyInfoPem()
+            PublicKeyPem = _rsa.ExportSubjectPublicKeyInfoPem(),
+            Timestamp = timestamp,
+            TimestampSignature = timestampSignature,
         };
     }
 }
