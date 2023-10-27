@@ -33,17 +33,21 @@ public class NoVncMiddleware(
         var sessionParam = context.Request.Path.Value?.Split("/").Last();
 
         if (!Guid.TryParse(sessionParam, out var sessionId) ||
-            !_proxyStreamStore.TryGet(sessionId, out var signaler))
+            !_proxyStreamStore.TryGet(sessionId, out var storedSignaler))
         {
             await _next(context);
             return;
         }
+
+        using var signaler = storedSignaler;
 
         signaler.NoVncWebsocket = websocket;
         signaler.NoVncViewerReady.Release();
 
         using var signalExpiration = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         await signaler.AgentVncReady.WaitAsync(signalExpiration.Token);
+
+        _ = _proxyStreamStore.TryRemove(sessionId, out _);
 
         Guard.IsNotNull(signaler.AgentVncWebsocket);
 
@@ -71,7 +75,6 @@ public class NoVncMiddleware(
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
-            _ = _proxyStreamStore.TryRemove(sessionId, out _);
 
             if (signaler.NoVncWebsocket.State == WebSocketState.Open)
             {
