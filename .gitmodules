@@ -6,4 +6,4 @@
 	url = https://github.com/novnc/noVNC
 [submodule "ControlR.Server/wwwroot/novnc"]
 	path = ControlR.Server/wwwroot/novnc
-	url = https://github.com/novnc/noVNC
+	url = git@github.com:bitbound/noVNC.git
