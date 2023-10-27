@@ -3,6 +3,7 @@ using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
@@ -64,44 +65,14 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
             SetRegKeys();
 
-            var silentArgs = _elevationChecker.IsElevated() ?
-                " -silent" :
-                "";
-
-            var service = ServiceController
-                .GetServices()
-                .FirstOrDefault(x => x.ServiceName == "tvnserver");
-
-            if (service?.Status != ServiceControllerStatus.Running)
+            if (_elevationChecker.IsElevated())
             {
-                await _processes.StartAndWaitForExit(tvnServerPath, $"-reinstall{silentArgs}", true, TimeSpan.FromSeconds(5));
-                await _processes.StartAndWaitForExit(tvnServerPath, $"-start{silentArgs}", true, TimeSpan.FromSeconds(5));
+                return await RunTvnServerAsService(sessionId, tvnServerPath);
             }
-
-            var startResult = WaitHelper.WaitFor(
-                   () =>
-                   {
-                       return _processes
-                           .GetProcesses()
-                           .Any(x =>
-                               x.ProcessName.Equals("tvnserver", StringComparison.OrdinalIgnoreCase));
-                   }, TimeSpan.FromSeconds(10));
-
-            if (!startResult)
+            else
             {
-                return Result.Fail<VncSession>("VNC session failed to start.");
+                return RunTvnServerAsUser(sessionId, tvnServerPath);
             }
-
-            var session = new VncSession(
-               sessionId,
-               async () =>
-               {
-                   await _processes.StartAndWaitForExit(tvnServerPath, $"-stop{silentArgs}", true, TimeSpan.FromSeconds(5));
-                   await _processes.StartAndWaitForExit(tvnServerPath, $"-remove{silentArgs}", true, TimeSpan.FromSeconds(5));
-                   StopProcesses();
-               });
-
-            return Result.Ok(session);
         }
         catch (Exception ex)
         {
@@ -160,14 +131,75 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         }
     }
 
-    private void SetRegKeys()
+    private async Task<Result<VncSession>> RunTvnServerAsService(Guid sessionId, string tvnServerPath)
     {
-        if (!_elevationChecker.IsElevated())
+        var silentArgs = _elevationChecker.IsElevated() ?
+            " -silent" :
+            "";
+
+        var service = ServiceController
+            .GetServices()
+            .FirstOrDefault(x => x.ServiceName == "tvnserver");
+
+        if (service?.Status != ServiceControllerStatus.Running)
         {
-            return;
+            await _processes.StartAndWaitForExit(tvnServerPath, $"-reinstall{silentArgs}", true, TimeSpan.FromSeconds(5));
+            await _processes.StartAndWaitForExit(tvnServerPath, $"-start{silentArgs}", true, TimeSpan.FromSeconds(5));
         }
 
-        using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+        var startResult = WaitHelper.WaitFor(
+               () =>
+               {
+                   return _processes
+                       .GetProcesses()
+                       .Any(x =>
+                           x.ProcessName.Equals("tvnserver", StringComparison.OrdinalIgnoreCase));
+               }, TimeSpan.FromSeconds(10));
+
+        if (!startResult)
+        {
+            return Result.Fail<VncSession>("VNC session failed to start.");
+        }
+
+        var session = new VncSession(
+           sessionId,
+           async () =>
+           {
+               await _processes.StartAndWaitForExit(tvnServerPath, $"-stop{silentArgs}", true, TimeSpan.FromSeconds(5));
+               await _processes.StartAndWaitForExit(tvnServerPath, $"-remove{silentArgs}", true, TimeSpan.FromSeconds(5));
+               StopProcesses();
+           });
+
+        return Result.Ok(session);
+    }
+
+    private Result<VncSession> RunTvnServerAsUser(Guid sessionId, string tvnServerPath)
+    {
+        var process = _processes.Start(tvnServerPath, "-run", true);
+
+        if (process?.HasExited != false)
+        {
+            return Result.Fail<VncSession>("VNC session failed to start.");
+        }
+
+        var session = new VncSession(
+           sessionId,
+           () =>
+           {
+               process.KillAndDispose();
+               return Task.CompletedTask;
+           });
+
+        return Result.Ok(session);
+    }
+
+    private void SetRegKeys()
+    {
+        var hive = _elevationChecker.IsElevated() ?
+            RegistryHive.LocalMachine :
+            RegistryHive.CurrentUser;
+
+        using var hklm = RegistryKey.OpenBaseKey(hive, RegistryView.Registry32);
         using var serverKey = hklm.CreateSubKey("SOFTWARE\\TightVNC\\Server");
         serverKey.SetValue("AllowLoopback", 1);
         serverKey.SetValue("LoopbackOnly", 1);

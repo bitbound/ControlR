@@ -56,7 +56,7 @@ if ($BuildViewer) {
     $AppVersion[0].InnerText = "1";
 
     $DisplayVersion = $Csproj.Node.SelectNodes("//ApplicationDisplayVersion")
-    $DisplayVersion[0].InnerText = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build)$($CurrentVersion.Revision)"
+    $DisplayVersion[0].InnerText = $CurrentVersion.ToString()
     Set-Content -Path  "$Root\ControlR.Viewer\ControlR.Viewer.csproj" -Value $Csproj.Node.OuterXml.Trim()
 
     $Manifest = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest"

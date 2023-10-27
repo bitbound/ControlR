@@ -13,12 +13,8 @@ import {
     Typography,
     Tooltip,
     IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions
 } from '@mui/material'
+import CertificateInstructionsDialog from "./components/CertificateInstructionsDialog";
 
 function App() {
     const darkTheme = createTheme({
@@ -68,14 +64,6 @@ function App() {
                         Windows 10/11
                     </Typography>
                     <ButtonWrapper>
-                        <div>
-                            <Button
-                                variant='outlined'
-                                href='/downloads/ControlR.Viewer.msix'
-                                target='_blank'>
-                                MSIX
-                            </Button>
-                        </div>
                         <CertifcateWrapper>
                             <Link href="/downloads/ControlR.Viewer.cer"
                                 target="_blank">
@@ -86,38 +74,17 @@ function App() {
                                     <HelpOutline />
                                 </CertificateButton>
                             </Tooltip>
-                            <Dialog
-                                open={isCertificateDialogOpen}
-                                onClose={closeCertificateDialog}
-                                aria-labelledby="certificate-dialog"
-                                aria-describedby="certificate-dialog-description"
-                            >
-                                <DialogTitle id="certificate-dialog">
-                                    MSIX Code Signing Certificate
-                                </DialogTitle>
-                                <DialogContent>
-                                    <DialogContentText id="certificate-dialog-description">
-                                        <Typography>
-                                            The MSIX installer is created with a self-signed certificate.
-                                            To install it, you must first install the certificate in
-                                            the Local Machine - Trusted People certificate store.
-                                        </Typography>
-                                        <Typography sx={{ mt: 1 }}>
-                                            You can find instructions in Microsoft's
-                                            <Link href="https://learn.microsoft.com/en-us/dotnet/maui/windows/deployment/publish-cli#installing-the-app" target="_blank">
-                                                &nbsp;offical documentation.
-                                            </Link>
-                                        </Typography>
 
-                                    </DialogContentText>
-                                </DialogContent>
-                                <DialogActions>
-                                    <Button onClick={closeCertificateDialog} autoFocus>
-                                        Close
-                                    </Button>
-                                </DialogActions>
-                            </Dialog>
+                            <CertificateInstructionsDialog isOpen={isCertificateDialogOpen} onClose={closeCertificateDialog} />
                         </CertifcateWrapper>
+                        <div>
+                            <Button
+                                variant='outlined'
+                                href='/downloads/ControlR.Viewer.msix'
+                                target='_blank'>
+                                MSIX
+                            </Button>
+                        </div>
                     </ButtonWrapper>
 
                     <Typography variant='h6'>
@@ -190,11 +157,11 @@ const Logo = styled('img')({
 
 const ButtonWrapper = styled('div')({
     marginTop: '0.5rem',
-    marginBottom: '1rem'
+    marginBottom: '1.5rem'
 })
 
 const CertifcateWrapper = styled('div')({
-    marginTop: '1em'
+    marginBottom: '1rem'
 })
 
 const CertificateButton = styled(IconButton)({
