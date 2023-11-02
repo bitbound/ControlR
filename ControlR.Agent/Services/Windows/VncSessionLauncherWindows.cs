@@ -133,18 +133,15 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
     private async Task<Result<VncSession>> RunTvnServerAsService(Guid sessionId, string tvnServerPath)
     {
-        var silentArgs = _elevationChecker.IsElevated() ?
-            " -silent" :
-            "";
-
-        var service = ServiceController
+        using var service = ServiceController
             .GetServices()
             .FirstOrDefault(x => x.ServiceName == "tvnserver");
 
         if (service?.Status != ServiceControllerStatus.Running)
         {
-            await _processes.StartAndWaitForExit(tvnServerPath, $"-reinstall{silentArgs}", true, TimeSpan.FromSeconds(5));
-            await _processes.StartAndWaitForExit(tvnServerPath, $"-start{silentArgs}", true, TimeSpan.FromSeconds(5));
+            await _processes.StartAndWaitForExit(tvnServerPath, "-reinstall -silent", true, TimeSpan.FromSeconds(5));
+            await _processes.StartAndWaitForExit(tvnServerPath, "-start -silent", true, TimeSpan.FromSeconds(5));
+            await _processes.StartAndWaitForExit("sc.exe", "config start= demand", true, TimeSpan.FromSeconds(5));
         }
 
         var startResult = WaitHelper.WaitFor(
@@ -165,8 +162,8 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
            sessionId,
            async () =>
            {
-               await _processes.StartAndWaitForExit(tvnServerPath, $"-stop{silentArgs}", true, TimeSpan.FromSeconds(5));
-               await _processes.StartAndWaitForExit(tvnServerPath, $"-remove{silentArgs}", true, TimeSpan.FromSeconds(5));
+               await _processes.StartAndWaitForExit(tvnServerPath, "-stop -silent", true, TimeSpan.FromSeconds(5));
+               await _processes.StartAndWaitForExit(tvnServerPath, "-remove -silent", true, TimeSpan.FromSeconds(5));
                StopProcesses();
            });
 
@@ -175,7 +172,13 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
 
     private Result<VncSession> RunTvnServerAsUser(Guid sessionId, string tvnServerPath)
     {
-        var process = _processes.Start(tvnServerPath, "-run", true);
+        var existingProcs = _processes.GetProcessesByName(Path.GetFileName(tvnServerPath));
+        var process = existingProcs.FirstOrDefault();
+
+        if (process is null)
+        {
+            process = _processes.Start(tvnServerPath, "-run", true);
+        }
 
         if (process?.HasExited != false)
         {

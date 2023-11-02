@@ -1,7 +1,6 @@
 import {
     Button,
     Link,
-    Typography,
     Dialog,
     DialogTitle,
     DialogContent,

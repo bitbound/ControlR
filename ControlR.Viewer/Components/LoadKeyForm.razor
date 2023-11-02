@@ -5,55 +5,71 @@
 @inject IKeyApi KeyApi
 @inject IHttpConfigurer HttpConfigurer
 
-<MudGrid Justify="Justify.Center">
-    <MudItem>
-        <MudPaper MinWidth="350px" MaxWidth="600px">
-            <MudForm @ref="_loginForm" @bind-IsValid="@_formIsValid">
-                <MudCard>
-                    <MudCardHeader Class="d-block">
-                        <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
-                            Decrypt Private Key
-                        </MudText>
-                        <MudText>
-                            You must decrypt your locally-stored private key
-                            before you can make any requests to the server.
-                        </MudText>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudTextField T="string"
-                                      @bind-Value="_passphrase"
-                                      Label="Passphrase"
-                                      HelperText="Enter your PIN or password."
-                                      Immediate="true"
-                                      InputType="InputType.Password"
-                                      OnKeyDown="PassphraseInputKeyDown"
-                                      Required />
 
-                        <MudCheckBox @bind-Checked="RememberPassphrase"
-                                     Label="Remember on this device" />
-                    </MudCardContent>
-                    <MudCardActions Class="justify-end">
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Disabled="!_formIsValid || _requestPending"
-                                   OnClick="SubmitButtonClicked">
-                            Submit
-                        </MudButton>
-                    </MudCardActions>
-                </MudCard>
-            </MudForm>
+@if (!_isInitialized)
+{
+    <div class="text-center mt-4">
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+            Loading
+        </MudText>
+        <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Info" />
+    </div>
+}
+else
+{
+    <MudGrid Justify="Justify.Center">
+        <MudItem>
+            <MudPaper MinWidth="350px" MaxWidth="600px">
 
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+                <MudForm @ref="_loginForm" @bind-IsValid="@_formIsValid">
+                    <MudCard>
+                        <MudCardHeader Class="d-block">
+                            <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
+                             Decrypt Private Key
+                         </MudText>
+                         <MudText>
+                             You must decrypt your locally-stored private key
+                             before you can make any requests to the server.
+                         </MudText>
+                     </MudCardHeader>
+                     <MudCardContent>
+                         <MudTextField T="string"
+                                       @bind-Value="_passphrase"
+                                       Label="Passphrase"
+                                       HelperText="Enter your PIN or password."
+                                       Immediate="true"
+                                       InputType="InputType.Password"
+                                       OnKeyDown="PassphraseInputKeyDown"
+                                            Required />
+
+                             <MudCheckBox @bind-Checked="RememberPassphrase"
+                                          Label="Remember on this device" />
+                         </MudCardContent>
+                         <MudCardActions Class="justify-end">
+                             <MudButton ButtonType="ButtonType.Button"
+                                        Variant="Variant.Filled"
+                                        Color="Color.Primary"
+                                        Disabled="!_formIsValid || _requestPending"
+                                        OnClick="SubmitButtonClicked">
+                                 Submit
+                             </MudButton>
+                         </MudCardActions>
+                     </MudCard>
+                 </MudForm>
+
+             </MudPaper>
+         </MudItem>
+     </MudGrid>
+
+}
 
 
- @code {
+@code {
     private string? _passphrase;
     private MudForm? _loginForm;
     private bool _formIsValid;
     private bool _requestPending;
+    private bool _isInitialized;
 
     private bool RememberPassphrase
     {
@@ -64,7 +80,6 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
         if (Settings.RememberPassphrase)
         {
             _passphrase = await Settings.GetPassphrase();
@@ -78,6 +93,8 @@
             _formIsValid = true;
             await LoadKeys(false);
         }
+
+        _isInitialized = true;
     }
 
     private async Task PassphraseInputKeyDown(KeyboardEventArgs args)
@@ -131,7 +148,7 @@
                 {
                     Snackbar.Add("Private key decrypted", Severity.Success);
                 }
-            
+
                 Messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
             }
             else
