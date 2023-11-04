@@ -121,7 +121,7 @@ internal class AgentUpdater(
                     .Start("sudo", $"chmod +x {tempPath}")
                     .WaitForExitAsync(cancellationToken);
 
-                _processInvoker.Start("/bin/bash", $"-c \"setsid {tempPath} install &\"", true);
+                _processInvoker.Start("/bin/bash", $"-c \"{tempPath} install &\"", true);
             }
         }
         catch (Exception ex)

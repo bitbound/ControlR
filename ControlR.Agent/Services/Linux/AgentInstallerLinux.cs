@@ -46,12 +46,15 @@ internal class AgentInstallerLinux(
                 _logger.LogError("Install command must be run with sudo.");
             }
 
-            await StopProcesses();
-
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
             var targetPath = Path.Combine(_installDir, AppConstants.AgentFileName);
             _fileSystem.CreateDirectory(_installDir);
+
+            if (_fileSystem.FileExists(targetPath))
+            {
+                _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
+            }
 
             TryHelper.Retry(
                 () =>
@@ -154,42 +157,5 @@ internal class AgentInstallerLinux(
             "RestartSec=10\n\n" +
             "[Install]\n" +
             "WantedBy=graphical.target";
-    }
-
-    private async Task<Result> StopProcesses()
-    {
-        try
-        {
-            if (_fileSystem.FileExists(_serviceFilePath))
-            {
-                _logger.LogInformation("Stopping existing service.");
-                var psi = new ProcessStartInfo()
-                {
-                    FileName = "sudo",
-                    Arguments = "systemctl stop controlr.agent.service",
-                    WorkingDirectory = "/tmp",
-                    UseShellExecute = true
-                };
-
-                await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(5));
-            }
-
-            _logger.LogInformation("Stopping processes.");
-            var procs = _processInvoker
-                .GetProcessesByName("ControlR.Agent")
-                .Where(x => x.Id != Environment.ProcessId);
-
-            foreach (var proc in procs)
-            {
-                proc.Kill();
-            }
-
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while stopping service and processes.");
-            return Result.Fail(ex);
-        }
     }
 }
