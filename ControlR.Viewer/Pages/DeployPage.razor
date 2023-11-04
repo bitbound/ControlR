@@ -48,15 +48,14 @@
 
     <div class="options-grid">
         <MudText Typo="Typo.subtitle2" Color="Color.Info">
-            Auto-Install VNC Server
+            Auto-Run VNC Server
         </MudText>
         <MudText Typo="Typo.body1">
-            Windows only.  This will cause the ControlR agent to automically install and
-            run a temporary VNC server for each session.  The VNC server will be closed 
-            afterward.  Each session will get a new, random password that gets passed in 
-            automatically.
+            Windows only.  This will cause the ControlR agent to automically download (if ncessary)
+            and run a temporary, loopback-only TightVNC server for each session.  The VNC server 
+            will be closed afterward.
         </MudText>
-        <MudCheckBox @bind-Checked="Settings.AutoInstallVnc" Class="mb-3" />
+        <MudCheckBox @bind-Checked="Settings.AutoRunVnc" Class="mb-3" />
 
         <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom>
             VNC Port
@@ -77,7 +76,7 @@
     {
         get
         {
-            var autoInstallOption = Settings.AutoInstallVnc ? "-i " : "";
+            var autoInstallOption = Settings.AutoRunVnc ? "-i " : "";
 
             return "$ProgressPreference = \"SilentlyContinue\"; " +
                 $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +

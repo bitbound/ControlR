@@ -34,7 +34,7 @@ internal class AgentUpdater(
 
     public async Task CheckForUpdate(CancellationToken cancellationToken = default)
     {
-        using var _ = _logger.BeginMemberScope();
+        using var logScope = _logger.BeginMemberScope();
 
         if (!await _checkForUpdatesLock.WaitAsync(0, cancellationToken))
         {
@@ -46,7 +46,7 @@ internal class AgentUpdater(
         {
             _logger.LogInformation("Beginning version check.");
 
-            var downloadUrl = $"{AppConstants.ServerUri}/downloads/{AppConstants.AgentFileName}";
+            var downloadUrl = AppConstants.AgentDownloadUri;
             var etagPath = Path.Combine(_environmentHelper.StartupDirectory, "etag.txt");
 
             using var request = new HttpRequestMessage(HttpMethod.Head, downloadUrl);
@@ -111,7 +111,6 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Launching installer.");
 
-            // TODO: Abstraction.
             if (OperatingSystem.IsWindows())
             {
                 _processInvoker.Start(tempPath, "install");
@@ -122,7 +121,7 @@ internal class AgentUpdater(
                     .Start("sudo", $"chmod +x {tempPath}")
                     .WaitForExitAsync(cancellationToken);
 
-                _processInvoker.Start("sudo", $"/bin/bash -c \"{tempPath} install &\"", true);
+                _processInvoker.Start("/bin/bash", $"-c \"setsid {tempPath} install &\"", true);
             }
         }
         catch (Exception ex)

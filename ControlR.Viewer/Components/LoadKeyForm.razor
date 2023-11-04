@@ -4,6 +4,7 @@
 @inject IMessenger Messenger
 @inject IKeyApi KeyApi
 @inject IHttpConfigurer HttpConfigurer
+@inject ILogger<LoadKeyForm> Logger
 
 
 @if (!_isInitialized)
@@ -80,21 +81,30 @@ else
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        if (Settings.RememberPassphrase)
+        try
         {
-            _passphrase = await Settings.GetPassphrase();
-
-            if (string.IsNullOrWhiteSpace(_passphrase))
+            if (Settings.RememberPassphrase)
             {
-                Snackbar.Add("Stored passphrase is empty", Severity.Warning);
-                return;
+                _passphrase = await Settings.GetPassphrase();
+
+                if (string.IsNullOrWhiteSpace(_passphrase))
+                {
+                    Snackbar.Add("Stored passphrase is empty", Severity.Warning);
+                    return;
+                }
+
+                _formIsValid = true;
+                await LoadKeys(false);
             }
 
-            _formIsValid = true;
-            await LoadKeys(false);
+            _isInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while initializing settings.");
+            Snackbar.Add("Failed to retrieve current settings", Severity.Error);
         }
 
-        _isInitialized = true;
     }
 
     private async Task PassphraseInputKeyDown(KeyboardEventArgs args)

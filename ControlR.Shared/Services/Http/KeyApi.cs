@@ -18,7 +18,7 @@ internal class KeyApi(
     {
         try
         {
-            var response = await _client.GetAsync($"/api/key/verify");
+            using var response = await _client.GetAsync($"/api/key/verify");
             response.EnsureSuccessStatusCode();
             return Result.Ok();
         }

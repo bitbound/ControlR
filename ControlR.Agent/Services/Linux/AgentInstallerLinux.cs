@@ -150,6 +150,7 @@ internal class AgentInstallerLinux(
             $"ExecStart={_installDir}/{AppConstants.AgentFileName} run\n" +
             "Restart=always\n" +
             "StartLimitIntervalSec=0\n" +
+            "Environment=DOTNET_ENVIRONMENT=Production\n" +
             "RestartSec=10\n\n" +
             "[Install]\n" +
             "WantedBy=graphical.target";

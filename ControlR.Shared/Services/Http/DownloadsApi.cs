@@ -38,7 +38,7 @@ internal class DownloadsApi(
     {
         try
         {
-            var fileUrl = $"{AppConstants.DownloadsUri}/downloads/{AppConstants.TightVncZipName}";
+            var fileUrl = $"{AppConstants.ExternalDownloadsUri}/downloads/{AppConstants.TightVncZipName}";
 
             using var webStream = await _client.GetStreamAsync(fileUrl);
 

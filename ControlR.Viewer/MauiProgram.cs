@@ -61,6 +61,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
+        builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 

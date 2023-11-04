@@ -9,7 +9,7 @@ namespace ControlR.Viewer.Services;
 
 internal interface ISettings
 {
-    bool AutoInstallVnc { get; set; }
+    bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
     byte[] PrivateKey { get; set; }
@@ -44,7 +44,7 @@ internal class Settings(
     private readonly ISecureStorage _secureStorage = secureStorage;
     private byte[] _privateKey = [];
 
-    public bool AutoInstallVnc
+    public bool AutoRunVnc
     {
         get => GetPref(false);
         set => SetPref(value);

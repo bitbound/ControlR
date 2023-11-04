@@ -1,5 +1,9 @@
 ﻿@page "/about"
 @inject IVersionTracking VersionTracking
+@inject IVersionApi VersionApi
+@inject ILogger<About> Logger
+@inject ISnackbar Snackbar
+@inject IEnvironmentHelper EnvironmentHelper
 
 <PageTitle>About</PageTitle>
 
@@ -14,13 +18,53 @@
             Version:
         </MudText>
     </div>
-    <div>
+    <div class="d-flex align-start">
         <MudText>
             @(VersionTracking.CurrentVersion)
         </MudText>
+
+        @if (_updateAvailable)
+        {
+            <MudLink Href="@DownloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
+                Update Available!
+            </MudLink>
+        }
+
     </div>
 </div>
 
 @code {
+    private bool _updateAvailable;
 
+    private string DownloadLink
+    {
+        get => AppConstants.ViewerDownloadUri;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        try
+        {
+            var result = await VersionApi.GetCurrentViewerVersion();
+            if (!result.IsSuccess)
+            {
+                Logger.LogResult(result);
+                Snackbar.Add("Failed to check for new versions", Severity.Error);
+                return;
+            }
+
+            var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
+            if (result.Value > currentVersion)
+            {
+                _updateAvailable = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while checking for new versions.");
+            Snackbar.Add("Failed to check for new versions", Severity.Error);
+        }
+    }
 }
