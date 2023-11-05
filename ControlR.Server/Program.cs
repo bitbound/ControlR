@@ -6,6 +6,7 @@ using ControlR.Server.Models;
 using ControlR.Server.Services;
 using ControlR.Shared;
 using ControlR.Shared.Services;
+using ControlR.Shared.Services.Buffers;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,7 @@ builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactor
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
+builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 
 builder.Host.UseSystemd();
 

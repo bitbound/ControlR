@@ -1,43 +1,30 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Agent.Messages;
-using ControlR.Agent.Models;
+﻿using ControlR.Agent.Models;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Buffers;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 
 namespace ControlR.Agent.Services;
 
-internal class LocalProxy(
-    IHostApplicationLifetime appLifetime,
-    IMessenger messenger,
-    IOptionsMonitor<AppOptions> appOptions,
-    ILogger<LocalProxy> logger) : IHostedService
+internal interface ILocalProxy
 {
-    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-    private readonly ILogger<LocalProxy> _logger = logger;
-    private readonly IMessenger _messenger = messenger;
+    Task HandleVncSession(VncSession session);
+}
 
-    public Task StartAsync(CancellationToken cancellationToken)
+internal class LocalProxy(
+    IHostApplicationLifetime _appLifetime,
+    IOptionsMonitor<AppOptions> _appOptions,
+    IMemoryProvider _memoryProvider,
+    ILogger<LocalProxy> _logger) : ILocalProxy
+{
+    public async Task HandleVncSession(VncSession session)
     {
-        _messenger.Register<VncProxyRequestMessage>(this, HandleVncRequestMessage);
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleVncRequestMessage(VncProxyRequestMessage message)
-    {
-        var sessionId = message.Session.SessionId;
+        var sessionId = session.SessionId;
         var ws = new ClientWebSocket();
 
         try
@@ -66,7 +53,7 @@ internal class LocalProxy(
             var websocketEndpoint = new Uri($"{AppConstants.ServerUri.Replace("http", "ws")}/agentvnc-proxy/{sessionId}");
             await ws.ConnectAsync(websocketEndpoint, _appLifetime.ApplicationStopping);
 
-            ProxyConnections(message, ws, tcpClient).AndForget();
+            ProxyConnections(session, ws, tcpClient).AndForget();
         }
         catch (Exception ex)
         {
@@ -76,7 +63,7 @@ internal class LocalProxy(
     }
 
     private async Task ProxyConnections(
-        VncProxyRequestMessage message,
+        VncSession session,
         WebSocket serverConnection,
         TcpClient localConnection)
     {
@@ -93,16 +80,15 @@ internal class LocalProxy(
         }
         finally
         {
-            _logger.LogInformation("Proxy session ended.  Cleaning up connections.  Session ID: {SessionID}", message.Session.SessionId);
-            serverConnection.Dispose();
-            localConnection.Dispose();
-            await message.Session.DisposeAsync();
+            _logger.LogInformation("Proxy session ended.  Cleaning up connections.  Session ID: {SessionID}", session.SessionId);
+            DisposeHelper.DisposeAll(serverConnection, localConnection);
+            await session.DisposeAsync();
         }
     }
 
     private async Task ReadFromLocal(TcpClient localConnection, WebSocket serverConnection)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+        using var buffer = _memoryProvider.CreateEphemeralBuffer<byte>(ushort.MaxValue);
 
         try
         {
@@ -110,18 +96,22 @@ internal class LocalProxy(
                 serverConnection.State == WebSocketState.Open &&
                 !_appLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                var bytesReceived = await localConnection.Client.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                var bytesReceived = await localConnection.Client.ReceiveAsync(buffer.Value, _appLifetime.ApplicationStopping);
                 if (bytesReceived == 0)
                 {
                     continue;
                 }
 
                 await serverConnection.SendAsync(
-                    buffer.AsMemory()[0..bytesReceived],
+                    buffer.Value.AsMemory()[0..bytesReceived],
                     WebSocketMessageType.Binary,
                     true,
                     _appLifetime.ApplicationStopping);
             }
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+        {
+            _logger.LogInformation("Websocket connection aborted.");
         }
         catch (Exception ex)
         {
@@ -130,13 +120,12 @@ internal class LocalProxy(
         finally
         {
             _logger.LogInformation("Read from local connection ended.");
-            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 
     private async Task ReadFromServer(WebSocket serverConnection, TcpClient localConnection)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
+        using var buffer = _memoryProvider.CreateEphemeralBuffer<byte>(ushort.MaxValue);
 
         try
         {
@@ -144,16 +133,27 @@ internal class LocalProxy(
               serverConnection.State == WebSocketState.Open &&
               !_appLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                var result = await serverConnection.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                var result = await serverConnection.ReceiveAsync(buffer.Value, _appLifetime.ApplicationStopping);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    _logger.LogInformation("Websocket close message received.");
+                    break;
+                }
+
                 if (result.Count == 0)
                 {
                     continue;
                 }
 
                 await localConnection.Client.SendAsync(
-                    buffer.AsMemory()[0..result.Count],
+                    buffer.Value.AsMemory()[0..result.Count],
                     _appLifetime.ApplicationStopping);
             }
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+        {
+            _logger.LogInformation("Websocket connection aborted.");
         }
         catch (Exception ex)
         {
@@ -162,7 +162,6 @@ internal class LocalProxy(
         finally
         {
             _logger.LogInformation("Read from server ended.");
-            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }

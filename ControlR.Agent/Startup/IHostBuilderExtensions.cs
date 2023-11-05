@@ -10,6 +10,7 @@ using ControlR.Devices.Common.Services.Linux;
 using ControlR.Devices.Common.Services.Windows;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
+using ControlR.Shared.Services.Buffers;
 using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
@@ -64,8 +65,9 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
                 services.AddHostedService<AgentHeartbeatTimer>();
                 services.AddHostedService<DtoHandler>();
-                services.AddHostedService<LocalProxy>();
+                services.AddSingleton<ILocalProxy, LocalProxy>();
                 services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+                services.AddSingleton<IMemoryProvider, MemoryProvider>();
                 services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
                 services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());

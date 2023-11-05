@@ -1,6 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Agent.Interfaces;
-using ControlR.Agent.Messages;
+﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
@@ -31,33 +29,19 @@ internal interface IAgentHubConnection : IHubConnectionBase
 }
 
 internal class AgentHubConnection(
-     IHostApplicationLifetime appLifetime,
-     IServiceScopeFactory scopeFactory,
-     IDeviceDataGenerator deviceCreator,
-     IEnvironmentHelper environmentHelper,
-     IProcessInvoker processes,
-     IFileSystem fileSystem,
-     IOptionsMonitor<AppOptions> appOptions,
-     ICpuUtilizationSampler cpuSampler,
-     IEncryptionSessionFactory encryptionFactory,
-     IVncSessionLauncher vncSessionLauncher,
-     IAgentUpdater updater,
-     IMessenger messenger,
+     IHostApplicationLifetime _appLifetime,
+     IServiceScopeFactory _scopeFactory,
+     IDeviceDataGenerator _deviceCreator,
+     IEnvironmentHelper _environmentHelper,
+     IOptionsMonitor<AppOptions> _appOptions,
+     ICpuUtilizationSampler _cpuSampler,
+     IEncryptionSessionFactory _encryptionFactory,
+     IVncSessionLauncher _vncSessionLauncher,
+     IAgentUpdater _updater,
+     ILocalProxy _localProxy,
      ILogger<AgentHubConnection> logger)
-        : HubConnectionBase(scopeFactory, logger), IHostedService, IAgentHubConnection, IAgentHubClient
+        : HubConnectionBase(_scopeFactory, logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
-    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-    private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
-    private readonly IDeviceDataGenerator _deviceCreator = deviceCreator;
-    private readonly IEncryptionSessionFactory _encryptionFactory = encryptionFactory;
-    private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
-    private readonly IFileSystem _fileSystem = fileSystem;
-    private readonly IMessenger _messenger = messenger;
-    private readonly IProcessInvoker _processes = processes;
-    private readonly IAgentUpdater _updater = updater;
-    private readonly IVncSessionLauncher _vncSessionLauncher = vncSessionLauncher;
-
     public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
     {
         try
@@ -72,8 +56,9 @@ internal class AgentHubConnection(
             if (_appOptions.CurrentValue.AutoRunVnc != true)
             {
                 var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
-                await _messenger.Send(new VncProxyRequestMessage(session));
-
+                _localProxy
+                    .HandleVncSession(session)
+                    .AndForget();
                 return new(true);
             }
 
@@ -87,7 +72,9 @@ internal class AgentHubConnection(
                 return new(false);
             }
 
-            await _messenger.Send(new VncProxyRequestMessage(result.Value));
+            _localProxy
+                .HandleVncSession(result.Value)
+                .AndForget();
 
             return new(true, true);
         }

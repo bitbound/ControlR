@@ -2,32 +2,21 @@
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
-using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Services.Linux;
 
 [SupportedOSPlatform("linux")]
-internal class VncSessionLauncherLinux : IVncSessionLauncher
+internal class VncSessionLauncherLinux(
+    IProcessInvoker _processes,
+    IOptionsMonitor<AppOptions> _appOptions,
+    IFileSystem _fileSystem,
+    ILogger<VncSessionLauncherLinux> _logger) : IVncSessionLauncher
 {
-    private readonly IOptionsMonitor<AppOptions> _appOptions;
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
-    private readonly ILogger<VncSessionLauncherLinux> _logger;
-    private readonly IProcessInvoker _processes;
-
-    public VncSessionLauncherLinux(
-        IProcessInvoker processInvoker,
-        IOptionsMonitor<AppOptions> appOptions,
-        ILogger<VncSessionLauncherLinux> logger)
-    {
-        _processes = processInvoker;
-        _appOptions = appOptions;
-        _logger = logger;
-    }
 
     public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
     {
@@ -41,22 +30,19 @@ internal class VncSessionLauncherLinux : IVncSessionLauncher
 
             await CreatePassword(password);
 
-            _ = _processes.Start("sudo", $"vncserver -depth 24 -geometry 1280x800 -localhost -rfbport {_appOptions.CurrentValue.VncPort} :9");
+            _ = _processes.Start("sudo", $"vncserver -depth 24 -geometry 1280x800 -localhost -rfbport {_appOptions.CurrentValue.VncPort}");
 
-            Process? vncProcess = null;
-
-            await WaitHelper.WaitForAsync(
+            var launchSuccess = await WaitHelper.WaitForAsync(
                 () =>
                 {
-                    vncProcess = _processes
+                    return _processes
                         .GetProcesses()
-                        .Where(x => x.ProcessName.Equals("Xtightvnc", StringComparison.OrdinalIgnoreCase))
-                        .FirstOrDefault();
-                    return vncProcess is not null;
+                        .Any(x => x.ProcessName.Equals("Xtightvnc", StringComparison.OrdinalIgnoreCase));
                 },
-                TimeSpan.FromSeconds(10));
+                timeout: TimeSpan.FromSeconds(10),
+                pollingMs: 250);
 
-            if (vncProcess is null)
+            if (!launchSuccess)
             {
                 return Result.Fail<VncSession>("VNC server failed to start.");
             }
@@ -65,8 +51,19 @@ internal class VncSessionLauncherLinux : IVncSessionLauncher
                 sessionId,
                 async () =>
                 {
-                    await _processes.StartAndWaitForExit("sudo", "/usr/bin/vncserver -kill :9", true, TimeSpan.FromSeconds(5));
-                    vncProcess.KillAndDispose();
+                    var pidFiles = _fileSystem
+                        .GetFiles("/root/.vnc/")
+                        .Where(x => x.EndsWith(".pid"))
+                        .ToArray();
+
+                    _logger.LogInformation("Found {PidCount} VNC PID files for cleanup.", pidFiles.Length);
+
+                    foreach (var pid in pidFiles)
+                    {
+                        var display = pid[pid.IndexOf(':')..pid.IndexOf('.')];
+                        _logger.LogInformation("Disposing of VNC session on display {DisplayName}.", display);
+                        await _processes.StartAndWaitForExit("sudo", $"/usr/bin/vncserver -kill {display}", true, TimeSpan.FromSeconds(5));
+                    }
                 });
 
             return Result.Ok(session);
@@ -94,6 +91,11 @@ internal class VncSessionLauncherLinux : IVncSessionLauncher
 
     private async Task InstallVnc()
     {
+        if (_fileSystem.FileExists("/usr/bin/tightvncserver"))
+        {
+            return;
+        }
+
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         await _processes

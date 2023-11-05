@@ -27,8 +27,9 @@ internal class CommandProvider
 
         var autoRunOption = new Option<bool?>(
              _autoRunVnc,
-             "Windows only.  Whether to automatically download (if needed) and run a temporary TightVNC server. " +
-             "The server is run in loopback-only mode and is shutdown after each session.  Set this to false " +
+             "Whether to automatically download (if needed) and run a temporary TightVNC server. " +
+             "The server will run in loopback-only mode, and a new random password will be generated " +
+             "for each session. The server will shutdown when the session ends. Set this to false " +
              "to use an existing server.");
 
         var installCommand = new Command("install", "Install the ControlR service.")

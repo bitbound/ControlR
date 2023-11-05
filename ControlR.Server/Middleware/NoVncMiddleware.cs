@@ -1,19 +1,17 @@
 ﻿using ControlR.Server.Services;
 using ControlR.Shared.Helpers;
-using System.Buffers;
+using ControlR.Shared.Services.Buffers;
 using System.Net.WebSockets;
 
 namespace ControlR.Server.Middleware;
 
 public class NoVncMiddleware(
-    RequestDelegate next,
-    IHostApplicationLifetime appLifetime,
-    IProxyStreamStore proxyStreamStore)
+    RequestDelegate _next,
+    IHostApplicationLifetime _appLifetime,
+    IProxyStreamStore _proxyStreamStore,
+    ILogger<NoVncMiddleware> _logger,
+    IMemoryProvider _memoryProvider)
 {
-    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-    private readonly RequestDelegate _next = next;
-    private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
-
     public async Task InvokeAsync(HttpContext context)
     {
         if (!context.WebSockets.IsWebSocketRequest)
@@ -51,22 +49,29 @@ public class NoVncMiddleware(
 
         Guard.IsNotNull(signaler.AgentVncWebsocket);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(ushort.MaxValue);
-
+        using var buffer = _memoryProvider.CreateEphemeralBuffer<byte>(ushort.MaxValue);
         try
         {
-            while (signaler.AgentVncWebsocket.State == WebSocketState.Open &&
-             signaler.NoVncWebsocket.State == WebSocketState.Open &&
-             !_appLifetime.ApplicationStopping.IsCancellationRequested)
+            while (
+                websocket.State == WebSocketState.Open &&
+                signaler.AgentVncWebsocket.State == WebSocketState.Open &&
+                 !_appLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                var result = await signaler.NoVncWebsocket.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+                var result = await websocket.ReceiveAsync(buffer.Value, _appLifetime.ApplicationStopping);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    _logger.LogInformation("Websocket close message received.");
+                    break;
+                }
+
                 if (result.Count == 0)
                 {
                     continue;
                 }
 
                 await signaler.AgentVncWebsocket.SendAsync(
-                    buffer.AsMemory()[0..result.Count],
+                    buffer.Value.AsMemory()[0..result.Count],
                     WebSocketMessageType.Binary,
                     true,
                     _appLifetime.ApplicationStopping);
@@ -74,14 +79,11 @@ public class NoVncMiddleware(
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
-
-            if (signaler.NoVncWebsocket.State == WebSocketState.Open)
+            if (websocket.State == WebSocketState.Open)
             {
-                await signaler.NoVncWebsocket.SendAsync(
-                    Array.Empty<byte>(),
-                    WebSocketMessageType.Close,
-                    true,
+                await websocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Stream ended.",
                     _appLifetime.ApplicationStopping);
             }
         }

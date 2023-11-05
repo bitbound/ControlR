@@ -1,4 +1,5 @@
-﻿using ControlR.Shared.Services;
+﻿using ControlR.Shared.Extensions;
+using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -8,6 +9,8 @@ public class FileLogger(string componentName, string componentVersion, string ca
 {
     private static readonly ConcurrentStack<string> _scopeStack = new();
     private static readonly SemaphoreSlim _writeLock = new(1, 1);
+    private static readonly ConcurrentQueue<string> _writeQueue = new();
+
     private readonly string _categoryName = categoryName;
     private readonly string _componentName = componentName;
     private readonly string _componentVersion = componentVersion;
@@ -43,7 +46,9 @@ public class FileLogger(string componentName, string componentVersion, string ca
             throw new PlatformNotSupportedException();
         }
     }
+
     private string LogPath => Path.Combine(LogsFolderPath, _componentName, $"LogFile_{DateTime.Now:yyyy-MM-dd}.log");
+
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull
     {
@@ -65,23 +70,20 @@ public class FileLogger(string componentName, string componentVersion, string ca
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        _writeLock.Wait();
-
         try
         {
-
             var message = FormatLogEntry(logLevel, _categoryName, $"{state}", exception, [.. _scopeStack]);
-            CheckLogFileExists();
-            File.AppendAllText(LogPath, message);
-            CleanupLogs();
+            _writeQueue.Enqueue(message);
+
+            DrainWriteQueue().AndForget();
+
+            //CheckLogFileExists();
+            //File.AppendAllText(LogPath, message);
+            //CleanupLogs();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error writing log entry: {ex.Message}");
-        }
-        finally
-        {
-            _writeLock.Release();
+            Console.WriteLine($"Error queuing log entry: {ex.Message}");
         }
     }
 
@@ -119,29 +121,59 @@ public class FileLogger(string componentName, string componentVersion, string ca
             }
         }
     }
+
+    private async Task DrainWriteQueue()
+    {
+        if (!await _writeLock.WaitAsync(0))
+        {
+            return;
+        }
+
+        try
+        {
+            CheckLogFileExists();
+            CleanupLogs();
+
+            while (_writeQueue.TryDequeue(out var message))
+            {
+                File.AppendAllText(LogPath, message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while trying to drain log queue.  Message: {ex.Message}");
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     private string FormatLogEntry(LogLevel logLevel, string categoryName, string state, Exception? exception, string[] scopeStack)
     {
         var ex = exception;
-        var exMessage = exception?.Message;
+        var exMessage = !string.IsNullOrWhiteSpace(exception?.Message) ?
+            $"[{exception.GetType().Name}] {exception.Message}" :
+            null;
 
         while (ex?.InnerException is not null)
         {
-            exMessage += $" | {ex.InnerException.Message}";
+            exMessage += $" | [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
             ex = ex.InnerException;
         }
 
         var entry =
-            $"[{logLevel}]\t" +
-            $"[v{_componentVersion}]\t" +
-            $"[Process ID: {Environment.ProcessId}]\t" +
-            $"[Thread ID: {Environment.CurrentManagedThreadId}]\t" +
-            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]\t";
+            $"[{logLevel}] " +
+            $"[v{_componentVersion}] " +
+            $"[Process ID: {Environment.ProcessId}] " +
+            $"[Thread ID: {Environment.CurrentManagedThreadId}] " +
+            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}] ";
 
         entry += scopeStack.Length != 0 ?
-                    $"[{categoryName} => {string.Join(" => ", scopeStack)}]\t" :
-                    $"[{categoryName}]\t";
+                    $"[{categoryName} => {string.Join(" => ", scopeStack)}] " :
+                    $"[{categoryName}] ";
 
-        entry += $"{state}\t";
+        entry += $"{state} ";
 
         if (!string.IsNullOrWhiteSpace(exMessage))
         {

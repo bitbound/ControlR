@@ -51,9 +51,10 @@
             Auto-Run VNC Server
         </MudText>
         <MudText Typo="Typo.body1">
-            Windows only.  This will cause the ControlR agent to automically download (if ncessary)
-            and run a temporary, loopback-only TightVNC server for each session.  The VNC server 
-            will be closed afterward.
+            This will cause the ControlR agent to automatically download (if ncessary) and
+            run a temporary, loopback-only TightVNC server for each session. A new, random
+            password will be set for the server each time.  The VNC server will be closed
+            afterward.
         </MudText>
         <MudCheckBox @bind-Checked="Settings.AutoRunVnc" Class="mb-3" />
 

@@ -25,10 +25,24 @@ public class Result
         Reason = reason;
     }
 
+    public Result(bool isSuccess, Exception? exception, string reason)
+    {
+        IsSuccess = isSuccess;
+        Exception = exception;
+        Reason = reason;
+    }
+
     private Result(Exception ex)
     {
         IsSuccess = false;
         Reason = ex.Message;
+        Exception = ex;
+    }
+
+    private Result(Exception ex, string reason)
+    {
+        IsSuccess = false;
+        Reason = reason;
         Exception = ex;
     }
 
@@ -56,6 +70,11 @@ public class Result
     public static Result Fail(Exception ex)
     {
         return new Result(ex);
+    }
+
+    public static Result Fail(Exception ex, string reason)
+    {
+        return new Result(ex, reason);
     }
 
     public static Result<T> Fail<T>(string reason)
@@ -145,4 +164,9 @@ public class Result<T>
 
     [MsgPackKey]
     public T? Value { get; init; }
+
+    public Result ToResult()
+    {
+        return new Result(IsSuccess, Exception, Reason);
+    }
 }
