@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -18,6 +18,23 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ContentWithTargetPath Include="Resources\ControlR.WinVncPassword.dll">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<TargetPath>ControlR.WinVncPassword.dll</TargetPath>
+	</ContentWithTargetPath>
+
+	<ContentWithTargetPath Include="Resources\ControlR.WinVncPassword.pdb">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <TargetPath>ControlR.WinVncPassword.pdb</TargetPath>
+	</ContentWithTargetPath>
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

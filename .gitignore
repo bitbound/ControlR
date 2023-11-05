@@ -369,3 +369,6 @@ FodyWeavers.xsd
 /ControlR.Viewer/controlr.keystore
 /ControlR.Server/wwwroot/downloads/ControlR.Agent.exe
 ControlR.Server/wwwroot/novnc/
+/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.dll
+/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.exp
+/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.lib
