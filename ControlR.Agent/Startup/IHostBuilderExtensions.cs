@@ -109,7 +109,10 @@ internal static class IHostBuilderExtensions
             logging.AddConsole();
             logging.AddDebug();
             var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-            logging.AddProvider(new FileLoggerProvider("ControlR.Agent", version));
+            logging.AddProvider(new FileLoggerProvider(
+                version,
+                () => LoggingConstants.LogPath,
+                TimeSpan.FromDays(7)));
             logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
         });
 

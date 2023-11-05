@@ -1,53 +1,20 @@
 ﻿using ControlR.Shared.Extensions;
-using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace ControlR.Devices.Common.Services;
 
-public class FileLogger(string componentName, string componentVersion, string categoryName) : ILogger
+public class FileLogger(
+    string _componentVersion,
+    string _categoryName,
+    Func<string> _logPathFactory,
+    TimeSpan _logRetention) : ILogger
 {
     private static readonly ConcurrentStack<string> _scopeStack = new();
     private static readonly SemaphoreSlim _writeLock = new(1, 1);
     private static readonly ConcurrentQueue<string> _writeQueue = new();
 
-    private readonly string _categoryName = categoryName;
-    private readonly string _componentName = componentName;
-    private readonly string _componentVersion = componentVersion;
     private DateTimeOffset _lastLogCleanup;
-
-    private static string LogsFolderPath
-    {
-        get
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                var logsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "ControlR",
-                    "Logs");
-
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    logsPath += "_Debug";
-                }
-                return logsPath;
-            }
-
-            if (OperatingSystem.IsLinux())
-            {
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    return "/var/log/ControlR_debug";
-                }
-                return "/var/log/ControlR";
-            }
-
-            throw new PlatformNotSupportedException();
-        }
-    }
-
-    private string LogPath => Path.Combine(LogsFolderPath, _componentName, $"LogFile_{DateTime.Now:yyyy-MM-dd}.log");
 
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull
@@ -89,10 +56,11 @@ public class FileLogger(string componentName, string componentVersion, string ca
 
     private void CheckLogFileExists()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-        if (!File.Exists(LogPath))
+        var logPath = _logPathFactory();
+        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+        if (!File.Exists(logPath))
         {
-            File.Create(LogPath).Close();
+            File.Create(logPath).Close();
         }
     }
 
@@ -105,9 +73,9 @@ public class FileLogger(string componentName, string componentVersion, string ca
 
         _lastLogCleanup = DateTimeOffset.Now;
 
-        var logFiles = Directory.GetFiles(Path.GetDirectoryName(LogPath)!)
+        var logFiles = Directory.GetFiles(Path.GetDirectoryName(_logPathFactory())!)
             .Select(x => new FileInfo(x))
-            .Where(x => DateTime.Now - x.CreationTime > TimeSpan.FromDays(7));
+            .Where(x => DateTime.Now - x.CreationTime > _logRetention);
 
         foreach (var file in logFiles)
         {
@@ -136,7 +104,7 @@ public class FileLogger(string componentName, string componentVersion, string ca
 
             while (_writeQueue.TryDequeue(out var message))
             {
-                File.AppendAllText(LogPath, message);
+                File.AppendAllText(_logPathFactory(), message);
             }
         }
         catch (Exception ex)
@@ -153,25 +121,25 @@ public class FileLogger(string componentName, string componentVersion, string ca
     {
         var ex = exception;
         var exMessage = !string.IsNullOrWhiteSpace(exception?.Message) ?
-            $"[{exception.GetType().Name}] {exception.Message}" :
+            $"[{exception.GetType().Name}]  {exception.Message}" :
             null;
 
         while (ex?.InnerException is not null)
         {
-            exMessage += $" | [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
+            exMessage += $" | [{ex.InnerException.GetType().Name}]  {ex.InnerException.Message}";
             ex = ex.InnerException;
         }
 
         var entry =
-            $"[{logLevel}] " +
-            $"[v{_componentVersion}] " +
-            $"[Process ID: {Environment.ProcessId}] " +
-            $"[Thread ID: {Environment.CurrentManagedThreadId}] " +
-            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}] ";
+            $"[{logLevel}]  " +
+            $"[v{_componentVersion}]  " +
+            $"[Process ID: {Environment.ProcessId}]  " +
+            $"[Thread ID: {Environment.CurrentManagedThreadId}]  " +
+            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]  ";
 
         entry += scopeStack.Length != 0 ?
-                    $"[{categoryName} => {string.Join(" => ", scopeStack)}] " :
-                    $"[{categoryName}] ";
+                    $"[{categoryName} => {string.Join(" => ", scopeStack)}]  " :
+                    $"[{categoryName}]  ";
 
         entry += $"{state} ";
 

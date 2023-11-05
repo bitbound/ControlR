@@ -147,9 +147,16 @@ internal class VncSessionLauncherWindows(
            sessionId,
            async () =>
            {
-               await _processInvoker.StartAndWaitForExit(tvnServerPath, "-stop -silent", true, TimeSpan.FromSeconds(5));
-               await _processInvoker.StartAndWaitForExit(tvnServerPath, "-remove -silent", true, TimeSpan.FromSeconds(5));
-               StopProcesses();
+               try
+               {
+                   StopProcesses();
+                   await _processInvoker.StartAndWaitForExit(tvnServerPath, "-stop -silent", true, TimeSpan.FromSeconds(5));
+                   await _processInvoker.StartAndWaitForExit(tvnServerPath, "-remove -silent", true, TimeSpan.FromSeconds(5));
+               }
+               catch (Exception ex)
+               {
+                   _logger.LogError(ex, "Error during VNC session cleanup");
+               }
            });
 
         return Result.Ok(session);
@@ -196,7 +203,7 @@ internal class VncSessionLauncherWindows(
         using var serverKey = baseKey.CreateSubKey("SOFTWARE\\TightVNC\\Server");
         serverKey.SetValue("AllowLoopback", 1);
         serverKey.SetValue("LoopbackOnly", 1);
-        serverKey.SetValue("UseVncAuthentication", 0);
+        serverKey.SetValue("UseVncAuthentication", 1);
         serverKey.SetValue("RemoveWallpaper", 0);
         serverKey.SetValue("Password", encryptResult.Value, RegistryValueKind.Binary);
         return Result.Ok();

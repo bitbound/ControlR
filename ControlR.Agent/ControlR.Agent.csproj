@@ -39,8 +39,4 @@
     <ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Messages\" />
-  </ItemGroup>
-
 </Project>

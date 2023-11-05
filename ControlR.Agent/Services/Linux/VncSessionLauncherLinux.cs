@@ -51,18 +51,39 @@ internal class VncSessionLauncherLinux(
                 sessionId,
                 async () =>
                 {
-                    var pidFiles = _fileSystem
-                        .GetFiles("/root/.vnc/")
-                        .Where(x => x.EndsWith(".pid"))
-                        .ToArray();
-
-                    _logger.LogInformation("Found {PidCount} VNC PID files for cleanup.", pidFiles.Length);
-
-                    foreach (var pid in pidFiles)
+                    try
                     {
-                        var display = pid[pid.IndexOf(':')..pid.IndexOf('.')];
-                        _logger.LogInformation("Disposing of VNC session on display {DisplayName}.", display);
-                        await _processes.StartAndWaitForExit("sudo", $"/usr/bin/vncserver -kill {display}", true, TimeSpan.FromSeconds(5));
+                        var pidFiles = _fileSystem
+                         .GetFiles("/root/.vnc/")
+                         .Where(x => x.EndsWith(".pid"))
+                         .Select(x => Path.GetFileName(x))
+                         .ToArray();
+
+                        _logger.LogInformation("Found {PidCount} VNC PID files for cleanup.", pidFiles.Length);
+
+                        foreach (var pid in pidFiles)
+                        {
+                            var start = pid.IndexOf(':');
+                            var end = pid.IndexOf('.');
+
+                            if (start < 0 || end < start)
+                            {
+                                _logger.LogWarning(
+                                    "Failed to parse VNC PID file {FileName}.  " +
+                                    "Start: {StartIndex}.  End: {EndIndex}.",
+                                    pid,
+                                    start,
+                                    end);
+                            }
+
+                            var display = pid[start..end];
+                            _logger.LogInformation("Disposing of VNC session on display {DisplayName}.", display);
+                            await _processes.StartAndWaitForExit("sudo", $"/usr/bin/vncserver -kill {display}", true, TimeSpan.FromSeconds(5));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during VNC session cleanup.");
                     }
                 });
 

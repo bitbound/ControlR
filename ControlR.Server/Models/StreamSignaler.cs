@@ -3,7 +3,7 @@ using System.Net.WebSockets;
 
 namespace ControlR.Server.Models;
 
-public class StreamSignaler(Guid sessionId) : IDisposable
+public class StreamSignaler(Guid sessionId) : IAsyncDisposable
 {
     private bool _disposedValue;
 
@@ -13,27 +13,47 @@ public class StreamSignaler(Guid sessionId) : IDisposable
     public WebSocket? NoVncWebsocket { get; internal set; }
     public Guid SessionId { get; init; } = sessionId;
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposedValue)
+        if (_disposedValue)
         {
-            if (disposing)
-            {
-                DisposeHelper.DisposeAll(
-                    AgentVncReady,
-                    AgentVncWebsocket,
-                    NoVncViewerReady,
-                    NoVncWebsocket);
-            }
-
-            _disposedValue = true;
+            return;
         }
+
+        _disposedValue = true;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            if (NoVncWebsocket?.State == WebSocketState.Open)
+            {
+                await NoVncWebsocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Session ended.",
+                    cts.Token);
+            }
+        }
+        catch { }
+
+        try
+        {
+            if (AgentVncWebsocket?.State == WebSocketState.Open)
+            {
+                await AgentVncWebsocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Session ended.",
+                    cts.Token);
+            }
+        }
+        catch { }
+
+        DisposeHelper.DisposeAll(
+                  AgentVncReady,
+                  AgentVncWebsocket,
+                  NoVncViewerReady,
+                  NoVncWebsocket);
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -37,7 +37,7 @@ public class NoVncMiddleware(
             return;
         }
 
-        using var signaler = storedSignaler;
+        await using var signaler = storedSignaler;
 
         signaler.NoVncWebsocket = websocket;
         signaler.NoVncViewerReady.Release();
@@ -77,15 +77,9 @@ public class NoVncMiddleware(
                     _appLifetime.ApplicationStopping);
             }
         }
-        finally
+        catch (Exception ex)
         {
-            if (websocket.State == WebSocketState.Open)
-            {
-                await websocket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Stream ended.",
-                    _appLifetime.ApplicationStopping);
-            }
+            _logger.LogError(ex, "Error while proxying NoVNC websocket.");
         }
     }
 }

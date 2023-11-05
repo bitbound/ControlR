@@ -37,7 +37,7 @@ public class AgentVncMiddleware(
             return;
         }
 
-        using var signaler = storedSignaler;
+        await using var signaler = storedSignaler;
         signaler.AgentVncWebsocket = websocket;
         signaler.AgentVncReady.Release();
 
@@ -75,15 +75,9 @@ public class AgentVncMiddleware(
                     _appLifetime.ApplicationStopping);
             }
         }
-        finally
+        catch (Exception ex)
         {
-            if (websocket.State == WebSocketState.Open)
-            {
-                await websocket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Stream ended.",
-                    _appLifetime.ApplicationStopping);
-            }
+            _logger.LogError(ex, "Error while proxying agent websocket.");
         }
     }
 }

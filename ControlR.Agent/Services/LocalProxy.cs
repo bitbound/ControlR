@@ -109,9 +109,15 @@ internal class LocalProxy(
                     _appLifetime.ApplicationStopping);
             }
         }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+        catch (SocketException ex) when (ex.SocketErrorCode is
+           SocketError.OperationAborted or
+           SocketError.ConnectionAborted)
         {
-            _logger.LogInformation("Websocket connection aborted.");
+            _logger.LogInformation("Socket connection aborted.");
+        }
+        catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.ConnectionClosedPrematurely)
+        {
+            _logger.LogInformation("Websocket connection closed.");
         }
         catch (Exception ex)
         {
@@ -151,9 +157,15 @@ internal class LocalProxy(
                     _appLifetime.ApplicationStopping);
             }
         }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+        catch (SocketException ex) when (ex.SocketErrorCode is
+            SocketError.OperationAborted or
+            SocketError.ConnectionAborted)
         {
-            _logger.LogInformation("Websocket connection aborted.");
+            _logger.LogInformation("Socket connection aborted.");
+        }
+        catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.ConnectionClosedPrematurely)
+        {
+            _logger.LogInformation("Websocket connection closed.");
         }
         catch (Exception ex)
         {

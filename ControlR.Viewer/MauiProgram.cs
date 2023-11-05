@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.Messaging;
+using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Services;
-using ControlR.Viewer.Services.Logging;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
+using FileSystem = Microsoft.Maui.Storage.FileSystem;
 using FileSystemCore = ControlR.Devices.Common.Services.FileSystem;
 using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
 
@@ -15,6 +16,8 @@ namespace ControlR.Viewer;
 
 public static class MauiProgram
 {
+    private static string LogPath => Path.Combine(FileSystem.Current.AppDataDirectory, "Logs", $"LogFile_{DateTime.Now:yyyy-MM-dd}.log");
+
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -37,7 +40,11 @@ public static class MauiProgram
             config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
         });
         builder.Logging.AddDebug();
-        builder.Logging.AddProvider(new FileLoggerProvider());
+        builder.Logging.AddProvider(new FileLoggerProvider(
+            VersionTracking.Default.CurrentVersion,
+            () => LogPath,
+            TimeSpan.FromDays(7)));
+
         // TODO: In-memory logger.
 
         builder.Services.AddSingleton(SecureStorage.Default);
