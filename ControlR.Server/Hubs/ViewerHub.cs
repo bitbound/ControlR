@@ -34,13 +34,13 @@ public class ViewerHub(
         return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
     }
 
-    public async Task<bool> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
+    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
             if (!VerifyPayload(sessionRequestDto, out _))
             {
-                return false;
+                return new(false);
             }
 
             var signaler = new StreamSignaler(sessionId);
@@ -55,7 +55,7 @@ public class ViewerHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while requesting VNC session.");
-            return false;
+            return new(false);
         }
     }
 

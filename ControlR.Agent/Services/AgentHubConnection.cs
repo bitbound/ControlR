@@ -58,13 +58,13 @@ internal class AgentHubConnection(
     private readonly IAgentUpdater _updater = updater;
     private readonly IVncSessionLauncher _vncSessionLauncher = vncSessionLauncher;
 
-    public async Task<bool> GetVncSession(SignedPayloadDto signedDto)
+    public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
     {
         try
         {
             if (!VerifyPayload(signedDto))
             {
-                return false;
+                return new(false);
             }
 
             var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
@@ -74,27 +74,27 @@ internal class AgentHubConnection(
                 var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
                 await _messenger.Send(new VncProxyRequestMessage(session));
 
-                return true;
+                return new(true);
             }
 
             var result = await _vncSessionLauncher
-                .CreateSession(dto.SessionId)
+                .CreateSession(dto.SessionId, dto.VncPassword)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
                 _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
-                return false;
+                return new(false);
             }
 
             await _messenger.Send(new VncProxyRequestMessage(result.Value));
 
-            return true;
+            return new(true, true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating streaming session.");
-            return false;
+            return new(false);
         }
     }
 
@@ -198,7 +198,7 @@ internal class AgentHubConnection(
 #pragma warning restore CA1416 // Validate platform compatibility
         }
 
-        hubConnection.On<SignedPayloadDto, bool>(nameof(GetVncSession), GetVncSession);
+        hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

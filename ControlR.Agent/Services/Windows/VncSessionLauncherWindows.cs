@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
@@ -43,7 +44,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         _logger = logger;
     }
 
-    public async Task<Result<VncSession>> CreateSession(Guid sessionId)
+    public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
     {
         await _createSessionLock.WaitAsync();
 
@@ -63,7 +64,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
                 }
             }
 
-            SetRegKeys();
+            SetRegKeys(password);
 
             if (_elevationChecker.IsElevated())
             {
@@ -196,8 +197,10 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         return Result.Ok(session);
     }
 
-    private void SetRegKeys()
+    private void SetRegKeys(string password)
     {
+        var encryptedPassword = TightVncInterop.EncryptVncPassword(password);
+
         var hive = _elevationChecker.IsElevated() ?
             RegistryHive.LocalMachine :
             RegistryHive.CurrentUser;
@@ -208,6 +211,7 @@ internal class VncSessionLauncherWindows : IVncSessionLauncher
         serverKey.SetValue("LoopbackOnly", 1);
         serverKey.SetValue("UseVncAuthentication", 0);
         serverKey.SetValue("RemoveWallpaper", 0);
+        serverKey.SetValue("Password", encryptedPassword, RegistryValueKind.Binary);
     }
 
     private void StopProcesses()

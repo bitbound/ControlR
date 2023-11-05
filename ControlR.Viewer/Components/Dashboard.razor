@@ -252,19 +252,26 @@
         try
         {
             var sessionId = Guid.NewGuid();
+            var vncPassword = RandomGenerator.GenerateString(8);
 
             Logger.LogInformation("Creating VNC session");
             Snackbar.Add("Requesting VNC session", Severity.Info);
 
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId);
+            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
 
-            if (!vncSessionResult)
+            if (!vncSessionResult.SessionCreated)
             {
                 Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
                 return;
             }
 
-            var targetUrl = $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}&show_dot=true&autoconnect=true";
+            var targetUrl = $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}&show_dot=true";
+
+            if (vncSessionResult.AutoRunUsed == true)
+            {
+                targetUrl += $"&password={vncPassword}&autoconnect=true";
+            }
+
 
             await Browser.OpenAsync(targetUrl);
         }
