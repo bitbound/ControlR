@@ -4,25 +4,30 @@
 #include <iostream>
 #include <string>
 #include "combaseapi.h"
+#include "TightVnc/VncPassCrypt.h"
 
+__declspec(dllexport) UINT8* EncryptVncPassword(char* password, int& size)
+{
+	size = VncPassCrypt::VNC_PASSWORD_SIZE;
 
-__declspec(dllexport) UINT8* EncryptVncPassword(char* password, int& size) {
 	std::string strPassword = password;
-	trimString(strPassword);
+	TrimString(strPassword);
 
-	UINT8 plainText[8] = {};
-	int maxPasswdLen = 8;
-	int passwdLen = static_cast<int>(strPassword.length());
-	size = min(maxPasswdLen, passwdLen);
+	int passwordLen = strPassword.length();
 
-	UINT8* encryptedPassword = (UINT8*)CoTaskMemAlloc(size);
-	
-	//UINT8* encryptedPassword = new UINT8[size];
+	UINT8* plainText = new UINT8[size];
 
 	for (int i = 0; i < size; i++)
 	{
-		plainText[i] = static_cast<UINT8>(strPassword[i]);
+		if (i < passwordLen) {
+			plainText[i] = static_cast<UINT8>(strPassword[i]);
+		}
+		else {
+			plainText[i] = 0;
+		}
 	}
+
+	UINT8* encryptedPassword = (UINT8*)CoTaskMemAlloc(size);
 
 	VncPassCrypt::getEncryptedPass(encryptedPassword, plainText);
 

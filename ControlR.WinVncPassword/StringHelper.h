@@ -1,4 +1,4 @@
 #pragma once
 #include <string>
 
-void trimString(std::string& str);
+void TrimString(std::string& str);
