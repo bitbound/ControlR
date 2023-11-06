@@ -15,6 +15,7 @@ import {
     IconButton,
 } from '@mui/material'
 import CertificateInstructionsDialog from "./components/CertificateInstructionsDialog";
+import DeployAgentDialog from "./components/DeployAgentDialog";
 
 function App() {
     const darkTheme = createTheme({
@@ -31,6 +32,16 @@ function App() {
 
     const closeCertificateDialog = () => {
         setCertificateDialogOpen(false);
+    };
+
+    const [isAgentDialogOpen, setAgentDialogOpen] = React.useState(false);
+
+    const openAgentDialog = () => {
+        setAgentDialogOpen(true);
+    };
+
+    const closeAgentDialog = () => {
+        setAgentDialogOpen(false);
     };
 
     return (
@@ -64,19 +75,19 @@ function App() {
                         Windows 10/11
                     </Typography>
                     <ButtonWrapper>
-                        <CertifcateWrapper>
+                        <CertificateInfoWrapper>
                             <Link href="/downloads/ControlR.Viewer.cer"
                                 target="_blank">
                                 Certificate
                             </Link>
                             <Tooltip title="Certificate Instructions">
-                                <CertificateButton onClick={openCertificateDialog}>
+                                <CertificateHelpButton onClick={openCertificateDialog}>
                                     <HelpOutline />
-                                </CertificateButton>
+                                </CertificateHelpButton>
                             </Tooltip>
 
                             <CertificateInstructionsDialog isOpen={isCertificateDialogOpen} onClose={closeCertificateDialog} />
-                        </CertifcateWrapper>
+                        </CertificateInfoWrapper>
                         <div>
                             <Button
                                 variant='outlined'
@@ -99,12 +110,21 @@ function App() {
                         </Button>
                     </ButtonWrapper>
 
+
                     <Typography
                         variant='h4'
                         color='success.main'
                         mt={3}
                         mb={1}>
                         Agent
+
+                        <Tooltip title="Agent Deployment">
+                            <AgentHelpButton onClick={openAgentDialog}>
+                                <HelpOutline />
+                            </AgentHelpButton>
+                        </Tooltip>
+
+                        <DeployAgentDialog isOpen={isAgentDialogOpen} onClose={closeAgentDialog} />
                     </Typography>
 
                     <Typography variant='h6'>
@@ -160,13 +180,18 @@ const ButtonWrapper = styled('div')({
     marginBottom: '1.5rem'
 })
 
-const CertifcateWrapper = styled('div')({
+const CertificateInfoWrapper = styled('div')({
     marginBottom: '1rem'
 })
 
-const CertificateButton = styled(IconButton)({
+const CertificateHelpButton = styled(IconButton)({
     position: "absolute",
     transform: "translate(5px, -25%)"
+})
+
+const AgentHelpButton = styled(IconButton)({
+    position: "absolute",
+    transform: "translateX(5px)"
 })
 
 export default App

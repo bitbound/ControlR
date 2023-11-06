@@ -19,22 +19,21 @@ function CertificateInstructionsDialog(props: Props) {
             <Dialog
                 open={props.isOpen}
                 onClose={props.onClose}
-                aria-labelledby="certificate-dialog"
+                aria-labelledby="deploy-agent-dialog"
             >
-                <DialogTitle id="certificate-dialog">
-                    MSIX Code Signing Certificate
+                <DialogTitle id="deploy-agent-dialog">
+                    Agent Deployment
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        The MSIX installer is created with a self-signed certificate.
-                        To install it, you must first install the certificate in
-                        the "Local Machine - Trusted People" certificate store.
+                        The Viewer app has a Deploy page containing scripts for installing
+                        the agent.  It will be preconfigured with your public key and
+                        chosen settings.
                     </DialogContentText>
                     <DialogContentText sx={{ mt: 1 }}>
-                        You can find instructions in Microsoft's&nbsp;
-                        <Link href="https://learn.microsoft.com/en-us/dotnet/maui/windows/deployment/publish-cli#installing-the-app" target="_blank">
-                            offical documentation
-                        </Link>.
+                        You are not required to manually download the agent. The files are
+                        only listed here for convenience, in case you want to use your own
+                        deployment method.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
