@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Extensions;
@@ -106,7 +106,7 @@ internal class Settings(
         PrivateKey = [];
         PublicKey = [];
         _secureStorage.RemoveAll();
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
         return Task.CompletedTask;
     }
 
@@ -141,7 +141,7 @@ internal class Settings(
         PublicKey = keypair.PublicKey;
         PrivateKey = keypair.PrivateKey;
         await SetEncryptedPrivateKey(keypair.EncryptedPrivateKey);
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
     }
 
     public async Task UpdateKeypair(KeypairExport export)
@@ -149,7 +149,7 @@ internal class Settings(
         Username = export.Username;
         PublicKey = Convert.FromBase64String(export.PublicKey);
         await SetEncryptedPrivateKey(Convert.FromBase64String(export.EncryptedPrivateKey));
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
     }
 
     private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")

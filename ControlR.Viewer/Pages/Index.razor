@@ -25,7 +25,7 @@
 
     protected override void OnInitialized()
     {
-        Messenger.RegisterParameterless(this, ParameterlessMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
+        Messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
         base.OnInitializedAsync();
     }
 

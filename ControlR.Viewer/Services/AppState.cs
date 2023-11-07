@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Services;
@@ -40,7 +40,7 @@ internal class AppState : IAppState
         _settings = settings;
         _messenger = messenger;
         Encryptor = encryptionFactory.CreateSession();
-        _messenger.RegisterParameterless(this, ParameterlessMessageKind.ShuttingDown, HandleShutdown);
+        _messenger.RegisterGenericMessage(this, GenericMessageKind.ShuttingDown, HandleShutdown);
     }
 
     public CancellationToken AppExiting => _appExiting;
@@ -81,12 +81,12 @@ internal class AppState : IAppState
     {
         Interlocked.Increment(ref _busyCounter);
 
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.PendingOperationsChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
 
         return new CallbackDisposable(() =>
         {
             Interlocked.Decrement(ref _busyCounter);
-            _messenger.SendParameterlessMessage(ParameterlessMessageKind.PendingOperationsChanged);
+            _messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
 
             additionalDisposedAction?.Invoke();
         });

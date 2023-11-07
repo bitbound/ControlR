@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bitbound.SimpleMessenger" Version="1.0.0" />
+    <PackageReference Include="Bitbound.SimpleMessenger" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0-rc.2.23480.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0-rc.2.23479.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0-rc.2.23479.6" />

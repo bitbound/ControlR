@@ -1,5 +1,5 @@
-﻿using CommunityToolkit.Maui;
-using CommunityToolkit.Mvvm.Messaging;
+﻿using Bitbound.SimpleMessenger;
+using CommunityToolkit.Maui;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
@@ -57,7 +57,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
-        builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+        builder.Services.AddSingleton(WeakReferenceMessenger.Default);
         builder.Services.AddSingleton<ISettings, Settings>();
         builder.Services.AddSingleton<IAppState, AppState>();
         builder.Services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);

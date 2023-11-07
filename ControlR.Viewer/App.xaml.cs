@@ -1,19 +1,21 @@
 ﻿#nullable enable
-using CommunityToolkit.Mvvm.Messaging;
+
+using Bitbound.SimpleMessenger;
 using ControlR.Viewer.Extensions;
+using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
 
 namespace ControlR.Viewer;
 
 public partial class App : Application
 {
-	public App()
-	{
-		InitializeComponent();
+    public App()
+    {
+        InitializeComponent();
 
         MainPage = new MainPage();
         MainPage.Loaded += MainPage_Loaded;
-	}
+    }
 
     private async void MainPage_Loaded(object? sender, EventArgs e)
     {
@@ -41,6 +43,6 @@ public partial class App : Application
         }
 
         var messenger = Handler.MauiContext.Services.GetRequiredService<IMessenger>();
-        messenger.SendParameterlessMessage(Models.Messages.ParameterlessMessageKind.ShuttingDown);
+        messenger.SendGenericMessage(GenericMessageKind.ShuttingDown);
     }
 }

@@ -233,7 +233,7 @@
     protected override async Task OnInitializedAsync()
     {
         using var _ = AppState.IncrementBusyCounter();
-        Messenger.RegisterParameterless(this, HandleParameterlessMessage);
+        Messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
         await base.OnInitializedAsync();
 
@@ -321,16 +321,16 @@
     }
 
 
-    private async Task HandleParameterlessMessage(ParameterlessMessageKind kind)
+    private async Task HandleGenericMessage(GenericMessageKind kind)
     {
         switch (kind)
         {
-            case ParameterlessMessageKind.DevicesCacheUpdated:
+            case GenericMessageKind.DevicesCacheUpdated:
                 {
                     Debouncer.Debounce(TimeSpan.FromSeconds(1), () => InvokeAsync(StateHasChanged));
                 }
                 break;
-            case ParameterlessMessageKind.HubConnectionStateChanged:
+            case GenericMessageKind.HubConnectionStateChanged:
                 {
                     if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
                     {

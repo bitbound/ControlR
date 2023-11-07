@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Viewer.Models.Messages;
 
-internal enum ParameterlessMessageKind
+internal enum GenericMessageKind
 {
     PrivateKeyChanged,
     ServerUriChanged,

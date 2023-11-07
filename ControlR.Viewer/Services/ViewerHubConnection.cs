@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
@@ -31,19 +31,12 @@ public interface IViewerHubConnection : IHubConnectionBase
 
 internal class ViewerHubConnection(
     IServiceScopeFactory serviceScopeFactory,
-    IHttpConfigurer httpConfigurer,
-    IMessenger messenger,
-    IAppState appState,
-    ISettings settings,
-    IDeviceCache devicesCache,
+    IHttpConfigurer _httpConfigurer,
+    IMessenger _messenger,
+    IAppState _appState,
+    IDeviceCache _devicesCache,
     ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection, IViewerHubClient
 {
-    private readonly IAppState _appState = appState;
-    private readonly IDeviceCache _devicesCache = devicesCache;
-    private readonly IHttpConfigurer _httpConfigurer = httpConfigurer;
-    private readonly IMessenger _messenger = messenger;
-    private readonly ISettings _settings = settings;
-
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
     {
         try
@@ -87,7 +80,7 @@ internal class ViewerHubConnection(
     public Task ReceiveDeviceUpdate(DeviceDto device)
     {
         _devicesCache.AddOrUpdate(device);
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.DevicesCacheUpdated);
+        _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
         return Task.CompletedTask;
     }
 
@@ -126,7 +119,7 @@ internal class ViewerHubConnection(
             OnConnectFailure,
             cancellationToken);
 
-        _messenger.RegisterParameterless(this, ParameterlessMessageKind.AuthStateChanged, HandleAuthStateChanged);
+        _messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, HandleAuthStateChanged);
 
         await RequestDeviceUpdates();
     }
@@ -147,19 +140,19 @@ internal class ViewerHubConnection(
 
     private Task Connection_Closed(Exception? arg)
     {
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.HubConnectionStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
         return Task.CompletedTask;
     }
 
     private Task Connection_Reconnected(string? arg)
     {
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.HubConnectionStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
         return Task.CompletedTask;
     }
 
     private Task Connection_Reconnecting(Exception? arg)
     {
-        _messenger.SendParameterlessMessage(ParameterlessMessageKind.HubConnectionStateChanged);
+        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
         return Task.CompletedTask;
     }
 

@@ -159,7 +159,7 @@ else
                     Snackbar.Add("Private key decrypted", Severity.Success);
                 }
 
-                Messenger.SendParameterlessMessage(ParameterlessMessageKind.AuthStateChanged);
+                Messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
             }
             else
             {

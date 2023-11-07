@@ -1,65 +1,67 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.Viewer.Models.Messages;
 
 namespace ControlR.Viewer.Extensions;
 
 internal static class IMessengerExtensions
 {
-    public static void SendParameterlessMessage(this IMessenger messenger, ParameterlessMessageKind kind)
-    {
-        messenger.Send(new ValueChangedMessage<ParameterlessMessageKind>(kind));
-    }
-
-    public static void RegisterParameterless(
+    public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        ParameterlessMessageKind kind,
+        GenericMessageKind kind,
         Action handler)
     {
-        messenger.Register<ValueChangedMessage<ParameterlessMessageKind>>(recipient, (r, m) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (message) =>
         {
-            if (kind == m.Value)
+            if (kind == message.Value)
             {
                 handler();
             }
+
+            return Task.CompletedTask;
         });
     }
 
-    public static void RegisterParameterless(
+    public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        ParameterlessMessageKind kind,
+        GenericMessageKind kind,
         Func<Task> handler)
-{
-        messenger.Register<ValueChangedMessage<ParameterlessMessageKind>>(recipient, async (r, m) =>
+    {
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (message) =>
         {
-            if (kind == m.Value)
+            if (kind == message.Value)
             {
                 await handler();
             }
         });
     }
 
-    public static void RegisterParameterless(
+    public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        Action<ParameterlessMessageKind> handler)
+        Action<GenericMessageKind> handler)
     {
-        messenger.Register<ValueChangedMessage<ParameterlessMessageKind>>(recipient, (r, m) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (message) =>
         {
-            handler(m.Value);
+            handler(message.Value);
+            return Task.CompletedTask;
         });
     }
 
-    public static void RegisterParameterless(
+    public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        Func<ParameterlessMessageKind, Task> handler)
+        Func<GenericMessageKind, Task> handler)
     {
-        messenger.Register<ValueChangedMessage<ParameterlessMessageKind>>(recipient, async (r, m) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (message) =>
         {
-            await handler(m.Value);
+            await handler(message.Value);
         });
+    }
+
+    public static void SendGenericMessage(this IMessenger messenger, GenericMessageKind kind)
+    {
+        messenger.Send(new GenericMessage<GenericMessageKind>(kind));
     }
 }
