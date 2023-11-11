@@ -24,16 +24,6 @@ public class ViewerHub(
     private readonly ILogger<ViewerHub> _logger = logger;
     private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
 
-    public Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
-    {
-        if (!VerifyPayload(dto, out _))
-        {
-            return Array.Empty<IceServer>().AsTaskResult();
-        }
-
-        return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
-    }
-
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try

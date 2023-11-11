@@ -1,0 +1,15 @@
+﻿@using System.Diagnostics
+@using System.Runtime.InteropServices
+@using System.Text
+@using System.Runtime.InteropServices.JavaScript;
+@using ControlR.Viewer.Components.Devices;
+
+<div class="device-content @($"{_windowState}".ToLower())">
+    <div class="title-bar p-2">
+        <div style="align-self: center; margin-left: 10px;">
+            <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">
+                @(Device?.Name)
+            </MudText>
+        </div>
+    </div>
+</div>

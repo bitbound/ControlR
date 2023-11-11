@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Viewer.Enums;
 
-internal enum AuthenticationState
+public enum AuthenticationState
 {
     Unknown,
     NoKeysPresent,

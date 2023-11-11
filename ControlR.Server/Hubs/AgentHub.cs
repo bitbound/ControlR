@@ -41,11 +41,6 @@ public class AgentHub(
         }
     }
 
-    public IceServer[] GetIceServers()
-    {
-        return [.. _appOptions.CurrentValue.IceServers];
-    }
-
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         if (Device is DeviceDto cachedDevice)

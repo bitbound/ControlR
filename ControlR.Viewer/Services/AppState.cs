@@ -8,7 +8,7 @@ using ControlR.Viewer.Models.Messages;
 
 namespace ControlR.Viewer.Services;
 
-internal interface IAppState
+public interface IAppState
 {
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
