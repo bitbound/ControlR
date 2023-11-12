@@ -3,22 +3,22 @@
 @inject IAppState AppState
 @inject IMessenger Messenger
 
-@* <div class="remote-session-harness">
-    @foreach (var session in AppState.RemoteControlSessions)
+<div class="device-content-window-harness">
+    @foreach (var instance in AppState.DeviceContentWindows)
     {
-        <RemoteDisplay Session="@session" />
+        <DeviceContentWindow ContentInstance="@(instance)" />
     }
-</div> *@
+</div>
 
 @code {
     public void Dispose()
     {
-        // AppState.RemoteControlSessions.CollectionChanged -= OnRemoteSessionsChanged;
+        AppState.DeviceContentWindows.CollectionChanged -= OnRemoteSessionsChanged;
     }
 
     protected override void OnInitialized()
     {
-        // AppState.RemoteControlSessions.CollectionChanged += OnRemoteSessionsChanged;
+        AppState.DeviceContentWindows.CollectionChanged += OnRemoteSessionsChanged;
         base.OnInitializedAsync();
     }
 

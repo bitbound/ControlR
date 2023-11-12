@@ -4,7 +4,9 @@ using ControlR.Shared.Dtos;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Enums;
 using ControlR.Viewer.Extensions;
+using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
+using System.Collections.ObjectModel;
 
 namespace ControlR.Viewer.Services;
 
@@ -12,9 +14,9 @@ public interface IAppState
 {
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
+    ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; }
     IEncryptionSession Encryptor { get; }
     bool IsAuthenticated { get; }
-
     bool IsBusy { get; }
 
     int PendingOperations { get; }
@@ -39,8 +41,8 @@ internal class AppState : IAppState
     {
         _settings = settings;
         _messenger = messenger;
-        Encryptor = encryptionFactory.CreateSession();
         _messenger.RegisterGenericMessage(this, GenericMessageKind.ShuttingDown, HandleShutdown);
+        Encryptor = encryptionFactory.CreateSession();
     }
 
     public CancellationToken AppExiting => _appExiting;
@@ -62,6 +64,8 @@ internal class AppState : IAppState
             return AuthenticationState.PrivateKeyLoaded;
         }
     }
+
+    public ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; } = new();
 
     public IEncryptionSession Encryptor { get; }
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.PrivateKeyLoaded;

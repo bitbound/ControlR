@@ -40,3 +40,8 @@
         .device-content.minimized .content-area {
             display: none;
         }
+
+.content-area {
+    overflow: auto;
+    position: relative;
+}

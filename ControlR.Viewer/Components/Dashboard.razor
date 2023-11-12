@@ -66,6 +66,12 @@
                                          OnTouch="@(() => RemoteControlClicked(context.Item))">
                                 Remote Control
                             </MudMenuItem>
+                            <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
+                                         IconColor="Color.Info"
+                                         OnClick="@(() => TerminalClicked(context.Item))"
+                                         OnTouch="@(() => TerminalClicked(context.Item))">
+                                Terminal
+                            </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
                                          IconColor="Color.Error"
                                          OnClick="@(() => ShutdownClicked(context.Item))"
@@ -281,6 +287,26 @@
             Snackbar.Add("An error occurred while requesting a VNC session", Severity.Error);
         }
 
+    }
+
+    private void TerminalClicked(DeviceDto device)
+    {
+        try
+        {
+            void RenderTerminal(RenderTreeBuilder builder)
+            {
+                builder.OpenComponent<Terminal>(0);
+                builder.AddComponentParameter(1, nameof(Terminal.Device), device);
+                builder.CloseComponent();
+            }
+            var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
+            AppState.DeviceContentWindows.Add(contentInstance);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while starting terminal session.");
+            Snackbar.Add("An error occurred while starting the terminal", Severity.Error);
+        }
     }
 
     private async Task RemoveDevice(DeviceDto device)

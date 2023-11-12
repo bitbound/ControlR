@@ -8,8 +8,44 @@
     <div class="title-bar p-2">
         <div style="align-self: center; margin-left: 10px;">
             <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">
-                @(Device?.Name)
+                @(ContentInstance.Device?.Name) - @(ContentInstance.ContentTypeName)
             </MudText>
         </div>
+        <div class="text-end" style="white-space: nowrap">
+            @if (_windowState != WindowState.Minimized)
+            {
+                <MudTooltip Text="Minimize">
+                    <MudIconButton Icon="@(Icons.Material.Filled.Minimize)"
+                                   Class="mr-1"
+                                   OnClick="@(() => SetWindowState(WindowState.Minimized))" />
+                </MudTooltip>
+            }
+
+            @if (_windowState != WindowState.Restored)
+            {
+                <MudTooltip Text="Restore">
+                    <MudIconButton Icon="@(Icons.Material.Filled.FullscreenExit)"
+                                   Class="mr-1"
+                                   OnClick="@(() => SetWindowState(WindowState.Restored))" />
+                </MudTooltip>
+            }
+
+            @if (_windowState != WindowState.Maximized)
+            {
+                <MudTooltip Text="Maximize">
+                    <MudIconButton Icon="@(Icons.Material.Filled.Fullscreen)"
+                                   Class="mr-1"
+                                   OnClick="@(() => SetWindowState(WindowState.Maximized))" />
+                </MudTooltip>
+            }
+
+            <MudTooltip Text="Close">
+                <MudIconButton Icon="@(Icons.Material.Filled.Close)"
+                               OnClick="Close" />
+            </MudTooltip>
+        </div>
+    </div>
+    <div class="content-area">
+        @(ContentInstance.Content)
     </div>
 </div>
