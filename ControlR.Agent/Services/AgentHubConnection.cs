@@ -42,11 +42,29 @@ internal class AgentHubConnection(
      ILogger<AgentHubConnection> logger)
         : HubConnectionBase(_scopeFactory, logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
+    public async Task<Result> CreateTerminalSession(SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!VerifySignature(requestDto))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            return Result.Fail("Not implemented.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail("An error occurred.");
+        }
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
     {
         try
         {
-            if (!VerifyPayload(signedDto))
+            if (!VerifySignature(signedDto))
             {
                 return new(false);
             }
@@ -88,7 +106,7 @@ internal class AgentHubConnection(
     [SupportedOSPlatform("windows6.0.6000")]
     public Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto)
     {
-        if (!VerifyPayload(signedDto))
+        if (!VerifySignature(signedDto))
         {
             return Array.Empty<WindowsSession>().AsTaskResult();
         }
@@ -209,7 +227,7 @@ internal class AgentHubConnection(
         await SendDeviceHeartbeat();
     }
 
-    private bool VerifyPayload(SignedPayloadDto signedDto)
+    private bool VerifySignature(SignedPayloadDto signedDto)
     {
         using var session = _encryptionFactory.CreateSession();
 

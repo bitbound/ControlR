@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Devices.Common.Native.Windows;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
@@ -62,13 +61,6 @@ internal class DtoHandler(
             case DtoType.PowerStateChange:
                 var powerDto = MessagePackSerializer.Deserialize<PowerStateChangeDto>(dto.Payload);
                 await _powerControl.ChangeState(powerDto.Type);
-                break;
-
-            case DtoType.InvokeCtrlAltDel:
-                if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
-                {
-                    Win32.InvokeCtrlAltDel();
-                }
                 break;
 
             default:

@@ -2,6 +2,7 @@
 using ControlR.Server.Extensions;
 using ControlR.Server.Models;
 using ControlR.Server.Services;
+using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
@@ -24,11 +25,31 @@ public class ViewerHub(
     private readonly ILogger<ViewerHub> _logger = logger;
     private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
 
+    public async Task<Result> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!VerifySignature(requestDto, out _))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            return await _agentHub.Clients
+                .Client(agentConnectionId)
+                .CreateTerminalSession(requestDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail("An error occurred.");
+        }
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
-            if (!VerifyPayload(sessionRequestDto, out _))
+            if (!VerifySignature(sessionRequestDto, out _))
             {
                 return new(false);
             }
@@ -51,7 +72,7 @@ public class ViewerHub(
 
     public async Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto)
     {
-        if (!VerifyPayload(signedDto, out _))
+        if (!VerifySignature(signedDto, out _))
         {
             return [];
         }
@@ -86,7 +107,7 @@ public class ViewerHub(
     {
         using var scope = _logger.BeginMemberScope();
 
-        if (!VerifyPayload(signedDto, out _))
+        if (!VerifySignature(signedDto, out _))
         {
             return;
         }
@@ -98,7 +119,7 @@ public class ViewerHub(
     {
         using var _ = _logger.BeginMemberScope();
 
-        if (!VerifyPayload(signedDto, out var publicKey))
+        if (!VerifySignature(signedDto, out var publicKey))
         {
             return;
         }
@@ -106,7 +127,7 @@ public class ViewerHub(
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
     }
 
-    private bool VerifyPayload(SignedPayloadDto signedDto, out string publicKey)
+    private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
     {
         publicKey = string.Empty;
 

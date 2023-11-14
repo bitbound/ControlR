@@ -43,7 +43,6 @@ public partial class DeviceContentWindow : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        //await ViewerHub.CloseStreamingSession(Session.SessionId);
         Messenger.UnregisterAll(this);
         GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;

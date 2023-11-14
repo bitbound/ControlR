@@ -7,11 +7,8 @@ namespace ControlR.Shared.Dtos;
 [MessagePackObject]
 [method: JsonConstructor]
 [method: SerializationConstructor]
-public class VncSessionRequest(Guid sessionId, string vncPassword)
+public class TerminalSessionRequest(Guid terminalId)
 {
     [MsgPackKey]
-    public Guid SessionId { get; init; } = sessionId;
-
-    [MsgPackKey]
-    public string VncPassword { get; init; } = vncPassword;
+    public Guid TerminalId { get; init; } = terminalId;
 }

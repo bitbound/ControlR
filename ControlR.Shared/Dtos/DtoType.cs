@@ -7,9 +7,7 @@ public enum DtoType
     VncSessionRequest = 2,
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
-    RtcSessionDescription = 5,
-    RtcIceCandidate = 6,
+    TerminalSessionRequest = 5,
     CloseStreamingSession = 7,
     PowerStateChange = 8,
-    InvokeCtrlAltDel = 9,
 }

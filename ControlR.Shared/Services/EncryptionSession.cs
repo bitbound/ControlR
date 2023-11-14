@@ -203,8 +203,8 @@ public class EncryptionSession(ISystemTime systemTime, ILogger<EncryptionSession
         }
 
         var timestamp = MessagePackSerializer.Deserialize<DateTimeOffset>(signedDto.Timestamp);
-        // Timestamp shouldn't be any older than 10 seconds.
-        return timestamp > _systemTime.Now.AddSeconds(-10);
+        // Timestamp shouldn't be any older than 5 seconds.
+        return timestamp > _systemTime.Now.AddSeconds(-5);
     }
 
     private SignedPayloadDto CreateSignedDtoImpl(byte[] payload, DtoType dtoType)

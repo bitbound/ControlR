@@ -18,6 +18,8 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
+    Task<Result> CreateTerminalSession(string agentConnectionId, Guid terminalId);
+
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
@@ -37,15 +39,26 @@ internal class ViewerHubConnection(
     IDeviceCache _devicesCache,
     ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection, IViewerHubClient
 {
+    public async Task<Result> CreateTerminalSession(string agentConnectionId, Guid terminalId)
+    {
+        try
+        {
+            var request = new TerminalSessionRequest(terminalId);
+            var signedDto = _appState.Encryptor.CreateSignedDto(request, DtoType.TerminalSessionRequest);
+            return await Connection.InvokeAsync<Result>("CreateTerminalSession", agentConnectionId, signedDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail("An error occurred.");
+        }
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
     {
         try
         {
-            var vncSession = new VncSessionRequest(
-                sessionId,
-                vncPassword,
-                Connection.ConnectionId);
-
+            var vncSession = new VncSessionRequest(sessionId, vncPassword);
             var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
 
             var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
