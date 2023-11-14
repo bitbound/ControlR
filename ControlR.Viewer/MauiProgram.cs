@@ -56,7 +56,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
-        builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
+        builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
         builder.Services.AddSingleton(WeakReferenceMessenger.Default);
         builder.Services.AddSingleton<ISettings, Settings>();
         builder.Services.AddSingleton<IAppState, AppState>();

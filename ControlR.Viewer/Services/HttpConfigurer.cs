@@ -1,5 +1,6 @@
 ﻿using ControlR.Shared;
 using ControlR.Shared.Dtos;
+using ControlR.Shared.Services;
 using MessagePack;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
@@ -20,14 +21,12 @@ internal interface IHttpConfigurer
 }
 
 internal class HttpConfigurer(
-    IHttpClientFactory clientFactory,
-    ISettings settings,
-    IAppState appState) : IHttpConfigurer
+    IHttpClientFactory _clientFactory,
+    ISettings _settings,
+    IKeyProvider _keyProvider,
+    IAppState _appState) : IHttpConfigurer
 {
-    public readonly IHttpClientFactory _clientFactory = clientFactory;
     private static readonly ConcurrentBag<HttpClient> _clients = [];
-    private readonly IAppState _appState = appState;
-    private readonly ISettings _settings = settings;
 
     public void ConfigureClient(HttpClient client)
     {
@@ -57,7 +56,7 @@ internal class HttpConfigurer(
 
     public string GetDigitalSignature(PublicKeyDto keyDto)
     {
-        var signedDto = _appState.Encryptor.CreateSignedDto(keyDto, DtoType.PublicKey);
+        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.PublicKey, _appState.UserKeys.PrivateKey);
         var dtoBytes = MessagePackSerializer.Serialize(signedDto);
         var base64Payload = Convert.ToBase64String(dtoBytes);
         return base64Payload;
@@ -65,7 +64,12 @@ internal class HttpConfigurer(
 
     public string GetDigitalSignature()
     {
-        return GetDigitalSignature(_appState.GetPublicKeyDto());
+        var publicKeyDto = new PublicKeyDto()
+        {
+            PublicKey = _settings.PublicKey,
+            Username = _settings.Username
+        };
+        return GetDigitalSignature(publicKeyDto);
     }
 
     public void UpdateClientAuthorizations(PublicKeyDto keyDto)

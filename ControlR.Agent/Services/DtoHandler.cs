@@ -11,18 +11,12 @@ using Microsoft.Extensions.Options;
 namespace ControlR.Agent.Services;
 
 internal class DtoHandler(
-    IEncryptionSessionFactory encryptionFactory,
-    IAgentHubConnection agentHub,
-    IPowerControl powerControl,
-    IOptionsMonitor<AppOptions> appOptions,
-    ILogger<DtoHandler> logger) : IHostedService
+    IKeyProvider _keyProvider,
+    IAgentHubConnection _agentHub,
+    IPowerControl _powerControl,
+    IOptionsMonitor<AppOptions> _appOptions,
+    ILogger<DtoHandler> _logger) : IHostedService
 {
-    private readonly IAgentHubConnection _agentHub = agentHub;
-    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-    private readonly IEncryptionSessionFactory _encryptionFactory = encryptionFactory;
-    private readonly ILogger<DtoHandler> _logger = logger;
-    private readonly IPowerControl _powerControl = powerControl;
-
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _agentHub.DtoReceived += AgentHub_DtoReceived;
@@ -38,9 +32,8 @@ internal class DtoHandler(
     private async void AgentHub_DtoReceived(object? sender, SignedPayloadDto dto)
     {
         using var _ = _logger.BeginMemberScope();
-        using var session = _encryptionFactory.CreateSession();
 
-        if (!session.Verify(dto))
+        if (!_keyProvider.Verify(dto))
         {
             _logger.LogCritical("Key verification failed for public key: {key}", dto.PublicKey);
             return;

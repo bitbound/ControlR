@@ -78,7 +78,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddSingleton<IProcessInvoker, ProcessInvoker>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-            services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
+            services.AddSingleton<IKeyProvider, KeyProvider>();
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<ISystemTime, SystemTime>();
 

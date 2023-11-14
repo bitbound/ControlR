@@ -72,8 +72,7 @@ public class DigitalSignatureAuthenticationHandler(
     {
         using var scope = _scopeFactory.CreateScope();
         using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
-        var encryptionFactory = scope.ServiceProvider.GetRequiredService<IEncryptionSessionFactory>();
-        using var encryptor = encryptionFactory.CreateSession();
+        var keyProvider = scope.ServiceProvider.GetRequiredService<IKeyProvider>();
 
         var account = MessagePackSerializer.Deserialize<PublicKeyDto>(signedDto.Payload);
         var publicKey = account.PublicKey;
@@ -82,8 +81,8 @@ public class DigitalSignatureAuthenticationHandler(
         {
             return AuthenticateResult.Fail("No public key found in the payload.");
         }
-        encryptor.ImportPublicKey(publicKey);
-        var result = encryptor.Verify(signedDto.Payload, signedDto.Signature);
+
+        var result = keyProvider.Verify(signedDto);
 
         if (!result)
         {

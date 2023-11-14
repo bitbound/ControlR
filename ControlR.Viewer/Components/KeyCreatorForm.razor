@@ -3,6 +3,7 @@
 @inject ISnackbar Snackbar
 @inject IHttpConfigurer HttpConfigurer
 @inject IFilePicker FilePicker
+@inject IKeyProvider KeyProvider
 @inject ILogger<KeyCreatorForm> Logger
 
 
@@ -158,7 +159,8 @@
                 InvokeAsync(StateHasChanged);
             });
 
-            var keypair = AppState.Encryptor.GenerateKeys(_passphrase);
+            var keypair = KeyProvider.GenerateKeys(_passphrase);
+            AppState.SetUserKeys(keypair);
             var keyDto = new PublicKeyDto()
                 {
                     PublicKey = keypair.PublicKey,

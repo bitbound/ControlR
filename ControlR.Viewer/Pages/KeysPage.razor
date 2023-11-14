@@ -92,7 +92,7 @@
             return;
         }
 
-        AppState.Encryptor.Reset();
+        AppState.RemoveUserKeys();
         await Settings.Clear();
         NavManager.NavigateTo(string.Empty, false);
     }

@@ -1,8 +1,10 @@
-﻿@inject IAppState AppState
+﻿@using System.Security.Cryptography
+@inject IAppState AppState
 @inject ISettings Settings
 @inject ISnackbar Snackbar
 @inject IMessenger Messenger
 @inject IKeyApi KeyApi
+@inject IKeyProvider KeyProvider
 @inject IHttpConfigurer HttpConfigurer
 @inject ILogger<LoadKeyForm> Logger
 
@@ -103,6 +105,7 @@ else
         {
             Logger.LogError(ex, "Error while initializing settings.");
             Snackbar.Add("Failed to retrieve current settings", Severity.Error);
+            await Settings.Clear();
         }
 
     }
@@ -129,19 +132,26 @@ else
 
         _requestPending = true;
 
-        using var _ = AppState.IncrementBusyCounter(() =>
+        using var counter = AppState.IncrementBusyCounter(() =>
         {
             _requestPending = false;
             InvokeAsync(StateHasChanged);
         });
 
-        var privateKey = await Settings.GetEncryptedPrivateKey();
-        var result = AppState.Encryptor.ImportPrivateKey(_passphrase, privateKey);
-        if (result.IsSuccess)
+        var encryptedPrivateKey = await Settings.GetEncryptedPrivateKey();
+
+        try
         {
+            using var rsa = RSA.Create();
+            rsa.ImportEncryptedPkcs8PrivateKey(_passphrase, encryptedPrivateKey, out _);
+            var privateKey = rsa.ExportRSAPrivateKey();
+            var publicKey = rsa.ExportRSAPublicKey();
+            var userKeys = new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
+            AppState.SetUserKeys(userKeys);
+
             var keyDto = new PublicKeyDto()
                 {
-                    PublicKey = result.Value.PublicKey,
+                    PublicKey = userKeys.PublicKey,
                     Username = Settings.Username
                 };
             HttpConfigurer.UpdateClientAuthorizations(keyDto);
@@ -166,9 +176,15 @@ else
                 Snackbar.Add("Verification with server failed", Severity.Error);
             }
         }
-        else
+        catch (CryptographicException ex) when (ex.Message.Contains("password may be incorrect"))
         {
+            Logger.LogWarning(ex, "Failed to decrypt private key.");
             Snackbar.Add("Passphrase is incorrect", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while loading user keys.");
+            Snackbar.Add("An error occurred", Severity.Error);
         }
     }
 }

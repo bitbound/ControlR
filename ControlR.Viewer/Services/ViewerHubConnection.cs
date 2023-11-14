@@ -6,6 +6,7 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Services;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.AspNetCore.Http.Connections.Client;
@@ -37,6 +38,7 @@ internal class ViewerHubConnection(
     IMessenger _messenger,
     IAppState _appState,
     IDeviceCache _devicesCache,
+    IKeyProvider _keyProvider,
     ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection, IViewerHubClient
 {
     public async Task<Result> CreateTerminalSession(string agentConnectionId, Guid terminalId)
@@ -44,7 +46,7 @@ internal class ViewerHubConnection(
         try
         {
             var request = new TerminalSessionRequest(terminalId);
-            var signedDto = _appState.Encryptor.CreateSignedDto(request, DtoType.TerminalSessionRequest);
+            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
             return await Connection.InvokeAsync<Result>("CreateTerminalSession", agentConnectionId, signedDto);
         }
         catch (Exception ex)
@@ -59,7 +61,7 @@ internal class ViewerHubConnection(
         try
         {
             var vncSession = new VncSessionRequest(sessionId, vncPassword);
-            var signedDto = _appState.Encryptor.CreateSignedDto(vncSession, DtoType.VncSessionRequest);
+            var signedDto = _keyProvider.CreateSignedDto(vncSession, DtoType.VncSessionRequest, _appState.UserKeys.PrivateKey);
 
             var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
             if (!result.SessionCreated)
@@ -79,7 +81,7 @@ internal class ViewerHubConnection(
     {
         try
         {
-            var signedDto = _appState.Encryptor.CreateRandomSignedDto(DtoType.WindowsSessions);
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.WindowsSessions, _appState.UserKeys.PrivateKey);
             var sessions = await Connection.InvokeAsync<WindowsSession[]>("GetWindowsSessions", device.ConnectionId, signedDto);
             return Result.Ok(sessions);
         }
@@ -102,7 +104,7 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             await WaitForConnection();
-            var signedDto = _appState.Encryptor.CreateRandomSignedDto(DtoType.DeviceUpdateRequest);
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _appState.UserKeys.PrivateKey);
             await Connection.InvokeAsync("SendSignedDtoToPublicKeyGroup", signedDto);
         });
     }
@@ -112,7 +114,7 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
-            var signedDto = _appState.Encryptor.CreateSignedDto(powerDto, DtoType.PowerStateChange);
+            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.UserKeys.PrivateKey);
             await Connection.InvokeAsync("SendSignedDtoToAgent", device.Id, signedDto);
         });
     }

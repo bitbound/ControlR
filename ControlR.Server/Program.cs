@@ -67,7 +67,7 @@ builder.Services
     })
     .AddMessagePackProtocol();
 
-builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
+builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));

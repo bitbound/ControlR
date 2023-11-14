@@ -35,7 +35,7 @@ internal class AgentHubConnection(
      IEnvironmentHelper _environmentHelper,
      IOptionsMonitor<AppOptions> _appOptions,
      ICpuUtilizationSampler _cpuSampler,
-     IEncryptionSessionFactory _encryptionFactory,
+     IKeyProvider _keyProvider,
      IVncSessionLauncher _vncSessionLauncher,
      IAgentUpdater _updater,
      ILocalProxy _localProxy,
@@ -229,9 +229,7 @@ internal class AgentHubConnection(
 
     private bool VerifySignature(SignedPayloadDto signedDto)
     {
-        using var session = _encryptionFactory.CreateSession();
-
-        if (!session.Verify(signedDto))
+        if (!_keyProvider.Verify(signedDto))
         {
             _logger.LogCritical("Verification failed for payload with public key: {key}", signedDto.PublicKey);
             return false;

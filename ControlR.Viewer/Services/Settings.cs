@@ -3,6 +3,7 @@ using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
@@ -35,13 +36,11 @@ internal interface ISettings
 }
 
 internal class Settings(
-    ISecureStorage secureStorage,
-    IPreferences preferences,
-    IMessenger messenger) : ISettings
+    ISecureStorage _secureStorage,
+    IPreferences _preferences,
+    IMessenger _messenger,
+    ILogger<Settings> _logger) : ISettings
 {
-    private readonly IMessenger _messenger = messenger;
-    private readonly IPreferences _preferences = preferences;
-    private readonly ISecureStorage _secureStorage = secureStorage;
     private byte[] _privateKey = [];
 
     public bool AutoRunVnc
@@ -102,11 +101,18 @@ internal class Settings(
 
     public Task Clear()
     {
-        RememberPassphrase = false;
-        PrivateKey = [];
-        PublicKey = [];
-        _secureStorage.RemoveAll();
-        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        try
+        {
+            RememberPassphrase = false;
+            PrivateKey = [];
+            PublicKey = [];
+            _secureStorage.RemoveAll();
+            _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while clearing settings.");
+        }
         return Task.CompletedTask;
     }
 

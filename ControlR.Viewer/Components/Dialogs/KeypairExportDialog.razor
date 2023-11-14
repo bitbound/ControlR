@@ -2,6 +2,7 @@
 @inject ISettings Settings
 @inject IAppState AppState
 @inject ControlR.Devices.Common.Services.IFileSystem FileIO
+@inject IKeyProvider KeyProvider
 @inject ILogger<KeypairExportDialog> Logger
 
 <MudDialog>
@@ -119,10 +120,16 @@
                 return;
             }
 
-            var keyExport = AppState.Encryptor.ExportKeypair(Settings.Username);
+            var keyExport = new KeypairExport()
+            {
+                EncryptedPrivateKey = Convert.ToBase64String(AppState.UserKeys.EncryptedPrivateKey),
+                PublicKey = Convert.ToBase64String(AppState.UserKeys.PublicKey),
+                Username = Settings.Username
+            };
+
             var exportPath = Path.Combine(KeyExportPath, $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys");
 
-            await FileIO.WriteAllTextAsync(exportPath, JsonSerializer.Serialize(keyExport.Value));
+            await FileIO.WriteAllTextAsync(exportPath, JsonSerializer.Serialize(keyExport));
         }
         catch (Exception ex)
         {

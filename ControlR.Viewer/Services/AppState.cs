@@ -1,7 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Shared;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Services;
+using ControlR.Shared.Models;
 using ControlR.Viewer.Enums;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models;
@@ -15,35 +14,26 @@ public interface IAppState
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
     ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; }
-    IEncryptionSession Encryptor { get; }
     bool IsAuthenticated { get; }
     bool IsBusy { get; }
-
     int PendingOperations { get; }
-
-    PublicKeyDto GetPublicKeyDto();
+    UserKeyPair UserKeys { get; }
 
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
+
+    void RemoveUserKeys();
+
+    void SetUserKeys(UserKeyPair userKeys);
 }
 
-internal class AppState : IAppState
+internal class AppState(
+    ISettings _settings,
+    IMessenger _messenger) : IAppState
 {
     private static readonly CancellationTokenSource _appExitingCts = new();
     private readonly CancellationToken _appExiting = _appExitingCts.Token;
-    private readonly IMessenger _messenger;
-    private readonly ISettings _settings;
     private volatile int _busyCounter;
-
-    public AppState(
-        ISettings settings,
-        IEncryptionSessionFactory encryptionFactory,
-        IMessenger messenger)
-    {
-        _settings = settings;
-        _messenger = messenger;
-        _messenger.RegisterGenericMessage(this, GenericMessageKind.ShuttingDown, HandleShutdown);
-        Encryptor = encryptionFactory.CreateSession();
-    }
+    private UserKeyPair? _userKeys;
 
     public CancellationToken AppExiting => _appExiting;
 
@@ -56,7 +46,7 @@ internal class AppState : IAppState
                 return AuthenticationState.NoKeysPresent;
             }
 
-            if (Encryptor.CurrentState is null)
+            if (_userKeys is null)
             {
                 return AuthenticationState.LocalKeysStored;
             }
@@ -65,20 +55,15 @@ internal class AppState : IAppState
         }
     }
 
-    public ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; } = new();
-
-    public IEncryptionSession Encryptor { get; }
+    public ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; } = [];
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.PrivateKeyLoaded;
     public bool IsBusy => _busyCounter > 0;
     public int PendingOperations => _busyCounter;
 
-    public PublicKeyDto GetPublicKeyDto()
+    public UserKeyPair UserKeys
     {
-        return new PublicKeyDto()
-        {
-            PublicKey = _settings.PublicKey,
-            Username = _settings.Username
-        };
+        get => _userKeys ?? throw new InvalidOperationException("User keypair has not yet been loaded.");
+        set => _userKeys = value;
     }
 
     public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
@@ -96,8 +81,13 @@ internal class AppState : IAppState
         });
     }
 
-    private void HandleShutdown()
+    public void RemoveUserKeys()
     {
-        Encryptor.Dispose();
+        _userKeys = null;
+    }
+
+    public void SetUserKeys(UserKeyPair userKeys)
+    {
+        _userKeys = userKeys;
     }
 }
