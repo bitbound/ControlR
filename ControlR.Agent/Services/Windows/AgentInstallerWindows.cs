@@ -19,7 +19,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows")]
 internal class AgentInstallerWindows(
     IHostApplicationLifetime lifetime,
-    IProcessInvoker processes,
+    IProcessManager processes,
     IFileSystem fileSystem,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
@@ -33,7 +33,7 @@ internal class AgentInstallerWindows(
     private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerWindows> _logger = logger;
-    private readonly IProcessInvoker _processes = processes;
+    private readonly IProcessManager _processes = processes;
     private readonly string _serviceName = "ControlR.Agent";
 
     public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)

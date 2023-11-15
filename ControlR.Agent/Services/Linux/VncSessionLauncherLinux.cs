@@ -11,7 +11,7 @@ namespace ControlR.Agent.Services.Linux;
 
 [SupportedOSPlatform("linux")]
 internal class VncSessionLauncherLinux(
-    IProcessInvoker _processes,
+    IProcessManager _processes,
     IOptionsMonitor<AppOptions> _appOptions,
     IFileSystem _fileSystem,
     ILogger<VncSessionLauncherLinux> _logger) : IVncSessionLauncher

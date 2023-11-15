@@ -1,10 +1,10 @@
 ﻿@using System.Collections.Specialized
 @implements IDisposable
-@inject IAppState AppState
+@inject IDeviceContentWindowStore WindowStore
 @inject IMessenger Messenger
 
 <div class="device-content-window-harness">
-    @foreach (var instance in AppState.DeviceContentWindows)
+    @foreach (var instance in WindowStore.Windows)
     {
         <DeviceContentWindow ContentInstance="@(instance)" />
     }
@@ -13,17 +13,25 @@
 @code {
     public void Dispose()
     {
-        AppState.DeviceContentWindows.CollectionChanged -= OnRemoteSessionsChanged;
+        Messenger.UnregisterAll(this);
     }
 
     protected override void OnInitialized()
     {
-        AppState.DeviceContentWindows.CollectionChanged += OnRemoteSessionsChanged;
+        Messenger.RegisterGenericMessage(this, HandleGenericMessage);
         base.OnInitializedAsync();
     }
 
     private async void OnRemoteSessionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleGenericMessage(GenericMessageKind messageKind)
+    {
+        if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

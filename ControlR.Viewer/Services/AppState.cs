@@ -3,9 +3,7 @@ using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Enums;
 using ControlR.Viewer.Extensions;
-using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
-using System.Collections.ObjectModel;
 
 namespace ControlR.Viewer.Services;
 
@@ -13,7 +11,6 @@ public interface IAppState
 {
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
-    ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; }
     bool IsAuthenticated { get; }
     bool IsBusy { get; }
     int PendingOperations { get; }
@@ -55,7 +52,6 @@ internal class AppState(
         }
     }
 
-    public ObservableCollection<DeviceContentInstance> DeviceContentWindows { get; } = [];
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.PrivateKeyLoaded;
     public bool IsBusy => _busyCounter > 0;
     public int PendingOperations => _busyCounter;

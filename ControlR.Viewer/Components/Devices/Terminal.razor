@@ -1,3 +1,9 @@
-﻿
-<h3>Terminal</h3>
-
+﻿@if (_loading)
+{
+    <div class="text-center mt-4">
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+            Loading
+        </MudText>
+        <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Info" />
+    </div>
+}

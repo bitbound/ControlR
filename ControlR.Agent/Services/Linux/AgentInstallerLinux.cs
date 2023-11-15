@@ -15,7 +15,7 @@ namespace ControlR.Agent.Services.Linux;
 internal class AgentInstallerLinux(
     IHostApplicationLifetime lifetime,
     IFileSystem fileSystem,
-    IProcessInvoker processInvoker,
+    IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
     ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
@@ -26,7 +26,7 @@ internal class AgentInstallerLinux(
     private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerLinux> _logger = logger;
-    private readonly IProcessInvoker _processInvoker = processInvoker;
+    private readonly IProcessManager _processInvoker = processInvoker;
     private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
     public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)

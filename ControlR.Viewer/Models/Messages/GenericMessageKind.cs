@@ -9,4 +9,5 @@ internal enum GenericMessageKind
     PendingOperationsChanged,
     DevicesCacheUpdated,
     HubConnectionStateChanged,
+    DeviceContentWindowsChanged,
 }

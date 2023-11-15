@@ -4,6 +4,7 @@
 
 @inject IViewerHubConnection ViewerHub
 @inject IMessenger Messenger
+@inject IDeviceContentWindowStore WindowStore
 @inject ISnackbar Snackbar
 @inject IDeviceCache DeviceCache
 @inject IDialogService DialogService
@@ -293,14 +294,17 @@
     {
         try
         {
+            var terminalId = Guid.NewGuid();
+
             void RenderTerminal(RenderTreeBuilder builder)
             {
                 builder.OpenComponent<Terminal>(0);
                 builder.AddComponentParameter(1, nameof(Terminal.Device), device);
+                builder.AddComponentParameter(1, nameof(Terminal.Id), terminalId);
                 builder.CloseComponent();
             }
             var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
-            AppState.DeviceContentWindows.Add(contentInstance);
+            WindowStore.AddOrUpdate(contentInstance);
         }
         catch (Exception ex)
         {

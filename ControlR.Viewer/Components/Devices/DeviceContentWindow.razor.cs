@@ -15,7 +15,7 @@ namespace ControlR.Viewer.Components.Devices;
 [SupportedOSPlatform("browser")]
 public partial class DeviceContentWindow : IAsyncDisposable
 {
-    private WindowState _windowState = WindowState.Maximized;
+    private WindowState _windowState = WindowState.Restored;
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -41,6 +41,9 @@ public partial class DeviceContentWindow : IAsyncDisposable
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
 
+    [Inject]
+    public required IDeviceContentWindowStore WindowStore { get; init; }
+
     public ValueTask DisposeAsync()
     {
         Messenger.UnregisterAll(this);
@@ -57,7 +60,7 @@ public partial class DeviceContentWindow : IAsyncDisposable
 
     private async Task Close()
     {
-        AppState.DeviceContentWindows.Remove(ContentInstance);
+        WindowStore.Remove(ContentInstance);
         await DisposeAsync();
     }
 

@@ -71,12 +71,13 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
                 services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
+                services.AddSingleton<ITerminalStore, TerminalStore>();
             }
 
-            services.AddSingleton<IProcessInvoker, ProcessInvoker>();
+            services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
             services.AddSingleton<IFileSystem, FileSystem>();
-            services.AddSingleton<IProcessInvoker, ProcessInvoker>();
+            services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
             services.AddSingleton<IKeyProvider, KeyProvider>();
             services.AddSingleton(WeakReferenceMessenger.Default);

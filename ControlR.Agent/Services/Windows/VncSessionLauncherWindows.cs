@@ -20,7 +20,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows")]
 internal class VncSessionLauncherWindows(
     IFileSystem _fileSystem,
-    IProcessInvoker _processInvoker,
+    IProcessManager _processInvoker,
     IDownloadsApi _downloadsApi,
     IEnvironmentHelper _environment,
     IElevationChecker _elevationChecker,

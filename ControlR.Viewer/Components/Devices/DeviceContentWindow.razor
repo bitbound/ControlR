@@ -46,6 +46,8 @@
         </div>
     </div>
     <div class="content-area">
-        @(ContentInstance.Content)
+        <CascadingValue Value="ContentInstance">
+            @(ContentInstance.Content)
+        </CascadingValue>
     </div>
 </div>

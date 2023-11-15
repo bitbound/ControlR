@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace ControlR.Devices.Common.Services.MacOs;
 
 internal class DeviceDataGeneratorMac(
-    IProcessInvoker processInvoker,
+    IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
     ILogger<DeviceDataGeneratorMac> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
     private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
-    private readonly IProcessInvoker _processService = processInvoker;
+    private readonly IProcessManager _processService = processInvoker;
 
     public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<string> authorizedKeys, string deviceId)
     {

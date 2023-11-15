@@ -20,7 +20,7 @@ internal class AgentUpdater(
     HttpClient httpClient,
     IDownloadsApi downloadsApi,
     IFileSystem fileSystem,
-    IProcessInvoker processInvoker,
+    IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
@@ -30,7 +30,7 @@ internal class AgentUpdater(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AgentUpdater> _logger = logger;
-    private readonly IProcessInvoker _processInvoker = processInvoker;
+    private readonly IProcessManager _processInvoker = processInvoker;
 
     public async Task CheckForUpdate(CancellationToken cancellationToken = default)
     {

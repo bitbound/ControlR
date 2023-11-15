@@ -19,7 +19,9 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task<Result> CreateTerminalSession(string agentConnectionId, Guid terminalId);
+    Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
+
+    Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
@@ -35,46 +37,52 @@ public interface IViewerHubConnection : IHubConnectionBase
 internal class ViewerHubConnection(
     IServiceScopeFactory serviceScopeFactory,
     IHttpConfigurer _httpConfigurer,
-    IMessenger _messenger,
     IAppState _appState,
     IDeviceCache _devicesCache,
     IKeyProvider _keyProvider,
-    ILogger<ViewerHubConnection> logger) : HubConnectionBase(serviceScopeFactory, logger), IViewerHubConnection, IViewerHubClient
+    ILogger<ViewerHubConnection> _logger,
+    IMessenger messenger) : HubConnectionBase(serviceScopeFactory, messenger, _logger), IViewerHubConnection, IViewerHubClient
 {
-    public async Task<Result> CreateTerminalSession(string agentConnectionId, Guid terminalId)
+    public async Task CloseTerminalSession(string deviceId, Guid terminalId)
     {
-        try
+        await TryInvoke(async () =>
         {
-            var request = new TerminalSessionRequest(terminalId);
-            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
-            return await Connection.InvokeAsync<Result>("CreateTerminalSession", agentConnectionId, signedDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while creating terminal session.");
-            return Result.Fail("An error occurred.");
-        }
+            var request = new CloseTerminalRequest(terminalId);
+            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.UserKeys.PrivateKey);
+            await Connection.InvokeAsync("SendSignedDtoToAgent", deviceId, signedDto);
+        });
+    }
+
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                Guard.IsNotNull(Connection.ConnectionId);
+
+                var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
+                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>("CreateTerminalSession", agentConnectionId, signedDto);
+            },
+            () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
     }
 
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
     {
-        try
-        {
-            var vncSession = new VncSessionRequest(sessionId, vncPassword);
-            var signedDto = _keyProvider.CreateSignedDto(vncSession, DtoType.VncSessionRequest, _appState.UserKeys.PrivateKey);
-
-            var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
-            if (!result.SessionCreated)
+        return await TryInvoke(
+            async () =>
             {
-                _logger.LogError("Failed to get VNC session.");
-            }
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting remote streaming session.");
-            return new(false);
-        }
+                var vncSession = new VncSessionRequest(sessionId, vncPassword);
+                var signedDto = _keyProvider.CreateSignedDto(vncSession, DtoType.VncSessionRequest, _appState.UserKeys.PrivateKey);
+
+                var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
+                if (!result.SessionCreated)
+                {
+                    _logger.LogError("Failed to get VNC session.");
+                }
+                return result;
+            },
+            () => new(false));
     }
 
     public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
@@ -96,6 +104,12 @@ internal class ViewerHubConnection(
     {
         _devicesCache.AddOrUpdate(device);
         _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
+        return Task.CompletedTask;
+    }
+
+    public Task ReceiveTerminalOutput(TerminalOutputDto output)
+    {
+        _messenger.Send(new TerminalOutputMessage(output));
         return Task.CompletedTask;
     }
 
@@ -197,6 +211,20 @@ internal class ViewerHubConnection(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while invoking hub method.");
+        }
+    }
+
+    private async Task<T> TryInvoke<T>(Func<Task<T>> func, Func<T> defaultValue, [CallerMemberName] string callerName = "")
+    {
+        try
+        {
+            using var _ = _logger.BeginScope(callerName);
+            return await func.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while invoking hub method.");
+            return defaultValue();
         }
     }
 

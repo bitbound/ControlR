@@ -1,4 +1,6 @@
-﻿using ControlR.Shared.Dtos;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Messages;
+using ControlR.Shared.Dtos;
 using ControlR.Shared.Helpers;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -9,8 +11,6 @@ namespace ControlR.Devices.Common.Services;
 
 public interface IHubConnectionBase
 {
-    event EventHandler<SignedPayloadDto>? DtoReceived;
-
     HubConnectionState ConnectionState { get; }
     bool IsConnected { get; }
 
@@ -20,16 +20,14 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
-    IServiceScopeFactory scopeFactory,
-    ILogger<HubConnectionBase> logger) : IHubConnectionBase
+    IServiceScopeFactory _scopeFactory,
+    IMessenger messenger,
+    ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
-    protected readonly ILogger<HubConnectionBase> _logger = logger;
-    protected readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    protected readonly IMessenger _messenger = messenger;
     private CancellationToken _cancellationToken;
     private HubConnection? _connection;
     private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
-
-    public event EventHandler<SignedPayloadDto>? DtoReceived;
 
     public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
@@ -86,7 +84,7 @@ public abstract class HubConnectionBase(
 
     public Task ReceiveDto(SignedPayloadDto dto)
     {
-        DtoReceived?.Invoke(this, dto);
+        _messenger.Send(new SignedDtoReceivedMessage(dto));
         return Task.CompletedTask;
     }
 

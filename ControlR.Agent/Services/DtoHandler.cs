@@ -1,5 +1,7 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
+using ControlR.Devices.Common.Messages;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
@@ -13,25 +15,28 @@ namespace ControlR.Agent.Services;
 internal class DtoHandler(
     IKeyProvider _keyProvider,
     IAgentHubConnection _agentHub,
+    IMessenger _messenger,
     IPowerControl _powerControl,
+    ITerminalStore _terminalStore,
     IOptionsMonitor<AppOptions> _appOptions,
     ILogger<DtoHandler> _logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _agentHub.DtoReceived += AgentHub_DtoReceived;
+        _messenger.Register<SignedDtoReceivedMessage>(this, HandleSignedDtoReceivedMessage);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _agentHub.DtoReceived -= AgentHub_DtoReceived;
+        _messenger.Unregister<SignedDtoReceivedMessage>(this);
         return Task.CompletedTask;
     }
 
-    private async void AgentHub_DtoReceived(object? sender, SignedPayloadDto dto)
+    private async Task HandleSignedDtoReceivedMessage(SignedDtoReceivedMessage message)
     {
-        using var _ = _logger.BeginMemberScope();
+        using var logScope = _logger.BeginMemberScope();
+        var dto = message.SignedDto;
 
         if (!_keyProvider.Verify(dto))
         {
@@ -54,6 +59,12 @@ internal class DtoHandler(
             case DtoType.PowerStateChange:
                 var powerDto = MessagePackSerializer.Deserialize<PowerStateChangeDto>(dto.Payload);
                 await _powerControl.ChangeState(powerDto.Type);
+                break;
+
+            case DtoType.CloseTerminalRequest:
+                var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequest>(dto.Payload);
+                // Underyling process is killed/disposed upon eviction from the MemoryCache.
+                _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
                 break;
 
             default:

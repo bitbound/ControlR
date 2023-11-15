@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace ControlR.Devices.Common.Services.Linux;
 
 internal class DeviceDataGeneratorLinux(
-    IProcessInvoker processInvoker,
+    IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
     ILogger<DeviceDataGeneratorLinux> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
     private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
-    private readonly IProcessInvoker _processInvoker = processInvoker;
+    private readonly IProcessManager _processInvoker = processInvoker;
 
     public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<string> authorizedKeys, string deviceId)
     {

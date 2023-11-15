@@ -8,6 +8,6 @@ public enum DtoType
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
     TerminalSessionRequest = 5,
-    CloseStreamingSession = 7,
+    CloseTerminalRequest = 7,
     PowerStateChange = 8,
 }

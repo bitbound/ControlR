@@ -25,13 +25,13 @@ public class ViewerHub(
     private readonly ILogger<ViewerHub> _logger = logger;
     private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
 
-    public async Task<Result> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
     {
         try
         {
             if (!VerifySignature(requestDto, out _))
             {
-                return Result.Fail("Signature verification failed.");
+                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
             }
 
             return await _agentHub.Clients
@@ -41,7 +41,7 @@ public class ViewerHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while creating terminal session.");
-            return Result.Fail("An error occurred.");
+            return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
         }
     }
 

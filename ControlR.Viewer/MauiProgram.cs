@@ -66,6 +66,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IJsInterop, JsInterop>();
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
+        builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
