@@ -24,8 +24,11 @@ internal class UpdateManager(
     IProcessManager _processManager,
 #endif
     IMessenger _messenger,
+    ISettings _settings,
     ILogger<UpdateManager> _logger) : IUpdateManager
 {
+    private readonly SemaphoreSlim _installLock = new(1, 1);
+
     public async Task<Result<bool>> CheckForUpdate()
     {
         try
@@ -41,7 +44,7 @@ internal class UpdateManager(
             if (result.Value != currentVersion)
             {
                 _messenger.SendGenericMessage(GenericMessageKind.AppUpdateAvailable);
-                Result.Ok(true);
+                return Result.Ok(true);
             }
 
             return Result.Ok(false);
@@ -55,10 +58,15 @@ internal class UpdateManager(
 
     public async Task<Result> InstallCurrentVersion()
     {
+        if (!await _installLock.WaitAsync(0))
+        {
+            return Result.Fail("Update already started.");
+        }
+
         try
         {
             var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
-            var downloadResult = await _downloadsApi.DownloadViewer(tempPath);
+            var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
             if (!downloadResult.IsSuccess)
             {
                 return downloadResult;
@@ -90,6 +98,10 @@ internal class UpdateManager(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while installing the current version.");
+        }
+        finally
+        {
+            _installLock.Release();
         }
         return Result.Fail("Installation failed.");
     }

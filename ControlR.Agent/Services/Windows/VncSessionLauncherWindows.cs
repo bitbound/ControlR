@@ -29,18 +29,35 @@ internal class VncSessionLauncherWindows(
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
 
+    private readonly string _tvnServerPath = Path.Combine(
+        _environment.StartupDirectory,
+        "TightVNC",
+        "tvnserver.exe");
+
+    public async Task CleanupSessions()
+    {
+        try
+        {
+            StopProcesses();
+            if (_elevationChecker.IsElevated())
+            {
+                await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-stop -silent", true, TimeSpan.FromSeconds(5));
+                await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-remove -silent", true, TimeSpan.FromSeconds(5));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during VNC session cleanup");
+        }
+    }
+
     public async Task<Result<VncSession>> CreateSession(Guid sessionId, string password)
     {
         await _createSessionLock.WaitAsync();
 
         try
         {
-            var tvnServerPath = Path.Combine(
-                _environment.StartupDirectory,
-                "TightVNC",
-                "tvnserver.exe");
-
-            if (!_fileSystem.FileExists(tvnServerPath))
+            if (!_fileSystem.FileExists(_tvnServerPath))
             {
                 var result = await DownloadTightVnc();
                 if (!result.IsSuccess)
@@ -53,11 +70,11 @@ internal class VncSessionLauncherWindows(
 
             if (_elevationChecker.IsElevated())
             {
-                return await RunTvnServerAsService(sessionId, tvnServerPath);
+                return await RunTvnServerAsService(sessionId);
             }
             else
             {
-                return RunTvnServerAsUser(sessionId, tvnServerPath);
+                return RunTvnServerAsUser(sessionId);
             }
         }
         catch (Exception ex)
@@ -117,7 +134,7 @@ internal class VncSessionLauncherWindows(
         }
     }
 
-    private async Task<Result<VncSession>> RunTvnServerAsService(Guid sessionId, string tvnServerPath)
+    private async Task<Result<VncSession>> RunTvnServerAsService(Guid sessionId)
     {
         using var service = ServiceController
             .GetServices()
@@ -125,8 +142,8 @@ internal class VncSessionLauncherWindows(
 
         if (service?.Status != ServiceControllerStatus.Running)
         {
-            await _processInvoker.StartAndWaitForExit(tvnServerPath, "-reinstall -silent", true, TimeSpan.FromSeconds(5));
-            await _processInvoker.StartAndWaitForExit(tvnServerPath, "-start -silent", true, TimeSpan.FromSeconds(5));
+            await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-reinstall -silent", true, TimeSpan.FromSeconds(5));
+            await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-start -silent", true, TimeSpan.FromSeconds(5));
             await _processInvoker.StartAndWaitForExit("sc.exe", "config start= demand", true, TimeSpan.FromSeconds(5));
         }
 
@@ -144,44 +161,24 @@ internal class VncSessionLauncherWindows(
             return Result.Fail<VncSession>("VNC session failed to start.");
         }
 
-        var session = new VncSession(
-           sessionId,
-           async () =>
-           {
-               try
-               {
-                   StopProcesses();
-                   await _processInvoker.StartAndWaitForExit(tvnServerPath, "-stop -silent", true, TimeSpan.FromSeconds(5));
-                   await _processInvoker.StartAndWaitForExit(tvnServerPath, "-remove -silent", true, TimeSpan.FromSeconds(5));
-               }
-               catch (Exception ex)
-               {
-                   _logger.LogError(ex, "Error during VNC session cleanup");
-               }
-           });
+        var session = new VncSession(sessionId);
 
         return Result.Ok(session);
     }
 
-    private Result<VncSession> RunTvnServerAsUser(Guid sessionId, string tvnServerPath)
+    private Result<VncSession> RunTvnServerAsUser(Guid sessionId)
     {
-        var existingProcs = _processInvoker.GetProcessesByName(Path.GetFileNameWithoutExtension(tvnServerPath));
+        var existingProcs = _processInvoker.GetProcessesByName(Path.GetFileNameWithoutExtension(_tvnServerPath));
         var process = existingProcs.FirstOrDefault();
 
-        process ??= _processInvoker.Start(tvnServerPath, "-run", true);
+        process ??= _processInvoker.Start(_tvnServerPath, "-run", true);
 
         if (process?.HasExited != false)
         {
             return Result.Fail<VncSession>("VNC session failed to start.");
         }
 
-        var session = new VncSession(
-           sessionId,
-           () =>
-           {
-               process.KillAndDispose();
-               return Task.CompletedTask;
-           });
+        var session = new VncSession(sessionId);
 
         return Result.Ok(session);
     }
@@ -221,7 +218,7 @@ internal class VncSessionLauncherWindows(
         {
             try
             {
-                proc.Kill();
+                proc.KillAndDispose();
             }
             catch (Exception ex)
             {

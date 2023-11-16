@@ -4,7 +4,6 @@ using ControlR.Agent.Models;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
@@ -18,7 +17,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 
@@ -36,7 +34,7 @@ internal class AgentHubConnection(
      IServiceScopeFactory _scopeFactory,
      IDeviceDataGenerator _deviceCreator,
      IEnvironmentHelper _environmentHelper,
-     IOptionsMonitor<AppOptions> _appOptions,
+     ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
      IVncSessionLauncher _vncSessionLauncher,
@@ -74,9 +72,9 @@ internal class AgentHubConnection(
                 return new(false);
             }
 
-            if (_appOptions.CurrentValue.AutoRunVnc != true)
+            if (!_settings.AutoRunVnc)
             {
-                var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
+                var session = new VncSession(dto.SessionId);
                 _localProxy
                     .HandleVncSession(session)
                     .AndForget();
@@ -152,7 +150,7 @@ internal class AgentHubConnection(
                 return;
             }
 
-            if (_appOptions.CurrentValue.AuthorizedKeys.Count == 0)
+            if (_settings.AuthorizedKeys.Count == 0)
             {
                 _logger.LogWarning("There are no authorized keys in appsettings. Aborting heartbeat.");
                 return;
@@ -160,8 +158,8 @@ internal class AgentHubConnection(
 
             var device = await _deviceCreator.CreateDevice(
                 _cpuSampler.CurrentUtilization,
-                _appOptions.CurrentValue.AuthorizedKeys,
-                _appOptions.CurrentValue.DeviceId);
+                _settings.AuthorizedKeys,
+                _settings.DeviceId);
 
             var result = device.TryCloneAs<Device, DeviceDto>();
 
@@ -228,7 +226,7 @@ internal class AgentHubConnection(
     private async Task StartImpl()
     {
         await Connect(
-            $"{AppConstants.ServerUri}/hubs/agent",
+            $"{_settings.ServerUri}hubs/agent",
             ConfigureConnection,
             ConfigureHttpOptions,
              _appLifetime.ApplicationStopping);
@@ -244,7 +242,7 @@ internal class AgentHubConnection(
             return false;
         }
 
-        if (!_appOptions.CurrentValue.AuthorizedKeys.Contains(signedDto.PublicKeyBase64))
+        if (!_settings.AuthorizedKeys.Contains(signedDto.PublicKeyBase64))
         {
             _logger.LogCritical("Public key does not exist in authorized keys list: {key}", signedDto.PublicKey);
             return false;

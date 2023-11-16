@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject IEnvironmentHelper EnvironmentHelper
 @inject IUpdateManager UpdateManager
+@inject ISettings Settings
 
 <PageTitle>About</PageTitle>
 
@@ -71,7 +72,7 @@
 
     private string DownloadLink
     {
-        get => AppConstants.ViewerDownloadUri;
+        get => Settings.ViewerDownloadUri;
     }
 
     protected override async Task OnInitializedAsync()
@@ -90,6 +91,8 @@
 
     private async Task InstallUpdate()
     {
+        Snackbar.Add("Downloading update", Severity.Info);
+
         var installResult = await UpdateManager.InstallCurrentVersion();
         if (!installResult.IsSuccess)
         {

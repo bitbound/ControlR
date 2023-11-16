@@ -12,21 +12,27 @@ namespace ControlR.Agent.Startup;
 internal class CommandProvider
 {
     private static readonly string[] _authorizedKeyAlias = ["-a", "--authorized-key"];
-    private static readonly string[] _autoRunVnc = ["-r", "--auto-run"];
-    private static readonly string[] _portAlias = ["-p", "--port"];
+    private static readonly string[] _autoRunVncAlias = ["-r", "--auto-run"];
+    private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
+    private static readonly string[] _vncPortAlias = ["-v", "--vnc-port"];
 
     internal static Command GetInstallCommand(string[] args)
     {
+        var serverUriOption = new Option<Uri?>(
+             _serverUriAlias,
+             "The fully-qualified server URI to which the agent will connect " +
+             "(e.g. 'https://my.example.com' or 'http://my.example.com:8080'). ");
+
         var authorizedKeyOption = new Option<string>(
             _authorizedKeyAlias,
             "An optional public key to preconfigure with authorization to this device.");
 
-        var portOption = new Option<int?>(
-            _portAlias,
+        var vncPortOption = new Option<int?>(
+            _vncPortAlias,
             "The port to use for VNC connections.  ControlR will proxy viewer connections to this port.");
 
         var autoRunOption = new Option<bool?>(
-             _autoRunVnc,
+             _autoRunVncAlias,
              "Whether to automatically download (if needed) and run a temporary TightVNC server. " +
              "The server will run in loopback-only mode, and a new random password will be generated " +
              "for each session. The server will shutdown when the session ends. Set this to false " +
@@ -35,17 +41,18 @@ internal class CommandProvider
         var installCommand = new Command("install", "Install the ControlR service.")
         {
             authorizedKeyOption,
-            portOption,
-            autoRunOption
+            vncPortOption,
+            autoRunOption,
+            serverUriOption
         };
 
-        installCommand.SetHandler(async (authorizedKey, vncPort, auotInstallVnc) =>
+        installCommand.SetHandler(async (serverUri, authorizedKey, vncPort, auotInstallVnc) =>
         {
             var host = CreateHost(StartupMode.Install, args);
+            await host.StartAsync();
             var installer = host.Services.GetRequiredService<IAgentInstaller>();
-            await installer.Install(authorizedKey, vncPort, auotInstallVnc);
-            await host.RunAsync();
-        }, authorizedKeyOption, portOption, autoRunOption);
+            await installer.Install(serverUri, authorizedKey, vncPort, auotInstallVnc);
+        }, serverUriOption, authorizedKeyOption, vncPortOption, autoRunOption);
 
         return installCommand;
     }

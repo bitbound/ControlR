@@ -10,6 +10,7 @@ namespace ControlR.Viewer.Services;
 
 internal interface ISettings
 {
+    string AgentDownloadUri { get; }
     bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
@@ -17,7 +18,9 @@ internal interface ISettings
     byte[] PublicKey { get; set; }
     string PublicKeyBase64 { get; }
     bool RememberPassphrase { get; set; }
+    string ServerUri { get; set; }
     string Username { get; set; }
+    string ViewerDownloadUri { get; }
     int VncPort { get; set; }
 
     Task Clear();
@@ -42,6 +45,14 @@ internal class Settings(
     ILogger<Settings> _logger) : ISettings
 {
     private byte[] _privateKey = [];
+
+    public string AgentDownloadUri
+    {
+        get
+        {
+            return $"{ServerUri}/downloads/{AppConstants.AgentFileName}";
+        }
+    }
 
     public bool AutoRunVnc
     {
@@ -85,12 +96,28 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public string ServerUri => _preferences.Get(nameof(ServerUri), AppConstants.ServerUri);
+    public string ServerUri
+    {
+        get => GetPref(AppConstants.ServerUri).TrimEnd('/');
+        set
+        {
+            SetPref(value.TrimEnd('/'));
+            _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
+        }
+    }
 
     public string Username
     {
         get => GetPref(string.Empty);
         set => SetPref(value);
+    }
+
+    public string ViewerDownloadUri
+    {
+        get
+        {
+            return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
+        }
     }
 
     public int VncPort

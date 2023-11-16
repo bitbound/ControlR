@@ -30,7 +30,7 @@ internal class HttpConfigurer(
 
     public void ConfigureClient(HttpClient client)
     {
-        client.BaseAddress = new Uri(AppConstants.ServerUri);
+        client.BaseAddress = new Uri(_settings.ServerUri);
 
         if (_appState.IsAuthenticated)
         {

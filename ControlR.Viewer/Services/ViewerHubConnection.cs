@@ -28,6 +28,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
+    Task Reconnect(CancellationToken cancellationToken);
+
     Task RequestDeviceUpdates();
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
@@ -43,6 +45,7 @@ internal class ViewerHubConnection(
     IAppState _appState,
     IDeviceCache _devicesCache,
     IKeyProvider _keyProvider,
+    ISettings _settings,
     ILogger<ViewerHubConnection> _logger,
     IMessenger messenger) : HubConnectionBase(serviceScopeFactory, messenger, _logger), IViewerHubConnection, IViewerHubClient
 {
@@ -116,6 +119,23 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
+    public async Task Reconnect(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (IsConnected)
+                {
+                    await Connection.StopAsync(cancellationToken);
+                }
+            }
+            catch { }
+            await Start(cancellationToken);
+            break;
+        }
+    }
+
     public async Task RequestDeviceUpdates()
     {
         await TryInvoke(async () =>
@@ -157,7 +177,7 @@ internal class ViewerHubConnection(
         using var _ = _appState.IncrementBusyCounter();
 
         await Connect(
-            $"{AppConstants.ServerUri}/hubs/viewer",
+            $"{_settings.ServerUri}/hubs/viewer",
             ConfigureConnection,
             ConfigureHttpOptions,
             OnConnectFailure,

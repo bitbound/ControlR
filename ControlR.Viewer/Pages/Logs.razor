@@ -37,13 +37,13 @@
                 @foreach (var file in _logFiles)
                 {
                     <MudListItem Text="@(Path.GetFileName(file.FullName))"
-                             Value="@(file)"></MudListItem>
+                                 Value="@(file)"></MudListItem>
                 }
             </MudList>
         </div>
         <div style="overflow:hidden;">
             <MudPaper Outlined Elevation="1" Style="position: relative; white-space: pre; padding: 10px; overflow: scroll;">
-                @_logContent
+                 @_logContent
             </MudPaper>
         </div>
     </div>

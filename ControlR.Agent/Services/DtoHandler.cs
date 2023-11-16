@@ -1,6 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using ControlR.Agent.Models;
 using ControlR.Devices.Common.Messages;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
@@ -8,7 +7,6 @@ using ControlR.Shared.Services;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Services;
 
@@ -18,7 +16,7 @@ internal class DtoHandler(
     IMessenger _messenger,
     IPowerControl _powerControl,
     ITerminalStore _terminalStore,
-    IOptionsMonitor<AppOptions> _appOptions,
+    ISettingsProvider _settings,
     ILogger<DtoHandler> _logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -44,7 +42,7 @@ internal class DtoHandler(
             return;
         }
 
-        if (!_appOptions.CurrentValue.AuthorizedKeys.Contains(dto.PublicKeyBase64))
+        if (!_settings.AuthorizedKeys.Contains(dto.PublicKeyBase64))
         {
             _logger.LogCritical("Public key does not exist in authorized keys: {key}", dto.PublicKey);
             return;

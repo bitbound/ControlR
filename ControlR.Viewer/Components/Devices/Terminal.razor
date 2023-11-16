@@ -1,26 +1,25 @@
 ﻿@if (_loading)
 {
     <div class="text-center mt-4">
-        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom> 
-            Loading 
-        </MudText>
-        <MudProgressCircular Indeterminate="true"
-                            Size="Size.Large"
-                            Color="Color.Info" />
-    </div>
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+         Loading
+     </MudText>
+     <MudProgressCircular Indeterminate="true"
+                          Size="Size.Large"
+                          Color="Color.Info" />
+ </div>
 }
 else
 {
     <div class="terminal-grid">
         <div @ref="_terminalOutputContainer" class="terminal-output-container">
-            <pre>
-                @foreach (var line in Output)
-                {
-                    <MudText Color="Terminal.GetOutputColor(line)">
-                        @(line.Output)
-                    </MudText>
-                }
-            </pre>
+
+            @foreach (var line in Output)
+            {
+                <MudText Color="Terminal.GetOutputColor(line)">
+                    @(line.Output)
+                </MudText>
+            }
         </div>
         <div>
             <MudTextField T="string"
@@ -31,17 +30,16 @@ else
                           HelperText="Type a command and press Enter to send"
                           TextUpdateSuppression="false"
                           Lines="@InputLineCount"
-                          HelperTextOnFocus
-                          AutoFocus
-                          Immediate
-                          OnKeyUp="@OnInputKeyDown"
-                          Class="mt-2" />
-        </div>
-        <div>
-            <MudSwitch 
-                @bind-Checked="_enableMultiline" 
-                Color="Color.Success"
-                Label="Multiline Input" />
-        </div>
-    </div>
+                                    HelperTextOnFocus
+                                    AutoFocus
+                                    Immediate
+                           OnKeyUp="@OnInputKeyDown"
+                           Class="mt-2" />
+         </div>
+         <div>
+             <MudSwitch @bind-Checked="_enableMultiline"
+                        Color="Color.Success"
+                        Label="Multiline Input" />
+         </div>
+     </div>
 }

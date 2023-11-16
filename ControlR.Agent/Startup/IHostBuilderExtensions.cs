@@ -59,33 +59,32 @@ internal static class IHostBuilderExtensions
 
             services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
-            if (startupMode == StartupMode.Run)
-            {
-                services.AddSingleton<IAgentUpdater, AgentUpdater>();
-                services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
-                services.AddHostedService<AgentHeartbeatTimer>();
-                services.AddHostedService<DtoHandler>();
-                services.AddSingleton<ILocalProxy, LocalProxy>();
-                services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-                services.AddSingleton<IMemoryProvider, MemoryProvider>();
-                services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
-                services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-                services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
-                services.AddSingleton<ITerminalStore, TerminalStore>();
-            }
-
+            services.AddSingleton<ISettingsProvider, SettingsProvider>();
             services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
             services.AddSingleton<IFileSystem, FileSystem>();
-            services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
             services.AddSingleton<IKeyProvider, KeyProvider>();
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<ISystemTime, SystemTime>();
+            services.AddSingleton<IMemoryProvider, MemoryProvider>();
+
+            if (startupMode == StartupMode.Run)
+            {
+                services.AddSingleton<IAgentUpdater, AgentUpdater>();
+                services.AddSingleton<ILocalProxy, LocalProxy>();
+                services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+                services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
+                services.AddSingleton<ITerminalStore, TerminalStore>();
+                services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
+                services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
+                services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
+                services.AddHostedService<AgentHeartbeatTimer>();
+                services.AddHostedService<DtoHandler>();
+            }
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
-                services.AddSingleton<IVncProcessCache, StreamingSessionCache>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();

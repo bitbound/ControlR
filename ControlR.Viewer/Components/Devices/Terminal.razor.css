@@ -14,4 +14,7 @@
 .terminal-output-container {
     overflow: auto;
     height: 100%;
+    unicode-bidi: embed;
+    font-family: monospace;
+    white-space: pre;
 }

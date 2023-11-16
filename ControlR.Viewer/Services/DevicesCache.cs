@@ -13,6 +13,8 @@ internal interface IDeviceCache
 
     Task AddOrUpdate(DeviceDto device);
 
+    void Clear();
+
     Task Remove(DeviceDto device);
 
     Task SetAllOffline();
@@ -41,6 +43,11 @@ internal class DeviceCache : IDeviceCache
     {
         _cache.AddOrUpdate(device.Id, device, (k, v) => device);
         await TrySaveCache();
+    }
+
+    public void Clear()
+    {
+        _cache.Clear();
     }
 
     public async Task Remove(DeviceDto device)

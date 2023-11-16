@@ -18,7 +18,8 @@ internal class AgentInstallerLinux(
     IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
-    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
+    ISettingsProvider settings,
+    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, downloadsApi, settings, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environment = environmentHelper;
@@ -29,7 +30,7 @@ internal class AgentInstallerLinux(
     private readonly IProcessManager _processInvoker = processInvoker;
     private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
-    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -65,7 +66,7 @@ internal class AgentInstallerLinux(
             var serviceFile = GetServiceFile().Trim();
 
             await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
-            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoRunVnc);
+            await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
             await WriteEtag(_installDir);
 
             var psi = new ProcessStartInfo()

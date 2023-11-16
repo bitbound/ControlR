@@ -1,11 +1,10 @@
-﻿using ControlR.Agent.Models;
-using ControlR.Shared;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Models;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 
@@ -18,10 +17,13 @@ internal interface ILocalProxy
 
 internal class LocalProxy(
     IHostApplicationLifetime _appLifetime,
-    IOptionsMonitor<AppOptions> _appOptions,
+    ISettingsProvider _settings,
     IMemoryProvider _memoryProvider,
+    IVncSessionLauncher _vncSessionLauncher,
     ILogger<LocalProxy> _logger) : ILocalProxy
 {
+    private volatile int _sessionCount;
+
     public async Task HandleVncSession(VncSession session)
     {
         var sessionId = session.SessionId;
@@ -29,28 +31,21 @@ internal class LocalProxy(
 
         try
         {
-            var vncPort = _appOptions.CurrentValue.VncPort;
-
-            if (vncPort is null)
-            {
-                _logger.LogError("VNC port is empty in appsettings.  Aborting VNC proxy.");
-                return;
-            }
-
             _logger.LogInformation("Starting proxy for session ID {SessionID} to port {VncPort}.",
                 sessionId,
-                vncPort);
+                _settings.VncPort);
 
             var tcpClient = new TcpClient();
             await TryHelper.Retry(
                 async () =>
                 {
-                    await tcpClient.ConnectAsync("127.0.0.1", vncPort.Value);
+                    await tcpClient.ConnectAsync("127.0.0.1", _settings.VncPort);
                 },
                 tryCount: 3,
                 retryDelay: TimeSpan.FromSeconds(3));
 
-            var websocketEndpoint = new Uri($"{AppConstants.ServerUri.Replace("http", "ws")}/agentvnc-proxy/{sessionId}");
+            var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
+            var websocketEndpoint = new Uri($"{serverUri.Replace("http", "ws")}/agentvnc-proxy/{sessionId}");
             await ws.ConnectAsync(websocketEndpoint, _appLifetime.ApplicationStopping);
 
             ProxyConnections(session, ws, tcpClient).AndForget();
@@ -69,6 +64,7 @@ internal class LocalProxy(
     {
         try
         {
+            Interlocked.Increment(ref _sessionCount);
             var localReadTask = ReadFromLocal(localConnection, serverConnection);
             var serverReadTask = ReadFromServer(serverConnection, localConnection);
 
@@ -80,9 +76,13 @@ internal class LocalProxy(
         }
         finally
         {
+            Interlocked.Decrement(ref _sessionCount);
             _logger.LogInformation("Proxy session ended.  Cleaning up connections.  Session ID: {SessionID}", session.SessionId);
             DisposeHelper.DisposeAll(serverConnection, localConnection);
-            await session.DisposeAsync();
+            if (_sessionCount == 0)
+            {
+                await _vncSessionLauncher.CleanupSessions();
+            }
         }
     }
 

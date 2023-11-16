@@ -27,7 +27,7 @@
                   OnAdornmentClick="CopyWindowsScript"
                   Adornment="Adornment.End"
                   Value="WindowsDeployScript"
-                  Class="mb-5"/>
+                  Class="mb-5" />
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Ubuntu (Bash)
@@ -77,21 +77,23 @@
     {
         get
         {
-            var autoInstallOption = Settings.AutoRunVnc ? "-i " : "";
+            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
 
             return "$ProgressPreference = \"SilentlyContinue\"; " +
-                $"Invoke-WebRequest -Uri \"{AppConstants.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+                $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
-                $"{autoInstallOption}-p {Settings.VncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
+                $"{autoRunOption}-s {Settings.ServerUri}-v {Settings.VncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
         }
     }
     private string UbuntuDeployScript
     {
         get
         {
-            return $"wget -q -O /tmp/ControlR.Agent {AppConstants.ServerUri}/downloads/ControlR.Agent && " +
-                "sudo chmod +x /tmp/ControlR.Agent && " +
-                $"sudo /tmp/ControlR.Agent install -p {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
+
+            return $"wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/ControlR.Agent && " +
+                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install {autoRunOption}" +
+                $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
         }
     }
 

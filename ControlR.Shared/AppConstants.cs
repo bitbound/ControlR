@@ -11,14 +11,6 @@ public static partial class AppConstants
     private const string DevServerUri = "http://localhost:5120";
     private const string ProdServerUri = "https://app.controlr.app";
 
-    public static string AgentDownloadUri
-    {
-        get
-        {
-            return $"{ServerUri}/downloads/{AgentFileName}";
-        }
-    }
-
     public static string AgentFileName
     {
         get
@@ -53,14 +45,6 @@ public static partial class AppConstants
     }
 
     public static string TightVncZipName { get; } = "tvnserver.zip";
-
-    public static string ViewerDownloadUri
-    {
-        get
-        {
-            return $"{ServerUri}/downloads/{ViewerFileName}";
-        }
-    }
 
     public static string ViewerFileName
     {
