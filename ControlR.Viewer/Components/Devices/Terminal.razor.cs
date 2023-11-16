@@ -16,7 +16,7 @@ namespace ControlR.Viewer.Components.Devices;
 
 public partial class Terminal : IAsyncDisposable
 {
-    private readonly ConcurrentList<string> _inputHistory = new();
+    private readonly ConcurrentList<string> _inputHistory = [];
     private bool _enableMultiline;
     private MudTextField<string>? _inputElement;
     private int _inputHistoryIndex;
@@ -164,13 +164,13 @@ public partial class Terminal : IAsyncDisposable
             return;
         }
 
-        if (args.Key.Equals("ArrowUp", StringComparison.OrdinalIgnoreCase))
+        if (!_enableMultiline && args.Key.Equals("ArrowUp", StringComparison.OrdinalIgnoreCase))
         {
             _inputText = GetTerminalHistory(false);
             return;
         }
 
-        if (args.Key.Equals("ArrowDown", StringComparison.OrdinalIgnoreCase))
+        if (!_enableMultiline && args.Key.Equals("ArrowDown", StringComparison.OrdinalIgnoreCase))
         {
             _inputText = GetTerminalHistory(true);
             return;
