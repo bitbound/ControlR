@@ -10,4 +10,5 @@ public enum DtoType
     TerminalSessionRequest = 5,
     CloseTerminalRequest = 7,
     PowerStateChange = 8,
+    TerminalInput = 9,
 }

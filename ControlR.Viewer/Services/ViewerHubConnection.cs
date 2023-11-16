@@ -31,6 +31,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
 
+    Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
+
     Task Start(CancellationToken cancellationToken);
 }
 
@@ -133,6 +135,18 @@ internal class ViewerHubConnection(
         });
     }
 
+    public async Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input)
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var request = new TerminalInputDto(terminalId, input);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _appState.UserKeys.PrivateKey);
+                return await Connection.InvokeAsync<Result>("SendTerminalInput", agentConnectionId, signedDto);
+            },
+            () => Result.Fail("Failed to send terminal input"));
+    }
+
     public async Task Start(CancellationToken cancellationToken)
     {
         _messenger.UnregisterAll(this);
@@ -159,6 +173,7 @@ internal class ViewerHubConnection(
         connection.Reconnecting += Connection_Reconnecting;
         connection.Reconnected += Connection_Reconnected;
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
+        connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

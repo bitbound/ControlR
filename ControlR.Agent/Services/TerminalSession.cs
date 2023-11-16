@@ -31,6 +31,7 @@ internal class TerminalSession(
     IAgentHubConnection _hubConnection,
     ILogger<TerminalSession> _logger) : ITerminalSession
 {
+    private readonly StringBuilder _inputBuilder = new();
     private readonly Process _shellProcess = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _disposedValue;
@@ -59,9 +60,13 @@ internal class TerminalSession(
                 throw new InvalidOperationException("Shell process is not running.");
             }
 
+            _inputBuilder.Clear();
+            _inputBuilder.Append(input);
             using var cts = new CancellationTokenSource(timeout);
-            var sb = new StringBuilder(input);
-            await _shellProcess.StandardInput.WriteLineAsync(sb, cts.Token);
+
+            await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
+            _inputBuilder.Clear();
+            await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
 
             return Result.Ok();
         }
@@ -90,8 +95,13 @@ internal class TerminalSession(
             UseShellExecute = false,
             RedirectStandardError = true,
             RedirectStandardInput = true,
-            RedirectStandardOutput = true
+            RedirectStandardOutput = true,
         };
+
+        if (SessionKind == TerminalSessionKind.PowerShell)
+        {
+            psi.EnvironmentVariables.Add("NO_COLOR", "1");
+        }
 
         _shellProcess.StartInfo = psi;
         _shellProcess.ErrorDataReceived += ShellProcess_ErrorDataReceived;
@@ -105,10 +115,10 @@ internal class TerminalSession(
 
         if (SessionKind is TerminalSessionKind.WindowsPowerShell or TerminalSessionKind.PowerShell)
         {
-            await WriteInput("$VerbosePreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            await WriteInput("$DebugPreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            await WriteInput("$InformationPreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            await WriteInput("$WarningPreference = \"Continue\";", TimeSpan.FromSeconds(5));
+            //await WriteInput("$VerbosePreference = \"Continue\";", TimeSpan.FromSeconds(5));
+            //await WriteInput("$DebugPreference = \"Continue\";", TimeSpan.FromSeconds(5));
+            //await WriteInput("$InformationPreference = \"Continue\";", TimeSpan.FromSeconds(5));
+            //await WriteInput("$WarningPreference = \"Continue\";", TimeSpan.FromSeconds(5));
         }
     }
 
@@ -129,7 +139,7 @@ internal class TerminalSession(
     {
         switch (_environment.Platform)
         {
-            case Shared.Enums.SystemPlatform.Windows:
+            case SystemPlatform.Windows:
                 var result = await TryGetPwshPath();
                 if (result.IsSuccess)
                 {
@@ -139,7 +149,7 @@ internal class TerminalSession(
                 SessionKind = TerminalSessionKind.WindowsPowerShell;
                 return "powershell.exe";
 
-            case Shared.Enums.SystemPlatform.Linux:
+            case SystemPlatform.Linux:
                 if (_fileSystem.FileExists("/bin/bash"))
                 {
                     SessionKind = TerminalSessionKind.Bash;
@@ -152,12 +162,12 @@ internal class TerminalSession(
                     return "/bin/sh";
                 }
                 throw new FileNotFoundException("No shell found.");
-            case Shared.Enums.SystemPlatform.Unknown:
-            case Shared.Enums.SystemPlatform.MacOS:
-            case Shared.Enums.SystemPlatform.MacCatalyst:
-            case Shared.Enums.SystemPlatform.Android:
-            case Shared.Enums.SystemPlatform.IOS:
-            case Shared.Enums.SystemPlatform.Browser:
+            case SystemPlatform.Unknown:
+            case SystemPlatform.MacOS:
+            case SystemPlatform.MacCatalyst:
+            case SystemPlatform.Android:
+            case SystemPlatform.IOS:
+            case SystemPlatform.Browser:
             default:
                 throw new PlatformNotSupportedException();
         }

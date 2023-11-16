@@ -121,6 +121,24 @@ internal class AgentHubConnection(
         return Win32.GetActiveSessions().ToArray().AsTaskResult();
     }
 
+    public async Task<Result> ReceiveTerminalInput(SignedPayloadDto dto)
+    {
+        try
+        {
+            if (!VerifySignedDto<TerminalInputDto>(dto, out var payload))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            return await _terminalStore.WriteInput(payload.TerminalId, payload.Input);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail("An error occurred.");
+        }
+    }
+
     public async Task SendDeviceHeartbeat()
     {
         try
@@ -193,6 +211,7 @@ internal class AgentHubConnection(
 
         hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
+        hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

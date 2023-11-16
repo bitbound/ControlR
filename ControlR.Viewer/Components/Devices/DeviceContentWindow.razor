@@ -6,7 +6,7 @@
 
 <div class="device-content @($"{_windowState}".ToLower())">
     <div class="title-bar p-2">
-        <div style="align-self: center; margin-left: 10px;">
+        <div class="title-description">
             <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">
                 @(ContentInstance.Device?.Name) - @(ContentInstance.ContentTypeName)
             </MudText>

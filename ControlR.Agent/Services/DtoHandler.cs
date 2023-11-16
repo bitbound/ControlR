@@ -53,19 +53,25 @@ internal class DtoHandler(
         switch (dto.DtoType)
         {
             case DtoType.DeviceUpdateRequest:
-                await _agentHub.SendDeviceHeartbeat();
-                break;
+                {
+                    await _agentHub.SendDeviceHeartbeat();
+                    break;
+                }
 
             case DtoType.PowerStateChange:
-                var powerDto = MessagePackSerializer.Deserialize<PowerStateChangeDto>(dto.Payload);
-                await _powerControl.ChangeState(powerDto.Type);
-                break;
+                {
+                    var powerDto = MessagePackSerializer.Deserialize<PowerStateChangeDto>(dto.Payload);
+                    await _powerControl.ChangeState(powerDto.Type);
+                    break;
+                }
 
             case DtoType.CloseTerminalRequest:
-                var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequest>(dto.Payload);
-                // Underyling process is killed/disposed upon eviction from the MemoryCache.
-                _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
-                break;
+                {
+                    var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequest>(dto.Payload);
+                    // Underyling process is killed/disposed upon eviction from the MemoryCache.
+                    _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
+                    break;
+                }
 
             default:
                 _logger.LogWarning("Unhandled DTO type: {type}", dto.DtoType);

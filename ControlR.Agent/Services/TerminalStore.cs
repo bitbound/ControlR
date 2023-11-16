@@ -15,6 +15,8 @@ public interface ITerminalStore
     Task<Result<TerminalSessionRequestResult>> CreateSession(Guid terminalId, string viewerConnectionId);
 
     bool TryRemove(Guid terminalId, [NotNullWhen(true)] out ITerminalSession? terminalSession);
+
+    Task<Result> WriteInput(Guid terminalId, string input);
 }
 
 internal class TerminalStore(
@@ -70,6 +72,25 @@ internal class TerminalStore(
 
         terminalSession = null;
         return false;
+    }
+
+    public async Task<Result> WriteInput(Guid terminalId, string input)
+    {
+        try
+        {
+            if (_sessionCache.TryGetValue(terminalId, out var cacheItem) &&
+                cacheItem is TerminalSession session)
+            {
+                await session.WriteInput(input, TimeSpan.FromSeconds(5));
+                return Result.Ok();
+            }
+            return Result.Fail("Failed to write terminal input.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while writing terminal input.");
+            return Result.Fail("An error occurred.");
+        }
     }
 
     private static MemoryCacheEntryOptions GetEntryOptions(TerminalSession terminalSession)

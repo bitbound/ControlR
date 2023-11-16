@@ -1,9 +1,40 @@
 ﻿@if (_loading)
 {
     <div class="text-center mt-4">
-        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
-            Loading
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom> 
+            Loading 
         </MudText>
-        <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Info" />
+        <MudProgressCircular Indeterminate="true"
+                            Size="Size.Large"
+                            Color="Color.Info" />
+    </div>
+}
+else
+{
+    <div class="terminal-grid">
+        <div @ref="_terminalOutputContainer" class="terminal-output-container">
+            <pre>
+                @foreach (var line in Output)
+                {
+                    <MudText Color="Terminal.GetOutputColor(line)">
+                        @(line.Output)
+                    </MudText>
+                }
+            </pre>
+        </div>
+        <div>
+            <MudTextField T="string"
+                          @ref="@(_inputElement)"
+                          @bind-Value="@_inputText"
+                          @bind-Text="@_inputText"
+                          Label="Enter a command"
+                          HelperText="Type a command and press Enter to send"
+                          TextUpdateSuppression="false"
+                          HelperTextOnFocus
+                          AutoFocus
+                          Immediate
+                          OnKeyUp="@OnInputKeyDown"
+                          Class="mt-2" />
+        </div>
     </div>
 }

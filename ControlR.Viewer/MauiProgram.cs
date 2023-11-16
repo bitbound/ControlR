@@ -63,7 +63,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
         builder.Services.AddSingleton<IViewerHubConnection, ViewerHubConnection>();
         builder.Services.AddSingleton<IDeviceCache, DeviceCache>();
-        builder.Services.AddSingleton<IJsInterop, JsInterop>();
+        builder.Services.AddTransient<IJsInterop, JsInterop>();
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();

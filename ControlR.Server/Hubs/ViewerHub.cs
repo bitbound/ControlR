@@ -127,6 +127,19 @@ public class ViewerHub(
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
     }
 
+    public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)
+    {
+        try
+        {
+            return await _agentHub.Clients.Client(agentConnectionId).ReceiveTerminalInput(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending terminal input.");
+            return Result.Fail("An error occurred.");
+        }
+    }
+
     private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
     {
         publicKey = string.Empty;

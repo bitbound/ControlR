@@ -3,11 +3,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace ControlR.Viewer.Services;
+
 public interface IJsInterop
 {
     ValueTask AddBeforeUnloadHandler();
 
     ValueTask AddClassName(ElementReference element, string className);
+
     ValueTask Alert(string message);
 
     ValueTask<bool> Confirm(string message);
@@ -23,6 +25,7 @@ public interface IJsInterop
     ValueTask PreventTabOut(ElementReference terminalInput);
 
     ValueTask<string> Prompt(string message);
+
     ValueTask Reload();
 
     ValueTask ScrollToElement(ElementReference element);
@@ -30,13 +33,12 @@ public interface IJsInterop
     ValueTask ScrollToEnd(ElementReference element);
 
     ValueTask SetStyleProperty(ElementReference element, string propertyName, string value);
+
     ValueTask StartDraggingY(ElementReference element, double clientY);
 }
 
-public class JsInterop(IJSRuntime jSRuntime) : IJsInterop
+public class JsInterop(IJSRuntime _jsRuntime) : IJsInterop
 {
-    private readonly IJSRuntime _jsRuntime = jSRuntime;
-
     public ValueTask AddBeforeUnloadHandler()
     {
         return _jsRuntime.InvokeVoidAsync("addBeforeUnloadHandler");
@@ -101,10 +103,12 @@ public class JsInterop(IJSRuntime jSRuntime) : IJsInterop
     {
         return _jsRuntime.InvokeVoidAsync("scrollToEnd", element);
     }
+
     public ValueTask SetStyleProperty(ElementReference element, string propertyName, string value)
     {
         return _jsRuntime.InvokeVoidAsync("setStyleProperty", element, propertyName, value);
     }
+
     public ValueTask StartDraggingY(ElementReference element, double clientY)
     {
         return _jsRuntime.InvokeVoidAsync("startDraggingY", element, clientY);
