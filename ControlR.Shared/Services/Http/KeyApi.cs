@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ControlR.Shared.Primitives;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.Shared.Services.Http;
 

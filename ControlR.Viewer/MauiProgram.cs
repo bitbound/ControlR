@@ -67,8 +67,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
+        builder.Services.AddSingleton<IUpdateManager, UpdateManager>();
+        builder.Services.AddSingleton<IProcessManager, ProcessManager>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
+        builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();

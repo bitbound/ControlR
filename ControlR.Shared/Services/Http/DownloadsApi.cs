@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ControlR.Shared.Primitives;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.Shared.Services.Http;
 
@@ -7,6 +8,8 @@ internal interface IDownloadsApi
     Task<Result> DownloadAgent(string destinationPath);
 
     Task<Result> DownloadTightVncZip(string destinationPath);
+
+    Task<Result> DownloadViewer(string destinationPath);
 
     Task<Result<string>> GetAgentEtag();
 }
@@ -22,7 +25,7 @@ internal class DownloadsApi(
     {
         try
         {
-            using var webStream = await _client.GetStreamAsync($"{AppConstants.ServerUri}/downloads/{AppConstants.AgentFileName}");
+            using var webStream = await _client.GetStreamAsync(AppConstants.AgentDownloadUri);
             using var fs = new FileStream(destinationPath, FileMode.Create);
             await webStream.CopyToAsync(fs);
             return Result.Ok();
@@ -51,6 +54,22 @@ internal class DownloadsApi(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while downloading TightVNC.");
+            return Result.Fail(ex);
+        }
+    }
+
+    public async Task<Result> DownloadViewer(string destinationPath)
+    {
+        try
+        {
+            using var webStream = await _client.GetStreamAsync(AppConstants.ViewerDownloadUri);
+            using var fs = new FileStream(destinationPath, FileMode.Create);
+            await webStream.CopyToAsync(fs);
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while downloading agent.");
             return Result.Fail(ex);
         }
     }

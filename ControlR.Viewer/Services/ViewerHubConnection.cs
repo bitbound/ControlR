@@ -6,6 +6,7 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;

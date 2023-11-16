@@ -15,9 +15,9 @@ internal interface IHttpConfigurer
 
     string GetDigitalSignature();
 
-    string GetDigitalSignature(PublicKeyDto keyDto);
+    string GetDigitalSignature(IdentityDto keyDto);
 
-    void UpdateClientAuthorizations(PublicKeyDto keyDto);
+    void UpdateClientAuthorizations(IdentityDto keyDto);
 }
 
 internal class HttpConfigurer(
@@ -34,7 +34,7 @@ internal class HttpConfigurer(
 
         if (_appState.IsAuthenticated)
         {
-            var keyDto = new PublicKeyDto()
+            var keyDto = new IdentityDto()
             {
                 PublicKey = _settings.PublicKey,
                 Username = _settings.Username
@@ -54,9 +54,9 @@ internal class HttpConfigurer(
         return client;
     }
 
-    public string GetDigitalSignature(PublicKeyDto keyDto)
+    public string GetDigitalSignature(IdentityDto keyDto)
     {
-        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.PublicKey, _appState.UserKeys.PrivateKey);
+        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.Identity, _appState.UserKeys.PrivateKey);
         var dtoBytes = MessagePackSerializer.Serialize(signedDto);
         var base64Payload = Convert.ToBase64String(dtoBytes);
         return base64Payload;
@@ -64,15 +64,15 @@ internal class HttpConfigurer(
 
     public string GetDigitalSignature()
     {
-        var publicKeyDto = new PublicKeyDto()
+        var identityDto = new IdentityDto()
         {
             PublicKey = _settings.PublicKey,
             Username = _settings.Username
         };
-        return GetDigitalSignature(publicKeyDto);
+        return GetDigitalSignature(identityDto);
     }
 
-    public void UpdateClientAuthorizations(PublicKeyDto keyDto)
+    public void UpdateClientAuthorizations(IdentityDto keyDto)
     {
         var signature = GetDigitalSignature(keyDto);
 

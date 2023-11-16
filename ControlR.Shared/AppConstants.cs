@@ -8,17 +8,14 @@ namespace ControlR.Shared;
 public static partial class AppConstants
 {
     public const string AgentCertificateThumbprint = "4b6235f1c44ab3a5f29bf40ad85b442269f6ee52";
+    private const string DevServerUri = "http://localhost:5120";
+    private const string ProdServerUri = "https://app.controlr.app";
 
     public static string AgentDownloadUri
     {
         get
         {
-            return EnvironmentHelper.Instance.Platform switch
-            {
-                SystemPlatform.Windows => $"{ServerUri}/downloads/ControlR.Agent.exe",
-                SystemPlatform.Linux => $"{ServerUri}/downloads/ControlR.Agent",
-                _ => throw new PlatformNotSupportedException(),
-            };
+            return $"{ServerUri}/downloads/{AgentFileName}";
         }
     }
 
@@ -49,9 +46,9 @@ public static partial class AppConstants
 
             if (OperatingSystem.IsWindows() && Debugger.IsAttached)
             {
-                return "http://localhost:5120";
+                return DevServerUri;
             }
-            return "https://app.controlr.app";
+            return ProdServerUri;
         }
     }
 
@@ -61,10 +58,18 @@ public static partial class AppConstants
     {
         get
         {
+            return $"{ServerUri}/downloads/{ViewerFileName}";
+        }
+    }
+
+    public static string ViewerFileName
+    {
+        get
+        {
             return EnvironmentHelper.Instance.Platform switch
             {
-                SystemPlatform.Windows => $"{ServerUri}/downloads/ControlR.Viewer.msix",
-                SystemPlatform.Android => $"{ServerUri}/downloads/ControlR.Viewer.apk",
+                SystemPlatform.Windows => "ControlR.Viewer.msix",
+                SystemPlatform.Android => "ControlR.Viewer.apk",
                 _ => throw new PlatformNotSupportedException(),
             };
         }

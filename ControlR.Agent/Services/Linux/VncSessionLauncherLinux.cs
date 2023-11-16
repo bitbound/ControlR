@@ -1,8 +1,8 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
-using ControlR.Shared;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.Versioning;

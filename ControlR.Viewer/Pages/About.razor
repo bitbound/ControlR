@@ -4,6 +4,7 @@
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
 @inject IEnvironmentHelper EnvironmentHelper
+@inject IUpdateManager UpdateManager
 
 <PageTitle>About</PageTitle>
 
@@ -26,7 +27,11 @@
         @if (_updateAvailable)
         {
             <MudLink Href="@DownloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
-                Update Available!
+                Download Update
+            </MudLink>
+
+            <MudLink Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info" OnClick="InstallUpdate">
+                Install Update
             </MudLink>
         }
 
@@ -73,26 +78,26 @@
     {
         await base.OnInitializedAsync();
 
-        try
+        var checkResult = await UpdateManager.CheckForUpdate();
+        if (!checkResult.IsSuccess)
         {
-            var result = await VersionApi.GetCurrentViewerVersion();
-            if (!result.IsSuccess)
-            {
-                Logger.LogResult(result);
-                Snackbar.Add("Failed to check for new versions", Severity.Error);
-                return;
-            }
-
-            var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
-            if (result.Value > currentVersion)
-            {
-                _updateAvailable = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while checking for new versions.");
             Snackbar.Add("Failed to check for new versions", Severity.Error);
+            return;
+        }
+
+        _updateAvailable = checkResult.Value;
+    }
+
+    private async Task InstallUpdate()
+    {
+        var installResult = await UpdateManager.InstallCurrentVersion();
+        if (!installResult.IsSuccess)
+        {
+            Snackbar.Add(installResult.Reason, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("Update successful.", Severity.Success);
         }
     }
 }

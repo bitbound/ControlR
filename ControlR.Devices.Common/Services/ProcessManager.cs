@@ -1,5 +1,5 @@
-﻿using ControlR.Shared;
-using ControlR.Shared.Helpers;
+﻿using ControlR.Shared.Helpers;
+using ControlR.Shared.Primitives;
 using System.Diagnostics;
 
 namespace ControlR.Devices.Common.Services;

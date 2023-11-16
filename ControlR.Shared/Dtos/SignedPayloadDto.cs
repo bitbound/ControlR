@@ -29,8 +29,8 @@ public class SignedPayloadDto
     public required byte[] Signature { get; init; }
 
     [MsgPackKey]
-    public byte[]? Timestamp { get; init; }
+    public required byte[] Timestamp { get; init; }
 
     [MsgPackKey]
-    public byte[]? TimestampSignature { get; init; }
+    public required byte[] TimestampSignature { get; init; }
 }

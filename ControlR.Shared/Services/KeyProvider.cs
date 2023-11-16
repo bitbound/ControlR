@@ -79,20 +79,14 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
             return false;
         }
 
-        // TODO: Remove after devices have updated.
-        if (signedDto.Timestamp is null)
-        {
-            return true;
-        }
-
-        if (signedDto.TimestampSignature is null)
-        {
-            return false;
-        }
-
         if (!Verify(rsa, signedDto.Timestamp, signedDto.TimestampSignature))
         {
             return false;
+        }
+
+        if (signedDto.DtoType == DtoType.Identity)
+        {
+            return true;
         }
 
         var timestamp = MessagePackSerializer.Deserialize<DateTimeOffset>(signedDto.Timestamp);

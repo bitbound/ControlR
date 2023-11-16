@@ -1,6 +1,6 @@
 ﻿using ControlR.Devices.Common.Services;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;

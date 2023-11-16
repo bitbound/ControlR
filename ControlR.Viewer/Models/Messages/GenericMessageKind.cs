@@ -10,4 +10,5 @@ internal enum GenericMessageKind
     DevicesCacheUpdated,
     HubConnectionStateChanged,
     DeviceContentWindowsChanged,
+    AppUpdateAvailable,
 }

@@ -149,7 +149,7 @@ else
             var userKeys = new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
             AppState.SetUserKeys(userKeys);
 
-            var keyDto = new PublicKeyDto()
+            var keyDto = new IdentityDto()
                 {
                     PublicKey = userKeys.PublicKey,
                     Username = Settings.Username

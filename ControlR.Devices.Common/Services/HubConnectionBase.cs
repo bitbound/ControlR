@@ -77,6 +77,7 @@ public abstract class HubConnectionBase(
                         optionsConfig(options);
                     })
                     .AddMessagePackProtocol()
+                    .WithStatefulReconnect()
                     .WithAutomaticReconnect(new RetryPolicy())
                     .Build();
 
@@ -148,13 +149,13 @@ public abstract class HubConnectionBase(
 
     private Task HubConnection_Reconnected(string? arg)
     {
-        _logger.LogInformation("Reconnected to desktop hub.  New connection ID: {id}", arg);
+        _logger.LogInformation("Reconnected to hub.  New connection ID: {id}", arg);
         return Task.CompletedTask;
     }
 
     private Task HubConnection_Reconnecting(Exception? arg)
     {
-        _logger.LogInformation(arg, "Reconnecting to desktop hub.");
+        _logger.LogInformation(arg, "Reconnecting to hub.");
         return Task.CompletedTask;
     }
 

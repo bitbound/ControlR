@@ -10,6 +10,7 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;

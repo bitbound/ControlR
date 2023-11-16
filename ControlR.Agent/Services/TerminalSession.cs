@@ -1,8 +1,8 @@
 ﻿using ControlR.Devices.Common.Services;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -105,6 +105,12 @@ internal class TerminalSession(
         if (SessionKind == TerminalSessionKind.PowerShell)
         {
             psi.EnvironmentVariables.Add("NO_COLOR", "1");
+        }
+
+        if (SessionKind == TerminalSessionKind.Bash)
+        {
+            psi.Arguments = "--login --rcfile /etc/bash.bashrc";
+            //psi.EnvironmentVariables.Add("PS1", "${debian_chroot:+($debian_chroot)}\\u@\\h:\\w\\$ ");
         }
 
         _shellProcess.StartInfo = psi;

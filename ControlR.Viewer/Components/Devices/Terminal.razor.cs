@@ -199,7 +199,11 @@ public partial class Terminal : IAsyncDisposable
                 _inputHistory.Add(_inputText);
                 _inputHistoryIndex = _inputHistory.Count;
 
-                await ViewerHub.SendTerminalInput(Device.ConnectionId, Id, _inputText);
+                var result = await ViewerHub.SendTerminalInput(Device.ConnectionId, Id, _inputText);
+                if (!result.IsSuccess)
+                {
+                    Snackbar.Add(result.Reason, Severity.Error);
+                }
 
                 _inputText = string.Empty;
             }

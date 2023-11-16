@@ -1,4 +1,4 @@
-﻿namespace ControlR.Shared;
+﻿namespace ControlR.Shared.Primitives;
 
 public sealed class CallbackDisposable(Action disposeCallback) : IDisposable
 {

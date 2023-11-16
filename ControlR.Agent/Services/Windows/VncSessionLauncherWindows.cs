@@ -6,6 +6,7 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ using Microsoft.Win32;
 using System.IO.Compression;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
-using Result = ControlR.Shared.Result;
+using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
 

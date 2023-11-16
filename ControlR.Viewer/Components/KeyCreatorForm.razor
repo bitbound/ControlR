@@ -161,7 +161,7 @@
 
             var keypair = KeyProvider.GenerateKeys(_passphrase);
             AppState.SetUserKeys(keypair);
-            var keyDto = new PublicKeyDto()
+            var keyDto = new IdentityDto()
                 {
                     PublicKey = keypair.PublicKey,
                     Username = _username

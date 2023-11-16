@@ -2,11 +2,11 @@
 using ControlR.Server.Extensions;
 using ControlR.Server.Models;
 using ControlR.Server.Services;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
@@ -136,7 +136,7 @@ public class ViewerHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while sending terminal input.");
-            return Result.Fail("An error occurred.");
+            return Result.Fail("Agent could not be reached.");
         }
     }
 
