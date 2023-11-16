@@ -46,12 +46,12 @@ internal class CommandProvider
             serverUriOption
         };
 
-        installCommand.SetHandler(async (serverUri, authorizedKey, vncPort, auotInstallVnc) =>
+        installCommand.SetHandler(async (serverUri, authorizedKey, vncPort, autoRunVnc) =>
         {
             var host = CreateHost(StartupMode.Install, args);
-            await host.StartAsync();
             var installer = host.Services.GetRequiredService<IAgentInstaller>();
-            await installer.Install(serverUri, authorizedKey, vncPort, auotInstallVnc);
+            await installer.Install(serverUri, authorizedKey, vncPort, autoRunVnc);
+            await host.RunAsync();
         }, serverUriOption, authorizedKeyOption, vncPortOption, autoRunOption);
 
         return installCommand;

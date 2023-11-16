@@ -25,8 +25,7 @@ internal class AgentInstallerWindows(
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
     IElevationChecker elevationChecker,
-    ISettingsProvider settings,
-    ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, downloadsApi, settings, logger), IAgentInstaller
+    ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -90,8 +89,8 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
-            await WriteEtag(_installDir);
+            var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await WriteEtag(_installDir, appOptions);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
             var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";
