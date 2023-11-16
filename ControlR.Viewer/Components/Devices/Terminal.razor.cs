@@ -17,6 +17,7 @@ namespace ControlR.Viewer.Components.Devices;
 public partial class Terminal : IAsyncDisposable
 {
     private readonly ConcurrentList<string> _inputHistory = new();
+    private bool _enableMultiline;
     private MudTextField<string>? _inputElement;
     private int _inputHistoryIndex;
     private string _inputText = string.Empty;
@@ -52,6 +53,14 @@ public partial class Terminal : IAsyncDisposable
 
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
+
+    private int InputLineCount
+    {
+        get
+        {
+            return _enableMultiline ? 6 : 1;
+        }
+    }
 
     private ConcurrentQueue<TerminalOutputDto> Output { get; } = [];
 
@@ -174,6 +183,11 @@ public partial class Terminal : IAsyncDisposable
                 return;
             }
 
+            if (args.CtrlKey || args.ShiftKey)
+            {
+                return;
+            }
+
             try
             {
                 while (_inputHistory.Count > 500)
@@ -181,6 +195,7 @@ public partial class Terminal : IAsyncDisposable
                     _inputHistory.RemoveAt(0);
                 }
 
+                _inputText = _inputText.Trim();
                 _inputHistory.Add(_inputText);
                 _inputHistoryIndex = _inputHistory.Count;
 

@@ -66,7 +66,11 @@ internal class TerminalSession(
 
             await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
             _inputBuilder.Clear();
-            await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
+
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
+            }
 
             return Result.Ok();
         }
@@ -113,13 +117,7 @@ internal class TerminalSession(
         _shellProcess.BeginErrorReadLine();
         _shellProcess.BeginOutputReadLine();
 
-        if (SessionKind is TerminalSessionKind.WindowsPowerShell or TerminalSessionKind.PowerShell)
-        {
-            //await WriteInput("$VerbosePreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            //await WriteInput("$DebugPreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            //await WriteInput("$InformationPreference = \"Continue\";", TimeSpan.FromSeconds(5));
-            //await WriteInput("$WarningPreference = \"Continue\";", TimeSpan.FromSeconds(5));
-        }
+        await WriteInput(string.Empty, TimeSpan.FromSeconds(5));
     }
 
     protected virtual void Dispose(bool disposing)
