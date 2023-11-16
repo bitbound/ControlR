@@ -54,8 +54,9 @@ internal static class IHostBuilderExtensions
 
         builder.ConfigureServices((context, services) =>
         {
-            services.Configure<AppOptions>(
-                context.Configuration.GetSection(nameof(AppOptions)));
+            services
+                .AddOptions<AppOptions>()
+                .Bind(context.Configuration.GetSection(nameof(AppOptions)));
 
             services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
