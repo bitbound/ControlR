@@ -7,6 +7,7 @@ using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
+using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
 
 namespace ControlR.Viewer.Services;
 
@@ -20,6 +21,7 @@ internal interface IUpdateManager
 internal class UpdateManager(
     IVersionApi _versionApi,
     IDownloadsApi _downloadsApi,
+    IFileSystem _fileSystem,
 #if WINDOWS
     IProcessManager _processManager,
 #endif
@@ -66,6 +68,11 @@ internal class UpdateManager(
         try
         {
             var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
+            if (_fileSystem.FileExists(tempPath))
+            {
+                _fileSystem.DeleteFile(tempPath);
+            }
+
             var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
             if (!downloadResult.IsSuccess)
             {
