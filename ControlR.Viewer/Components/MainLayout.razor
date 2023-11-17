@@ -121,6 +121,8 @@
                 await InvokeAsync(StateHasChanged);
                 break;
             case GenericMessageKind.AppUpdateAvailable:
+                _updateAvailable = true;
+                await InvokeAsync(StateHasChanged);
                 break;
             default:
                 break;

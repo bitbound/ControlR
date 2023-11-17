@@ -6,6 +6,7 @@
 @inject IEnvironmentHelper EnvironmentHelper
 @inject IUpdateManager UpdateManager
 @inject ISettings Settings
+@inject IDialogService Dialogs
 
 <PageTitle>About</PageTitle>
 
@@ -92,7 +93,6 @@
     private async Task InstallUpdate()
     {
         Snackbar.Add("Downloading update", Severity.Info);
-
         var installResult = await UpdateManager.InstallCurrentVersion();
         if (!installResult.IsSuccess)
         {

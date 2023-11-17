@@ -24,7 +24,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2023.11.16.2301</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2023.11.17.447</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 
@@ -98,6 +98,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
 		<ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Permissions\" />
 	</ItemGroup>
 
 </Project>
