@@ -142,11 +142,7 @@ else
 
         try
         {
-            using var rsa = RSA.Create();
-            rsa.ImportEncryptedPkcs8PrivateKey(_passphrase, encryptedPrivateKey, out _);
-            var privateKey = rsa.ExportRSAPrivateKey();
-            var publicKey = rsa.ExportRSAPublicKey();
-            var userKeys = new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
+            var userKeys = KeyProvider.ImportKeys(_passphrase, encryptedPrivateKey);
             AppState.SetUserKeys(userKeys);
 
             var keyDto = new IdentityDto()
@@ -169,6 +165,7 @@ else
                     Snackbar.Add("Private key decrypted", Severity.Success);
                 }
 
+                AppState.KeysVerified = true;
                 Messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
             }
             else

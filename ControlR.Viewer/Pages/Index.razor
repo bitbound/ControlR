@@ -8,12 +8,13 @@
 @switch (AppState.AuthenticationState)
 {
     case AuthenticationState.LocalKeysStored:
+    case AuthenticationState.PrivateKeyLoaded:
         <LoadKeyForm />
         break;
     case AuthenticationState.NoKeysPresent:
         <KeyCreatorForm />
         break;
-    case AuthenticationState.PrivateKeyLoaded:
+    case AuthenticationState.Authenticated:
         <Dashboard />
         break;
     default:

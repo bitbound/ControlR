@@ -93,20 +93,6 @@
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-
-        if (firstRender)
-        {
-            var result = await UpdateManager.CheckForUpdate();
-            if (result.IsSuccess)
-            {
-                _updateAvailable = result.Value;
-            }
-        }
-    }
-
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
@@ -116,6 +102,16 @@
     {
         switch (kind)
         {
+            case GenericMessageKind.AuthStateChanged:
+                if (AppState.IsAuthenticated)
+                {
+                    var result = await UpdateManager.CheckForUpdate();
+                    if (result.IsSuccess)
+                    {
+                        _updateAvailable = result.Value;
+                    }
+                }
+                break;
             case GenericMessageKind.PendingOperationsChanged:
             case GenericMessageKind.HubConnectionStateChanged:
                 await InvokeAsync(StateHasChanged);

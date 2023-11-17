@@ -13,6 +13,7 @@ public interface IAppState
     AuthenticationState AuthenticationState { get; }
     bool IsAuthenticated { get; }
     bool IsBusy { get; }
+    bool KeysVerified { get; set; }
     int PendingOperations { get; }
     UserKeyPair UserKeys { get; }
 
@@ -48,12 +49,18 @@ internal class AppState(
                 return AuthenticationState.LocalKeysStored;
             }
 
+            if (KeysVerified)
+            {
+                return AuthenticationState.Authenticated;
+            }
+
             return AuthenticationState.PrivateKeyLoaded;
         }
     }
 
-    public bool IsAuthenticated => AuthenticationState == AuthenticationState.PrivateKeyLoaded;
+    public bool IsAuthenticated => AuthenticationState == AuthenticationState.Authenticated;
     public bool IsBusy => _busyCounter > 0;
+    public bool KeysVerified { get; set; }
     public int PendingOperations => _busyCounter;
 
     public UserKeyPair UserKeys

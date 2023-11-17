@@ -225,7 +225,7 @@ internal class ViewerHubConnection(
     {
         await StopConnection(_appState.AppExiting);
 
-        if (_appState.AuthenticationState == Enums.AuthenticationState.PrivateKeyLoaded)
+        if (_appState.IsAuthenticated)
         {
             await Start(_appState.AppExiting);
         }

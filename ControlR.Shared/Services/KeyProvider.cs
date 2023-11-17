@@ -16,6 +16,8 @@ public interface IKeyProvider
 
     UserKeyPair GenerateKeys(string password);
 
+    UserKeyPair ImportKeys(string password, byte[] encryptedPrivateKey);
+
     bool Verify(SignedPayloadDto signedDto);
 }
 
@@ -64,6 +66,15 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
     {
         using var rsa = RSA.Create();
         var encryptedPrivateKey = rsa.ExportEncryptedPkcs8PrivateKey(password, _pbeParameters);
+        var privateKey = rsa.ExportRSAPrivateKey();
+        var publicKey = rsa.ExportRSAPublicKey();
+        return new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
+    }
+
+    public UserKeyPair ImportKeys(string password, byte[] encryptedPrivateKey)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportEncryptedPkcs8PrivateKey(password, encryptedPrivateKey, out _);
         var privateKey = rsa.ExportRSAPrivateKey();
         var publicKey = rsa.ExportRSAPublicKey();
         return new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
