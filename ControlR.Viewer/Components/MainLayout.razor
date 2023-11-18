@@ -4,67 +4,87 @@
 @inject IAppState AppState
 @inject IViewerHubConnection ViewerHub
 @inject ISnackbar Snackbar
+@inject IUpdateManager UpdateManager
+@inject NavigationManager NavManager
 
-<MudThemeProvider IsDarkMode />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<!-- This div has to be here in order for ::deep selector to work on child components. -->
+<div>
+    <MudThemeProvider IsDarkMode />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="0">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudSpacer />
-        @if (AppState.IsBusy)
-        {
-            <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
-                <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
-            </MudTooltip>
-        }
-        else
-        {
-            switch (ViewerHub.ConnectionState)
+     <MudLayout>
+         <MudAppBar Elevation="0">
+             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+             <MudSpacer />
+
+             @if (_updateAvailable)
             {
-                case HubConnectionState.Connected:
-                    <MudTooltip Text="Connected">
-                        <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
-                    </MudTooltip>
-                    break;
-                case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
-                    <MudTooltip Text="Reconnecting">
-                        <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
-                    </MudTooltip>
-                    break;
-                case HubConnectionState.Disconnected:
-                    <MudTooltip Text="Disconnected">
-                        <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
-                    </MudTooltip>
-                    break;
-                default:
-                    break;
+                <MudTooltip Text="Update Available">
+                    <MudBadge Content="@("!")" Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
+                        <MudIconButton Color="Color.Info"
+                                       Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
+                                       OnClick="NavigateToAbout" />
+                    </MudBadge>
+
+                </MudTooltip>
             }
-        }
-        <MudTooltip Text="Website">
-            <MudIconButton Icon="@(Icons.Material.Filled.WebAsset)" Color="Color.Inherit" Href="https://controlr.app/" Target="_blank" />
-        </MudTooltip>
-        <MudTooltip Text="GitHub">
-            <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/lucent-sea/controlr/" Target="_blank" />
-        </MudTooltip>
-    </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
-        <MudDrawerHeader>
-            <MudImage Src="/assets/appicon.png" Height="30" Style="margin-right: 10px;" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-        </MudDrawerHeader>
-        <NavMenu />
-    </MudDrawer>
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="my-4 pt-4">
-            @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+            @if (AppState.IsBusy)
+            {
+                <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
+                    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
+                 </MudTooltip>
+            }
+            else
+            {
+                switch (ViewerHub.ConnectionState)
+                {
+                    case HubConnectionState.Connected:
+                        <MudTooltip Text="Connected">
+                            <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+                        </MudTooltip>
+                        break;
+                    case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+                        <MudTooltip Text="Reconnecting">
+                            <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
+                         </MudTooltip>
+                        break;
+                    case HubConnectionState.Disconnected:
+                        <MudTooltip Text="Disconnected">
+                            <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+                        </MudTooltip>
+                        break;
+                    default:
+                        break;
+                }
+            }
+            <MudTooltip Text="Website">
+                <MudIconButton Icon="@(Icons.Material.Filled.WebAsset)" Color="Color.Inherit" Href="https://controlr.app/" Target="_blank" />
+            </MudTooltip>
+            <MudTooltip Text="GitHub">
+                <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/bitbound/controlr/" Target="_blank" />
+            </MudTooltip>
+        </MudAppBar>
+        <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+            <MudDrawerHeader>
+                <MudImage Src="/assets/appicon.png" Height="30" Style="margin-right: 10px;" />
+                <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+            </MudDrawerHeader>
+            <NavMenu />
+        </MudDrawer>
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="my-4 pt-4">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
+
+    <DeviceContentHarness />
+</div>
 
 @code {
     private bool _drawerOpen = true;
+    private bool _updateAvailable;
 
     protected override void OnInitialized()
     {
@@ -82,8 +102,22 @@
     {
         switch (kind)
         {
+            case GenericMessageKind.AuthStateChanged:
+                if (AppState.IsAuthenticated)
+                {
+                    var result = await UpdateManager.CheckForUpdate();
+                    if (result.IsSuccess)
+                    {
+                        _updateAvailable = result.Value;
+                    }
+                }
+                break;
             case GenericMessageKind.PendingOperationsChanged:
             case GenericMessageKind.HubConnectionStateChanged:
+                await InvokeAsync(StateHasChanged);
+                break;
+            case GenericMessageKind.AppUpdateAvailable:
+                _updateAvailable = true;
                 await InvokeAsync(StateHasChanged);
                 break;
             default:
@@ -95,5 +129,10 @@
     {
         Snackbar.Add(toast.Message, toast.Severity);
         return Task.CompletedTask;
+    }
+
+    private void NavigateToAbout()
+    {
+        NavManager.NavigateTo("/about");
     }
 }

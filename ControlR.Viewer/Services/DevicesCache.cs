@@ -7,11 +7,13 @@ using IFileIo = ControlR.Devices.Common.Services.IFileSystem;
 
 namespace ControlR.Viewer.Services;
 
-internal interface IDeviceCache
+public interface IDeviceCache
 {
     IEnumerable<DeviceDto> Devices { get; }
 
     Task AddOrUpdate(DeviceDto device);
+
+    void Clear();
 
     Task Remove(DeviceDto device);
 
@@ -41,6 +43,11 @@ internal class DeviceCache : IDeviceCache
     {
         _cache.AddOrUpdate(device.Id, device, (k, v) => device);
         await TrySaveCache();
+    }
+
+    public void Clear()
+    {
+        _cache.Clear();
     }
 
     public async Task Remove(DeviceDto device)

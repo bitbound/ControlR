@@ -1,4 +1,6 @@
-﻿using ControlR.Shared.Dtos;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Messages;
+using ControlR.Shared.Dtos;
 using ControlR.Shared.Helpers;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -9,8 +11,6 @@ namespace ControlR.Devices.Common.Services;
 
 public interface IHubConnectionBase
 {
-    event EventHandler<SignedPayloadDto>? DtoReceived;
-
     HubConnectionState ConnectionState { get; }
     bool IsConnected { get; }
 
@@ -20,16 +20,14 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
-    IServiceScopeFactory scopeFactory,
-    ILogger<HubConnectionBase> logger) : IHubConnectionBase
+    IServiceScopeFactory _scopeFactory,
+    IMessenger messenger,
+    ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
-    protected readonly ILogger<HubConnectionBase> _logger = logger;
-    protected readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    protected readonly IMessenger _messenger = messenger;
     private CancellationToken _cancellationToken;
     private HubConnection? _connection;
     private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
-
-    public event EventHandler<SignedPayloadDto>? DtoReceived;
 
     public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
@@ -61,32 +59,60 @@ public abstract class HubConnectionBase(
         _cancellationToken = cancellationToken;
         _onConnectFailure = onConnectFailure;
 
-        using var scope = _scopeFactory.CreateScope();
-        var builder = scope.ServiceProvider.GetRequiredService<IHubConnectionBuilder>();
-
-        _connection = builder
-            .WithUrl(hubUrl, options =>
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
             {
-                optionsConfig(options);
-            })
-            .AddMessagePackProtocol()
-            .WithAutomaticReconnect(new RetryPolicy())
-            .Build();
+                using var scope = _scopeFactory.CreateScope();
+                var builder = scope.ServiceProvider.GetRequiredService<IHubConnectionBuilder>();
 
-        _connection.On<SignedPayloadDto>(nameof(ReceiveDto), ReceiveDto);
-        _connection.Reconnecting += HubConnection_Reconnecting;
-        _connection.Reconnected += HubConnection_Reconnected;
-        _connection.Closed += HubConnection_Closed;
+                if (_connection is not null)
+                {
+                    await _connection.DisposeAsync();
+                }
 
-        connectionConfig.Invoke(_connection);
+                _connection = builder
+                    .WithUrl(hubUrl, options =>
+                    {
+                        optionsConfig(options);
+                    })
+                    .AddMessagePackProtocol()
+                    .WithStatefulReconnect()
+                    .WithAutomaticReconnect(new RetryPolicy())
+                    .Build();
 
-        _logger.LogInformation("Starting connection to {HubUrl}.", hubUrl);
-        await StartConnection(cancellationToken);
+                _connection.On<SignedPayloadDto>(nameof(ReceiveDto), ReceiveDto);
+                _connection.Reconnecting += HubConnection_Reconnecting;
+                _connection.Reconnected += HubConnection_Reconnected;
+                _connection.Closed += HubConnection_Closed;
+
+                connectionConfig.Invoke(_connection);
+
+                _logger.LogInformation("Starting connection to {HubUrl}.", hubUrl);
+
+                await _connection.StartAsync(cancellationToken);
+
+                _logger.LogInformation("Connected to server.");
+
+                break;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Failed to connect to server.  Status Code: {code}", ex.StatusCode);
+                await _onConnectFailure.Invoke($"Communication failure.  Status Code: {ex.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in hub connection.");
+                await _onConnectFailure.Invoke($"Connection error.  Message: {ex.Message}");
+            }
+            await Task.Delay(3_000, cancellationToken);
+        }
     }
 
     public Task ReceiveDto(SignedPayloadDto dto)
     {
-        DtoReceived?.Invoke(this, dto);
+        _messenger.Send(new SignedDtoReceivedMessage(dto));
         return Task.CompletedTask;
     }
 
@@ -123,48 +149,14 @@ public abstract class HubConnectionBase(
 
     private Task HubConnection_Reconnected(string? arg)
     {
-        _logger.LogInformation("Reconnected to desktop hub.  New connection ID: {id}", arg);
+        _logger.LogInformation("Reconnected to hub.  New connection ID: {id}", arg);
         return Task.CompletedTask;
     }
 
     private Task HubConnection_Reconnecting(Exception? arg)
     {
-        _logger.LogInformation(arg, "Reconnecting to desktop hub.");
+        _logger.LogInformation(arg, "Reconnecting to hub.");
         return Task.CompletedTask;
-    }
-
-    private async Task StartConnection(CancellationToken cancellationToken)
-    {
-        if (_connection is null)
-        {
-            _logger.LogWarning("Connection shouldn't be null here.");
-            return;
-        }
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                _logger.LogInformation("Connecting to server.");
-
-                await _connection.StartAsync(cancellationToken);
-
-                _logger.LogInformation("Connected to server.");
-
-                break;
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogWarning(ex, "Failed to connect to server.  Status Code: {code}", ex.StatusCode);
-                await _onConnectFailure.Invoke($"Communication failure.  Status Code: {ex.StatusCode}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in hub connection.");
-                await _onConnectFailure.Invoke($"Connection error.  Message: {ex.Message}");
-            }
-            await Task.Delay(3_000, cancellationToken);
-        }
     }
 
     private class RetryPolicy : IRetryPolicy

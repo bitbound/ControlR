@@ -1,29 +1,37 @@
 ﻿@using System.Collections.Specialized
 @implements IDisposable
-@inject IAppState AppState
+@inject IDeviceContentWindowStore WindowStore
 @inject IMessenger Messenger
 
-@* <div class="remote-session-harness">
-    @foreach (var session in AppState.RemoteControlSessions)
+<div class="device-content-window-harness">
+    @foreach (var instance in WindowStore.Windows)
     {
-        <RemoteDisplay Session="@session" />
+        <DeviceContentWindow ContentInstance="@(instance)" />
     }
-</div> *@
+</div>
 
 @code {
     public void Dispose()
     {
-        // AppState.RemoteControlSessions.CollectionChanged -= OnRemoteSessionsChanged;
+        Messenger.UnregisterAll(this);
     }
 
     protected override void OnInitialized()
     {
-        // AppState.RemoteControlSessions.CollectionChanged += OnRemoteSessionsChanged;
+        Messenger.RegisterGenericMessage(this, HandleGenericMessage);
         base.OnInitializedAsync();
     }
 
     private async void OnRemoteSessionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleGenericMessage(GenericMessageKind messageKind)
+    {
+        if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

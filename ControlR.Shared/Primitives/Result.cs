@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
-namespace ControlR.Shared;
+namespace ControlR.Shared.Primitives;
 
 /// <summary>
 /// Describes the success or failure of any kind of operation.

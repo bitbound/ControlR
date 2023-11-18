@@ -1,4 +1,5 @@
 ﻿using ControlR.Shared.Extensions;
+using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
@@ -33,7 +34,7 @@ internal class VersionApi(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while verifying authentication.");
+            _logger.LogError(ex, "Error while checking for new versions.");
             return Result.Fail<Version>(ex);
         }
     }

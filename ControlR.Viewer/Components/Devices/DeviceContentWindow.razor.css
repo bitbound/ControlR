@@ -7,6 +7,12 @@
     white-space: nowrap;
 }
 
+.title-description {
+    align-self: center;
+    margin-left: 10px;
+    overflow-x: auto;
+}
+
 .device-content {
     display: grid;
     grid-template-rows: auto 1fr;
@@ -34,9 +40,14 @@
 
     .device-content.minimized {
         border: 1px solid gray;
-        width: fit-content;
+        max-width: 400px;
     }
 
         .device-content.minimized .content-area {
             display: none;
         }
+
+.content-area {
+    overflow: auto;
+    position: relative;
+}

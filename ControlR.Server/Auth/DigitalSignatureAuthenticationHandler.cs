@@ -59,7 +59,7 @@ public class DigitalSignatureAuthenticationHandler(
         var payloadBytes = Convert.FromBase64String(base64Token);
         signedPayload = MessagePackSerializer.Deserialize<SignedPayloadDto>(payloadBytes);
 
-        if (signedPayload.DtoType != DtoType.PublicKey)
+        if (signedPayload.DtoType != DtoType.Identity)
         {
             _logger.LogWarning("Unexpected DTO type of {type}.", signedPayload.DtoType);
             return false;
@@ -72,22 +72,26 @@ public class DigitalSignatureAuthenticationHandler(
     {
         using var scope = _scopeFactory.CreateScope();
         using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
-        var encryptionFactory = scope.ServiceProvider.GetRequiredService<IEncryptionSessionFactory>();
-        using var encryptor = encryptionFactory.CreateSession();
+        var keyProvider = scope.ServiceProvider.GetRequiredService<IKeyProvider>();
 
-        var account = MessagePackSerializer.Deserialize<PublicKeyDto>(signedDto.Payload);
+        var account = MessagePackSerializer.Deserialize<IdentityDto>(signedDto.Payload);
         var publicKey = account.PublicKey;
 
         if (publicKey.Length == 0)
         {
             return AuthenticateResult.Fail("No public key found in the payload.");
         }
-        encryptor.ImportPublicKey(publicKey);
-        var result = encryptor.Verify(signedDto.Payload, signedDto.Signature);
+
+        if (!publicKey.SequenceEqual(signedDto.PublicKey))
+        {
+            return AuthenticateResult.Fail("Public key of the signed DTO does not match the payload.");
+        }
+
+        var result = keyProvider.Verify(signedDto);
 
         if (!result)
         {
-            return AuthenticateResult.Fail("Digital siganture verification failed.");
+            return AuthenticateResult.Fail("Digital signature verification failed.");
         }
 
         var claims = new Claim[]

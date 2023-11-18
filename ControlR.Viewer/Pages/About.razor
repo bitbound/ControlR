@@ -4,6 +4,9 @@
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
 @inject IEnvironmentHelper EnvironmentHelper
+@inject IUpdateManager UpdateManager
+@inject ISettings Settings
+@inject IDialogService Dialogs
 
 <PageTitle>About</PageTitle>
 
@@ -26,10 +29,42 @@
         @if (_updateAvailable)
         {
             <MudLink Href="@DownloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
-                Update Available!
+                Download Update
+            </MudLink>
+
+            <MudLink Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info" OnClick="InstallUpdate">
+                Install Update
             </MudLink>
         }
 
+    </div>
+
+    <div>
+        <MudText Color="Color.Primary">
+            Open-Source:
+        </MudText>
+    </div>
+
+    <div>
+        <MudText Class="mb-4">
+            ControlR uses the following open-source software and libraries:
+        </MudText>
+
+        <MudText Class="mb-2">
+            MudBlazor
+            <MudLink Href="https://github.com/MudBlazor/MudBlazor" Class="ms-4 me-2">source</MudLink>
+            <MudLink Href="https://github.com/MudBlazor/MudBlazor/blob/dev/LICENSE">license</MudLink>
+        </MudText>
+        <MudText Class="mb-2">
+            NoVNC
+            <MudLink Href="https://github.com/novnc/noVNC" Class="ms-4 me-2">source</MudLink>
+            <MudLink Href="https://github.com/novnc/noVNC/blob/master/LICENSE.txt">license</MudLink>
+        </MudText>
+        <MudText Class="mb-2">
+            TightVNC
+            <MudLink Href="https://www.tightvnc.com/download.php" Class="ms-4 me-2">source</MudLink>
+            <MudLink Href="https://www.tightvnc.com/licensing.php">license</MudLink>
+        </MudText>
     </div>
 </div>
 
@@ -38,33 +73,34 @@
 
     private string DownloadLink
     {
-        get => AppConstants.ViewerDownloadUri;
+        get => Settings.ViewerDownloadUri;
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        try
+        var checkResult = await UpdateManager.CheckForUpdate();
+        if (!checkResult.IsSuccess)
         {
-            var result = await VersionApi.GetCurrentViewerVersion();
-            if (!result.IsSuccess)
-            {
-                Logger.LogResult(result);
-                Snackbar.Add("Failed to check for new versions", Severity.Error);
-                return;
-            }
-
-            var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
-            if (result.Value > currentVersion)
-            {
-                _updateAvailable = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while checking for new versions.");
             Snackbar.Add("Failed to check for new versions", Severity.Error);
+            return;
+        }
+
+        _updateAvailable = checkResult.Value;
+    }
+
+    private async Task InstallUpdate()
+    {
+        Snackbar.Add("Downloading update", Severity.Info);
+        var installResult = await UpdateManager.InstallCurrentVersion();
+        if (!installResult.IsSuccess)
+        {
+            Snackbar.Add(installResult.Reason, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("Download successful", Severity.Success);
         }
     }
 }

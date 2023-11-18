@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
+using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services.Http;
@@ -9,16 +10,13 @@ using System.Text.Json;
 namespace ControlR.Agent.Services.Base;
 
 internal abstract class AgentInstallerBase(
-    IFileSystem fileSystem,
-    IDownloadsApi downloadsApi,
-    ILogger<AgentInstallerBase> logger)
+    IFileSystem _fileSystem,
+    IDownloadsApi _downloadsApi,
+    ILogger<AgentInstallerBase> _logger)
 {
-    private readonly IDownloadsApi _downloadsApi = downloadsApi;
-    private readonly IFileSystem _fileSystem = fileSystem;
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-    private readonly ILogger<AgentInstallerBase> _logger = logger;
 
-    protected async Task UpdateAppSettings(string installDir, string? authorizedKey, int? vncPort, bool? autoRunVnc)
+    protected async Task<AppOptions> UpdateAppSettings(string installDir, Uri? serverUri, string? authorizedKey, int? vncPort, bool? autoRunVnc)
     {
         using var _ = _logger.BeginMemberScope();
 
@@ -41,6 +39,13 @@ internal abstract class AgentInstallerBase(
         {
             _logger.LogInformation("No appsettings found.  Creating a new one.");
         }
+
+        var updatedServerUri =
+            serverUri?.ToString().TrimEnd('/') ??
+            appSettings.AppOptions.ServerUri?.TrimEnd('/') ??
+            AppConstants.ServerUri;
+        _logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
+        appSettings.AppOptions.ServerUri = updatedServerUri;
 
         var updatedVncPort = vncPort ?? appSettings.AppOptions.VncPort ?? 5900;
         _logger.LogInformation("Setting VNC port to {VncPort}.", updatedVncPort);
@@ -75,12 +80,15 @@ internal abstract class AgentInstallerBase(
 
         _logger.LogInformation("Writing results to disk.");
         await _fileSystem.WriteAllTextAsync(appsettingsPath, JsonSerializer.Serialize(appSettings, _jsonOptions));
+
+        return appSettings.AppOptions;
     }
 
-    protected async Task WriteEtag(string installDir)
+    protected async Task WriteEtag(string installDir, AppOptions appOptions)
     {
         _logger.LogInformation("Retrieving ETag for installed app.");
-        var etagResult = await _downloadsApi.GetAgentEtag();
+        var agentDownloadUri = $"{appOptions.ServerUri}/downloads/{AppConstants.AgentFileName}";
+        var etagResult = await _downloadsApi.GetAgentEtag(agentDownloadUri);
         if (etagResult.IsSuccess)
         {
             var etagPath = Path.Combine(installDir, "etag.txt");

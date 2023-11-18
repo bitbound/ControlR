@@ -1,19 +1,4 @@
-﻿@using ControlR.Shared.Collections;
-@using System.Collections.ObjectModel;
-@using System.Collections.Concurrent;
-
-@inject IViewerHubConnection ViewerHub
-@inject IMessenger Messenger
-@inject ISnackbar Snackbar
-@inject IDeviceCache DeviceCache
-@inject IDialogService DialogService
-@inject IAppState AppState
-@inject ISettings Settings
-@inject IClipboard Clipboard
-@inject ILogger<Dashboard> Logger
-@inject IBrowser Browser
-
-<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+﻿<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
     Devices
 </MudText>
 
@@ -62,20 +47,36 @@
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => RemoteControlClicked(context.Item))"
-                                         OnTouch="@(() => RemoteControlClicked(context.Item))">
-                                Remote Control
+                                         OnClick="@(() => StartNoVnc(context.Item))"
+                                         OnTouch="@(() => StartNoVnc(context.Item))">
+                                Remote (noVNC)
+                            </MudMenuItem>
+                            @if (context.Item.Platform == SystemPlatform.Windows)
+                            {
+                                <MudMenuItem Icon="@(Icons.Material.Filled.DesktopWindows)"
+                                             IconColor="Color.Info"
+                                             OnClick="@(() => StartRdp(context.Item))"
+                                             OnTouch="@(() => StartRdp(context.Item))">
+                                    Remote (Microsoft RDP)
+                                </MudMenuItem>
+
+                            }
+                            <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
+                                         IconColor="Color.Info"
+                                         OnClick="@(() => StartTerminal(context.Item))"
+                                         OnTouch="@(() => StartTerminal(context.Item))">
+                                Terminal
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
                                          IconColor="Color.Error"
-                                         OnClick="@(() => ShutdownClicked(context.Item))"
-                                         OnTouch="@(() => ShutdownClicked(context.Item))">
+                                         OnClick="@(() => ShutdownDevice(context.Item))"
+                                         OnTouch="@(() => ShutdownDevice(context.Item))">
                                 Shutdown
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
                                          IconColor="Color.Error"
-                                         OnClick="@(() => RestartClicked(context.Item))"
-                                         OnTouch="@(() => RestartClicked(context.Item))">
+                                         OnClick="@(() => RestartDevice(context.Item))"
+                                         OnTouch="@(() => RestartDevice(context.Item))">
                                 Restart
                             </MudMenuItem>
                         }
@@ -196,159 +197,3 @@
         </div>
     </ChildRowContent>
 </MudDataGrid>
-
-@code {
-    private readonly Dictionary<string, SortDefinition<DeviceDto>> _sortDefinitions = new()
-        {
-            ["IsOnline"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.IsOnline), true, 0, x => x.IsOnline),
-            ["Name"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.Name), false, 1, x => x.Name)
-        };
-    private bool _loading = true;
-    private string? _searchText;
-
-    private Func<DeviceDto, bool> QuickFilter => x =>
-    {
-        if (string.IsNullOrWhiteSpace(_searchText))
-        {
-            return true;
-        }
-
-        return JsonSerializer.Serialize(x).Contains(_searchText, StringComparison.OrdinalIgnoreCase);
-    };
-
-    private IEnumerable<DeviceDto> FilteredDevices
-    {
-        get
-        {
-            if (!Settings.HideOfflineDevices)
-            {
-                return DeviceCache.Devices;
-            }
-
-            return DeviceCache.Devices.Where(x => x.IsOnline);
-        }
-    }
-
-
-    protected override async Task OnInitializedAsync()
-    {
-        using var _ = AppState.IncrementBusyCounter();
-        Messenger.RegisterGenericMessage(this, HandleGenericMessage);
-
-        await base.OnInitializedAsync();
-
-        _loading = false;
-    }
-
-
-    private async Task HideOfflineDevicesChanged(bool isChecked)
-    {
-        Settings.HideOfflineDevices = isChecked;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task RemoteControlClicked(DeviceDto device)
-    {
-        try
-        {
-            var sessionId = Guid.NewGuid();
-            var vncPassword = RandomGenerator.GenerateString(8);
-
-            Logger.LogInformation("Creating VNC session");
-            Snackbar.Add("Requesting VNC session", Severity.Info);
-
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
-
-            if (!vncSessionResult.SessionCreated)
-            {
-                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
-                return;
-            }
-
-            var targetUrl = $"{AppConstants.ServerUri}/novnc/vnc.html?path=novnc-proxy/{sessionId}&show_dot=true";
-
-            if (vncSessionResult.AutoRunUsed == true)
-            {
-                targetUrl += $"&password={vncPassword}&autoconnect=true";
-            }
-
-
-            await Browser.OpenAsync(targetUrl);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while requesting VNC session.");
-            Snackbar.Add("An error occurred while requesting a VNC session", Severity.Error);
-        }
-
-    }
-
-    private async Task RemoveDevice(DeviceDto device)
-    {
-        await DeviceCache.Remove(device);
-        Snackbar.Add("Device removed.", Severity.Success);
-    }
-    private async Task RestartClicked(DeviceDto device)
-    {
-        var result = await DialogService.ShowMessageBox(
-            "Confirm Restart",
-            $"Are you sure you want to restart {device.Name}?",
-            "Yes",
-            "No");
-
-        if (result != true)
-        {
-            return;
-        }
-
-        await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Restart);
-    }
-
-    private async Task ShutdownClicked(DeviceDto device)
-    {
-        var result = await DialogService.ShowMessageBox(
-           "Confirm Shutdown",
-           $"Are you sure you want to shut down {device.Name}?",
-           "Yes",
-           "No");
-
-        if (result != true)
-        {
-            return;
-        }
-
-        await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
-    }
-
-
-    private async Task HandleGenericMessage(GenericMessageKind kind)
-    {
-        switch (kind)
-        {
-            case GenericMessageKind.DevicesCacheUpdated:
-                {
-                    Debouncer.Debounce(TimeSpan.FromSeconds(1), () => InvokeAsync(StateHasChanged));
-                }
-                break;
-            case GenericMessageKind.HubConnectionStateChanged:
-                {
-                    if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
-                    {
-                        await Refresh();
-                    }
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
-    private async Task Refresh()
-    {
-        using var _ = AppState.IncrementBusyCounter();
-        await DeviceCache.SetAllOffline();
-        await InvokeAsync(StateHasChanged);
-        await ViewerHub.RequestDeviceUpdates();
-        Snackbar.Add("Device refresh requested", Severity.Success);
-    }
-}

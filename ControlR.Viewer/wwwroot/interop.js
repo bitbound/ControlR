@@ -47,7 +47,6 @@ window.scrollToElement = (element) => {
     window.setTimeout(() => {
         window.scrollTo({ top: element.offsetTop, behavior: "smooth" });
     }, 200);
-
 }
 window.setStyleProperty = (element, propertyName, value) => {
     element.style[propertyName] = value;

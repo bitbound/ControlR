@@ -3,13 +3,13 @@
     See https://heptapod.host/thirteen/switchstartupproject/blob/branch/current/Configuration.md
 */
 {
-    /*  Configuration File Version  */
-    "Version": 3,
-    
-    /*  Create an item in the dropdown list for each project in the solution?  */
-    "ListAllProjects": false,
+  /*  Configuration File Version  */
+  "Version": 3,
 
-    /*
+  /*  Create an item in the dropdown list for each project in the solution?  */
+  "ListAllProjects": false,
+
+  /*
         Dictionary of named configurations with one or multiple startup projects
         and optional parameters like command line arguments and working directory.
         Example:
@@ -66,7 +66,7 @@
     "Agent + Server": {
       "Projects": {
         "ControlR.Agent": {
-          "ProfileName": "ControlR.Agent"
+          "ProfileName": "Run"
         },
         "ControlR.Server": {
           "ProfileName": "https"
@@ -83,7 +83,7 @@
           "ProfileName": "https"
         },
         "ControlR.Agent": {
-          "ProfileName": "ControlR.Agent"
+          "ProfileName": "Run"
         }
       }
     }

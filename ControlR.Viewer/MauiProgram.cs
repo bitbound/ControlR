@@ -1,9 +1,18 @@
-﻿using Bitbound.SimpleMessenger;
+﻿#if WINDOWS
+using ControlR.Viewer.Services.WindowsX;
+#elif ANDROID
+
+using ControlR.Viewer.Services.AndroidX;
+
+#endif
+
+using Bitbound.SimpleMessenger;
 using CommunityToolkit.Maui;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Services;
+using ControlR.Viewer.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -56,21 +65,31 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
-        builder.Services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
+        builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
         builder.Services.AddSingleton(WeakReferenceMessenger.Default);
         builder.Services.AddSingleton<ISettings, Settings>();
         builder.Services.AddSingleton<IAppState, AppState>();
         builder.Services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
         builder.Services.AddSingleton<IViewerHubConnection, ViewerHubConnection>();
         builder.Services.AddSingleton<IDeviceCache, DeviceCache>();
-        builder.Services.AddSingleton<IJsInterop, JsInterop>();
+        builder.Services.AddTransient<IJsInterop, JsInterop>();
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
+        builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
+        builder.Services.AddSingleton<IUpdateManager, UpdateManager>();
+        builder.Services.AddSingleton<IProcessManager, ProcessManager>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
+        builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+
+#if WINDOWS
+        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherWindows>();
+#elif ANDROID
+        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherAndroid>();
+#endif
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

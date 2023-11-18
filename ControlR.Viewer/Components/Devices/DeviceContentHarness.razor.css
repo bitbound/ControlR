@@ -1,0 +1,11 @@
+.device-content-window-harness {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    z-index: 9000;
+}

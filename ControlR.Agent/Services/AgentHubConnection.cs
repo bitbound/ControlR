@@ -1,14 +1,15 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
-using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;
@@ -16,16 +17,16 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Services;
 
 internal interface IAgentHubConnection : IHubConnectionBase
 {
-    Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
-
     Task SendDeviceHeartbeat();
+
+    Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
 }
 
 internal class AgentHubConnection(
@@ -33,29 +34,47 @@ internal class AgentHubConnection(
      IServiceScopeFactory _scopeFactory,
      IDeviceDataGenerator _deviceCreator,
      IEnvironmentHelper _environmentHelper,
-     IOptionsMonitor<AppOptions> _appOptions,
+     ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
-     IEncryptionSessionFactory _encryptionFactory,
+     IKeyProvider _keyProvider,
      IVncSessionLauncher _vncSessionLauncher,
      IAgentUpdater _updater,
      ILocalProxy _localProxy,
-     ILogger<AgentHubConnection> logger)
-        : HubConnectionBase(_scopeFactory, logger), IHostedService, IAgentHubConnection, IAgentHubClient
+     IMessenger _messenger,
+     ITerminalStore _terminalStore,
+     ILogger<AgentHubConnection> _logger)
+        : HubConnectionBase(_scopeFactory, _messenger, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!VerifySignedDto<TerminalSessionRequest>(requestDto, out var payload))
+            {
+                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
+            }
+
+            return await _terminalStore.CreateSession(payload.TerminalId, payload.ViewerConnectionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
+        }
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
     {
         try
         {
-            if (!VerifyPayload(signedDto))
+            if (!VerifySignedDto<VncSessionRequest>(signedDto, out var dto))
             {
                 return new(false);
             }
 
-            var dto = MessagePackSerializer.Deserialize<VncSessionRequest>(signedDto.Payload);
-
-            if (_appOptions.CurrentValue.AutoRunVnc != true)
+            if (!_settings.AutoRunVnc)
             {
-                var session = new VncSession(dto.SessionId, () => Task.CompletedTask);
+                var session = new VncSession(dto.SessionId);
                 _localProxy
                     .HandleVncSession(session)
                     .AndForget();
@@ -88,7 +107,7 @@ internal class AgentHubConnection(
     [SupportedOSPlatform("windows6.0.6000")]
     public Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto)
     {
-        if (!VerifyPayload(signedDto))
+        if (!VerifySignedDto(signedDto))
         {
             return Array.Empty<WindowsSession>().AsTaskResult();
         }
@@ -101,15 +120,21 @@ internal class AgentHubConnection(
         return Win32.GetActiveSessions().ToArray().AsTaskResult();
     }
 
-    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
+    public async Task<Result> ReceiveTerminalInput(SignedPayloadDto dto)
     {
         try
         {
-            await Connection.InvokeAsync("NotifyViewerDesktopChanged", sessionId, desktopName);
+            if (!VerifySignedDto<TerminalInputDto>(dto, out var payload))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            return await _terminalStore.WriteInput(payload.TerminalId, payload.Input);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while sending device update.");
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail("An error occurred.");
         }
     }
 
@@ -125,7 +150,7 @@ internal class AgentHubConnection(
                 return;
             }
 
-            if (_appOptions.CurrentValue.AuthorizedKeys.Count == 0)
+            if (_settings.AuthorizedKeys.Count == 0)
             {
                 _logger.LogWarning("There are no authorized keys in appsettings. Aborting heartbeat.");
                 return;
@@ -133,8 +158,8 @@ internal class AgentHubConnection(
 
             var device = await _deviceCreator.CreateDevice(
                 _cpuSampler.CurrentUtilization,
-                _appOptions.CurrentValue.AuthorizedKeys,
-                _appOptions.CurrentValue.DeviceId);
+                _settings.AuthorizedKeys,
+                _settings.DeviceId);
 
             var result = device.TryCloneAs<Device, DeviceDto>();
 
@@ -152,11 +177,11 @@ internal class AgentHubConnection(
         }
     }
 
-    public async Task SendVncStream(Guid sessionId, IAsyncEnumerable<byte[]> outgoingStream)
+    public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
     {
         try
         {
-            await Connection.InvokeAsync("SendVncStream", sessionId, outgoingStream);
+            await Connection.InvokeAsync("SendTerminalOutputToViewer", viewerConnectionId, outputDto);
         }
         catch (Exception ex)
         {
@@ -178,14 +203,14 @@ internal class AgentHubConnection(
     {
         hubConnection.Reconnected += HubConnection_Reconnected;
 
-        if (_environmentHelper.Platform == SystemPlatform.Windows)
+        if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
         {
-#pragma warning disable CA1416 // Validate platform compatibility
             hubConnection.On<SignedPayloadDto, WindowsSession[]>(nameof(GetWindowsSessions), GetWindowsSessions);
-#pragma warning restore CA1416 // Validate platform compatibility
         }
 
         hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
+        hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
+        hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
@@ -201,7 +226,7 @@ internal class AgentHubConnection(
     private async Task StartImpl()
     {
         await Connect(
-            $"{AppConstants.ServerUri}/hubs/agent",
+            $"{_settings.ServerUri}hubs/agent",
             ConfigureConnection,
             ConfigureHttpOptions,
              _appLifetime.ApplicationStopping);
@@ -209,23 +234,35 @@ internal class AgentHubConnection(
         await SendDeviceHeartbeat();
     }
 
-    private bool VerifyPayload(SignedPayloadDto signedDto)
+    private bool VerifySignedDto(SignedPayloadDto signedDto)
     {
-        using var session = _encryptionFactory.CreateSession();
-
-        if (!session.Verify(signedDto))
+        if (!_keyProvider.Verify(signedDto))
         {
             _logger.LogCritical("Verification failed for payload with public key: {key}", signedDto.PublicKey);
             return false;
         }
 
-        if (!_appOptions.CurrentValue.AuthorizedKeys.Contains(signedDto.PublicKeyBase64))
+        if (!_settings.AuthorizedKeys.Contains(signedDto.PublicKeyBase64))
         {
             _logger.LogCritical("Public key does not exist in authorized keys list: {key}", signedDto.PublicKey);
             return false;
         }
-
         return true;
+    }
+
+    private bool VerifySignedDto<TPayload>(
+      SignedPayloadDto signedDto,
+      [NotNullWhen(true)] out TPayload? payload)
+    {
+        payload = default;
+
+        if (!VerifySignedDto(signedDto))
+        {
+            return false;
+        }
+
+        payload = MessagePackSerializer.Deserialize<TPayload>(signedDto.Payload);
+        return payload is not null;
     }
 
     private class RetryPolicy : IRetryPolicy

@@ -19,15 +19,14 @@
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Public Key
     </MudText>
-    <MudTextField 
-        T="string" 
-        Label="Your Public Key"
-        ReadOnly="true" 
-        Variant="Variant.Filled" 
-        AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-        OnAdornmentClick="CopyPublicKey"
-        Adornment="Adornment.End"
-        Value="_publicKey" />
+    <MudTextField T="string"
+                  Label="Your Public Key"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyPublicKey"
+                  Adornment="Adornment.End"
+                  Value="_publicKey" />
 </div>
 
 <div class="mt-10">
@@ -92,7 +91,7 @@
             return;
         }
 
-        AppState.Encryptor.Reset();
+        AppState.RemoveUserKeys();
         await Settings.Clear();
         NavManager.NavigateTo(string.Empty, false);
     }

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using ControlR.Shared.Primitives;
 
 namespace ControlR.Shared.Extensions;
 

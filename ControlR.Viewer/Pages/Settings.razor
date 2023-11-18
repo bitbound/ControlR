@@ -1,6 +1,11 @@
 ﻿@page "/settings"
 @inject ISettings SettingsStore
 @inject ISnackbar Snackbar
+@inject IMessenger Messenger
+@inject IViewerHubConnection HubConnection
+@inject IDeviceCache DeviceCache
+@inject IAppState AppState
+@inject IDialogService Dialogs
 
 <PageTitle>Settings</PageTitle>
 
@@ -8,6 +13,16 @@
     Settings
 </MudText>
 
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Server
+    </MudText>
+    <MudTextField T="string"
+                  @bind-Value="Server"
+                  Label="The server URI to which the viewer connects (e.g. 'https://my.example.com')">
+
+    </MudTextField>
+</div>
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -28,12 +43,52 @@
                  Label="Remember private key passphrase on this device" />
 </div>
 
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Local Proxy Port
+    </MudText>
+    <MudNumericField T="int"
+                  @bind-Value="LocalProxyPort"
+                  Label="Local port for proxying VNC and RDP connections from native apps">
+
+    </MudNumericField>
+</div>
+
+
 
 @code {
     private bool RememberPassphrase
     {
         get => SettingsStore.RememberPassphrase;
         set => SettingsStore.RememberPassphrase = value;
+    }
+
+    private int LocalProxyPort
+    {
+        get => SettingsStore.LocalProxyPort;
+        set => SettingsStore.LocalProxyPort = value;
+    }
+
+
+    private string Server
+    {
+        get => SettingsStore.ServerUri;
+        set
+        {
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var serverUri))
+            {
+                Snackbar.Add("Invalid URI", Severity.Error);
+                return;
+            }
+            SettingsStore.ServerUri = serverUri.ToString();
+            Snackbar.Add("Server updated", Severity.Success);
+            DeviceCache.Clear();
+            HubConnection.Reconnect(AppState.AppExiting).AndForget(true);
+            Dialogs.ShowMessageBox(
+                "Restart Required",
+                "Please restart the application soon for changes to fully take effect.")
+                .AndForget(true);
+        }
     }
 
     private string Username

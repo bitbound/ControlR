@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Enums;
+using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
@@ -8,29 +9,19 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
 using System.Runtime.Versioning;
-using Device = ControlR.Shared.Models.Device;
 
 namespace ControlR.Viewer.Components.Devices;
 
 [SupportedOSPlatform("browser")]
 public partial class DeviceContentWindow : IAsyncDisposable
 {
-    private WindowState _windowState = WindowState.Maximized;
-
-    [Parameter, EditorRequired]
-    public required Device Device { get; init; }
-
-    [Parameter, EditorRequired]
-    public required string ContentName { get; init; }
-
-    [Parameter, EditorRequired]
-    public required Guid WindowId { get; init; }
-
-    [Parameter]
-    public RenderFragment? ChildContent { get; init; }
+    private WindowState _windowState = WindowState.Restored;
 
     [Inject]
     public required IAppState AppState { get; init; }
+
+    [Parameter, EditorRequired]
+    public required DeviceContentInstance ContentInstance { get; init; }
 
     [Inject]
     public required IEnvironmentHelper EnvironmentHelper { get; init; }
@@ -50,15 +41,15 @@ public partial class DeviceContentWindow : IAsyncDisposable
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
 
+    [Inject]
+    public required IDeviceContentWindowStore WindowStore { get; init; }
 
     public ValueTask DisposeAsync()
     {
-        //await ViewerHub.CloseStreamingSession(Session.SessionId);
         Messenger.UnregisterAll(this);
         GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
     }
-
 
     protected override Task OnInitializedAsync()
     {
@@ -66,15 +57,16 @@ public partial class DeviceContentWindow : IAsyncDisposable
 
         return base.OnInitializedAsync();
     }
+
     private async Task Close()
     {
-        //AppState.RemoteControlSessions.Remove(Session);
+        WindowStore.Remove(ContentInstance);
         await DisposeAsync();
     }
 
     private async Task HandleDeviceContentWindowStateChanged(DeviceContentWindowStateMessage message)
     {
-        if (message.WindowId == WindowId)
+        if (message.WindowId == ContentInstance.WindowId)
         {
             return;
         }
@@ -89,6 +81,6 @@ public partial class DeviceContentWindow : IAsyncDisposable
     private void SetWindowState(WindowState state)
     {
         _windowState = state;
-        Messenger.Send(new DeviceContentWindowStateMessage(WindowId, state));
+        Messenger.Send(new DeviceContentWindowStateMessage(ContentInstance.WindowId, state));
     }
 }

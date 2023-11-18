@@ -1,4 +1,4 @@
-﻿using ControlR.Shared;
+﻿using ControlR.Shared.Primitives;
 using System.Runtime.InteropServices;
 
 namespace ControlR.Devices.Common.Native.Windows;

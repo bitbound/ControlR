@@ -1,29 +1,15 @@
-﻿using ControlR.Server.Models;
-using ControlR.Server.Services;
-using ControlR.Shared.Dtos;
+﻿using ControlR.Shared.Dtos;
 using ControlR.Shared.Interfaces.HubClients;
-using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Server.Hubs;
 
 public class AgentHub(
-    IHubContext<ViewerHub, IViewerHubClient> viewerHubContext,
-    IProxyStreamStore proxyStreamStore,
-    IOptionsMonitor<AppOptions> appOptions,
-    ISystemTime systemTime,
-    IHostApplicationLifetime appLifetime,
-    ILogger<AgentHub> logger) : Hub<IAgentHubClient>
+    IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
+    ISystemTime _systemTime,
+    ILogger<AgentHub> _logger) : Hub<IAgentHubClient>
 {
-    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-    private readonly ILogger<AgentHub> _logger = logger;
-    private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
-    private readonly ISystemTime _systemTime = systemTime;
-    private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHubContext;
-
     private DeviceDto? Device
     {
         get
@@ -59,37 +45,58 @@ public class AgentHub(
         await base.OnDisconnectedAsync(exception);
     }
 
+    public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
+    {
+        try
+        {
+            await _viewerHub.Clients
+                .Client(viewerConnectionId)
+                .ReceiveTerminalOutput(outputDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending terminal output to viewer.");
+        }
+    }
+
     public async Task UpdateDevice(DeviceDto device)
     {
-        device.ConnectionId = Context.ConnectionId;
-        device.IsOnline = true;
-        device.LastSeen = _systemTime.Now;
-
-        await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
-
-        if (Device is DeviceDto cachedDevice)
+        try
         {
-            var oldKeys = cachedDevice.AuthorizedKeys.Except(device.AuthorizedKeys);
-            foreach (var oldKey in oldKeys)
+            device.ConnectionId = Context.ConnectionId;
+            device.IsOnline = true;
+            device.LastSeen = _systemTime.Now;
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
+
+            if (Device is DeviceDto cachedDevice)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldKey);
+                var oldKeys = cachedDevice.AuthorizedKeys.Except(device.AuthorizedKeys);
+                foreach (var oldKey in oldKeys)
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldKey);
+                }
+
+                var newKeys = device.AuthorizedKeys.Except(cachedDevice.AuthorizedKeys);
+                foreach (var newKey in newKeys)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, newKey);
+                }
+            }
+            else
+            {
+                foreach (var key in device.AuthorizedKeys)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, key);
+                }
             }
 
-            var newKeys = device.AuthorizedKeys.Except(cachedDevice.AuthorizedKeys);
-            foreach (var newKey in newKeys)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, newKey);
-            }
+            Device = device;
+            await _viewerHub.Clients.Groups(device.AuthorizedKeys).ReceiveDeviceUpdate(device);
         }
-        else
+        catch (Exception ex)
         {
-            foreach (var key in device.AuthorizedKeys)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, key);
-            }
+            _logger.LogError(ex, "Error while updating device.");
         }
-
-        Device = device;
-        await _viewerHub.Clients.Groups(device.AuthorizedKeys).ReceiveDeviceUpdate(device);
     }
 }

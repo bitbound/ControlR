@@ -5,6 +5,7 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
@@ -19,7 +20,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows")]
 internal class AgentInstallerWindows(
     IHostApplicationLifetime lifetime,
-    IProcessInvoker processes,
+    IProcessManager processes,
     IFileSystem fileSystem,
     IEnvironmentHelper environmentHelper,
     IDownloadsApi downloadsApi,
@@ -33,10 +34,10 @@ internal class AgentInstallerWindows(
     private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
     private readonly IHostApplicationLifetime _lifetime = lifetime;
     private readonly ILogger<AgentInstallerWindows> _logger = logger;
-    private readonly IProcessInvoker _processes = processes;
+    private readonly IProcessManager _processes = processes;
     private readonly string _serviceName = "ControlR.Agent";
 
-    public async Task Install(string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -88,8 +89,8 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(_installDir, authorizedPublicKey, vncPort, autoRunVnc);
-            await WriteEtag(_installDir);
+            var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await WriteEtag(_installDir, appOptions);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
             var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";

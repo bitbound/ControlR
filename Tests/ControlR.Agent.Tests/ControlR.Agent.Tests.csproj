@@ -7,7 +7,7 @@
 
     <IsPackable>false</IsPackable>
 
-    <Platforms>AnyCPU</Platforms>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

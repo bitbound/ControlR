@@ -6,4 +6,5 @@ public enum AuthenticationState
     NoKeysPresent,
     LocalKeysStored,
     PrivateKeyLoaded,
+    Authenticated,
 }

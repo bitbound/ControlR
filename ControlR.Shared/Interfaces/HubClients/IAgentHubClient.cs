@@ -1,11 +1,16 @@
 ﻿using ControlR.Shared.Dtos;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 
 namespace ControlR.Shared.Interfaces.HubClients;
 
 public interface IAgentHubClient : IHubClient
 {
+    Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto);
+
     Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto sessionRequest);
 
     Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto);
+
+    Task<Result> ReceiveTerminalInput(SignedPayloadDto dto);
 }

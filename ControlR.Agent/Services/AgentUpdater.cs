@@ -17,20 +17,17 @@ internal interface IAgentUpdater : IHostedService
 }
 
 internal class AgentUpdater(
-    HttpClient httpClient,
-    IDownloadsApi downloadsApi,
-    IFileSystem fileSystem,
-    IProcessInvoker processInvoker,
-    IEnvironmentHelper environmentHelper,
+    IHttpClientFactory _httpFactory,
+    IDownloadsApi _downloadsApi,
+    IFileSystem _fileSystem,
+    IProcessManager _processInvoker,
+    IEnvironmentHelper _environmentHelper,
+    ISettingsProvider _settings,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
+    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{AppConstants.AgentFileName}";
     private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
-    private readonly IDownloadsApi _downloadsApi = downloadsApi;
-    private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
-    private readonly IFileSystem _fileSystem = fileSystem;
-    private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AgentUpdater> _logger = logger;
-    private readonly IProcessInvoker _processInvoker = processInvoker;
 
     public async Task CheckForUpdate(CancellationToken cancellationToken = default)
     {
@@ -46,10 +43,9 @@ internal class AgentUpdater(
         {
             _logger.LogInformation("Beginning version check.");
 
-            var downloadUrl = AppConstants.AgentDownloadUri;
             var etagPath = Path.Combine(_environmentHelper.StartupDirectory, "etag.txt");
 
-            using var request = new HttpRequestMessage(HttpMethod.Head, downloadUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Head, _agentDownloadUri);
 
             if (_fileSystem.FileExists(etagPath))
             {
@@ -62,7 +58,8 @@ internal class AgentUpdater(
                 }
             }
 
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var httpClient = _httpFactory.CreateClient();
+            using var response = await httpClient.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
                 _logger.LogInformation("Version is current.");
@@ -85,7 +82,7 @@ internal class AgentUpdater(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            var result = await _downloadsApi.DownloadAgent(tempPath);
+            var result = await _downloadsApi.DownloadAgent(tempPath, _agentDownloadUri);
             if (!result.IsSuccess)
             {
                 _logger.LogCritical("Download failed.  Aborting update.");

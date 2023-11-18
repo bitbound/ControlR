@@ -1,8 +1,16 @@
 {
   "profiles": {
-    "ControlR.Agent": {
+    "Run": {
       "commandName": "Project",
       "commandLineArgs": "run",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ControlRServerUri": "http://localhost:5120"
+      }
+    },
+    "Install": {
+      "commandName": "Project",
+      "commandLineArgs": "install",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
         "ControlRServerUri": "http://localhost:5120"

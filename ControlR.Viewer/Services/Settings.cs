@@ -3,20 +3,25 @@ using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
-internal interface ISettings
+public interface ISettings
 {
+    string AgentDownloadUri { get; }
     bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
+    int LocalProxyPort { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
     string PublicKeyBase64 { get; }
     bool RememberPassphrase { get; set; }
+    string ServerUri { get; set; }
     string Username { get; set; }
+    string ViewerDownloadUri { get; }
     int VncPort { get; set; }
 
     Task Clear();
@@ -35,14 +40,20 @@ internal interface ISettings
 }
 
 internal class Settings(
-    ISecureStorage secureStorage,
-    IPreferences preferences,
-    IMessenger messenger) : ISettings
+    ISecureStorage _secureStorage,
+    IPreferences _preferences,
+    IMessenger _messenger,
+    ILogger<Settings> _logger) : ISettings
 {
-    private readonly IMessenger _messenger = messenger;
-    private readonly IPreferences _preferences = preferences;
-    private readonly ISecureStorage _secureStorage = secureStorage;
     private byte[] _privateKey = [];
+
+    public string AgentDownloadUri
+    {
+        get
+        {
+            return $"{ServerUri}/downloads/{AppConstants.AgentFileName}";
+        }
+    }
 
     public bool AutoRunVnc
     {
@@ -59,6 +70,12 @@ internal class Settings(
     public string KeypairExportPath
     {
         get => GetPref(string.Empty);
+        set => SetPref(value);
+    }
+
+    public int LocalProxyPort
+    {
+        get => GetPref(48898);
         set => SetPref(value);
     }
 
@@ -86,12 +103,28 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public string ServerUri => _preferences.Get(nameof(ServerUri), AppConstants.ServerUri);
+    public string ServerUri
+    {
+        get => GetPref(AppConstants.ServerUri).TrimEnd('/');
+        set
+        {
+            SetPref(value.TrimEnd('/'));
+            _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
+        }
+    }
 
     public string Username
     {
         get => GetPref(string.Empty);
         set => SetPref(value);
+    }
+
+    public string ViewerDownloadUri
+    {
+        get
+        {
+            return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
+        }
     }
 
     public int VncPort
@@ -102,11 +135,18 @@ internal class Settings(
 
     public Task Clear()
     {
-        RememberPassphrase = false;
-        PrivateKey = [];
-        PublicKey = [];
-        _secureStorage.RemoveAll();
-        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        try
+        {
+            RememberPassphrase = false;
+            PrivateKey = [];
+            PublicKey = [];
+            _secureStorage.RemoveAll();
+            _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while clearing settings.");
+        }
         return Task.CompletedTask;
     }
 

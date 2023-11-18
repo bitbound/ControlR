@@ -3,13 +3,12 @@
 public enum DtoType
 {
     None = 0,
-    PublicKey = 1,
+    Identity = 1,
     VncSessionRequest = 2,
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
-    RtcSessionDescription = 5,
-    RtcIceCandidate = 6,
-    CloseStreamingSession = 7,
+    TerminalSessionRequest = 5,
+    CloseTerminalRequest = 7,
     PowerStateChange = 8,
-    InvokeCtrlAltDel = 9,
+    TerminalInput = 9,
 }

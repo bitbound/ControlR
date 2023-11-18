@@ -1,6 +1,7 @@
 ﻿using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Serialization;
 using MessagePack;
 
