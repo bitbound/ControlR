@@ -48,7 +48,11 @@ internal class VncSessionLauncherWindows(
                 }
             }
 
-            SetRegKeys(password);
+            var regResult = SetRegKeys(password);
+            if (!regResult.IsSuccess)
+            {
+                return Result.Fail<VncSession>(regResult.Reason);
+            }
 
             if (_elevationChecker.IsElevated())
             {
