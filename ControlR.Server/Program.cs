@@ -100,19 +100,19 @@ else
 ConfigureStaticFiles(app);
 
 app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/novnc-proxy"),
+    x => x.Request.Path.StartsWithSegments("/viewer-proxy"),
     builder =>
     {
         builder.UseWebSockets();
-        builder.UseMiddleware<NoVncMiddleware>();
+        builder.UseMiddleware<ViewerProxyMiddleware>();
     });
 
 app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/agentvnc-proxy"),
+    x => x.Request.Path.StartsWithSegments("/agent-proxy"),
     builder =>
     {
         builder.UseWebSockets();
-        builder.UseMiddleware<AgentVncMiddleware>();
+        builder.UseMiddleware<AgentProxyMiddleware>();
     });
 
 app.UseRouting();

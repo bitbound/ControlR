@@ -43,12 +43,30 @@
                  Label="Remember private key passphrase on this device" />
 </div>
 
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Local Proxy Port
+    </MudText>
+    <MudNumericField T="int"
+                  @bind-Value="LocalProxyPort"
+                  Label="Local port for proxying VNC and RDP connections from native apps">
+
+    </MudNumericField>
+</div>
+
+
 
 @code {
     private bool RememberPassphrase
     {
         get => SettingsStore.RememberPassphrase;
         set => SettingsStore.RememberPassphrase = value;
+    }
+
+    private int LocalProxyPort
+    {
+        get => SettingsStore.LocalProxyPort;
+        set => SettingsStore.LocalProxyPort = value;
     }
 
 

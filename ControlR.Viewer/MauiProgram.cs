@@ -1,9 +1,18 @@
-﻿using Bitbound.SimpleMessenger;
+﻿#if WINDOWS
+using ControlR.Viewer.Services.WindowsX;
+#elif ANDROID
+
+using ControlR.Viewer.Services.AndroidX;
+
+#endif
+
+using Bitbound.SimpleMessenger;
 using CommunityToolkit.Maui;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Services;
+using ControlR.Viewer.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -75,6 +84,12 @@ public static class MauiProgram
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+
+#if WINDOWS
+        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherWindows>();
+#elif ANDROID
+        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherAndroid>();
+#endif
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

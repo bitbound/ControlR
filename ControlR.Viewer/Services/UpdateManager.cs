@@ -46,6 +46,9 @@ internal class UpdateManager(
     ISettings _settings,
     ILogger<UpdateManager> _logger) : IUpdateManager
 {
+    public const string PackageInstalledAction =
+                     "com.example.android.apis.content.SESSION_API_PACKAGE_INSTALLED";
+
     private readonly SemaphoreSlim _installLock = new(1, 1);
 
     public async Task<Result<bool>> CheckForUpdate()
@@ -176,16 +179,16 @@ internal class UpdateManager(
                     apkStream.Close();
                 }
 
-                var packageInstalledAction =
-                     "com.example.android.apis.content.SESSION_API_PACKAGE_INSTALLED";
+                var intent = new Intent(context, context.Class);
+                intent.SetAction(PackageInstalledAction);
 
-                var intent = PendingIntent.GetActivity(
-                    Platform.CurrentActivity,
+                var receiver = PendingIntent.GetActivity(
+                    context,
                     0,
-                    new Intent(packageInstalledAction),
+                    intent,
                     0);
 
-                installerSession.Commit(intent!.IntentSender);
+                installerSession.Commit(receiver!.IntentSender);
                 return Result.Ok();
             }
 

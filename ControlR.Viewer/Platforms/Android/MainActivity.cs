@@ -1,6 +1,9 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
+using ControlR.Shared.Extensions;
+using ControlR.Viewer.Services;
+using MauiApp = Microsoft.Maui.Controls.Application;
 
 namespace ControlR.Viewer.Platforms.Android;
 
@@ -15,7 +18,7 @@ public class MainActivity : MauiAppCompatActivity
         }
 
         var extras = intent.Extras;
-        if ("PACKAGE_INSTALLED_ACTION".Equals(intent.Action))
+        if (intent.Action == UpdateManager.PackageInstalledAction)
         {
             var status = extras.GetInt(PackageInstaller.ExtraStatus);
             var message = extras.GetString(PackageInstaller.ExtraStatusMessage);
@@ -30,7 +33,11 @@ public class MainActivity : MauiAppCompatActivity
                     break;
 
                 case (int)PackageInstallStatus.Success:
-                    //TODO: Handle success
+                    MauiApp.Current?.MainPage?.DisplayAlert(
+                        "Install Successful",
+                        "Installation completed successfully.",
+                        "OK")
+                        .AndForget();
                     break;
 
                 case (int)PackageInstallStatus.Failure:
@@ -40,7 +47,11 @@ public class MainActivity : MauiAppCompatActivity
                 case (int)PackageInstallStatus.FailureIncompatible:
                 case (int)PackageInstallStatus.FailureInvalid:
                 case (int)PackageInstallStatus.FailureStorage:
-                    //TODO: Handle failures
+                    MauiApp.Current?.MainPage?.DisplayAlert(
+                        "Install Failed",
+                        $"Installation failed.  Message: {message}",
+                        "OK")
+                        .AndForget();
                     break;
             }
         }

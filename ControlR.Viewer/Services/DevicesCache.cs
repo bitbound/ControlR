@@ -7,7 +7,7 @@ using IFileIo = ControlR.Devices.Common.Services.IFileSystem;
 
 namespace ControlR.Viewer.Services;
 
-internal interface IDeviceCache
+public interface IDeviceCache
 {
     IEnumerable<DeviceDto> Devices { get; }
 

@@ -5,11 +5,11 @@ using System.Net.WebSockets;
 
 namespace ControlR.Server.Middleware;
 
-public class NoVncMiddleware(
+public class ViewerProxyMiddleware(
     RequestDelegate _next,
     IHostApplicationLifetime _appLifetime,
     IProxyStreamStore _proxyStreamStore,
-    ILogger<NoVncMiddleware> _logger,
+    ILogger<ViewerProxyMiddleware> _logger,
     IMemoryProvider _memoryProvider)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -22,7 +22,7 @@ public class NoVncMiddleware(
 
         var websocket = await context.WebSockets.AcceptWebSocketAsync();
 
-        if (!context.Request.Path.StartsWithSegments("/novnc-proxy"))
+        if (!context.Request.Path.StartsWithSegments("/viewer-proxy"))
         {
             await _next(context);
             return;

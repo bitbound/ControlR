@@ -23,6 +23,27 @@ public static class TaskExtensions
         }
     }
 
+    public static async void AndForget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception ex)
+        {
+            if (exceptionHandler is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await exceptionHandler(ex);
+            }
+            catch { }
+        }
+    }
+
     public static Task OrCompleted<T>(this T? value)
     {
         if (value is Task task)

@@ -8,12 +8,13 @@ using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
-internal interface ISettings
+public interface ISettings
 {
     string AgentDownloadUri { get; }
     bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
+    int LocalProxyPort { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
     string PublicKeyBase64 { get; }
@@ -69,6 +70,12 @@ internal class Settings(
     public string KeypairExportPath
     {
         get => GetPref(string.Empty);
+        set => SetPref(value);
+    }
+
+    public int LocalProxyPort
+    {
+        get => GetPref(48898);
         set => SetPref(value);
     }
 

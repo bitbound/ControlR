@@ -5,11 +5,11 @@ using System.Net.WebSockets;
 
 namespace ControlR.Server.Middleware;
 
-public class AgentVncMiddleware(
+public class AgentProxyMiddleware(
     RequestDelegate _next,
     IHostApplicationLifetime _appLifetime,
     IMemoryProvider _memoryProvider,
-    ILogger<AgentVncMiddleware> _logger,
+    ILogger<AgentProxyMiddleware> _logger,
     IProxyStreamStore _proxyStreamStore)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -22,7 +22,7 @@ public class AgentVncMiddleware(
 
         var websocket = await context.WebSockets.AcceptWebSocketAsync();
 
-        if (!context.Request.Path.StartsWithSegments("/agentvnc-proxy"))
+        if (!context.Request.Path.StartsWithSegments("/agent-proxy"))
         {
             await _next(context);
             return;
