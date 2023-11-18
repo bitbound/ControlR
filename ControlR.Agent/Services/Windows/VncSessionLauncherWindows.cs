@@ -1,17 +1,14 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
-using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
-using System.IO.Compression;
+using System.Reflection;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using Result = ControlR.Shared.Primitives.Result;
@@ -22,17 +19,15 @@ namespace ControlR.Agent.Services.Windows;
 internal class VncSessionLauncherWindows(
     IFileSystem _fileSystem,
     IProcessManager _processInvoker,
-    IDownloadsApi _downloadsApi,
     IEnvironmentHelper _environment,
     IElevationChecker _elevationChecker,
     ILogger<VncSessionLauncherWindows> _logger) : IVncSessionLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
 
-    private readonly string _tvnServerPath = Path.Combine(
-        _environment.StartupDirectory,
-        "TightVNC",
-        "tvnserver.exe");
+    private readonly string _tvnResourcesDir = Path.Combine(_environment.StartupDirectory, "TightVNC");
+    private readonly string _tvnServerPath = Path.Combine(_environment.StartupDirectory, "TightVNC", "tvnserver.exe");
+    private readonly string _vncPasswordPath = Path.Combine(_environment.StartupDirectory, "TightVNC", "TightVncPassword_x86.exe");
 
     public async Task CleanupSessions()
     {
@@ -57,16 +52,13 @@ internal class VncSessionLauncherWindows(
 
         try
         {
-            if (!_fileSystem.FileExists(_tvnServerPath))
+            var resourcesResult = await EnsureTightVncResources();
+            if (!resourcesResult.IsSuccess)
             {
-                var result = await DownloadTightVnc();
-                if (!result.IsSuccess)
-                {
-                    return Result.Fail<VncSession>(result.Reason);
-                }
+                return Result.Fail<VncSession>(resourcesResult.Reason);
             }
 
-            var regResult = SetRegKeys(password);
+            var regResult = await SetRegKeys(password);
             if (!regResult.IsSuccess)
             {
                 return Result.Fail<VncSession>(regResult.Reason);
@@ -114,27 +106,39 @@ internal class VncSessionLauncherWindows(
         return Result.Fail<string>("Not found.");
     }
 
-    private async Task<Result> DownloadTightVnc()
+    private async Task<Result> EnsureTightVncResources()
     {
         try
         {
-            var targetPath = Path.Combine(_environment.StartupDirectory, AppConstants.TightVncZipName);
-            var result = await _downloadsApi.DownloadTightVncZip(targetPath);
-            if (!result.IsSuccess)
+            _fileSystem.CreateDirectory(_tvnResourcesDir);
+
+            var assembly = this.GetType().Assembly;
+            var assemblyRoot = assembly.GetName().Name;
+            var resourcesNamespace = $"{assemblyRoot}.Resources.TightVnc.";
+            var resourceNames = assembly
+                .GetManifestResourceNames()
+                .Where(x => x.Contains(".Resources.TightVnc."));
+
+            foreach (var resource in resourceNames)
             {
-                return result;
+                var fileName = resource.Replace(resourcesNamespace, string.Empty);
+                var targetPath = Path.Combine(_tvnResourcesDir, fileName);
+                if (!_fileSystem.FileExists(targetPath))
+                {
+                    _logger.LogInformation("TightVNC resource is missing.  Extracting {TightVncFileName}.", fileName);
+                    using var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
+                    Guard.IsNotNull(resourceStream);
+                    using var fs = _fileSystem.CreateFileStream(targetPath, FileMode.Create);
+                    await resourceStream.CopyToAsync(fs);
+                }
             }
-
-            var extractDir = Path.Combine(_environment.StartupDirectory, "TightVNC");
-            Directory.CreateDirectory(extractDir);
-            ZipFile.ExtractToDirectory(targetPath, extractDir);
-
             return Result.Ok();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while downloading and installing TightVNC.");
-            return Result.Fail(ex);
+            var result = Result.Fail(ex, "Failed to extract TightVNC resources.");
+            _logger.LogResult(result);
+            return result;
         }
     }
 
@@ -187,15 +191,17 @@ internal class VncSessionLauncherWindows(
         return Result.Ok(session);
     }
 
-    private Result SetRegKeys(string password)
+    private async Task<Result> SetRegKeys(string password)
     {
-        var encryptResult = TightVncInterop.EncryptVncPassword(password);
+        var outputResult = await _processInvoker.GetProcessOutput(_vncPasswordPath, $"{password}", 5_000);
 
-        if (!encryptResult.IsSuccess)
+        if (!outputResult.IsSuccess)
         {
-            _logger.LogResult(encryptResult);
-            return encryptResult.ToResult();
+            return Result.Fail("Failed to encrypt password.");
         }
+
+        var hexPassword = outputResult.Value.Trim().Split().Last();
+        var encryptedPassword = Convert.FromHexString(hexPassword);
 
         var hive = _elevationChecker.IsElevated() ?
             RegistryHive.LocalMachine :
@@ -207,7 +213,7 @@ internal class VncSessionLauncherWindows(
         serverKey.SetValue("LoopbackOnly", 1);
         serverKey.SetValue("UseVncAuthentication", 1);
         serverKey.SetValue("RemoveWallpaper", 0);
-        serverKey.SetValue("Password", encryptResult.Value, RegistryValueKind.Binary);
+        serverKey.SetValue("Password", encryptedPassword, RegistryValueKind.Binary);
         return Result.Ok();
     }
 

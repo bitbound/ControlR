@@ -11,6 +11,9 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$KeystorePassword,
 
+    [Parameter(Mandatory=$true)]
+    [string]$TightVncResourcesDir,
+
     [switch]$BuildAgent,
 
     [switch]$BuildViewer
@@ -35,12 +38,19 @@ if (!(Test-Path $SignToolPath)) {
     return
 }
 
+if (!(Test-Path $TightVncResourcesDir)) {
+    Write-Error "TightVncResources directory not found."
+    return
+}
+
 Set-Location $Root
 
 if (!(Test-Path -Path "$Root\ControlR.sln")) {
     Write-Host "Unable to determine solution directory." -ForegroundColor Red
     return
 }
+
+Get-ChidlItem -Path $TightVncResourcesDir | Copy-Item -Destination "$Root\ControlR.Agent\Resources" -Force
 
 if ($BuildAgent){
     &"$MSBuildPath" "$Root\ControlR.WinVncPassword" -p:Configuration=Release -p:Platform=Win32

@@ -34,8 +34,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B852
 		.build\install-tightvnc.sh = .build\install-tightvnc.sh
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ControlR.WinVncPassword", "ControlR.WinVncPassword\ControlR.WinVncPassword.vcxproj", "{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -154,18 +152,6 @@ Global
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.ActiveCfg = Release|Any CPU
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Build.0 = Release|Any CPU
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Deploy.0 = Release|Any CPU
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|Any CPU.Build.0 = Debug|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|x64.ActiveCfg = Debug|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|x64.Build.0 = Debug|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|x86.ActiveCfg = Debug|Win32
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Debug|x86.Build.0 = Debug|Win32
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|Any CPU.ActiveCfg = Release|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|Any CPU.Build.0 = Release|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|x64.ActiveCfg = Release|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|x64.Build.0 = Release|x64
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|x86.ActiveCfg = Release|Win32
-		{9B45E5E5-78D6-406D-9D1C-E4FD00855FDB}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -176,7 +162,7 @@ Global
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal
