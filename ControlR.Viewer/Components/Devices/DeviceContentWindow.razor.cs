@@ -64,7 +64,7 @@ public partial class DeviceContentWindow : IAsyncDisposable
         await DisposeAsync();
     }
 
-    private async Task HandleDeviceContentWindowStateChanged(DeviceContentWindowStateMessage message)
+    private async Task HandleDeviceContentWindowStateChanged(object subscriber, DeviceContentWindowStateMessage message)
     {
         if (message.WindowId == ContentInstance.WindowId)
         {

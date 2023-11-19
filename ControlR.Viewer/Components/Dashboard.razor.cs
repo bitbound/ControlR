@@ -131,7 +131,7 @@ public partial class Dashboard
         Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
     }
 
-    private async Task HandleGenericMessage(GenericMessageKind kind)
+    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
         switch (kind)
         {
@@ -345,6 +345,15 @@ public partial class Dashboard
                 Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
                 return;
             }
+
+            var hasNotifyPermission = await MainActivity.Current.VerifyNotificationPermissions();
+            if (!hasNotifyPermission)
+            {
+                Snackbar.Add("Notification permission required", Severity.Warning);
+                return;
+            }
+
+            MainActivity.Current.StartForegroundServiceCompat<ProxyForegroundService>(ProxyForegroundService.ActionStartProxy);
 
             var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
 

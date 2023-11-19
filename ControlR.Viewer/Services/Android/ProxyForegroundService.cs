@@ -62,7 +62,7 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         return new NotificationCompat.Action(0, "Stop", stopIntent);
     }
 
-    private void HandleGenericMessage(GenericMessageKind kind)
+    private void HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
         if (kind == GenericMessageKind.LocalProxyListenerStopRequested)
         {

@@ -27,7 +27,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleGenericMessage(GenericMessageKind messageKind)
+    private async Task HandleGenericMessage(object subscriber, GenericMessageKind messageKind)
     {
         if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
         {

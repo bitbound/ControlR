@@ -12,7 +12,7 @@ internal static class IMessengerExtensions
         GenericMessageKind kind,
         Action handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (message) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
         {
             if (kind == message.Value)
             {
@@ -29,7 +29,7 @@ internal static class IMessengerExtensions
         GenericMessageKind kind,
         Func<Task> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (message) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
         {
             if (kind == message.Value)
             {
@@ -41,11 +41,11 @@ internal static class IMessengerExtensions
     public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        Action<GenericMessageKind> handler)
+        Action<object, GenericMessageKind> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (message) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
         {
-            handler(message.Value);
+            handler(subscriber, message.Value);
             return Task.CompletedTask;
         });
     }
@@ -53,11 +53,11 @@ internal static class IMessengerExtensions
     public static void RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
-        Func<GenericMessageKind, Task> handler)
+        Func<object, GenericMessageKind, Task> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (message) =>
+        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
         {
-            await handler(message.Value);
+            await handler(subscriber, message.Value);
         });
     }
 

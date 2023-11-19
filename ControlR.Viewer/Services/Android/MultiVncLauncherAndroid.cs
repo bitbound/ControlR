@@ -57,11 +57,6 @@ internal class MultiVncLauncherAndroid(IClipboard _clipboard) : IMultiVncLaunche
         launchIntent.SetData(vncUri);
         launchIntent.SetFlags(ActivityFlags.NewTask);
         MainActivity.Current.StartActivity(launchIntent);
-        //launchIntent = new Intent(Intent.ActionView, vncUri);
-        //launchIntent.SetDataAndNormalize(vncUri);
-        //launchIntent.SetData(global::Android.Net.Uri.Parse($"vnc://127.0.0.1:{localPort}/C24bit/{password}/"));
-        //await Launcher.OpenAsync($"vnc://127.0.0.1:{localPort}/C24bit/{password}/");
-        //await Launcher.OpenAsync($"vnc://127.0.0.1:{localPort}?password={password}");
         return Result.Ok();
     }
 

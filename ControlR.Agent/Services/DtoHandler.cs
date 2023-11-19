@@ -31,7 +31,7 @@ internal class DtoHandler(
         return Task.CompletedTask;
     }
 
-    private async Task HandleSignedDtoReceivedMessage(SignedDtoReceivedMessage message)
+    private async Task HandleSignedDtoReceivedMessage(object subscriber, SignedDtoReceivedMessage message)
     {
         using var logScope = _logger.BeginMemberScope();
         var dto = message.SignedDto;

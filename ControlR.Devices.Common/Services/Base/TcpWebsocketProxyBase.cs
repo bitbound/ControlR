@@ -12,26 +12,14 @@ using System.Net.WebSockets;
 
 namespace ControlR.Devices.Common.Services.Base;
 
-public abstract class TcpWebsocketProxyBase
+public abstract class TcpWebsocketProxyBase(
+    IMemoryProvider memoryProvider,
+    IMessenger messenger,
+    ILogger<TcpWebsocketProxyBase> logger)
 {
-    protected readonly ILogger<TcpWebsocketProxyBase> _logger;
-    private readonly IMemoryProvider _memoryProvider;
-    private readonly IMessenger _messenger;
-    private CancellationTokenSource _linkedCancellationSource = new();
-    private CancellationTokenSource _proxyCancellationSource = new();
-
-    public TcpWebsocketProxyBase(
-        IMemoryProvider memoryProvider,
-        IMessenger messenger,
-        ILogger<TcpWebsocketProxyBase> logger)
-    {
-        _memoryProvider = memoryProvider;
-        _messenger = messenger;
-        _logger = logger;
-
-        messenger.RegisterGenericMessage(this, HandleGenericMessage);
-        messenger.Register<ProxyListenerStatusChangedMessage>(this, HandleProxyListenerStatusChangedMessage);
-    }
+    protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
+    private readonly IMemoryProvider _memoryProvider = memoryProvider;
+    private readonly IMessenger _messenger = messenger;
 
     protected async Task<Result<Task>> ListenForLocalConnections(
        Guid sessionId,
@@ -39,7 +27,10 @@ public abstract class TcpWebsocketProxyBase
        Uri websocketUri,
        CancellationToken cancellationToken)
     {
-        var listenerToken = GetNewListenerCancellationToken(cancellationToken);
+        var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        _messenger.RegisterGenericMessage(linkedSource, HandleGenericMessage);
+        _messenger.Register<ProxyListenerStatusChangedMessage>(linkedSource, HandleProxyListenerStatusChangedMessage);
 
         var ws = new ClientWebSocket();
         TcpListener? tcpListener = null;
@@ -60,14 +51,14 @@ public abstract class TcpWebsocketProxyBase
                 4,
                 TimeSpan.FromSeconds(1));
 
-            await ws.ConnectAsync(websocketUri, listenerToken);
+            await ws.ConnectAsync(websocketUri, linkedSource.Token);
 
             var listenerTask = Task.Run(async () =>
             {
                 try
                 {
-                    var client = await tcpListener.AcceptTcpClientAsync(listenerToken);
-                    await ProxyConnections(sessionId, ws, client, listenerToken);
+                    var client = await tcpListener.AcceptTcpClientAsync(linkedSource.Token);
+                    await ProxyConnections(sessionId, ws, client, linkedSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -83,7 +74,7 @@ public abstract class TcpWebsocketProxyBase
                     tcpListener.Dispose();
                     _messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
                 }
-            }, listenerToken);
+            }, linkedSource.Token);
 
             return Result.Ok(listenerTask);
         }
@@ -136,44 +127,25 @@ public abstract class TcpWebsocketProxyBase
         }
     }
 
-    private void CancelAndDisposeSources()
-    {
-        try
-        {
-            _proxyCancellationSource.Cancel();
-            _proxyCancellationSource.Dispose();
-        }
-        catch { }
-        try
-        {
-            _linkedCancellationSource.Cancel();
-            _linkedCancellationSource.Dispose();
-        }
-        catch { }
-    }
-
-    private CancellationToken GetNewListenerCancellationToken(CancellationToken mainToken)
-    {
-        CancelAndDisposeSources();
-
-        _proxyCancellationSource = new CancellationTokenSource();
-        _linkedCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(_proxyCancellationSource.Token, mainToken);
-        return _linkedCancellationSource.Token;
-    }
-
-    private void HandleGenericMessage(GenericMessageKind kind)
+    private void HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
         if (kind == GenericMessageKind.LocalProxyListenerStopRequested)
         {
-            _linkedCancellationSource.Cancel();
+            if (subscriber is CancellationTokenSource cts)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
         }
     }
 
-    private Task HandleProxyListenerStatusChangedMessage(ProxyListenerStatusChangedMessage message)
+    private Task HandleProxyListenerStatusChangedMessage(object subscriber, ProxyListenerStatusChangedMessage message)
     {
-        if (!message.IsRunning)
+        if (!message.IsRunning &&
+            subscriber is CancellationTokenSource cts)
         {
-            _linkedCancellationSource.Cancel();
+            cts.Cancel();
+            cts.Dispose();
         }
         return Task.CompletedTask;
     }

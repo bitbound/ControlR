@@ -98,7 +98,7 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    private async Task HandleGeneric(GenericMessageKind kind)
+    private async Task HandleGeneric(object subscriber, GenericMessageKind kind)
     {
         switch (kind)
         {
@@ -125,7 +125,7 @@
         }
     }
 
-    private Task HandleToastMessage(ToastMessage toast)
+    private Task HandleToastMessage(object subscriber, ToastMessage toast)
     {
         Snackbar.Add(toast.Message, toast.Severity);
         return Task.CompletedTask;
