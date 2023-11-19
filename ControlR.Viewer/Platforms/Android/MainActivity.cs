@@ -1,7 +1,6 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using ControlR.Shared.Extensions;
 using ControlR.Viewer.Services;
 using MauiApp = Microsoft.Maui.Controls.Application;
 
@@ -10,16 +9,37 @@ namespace ControlR.Viewer.Platforms.Android;
 [Activity(Theme = "@style/Maui.SplashTheme", LaunchMode = LaunchMode.SingleTop, MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity
 {
+    private static MainActivity? _current;
+
+    public MainActivity()
+    {
+        _current = this;
+    }
+
+    public static MainActivity Current
+    {
+        get
+        {
+            return _current ??
+                throw new InvalidOperationException("MainActivity must be started before accessing this property.");
+        }
+    }
+
     protected override void OnNewIntent(Intent? intent)
     {
-        if (intent?.Extras is null)
+        if (intent is null)
         {
             return;
         }
 
-        var extras = intent.Extras;
         if (intent.Action == UpdateManager.PackageInstalledAction)
         {
+            if (intent.Extras is null)
+            {
+                return;
+            }
+
+            var extras = intent.Extras;
             var status = extras.GetInt(PackageInstaller.ExtraStatus);
             var message = extras.GetString(PackageInstaller.ExtraStatusMessage);
             switch (status)

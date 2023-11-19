@@ -6,7 +6,6 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
-using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
@@ -37,6 +36,8 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
 
     Task Start(CancellationToken cancellationToken);
+
+    Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId);
 }
 
 internal class ViewerHubConnection(
@@ -186,6 +187,24 @@ internal class ViewerHubConnection(
         _messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, HandleAuthStateChanged);
 
         await RequestDeviceUpdates();
+    }
+
+    public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
+    {
+        return await TryInvoke(
+        async () =>
+        {
+            var dto = new RdpProxyRequestDto(sessionId);
+            var signedDto = _keyProvider.CreateSignedDto<RdpProxyRequestDto>(dto, DtoType.StartRdpProxy, _appState.UserKeys.PrivateKey);
+
+            var result = await Connection.InvokeAsync<Result>("StartRdpProxy", agentConnectionId, sessionId, signedDto);
+            if (!result.IsSuccess)
+            {
+                _logger.LogError("Failed to start RDP proxy session.");
+            }
+            return result;
+        },
+        () => new(false));
     }
 
     private void ConfigureConnection(HubConnection connection)

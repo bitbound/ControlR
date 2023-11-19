@@ -2,6 +2,7 @@
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 
@@ -13,9 +14,56 @@ public abstract class TcpWebsocketProxyBase(
 {
     protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
 
-    protected async Task<Result<Task>> StartProxySession(
+    protected async Task<Result<Task>> ListenForLocalConnections(
+       Guid sessionId,
+       int listeningPort,
+       Uri websocketUri,
+       CancellationToken cancellationToken)
+    {
+        var ws = new ClientWebSocket();
+        TcpListener? tcpListener = null;
+
+        try
+        {
+            _logger.LogInformation("Starting proxy for session ID {SessionID}.  Listening for connections on port {ListeningPort}.",
+                sessionId,
+                listeningPort);
+
+            tcpListener = new TcpListener(IPAddress.Loopback, listeningPort);
+            tcpListener.Start();
+
+            await ws.ConnectAsync(websocketUri, cancellationToken);
+
+            var listenerTask = Task.Run(async () =>
+            {
+                try
+                {
+                    var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
+                    await ProxyConnections(sessionId, ws, client, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while listening for TCP client to proxy.");
+                }
+                finally
+                {
+                    tcpListener.Dispose();
+                }
+            }, cancellationToken);
+
+            return Result.Ok(listenerTask);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while proxying stream.");
+            DisposeHelper.DisposeAll(ws, tcpListener);
+            return Result.Fail<Task>("Error while creating proxy session.");
+        }
+    }
+
+    protected async Task<Result<Task>> ProxyToLocalService(
         Guid sessionId,
-        int localProxyPort,
+        int localServicePort,
         Uri websocketUri,
         CancellationToken cancellationToken)
     {
@@ -23,15 +71,15 @@ public abstract class TcpWebsocketProxyBase(
 
         try
         {
-            _logger.LogInformation("Starting proxy for session ID {SessionID} to port {LocalProxyPort}.",
+            _logger.LogInformation("Starting proxy for session ID {SessionID} to local service port {LocalServicePort}.",
                 sessionId,
-                localProxyPort);
+                localServicePort);
 
             var tcpClient = new TcpClient();
             await TryHelper.Retry(
                 async () =>
                 {
-                    await tcpClient.ConnectAsync("127.0.0.1", localProxyPort);
+                    await tcpClient.ConnectAsync("127.0.0.1", localServicePort);
                 },
                 tryCount: 3,
                 retryDelay: TimeSpan.FromSeconds(3));

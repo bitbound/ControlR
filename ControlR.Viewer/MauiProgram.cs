@@ -1,8 +1,8 @@
 ﻿#if WINDOWS
-using ControlR.Viewer.Services.WindowsX;
+using ControlR.Viewer.Services.Windows;
 #elif ANDROID
 
-using ControlR.Viewer.Services.AndroidX;
+using ControlR.Viewer.Services.Android;
 
 #endif
 
@@ -20,6 +20,7 @@ using MudBlazor.Services;
 using FileSystem = Microsoft.Maui.Storage.FileSystem;
 using FileSystemCore = ControlR.Devices.Common.Services.FileSystem;
 using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
+using ControlR.Shared.Services.Buffers;
 
 namespace ControlR.Viewer;
 
@@ -78,6 +79,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
         builder.Services.AddSingleton<IUpdateManager, UpdateManager>();
         builder.Services.AddSingleton<IProcessManager, ProcessManager>();
+        builder.Services.AddSingleton<ILocalProxyViewer, LocalProxyViewer>();
+        builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

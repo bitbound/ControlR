@@ -73,7 +73,7 @@ internal static class IHostBuilderExtensions
             if (startupMode == StartupMode.Run)
             {
                 services.AddSingleton<IAgentUpdater, AgentUpdater>();
-                services.AddSingleton<ILocalProxy, LocalProxy>();
+                services.AddSingleton<ILocalProxyAgent, LocalProxyAgent>();
                 services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
                 services.AddSingleton<ITerminalStore, TerminalStore>();
@@ -91,6 +91,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
+                services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
             }
             else if (OperatingSystem.IsLinux())
             {

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Viewer.Services.Base;
 

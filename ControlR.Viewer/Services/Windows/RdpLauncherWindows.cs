@@ -1,10 +1,10 @@
 ﻿using ControlR.Viewer.Services.Interfaces;
 
-namespace ControlR.Viewer.Services.WindowsX;
+namespace ControlR.Viewer.Services.Windows;
 
 internal class RdpLauncherWindows : IRdpLauncher
 {
-    public Task LaunchRdp(int localPort)
+    public Task<Result> LaunchRdp(int localPort)
     {
         throw new NotImplementedException();
     }

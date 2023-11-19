@@ -2,8 +2,19 @@
 
 public partial class MainPage : ContentPage
 {
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+    private static MainPage? _default;
+
+    public MainPage()
+    {
+        InitializeComponent();
+        _default = this;
+    }
+
+    public static MainPage Current
+    {
+        get
+        {
+            return _default ??= new MainPage();
+        }
+    }
 }

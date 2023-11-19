@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
+using ControlR.Agent.Services.Windows;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
@@ -39,9 +40,10 @@ internal class AgentHubConnection(
      IKeyProvider _keyProvider,
      IVncSessionLauncher _vncSessionLauncher,
      IAgentUpdater _updater,
-     ILocalProxy _localProxy,
+     ILocalProxyAgent _localProxy,
      IMessenger _messenger,
      ITerminalStore _terminalStore,
+     IRegistryAccessor _registryAccessor,
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_scopeFactory, _messenger, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
@@ -194,6 +196,35 @@ internal class AgentHubConnection(
         await StartImpl();
     }
 
+    public async Task<Result> StartRdpProxy(SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return Result.Fail("Platform not supported.");
+            }
+
+            if (!VerifySignedDto<RdpProxyRequestDto>(requestDto, out var dto))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            var regResult = _registryAccessor.GetRdpPort();
+            if (!regResult.IsSuccess)
+            {
+                return regResult.ToResult();
+            }
+
+            return await _localProxy.ProxyToLocalService(dto.SessionId, regResult.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while starting RDP proxy session.");
+            return Result.Fail("An error occurred while starting RDP proxy.");
+        }
+    }
+
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         await StopConnection(cancellationToken);
@@ -211,6 +242,7 @@ internal class AgentHubConnection(
         hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
+        hubConnection.On<SignedPayloadDto, Result>(nameof(StartRdpProxy), StartRdpProxy);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

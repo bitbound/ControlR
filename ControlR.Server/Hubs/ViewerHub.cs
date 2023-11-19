@@ -140,6 +140,31 @@ public class ViewerHub(
         }
     }
 
+    public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId, SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!VerifySignature(requestDto, out _))
+            {
+                return new(false);
+            }
+
+            var signaler = new StreamSignaler(sessionId);
+            _proxyStreamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
+
+            var sessionResult = await _agentHub.Clients
+                   .Client(agentConnectionId)
+                   .StartRdpProxy(requestDto);
+
+            return sessionResult;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while starting RDP proxy session.");
+            return new(false);
+        }
+    }
+
     private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
     {
         publicKey = string.Empty;

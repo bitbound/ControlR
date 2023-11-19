@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Viewer.Services.Interfaces;
 
-internal interface IRdpLauncher
+public interface IRdpLauncher
 {
-    Task LaunchRdp(int localPort);
+    Task<Result> LaunchRdp(int localPort);
 }

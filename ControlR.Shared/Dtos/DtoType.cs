@@ -11,4 +11,5 @@ public enum DtoType
     CloseTerminalRequest = 7,
     PowerStateChange = 8,
     TerminalInput = 9,
+    StartRdpProxy = 10,
 }

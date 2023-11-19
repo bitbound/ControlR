@@ -1,28 +1,27 @@
 ﻿#if ANDROID
 
+using Android.App;
 using Android.Content;
 using ControlR.Viewer.Services.Interfaces;
 using MudBlazor;
 
-namespace ControlR.Viewer.Services.AndroidX;
+namespace ControlR.Viewer.Services.Android;
 
-internal class RdpLauncherAndroid(ISnackbar _snackbar) : IRdpLauncher
+internal class RdpLauncherAndroid() : IRdpLauncher
 {
-    public async Task LaunchRdp(int localPort)
+    public async Task<Result> LaunchRdp(int localPort)
     {
         await Task.Yield();
 
         if (Platform.CurrentActivity?.PackageManager is null)
         {
-            _snackbar.Add("CurrentActivity is unavailable", Severity.Warning);
-            return;
+            return Result.Fail("Current activity is unavailable.");
         }
 
         var launchIntent = Platform.CurrentActivity.PackageManager.GetLaunchIntentForPackage("com.microsoft.rdc.androidx");
         if (launchIntent is null)
         {
-            _snackbar.Add("Microsoft RDP app not found", Severity.Warning);
-            return;
+            return Result.Fail("Microsoft RDP app not found.");
         }
 
         launchIntent.SetFlags(ActivityFlags.NewTask);
@@ -30,6 +29,7 @@ internal class RdpLauncherAndroid(ISnackbar _snackbar) : IRdpLauncher
         //launchIntent.PutExtra("username", "user");
         //launchIntent.PutExtra("password", "password");
         global::Android.App.Application.Context.StartActivity(launchIntent);
+        return Result.Ok();
     }
 }
 

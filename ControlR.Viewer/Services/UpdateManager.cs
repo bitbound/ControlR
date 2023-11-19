@@ -14,14 +14,12 @@ using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
 #endif
 
 using Bitbound.SimpleMessenger;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
-using Result = ControlR.Shared.Primitives.Result;
 using ControlR.Shared.Helpers;
+using System.Runtime.Versioning;
 
 namespace ControlR.Viewer.Services;
 
@@ -88,113 +86,16 @@ internal class UpdateManager(
         try
         {
 #if WINDOWS
-            var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
-            if (_fileSystem.FileExists(tempPath))
-            {
-                _fileSystem.DeleteFile(tempPath);
-            }
+            return await InstallCurrentVersionWindows();
 
-            var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
-            if (!downloadResult.IsSuccess)
-            {
-                return downloadResult;
-            }
-
-            await _processManager.StartAndWaitForExit(
-                  "powershell.exe",
-                  $"-Command \"& {{Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion}}\"",
-                  true,
-                  TimeSpan.FromMinutes(1));
-
-            return Result.Ok();
-
-#elif ANDROID
+#elif ANDROID26_0_OR_GREATER
             if (OperatingSystem.IsAndroidVersionAtLeast(26))
             {
-                var context = Platform.CurrentActivity;
-                if (context is null)
-                {
-                    return Result.Fail("CurrentActivity is unavailable.");
-                }
-
-                if (context.PackageManager is null)
-                {
-                    return Result.Fail("PackageManager is unavailable.");
-                }
-
-                if (context.ContentResolver is null)
-                {
-                    return Result.Fail("ContentResolver is unavailable.");
-                }
-
-                var packageManager = context.PackageManager;
-                if (!packageManager.CanRequestPackageInstalls())
-                {
-                    Guard.IsNotNull(App.Current?.MainPage);
-
-                    await Microsoft.Maui.Controls.Application.Current.MainPage.DisplayAlert(
-                        "Permission Required",
-                        "ControlR requires permission to install apps from external sources.  " +
-                        "Press OK to open settings and enable the permission.",
-                        "OK");
-
-                    context.StartActivity(new Intent(
-                        Android.Provider.Settings.ActionManageUnknownAppSources,
-                        Android.Net.Uri.Parse("package:" + Android.App.Application.Context.PackageName)));
-
-                    await WaitHelper.WaitForAsync(
-                        packageManager.CanRequestPackageInstalls,
-                        TimeSpan.MaxValue,
-                        1_000);
-                }
-
-                var packageName = context.PackageName;
-                if (packageName is null)
-                {
-                    return Result.Fail("Unable to determine package name.");
-                }
-
-                var packageInstaller = packageManager.PackageInstaller;
-                var sessionParams = new PackageInstaller.SessionParams(PackageInstallMode.FullInstall);
-                sessionParams.SetAppPackageName(packageName);
-                var sessionId = packageInstaller.CreateSession(sessionParams);
-                var installerSession = packageInstaller.OpenSession(sessionId);
-
-                var httpClient = _clientFactory.CreateClient();
-                var apkStream = await httpClient.GetStreamAsync(_settings.ViewerDownloadUri);
-                if (apkStream is null)
-                {
-                    return Result.Fail("Failed to open APK file.");
-                }
-                var installerPackageStream = installerSession.OpenWrite(packageName, 0, -1);
-
-                try
-                {
-                    await apkStream.CopyToAsync(installerPackageStream);
-                    installerSession.Fsync(installerPackageStream);
-                }
-                finally
-                {
-                    installerPackageStream.Close();
-                    apkStream.Close();
-                }
-
-                var intent = new Intent(context, context.Class);
-                intent.SetAction(PackageInstalledAction);
-
-                var receiver = PendingIntent.GetActivity(
-                    context,
-                    0,
-                    intent,
-                    0);
-
-                installerSession.Commit(receiver!.IntentSender);
-                return Result.Ok();
+                return await InstallCurrentVersionAndroid();
             }
-
 #else
 
-            return Result.Fail("Not implemented.");
+            return Result.Fail("Platform not supported.");
 #endif
         }
         catch (Exception ex)
@@ -207,4 +108,116 @@ internal class UpdateManager(
         }
         return Result.Fail("Installation failed.");
     }
+
+#if ANDROID
+
+    [SupportedOSPlatform("android26.0")]
+    private async Task<Result> InstallCurrentVersionAndroid()
+    {
+        var context = Platform.CurrentActivity;
+        if (context is null)
+        {
+            return Result.Fail("CurrentActivity is unavailable.");
+        }
+
+        if (context.PackageManager is null)
+        {
+            return Result.Fail("PackageManager is unavailable.");
+        }
+
+        if (context.ContentResolver is null)
+        {
+            return Result.Fail("ContentResolver is unavailable.");
+        }
+
+        var packageManager = context.PackageManager;
+        if (!packageManager.CanRequestPackageInstalls())
+        {
+            await MainPage.Current.DisplayAlert(
+                "Permission Required",
+                "ControlR requires permission to install apps from external sources.  " +
+                "Press OK to open settings and enable the permission.",
+                "OK");
+
+            context.StartActivity(new Intent(
+                global::Android.Provider.Settings.ActionManageUnknownAppSources,
+                global::Android.Net.Uri.Parse("package:" + global::Android.App.Application.Context.PackageName)));
+
+            await WaitHelper.WaitForAsync(
+                packageManager.CanRequestPackageInstalls,
+                TimeSpan.MaxValue,
+                1_000);
+        }
+
+        var packageName = context.PackageName;
+        if (packageName is null)
+        {
+            return Result.Fail("Unable to determine package name.");
+        }
+
+        var packageInstaller = packageManager.PackageInstaller;
+        var sessionParams = new PackageInstaller.SessionParams(PackageInstallMode.FullInstall);
+        sessionParams.SetAppPackageName(packageName);
+        var sessionId = packageInstaller.CreateSession(sessionParams);
+        var installerSession = packageInstaller.OpenSession(sessionId);
+
+        var httpClient = _clientFactory.CreateClient();
+        var apkStream = await httpClient.GetStreamAsync(_settings.ViewerDownloadUri);
+        if (apkStream is null)
+        {
+            return Result.Fail("Failed to open APK file.");
+        }
+        var installerPackageStream = installerSession.OpenWrite(packageName, 0, -1);
+
+        try
+        {
+            await apkStream.CopyToAsync(installerPackageStream);
+            installerSession.Fsync(installerPackageStream);
+        }
+        finally
+        {
+            installerPackageStream.Close();
+            apkStream.Close();
+        }
+
+        var intent = new Intent(context, context.Class);
+        intent.SetAction(PackageInstalledAction);
+
+        var receiver = PendingIntent.GetActivity(
+            context,
+            0,
+            intent,
+            0);
+
+        installerSession.Commit(receiver!.IntentSender);
+        return Result.Ok();
+    }
+
+#endif
+
+#if WINDOWS
+    [SupportedOSPlatform("windows")]
+    private async Task<Result> InstallCurrentVersionWindows()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
+        if (_fileSystem.FileExists(tempPath))
+        {
+            _fileSystem.DeleteFile(tempPath);
+        }
+
+        var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
+        if (!downloadResult.IsSuccess)
+        {
+            return downloadResult;
+        }
+
+        await _processManager.StartAndWaitForExit(
+              "powershell.exe",
+              $"-Command \"& {{Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion}}\"",
+              true,
+              TimeSpan.FromMinutes(1));
+
+        return Result.Ok();
+    }
+#endif
 }

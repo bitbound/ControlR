@@ -1,4 +1,16 @@
-﻿using Bitbound.SimpleMessenger;
+﻿#if ANDROID
+
+using ControlR.Viewer.Platforms.Android;
+using ControlR.Viewer.Services.Android;
+using ControlR.Viewer.Platforms.Android.Extensions;
+using AndroidX.Core.App;
+using AndroidX.Core.Content;
+using Android;
+using Android.Content.PM;
+
+#endif
+
+using Bitbound.SimpleMessenger;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
@@ -7,6 +19,7 @@ using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
+using ControlR.Viewer.Services.Interfaces;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.Logging;
@@ -43,10 +56,16 @@ public partial class Dashboard
     public required IDialogService DialogService { get; init; }
 
     [Inject]
+    public required ILocalProxyViewer LocalProxy { get; init; }
+
+    [Inject]
     public required ILogger<Dashboard> Logger { get; init; }
 
     [Inject]
     public required IMessenger Messenger { get; init; }
+
+    [Inject]
+    public required IRdpLauncher RdpLauncher { get; init; }
 
     [Inject]
     public required ISettings Settings { get; init; }
@@ -213,7 +232,50 @@ public partial class Dashboard
                 Snackbar.Add("Only available on Windows", Severity.Warning);
                 return;
             }
-            await Task.Yield();
+
+            Logger.LogInformation("Creating RDP session");
+            Snackbar.Add("Requesting RDP session", Severity.Info);
+
+            var sessionId = Guid.NewGuid();
+
+            var rdpProxyResult = await ViewerHub.StartRdpProxy(device.ConnectionId, sessionId);
+
+            if (!rdpProxyResult.IsSuccess)
+            {
+                Snackbar.Add("Failed to start RDP proxy session.", Severity.Error);
+                return;
+            }
+
+#if ANDROID
+            if (OperatingSystem.IsAndroidVersionAtLeast(33))
+            {
+                if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
+                {
+                    ActivityCompat.RequestPermissions(MainActivity.Current, [Manifest.Permission.PostNotifications], 0);
+                    if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
+                    {
+                        Snackbar.Add("Notification permission required", Severity.Warning);
+                        return;
+                    }
+                }
+            }
+
+            MainActivity.Current.StartForegroundServiceCompat<ProxyForegroundService>(ProxyForegroundService.ActionStartProxy);
+#endif
+
+            var startResult = await LocalProxy.ListenForLocalConnections(sessionId);
+
+            if (!startResult.IsSuccess)
+            {
+                Snackbar.Add(startResult.Reason, Severity.Error);
+                return;
+            }
+
+            var launchResult = await RdpLauncher.LaunchRdp(Settings.LocalProxyPort);
+            if (!launchResult.IsSuccess)
+            {
+                Snackbar.Add(launchResult.Reason, Severity.Error);
+            }
         }
         catch (Exception ex)
         {
