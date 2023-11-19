@@ -7,6 +7,7 @@ using AndroidX.Core.App;
 using AndroidX.Core.Graphics.Drawable;
 using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
+using ControlR.Devices.Common.Messages;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Platforms.Android;
 using System.Runtime.Versioning;
@@ -41,19 +42,19 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         if (intent?.Action == ActionStartProxy)
         {
             StartProxy();
-            WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(true));
+            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(true));
         }
 
         if (intent?.Action == ActionStopProxy)
         {
             StopSelf();
-            WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(false));
+            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(false));
         }
         return StartCommandResult.Sticky;
     }
 
     [SupportedOSPlatform("android26.0")]
-    private NotificationCompat.Action? BuildStopAction()
+    private static NotificationCompat.Action? BuildStopAction()
     {
         var intent = new Intent(MainActivity.Current, typeof(ProxyForegroundService));
         intent.SetAction(ActionStopProxy);
@@ -63,10 +64,10 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
 
     private void HandleGenericMessage(GenericMessageKind kind)
     {
-        if (kind == GenericMessageKind.LocalProxyStopRequested)
+        if (kind == GenericMessageKind.LocalProxyListenerStopRequested)
         {
             StopSelf();
-            WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(false));
+            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(false));
         }
     }
 

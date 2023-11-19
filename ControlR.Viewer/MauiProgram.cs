@@ -94,6 +94,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITightVncLauncherWindows, TightVncLauncherWindows>();
 #elif ANDROID
         builder.Services.AddSingleton<IRdpLauncher, RdpLauncherAndroid>();
+        builder.Services.AddSingleton<IMultiVncLauncher, MultiVncLauncherAndroid>();
 #endif
 
 #if DEBUG

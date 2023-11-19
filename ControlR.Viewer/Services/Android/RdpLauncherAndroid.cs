@@ -2,6 +2,7 @@
 
 using Android.App;
 using Android.Content;
+using ControlR.Viewer.Platforms.Android;
 using ControlR.Viewer.Services.Interfaces;
 using MudBlazor;
 
@@ -13,12 +14,12 @@ internal class RdpLauncherAndroid() : IRdpLauncher
     {
         await Task.Yield();
 
-        if (Platform.CurrentActivity?.PackageManager is null)
+        if (MainActivity.Current.PackageManager is null)
         {
-            return Result.Fail("Current activity is unavailable.");
+            return Result.Fail("PackageManager is unavailable.");
         }
 
-        var launchIntent = Platform.CurrentActivity.PackageManager.GetLaunchIntentForPackage("com.microsoft.rdc.androidx");
+        var launchIntent = MainActivity.Current.PackageManager.GetLaunchIntentForPackage("com.microsoft.rdc.androidx");
         if (launchIntent is null)
         {
             return Result.Fail("Microsoft RDP app not found.");
