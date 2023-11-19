@@ -11,4 +11,5 @@ internal enum GenericMessageKind
     HubConnectionStateChanged,
     DeviceContentWindowsChanged,
     AppUpdateAvailable,
+    LocalProxyStopRequested,
 }

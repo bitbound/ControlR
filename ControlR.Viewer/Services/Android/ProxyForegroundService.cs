@@ -8,6 +8,7 @@ using Android.OS;
 using AndroidX.Core.App;
 using AndroidX.Core.Graphics.Drawable;
 using Bitbound.SimpleMessenger;
+using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Platforms.Android;
 using System;
@@ -32,6 +33,11 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
     public const string LocalProxyServiceChannelName = "ControlR Proxy";
     public const int LocalProxyServiceNotificationId = 443809193;
 
+    public ProxyForegroundService()
+    {
+        WeakReferenceMessenger.Default.RegisterGenericMessage(this, HandleGenericMessage);
+    }
+
     public override IBinder? OnBind(Intent? intent)
     {
         return null;
@@ -42,6 +48,7 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         if (intent?.Action == ActionStartProxy)
         {
             StartProxy();
+            WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(true));
         }
 
         if (intent?.Action == ActionStopProxy)
@@ -53,12 +60,21 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
     }
 
     [SupportedOSPlatform("android26.0")]
-    private static NotificationCompat.Action? BuildStopAction()
+    private NotificationCompat.Action? BuildStopAction()
     {
         var intent = new Intent(MainActivity.Current, typeof(ProxyForegroundService));
         intent.SetAction(ActionStopProxy);
         var stopIntent = PendingIntent.GetForegroundService(MainActivity.Current, 0, intent, 0);
         return new NotificationCompat.Action(0, "Stop", stopIntent);
+    }
+
+    private void HandleGenericMessage(GenericMessageKind kind)
+    {
+        if (kind == GenericMessageKind.LocalProxyStopRequested)
+        {
+            StopSelf();
+            WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(false));
+        }
     }
 
     private void StartProxy()
@@ -102,7 +118,6 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         var notification = new NotificationCompat.Builder(context, LocalProxyServiceChannelName)
             .SetContentTitle("ControlR Proxy")
             .SetContentText("ControlR local proxy is running.")
-            //.SetSmallIcon(Resource.Drawable.notification_icon_background)
             .SetSmallIcon(appIcon)
             //.SetContentIntent(BuildIntentToShowMainActivity())
             .SetOngoing(true)
@@ -110,8 +125,6 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
             .Build();
 
         StartForeground(LocalProxyServiceNotificationId, notification);
-
-        WeakReferenceMessenger.Default.Send(new LocalProxyStatusChanged(true));
     }
 }
 

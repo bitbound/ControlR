@@ -8,9 +8,9 @@ namespace ControlR.Viewer.Services;
 
 public interface ILocalProxyViewer
 {
-    Task<Result> ListenForLocalConnections(Guid sessionId);
+    Task<Result> ListenForLocalConnections(Guid sessionId, int portNumber);
 
-    Task<Result> ProxyToLocalService(Guid sessionId);
+    Task<Result> ProxyToLocalService(Guid sessionId, int portNumber);
 }
 
 internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
@@ -35,14 +35,14 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
         messenger.Register<LocalProxyStatusChanged>(this, HandleLocalProxyStatusChangedMessage);
     }
 
-    public async Task<Result> ListenForLocalConnections(Guid sessionId)
+    public async Task<Result> ListenForLocalConnections(Guid sessionId, int portNumber)
     {
-        return await StartProxySession(sessionId, true);
+        return await StartProxySession(sessionId, portNumber, true);
     }
 
-    public async Task<Result> ProxyToLocalService(Guid sessionId)
+    public async Task<Result> ProxyToLocalService(Guid sessionId, int portNumber)
     {
-        return await StartProxySession(sessionId, false);
+        return await StartProxySession(sessionId, portNumber, false);
     }
 
     private void CancelAndDisposeSources()
@@ -79,7 +79,7 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
         return Task.CompletedTask;
     }
 
-    private async Task<Result> StartProxySession(Guid sessionId, bool isListener)
+    private async Task<Result> StartProxySession(Guid sessionId, int portNumber, bool isListener)
     {
         if (!await _proxyLock.WaitAsync(0))
         {
@@ -96,13 +96,13 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
 
             await ListenForLocalConnections(
                 sessionId,
-                _settings.VncPort,
+                portNumber,
                 websocketEndpoint,
                 linkedToken) :
 
             await ProxyToLocalService(
                 sessionId,
-                _settings.VncPort,
+                portNumber,
                 websocketEndpoint,
                 linkedToken);
 

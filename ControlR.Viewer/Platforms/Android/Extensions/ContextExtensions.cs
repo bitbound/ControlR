@@ -1,6 +1,10 @@
-﻿using Android.App;
+﻿using Android;
+using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.OS;
+using AndroidX.Core.App;
+using AndroidX.Core.Content;
 
 namespace ControlR.Viewer.Platforms.Android.Extensions;
 
@@ -31,5 +35,34 @@ public static class ContextExtensions
         {
             context.StartService(intent);
         }
+    }
+
+    public static async Task<bool> VerifyNotificationPermissions(this Context context)
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(33))
+        {
+            return true;
+        }
+
+        if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
+        {
+            ActivityCompat.RequestPermissions(MainActivity.Current, [Manifest.Permission.PostNotifications], 0);
+
+            if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
+            {
+                await MainPage.Current.DisplayAlert(
+                    "Permission Required",
+                    "ControlR requires notification permissions in order to keep the proxy service " +
+                    "running in the background. Press OK to open settings and enable notifications.",
+                    "OK");
+
+                context.StartActivity(new Intent(
+                     global::Android.Provider.Settings.ActionAppNotificationSettings,
+                     global::Android.Net.Uri.Parse("package:" + global::Android.App.Application.Context.PackageName)));
+
+                return false;
+            }
+        }
+        return true;
     }
 }

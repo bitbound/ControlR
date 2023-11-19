@@ -112,6 +112,11 @@ public partial class Dashboard
         _loading = false;
     }
 
+    private void BroadcastProxyStopRequest(object? sender, EventArgs e)
+    {
+        Messenger.SendGenericMessage(GenericMessageKind.LocalProxyStopRequested);
+    }
+
     private async Task HandleGenericMessage(GenericMessageKind kind)
     {
         switch (kind)
@@ -247,23 +252,17 @@ public partial class Dashboard
             }
 
 #if ANDROID
-            if (OperatingSystem.IsAndroidVersionAtLeast(33))
+            var hasNotifyPermission = await MainActivity.Current.VerifyNotificationPermissions();
+            if (!hasNotifyPermission)
             {
-                if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
-                {
-                    ActivityCompat.RequestPermissions(MainActivity.Current, [Manifest.Permission.PostNotifications], 0);
-                    if (ContextCompat.CheckSelfPermission(MainActivity.Current, Manifest.Permission.PostNotifications) != Permission.Granted)
-                    {
-                        Snackbar.Add("Notification permission required", Severity.Warning);
-                        return;
-                    }
-                }
+                Snackbar.Add("Notification permission required", Severity.Warning);
+                return;
             }
 
             MainActivity.Current.StartForegroundServiceCompat<ProxyForegroundService>(ProxyForegroundService.ActionStartProxy);
 #endif
 
-            var startResult = await LocalProxy.ListenForLocalConnections(sessionId);
+            var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
 
             if (!startResult.IsSuccess)
             {
@@ -276,6 +275,11 @@ public partial class Dashboard
             {
                 Snackbar.Add(launchResult.Reason, Severity.Error);
             }
+
+#if ANDROID
+            MainPage.Current.Window.Activated -= BroadcastProxyStopRequest;
+            MainPage.Current.Window.Activated += BroadcastProxyStopRequest;
+#endif
         }
         catch (Exception ex)
         {
@@ -294,7 +298,7 @@ public partial class Dashboard
             {
                 builder.OpenComponent<Terminal>(0);
                 builder.AddComponentParameter(1, nameof(Terminal.Device), device);
-                builder.AddComponentParameter(1, nameof(Terminal.Id), terminalId);
+                builder.AddComponentParameter(2, nameof(Terminal.Id), terminalId);
                 builder.CloseComponent();
             }
             var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
