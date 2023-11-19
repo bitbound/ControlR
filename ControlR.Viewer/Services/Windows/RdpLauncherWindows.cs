@@ -7,7 +7,6 @@ namespace ControlR.Viewer.Services.Windows;
 
 internal class RdpLauncherWindows(
     IProcessManager _processes,
-    ILauncher _launcher,
     IFileSystem _fileSystem,
     ILogger<RdpLauncherWindows> _logger) : IRdpLauncher
 {
@@ -19,7 +18,6 @@ internal class RdpLauncherWindows(
             var rdpContent = $"full address:s:127.0.0.1:{localPort}\r\nauthentication level:i:0";
             await _fileSystem.WriteAllTextAsync(filePath, rdpContent);
             var process = _processes.Start("mstsc.exe", $"\"{filePath}\"", true);
-            //var process = _processes.Start("mstsc.exe", $"/v:127.0.0.1:{localPort}", true);
             if (process?.HasExited == false)
             {
                 return Result.Ok();

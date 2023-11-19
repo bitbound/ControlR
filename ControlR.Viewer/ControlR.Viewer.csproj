@@ -85,7 +85,25 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AndroidResource Remove="Permissions\**" />
+	  <Compile Remove="Permissions\**" />
+	  <Content Remove="Permissions\**" />
+	  <EmbeddedResource Remove="Permissions\**" />
+	  <MauiXaml Remove="Permissions\**" />
+	  <None Remove="Permissions\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Remove="Resources\Raw\appicon.png" />
+	  <None Remove="VncResources\LICENSE.txt" />
+	  <None Remove="VncResources\TightVNC Web Site.url" />
+	  <None Remove="VncResources\tvnviewer.exe" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="VncResources\LICENSE.txt" />
+	  <EmbeddedResource Include="VncResources\TightVNC Web Site.url" />
+	  <EmbeddedResource Include="VncResources\tvnviewer.exe" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -102,10 +120,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
 		<ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Permissions\" />
 	</ItemGroup>
 
 </Project>

@@ -373,4 +373,4 @@ ControlR.Server/wwwroot/novnc/
 /ControlR.Devices.Common/Resources/ControlR.WinVncPassword.exp
 /ControlR.Devices.Common/Resources/ControlR.WinVncPassword.lib
 /ControlR.Agent/Resources/TightVnc/*
-/ControlR.Viewer/VncResources/LICENSE.txt
+/ControlR.Viewer/VncResources/*

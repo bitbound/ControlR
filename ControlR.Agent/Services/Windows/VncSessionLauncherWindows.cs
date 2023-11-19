@@ -112,12 +112,12 @@ internal class VncSessionLauncherWindows(
         {
             _fileSystem.CreateDirectory(_tvnResourcesDir);
 
-            var assembly = this.GetType().Assembly;
+            var assembly = typeof(VncSessionLauncherWindows).Assembly;
             var assemblyRoot = assembly.GetName().Name;
             var resourcesNamespace = $"{assemblyRoot}.Resources.TightVnc.";
             var resourceNames = assembly
                 .GetManifestResourceNames()
-                .Where(x => x.Contains(".Resources.TightVnc."));
+                .Where(x => x.Contains(resourcesNamespace));
 
             foreach (var resource in resourceNames)
             {

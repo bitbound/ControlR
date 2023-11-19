@@ -16,7 +16,9 @@ param (
 
     [switch]$BuildAgent,
 
-    [switch]$BuildViewer
+    [switch]$BuildViewer,
+
+    [switch]$BuildWebsite
 )
 
 $InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
@@ -43,6 +45,16 @@ if (!(Test-Path $TightVncResourcesDir)) {
     return
 }
 
+if (!(Test-Path "$TightVncResourcesDir\Server")) {
+    Write-Error "Expected a folder named 'Server' in the TightVNC resources directory."
+    return
+}
+
+if (!(Test-Path "$TightVncResourcesDir\Viewer")) {
+    Write-Error "Expected a folder named 'Server' in the TightVNC resources directory."
+    return
+}
+
 Set-Location $Root
 
 if (!(Test-Path -Path "$Root\ControlR.sln")) {
@@ -51,7 +63,9 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 }
 
 [System.IO.Directory]::CreateDirectory("$Root\ControlR.Agent\Resources\TightVnc")
-Get-ChildItem -Path $TightVncResourcesDir | Copy-Item -Destination "$Root\ControlR.Agent\Resources\TightVnc" -Force
+[System.IO.Directory]::CreateDirectory("$Root\ControlR.Viewer\VncResources")
+Get-ChildItem -Path "$TightVncResourcesDir\Server" | Copy-Item -Destination "$Root\ControlR.Agent\Resources\TightVnc" -Force
+Get-ChildItem -Path "$TightVncResourcesDir\Viewer" | Copy-Item -Destination "$Root\ControlR.Viewer\VncResources" -Force
 
 if ($BuildAgent){
     &"$MSBuildPath" "$Root\ControlR.WinVncPassword" -p:Configuration=Release -p:Platform=Win32
@@ -90,12 +104,14 @@ if ($BuildViewer) {
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
 
-[System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
-Get-ChildItem -Path "$Root\ControlR.Server\wwwroot\downloads\" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse
 
-Push-Location "$Root\ControlR.Website"
-npm install
-npm run build
-Pop-Location
+if ($BuildWebsite) {
+    [System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
+    Get-ChildItem -Path "$Root\ControlR.Server\wwwroot\downloads\" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse
+    Push-Location "$Root\ControlR.Website"
+    npm install
+    npm run build
+    Pop-Location
+}
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output "$Root\ControlR.Server\bin\publish" --self-contained true "$Root\ControlR.Server\"

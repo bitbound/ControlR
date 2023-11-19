@@ -91,6 +91,7 @@ public static class MauiProgram
 
 #if WINDOWS
         builder.Services.AddSingleton<IRdpLauncher, RdpLauncherWindows>();
+        builder.Services.AddSingleton<ITightVncLauncherWindows, TightVncLauncherWindows>();
 #elif ANDROID
         builder.Services.AddSingleton<IRdpLauncher, RdpLauncherAndroid>();
 #endif

@@ -16,7 +16,6 @@ public interface ILocalProxyViewer
 internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
 {
     private readonly IAppState _appState;
-    private readonly SemaphoreSlim _proxyLock = new(1, 1);
     private readonly ISettings _settings;
     private CancellationTokenSource _linkedCancellationSource = new();
     private CancellationTokenSource _proxyCancellationSource = new();
@@ -61,7 +60,7 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
         catch { }
     }
 
-    private CancellationToken GetNewProxyCancellationToken()
+    private CancellationToken GetNewListenerCancellationToken()
     {
         CancelAndDisposeSources();
 
@@ -81,12 +80,7 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
 
     private async Task<Result> StartProxySession(Guid sessionId, int portNumber, bool isListener)
     {
-        if (!await _proxyLock.WaitAsync(0))
-        {
-            return Result.Fail("Proxy session already running.");
-        }
-
-        var linkedToken = GetNewProxyCancellationToken();
+        var listenerToken = GetNewListenerCancellationToken();
 
         var serverOrigin = _settings.ServerUri.TrimEnd('/');
         var websocketEndpoint = new Uri($"{serverOrigin.Replace("http", "ws")}/viewer-proxy/{sessionId}");
@@ -98,26 +92,20 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
                 sessionId,
                 portNumber,
                 websocketEndpoint,
-                linkedToken) :
+                listenerToken) :
 
             await ProxyToLocalService(
                 sessionId,
                 portNumber,
                 websocketEndpoint,
-                linkedToken);
+                _appState.AppExiting);
 
         if (startResult.IsSuccess)
         {
-            _ = startResult.Value
-                .ContinueWith(_ =>
-                {
-                    _proxyLock.Release();
-                });
             return Result.Ok();
         }
         else
         {
-            _proxyLock.Release();
             return startResult.ToResult();
         }
     }

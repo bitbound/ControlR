@@ -10,6 +10,10 @@ using Android.Content.PM;
 
 #endif
 
+#if WINDOWS
+using ControlR.Viewer.Services.Windows;
+#endif
+
 using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Dtos;
@@ -39,6 +43,11 @@ public partial class Dashboard
     private bool _loading = true;
 
     private string? _searchText;
+
+#if WINDOWS
+    [Inject]
+    public required ITightVncLauncherWindows TightVncLauncher { get; init; }
+#endif
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -310,5 +319,54 @@ public partial class Dashboard
             Logger.LogError(ex, "Error while starting terminal session.");
             Snackbar.Add("An error occurred while starting the terminal", Severity.Error);
         }
+    }
+
+    private async Task StartTightVnc(DeviceDto device)
+    {
+#if WINDOWS
+        try
+        {
+            var sessionId = Guid.NewGuid();
+            var vncPassword = RandomGenerator.GenerateString(8);
+
+            Logger.LogInformation("Creating TightVNC session.");
+            Snackbar.Add("Requesting TightVNC session", Severity.Info);
+
+            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
+
+            if (!vncSessionResult.SessionCreated)
+            {
+                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
+                return;
+            }
+
+            var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
+
+            if (!startResult.IsSuccess)
+            {
+                Snackbar.Add(startResult.Reason, Severity.Error);
+                return;
+            }
+
+            var launchResult = vncSessionResult.AutoRunUsed ?
+                await TightVncLauncher.LaunchTightVnc(Settings.LocalProxyPort, vncPassword) :
+                await TightVncLauncher.LaunchTightVnc(Settings.LocalProxyPort);
+
+            if (!launchResult.IsSuccess)
+            {
+                Logger.LogResult(launchResult);
+                Snackbar.Add(launchResult.Reason, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while starting TightVNC session.");
+            Snackbar.Add("An error occurred while TightVNC session", Severity.Error);
+        }
+#else
+        // This is to prevent compiler warning on Android.
+        await Task.Yield();
+#endif
+
     }
 }

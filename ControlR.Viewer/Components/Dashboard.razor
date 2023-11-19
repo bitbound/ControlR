@@ -51,16 +51,32 @@
                                          OnTouch="@(() => StartNoVnc(context.Item))">
                                 Remote (noVNC)
                             </MudMenuItem>
-                            @if (context.Item.Platform == SystemPlatform.Windows)
+                            @if (OperatingSystem.IsAndroid())
                             {
-                                <MudMenuItem Icon="@(Icons.Material.Filled.DesktopWindows)"
+                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
                                              IconColor="Color.Info"
                                              OnClick="@(() => StartRdp(context.Item))"
                                              OnTouch="@(() => StartRdp(context.Item))">
-                                    Remote (Microsoft RDP)
+                                    Remote (MultiVNC)
                                 </MudMenuItem>
 
                             }
+                            @if (context.Item.Platform == SystemPlatform.Windows)
+                            {
+                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
+                                             IconColor="Color.Info"
+                                             OnClick="@(() => StartTightVnc(context.Item))"
+                                             OnTouch="@(() => StartTightVnc(context.Item))">
+                                    Remote (TightVNC)
+                                </MudMenuItem>
+                            }
+
+                            <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
+                                         IconColor="Color.Info"
+                                         OnClick="@(() => StartRdp(context.Item))"
+                                         OnTouch="@(() => StartRdp(context.Item))">
+                                Remote (Microsoft RDP)
+                            </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
                                          IconColor="Color.Info"
                                          OnClick="@(() => StartTerminal(context.Item))"

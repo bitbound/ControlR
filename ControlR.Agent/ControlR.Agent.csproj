@@ -29,7 +29,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\TightVnc\LICENSE.txt" />
     <EmbeddedResource Include="Resources\TightVnc\screenhooks32.dll" />
-    <EmbeddedResource Include="Resources\TightVnc\TightVNC Web Site.url" />
     <EmbeddedResource Include="Resources\TightVnc\TightVncPassword_x86.exe" />
     <EmbeddedResource Include="Resources\TightVnc\tvnserver.exe" />
   </ItemGroup>
