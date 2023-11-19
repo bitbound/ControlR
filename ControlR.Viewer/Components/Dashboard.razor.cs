@@ -302,7 +302,7 @@ public partial class Dashboard
                 builder.CloseComponent();
             }
             var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
-            WindowStore.AddOrUpdate(contentInstance);
+            WindowStore.Add(contentInstance);
         }
         catch (Exception ex)
         {
