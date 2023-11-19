@@ -71,12 +71,15 @@
                                 </MudMenuItem>
                             }
 
-                            <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                                         IconColor="Color.Info"
-                                         OnClick="@(() => StartRdp(context.Item))"
-                                         OnTouch="@(() => StartRdp(context.Item))">
-                                Remote (Microsoft RDP)
-                            </MudMenuItem>
+                            @if (context.Item.Platform == SystemPlatform.Windows)
+                            {
+                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
+                                             IconColor="Color.Info"
+                                             OnClick="@(() => StartRdp(context.Item))"
+                                             OnTouch="@(() => StartRdp(context.Item))">
+                                    Remote (Microsoft RDP)
+                                </MudMenuItem>
+                            }
                             <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
                                          IconColor="Color.Info"
                                          OnClick="@(() => StartTerminal(context.Item))"

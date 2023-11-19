@@ -10,6 +10,7 @@ using IFileSystemMaui = Microsoft.Maui.Storage.IFileSystem;
 using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
 
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 
 namespace ControlR.Viewer.Services.Windows;
@@ -27,6 +28,7 @@ internal class TightVncLauncherWindows(
 {
     private readonly string _tvnResourcesDir = Path.Combine(_mauiFileSystem.AppDataDirectory, "TightVNC");
     private readonly string _tvnViewerPath = Path.Combine(_mauiFileSystem.AppDataDirectory, "TightVNC", "tvnviewer.exe");
+    private Process? _tvnProcess;
 
     public async Task<Result> LaunchTightVnc(int localPort, string? password = null)
     {
@@ -36,14 +38,16 @@ internal class TightVncLauncherWindows(
             return resourcesResult;
         }
 
+        KillViewerProcesses();
+
         var args = $"-host=127.0.0.1 -port={_settings.LocalProxyPort} -scale=auto";
         if (!string.IsNullOrEmpty(password))
         {
             args += $" -password={password}";
         }
 
-        var process = _processes.Start(_tvnViewerPath, args, true);
-        if (process?.HasExited == false)
+        _tvnProcess = _processes.Start(_tvnViewerPath, args, true);
+        if (_tvnProcess?.HasExited == false)
         {
             return Result.Ok();
         }
@@ -83,6 +87,16 @@ internal class TightVncLauncherWindows(
             var result = Result.Fail(ex, "Failed to extract TightVNC resources.");
             _logger.LogResult(result);
             return result;
+        }
+    }
+
+    private void KillViewerProcesses()
+    {
+        _tvnProcess?.KillAndDispose();
+        var viewerProcs = _processes.GetProcessesByName("tvnviewer");
+        foreach (var proc in viewerProcs)
+        {
+            proc.KillAndDispose();
         }
     }
 }

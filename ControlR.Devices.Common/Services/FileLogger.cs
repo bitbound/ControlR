@@ -1,6 +1,7 @@
 ﻿using ControlR.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace ControlR.Devices.Common.Services;
 
@@ -10,10 +11,11 @@ public class FileLogger(
     Func<string> _logPathFactory,
     TimeSpan _logRetention) : ILogger
 {
+    private static readonly SemaphoreSlim _innerLock = new(1, 1);
+    private static readonly SemaphoreSlim _outerLock = new(2, 2);
     private static readonly ConcurrentStack<string> _scopeStack = new();
-    private static readonly SemaphoreSlim _writeLock = new(1, 1);
+    private static readonly TimeSpan _writeInterval = TimeSpan.FromSeconds(3);
     private static readonly ConcurrentQueue<string> _writeQueue = new();
-
     private DateTimeOffset _lastLogCleanup;
 
     public IDisposable? BeginScope<TState>(TState state)
@@ -43,10 +45,6 @@ public class FileLogger(
             _writeQueue.Enqueue(message);
 
             DrainWriteQueue().AndForget();
-
-            //CheckLogFileExists();
-            //File.AppendAllText(LogPath, message);
-            //CleanupLogs();
         }
         catch (Exception ex)
         {
@@ -92,19 +90,38 @@ public class FileLogger(
 
     private async Task DrainWriteQueue()
     {
-        if (!await _writeLock.WaitAsync(0))
+        if (!await _outerLock.WaitAsync(0))
         {
             return;
         }
 
         try
         {
-            CheckLogFileExists();
-            CleanupLogs();
+            await _innerLock.WaitAsync();
 
-            while (_writeQueue.TryDequeue(out var message))
+            try
             {
-                File.AppendAllText(_logPathFactory(), message);
+                CheckLogFileExists();
+                CleanupLogs();
+
+                await Task.Delay(_writeInterval);
+
+                var outputBuilder = new StringBuilder();
+                while (_writeQueue.TryDequeue(out var message))
+                {
+                    outputBuilder.AppendLine(message);
+                }
+
+                if (outputBuilder.Length == 0)
+                {
+                    return;
+                }
+                
+                File.AppendAllText(_logPathFactory(), outputBuilder.ToString());
+            }
+            finally
+            {
+                _innerLock.Release();
             }
         }
         catch (Exception ex)
@@ -113,7 +130,7 @@ public class FileLogger(
         }
         finally
         {
-            _writeLock.Release();
+            _outerLock.Release();
         }
     }
 
@@ -130,32 +147,32 @@ public class FileLogger(
             ex = ex.InnerException;
         }
 
-        var entry =
+        var entry = new StringBuilder();
+
+        entry.Append(
             $"[{logLevel}]  " +
             $"[v{_componentVersion}]  " +
             $"[Process ID: {Environment.ProcessId}]  " +
             $"[Thread ID: {Environment.CurrentManagedThreadId}]  " +
-            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]  ";
+            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]  ");
 
-        entry += scopeStack.Length != 0 ?
+        entry.Append(scopeStack.Length != 0 ?
                     $"[{categoryName} => {string.Join(" => ", scopeStack)}]  " :
-                    $"[{categoryName}]  ";
+                    $"[{categoryName}]  ");
 
-        entry += $"{state} ";
+        entry.Append($"{state} ");
 
         if (!string.IsNullOrWhiteSpace(exMessage))
         {
-            entry += exMessage;
+            entry.Append(exMessage);
         }
 
         if (exception is not null)
         {
-            entry += $"{Environment.NewLine}{exception.StackTrace}";
+            entry.Append($"{Environment.NewLine}{exception.StackTrace}");
         }
 
-        entry += Environment.NewLine;
-
-        return entry;
+        return entry.ToString();
     }
 
     private class NoopDisposable : IDisposable
