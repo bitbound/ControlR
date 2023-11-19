@@ -50,7 +50,8 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
     return
 }
 
-Get-ChidlItem -Path $TightVncResourcesDir | Copy-Item -Destination "$Root\ControlR.Agent\Resources" -Force
+[System.IO.Directory]::CreateDirectory("$Root\ControlR.Agent\Resources\TightVnc")
+Get-ChildItem -Path $TightVncResourcesDir | Copy-Item -Destination "$Root\ControlR.Agent\Resources\TightVnc" -Force
 
 if ($BuildAgent){
     &"$MSBuildPath" "$Root\ControlR.WinVncPassword" -p:Configuration=Release -p:Platform=Win32
