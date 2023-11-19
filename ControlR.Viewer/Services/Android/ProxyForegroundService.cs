@@ -1,22 +1,15 @@
 ﻿#if ANDROID
 
 using Android.App;
-using Android.Content;
 using Android.Content.PM;
-using Android.Graphics.Drawables;
 using Android.OS;
 using AndroidX.Core.App;
 using AndroidX.Core.Graphics.Drawable;
 using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Extensions;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Platforms.Android;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
 using Intent = Android.Content.Intent;
 
 namespace ControlR.Viewer.Services.Android;

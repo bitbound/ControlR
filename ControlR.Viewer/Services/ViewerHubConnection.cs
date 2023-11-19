@@ -1,4 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
@@ -7,7 +8,6 @@ using ControlR.Shared.Helpers;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;

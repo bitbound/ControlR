@@ -63,8 +63,9 @@ public static class MauiProgram
         builder.Services.AddSingleton(FilePicker.Default);
         builder.Services.AddSingleton(Browser.Default);
         builder.Services.AddSingleton(Clipboard.Default);
-
+        builder.Services.AddSingleton(Launcher.Default);
         builder.Services.AddSingleton(VersionTracking.Default);
+
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
         builder.Services.AddSingleton(WeakReferenceMessenger.Default);

@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Extensions;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
 

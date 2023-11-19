@@ -11,9 +11,9 @@ public interface IRegistryAccessor
     Result<int> GetRdpPort();
 }
 
-[SupportedOSPlatform("windows")]
 internal class RegistryAccessor(ILogger<RegistryAccessor> _logger) : IRegistryAccessor
 {
+    [SupportedOSPlatform("windows")]
     public Result<int> GetRdpPort()
     {
         try

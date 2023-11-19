@@ -1,7 +1,8 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Messages;
 using ControlR.Viewer.Models.Messages;
 
-namespace ControlR.Viewer.Extensions;
+namespace ControlR.Devices.Common.Extensions;
 
 internal static class IMessengerExtensions
 {

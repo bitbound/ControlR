@@ -15,11 +15,11 @@ using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
 
 using Bitbound.SimpleMessenger;
 using ControlR.Shared.Services.Http;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
 using ControlR.Shared.Helpers;
 using System.Runtime.Versioning;
+using ControlR.Devices.Common.Extensions;
 
 namespace ControlR.Viewer.Services;
 
@@ -213,7 +213,9 @@ internal class UpdateManager(
 
         await _processManager.StartAndWaitForExit(
               "powershell.exe",
-              $"-Command \"& {{Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion}}\"",
+              $"-Command \"& {{" +
+              $"Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion; " +
+              $"Start-Process -FilePath explorer.exe -ArgumentList shell:appsFolder\\8956DD24-5084-4303-BE59-0E1119CDB38C_44e6yepvw4x8a!App;}}\"",
               true,
               TimeSpan.FromMinutes(1));
 

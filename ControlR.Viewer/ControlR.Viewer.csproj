@@ -24,7 +24,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2023.11.19.37</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2023.11.19.618</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 

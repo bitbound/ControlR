@@ -27,7 +27,7 @@ internal class LocalProxyViewer : TcpWebsocketProxyBase, ILocalProxyViewer
         IAppState appState,
         IMessenger messenger,
         ILogger<TcpWebsocketProxyBase> logger)
-        : base(memoryProvider, logger)
+        : base(memoryProvider, messenger, logger)
     {
         _settings = settings;
         _appState = appState;

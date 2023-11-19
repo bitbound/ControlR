@@ -1,11 +1,35 @@
-﻿using ControlR.Viewer.Services.Interfaces;
+﻿using ControlR.Devices.Common.Services;
+using ControlR.Viewer.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
 
 namespace ControlR.Viewer.Services.Windows;
 
-internal class RdpLauncherWindows : IRdpLauncher
+internal class RdpLauncherWindows(
+    IProcessManager _processes,
+    ILauncher _launcher,
+    IFileSystem _fileSystem,
+    ILogger<RdpLauncherWindows> _logger) : IRdpLauncher
 {
-    public Task<Result> LaunchRdp(int localPort)
+    public async Task<Result> LaunchRdp(int localPort)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var filePath = Path.Combine(Path.GetTempPath(), "ControlR.rdp");
+            var rdpContent = $"full address:s:127.0.0.1:{localPort}\r\nauthentication level:i:0";
+            await _fileSystem.WriteAllTextAsync(filePath, rdpContent);
+            var process = _processes.Start("mstsc.exe", $"\"{filePath}\"", true);
+            //var process = _processes.Start("mstsc.exe", $"/v:127.0.0.1:{localPort}", true);
+            if (process?.HasExited == false)
+            {
+                return Result.Ok();
+            }
+            return Result.Fail("RDP process failed to start.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while launching RDP app.");
+            return Result.Fail("Failed to start RDP.");
+        }
     }
 }

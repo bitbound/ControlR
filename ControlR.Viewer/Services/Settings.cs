@@ -1,7 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Shared;
 using ControlR.Shared.Models;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;

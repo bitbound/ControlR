@@ -56,9 +56,18 @@ public static class ContextExtensions
                     "running in the background. Press OK to open settings and enable notifications.",
                     "OK");
 
-                context.StartActivity(new Intent(
-                     global::Android.Provider.Settings.ActionAppNotificationSettings,
-                     global::Android.Net.Uri.Parse("package:" + global::Android.App.Application.Context.PackageName)));
+                var intent = new Intent(global::Android.Provider.Settings.ActionAppNotificationSettings);
+                intent.AddFlags(ActivityFlags.NewTask);
+                //for Android 5-7
+                intent.PutExtra("app_package", context.PackageName);
+                if (context.ApplicationInfo is not null)
+                {
+                    intent.PutExtra("app_uid", context.ApplicationInfo.Uid);
+                }
+
+                // for Android 8 and above
+                intent.PutExtra("android.provider.extra.APP_PACKAGE", context.PackageName);
+                context.StartActivity(intent);
 
                 return false;
             }

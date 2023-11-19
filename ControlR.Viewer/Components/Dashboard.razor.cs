@@ -11,11 +11,11 @@ using Android.Content.PM;
 #endif
 
 using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Viewer.Components.Devices;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
@@ -274,6 +274,7 @@ public partial class Dashboard
             if (!launchResult.IsSuccess)
             {
                 Snackbar.Add(launchResult.Reason, Severity.Error);
+                Messenger.SendGenericMessage(GenericMessageKind.LocalProxyStopRequested);
             }
 
 #if ANDROID

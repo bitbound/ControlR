@@ -1,6 +1,9 @@
-﻿using ControlR.Shared.Helpers;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Extensions;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Buffers;
+using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
@@ -10,6 +13,7 @@ namespace ControlR.Devices.Common.Services.Base;
 
 public abstract class TcpWebsocketProxyBase(
     IMemoryProvider _memoryProvider,
+    IMessenger _messenger,
     ILogger<TcpWebsocketProxyBase> logger)
 {
     protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
@@ -48,6 +52,7 @@ public abstract class TcpWebsocketProxyBase(
                 finally
                 {
                     tcpListener.Dispose();
+                    _messenger.SendGenericMessage(GenericMessageKind.LocalProxyStopRequested);
                 }
             }, cancellationToken);
 

@@ -1,4 +1,5 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services.Base;
 using ControlR.Shared.Extensions;
@@ -23,7 +24,8 @@ internal class LocalProxyAgent(
     ISettingsProvider _settings,
     IMemoryProvider _memoryProvider,
     IVncSessionLauncher _vncSessionLauncher,
-    ILogger<LocalProxyAgent> logger) : TcpWebsocketProxyBase(_memoryProvider, logger), ILocalProxyAgent
+    IMessenger messenger,
+    ILogger<LocalProxyAgent> logger) : TcpWebsocketProxyBase(_memoryProvider, messenger, logger), ILocalProxyAgent
 {
     private volatile int _sessionCount;
 

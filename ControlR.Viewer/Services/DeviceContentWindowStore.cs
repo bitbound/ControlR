@@ -1,6 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Collections;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 

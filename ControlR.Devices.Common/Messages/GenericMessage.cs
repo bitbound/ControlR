@@ -1,4 +1,4 @@
-﻿namespace ControlR.Viewer.Models.Messages;
+﻿namespace ControlR.Devices.Common.Messages;
 
 public class GenericMessage<T>(T value)
     where T : notnull

@@ -69,6 +69,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<ISystemTime, SystemTime>();
             services.AddSingleton<IMemoryProvider, MemoryProvider>();
+            services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
 
             if (startupMode == StartupMode.Run)
             {
@@ -91,7 +92,6 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
-                services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
             }
             else if (OperatingSystem.IsLinux())
             {
