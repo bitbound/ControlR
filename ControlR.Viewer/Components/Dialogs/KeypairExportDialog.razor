@@ -13,18 +13,18 @@
                     <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
                         Export Keypair
                     </MudText>
+                </MudCardHeader>
+                <MudCardContent>
                     <MudText>
                         Export your public/private keypair to a file, which can
                         be imported on other devices.
                     </MudText>
                     <MudText>
                         Your private key is encrypted within the file using the
-                        same passphrase that you used when you created it.  If 
+                        same passphrase that you used when you created it.  If
                         you store this file long-term, it's recommended that you
                         put it in a secure location, such as a password vault.
                     </MudText>
-                </MudCardHeader>
-                <MudCardContent>
                     <MudTextField T="string"
                                   @bind-Value="KeyExportPath"
                                   Label="Export Location"
@@ -49,9 +49,6 @@
             </MudCard>
         </MudForm>
     </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
-    </DialogActions>
 </MudDialog>
 
  @code {

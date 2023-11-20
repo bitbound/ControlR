@@ -42,13 +42,11 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         if (intent?.Action == ActionStartProxy)
         {
             StartProxy();
-            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(true));
         }
 
         if (intent?.Action == ActionStopProxy)
         {
             StopSelf();
-            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(false));
         }
         return StartCommandResult.Sticky;
     }
@@ -67,7 +65,6 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
         if (kind == GenericMessageKind.LocalProxyListenerStopRequested)
         {
             StopSelf();
-            WeakReferenceMessenger.Default.Send(new ProxyListenerStatusChangedMessage(false));
         }
     }
 

@@ -1,10 +1,8 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Buffers;
-using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
@@ -29,8 +27,6 @@ public abstract class TcpWebsocketProxyBase(
        Uri websocketUri,
        CancellationToken cancellationToken)
     {
-        _messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
-
         try
         {
             _logger.LogInformation("Starting proxy for session ID {SessionID}, listening port {ListeningPort}.",
@@ -54,19 +50,6 @@ public abstract class TcpWebsocketProxyBase(
                     await ws.ConnectAsync(websocketUri, linkedTokenSource.Token);
                     var client = await tcpListener.AcceptTcpClientAsync(linkedTokenSource.Token);
 
-                    using var regToken = _messenger.RegisterGenericMessage(client, (s, m) =>
-                    {
-                        if (m == GenericMessageKind.LocalProxyListenerStopRequested)
-                        {
-                            try
-                            {
-                                linkedTokenSource.Cancel();
-                                linkedTokenSource.Dispose();
-                            }
-                            catch { }
-                        }
-                    });
-
                     await ProxyConnections(sessionId, ws, client, linkedTokenSource.Token);
                 }
                 catch (OperationCanceledException)
@@ -76,10 +59,6 @@ public abstract class TcpWebsocketProxyBase(
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error while listening for TCP client to proxy.");
-                }
-                finally
-                {
-                    _messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
                 }
             }, cancellationToken);
 
