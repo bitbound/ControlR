@@ -98,8 +98,6 @@ else
                 _formIsValid = true;
                 await LoadKeys(false);
             }
-
-            _isInitialized = true;
         }
         catch (Exception ex)
         {
@@ -107,7 +105,10 @@ else
             Snackbar.Add("Failed to retrieve current settings", Severity.Error);
             await Settings.Clear();
         }
-
+        finally
+        {
+            _isInitialized = true;
+        }
     }
 
     private async Task PassphraseInputKeyDown(KeyboardEventArgs args)

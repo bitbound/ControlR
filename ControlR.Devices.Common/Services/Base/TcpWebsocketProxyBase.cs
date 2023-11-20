@@ -1,11 +1,12 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
-using ControlR.Devices.Common.Messages;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Buffers;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
@@ -18,46 +19,55 @@ public abstract class TcpWebsocketProxyBase(
     ILogger<TcpWebsocketProxyBase> logger)
 {
     protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
+    private readonly ConcurrentDictionary<int, TcpListener> _listeners = [];
     private readonly IMemoryProvider _memoryProvider = memoryProvider;
     private readonly IMessenger _messenger = messenger;
-    private CancellationTokenSource _listenerCancellationSource = new();
 
-    protected async Task<Result<Task>> ListenForLocalConnections(
+    protected Task<Result<Task>> ListenForLocalConnections(
        Guid sessionId,
        int listeningPort,
        Uri websocketUri,
        CancellationToken cancellationToken)
     {
-        var linkedToken = GetNewListenerCancellationToken(cancellationToken);
-
-
-        var ws = new ClientWebSocket();
-        TcpListener? tcpListener = null;
+        _messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
 
         try
         {
-            _logger.LogInformation("Starting proxy for session ID {SessionID}.  Listening for connections on port {ListeningPort}.",
+            _logger.LogInformation("Starting proxy for session ID {SessionID}, listening port {ListeningPort}.",
                 sessionId,
                 listeningPort);
 
-            tcpListener = new TcpListener(IPAddress.Loopback, listeningPort);
-
-            TryHelper.Retry(
-                () =>
-                {
-                    tcpListener.Start();
-                },
-                4,
-                TimeSpan.FromSeconds(1));
-
-            await ws.ConnectAsync(websocketUri, linkedToken);
+            var tcpListener = _listeners.GetOrAdd(listeningPort, port =>
+            {
+                var newListener = new TcpListener(IPAddress.Loopback, port);
+                newListener.Start();
+                return newListener;
+            });
 
             var listenerTask = Task.Run(async () =>
             {
                 try
                 {
-                    var client = await tcpListener.AcceptTcpClientAsync(linkedToken);
-                    await ProxyConnections(sessionId, ws, client, linkedToken);
+                    var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                    var ws = new ClientWebSocket();
+                    await ws.ConnectAsync(websocketUri, linkedTokenSource.Token);
+                    var client = await tcpListener.AcceptTcpClientAsync(linkedTokenSource.Token);
+
+                    using var regToken = _messenger.RegisterGenericMessage(client, (s, m) =>
+                    {
+                        if (m == GenericMessageKind.LocalProxyListenerStopRequested)
+                        {
+                            try
+                            {
+                                linkedTokenSource.Cancel();
+                                linkedTokenSource.Dispose();
+                            }
+                            catch { }
+                        }
+                    });
+
+                    await ProxyConnections(sessionId, ws, client, linkedTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -69,38 +79,22 @@ public abstract class TcpWebsocketProxyBase(
                 }
                 finally
                 {
-                    DisposeHelper.DisposeAll(tcpListener, ws);
-                    _logger.LogInformation("Disposing TCP listener.");
                     _messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
                 }
-            }, linkedToken);
+            }, cancellationToken);
 
-            return Result.Ok(listenerTask);
+            return Result.Ok(listenerTask).AsTaskResult();
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning("TCP listening task cancelled unexpectedly.");
-            DisposeHelper.DisposeAll(ws, tcpListener);
-            return Result.Fail<Task>("Listening task cancelled unexpectedly.");
+            return Result.Fail<Task>("Listening task cancelled unexpectedly.").AsTaskResult();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while proxying stream.");
-            DisposeHelper.DisposeAll(ws, tcpListener);
-            return Result.Fail<Task>("Error while creating proxy session.");
+            return Result.Fail<Task>("Error while creating proxy session.").AsTaskResult();
         }
-    }
-
-    private CancellationToken GetNewListenerCancellationToken(CancellationToken cancellationToken)
-    {
-        try
-        {
-            _listenerCancellationSource.Cancel();
-            _listenerCancellationSource.Dispose();
-        }
-        catch { }
-        _listenerCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        return _listenerCancellationSource.Token;
     }
 
     protected async Task<Result<Task>> ProxyToLocalService(
@@ -179,7 +173,7 @@ public abstract class TcpWebsocketProxyBase(
                 var bytesReceived = await localConnection.Client.ReceiveAsync(buffer.Value, cancellationToken);
                 if (bytesReceived == 0)
                 {
-                    continue;
+                    break;
                 }
 
                 await serverConnection.SendAsync(

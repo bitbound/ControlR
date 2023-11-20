@@ -6,13 +6,13 @@ namespace ControlR.Devices.Common.Extensions;
 
 internal static class IMessengerExtensions
 {
-    public static void RegisterGenericMessage(
+    public static IDisposable RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
         GenericMessageKind kind,
         Action handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
+        return messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
         {
             if (kind == message.Value)
             {
@@ -23,13 +23,13 @@ internal static class IMessengerExtensions
         });
     }
 
-    public static void RegisterGenericMessage(
+    public static IDisposable RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
         GenericMessageKind kind,
         Func<Task> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
+        return messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
         {
             if (kind == message.Value)
             {
@@ -38,24 +38,24 @@ internal static class IMessengerExtensions
         });
     }
 
-    public static void RegisterGenericMessage(
+    public static IDisposable RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
         Action<object, GenericMessageKind> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
+        return messenger.Register<GenericMessage<GenericMessageKind>>(recipient, (subscriber, message) =>
         {
             handler(subscriber, message.Value);
             return Task.CompletedTask;
         });
     }
 
-    public static void RegisterGenericMessage(
+    public static IDisposable RegisterGenericMessage(
         this IMessenger messenger,
         object recipient,
         Func<object, GenericMessageKind, Task> handler)
     {
-        messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
+        return messenger.Register<GenericMessage<GenericMessageKind>>(recipient, async (subscriber, message) =>
         {
             await handler(subscriber, message.Value);
         });
