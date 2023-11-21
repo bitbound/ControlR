@@ -24,7 +24,7 @@
                     <MudBadge Content="@("!")" Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
                         <MudIconButton Color="Color.Info"
                                        Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
-                                       OnClick="NavigateToAbout" />
+                                       OnClick="InstallUpdate" />
                     </MudBadge>
 
                 </MudTooltip>
@@ -131,8 +131,17 @@
         return Task.CompletedTask;
     }
 
-    private void NavigateToAbout()
+    private async Task InstallUpdate()
     {
-        NavManager.NavigateTo("/about");
+        Snackbar.Add("Downloading and installing update", Severity.Info);
+        var installResult = await UpdateManager.InstallCurrentVersion();
+        if (!installResult.IsSuccess)
+        {
+            Snackbar.Add(installResult.Reason, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("Download successful", Severity.Success);
+        }
     }
 }

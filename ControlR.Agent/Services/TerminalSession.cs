@@ -67,6 +67,13 @@ internal class TerminalSession(
             await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
             _inputBuilder.Clear();
 
+            if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh)
+            {
+                _inputBuilder.Append(@"echo ""$(whoami)@$(cat /etc/hostname):$PWD$""");
+                await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
+                _inputBuilder.Clear();
+            }
+
             if (!string.IsNullOrWhiteSpace(input))
             {
                 await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
@@ -105,12 +112,6 @@ internal class TerminalSession(
         if (SessionKind == TerminalSessionKind.PowerShell)
         {
             psi.EnvironmentVariables.Add("NO_COLOR", "1");
-        }
-
-        if (SessionKind == TerminalSessionKind.Bash)
-        {
-            psi.Arguments = "--login --rcfile /etc/bash.bashrc";
-            //psi.EnvironmentVariables.Add("PS1", "${debian_chroot:+($debian_chroot)}\\u@\\h:\\w\\$ ");
         }
 
         _shellProcess.StartInfo = psi;

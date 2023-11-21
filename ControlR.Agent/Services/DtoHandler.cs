@@ -38,13 +38,13 @@ internal class DtoHandler(
 
         if (!_keyProvider.Verify(dto))
         {
-            _logger.LogCritical("Key verification failed for public key: {key}", dto.PublicKey);
+            _logger.LogCritical("Key verification failed for public key: {key}", dto.PublicKeyBase64);
             return;
         }
 
         if (!_settings.AuthorizedKeys.Contains(dto.PublicKeyBase64))
         {
-            _logger.LogCritical("Public key does not exist in authorized keys: {key}", dto.PublicKey);
+            _logger.LogCritical("Public key does not exist in authorized keys: {key}", dto.PublicKeyBase64);
             return;
         }
 

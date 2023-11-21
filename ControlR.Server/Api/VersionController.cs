@@ -9,9 +9,31 @@ namespace ControlR.Server.Api;
 public partial class VersionController(
     IFileProvider _phyiscalFileProvider) : ControllerBase
 {
+    [HttpGet("agent")]
+    public async Task<ActionResult<Version>> GetCurrentAgentVersion()
+    {
+        var fileInfo = _phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/AgentVersion.txt");
+
+        if (!fileInfo.Exists || string.IsNullOrWhiteSpace(fileInfo.PhysicalPath))
+        {
+            return NotFound();
+        }
+
+        using var fs = fileInfo.CreateReadStream();
+        using var sr = new StreamReader(fs);
+        var versionString = await sr.ReadToEndAsync();
+
+        if (!Version.TryParse(versionString?.Trim(), out var version))
+        {
+            return NotFound();
+        }
+
+        return Ok(version);
+    }
+
     [HttpGet("viewer")]
     [Authorize]
-    public async Task<ActionResult<Version>> GetViewerCurrentVersion()
+    public async Task<ActionResult<Version>> GetCurrentViewerVersion()
     {
         var fileInfo = _phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/ViewerVersion.txt");
 

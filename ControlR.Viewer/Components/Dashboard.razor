@@ -86,6 +86,12 @@
                                          OnTouch="@(() => StartTerminal(context.Item))">
                                 Terminal
                             </MudMenuItem>
+                            @*<MudMenuItem Icon="@(Icons.Material.Filled.Settings)"
+                                         IconColor="Color.Info"
+                                         OnClick="@(() => ConfigureDeviceSettings(context.Item))"
+                                         OnTouch="@(() => ConfigureDeviceSettings(context.Item))">
+                                Configure
+                            </MudMenuItem> *@
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
                                          IconColor="Color.Error"
                                          OnClick="@(() => ShutdownDevice(context.Item))"

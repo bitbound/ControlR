@@ -5,7 +5,6 @@ using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -17,8 +16,7 @@ internal class AgentInstallerLinux(
     IFileSystem fileSystem,
     IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
-    IDownloadsApi downloadsApi,
-    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
+    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environment = environmentHelper;
@@ -66,7 +64,6 @@ internal class AgentInstallerLinux(
 
             await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
             var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
-            await WriteEtag(_installDir, appOptions);
 
             var psi = new ProcessStartInfo()
             {

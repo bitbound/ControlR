@@ -5,8 +5,6 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ControlR.Agent.Services;
@@ -17,7 +15,7 @@ internal interface IAgentUpdater : IHostedService
 }
 
 internal class AgentUpdater(
-    IHttpClientFactory _httpFactory,
+    IVersionApi _versionApi,
     IDownloadsApi _downloadsApi,
     IFileSystem _fileSystem,
     IProcessManager _processInvoker,
@@ -43,32 +41,22 @@ internal class AgentUpdater(
         {
             _logger.LogInformation("Beginning version check.");
 
-            var etagPath = Path.Combine(_environmentHelper.StartupDirectory, "etag.txt");
-
-            using var request = new HttpRequestMessage(HttpMethod.Head, _agentDownloadUri);
-
-            if (_fileSystem.FileExists(etagPath))
+            var versionResult = await _versionApi.GetCurrentAgentVersion();
+            if (!versionResult.IsSuccess)
             {
-                var lastEtag = await _fileSystem.ReadAllTextAsync(etagPath);
-                if (!string.IsNullOrWhiteSpace(lastEtag) &&
-                   EntityTagHeaderValue.TryParse(lastEtag.Trim(), out var etag))
-                {
-                    _logger.LogInformation("Found existing etag {etag}.  Adding it to IfNoneMatch header.", etag);
-                    request.Headers.IfNoneMatch.Add(etag);
-                }
-            }
-
-            using var httpClient = _httpFactory.CreateClient();
-            using var response = await httpClient.SendAsync(request, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.NotModified)
-            {
-                _logger.LogInformation("Version is current.");
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(response.Headers.ETag?.Tag))
+            var exeVersion = typeof(AgentUpdater).Assembly.GetName().Version;
+
+            _logger.LogInformation(
+                "Comparing local version {LocalVersion} to latest version {ServerVersion}",
+                exeVersion,
+                versionResult.Value);
+
+            if (versionResult.Value == exeVersion)
             {
-                _logger.LogCritical("New etag is empty.  Update cannot continue.");
+                _logger.LogInformation("Version is current.");
                 return;
             }
 

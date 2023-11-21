@@ -87,11 +87,24 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 
         if (!Verify(rsa, signedDto.Payload, signedDto.Signature))
         {
+            _logger.LogCritical("Key verification failed. DTO type: {DtoType}.  " +
+                "Public key: {PublicKey}.  " +
+                "Signature: {Signature}",
+                signedDto.DtoType,
+                signedDto.PublicKeyBase64,
+                Convert.ToBase64String(signedDto.Signature));
             return false;
         }
 
         if (!Verify(rsa, signedDto.Timestamp, signedDto.TimestampSignature))
         {
+            _logger.LogCritical("Timestamp verification failed. Are clocks set correctly on both ends? " +
+                "DTO type: {DtoType}.  " +
+                "Public key: {PublicKey}.  " +
+                "Timestamp Signature: {Signature}",
+                signedDto.DtoType,
+                signedDto.PublicKeyBase64,
+                Convert.ToBase64String(signedDto.TimestampSignature));
             return false;
         }
 
@@ -130,11 +143,6 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 
     private bool Verify(RSA rsa, byte[] payload, byte[] signature)
     {
-        var result = rsa.VerifyData(payload, signature, _hashAlgName, _signaturePadding);
-        if (!result)
-        {
-            _logger.LogCritical("Verification failed for signature: {Signature}", Convert.ToBase64String(signature));
-        }
-        return result;
+        return rsa.VerifyData(payload, signature, _hashAlgName, _signaturePadding);
     }
 }

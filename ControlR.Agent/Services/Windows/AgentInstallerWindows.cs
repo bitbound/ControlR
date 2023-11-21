@@ -7,7 +7,6 @@ using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -23,9 +22,8 @@ internal class AgentInstallerWindows(
     IProcessManager processes,
     IFileSystem fileSystem,
     IEnvironmentHelper environmentHelper,
-    IDownloadsApi downloadsApi,
     IElevationChecker elevationChecker,
-    ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, downloadsApi, logger), IAgentInstaller
+    ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -90,7 +88,6 @@ internal class AgentInstallerWindows(
             }
 
             var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
-            await WriteEtag(_installDir, appOptions);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
             var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";

@@ -43,11 +43,6 @@ public partial class Dashboard
     private bool _loading = true;
     private string? _searchText;
 
-#if WINDOWS
-    [Inject]
-    public required ITightVncLauncherWindows TightVncLauncher { get; init; }
-#endif
-
     [Inject]
     public required IAppState AppState { get; init; }
 
@@ -87,6 +82,11 @@ public partial class Dashboard
 
     [Inject]
     public required ISnackbar Snackbar { get; init; }
+
+#if WINDOWS
+    [Inject]
+    public required ITightVncLauncherWindows TightVncLauncher { get; init; }
+#endif
 
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
@@ -130,6 +130,19 @@ public partial class Dashboard
     private void BroadcastProxyStopRequest(object? sender, EventArgs e)
     {
         Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
+    }
+
+    private async Task ConfigureDeviceSettings(DeviceDto device)
+    {
+        try
+        {
+            await ViewerHub.GetAgentAppSettings(device.ConnectionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while getting device settings.");
+            Snackbar.Add("Failed to get device settings", Severity.Error);
+        }
     }
 
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)

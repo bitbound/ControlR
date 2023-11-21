@@ -1,5 +1,5 @@
-﻿using ControlR.Agent.Models;
-using ControlR.Shared;
+﻿using ControlR.Shared;
+using ControlR.Shared.Models;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Services;
@@ -13,7 +13,7 @@ internal interface ISettingsProvider
     int VncPort { get; }
 }
 
-internal class SettingsProvider(IOptionsMonitor<AppOptions> _appOptions) : ISettingsProvider
+internal class SettingsProvider(IOptionsMonitor<AgentAppOptions> _appOptions) : ISettingsProvider
 {
     public IReadOnlyList<string> AuthorizedKeys
     {

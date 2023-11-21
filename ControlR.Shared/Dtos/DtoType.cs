@@ -12,4 +12,5 @@ public enum DtoType
     PowerStateChange = 8,
     TerminalInput = 9,
     StartRdpProxy = 10,
+    GetAgentAppSettings = 11,
 }

@@ -9,6 +9,7 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Devices.Common.Services.Linux;
 using ControlR.Devices.Common.Services.Windows;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using ControlR.Shared.Services.Http;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Startup;
 
@@ -55,10 +57,11 @@ internal static class IHostBuilderExtensions
         builder.ConfigureServices((context, services) =>
         {
             services
-                .AddOptions<AppOptions>()
-                .Bind(context.Configuration.GetSection(nameof(AppOptions)));
+                .AddOptions<AgentAppOptions>()
+                .Bind(context.Configuration.GetSection(AgentAppOptions.ConfigurationKey));
 
-            services.AddHttpClient<IDownloadsApi, DownloadsApi>();
+            services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
+            services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
             services.AddSingleton<ISettingsProvider, SettingsProvider>();
             services.AddSingleton<IProcessManager, ProcessManager>();
@@ -119,5 +122,14 @@ internal static class IHostBuilderExtensions
         });
 
         return builder;
+    }
+
+    private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
+    {
+        var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
+        if (Uri.TryCreate(options.CurrentValue.ServerUri, UriKind.Absolute, out var serverUri))
+        {
+            client.BaseAddress = serverUri;
+        }
     }
 }

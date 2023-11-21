@@ -15,7 +15,10 @@ internal class RdpLauncherWindows(
         try
         {
             var filePath = Path.Combine(Path.GetTempPath(), "ControlR.rdp");
-            var rdpContent = $"full address:s:127.0.0.1:{localPort}\r\nauthentication level:i:0";
+            var rdpContent =
+                $"full address:s:127.0.0.1:{localPort}\r\n" +
+                $"authentication level:i:0\r\n" +
+                $"smart sizing:i:1";
             await _fileSystem.WriteAllTextAsync(filePath, rdpContent);
             var process = _processes.Start("mstsc.exe", $"\"{filePath}\"", true);
             if (process?.HasExited == false)

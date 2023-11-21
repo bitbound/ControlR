@@ -68,12 +68,12 @@ Get-ChildItem -Path "$TightVncResourcesDir\Server" | Copy-Item -Destination "$Ro
 Get-ChildItem -Path "$TightVncResourcesDir\Viewer" | Copy-Item -Destination "$Root\ControlR.Viewer\VncResources" -Force
 
 if ($BuildAgent){
-    &"$MSBuildPath" "$Root\ControlR.WinVncPassword" -p:Configuration=Release -p:Platform=Win32
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-
     dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Start-Sleep -Seconds 1
     &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\ControlR.Agent.exe"
+
+    Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
 
 

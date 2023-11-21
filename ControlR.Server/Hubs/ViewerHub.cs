@@ -45,6 +45,11 @@ public class ViewerHub(
         }
     }
 
+    public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
+    {
+        return Result.Fail<AgentAppSettings>("Not yet implemented.");
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try

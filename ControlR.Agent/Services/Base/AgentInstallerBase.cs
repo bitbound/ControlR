@@ -1,9 +1,8 @@
-﻿using ControlR.Agent.Models;
-using ControlR.Devices.Common.Services;
+﻿using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
-using ControlR.Shared.Services.Http;
+using ControlR.Shared.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -11,23 +10,22 @@ namespace ControlR.Agent.Services.Base;
 
 internal abstract class AgentInstallerBase(
     IFileSystem _fileSystem,
-    IDownloadsApi _downloadsApi,
     ILogger<AgentInstallerBase> _logger)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    protected async Task<AppOptions> UpdateAppSettings(string installDir, Uri? serverUri, string? authorizedKey, int? vncPort, bool? autoRunVnc)
+    protected async Task<AgentAppOptions> UpdateAppSettings(string installDir, Uri? serverUri, string? authorizedKey, int? vncPort, bool? autoRunVnc)
     {
         using var _ = _logger.BeginMemberScope();
 
-        var appSettings = new AppSettings();
+        var appSettings = new AgentAppSettings();
 
         var appsettingsPath = Path.Combine(installDir, "appsettings.json");
 
         if (_fileSystem.FileExists(appsettingsPath))
         {
             var content = await _fileSystem.ReadAllTextAsync(appsettingsPath);
-            var deserialized = JsonSerializer.Deserialize<AppSettings>(content);
+            var deserialized = JsonSerializer.Deserialize<AgentAppSettings>(content);
             if (deserialized is not null)
             {
                 appSettings = deserialized;
@@ -82,18 +80,5 @@ internal abstract class AgentInstallerBase(
         await _fileSystem.WriteAllTextAsync(appsettingsPath, JsonSerializer.Serialize(appSettings, _jsonOptions));
 
         return appSettings.AppOptions;
-    }
-
-    protected async Task WriteEtag(string installDir, AppOptions appOptions)
-    {
-        _logger.LogInformation("Retrieving ETag for installed app.");
-        var agentDownloadUri = $"{appOptions.ServerUri}/downloads/{AppConstants.AgentFileName}";
-        var etagResult = await _downloadsApi.GetAgentEtag(agentDownloadUri);
-        if (etagResult.IsSuccess)
-        {
-            var etagPath = Path.Combine(installDir, "etag.txt");
-            _logger.LogInformation("Writing ETag to file at path {path}.", etagPath);
-            await _fileSystem.WriteAllTextAsync(etagPath, etagResult.Value.Trim());
-        }
     }
 }

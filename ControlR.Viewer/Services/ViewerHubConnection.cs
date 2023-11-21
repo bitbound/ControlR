@@ -23,6 +23,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
+    Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
+
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
@@ -72,6 +74,18 @@ internal class ViewerHubConnection(
                 return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>("CreateTerminalSession", agentConnectionId, signedDto);
             },
             () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
+    }
+
+    public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var request = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentAppSettings, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
+                return await Connection.InvokeAsync<Result<AgentAppSettings>>("GetAgentAppSettings", agentConnectionId, signedDto);
+            },
+            () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
     }
 
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
