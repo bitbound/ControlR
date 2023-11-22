@@ -15,7 +15,6 @@
     <None Remove="Resources\TightVnc\LICENSE.txt" />
     <None Remove="Resources\TightVnc\screenhooks32.dll" />
     <None Remove="Resources\TightVnc\TightVNC Web Site.url" />
-    <None Remove="Resources\TightVnc\TightVncPassword_x86.exe" />
     <None Remove="Resources\TightVnc\tvnserver.exe" />
   </ItemGroup>
 
@@ -29,7 +28,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\TightVnc\LICENSE.txt" />
     <EmbeddedResource Include="Resources\TightVnc\screenhooks32.dll" />
-    <EmbeddedResource Include="Resources\TightVnc\TightVncPassword_x86.exe" />
     <EmbeddedResource Include="Resources\TightVnc\tvnserver.exe" />
   </ItemGroup>
 

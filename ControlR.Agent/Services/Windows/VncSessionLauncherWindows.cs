@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
+using ControlR.Agent.Utilities;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared.Extensions;
@@ -27,7 +28,6 @@ internal class VncSessionLauncherWindows(
 
     private readonly string _tvnResourcesDir = Path.Combine(_environment.StartupDirectory, "TightVNC");
     private readonly string _tvnServerPath = Path.Combine(_environment.StartupDirectory, "TightVNC", "tvnserver.exe");
-    private readonly string _vncPasswordPath = Path.Combine(_environment.StartupDirectory, "TightVNC", "TightVncPassword_x86.exe");
 
     public async Task CleanupSessions()
     {
@@ -148,7 +148,11 @@ internal class VncSessionLauncherWindows(
             .GetServices()
             .FirstOrDefault(x => x.ServiceName == "tvnserver");
 
-        if (service?.Status != ServiceControllerStatus.Running)
+        if (service?.Status == ServiceControllerStatus.Running)
+        {
+            await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-controlservice -reload", true, TimeSpan.FromSeconds(5));
+        }
+        else
         {
             await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-reinstall -silent", true, TimeSpan.FromSeconds(5));
             await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-start -silent", true, TimeSpan.FromSeconds(5));
@@ -191,16 +195,9 @@ internal class VncSessionLauncherWindows(
         return Result.Ok(session);
     }
 
-    private async Task<Result> SetRegKeys(string password)
+    private Task<Result> SetRegKeys(string password)
     {
-        var outputResult = await _processInvoker.GetProcessOutput(_vncPasswordPath, $"{password}", 5_000);
-
-        if (!outputResult.IsSuccess)
-        {
-            return Result.Fail("Failed to encrypt password.");
-        }
-
-        var hexPassword = outputResult.Value.Trim().Split().Last();
+        var hexPassword = VncDesEncryptor.Encrypt(password);
         var encryptedPassword = Convert.FromHexString(hexPassword);
 
         var hive = _elevationChecker.IsElevated() ?
@@ -212,9 +209,10 @@ internal class VncSessionLauncherWindows(
         serverKey.SetValue("AllowLoopback", 1);
         serverKey.SetValue("LoopbackOnly", 1);
         serverKey.SetValue("UseVncAuthentication", 1);
+        serverKey.SetValue("AlwaysShared", 1);
         serverKey.SetValue("RemoveWallpaper", 0);
         serverKey.SetValue("Password", encryptedPassword, RegistryValueKind.Binary);
-        return Result.Ok();
+        return Result.Ok().AsTaskResult();
     }
 
     private void StopProcesses()
