@@ -7,7 +7,7 @@ namespace ControlR.Shared.Interfaces.HubClients;
 public interface IAgentHubClient : IHubClient
 {
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto);
-
+    Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto);
     Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto sessionRequest);
 
     Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto);

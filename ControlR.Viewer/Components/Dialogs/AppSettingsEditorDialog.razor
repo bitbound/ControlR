@@ -1,0 +1,117 @@
+﻿<div>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h5" Color="Color.Primary">
+                Agent App Settings
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
+                <MudCard>
+                    <MudCardContent>
+                        <MudTextField T="string"
+                                      @bind-Value="_appSettingsJson"
+                                      @bind-Text="_appSettingsJson"
+                                      Label="Agent Appsettings File"
+                                      Lines="15"
+                                      HelperText="Edit the appsettings.json file on the agent."
+                                      InputType="InputType.Text"
+                                      Required="true"
+                                      ErrorText="Invalid JSON."
+                                      Class="no-wrap"
+                                      UserAttributes="_editorAttributes"
+                                      Validation="@((string val) => ValidateJson(val))" />
+
+                    </MudCardContent>
+                    <MudCardActions Class="justify-end">
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Class="me-3"
+                                   OnClick="Cancel">
+                            Cancel
+                        </MudButton>
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="!_formIsValid"
+                                   OnClick="Save">
+                            Save
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudForm>
+        </DialogContent>
+    </MudDialog>
+
+</div>
+@code {
+    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+    private readonly Dictionary<string, object> _editorAttributes = new()
+    {
+      ["spellcheck"] = "false"
+    };
+    private bool _formIsValid;
+    private MudForm? _form;
+
+    private string _appSettingsJson = string.Empty;
+    private AgentAppSettings? _newAppSettings;
+
+    [Parameter]
+    public required AgentAppSettings AppSettings { get; set; }
+
+    [CascadingParameter]
+    public required MudDialogInstance DialogInstance { get; init; }
+
+    [Inject]
+    public required ILogger<AppSettingsEditorDialog> Logger { get; init; }
+    [Inject]
+    public required ISnackbar Snackbar { get; init; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        try
+        {
+            _appSettingsJson = JsonSerializer.Serialize(AppSettings, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while loading agent's appsettings in editor dialog.");
+            Snackbar.Add("Failed to load settings", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        DialogInstance.Close(DialogResult.Cancel());
+    }
+
+    private void Save()
+    {
+        try
+        {
+            _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
+            DialogInstance.Close(DialogResult.Ok(_newAppSettings));
+        }
+        catch
+        {
+            Snackbar.Add("Invalid JSON", Severity.Error);
+            return;
+        }
+    }
+
+    private bool ValidateJson(string json)
+    {
+        try
+        {
+            _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

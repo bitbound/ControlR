@@ -47,7 +47,20 @@ public class ViewerHub(
 
     public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
     {
-        return Result.Fail<AgentAppSettings>("Not yet implemented.");
+        try
+        {
+            if (!VerifySignature(signedDto, out _))
+            {
+                return Result.Fail<AgentAppSettings>("Signature verification failed.");
+            }
+
+            return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings(signedDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting agent appsettings.");
+            return Result.Fail<AgentAppSettings>("Failed to get agent app settings.");
+        }
     }
 
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
@@ -77,12 +90,20 @@ public class ViewerHub(
 
     public async Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto)
     {
-        if (!VerifySignature(signedDto, out _))
+        try
         {
+            if (!VerifySignature(signedDto, out _))
+            {
+                return [];
+            }
+
+            return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions(signedDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting Windows sessions from agent.");
             return [];
         }
-
-        return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions(signedDto);
     }
 
     public override async Task OnConnectedAsync()

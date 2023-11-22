@@ -1,0 +1,4 @@
+::deep .no-wrap textarea {
+    white-space: nowrap !important;
+    font-family: monospace;
+}

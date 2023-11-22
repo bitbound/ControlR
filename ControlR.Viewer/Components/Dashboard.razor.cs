@@ -29,6 +29,8 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Text.Json;
+using ControlR.Viewer.Components.Dialogs;
+using ControlR.Shared.Models;
 
 namespace ControlR.Viewer.Components;
 
@@ -136,7 +138,34 @@ public partial class Dashboard
     {
         try
         {
-            await ViewerHub.GetAgentAppSettings(device.ConnectionId);
+            var settingsResult = await ViewerHub.GetAgentAppSettings(device.ConnectionId);
+            if (!settingsResult.IsSuccess)
+            {
+                Snackbar.Add(settingsResult.Reason, Severity.Error);
+                return;
+            }
+
+            var dialogOptions = new DialogOptions()
+            {
+                DisableBackdropClick = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.Medium
+            };
+
+            var parameters = new DialogParameters
+            {
+                { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value }
+            };
+            var dialogRef = await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
+            if (dialogRef is null)
+            {
+                return;
+            }
+            var result = await dialogRef.Result;
+            if (result?.Data is AgentAppSettings appSettings)
+            {
+                // TODO: Send to agent.
+            }
         }
         catch (Exception ex)
         {

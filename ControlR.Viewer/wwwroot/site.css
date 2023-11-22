@@ -17,3 +17,7 @@
 .z9001 {
     z-index: 9001 !important;
 }
+
+.no-wrap {
+    white-space: nowrap;
+}

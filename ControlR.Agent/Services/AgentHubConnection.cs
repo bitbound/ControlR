@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 
@@ -44,6 +45,7 @@ internal class AgentHubConnection(
      IMessenger _messenger,
      ITerminalStore _terminalStore,
      IRegistryAccessor _registryAccessor,
+     IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_scopeFactory, _messenger, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
@@ -62,6 +64,29 @@ internal class AgentHubConnection(
         {
             _logger.LogError(ex, "Error while creating terminal session.");
             return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
+        }
+    }
+
+    public Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignedDto(signedDto))
+            {
+                return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
+            }
+
+            var agentOptions = _agentOptions.CurrentValue;
+            var settings = new AgentAppSettings()
+            {
+                AppOptions = agentOptions
+            };
+            return Result.Ok(settings).AsTaskResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting agent appsettings.");
+            return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
         }
     }
 
@@ -243,6 +268,7 @@ internal class AgentHubConnection(
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
         hubConnection.On<SignedPayloadDto, Result>(nameof(StartRdpProxy), StartRdpProxy);
+        hubConnection.On<SignedPayloadDto, Result<AgentAppSettings>>(nameof(GetAgentAppSettings), GetAgentAppSettings);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
