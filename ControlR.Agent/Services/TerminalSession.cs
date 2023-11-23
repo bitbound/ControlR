@@ -107,6 +107,7 @@ internal class TerminalSession(
             RedirectStandardError = true,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
+            WorkingDirectory = _environment.StartupDirectory
         };
 
         if (SessionKind == TerminalSessionKind.PowerShell)
