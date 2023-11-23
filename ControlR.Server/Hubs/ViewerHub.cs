@@ -129,6 +129,24 @@ public class ViewerHub(
         await base.OnDisconnectedAsync(exception);
     }
 
+    public async Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignature(signedDto, out _))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(signedDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending agent appsettings.");
+            return Result.Fail("Failed to sending agent app settings.");
+        }
+    }
+
     public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
     {
         using var scope = _logger.BeginMemberScope();

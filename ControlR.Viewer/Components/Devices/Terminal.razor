@@ -16,9 +16,9 @@ else
 
             @foreach (var line in Output)
             {
-                <MudText Color="Terminal.GetOutputColor(line)">
+                <div class="@(Terminal.GetOutputColor(line))">
                     @(line.Output)
-                </MudText>
+                </div>
             }
         </div>
         <div>
@@ -30,16 +30,17 @@ else
                           HelperText="Type a command and press Enter to send"
                           TextUpdateSuppression="false"
                           Lines="@InputLineCount"
-                                    HelperTextOnFocus
-                                    AutoFocus
-                                    Immediate
-                           OnKeyUp="@OnInputKeyDown"
-                           Class="mt-2" />
-         </div>
-         <div>
-             <MudSwitch @bind-Checked="_enableMultiline"
-                        Color="Color.Success"
-                        Label="Multiline Input" />
-         </div>
-     </div>
+                          HelperTextOnFocus="true"
+                          AutoFocus="true"
+                          Immediate="true"
+                          UserAttributes="_inputAttributes"
+                          OnKeyUp="@OnInputKeyDown"
+                          Class="mt-2" />
+        </div>
+        <div>
+            <MudSwitch @bind-Checked="_enableMultiline"
+                       Color="Color.Success"
+                       Label="Multiline Input" />
+        </div>
+    </div>
 }

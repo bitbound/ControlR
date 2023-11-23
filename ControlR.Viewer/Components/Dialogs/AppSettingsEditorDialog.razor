@@ -60,13 +60,20 @@
     [Parameter]
     public required AgentAppSettings AppSettings { get; set; }
 
+    [Parameter]
+    public required DeviceDto Device { get; set; }
+
     [CascadingParameter]
     public required MudDialogInstance DialogInstance { get; init; }
 
     [Inject]
     public required ILogger<AppSettingsEditorDialog> Logger { get; init; }
+
     [Inject]
     public required ISnackbar Snackbar { get; init; }
+
+    [Inject]
+    public required IViewerHubConnection ViewerHub { get; set; }
 
     protected override void OnInitialized()
     {
@@ -88,16 +95,23 @@
         DialogInstance.Close(DialogResult.Cancel());
     }
 
-    private void Save()
+    private async Task Save()
     {
         try
         {
             _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
-            DialogInstance.Close(DialogResult.Ok(_newAppSettings));
+            Guard.IsNotNull(_newAppSettings);
+            var result = await ViewerHub.SendAgentAppSettings(Device.ConnectionId, _newAppSettings);
+            if (!result.IsSuccess)
+            {
+                Snackbar.Add(result.Reason, Severity.Error);
+                return;
+            }
+            DialogInstance.Close(DialogResult.Ok(true));
         }
         catch
         {
-            Snackbar.Add("Invalid JSON", Severity.Error);
+            Snackbar.Add("Failed to save settings", Severity.Error);
             return;
         }
     }

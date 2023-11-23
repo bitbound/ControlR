@@ -11,7 +11,7 @@ public interface IAgentHubClient : IHubClient
     Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto sessionRequest);
 
     Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto);
-
+    Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto);
     Task<Result> ReceiveTerminalInput(SignedPayloadDto dto);
     Task<Result> StartRdpProxy(SignedPayloadDto requestDto);
 }

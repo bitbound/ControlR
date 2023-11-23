@@ -13,4 +13,5 @@ public enum DtoType
     TerminalInput = 9,
     StartRdpProxy = 10,
     GetAgentAppSettings = 11,
+    SendAppSettings = 12,
 }

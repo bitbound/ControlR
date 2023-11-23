@@ -70,7 +70,7 @@ internal class VncSessionLauncherWindows(
             }
             else
             {
-                return RunTvnServerAsUser(sessionId);
+                return await RunTvnServerAsUser(sessionId);
             }
         }
         catch (Exception ex)
@@ -178,12 +178,19 @@ internal class VncSessionLauncherWindows(
         return Result.Ok(session);
     }
 
-    private Result<VncSession> RunTvnServerAsUser(Guid sessionId)
+    private async Task<Result<VncSession>> RunTvnServerAsUser(Guid sessionId)
     {
         var existingProcs = _processInvoker.GetProcessesByName(Path.GetFileNameWithoutExtension(_tvnServerPath));
         var process = existingProcs.FirstOrDefault();
 
-        process ??= _processInvoker.Start(_tvnServerPath, "-run", true);
+        if (process is null)
+        {
+            process = _processInvoker.Start(_tvnServerPath, "-run", true);
+        }
+        else
+        {
+            await _processInvoker.StartAndWaitForExit(_tvnServerPath, "-controlapp -reload", true, TimeSpan.FromSeconds(5));
+        }
 
         if (process?.HasExited != false)
         {
@@ -206,12 +213,12 @@ internal class VncSessionLauncherWindows(
 
         using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry32);
         using var serverKey = baseKey.CreateSubKey("SOFTWARE\\TightVNC\\Server");
+        serverKey.SetValue("Password", encryptedPassword, RegistryValueKind.Binary);
         serverKey.SetValue("AllowLoopback", 1);
         serverKey.SetValue("LoopbackOnly", 1);
         serverKey.SetValue("UseVncAuthentication", 1);
         serverKey.SetValue("AlwaysShared", 1);
         serverKey.SetValue("RemoveWallpaper", 0);
-        serverKey.SetValue("Password", encryptedPassword, RegistryValueKind.Binary);
         return Result.Ok().AsTaskResult();
     }
 

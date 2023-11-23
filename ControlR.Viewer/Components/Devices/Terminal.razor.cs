@@ -15,6 +15,12 @@ namespace ControlR.Viewer.Components.Devices;
 
 public partial class Terminal : IAsyncDisposable
 {
+    private readonly Dictionary<string, object> _inputAttributes = new()
+    {
+        ["autocapitalize"] = "off",
+        ["spellcheck"] = "false"
+    };
+
     private readonly ConcurrentList<string> _inputHistory = [];
     private bool _enableMultiline;
     private MudTextField<string>? _inputElement;
@@ -105,13 +111,13 @@ public partial class Terminal : IAsyncDisposable
         }
     }
 
-    private static MudBlazor.Color GetOutputColor(TerminalOutputDto output)
+    private static string GetOutputColor(TerminalOutputDto output)
     {
         return output.OutputKind switch
         {
-            Shared.Enums.TerminalOutputKind.StandardOutput => MudBlazor.Color.Default,
-            Shared.Enums.TerminalOutputKind.StandardError => MudBlazor.Color.Error,
-            _ => MudBlazor.Color.Default,
+            Shared.Enums.TerminalOutputKind.StandardOutput => "",
+            Shared.Enums.TerminalOutputKind.StandardError => "mud-error-text",
+            _ => "",
         };
     }
 

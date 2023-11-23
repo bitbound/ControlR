@@ -33,6 +33,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task RequestDeviceUpdates();
 
+    Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
+
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
 
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
@@ -159,6 +161,18 @@ internal class ViewerHubConnection(
             var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _appState.UserKeys.PrivateKey);
             await Connection.InvokeAsync("SendSignedDtoToPublicKeyGroup", signedDto);
         });
+    }
+
+    public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings)
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                await WaitForConnection();
+                var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _appState.UserKeys.PrivateKey);
+                return await Connection.InvokeAsync<Result>("SendAgentAppSettings", agentConnectionId, signedDto);
+            },
+            () => Result.Fail("Failed to send app settings"));
     }
 
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)

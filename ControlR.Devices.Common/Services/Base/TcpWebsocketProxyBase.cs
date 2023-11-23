@@ -33,12 +33,22 @@ public abstract class TcpWebsocketProxyBase(
                 sessionId,
                 listeningPort);
 
-            var tcpListener = _listeners.GetOrAdd(listeningPort, port =>
+            var tcpListener = _listeners.GetOrAdd(
+                listeningPort,
+                port => new TcpListener(IPAddress.Loopback, port));
+
+            if (!tcpListener.Server.IsBound)
             {
-                var newListener = new TcpListener(IPAddress.Loopback, port);
-                newListener.Start();
-                return newListener;
-            });
+                try
+                {
+                    tcpListener.Start();
+                }
+                catch (SocketException ex)
+                {
+                    _logger.LogError(ex, "Error while starting TCP listener.");
+                    return Result.Fail<Task>($"Socket error on agent: {ex.SocketErrorCode}").AsTaskResult();
+                }
+            }
 
             var listenerTask = Task.Run(async () =>
             {

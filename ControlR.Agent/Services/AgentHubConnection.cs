@@ -2,6 +2,8 @@
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services.Windows;
+using ControlR.Devices.Common.Extensions;
+using ControlR.Devices.Common.Messages;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
@@ -12,6 +14,7 @@ using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
+using ControlR.Viewer.Models.Messages;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -147,6 +150,25 @@ internal class AgentHubConnection(
         return Win32.GetActiveSessions().ToArray().AsTaskResult();
     }
 
+    public async Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignedDto<AgentAppSettings>(signedDto, out var payload))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            await _settings.UpdateSettings(payload);
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while saving app settings to disk.");
+            return Result.Fail("Failed to save settings to disk.");
+        }
+    }
+
     public async Task<Result> ReceiveTerminalInput(SignedPayloadDto dto)
     {
         try
@@ -218,7 +240,15 @@ internal class AgentHubConnection(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await StartImpl();
+        _messenger.Unregister<GenericMessage<GenericMessageKind>>(this);
+        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
+        await Connect(
+              $"{_settings.ServerUri}hubs/agent",
+              ConfigureConnection,
+              ConfigureHttpOptions,
+               _appLifetime.ApplicationStopping);
+
+        await SendDeviceHeartbeat();
     }
 
     public async Task<Result> StartRdpProxy(SignedPayloadDto requestDto)
@@ -269,27 +299,26 @@ internal class AgentHubConnection(
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
         hubConnection.On<SignedPayloadDto, Result>(nameof(StartRdpProxy), StartRdpProxy);
         hubConnection.On<SignedPayloadDto, Result<AgentAppSettings>>(nameof(GetAgentAppSettings), GetAgentAppSettings);
+        hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveAgentAppSettings), ReceiveAgentAppSettings);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
     {
     }
 
+    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+    {
+        if (kind == GenericMessageKind.ServerUriChanged)
+        {
+            await StopAsync(_appLifetime.ApplicationStopping);
+            await StartAsync(_appLifetime.ApplicationStopping);
+        }
+    }
+
     private async Task HubConnection_Reconnected(string? arg)
     {
         await SendDeviceHeartbeat();
         await _updater.CheckForUpdate();
-    }
-
-    private async Task StartImpl()
-    {
-        await Connect(
-            $"{_settings.ServerUri}hubs/agent",
-            ConfigureConnection,
-            ConfigureHttpOptions,
-             _appLifetime.ApplicationStopping);
-
-        await SendDeviceHeartbeat();
     }
 
     private bool VerifySignedDto(SignedPayloadDto signedDto)

@@ -154,7 +154,8 @@ public partial class Dashboard
 
             var parameters = new DialogParameters
             {
-                { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value }
+                { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
+                { nameof(AppSettingsEditorDialog.Device), device }
             };
             var dialogRef = await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
             if (dialogRef is null)
@@ -162,9 +163,9 @@ public partial class Dashboard
                 return;
             }
             var result = await dialogRef.Result;
-            if (result?.Data is AgentAppSettings appSettings)
+            if (result?.Data is bool isSuccess && isSuccess)
             {
-                // TODO: Send to agent.
+                Snackbar.Add("Settings saved on device", Severity.Success);
             }
         }
         catch (Exception ex)
