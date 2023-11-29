@@ -9,23 +9,23 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace ControlR.Agent.Services.Linux;
+namespace ControlR.Agent.Services.Mac;
 
-internal class AgentInstallerLinux(
+internal class AgentInstallerMac(
     IHostApplicationLifetime lifetime,
     IFileSystem fileSystem,
     IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
-    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
+    ILogger<AgentInstallerMac> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environment = environmentHelper;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = lifetime;
-    private readonly ILogger<AgentInstallerLinux> _logger = logger;
+    private readonly ILogger<AgentInstallerMac> _logger = logger;
     private readonly IProcessManager _processInvoker = processInvoker;
-    private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
+    private readonly string _serviceFilePath = "/Library/LaunchDaemons/controlr-agent.plist";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
     {
@@ -68,16 +68,16 @@ internal class AgentInstallerLinux(
             var psi = new ProcessStartInfo()
             {
                 FileName = "sudo",
-                Arguments = "systemctl enable controlr.agent.service",
+                Arguments = $"launchctl load -w {_serviceFilePath}",
                 WorkingDirectory = "/tmp",
                 UseShellExecute = true
             };
 
-            _logger.LogInformation("Enabling service.");
+            _logger.LogInformation("Loading service.");
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
-            _logger.LogInformation("Restarting service.");
-            psi.Arguments = "systemctl restart controlr.agent.service";
+            _logger.LogInformation("Kickstarting service.");
+            psi.Arguments = "kickstart -k system/com.jaredg.controlr-agent";
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Install completed.");
@@ -111,18 +111,10 @@ internal class AgentInstallerLinux(
             }
 
             await _processInvoker
-                .Start("sudo", "systemctl stop controlr.agent.service")
-                .WaitForExitAsync(_lifetime.ApplicationStopping);
-
-            await _processInvoker
-                .Start("sudo", "systemctl disable controlr.agent.service")
+                .Start("sudo", $"launchctl unload -w {_serviceFilePath}")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);
 
             _fileSystem.DeleteFile(_serviceFilePath);
-
-            await _processInvoker
-                .Start("sudo", "systemctl daemon-reload")
-                .WaitForExitAsync(_lifetime.ApplicationStopping);
 
             _fileSystem.DeleteDirectory(_installDir, true);
 
@@ -142,16 +134,19 @@ internal class AgentInstallerLinux(
     private string GetServiceFile()
     {
         return
-            $"[Unit]\n" +
-            "Description=ControlR provides zero-trust remote control and administration.\n\n" +
-            "[Service]\n" +
-            $"WorkingDirectory={_installDir}\n" +
-            $"ExecStart={_installDir}/{AppConstants.AgentFileName} run\n" +
-            "Restart=always\n" +
-            "StartLimitIntervalSec=0\n" +
-            "Environment=DOTNET_ENVIRONMENT=Production\n" +
-            "RestartSec=10\n\n" +
-            "[Install]\n" +
-            "WantedBy=graphical.target";
+            $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            $"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+            $"<plist version=\"1.0\">\n" +
+            $"<dict>\n" +
+            $"    <key>Label</key>\n" +
+            $"    <string>com.jaredg.controlr-agent</string>\n" +
+            $"    <key>ProgramArguments</key>\n" +
+            $"    <array>\n" +
+            $"        <string>{_installDir}/ControlR.Agent</string>\n" +
+            $"    </array>\n" +
+            $"    <key>KeepAlive</key>\n" +
+            $"    <true/>\n" +
+            $"</dict>\n" +
+            $"</plist>";
     }
 }

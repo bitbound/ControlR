@@ -84,7 +84,7 @@ internal class VncSessionLauncherLinux(
                 return Result.Fail<VncSession>("VNC server failed to start.");
             }
 
-            var session = new VncSession(sessionId);
+            var session = new VncSession(sessionId, true);
 
             return Result.Ok(session);
         }

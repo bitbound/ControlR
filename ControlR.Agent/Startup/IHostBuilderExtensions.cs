@@ -3,10 +3,12 @@ using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services;
 using ControlR.Agent.Services.Linux;
+using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Devices.Common.Services.Linux;
+using ControlR.Devices.Common.Services.Mac;
 using ControlR.Devices.Common.Services.Windows;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Models;
@@ -101,8 +103,16 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherLinux>();
-                services.AddSingleton<IPowerControl, PowerControlLinux>();
+                services.AddSingleton<IPowerControl, PowerControlMac>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
+                services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
+                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherMac>();
+                services.AddSingleton<IPowerControl, PowerControlMac>();
+                services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
             }
             else
             {

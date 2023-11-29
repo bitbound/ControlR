@@ -96,17 +96,36 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Launching installer.");
 
-            if (OperatingSystem.IsWindows())
+            switch (_environmentHelper.Platform)
             {
-                _processInvoker.Start(tempPath, "install");
-            }
-            else
-            {
-                await _processInvoker
-                    .Start("sudo", $"chmod +x {tempPath}")
-                    .WaitForExitAsync(cancellationToken);
+                case Shared.Enums.SystemPlatform.Windows:
+                    {
+                        _processInvoker.Start(tempPath, "install");
+                    }
+                    break;
 
-                _processInvoker.Start("/bin/bash", $"-c \"{tempPath} install &\"", true);
+                case Shared.Enums.SystemPlatform.Linux:
+                    {
+                        await _processInvoker
+                          .Start("sudo", $"chmod +x {tempPath}")
+                          .WaitForExitAsync(cancellationToken);
+
+                        _processInvoker.Start("/bin/bash", $"-c \"{tempPath} install &\"", true);
+                    }
+                    break;
+
+                case Shared.Enums.SystemPlatform.MacOS:
+                    {
+                        await _processInvoker
+                         .Start("sudo", $"chmod +x {tempPath}")
+                         .WaitForExitAsync(cancellationToken);
+
+                        _processInvoker.Start("/bin/zsh", $"-c \"{tempPath} install &\"", true);
+                    }
+                    break;
+
+                default:
+                    throw new PlatformNotSupportedException();
             }
         }
         catch (Exception ex)

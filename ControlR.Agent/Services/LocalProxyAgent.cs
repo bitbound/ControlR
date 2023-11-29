@@ -48,7 +48,7 @@ internal class LocalProxyAgent(
             _ = startResult.Value.ContinueWith(async x =>
             {
                 Interlocked.Decrement(ref _sessionCount);
-                if (_sessionCount == 0)
+                if (_sessionCount == 0 && session.AutoRunUsed)
                 {
                     _logger.LogInformation("All proxy sessions have ended.  Performing cleanup.");
                     await _vncSessionLauncher.CleanupSessions();

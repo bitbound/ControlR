@@ -67,7 +67,7 @@ internal class TerminalSession(
             await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
             _inputBuilder.Clear();
 
-            if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh)
+            if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh or TerminalSessionKind.Zsh)
             {
                 _inputBuilder.Append(@"echo ""$(whoami)@$(cat /etc/hostname):$PWD$""");
                 await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
@@ -168,8 +168,12 @@ internal class TerminalSession(
                     return "/bin/sh";
                 }
                 throw new FileNotFoundException("No shell found.");
-            case SystemPlatform.Unknown:
             case SystemPlatform.MacOS:
+                {
+                    SessionKind = TerminalSessionKind.Zsh;
+                    return "/bin/zsh";
+                }
+            case SystemPlatform.Unknown:
             case SystemPlatform.MacCatalyst:
             case SystemPlatform.Android:
             case SystemPlatform.IOS:

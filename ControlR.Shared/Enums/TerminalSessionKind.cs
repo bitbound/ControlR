@@ -6,5 +6,6 @@ public enum TerminalSessionKind
     WindowsPowerShell,
     PowerShell,
     Bash,
-    Sh
+    Sh,
+    Zsh
 }

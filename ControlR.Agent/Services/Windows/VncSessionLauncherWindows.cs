@@ -173,7 +173,7 @@ internal class VncSessionLauncherWindows(
             return Result.Fail<VncSession>("VNC session failed to start.");
         }
 
-        var session = new VncSession(sessionId);
+        var session = new VncSession(sessionId, true);
 
         return Result.Ok(session);
     }
@@ -197,7 +197,7 @@ internal class VncSessionLauncherWindows(
             return Result.Fail<VncSession>("VNC session failed to start.");
         }
 
-        var session = new VncSession(sessionId);
+        var session = new VncSession(sessionId, true);
 
         return Result.Ok(session);
     }

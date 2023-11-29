@@ -4,7 +4,7 @@ using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Devices.Common.Services.MacOs;
+namespace ControlR.Devices.Common.Services.Mac;
 
 internal class DeviceDataGeneratorMac(
     IProcessManager processInvoker,
