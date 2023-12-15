@@ -9,7 +9,7 @@ using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Services.Mac;
 
-[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
 internal class VncSessionLauncherMac() : IVncSessionLauncher
 {
     public Task CleanupSessions()

@@ -14,6 +14,8 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$TightVncResourcesDir,
 
+    [string]$CurrentVersion,
+
     [switch]$BuildAgent,
 
     [switch]$BuildViewer,
@@ -21,14 +23,28 @@ param (
     [switch]$BuildWebsite
 )
 
+function Check-LastExitCode {
+    if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
+        throw "Received exit code $LASTEXITCODE.  Aborting."
+    }
+}
+
 $InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
 $VsWhere = "$InstallerDir\vswhere.exe"
 $MSBuildPath = (&"$VsWhere" -latest -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
-$Now = [System.DateTime]::UtcNow
-$CurrentVersionString = $Now.ToString("yyyy.MM.dd.HHmm")
-$CurrentVersion = [System.Version]::Parse($CurrentVersionString)
+
+if (!$CurrentVersion) {
+    Push-Location -Path $Root
+
+    $VersionString = git show -s --format=%ci
+    $VersionDate = [DateTimeOffset]::Parse($VersionString)
+
+    $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+
+    Pop-Location
+}
 
 if (!(Test-Path $CertificatePath)) {
     Write-Error "Certificate not found."
@@ -69,9 +85,14 @@ Get-ChildItem -Path "$TightVncResourcesDir\Viewer" | Copy-Item -Destination "$Ro
 
 if ($BuildAgent){
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    Check-LastExitCode
+
     dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    Check-LastExitCode
+
     Start-Sleep -Seconds 1
     &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\ControlR.Agent.exe"
+    Check-LastExitCode
 
     Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
@@ -93,12 +114,16 @@ if ($BuildViewer) {
     Set-Content -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest" -Value $Manifest.Node.OuterXml.Trim()
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
     dotnet publish -p:PublishProfile=msix --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
+    Check-LastExitCode
+
     New-Item -Path "$DownloadsFolder" -ItemType Directory -Force
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.msix" -Force
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.cer" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.cer" -Force
 
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
     dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword -o "$Root\ControlR.Viewer\bin\publish\"
+    Check-LastExitCode
+
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "*Signed.apk" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
 
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
@@ -112,6 +137,7 @@ if ($BuildWebsite) {
     npm install
     npm run build
     Pop-Location
+    Check-LastExitCode
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output "$Root\ControlR.Server\bin\publish" --self-contained true "$Root\ControlR.Server\"
