@@ -84,10 +84,10 @@ Get-ChildItem -Path "$TightVncResourcesDir\Server" | Copy-Item -Destination "$Ro
 Get-ChildItem -Path "$TightVncResourcesDir\Viewer" | Copy-Item -Destination "$Root\ControlR.Viewer\VncResources" -Force
 
 if ($BuildAgent){
-    dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
 
-    dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersionString -p:FileVersion=$CurrentVersionString -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
 
     Start-Sleep -Seconds 1
