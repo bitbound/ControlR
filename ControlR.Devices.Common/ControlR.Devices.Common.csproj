@@ -9,12 +9,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Resources\**" />
-		<EmbeddedResource Remove="Resources\**" />
-		<None Remove="Resources\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="8.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
@@ -26,9 +20,5 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Models\" />
 	</ItemGroup>
 </Project>
