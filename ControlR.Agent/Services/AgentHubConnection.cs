@@ -105,9 +105,8 @@ internal class AgentHubConnection(
             if (!_settings.AutoRunVnc)
             {
                 var session = new VncSession(dto.SessionId, false);
-                _localProxy
-                    .HandleVncSession(session)
-                    .AndForget();
+                await _localProxy.HandleVncSession(session);
+
                 return new(true);
             }
 
@@ -121,9 +120,7 @@ internal class AgentHubConnection(
                 return new(false);
             }
 
-            _localProxy
-                .HandleVncSession(result.Value)
-                .AndForget();
+            await _localProxy.HandleVncSession(result.Value);
 
             return new(true, result.Value.AutoRunUsed);
         }
