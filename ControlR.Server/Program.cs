@@ -1,5 +1,4 @@
 using ControlR.Server.Auth;
-using ControlR.Server.Data;
 using ControlR.Server.Hubs;
 using ControlR.Server.Middleware;
 using ControlR.Server.Models;
@@ -16,9 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<AppOptions>(
     builder.Configuration.GetSection(nameof(AppOptions)));
-
-builder.Services.AddDbContext<AppDb>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddRateLimiter(config =>
 {
@@ -39,9 +35,8 @@ builder.Services.AddAuthentication(options =>
     });
 });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy(PolicyNames.DigitalSignaturePolicy, builder =>
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(PolicyNames.DigitalSignaturePolicy, builder =>
     {
         builder.AddAuthenticationSchemes(AuthSchemes.DigitalSignature);
         builder.RequireAssertion(x =>
@@ -51,7 +46,6 @@ builder.Services.AddAuthorization(options =>
         builder.RequireClaim(ClaimNames.PublicKey);
         builder.RequireClaim(ClaimNames.Username);
     });
-});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -124,13 +118,6 @@ app.MapControllers();
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
-
-var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-using (var scope = scopeFactory.CreateScope())
-using (var appDb = scope.ServiceProvider.GetRequiredService<AppDb>())
-{
-    await appDb.Database.MigrateAsync();
-}
 
 app.Run();
 

@@ -4,6 +4,7 @@ namespace ControlR.Server.Models;
 
 public class AppOptions
 {
-    public IReadOnlyList<string> AuthorizedAdminIps { get; init; } = new List<string>();
-    public IReadOnlyList<string> AuthorizedAdminDnsNames { get; init; } = new List<string>();
+    public bool EnableRestrictedUserAccess { get; init; }
+    public IReadOnlyList<string> AuthorizedUserPublicKeys { get; init; } = new List<string>();
+    public IReadOnlyList<string> AdminPublicKeys { get; init; } = new List<string>();
 }

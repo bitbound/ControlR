@@ -1,5 +1,4 @@
-﻿using ControlR.Server.Data;
-using ControlR.Shared;
+﻿using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
@@ -71,7 +70,6 @@ public class DigitalSignatureAuthenticationHandler(
     private AuthenticateResult VerifySignature(SignedPayloadDto signedDto)
     {
         using var scope = _scopeFactory.CreateScope();
-        using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
         var keyProvider = scope.ServiceProvider.GetRequiredService<IKeyProvider>();
 
         var account = MessagePackSerializer.Deserialize<IdentityDto>(signedDto.Payload);
