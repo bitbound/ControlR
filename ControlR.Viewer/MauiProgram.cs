@@ -82,6 +82,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         builder.Services.AddSingleton<ILocalProxyViewer, LocalProxyViewer>();
         builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
+        builder.Services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

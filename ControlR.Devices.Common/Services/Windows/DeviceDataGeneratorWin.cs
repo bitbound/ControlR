@@ -1,4 +1,5 @@
 ﻿using ControlR.Devices.Common.Native.Windows;
+using ControlR.Devices.Common.Services.Base;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
