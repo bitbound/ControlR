@@ -29,5 +29,3 @@ When the agent comes online, it broadcasts its presence via SignalR to public ke
 When viewers try to connect or issue commands, the signed payload is first verified on the server, then verified again on the agent itself.
 
 This means that the agent doesn't implicitly trust anything coming from the server.  It's able to independently verify all commands issued to it.
-
-https://github.com/lucent-sea/ControlR/assets/20995508/66c38755-3745-4b26-9b92-8f5e9a391af7
