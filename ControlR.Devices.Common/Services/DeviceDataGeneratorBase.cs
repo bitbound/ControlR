@@ -1,6 +1,8 @@
 ﻿using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace ControlR.Devices.Common.Services;
@@ -57,6 +59,7 @@ internal class DeviceDataGeneratorBase(
             OsArchitecture = RuntimeInformation.OSArchitecture,
             OsDescription = RuntimeInformation.OSDescription,
             Is64Bit = Environment.Is64BitOperatingSystem,
+            MacAddresses = GetMacAddresses().ToArray(),
             IsOnline = true
         };
     }
@@ -98,5 +101,45 @@ internal class DeviceDataGeneratorBase(
         }
 
         return (0, 0);
+    }
+
+    private IEnumerable<string> GetMacAddresses()
+    {
+        var macAddress = new List<string>();
+
+        try
+        {
+            var nics = NetworkInterface.GetAllNetworkInterfaces();
+
+            if (!nics.Any())
+            {
+                return macAddress;
+            }
+
+            var onlineNics = nics
+                .Where(c =>
+                    c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                    c.OperationalStatus == OperationalStatus.Up);
+
+            foreach (var adapter in onlineNics)
+            {
+                var ipProperties = adapter.GetIPProperties();
+
+                var unicastAddresses = ipProperties.UnicastAddresses;
+                if (!unicastAddresses.Any(temp => temp.Address.AddressFamily == AddressFamily.InterNetwork))
+                {
+                    continue;
+                }
+
+                var address = adapter.GetPhysicalAddress();
+                macAddress.Add(address.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting MAC addresses.");
+        }
+
+        return macAddress;
     }
 }
