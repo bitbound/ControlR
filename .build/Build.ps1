@@ -41,7 +41,7 @@ if (!$CurrentVersion) {
     $VersionString = git show -s --format=%ci
     $VersionDate = [DateTimeOffset]::Parse($VersionString)
 
-    $CurrentVersion = $VersionDate.ToString("yyyy.M.d.Hm")
+    $CurrentVersion = $VersionDate.ToString("yyyy.M.d.Hmm")
 
     Pop-Location
 }
@@ -87,11 +87,17 @@ if ($BuildAgent){
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
 
-    dotnet publish --configuration Release -p:PublishProfile=ubuntu-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    dotnet publish --configuration Release -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    Check-LastExitCode
+
+    dotnet publish --configuration Release -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    Check-LastExitCode
+
+    dotnet publish --configuration Release -p:PublishProfile=linux-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
 
     Start-Sleep -Seconds 1
-    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\ControlR.Agent.exe"
+    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
     Check-LastExitCode
 
     Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
@@ -132,7 +138,7 @@ if ($BuildViewer) {
 
 if ($BuildWebsite) {
     [System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
-    Get-ChildItem -Path "$Root\ControlR.Server\wwwroot\downloads\" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse
+    Get-ChildItem -Path "$Root\ControlR.Server\wwwroot\downloads\" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
     Push-Location "$Root\ControlR.Website"
     npm install
     npm run build

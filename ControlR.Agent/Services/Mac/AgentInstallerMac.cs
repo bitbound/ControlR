@@ -3,6 +3,7 @@ using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Exceptions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
@@ -68,16 +69,24 @@ internal class AgentInstallerMac(
             var psi = new ProcessStartInfo()
             {
                 FileName = "sudo",
-                Arguments = $"launchctl load -w {_serviceFilePath}",
+                Arguments = $"launchctl bootout system {_serviceFilePath}",
                 WorkingDirectory = "/tmp",
                 UseShellExecute = true
             };
 
+            _logger.LogInformation("Stopping service, if running.");
+            try
+            {
+                await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+            }
+            catch (ProcessStatusException) { }
+
             _logger.LogInformation("Loading service.");
+            psi.Arguments = $"launchctl bootstrap system {_serviceFilePath}";
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Kickstarting service.");
-            psi.Arguments = "kickstart -k system/com.jaredg.controlr-agent";
+            psi.Arguments = "launchctl kickstart -k system/com.jaredg.controlr-agent";
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Install completed.");
@@ -143,6 +152,7 @@ internal class AgentInstallerMac(
             $"    <key>ProgramArguments</key>\n" +
             $"    <array>\n" +
             $"        <string>{_installDir}/ControlR.Agent</string>\n" +
+            $"        <string>run</string>\n" +
             $"    </array>\n" +
             $"    <key>KeepAlive</key>\n" +
             $"    <true/>\n" +

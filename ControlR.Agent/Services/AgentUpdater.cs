@@ -5,6 +5,7 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ControlR.Agent.Services;
@@ -23,7 +24,7 @@ internal class AgentUpdater(
     ISettingsProvider _settings,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
-    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{AppConstants.AgentFileName}";
+    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.AgentFileName}";
     private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
     private readonly ILogger<AgentUpdater> _logger = logger;
 

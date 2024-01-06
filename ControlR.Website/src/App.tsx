@@ -133,19 +133,43 @@ function App() {
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
-                            href="/downloads/ControlR.Agent.exe"
+                            href="/downloads/win-x86/ControlR.Agent.exe"
                             target='_blank'>
                             EXE
                         </Button>
                     </ButtonWrapper>
 
                     <Typography variant='h6'>
-                        Ubuntu
+                        Ubuntu (x64)
                     </Typography>
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
-                            href="/downloads/ControlR.Agent"
+                            href="/downloads/linux-x64/ControlR.Agent"
+                            target='_blank'>
+                            EXE
+                        </Button>
+                    </ButtonWrapper>
+
+                    <Typography variant='h6'>
+                        Mac (x64)
+                    </Typography>
+                    <ButtonWrapper>
+                        <Button
+                            variant='outlined'
+                            href="/downloads/osx-x64/ControlR.Agent"
+                            target='_blank'>
+                            EXE
+                        </Button>
+                    </ButtonWrapper>
+
+                    <Typography variant='h6'>
+                        Mac (Apple Silicon)
+                    </Typography>
+                    <ButtonWrapper>
+                        <Button
+                            variant='outlined'
+                            href="/downloads/osx-arm64/ControlR.Agent"
                             target='_blank'>
                             EXE
                         </Button>

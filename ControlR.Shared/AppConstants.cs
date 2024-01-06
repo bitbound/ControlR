@@ -19,6 +19,7 @@ public static partial class AppConstants
             {
                 SystemPlatform.Windows => "ControlR.Agent.exe",
                 SystemPlatform.Linux => "ControlR.Agent",
+                SystemPlatform.MacOS => "ControlR.Agent",
                 _ => throw new PlatformNotSupportedException(),
             };
         }

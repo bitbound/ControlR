@@ -24,7 +24,7 @@ internal static class LoggingConstants
                 return logsPath;
             }
 
-            if (OperatingSystem.IsLinux())
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
                 if (EnvironmentHelper.Instance.IsDebug)
                 {

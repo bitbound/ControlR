@@ -116,7 +116,7 @@ internal static class IHostBuilderExtensions
             }
             else
             {
-                throw new PlatformNotSupportedException("Only Windows and Linux are supported.");
+                throw new PlatformNotSupportedException();
             }
         })
         .ConfigureLogging(logging =>

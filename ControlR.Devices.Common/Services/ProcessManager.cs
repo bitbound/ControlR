@@ -1,4 +1,5 @@
-﻿using ControlR.Shared.Helpers;
+﻿using ControlR.Shared.Exceptions;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using System.Diagnostics;
 
@@ -135,7 +136,7 @@ public class ProcessManager : IProcessManager
 
         if (process.ExitCode != 0)
         {
-            throw new Exception($"Process exited with code {process.ExitCode}.");
+            throw new ProcessStatusException(process.ExitCode);
         }
     }
 

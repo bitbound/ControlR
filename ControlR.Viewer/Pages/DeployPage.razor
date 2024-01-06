@@ -43,6 +43,32 @@
                   Class="mb-5" />
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Mac x64 (zsh)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to deploy an agent"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyMacX64Script"
+                  Adornment="Adornment.End"
+                  Value="MacX64DeployScript"
+                  Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Mac Arm64 (zsh)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to deploy an agent"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyMacArm64Script"
+                  Adornment="Adornment.End"
+                  Value="MacArm64DeployScript"
+                  Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Options
     </MudText>
 
@@ -73,6 +99,45 @@
 
 
 @code {
+
+    private string MacArm64DeployScript
+    {
+        get
+        {
+            return
+              $"sudo rm -f /tmp/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-arm64/ControlR.Agent && " +
+              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+              $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+        }
+    }
+
+    private string MacX64DeployScript 
+    {
+        get
+        {
+            return
+              $"sudo rm -f /tmp/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-x64/ControlR.Agent && " +
+              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+              $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+        }
+    }
+
+    private string UbuntuDeployScript
+    {
+        get
+        {
+            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
+
+            return
+                $"sudo rm -f /tmp/ControlR.Agent && " +
+                $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/linux-x64/ControlR.Agent && " +
+                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install {autoRunOption}" +
+                $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+        }
+    }
+
     private string WindowsDeployScript
     {
         get
@@ -80,29 +145,21 @@
             var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
 
             return "$ProgressPreference = \"SilentlyContinue\"; " +
-                $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+                $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/win-x86/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
                 $"{autoRunOption}-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
         }
     }
-    private string UbuntuDeployScript
-    {
-        get
-        {
-            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
 
-            return 
-                $"sudo rm -f /tmp/ControlR.Agent && " + 
-                $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/ControlR.Agent && " +
-                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install {autoRunOption}" +
-                $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
-        }
+    private async Task CopyMacArm64Script()
+    {
+        await Clipboard.Default.SetTextAsync(MacArm64DeployScript);
+        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
     }
 
-
-    private async Task CopyWindowsScript()
+    private async Task CopyMacX64Script()
     {
-        await Clipboard.Default.SetTextAsync(WindowsDeployScript);
+        await Clipboard.Default.SetTextAsync(MacX64DeployScript);
         Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
     }
 
@@ -111,4 +168,11 @@
         await Clipboard.Default.SetTextAsync(UbuntuDeployScript);
         Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
     }
+
+    private async Task CopyWindowsScript()
+    {
+        await Clipboard.Default.SetTextAsync(WindowsDeployScript);
+        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+    }
+
 }

@@ -10,7 +10,6 @@ namespace ControlR.Viewer.Services;
 
 public interface ISettings
 {
-    string AgentDownloadUri { get; }
     bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
@@ -46,14 +45,6 @@ internal class Settings(
     ILogger<Settings> _logger) : ISettings
 {
     private byte[] _privateKey = [];
-
-    public string AgentDownloadUri
-    {
-        get
-        {
-            return $"{ServerUri}/downloads/{AppConstants.AgentFileName}";
-        }
-    }
 
     public bool AutoRunVnc
     {
