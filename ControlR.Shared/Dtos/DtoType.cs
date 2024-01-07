@@ -14,4 +14,5 @@ public enum DtoType
     StartRdpProxy = 10,
     GetAgentAppSettings = 11,
     SendAppSettings = 12,
+    WakeDevice = 13,
 }

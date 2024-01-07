@@ -31,6 +31,7 @@ using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
 using ControlR.Shared.Models;
+using ControlR.Devices.Common.Services;
 
 namespace ControlR.Viewer.Components;
 
@@ -46,44 +47,44 @@ public partial class Dashboard
     private string? _searchText;
 
     [Inject]
-    public required IAppState AppState { get; init; }
+    public IAppState AppState { get; init; }
 
     [Inject]
-    public required IBrowser Browser { get; init; }
+    public IBrowser Browser { get; init; }
 
     [Inject]
-    public required IClipboard Clipboard { get; init; }
+    public IClipboard Clipboard { get; init; }
 
     [Inject]
-    public required IDeviceCache DeviceCache { get; init; }
+    public IDeviceCache DeviceCache { get; init; }
 
     [Inject]
-    public required IDialogService DialogService { get; init; }
+    public IDialogService DialogService { get; init; }
 
     [Inject]
-    public required ILocalProxyViewer LocalProxy { get; init; }
+    public ILocalProxyViewer LocalProxy { get; init; }
 
     [Inject]
-    public required ILogger<Dashboard> Logger { get; init; }
+    public ILogger<Dashboard> Logger { get; init; }
 
     [Inject]
-    public required IMessenger Messenger { get; init; }
+    public IMessenger Messenger { get; init; }
 
 #if ANDROID
 
     [Inject]
-    public required IMultiVncLauncher MultiVncLauncher { get; init; }
+    public IMultiVncLauncher MultiVncLauncher { get; init; }
 
 #endif
 
     [Inject]
-    public required IRdpLauncher RdpLauncher { get; init; }
+    public IRdpLauncher RdpLauncher { get; init; }
 
     [Inject]
-    public required ISettings Settings { get; init; }
+    public ISettings Settings { get; init; }
 
     [Inject]
-    public required ISnackbar Snackbar { get; init; }
+    public ISnackbar Snackbar { get; init; }
 
 #if WINDOWS
     [Inject]
@@ -91,10 +92,13 @@ public partial class Dashboard
 #endif
 
     [Inject]
-    public required IViewerHubConnection ViewerHub { get; init; }
+    public IViewerHubConnection ViewerHub { get; init; }
 
     [Inject]
-    public required IDeviceContentWindowStore WindowStore { get; init; }
+    public IWakeOnLanService WakeOnLan { get; init; }
+
+    [Inject]
+    public IDeviceContentWindowStore WindowStore { get; init; }
 
     private IEnumerable<DeviceDto> FilteredDevices
     {
@@ -217,7 +221,20 @@ public partial class Dashboard
     private async Task RemoveDevice(DeviceDto device)
     {
         await DeviceCache.Remove(device);
-        Snackbar.Add("Device removed.", Severity.Success);
+        Snackbar.Add("Device removed", Severity.Success);
+    }
+
+    private async Task WakeDevice(DeviceDto device)
+    {
+        if (device.MacAddresses[0].Length == 0)
+        {
+            Snackbar.Add("No MAC addresses on device", Severity.Warning);
+            return;
+        }
+
+        await WakeOnLan.WakeDevices(device.MacAddresses);
+        await ViewerHub.SendWakeDevice(device.MacAddresses);
+        Snackbar.Add("Wake command sent", Severity.Success);
     }
 
     private async Task RestartDevice(DeviceDto device)

@@ -39,6 +39,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
 
+    Task SendWakeDevice(string[] macAddresses);
+
     Task Start(CancellationToken cancellationToken);
 
     Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId);
@@ -58,7 +60,7 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var request = new CloseTerminalRequest(terminalId);
+            var request = new CloseTerminalRequestDto(terminalId);
             var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.UserKeys.PrivateKey);
             await Connection.InvokeAsync("SendSignedDtoToAgent", deviceId, signedDto);
         });
@@ -195,6 +197,17 @@ internal class ViewerHubConnection(
                 return await Connection.InvokeAsync<Result>("SendTerminalInput", agentConnectionId, signedDto);
             },
             () => Result.Fail("Failed to send terminal input"));
+    }
+
+    public async Task SendWakeDevice(string[] macAddresses)
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var request = new WakeDeviceDto(macAddresses);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.UserKeys.PrivateKey);
+                await Connection.InvokeAsync("SendSignedDtoToPublicKeyGroup", signedDto);
+            });
     }
 
     public async Task Start(CancellationToken cancellationToken)

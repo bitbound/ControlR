@@ -107,6 +107,12 @@
                         }
                         else
                         {
+                            <MudMenuItem Icon="@(Icons.Material.Filled.Power)"
+                                         IconColor="Color.Success"
+                                         OnClick="@(() => WakeDevice(context.Item))"
+                                         OnTouch="@(() => WakeDevice(context.Item))">
+                                Wake
+                            </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
                                          IconColor="Color.Error"
                                          OnClick="@(() => RemoveDevice(context.Item))"
@@ -218,6 +224,9 @@
             </div>
             <div>
                 @(context.Item.OsArchitecture)
+            </div>
+            <div>
+                @(string.Join(", ", context.Item.MacAddresses))
             </div>
         </div>
     </ChildRowContent>
