@@ -45,6 +45,10 @@ public class Device
     public bool Is64Bit { get; set; }
 
     [MsgPackKey]
+    [Display(Name = "MAC Addresses")]
+    public string[] MacAddresses { get; set; } = [];
+
+    [MsgPackKey]
     [Display(Name = "Online")]
     public bool IsOnline { get; set; }
 

@@ -246,6 +246,11 @@ internal class AgentHubConnection(
                _appLifetime.ApplicationStopping);
 
         await SendDeviceHeartbeat();
+
+        if (_agentOptions.CurrentValue.AutoRunVnc == true)
+        {
+            await _vncSessionLauncher.CleanupSessions();
+        }
     }
 
     public async Task<Result> StartRdpProxy(SignedPayloadDto requestDto)
@@ -314,6 +319,10 @@ internal class AgentHubConnection(
 
     private async Task HubConnection_Reconnected(string? arg)
     {
+        if (_agentOptions.CurrentValue.AutoRunVnc == true)
+        {
+            await _vncSessionLauncher.CleanupSessions();
+        }
         await SendDeviceHeartbeat();
         await _updater.CheckForUpdate();
     }

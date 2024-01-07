@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
 using ControlR.Devices.Common.Messages;
+using ControlR.Devices.Common.Services;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
@@ -17,6 +18,7 @@ internal class DtoHandler(
     IPowerControl _powerControl,
     ITerminalStore _terminalStore,
     ISettingsProvider _settings,
+    IWakeOnLanService _wakeOnLan,
     ILogger<DtoHandler> _logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -65,9 +67,16 @@ internal class DtoHandler(
 
             case DtoType.CloseTerminalRequest:
                 {
-                    var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequest>(dto.Payload);
+                    var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequestDto>(dto.Payload);
                     // Underyling process is killed/disposed upon eviction from the MemoryCache.
                     _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
+                    break;
+                }
+
+            case DtoType.WakeDevice:
+                {
+                    var wakeDto = MessagePackSerializer.Deserialize<WakeDeviceDto>(dto.Payload);
+                    await _wakeOnLan.WakeDevices(wakeDto.MacAddresses);
                     break;
                 }
 
