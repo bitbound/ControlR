@@ -107,7 +107,7 @@
                         }
                         else
                         {
-                            <MudMenuItem Icon="@(Icons.Material.Filled.Power)"
+                            <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)"
                                          IconColor="Color.Success"
                                          OnClick="@(() => WakeDevice(context.Item))"
                                          OnTouch="@(() => WakeDevice(context.Item))">
@@ -224,6 +224,9 @@
             </div>
             <div>
                 @(context.Item.OsArchitecture)
+            </div>
+            <div>
+                MAC Addresses:
             </div>
             <div>
                 @(string.Join(", ", context.Item.MacAddresses))

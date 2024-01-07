@@ -226,7 +226,8 @@ public partial class Dashboard
 
     private async Task WakeDevice(DeviceDto device)
     {
-        if (device.MacAddresses[0].Length == 0)
+        if (device.MacAddresses is null ||
+            device.MacAddresses.Length == 0)
         {
             Snackbar.Add("No MAC addresses on device", Severity.Warning);
             return;
