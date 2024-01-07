@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
-using ControlR.Shared.Models;
 using ControlR.Devices.Common.Services;
 
 namespace ControlR.Viewer.Components;
@@ -47,44 +46,44 @@ public partial class Dashboard
     private string? _searchText;
 
     [Inject]
-    public IAppState AppState { get; init; }
+    public required IAppState AppState { get; init; }
 
     [Inject]
-    public IBrowser Browser { get; init; }
+    public required IBrowser Browser { get; init; }
 
     [Inject]
-    public IClipboard Clipboard { get; init; }
+    public required IClipboard Clipboard { get; init; }
 
     [Inject]
-    public IDeviceCache DeviceCache { get; init; }
+    public required IDeviceCache DeviceCache { get; init; }
 
     [Inject]
-    public IDialogService DialogService { get; init; }
+    public required IDialogService DialogService { get; init; }
 
     [Inject]
-    public ILocalProxyViewer LocalProxy { get; init; }
+    public required ILocalProxyViewer LocalProxy { get; init; }
 
     [Inject]
-    public ILogger<Dashboard> Logger { get; init; }
+    public required ILogger<Dashboard> Logger { get; init; }
 
     [Inject]
-    public IMessenger Messenger { get; init; }
+    public required IMessenger Messenger { get; init; }
 
 #if ANDROID
 
     [Inject]
-    public IMultiVncLauncher MultiVncLauncher { get; init; }
+    public required IMultiVncLauncher MultiVncLauncher { get; init; }
 
 #endif
 
     [Inject]
-    public IRdpLauncher RdpLauncher { get; init; }
+    public required IRdpLauncher RdpLauncher { get; init; }
 
     [Inject]
-    public ISettings Settings { get; init; }
+    public required ISettings Settings { get; init; }
 
     [Inject]
-    public ISnackbar Snackbar { get; init; }
+    public required ISnackbar Snackbar { get; init; }
 
 #if WINDOWS
     [Inject]
@@ -92,19 +91,19 @@ public partial class Dashboard
 #endif
 
     [Inject]
-    public IViewerHubConnection ViewerHub { get; init; }
+    public required IViewerHubConnection ViewerHub { get; init; }
 
     [Inject]
-    public IWakeOnLanService WakeOnLan { get; init; }
+    public required IWakeOnLanService WakeOnLan { get; init; }
 
     [Inject]
-    public IDeviceContentWindowStore WindowStore { get; init; }
+    public required IDeviceContentWindowStore WindowStore { get; init; }
 
     private IEnumerable<DeviceDto> FilteredDevices
     {
         get
         {
-            if (!Settings.HideOfflineDevices)
+            if (!Settings.HideOfflineDevices || IsHideOfflineDevicesDisabled)
             {
                 return DeviceCache.Devices;
             }
@@ -112,6 +111,9 @@ public partial class Dashboard
             return DeviceCache.Devices.Where(x => x.IsOnline);
         }
     }
+
+    private bool IsHideOfflineDevicesDisabled =>
+        !string.IsNullOrWhiteSpace(_searchText);
 
     private Func<DeviceDto, bool> QuickFilter => x =>
         {
