@@ -222,6 +222,16 @@ public partial class Dashboard
 
     private async Task RemoveDevice(DeviceDto device)
     {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Removal",
+            "Are you sure you want to remove this device?",
+            "Remove",
+            "Cancel");
+            
+        if (result != true)
+        {
+            return;
+        }
         await DeviceCache.Remove(device);
         Snackbar.Add("Device removed", Severity.Success);
     }
