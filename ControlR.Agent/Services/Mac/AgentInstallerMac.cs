@@ -87,9 +87,9 @@ internal class AgentInstallerMac(
 
             _logger.LogInformation("Kickstarting service.");
             psi.Arguments = "launchctl kickstart -k system/com.jaredg.controlr-agent";
-            await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+            _ = _processInvoker.Start(psi);
 
-            _logger.LogInformation("Install completed.");
+            _logger.LogInformation("Installer launched.");
         }
         catch (Exception ex)
         {
