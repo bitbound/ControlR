@@ -67,7 +67,7 @@ internal class TerminalSession(
             await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
             _inputBuilder.Clear();
 
-            if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh or TerminalSessionKind.Zsh)
+            if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh)
             {
                 _inputBuilder.Append(@"echo ""$(whoami)@$(cat /etc/hostname):$PWD$""");
                 await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
