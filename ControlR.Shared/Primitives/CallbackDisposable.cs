@@ -1,8 +1,8 @@
 ﻿namespace ControlR.Shared.Primitives;
 
-public sealed class CallbackDisposable(Action disposeCallback) : IDisposable
+public sealed class CallbackDisposable(Action _disposeCallback) : IDisposable
 {
-    private readonly Action _disposeCallback = disposeCallback;
+    private readonly Action _disposeCallback = _disposeCallback;
 
     public void Dispose()
     {

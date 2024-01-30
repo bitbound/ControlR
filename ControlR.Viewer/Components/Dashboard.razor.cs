@@ -181,13 +181,19 @@ public partial class Dashboard
         }
     }
 
+    private readonly FunnelLock _stateChangeLock = new(2, 2, 1, 1);
+
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
         switch (kind)
         {
             case GenericMessageKind.DevicesCacheUpdated:
                 {
-                    Debouncer.Debounce(TimeSpan.FromSeconds(1), () => InvokeAsync(StateHasChanged));
+                    using var result = await _stateChangeLock.WaitAsync(AppState.AppExiting);
+                    if (result.Value)
+                    {
+                        await InvokeAsync(StateHasChanged);
+                    }
                 }
                 break;
 
@@ -227,7 +233,7 @@ public partial class Dashboard
             "Are you sure you want to remove this device?",
             "Remove",
             "Cancel");
-            
+
         if (result != true)
         {
             return;

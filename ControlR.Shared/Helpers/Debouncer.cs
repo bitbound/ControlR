@@ -7,7 +7,13 @@ public static class Debouncer
 {
     private static readonly ConcurrentDictionary<object, System.Timers.Timer> _timers = new();
 
-    public static void Debounce(TimeSpan wait, Action action, string key = "", [CallerMemberName] string callerMemberName = "", [CallerFilePath]string callerFilePath = "")
+    public static void Debounce(
+        TimeSpan wait,
+        Action action,
+        string key = "",
+        [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string callerFilePath = "",
+        Action<Exception>? exceptionHandler = null)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -30,6 +36,10 @@ public static class Debouncer
             try
             {
                 action();
+            }
+            catch (Exception ex)
+            {
+                exceptionHandler?.Invoke(ex);
             }
             finally
             {

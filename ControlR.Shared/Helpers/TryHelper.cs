@@ -40,24 +40,4 @@ public static class TryHelper
         }
         throw new InvalidOperationException("Retry should not have reached this point.");
     }
-
-    public static void Retry(Action action, int tryCount, TimeSpan retryDelay)
-    {
-        for (var i = 0; i <= tryCount; i++)
-        {
-            try
-            {
-                action.Invoke();
-                return;
-            }
-            catch
-            {
-                if (i == tryCount)
-                {
-                    throw;
-                }
-                Thread.Sleep(retryDelay);
-            }
-        }
-    }
 }

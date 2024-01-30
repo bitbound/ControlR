@@ -54,10 +54,11 @@ internal class AgentInstallerLinux(
                 _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
             }
 
-            TryHelper.Retry(
+            await TryHelper.Retry(
                 () =>
                 {
                     _fileSystem.CopyFile(exePath, targetPath, true);
+                    return Task.CompletedTask;
                 }, 5, TimeSpan.FromSeconds(1));
 
             var serviceFile = GetServiceFile().Trim();
