@@ -30,6 +30,11 @@ internal class AgentUpdater(
 
     public async Task CheckForUpdate(CancellationToken cancellationToken = default)
     {
+        if (_environmentHelper.IsDebug)
+        {
+            return;
+        }
+
         using var logScope = _logger.BeginMemberScope();
 
         if (!await _checkForUpdatesLock.WaitAsync(0, cancellationToken))

@@ -114,8 +114,8 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
         }
 
         var timestamp = MessagePackSerializer.Deserialize<DateTimeOffset>(signedDto.Timestamp);
-        // Timestamp shouldn't be any older than 5 seconds.
-        return timestamp > _systemTime.Now.AddSeconds(-5);
+        // Timestamp shouldn't be any older than 10 seconds.
+        return timestamp > _systemTime.Now.AddSeconds(-10);
     }
 
     private SignedPayloadDto CreateSignedDtoImpl(RSA rsa, byte[] payload, DtoType dtoType)
