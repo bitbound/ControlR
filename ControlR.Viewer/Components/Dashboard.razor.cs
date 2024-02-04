@@ -430,7 +430,7 @@ public partial class Dashboard
             if (!launchResult.IsSuccess)
             {
                 Snackbar.Add(launchResult.Reason, Severity.Error);
-                Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
+                await Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
                 return;
             }
 

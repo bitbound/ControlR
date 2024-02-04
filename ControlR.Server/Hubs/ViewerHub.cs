@@ -4,26 +4,47 @@ using ControlR.Server.Models;
 using ControlR.Server.Services;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
 
 namespace ControlR.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
-    IHubContext<AgentHub, IAgentHubClient> agentHubContext,
-    IProxyStreamStore proxyStreamStore,
-    IOptionsMonitor<AppOptions> appOptions,
-    ILogger<ViewerHub> logger) : Hub<IViewerHubClient>
+    IHubContext<AgentHub, IAgentHubClient> _agentHub,
+    IProxyStreamStore _proxyStreamStore,
+    IAgentConnectionCounter _agentCounter,
+    ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
-    private readonly IHubContext<AgentHub, IAgentHubClient> _agentHub = agentHubContext;
-    private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-    private readonly ILogger<ViewerHub> _logger = logger;
-    private readonly IProxyStreamStore _proxyStreamStore = proxyStreamStore;
+
+    public async Task<Result<bool>> CheckIfServerAdministrator(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignature(signedDto, out _))
+            {
+                return Result.Fail<bool>("Signature verification failed.");
+            }
+
+            var isAdmin = Context.User?.IsAdministrator() ?? false;
+            if (isAdmin)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+                await Clients.Caller.ReceiveAgentConnectionCount(_agentCounter.AgentCount);
+            }
+            return Result.Ok(isAdmin);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while check if user is an administrator.");
+            return Result.Fail<bool>("An error occurred.");
+        }
+    }
 
     public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
     {
@@ -60,6 +81,30 @@ public class ViewerHub(
         {
             _logger.LogError(ex, "Error while getting agent appsettings.");
             return Result.Fail<AgentAppSettings>("Failed to get agent app settings.");
+        }
+    }
+
+    public Task<Result<int>> GetAgentCount(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignature(signedDto, out _))
+            {
+                return Result.Fail<int>("Signature verification failed.").AsTaskResult();
+            }
+
+            var adminResult = VerifyIsAdmin(signedDto);
+            if (!adminResult.IsSuccess || !adminResult.Value)
+            {
+                return Result.Fail<int>("Failed to verify administrator access.").AsTaskResult();
+            }
+
+            return Result.Ok(_agentCounter.AgentCount).AsTaskResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting agent count.");
+            return Result.Fail<int>("Failed to get agent count.").AsTaskResult();
         }
     }
 
@@ -209,6 +254,27 @@ public class ViewerHub(
         }
     }
 
+    private Result<bool> VerifyIsAdmin(
+        SignedPayloadDto signedDto,
+        [CallerMemberName] string callerMember = "")
+    {
+        if (!VerifySignature(signedDto, out var publicKey))
+        {
+            var result = Result.Fail<bool>("Signature verification failed.");
+            _logger.LogResult(result);
+            return result;
+        }
+
+        var isAdmin = Context.User?.IsAdministrator() ?? false;
+        if (!isAdmin)
+        {
+            _logger.LogCritical(
+                "Admin verification failed when invoking membmer {MemberName}. Public Key: {PublicKey}",
+                callerMember,
+                publicKey);
+        }
+        return Result.Ok(isAdmin);
+    }
     private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
     {
         publicKey = string.Empty;

@@ -1,0 +1,67 @@
+﻿@page "/server-admin"
+@inject IMessenger Messenger;
+@inject IViewerHubConnection ViewerHub;
+@inject ISnackbar Snackbar;
+@inject ILogger<ServerAdmin> Logger;
+
+<PageTitle>Server Administration</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Server Administration
+</MudText>
+
+<div class="d-flex mt-10">
+    <MudCard>
+        <MudCardHeader Class="pa-2">
+            Agent Count
+        </MudCardHeader>
+        <MudCardContent Class="pa-2">
+            <MudText Align="Align.Center">
+                <b>
+                    @(_serverAgentCount)
+                </b>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+</div>
+@code {
+    private int _serverAgentCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Messenger.Register<ServerAgentConnectionCountUpdate>(
+            this,
+            async (subscriber, update) =>
+            {
+                _serverAgentCount = update.AgentCount;
+                await InvokeAsync(StateHasChanged);
+            }
+        );
+
+        await RefreshAgentCount();
+    }
+
+    private async Task RefreshAgentCount()
+    {
+        try
+        {
+            var result = await ViewerHub.GetAgentCount();
+            if (result.IsSuccess)
+            {
+                _serverAgentCount = result.Value;
+                return;
+            }
+            else
+            {
+                Logger.LogResult(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while retrieving agent count from server.");
+        }
+
+        Snackbar.Add("Failed to retrieve agent count", Severity.Error);
+    }
+}

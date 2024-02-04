@@ -5,6 +5,7 @@ using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
+using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
@@ -19,6 +20,7 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
+    Task<Result<int>> GetAgentCount();
     Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
@@ -148,9 +150,12 @@ internal class ViewerHubConnection(
                 {
                     await Connection.StopAsync(cancellationToken);
                 }
+                await Start(cancellationToken);
             }
-            catch { }
-            await Start(cancellationToken);
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
+            }
             break;
         }
     }
@@ -227,18 +232,42 @@ internal class ViewerHubConnection(
 
         _messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, HandleAuthStateChanged);
 
+        await CheckIfServerAdministrator();
         await RequestDeviceUpdates();
     }
 
+    private async Task CheckIfServerAdministrator()
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
+                var result = await Connection.InvokeAsync<Result<bool>>(nameof(IViewerHub.CheckIfServerAdministrator), signedDto);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogResult(result);
+                }
+                if (result.IsSuccess && _appState.IsServerAdministrator != result.Value)
+                {
+                    _appState.IsServerAdministrator = result.Value;
+                    await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+                }
+            });
+    }
     public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
     {
         return await TryInvoke(
         async () =>
         {
             var dto = new RdpProxyRequestDto(sessionId);
-            var signedDto = _keyProvider.CreateSignedDto<RdpProxyRequestDto>(dto, DtoType.StartRdpProxy, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.StartRdpProxy, _appState.UserKeys.PrivateKey);
 
-            var result = await Connection.InvokeAsync<Result>("StartRdpProxy", agentConnectionId, sessionId, signedDto);
+            var result = await Connection.InvokeAsync<Result>(
+                nameof(IViewerHub.StartRdpProxy),
+                agentConnectionId,
+                sessionId,
+                signedDto);
+
             if (!result.IsSuccess)
             {
                 _logger.LogError("Failed to start RDP proxy session.");
@@ -322,6 +351,29 @@ internal class ViewerHubConnection(
             _logger.LogError(ex, "Error while invoking hub method.");
             return defaultValue();
         }
+    }
+
+    public async Task ReceiveAgentConnectionCount(int agentConnectionCount)
+    {
+        var message = new ServerAgentConnectionCountUpdate(agentConnectionCount);
+        await _messenger.Send(message);
+    }
+
+    public async Task<Result<int>> GetAgentCount()
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentCountRequest, _appState.UserKeys.PrivateKey);
+                var result = await Connection.InvokeAsync<Result<int>>(nameof(IViewerHub.GetAgentCount), signedDto);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogResult(result);
+                }
+
+                return result;
+            },
+            () => Result.Fail<int>("Failed to get agent count."));
     }
 
     private class RetryPolicy : IRetryPolicy

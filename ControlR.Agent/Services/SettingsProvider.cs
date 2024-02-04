@@ -86,7 +86,7 @@ internal class SettingsProvider(
         if (Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
             newServerUri != ServerUri)
         {
-            _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
+            await _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
         }
     }
 }

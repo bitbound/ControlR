@@ -1,4 +1,6 @@
-﻿namespace ControlR.Shared.Primitives;
+﻿using System.Diagnostics;
+
+namespace ControlR.Shared.Primitives;
 public sealed class DisposableValue<T>(
     T _value,
     Action? _disposeCallback = null) : IDisposable
@@ -13,6 +15,11 @@ public sealed class DisposableValue<T>(
         {
             _disposeCallback?.Invoke();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine
+                ($"Error while invoking callback in {nameof(DisposableValue<T>)}.  " +
+                $"Exception: {ex}");
+        }
     }
 }

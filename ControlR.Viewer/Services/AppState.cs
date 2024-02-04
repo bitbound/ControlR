@@ -10,6 +10,7 @@ public interface IAppState
 {
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
+    bool IsServerAdministrator { get; internal set; }
     bool IsAuthenticated { get; }
     bool IsBusy { get; }
     bool KeysVerified { get; set; }
@@ -57,6 +58,7 @@ internal class AppState(
         }
     }
 
+    public bool IsServerAdministrator { get; set; }
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.Authenticated;
     public bool IsBusy => _busyCounter > 0;
     public bool KeysVerified { get; set; }

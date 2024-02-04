@@ -17,6 +17,12 @@
     <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
         Settings
     </MudNavLink>
+    @if (AppState.IsServerAdministrator)
+    {
+        <MudNavLink Href="server-admin" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+            Server Admin
+        </MudNavLink>
+    }
     <MudNavLink Href="about" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
         About
     </MudNavLink>

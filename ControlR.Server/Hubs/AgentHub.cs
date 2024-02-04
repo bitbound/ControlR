@@ -1,4 +1,6 @@
-﻿using ControlR.Shared.Dtos;
+﻿using ControlR.Server.Services;
+using ControlR.Shared.Dtos;
+using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
@@ -8,7 +10,8 @@ namespace ControlR.Server.Hubs;
 public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
-    ILogger<AgentHub> _logger) : Hub<IAgentHubClient>
+    IAgentConnectionCounter _agentCounter,
+    ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
     {
@@ -27,8 +30,18 @@ public class AgentHub(
         }
     }
 
+    public override async Task OnConnectedAsync()
+    {
+        _agentCounter.Increment();
+        await SendUpdatedConnectionCountToAdmins();
+        await base.OnConnectedAsync();
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        _agentCounter.Decrement();
+        await SendUpdatedConnectionCountToAdmins();
+
         if (Device is DeviceDto cachedDevice)
         {
             cachedDevice.IsOnline = false;
@@ -97,6 +110,19 @@ public class AgentHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while updating device.");
+        }
+    }
+    private async Task SendUpdatedConnectionCountToAdmins()
+    {
+        try
+        {
+            await _viewerHub.Clients
+                .Group(HubGroupNames.ServerAdministrators)
+                .ReceiveAgentConnectionCount(_agentCounter.AgentCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
         }
     }
 }

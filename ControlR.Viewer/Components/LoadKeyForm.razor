@@ -167,7 +167,7 @@ else
                 }
 
                 AppState.KeysVerified = true;
-                Messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+                await Messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
             }
             else
             {

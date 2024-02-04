@@ -108,7 +108,7 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
             return false;
         }
 
-        if (signedDto.DtoType == DtoType.Identity)
+        if (signedDto.DtoType == DtoType.IdentityAttestation)
         {
             return true;
         }

@@ -61,8 +61,8 @@ internal static class IMessengerExtensions
         });
     }
 
-    public static void SendGenericMessage(this IMessenger messenger, GenericMessageKind kind)
+    public static Task SendGenericMessage(this IMessenger messenger, GenericMessageKind kind)
     {
-        messenger.Send(new GenericMessage<GenericMessageKind>(kind));
+        return messenger.Send(new GenericMessage<GenericMessageKind>(kind));
     }
 }

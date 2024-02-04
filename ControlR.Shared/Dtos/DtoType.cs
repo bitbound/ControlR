@@ -3,7 +3,7 @@
 public enum DtoType
 {
     None = 0,
-    Identity = 1,
+    IdentityAttestation = 1,
     VncSessionRequest = 2,
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
@@ -15,4 +15,5 @@ public enum DtoType
     GetAgentAppSettings = 11,
     SendAppSettings = 12,
     WakeDevice = 13,
+    GetAgentCountRequest = 14,
 }

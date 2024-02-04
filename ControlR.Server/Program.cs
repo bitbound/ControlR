@@ -8,7 +8,6 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +44,15 @@ builder.Services.AddAuthorizationBuilder()
         });
         builder.RequireClaim(ClaimNames.PublicKey);
         builder.RequireClaim(ClaimNames.Username);
+    })
+    .AddPolicy(PolicyNames.RequireAdministratorPolicy, builder =>
+    {
+        builder.AddAuthenticationSchemes(AuthSchemes.DigitalSignature);
+        builder.RequireAssertion(x =>
+        {
+            return x.User?.Identity?.IsAuthenticated == true;
+        });
+        builder.RequireClaim(ClaimNames.IsAdministrator, "true");
     });
 
 // Add services to the container.
@@ -66,6 +74,7 @@ builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
+builder.Services.AddSingleton<IAgentConnectionCounter, AgentConnectionCounter>();
 
 builder.Host.UseSystemd();
 

@@ -1,4 +1,5 @@
-﻿using ControlR.Shared;
+﻿using ControlR.Server.Models;
+using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Services;
@@ -11,14 +12,13 @@ using System.Text.Encodings.Web;
 namespace ControlR.Server.Auth;
 
 public class DigitalSignatureAuthenticationHandler(
-    UrlEncoder encoder,
-    IOptionsMonitor<AuthenticationSchemeOptions> options,
-    ILoggerFactory loggerFactory,
-    IServiceScopeFactory scopeFactory,
-    ILogger<DigitalSignatureAuthenticationHandler> logger) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    UrlEncoder _encoder,
+    IOptionsMonitor<AuthenticationSchemeOptions> _options,
+    ILoggerFactory _loggerFactory,
+    IServiceScopeFactory _scopeFactory,
+    IOptionsMonitor<AppOptions> _appOptions,
+    ILogger<DigitalSignatureAuthenticationHandler> _logger) : AuthenticationHandler<AuthenticationSchemeOptions>(_options, _loggerFactory, _encoder)
 {
-    private readonly ILogger<DigitalSignatureAuthenticationHandler> _logger = logger;
-    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -58,7 +58,7 @@ public class DigitalSignatureAuthenticationHandler(
         var payloadBytes = Convert.FromBase64String(base64Token);
         signedPayload = MessagePackSerializer.Deserialize<SignedPayloadDto>(payloadBytes);
 
-        if (signedPayload.DtoType != DtoType.Identity)
+        if (signedPayload.DtoType != DtoType.IdentityAttestation)
         {
             _logger.LogWarning("Unexpected DTO type of {type}.", signedPayload.DtoType);
             return false;
@@ -92,11 +92,16 @@ public class DigitalSignatureAuthenticationHandler(
             return AuthenticateResult.Fail("Digital signature verification failed.");
         }
 
-        var claims = new Claim[]
+        var claims = new List<Claim>
         {
             new(ClaimNames.PublicKey, signedDto.PublicKeyBase64),
             new(ClaimNames.Username, account.Username),
         };
+
+        if (_appOptions.CurrentValue.AdminPublicKeys.Contains(signedDto.PublicKeyBase64))
+        {
+            claims.Add(new(ClaimNames.IsAdministrator, "true"));
+        }
 
         var identity = new ClaimsIdentity(claims, AuthSchemes.DigitalSignature);
         var principal = new ClaimsPrincipal(identity);
