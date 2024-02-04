@@ -64,33 +64,30 @@ internal class AgentInstallerMac(
 
             var serviceFile = GetServiceFile().Trim();
 
+            _logger.LogInformation("Writing service file.");
             await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
             var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
 
             var psi = new ProcessStartInfo()
             {
                 FileName = "sudo",
-                Arguments = $"launchctl bootout system {_serviceFilePath}",
                 WorkingDirectory = "/tmp",
                 UseShellExecute = true
             };
 
-            _logger.LogInformation("Stopping service, if running.");
             try
             {
+                _logger.LogInformation("Bootstrapping service.");
+                psi.Arguments = $"launchctl bootstrap system {_serviceFilePath}";
                 await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
             }
             catch (ProcessStatusException) { }
-
-            _logger.LogInformation("Loading service.");
-            psi.Arguments = $"launchctl bootstrap system {_serviceFilePath}";
-            await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Kickstarting service.");
             psi.Arguments = "launchctl kickstart -k system/com.jaredg.controlr-agent";
             _ = _processInvoker.Start(psi);
 
-            _logger.LogInformation("Installer launched.");
+            _logger.LogInformation("Installer finished.");
         }
         catch (Exception ex)
         {
@@ -120,13 +117,31 @@ internal class AgentInstallerMac(
                 _logger.LogError("Uninstall command must be run with sudo.");
             }
 
-            await _processInvoker
-                .Start("sudo", $"launchctl unload -w {_serviceFilePath}")
-                .WaitForExitAsync(_lifetime.ApplicationStopping);
+            var psi = new ProcessStartInfo()
+            {
+                FileName = "sudo",
+                Arguments = $"launchctl bootout system {_serviceFilePath}",
+                WorkingDirectory = "/tmp",
+                UseShellExecute = true
+            };
 
-            _fileSystem.DeleteFile(_serviceFilePath);
+            try
+            {
+                _logger.LogInformation("Booting out service.");
+                psi.Arguments = $"launchctl bootout system {_serviceFilePath}";
+                await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+            }
+            catch (ProcessStatusException) { }
 
-            _fileSystem.DeleteDirectory(_installDir, true);
+            if (_fileSystem.FileExists(_serviceFilePath))
+            {
+                _fileSystem.DeleteFile(_serviceFilePath);
+            }
+
+            if (_fileSystem.DirectoryExists(_installDir))
+            {
+                _fileSystem.DeleteDirectory(_installDir, true);
+            }
 
             _logger.LogInformation("Uninstall completed.");
         }
@@ -150,13 +165,17 @@ internal class AgentInstallerMac(
             $"<dict>\n" +
             $"    <key>Label</key>\n" +
             $"    <string>com.jaredg.controlr-agent</string>\n" +
+            $"    <key>KeepAlive</key>\n" +
+            $"    <true/>\n" +
+            //$"    <key>StandardErrorPath</key>\n" +
+            //$"    <string>/var/log/ControlR/plist-err.log</string>\n" +
+            //$"    <key>StandardOutPath</key>\n" +
+            //$"    <string>/var/log/ControlR/plist-std-log</string> \n" +
             $"    <key>ProgramArguments</key>\n" +
             $"    <array>\n" +
             $"        <string>{_installDir}/ControlR.Agent</string>\n" +
             $"        <string>run</string>\n" +
             $"    </array>\n" +
-            $"    <key>KeepAlive</key>\n" +
-            $"    <true/>\n" +
             $"</dict>\n" +
             $"</plist>";
     }
