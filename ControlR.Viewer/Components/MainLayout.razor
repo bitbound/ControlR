@@ -73,6 +73,14 @@
             <NavMenu />
         </MudDrawer>
         <MudMainContent>
+            <div>
+                @if (_showAlert)
+                {
+                    <MudAlert Severity="Severity.Warning" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
+                        @(_alertMessage)
+                     </MudAlert>
+                }
+            </div>
             <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="my-4 pt-4">
                 @Body
             </MudContainer>
@@ -84,6 +92,9 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _showAlert = false;
+    private Severity _alertSeverity = Severity.Normal;
+    private string _alertMessage = string.Empty;
     private bool _updateAvailable;
 
     protected override void OnInitialized()
@@ -91,6 +102,11 @@
         base.OnInitialized();
         Messenger.RegisterGenericMessage(this, HandleGeneric);
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
+    }
+
+    private void CloseAlert()
+    {
+        _showAlert = false;
     }
 
     private void DrawerToggle()
