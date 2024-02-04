@@ -172,7 +172,7 @@ internal class Settings(
         PublicKey = keypair.PublicKey;
         PrivateKey = keypair.PrivateKey;
         await SetEncryptedPrivateKey(keypair.EncryptedPrivateKey);
-        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
     }
 
     public async Task UpdateKeypair(KeypairExport export)
@@ -180,7 +180,7 @@ internal class Settings(
         Username = export.Username;
         PublicKey = Convert.FromBase64String(export.PublicKey);
         await SetEncryptedPrivateKey(Convert.FromBase64String(export.EncryptedPrivateKey));
-        _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
     }
 
     private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
