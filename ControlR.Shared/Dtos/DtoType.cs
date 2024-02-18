@@ -16,4 +16,6 @@ public enum DtoType
     SendAppSettings = 12,
     WakeDevice = 13,
     GetAgentCountRequest = 14,
+    SendAlertBroadcast = 15,
+    ClearAlerts = 16,
 }

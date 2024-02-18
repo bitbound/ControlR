@@ -68,10 +68,10 @@
         Label="Whether the alert should persist through server reboots." />
 
     <div class="d-flex">
-        <MudButton ButtonType="ButtonType.Button" Color="Color.Info">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Info" OnClick="SendBroadcast">
             Send
         </MudButton>
-        <MudButton ButtonType="ButtonType.Button" Color="Color.Default">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" OnClick="ClearAlert">
             Clear
         </MudButton>
     </div>
@@ -81,7 +81,7 @@
 @code {
     private int _serverAgentCount;
     private string _alertMessage = string.Empty;
-    private Severity _alertSeverity = Severity.Normal;
+    private AlertSeverity _alertSeverity = AlertSeverity.Information;
     private bool _alertIsSticky = false;
 
     protected override async Task OnInitializedAsync()
@@ -97,6 +97,11 @@
         );
 
         await RefreshAgentCount();
+    }
+
+    private async Task ClearAlert()
+    {
+        await ViewerHub.CleartAlerts();
     }
 
     private async Task RefreshAgentCount()
@@ -120,5 +125,10 @@
         }
 
         Snackbar.Add("Failed to retrieve agent count", Severity.Error);
+    }
+
+    private async Task SendBroadcast()
+    {
+        await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
     }
 }

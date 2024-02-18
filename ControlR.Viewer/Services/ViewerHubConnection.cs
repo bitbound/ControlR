@@ -20,12 +20,15 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task<Result<int>> GetAgentCount();
+    Task ClearAlerts();
+
     Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
+
+    Task<Result<int>> GetAgentCount();
 
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
@@ -36,6 +39,8 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task RequestDeviceUpdates();
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
+
+    Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
 
@@ -58,13 +63,24 @@ internal class ViewerHubConnection(
     ILogger<ViewerHubConnection> _logger,
     IMessenger messenger) : HubConnectionBase(serviceScopeFactory, messenger, _logger), IViewerHubConnection, IViewerHubClient
 {
+    public async Task ClearAlerts()
+    {
+        await TryInvoke(
+            async () =>
+            {
+                await WaitForConnection();
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _appState.UserKeys.PrivateKey);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
+            });
+    }
+
     public async Task CloseTerminalSession(string deviceId, Guid terminalId)
     {
         await TryInvoke(async () =>
         {
             var request = new CloseTerminalRequestDto(terminalId);
             var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.UserKeys.PrivateKey);
-            await Connection.InvokeAsync("SendSignedDtoToAgent", deviceId, signedDto);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
         });
     }
 
@@ -77,7 +93,7 @@ internal class ViewerHubConnection(
 
                 var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
                 var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
-                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>("CreateTerminalSession", agentConnectionId, signedDto);
+                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, signedDto);
             },
             () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
     }
@@ -89,9 +105,26 @@ internal class ViewerHubConnection(
             {
                 var request = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentAppSettings, _appState.UserKeys.PrivateKey);
                 var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
-                return await Connection.InvokeAsync<Result<AgentAppSettings>>("GetAgentAppSettings", agentConnectionId, signedDto);
+                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, signedDto);
             },
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
+    }
+
+    public async Task<Result<int>> GetAgentCount()
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentCountRequest, _appState.UserKeys.PrivateKey);
+                var result = await Connection.InvokeAsync<Result<int>>(nameof(IViewerHub.GetAgentCount), signedDto);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogResult(result);
+                }
+
+                return result;
+            },
+            () => Result.Fail<int>("Failed to get agent count."));
     }
 
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
@@ -102,7 +135,7 @@ internal class ViewerHubConnection(
                 var vncSession = new VncSessionRequest(sessionId, vncPassword);
                 var signedDto = _keyProvider.CreateSignedDto(vncSession, DtoType.VncSessionRequest, _appState.UserKeys.PrivateKey);
 
-                var result = await Connection.InvokeAsync<VncSessionRequestResult>("GetVncSession", agentConnectionId, sessionId, signedDto);
+                var result = await Connection.InvokeAsync<VncSessionRequestResult>(nameof(IViewerHub.GetVncSession), agentConnectionId, sessionId, signedDto);
                 if (!result.SessionCreated)
                 {
                     _logger.LogError("Failed to get VNC session.");
@@ -117,7 +150,7 @@ internal class ViewerHubConnection(
         try
         {
             var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.WindowsSessions, _appState.UserKeys.PrivateKey);
-            var sessions = await Connection.InvokeAsync<WindowsSession[]>("GetWindowsSessions", device.ConnectionId, signedDto);
+            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, signedDto);
             return Result.Ok(sessions);
         }
         catch (Exception ex)
@@ -125,6 +158,12 @@ internal class ViewerHubConnection(
             _logger.LogError(ex, "Error while getting windows sessions.");
             return Result.Fail<WindowsSession[]>(ex);
         }
+    }
+
+    public async Task ReceiveAgentConnectionCount(int agentConnectionCount)
+    {
+        var message = new ServerAgentConnectionCountUpdate(agentConnectionCount);
+        await _messenger.Send(message);
     }
 
     public Task ReceiveDeviceUpdate(DeviceDto device)
@@ -166,7 +205,7 @@ internal class ViewerHubConnection(
         {
             await WaitForConnection();
             var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _appState.UserKeys.PrivateKey);
-            await Connection.InvokeAsync("SendSignedDtoToPublicKeyGroup", signedDto);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
         });
     }
 
@@ -177,9 +216,21 @@ internal class ViewerHubConnection(
             {
                 await WaitForConnection();
                 var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _appState.UserKeys.PrivateKey);
-                return await Connection.InvokeAsync<Result>("SendAgentAppSettings", agentConnectionId, signedDto);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, signedDto);
             },
             () => Result.Fail("Failed to send app settings"));
+    }
+
+    public async Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky)
+    {
+        await TryInvoke(
+            async () =>
+            {
+                await WaitForConnection();
+                var dto = new AlertBroadcastDto(message, severity, isSticky);
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.UserKeys.PrivateKey);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
+            });
     }
 
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
@@ -188,7 +239,7 @@ internal class ViewerHubConnection(
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
             var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.UserKeys.PrivateKey);
-            await Connection.InvokeAsync("SendSignedDtoToAgent", device.Id, signedDto);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
         });
     }
 
@@ -199,7 +250,7 @@ internal class ViewerHubConnection(
             {
                 var request = new TerminalInputDto(terminalId, input);
                 var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _appState.UserKeys.PrivateKey);
-                return await Connection.InvokeAsync<Result>("SendTerminalInput", agentConnectionId, signedDto);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, signedDto);
             },
             () => Result.Fail("Failed to send terminal input"));
     }
@@ -211,7 +262,7 @@ internal class ViewerHubConnection(
             {
                 var request = new WakeDeviceDto(macAddresses);
                 var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.UserKeys.PrivateKey);
-                await Connection.InvokeAsync("SendSignedDtoToPublicKeyGroup", signedDto);
+                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
             });
     }
 
@@ -236,24 +287,6 @@ internal class ViewerHubConnection(
         await RequestDeviceUpdates();
     }
 
-    private async Task CheckIfServerAdministrator()
-    {
-        await TryInvoke(
-            async () =>
-            {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
-                var result = await Connection.InvokeAsync<Result<bool>>(nameof(IViewerHub.CheckIfServerAdministrator), signedDto);
-                if (!result.IsSuccess)
-                {
-                    _logger.LogResult(result);
-                }
-                if (result.IsSuccess && _appState.IsServerAdministrator != result.Value)
-                {
-                    _appState.IsServerAdministrator = result.Value;
-                    await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
-                }
-            });
-    }
     public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
     {
         return await TryInvoke(
@@ -275,6 +308,25 @@ internal class ViewerHubConnection(
             return result;
         },
         () => new(false));
+    }
+
+    private async Task CheckIfServerAdministrator()
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
+                var result = await Connection.InvokeAsync<Result<bool>>(nameof(IViewerHub.CheckIfServerAdministrator), signedDto);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogResult(result);
+                }
+                if (result.IsSuccess && _appState.IsServerAdministrator != result.Value)
+                {
+                    _appState.IsServerAdministrator = result.Value;
+                    await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+                }
+            });
     }
 
     private void ConfigureConnection(HubConnection connection)
@@ -351,29 +403,6 @@ internal class ViewerHubConnection(
             _logger.LogError(ex, "Error while invoking hub method.");
             return defaultValue();
         }
-    }
-
-    public async Task ReceiveAgentConnectionCount(int agentConnectionCount)
-    {
-        var message = new ServerAgentConnectionCountUpdate(agentConnectionCount);
-        await _messenger.Send(message);
-    }
-
-    public async Task<Result<int>> GetAgentCount()
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentCountRequest, _appState.UserKeys.PrivateKey);
-                var result = await Connection.InvokeAsync<Result<int>>(nameof(IViewerHub.GetAgentCount), signedDto);
-                if (!result.IsSuccess)
-                {
-                    _logger.LogResult(result);
-                }
-
-                return result;
-            },
-            () => Result.Fail<int>("Failed to get agent count."));
     }
 
     private class RetryPolicy : IRetryPolicy

@@ -21,7 +21,6 @@ public class ViewerHub(
     IAgentConnectionCounter _agentCounter,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
-
     public async Task<Result<bool>> CheckIfServerAdministrator(SignedPayloadDto signedDto)
     {
         try
@@ -192,6 +191,11 @@ public class ViewerHub(
         }
     }
 
+    public Task SendAlertBroadcast(SignedPayloadDto signedDto)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
     {
         using var scope = _logger.BeginMemberScope();
@@ -275,6 +279,7 @@ public class ViewerHub(
         }
         return Result.Ok(isAdmin);
     }
+
     private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
     {
         publicKey = string.Empty;
