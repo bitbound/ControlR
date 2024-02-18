@@ -8,6 +8,7 @@ using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
+using MessagePack;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Runtime.CompilerServices;
@@ -19,6 +20,7 @@ public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
     IProxyStreamStore _proxyStreamStore,
     IAgentConnectionCounter _agentCounter,
+    IAlertStore _alertStore,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
     public async Task<Result<bool>> CheckIfServerAdministrator(SignedPayloadDto signedDto)
@@ -43,6 +45,28 @@ public class ViewerHub(
             _logger.LogError(ex, "Error while check if user is an administrator.");
             return Result.Fail<bool>("An error occurred.");
         }
+    }
+
+    public async Task<Result> ClearAlert(SignedPayloadDto signedDto)
+    {
+        using var scope = _logger.BeginMemberScope();
+
+        if (!VerifySignature(signedDto, out var publicKey))
+        {
+            return Result.Fail("Signature verification failed.");
+        }
+
+        var isAdmin = Context.User?.IsAdministrator() ?? false;
+        if (!isAdmin)
+        {
+            _logger.LogCritical(
+                "Non-administrator attempted to clear alerts.  " +
+                "Public Key: {PublicKey}",
+                publicKey);
+            return Result.Fail("Unauthorized.");
+        }
+
+        return await _alertStore.ClearAlert();
     }
 
     public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
@@ -104,6 +128,20 @@ public class ViewerHub(
         {
             _logger.LogError(ex, "Error while getting agent count.");
             return Result.Fail<int>("Failed to get agent count.").AsTaskResult();
+        }
+    }
+
+    public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
+    {
+        try
+        {
+            return await _alertStore.GetCurrentAlert();
+        }
+        catch (Exception ex)
+        {
+            return Result
+                .Fail<AlertBroadcastDto>(ex, "Failed to get current alert.")
+                .Log(_logger);
         }
     }
 
@@ -191,9 +229,41 @@ public class ViewerHub(
         }
     }
 
-    public Task SendAlertBroadcast(SignedPayloadDto signedDto)
+    public async Task<Result> SendAlertBroadcast(SignedPayloadDto signedDto)
     {
-        throw new NotImplementedException();
+        try
+        {
+            using var scope = _logger.BeginMemberScope();
+
+            if (!VerifySignature(signedDto, out _))
+            {
+                return Result.Fail("Signature verification failed.");
+            }
+
+            var alert = MessagePackSerializer.Deserialize<AlertBroadcastDto>(signedDto.Payload);
+            if (alert is null)
+            {
+                return Result
+                    .Fail("Failed to deserialize alert payload.")
+                    .Log(_logger);
+            }
+
+            var storeResult = await _alertStore.StoreAlert(alert);
+            if (!storeResult.IsSuccess)
+            {
+                return storeResult;
+            }
+
+            await Clients.All.ReceiveAlertBroadcast(alert);
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Result
+                .Fail(ex, "Failed to send agent app settings.")
+                .Log(_logger);
+        }
+
     }
 
     public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
@@ -292,7 +362,11 @@ public class ViewerHub(
 
         if (publicKey != signedDto.PublicKeyBase64)
         {
-            _logger.LogCritical("Public key doesn't match what was retrieved during authentication.");
+            _logger.LogCritical(
+                "Public key doesn't match what was retrieved during authentication.  " +
+                "Public Key: {ReceivedPublicKey}",
+                publicKey);
+
             return false;
         }
 

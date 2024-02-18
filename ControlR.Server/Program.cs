@@ -75,6 +75,9 @@ builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 builder.Services.AddSingleton<IAgentConnectionCounter, AgentConnectionCounter>();
+builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
+builder.Services.AddSingleton<IAlertStore, AlertStore>();
+builder.Services.AddSingleton<IRetryer, Retryer>();
 
 builder.Host.UseSystemd();
 

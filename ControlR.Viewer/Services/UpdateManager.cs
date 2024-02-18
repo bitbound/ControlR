@@ -17,9 +17,9 @@ using Bitbound.SimpleMessenger;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
-using ControlR.Shared.Helpers;
 using System.Runtime.Versioning;
 using ControlR.Devices.Common.Extensions;
+using ControlR.Shared.Services;
 
 namespace ControlR.Viewer.Services;
 
@@ -34,6 +34,7 @@ internal class UpdateManager(
     IVersionApi _versionApi,
 #if ANDROID
     IHttpClientFactory _clientFactory,
+    IDelayer _delayer,
 #endif
 #if WINDOWS
     IDownloadsApi _downloadsApi,
@@ -143,7 +144,7 @@ internal class UpdateManager(
                 global::Android.Provider.Settings.ActionManageUnknownAppSources,
                 global::Android.Net.Uri.Parse("package:" + global::Android.App.Application.Context.PackageName)));
 
-            await WaitHelper.WaitForAsync(
+            await _delayer.WaitForAsync(
                 packageManager.CanRequestPackageInstalls,
                 TimeSpan.MaxValue,
                 1_000);

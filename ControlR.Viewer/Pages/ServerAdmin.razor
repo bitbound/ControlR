@@ -52,7 +52,7 @@
         @bind-Value="_alertSeverity" 
         FullWidth="false"
         Label="The severity (icon and color) to use for the alert.">
-        @foreach (var severity in Enum.GetValues<Severity>())
+        @foreach (var severity in Enum.GetValues<AlertSeverity>())
         {
             <MudSelectItem Value="@severity">
                 @severity
@@ -68,10 +68,10 @@
         Label="Whether the alert should persist through server reboots." />
 
     <div class="d-flex">
-        <MudButton ButtonType="ButtonType.Button" Color="Color.Info" OnClick="SendBroadcast">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Info" Variant="Variant.Filled" Class="me-3" OnClick="SendBroadcast">
             Send
         </MudButton>
-        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" OnClick="ClearAlert">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" Variant="Variant.Filled" OnClick="ClearAlert">
             Clear
         </MudButton>
     </div>
@@ -86,7 +86,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var result = await ViewerHub.GetCurrentAlertFromServer();
+        if (result.IsSuccess)
+        {
+            _alertMessage = result.Value.Message;
+            _alertSeverity = result.Value.Severity;
+            _alertIsSticky = result.Value.IsSticky;
+        }
+
         await base.OnInitializedAsync();
+
         Messenger.Register<ServerAgentConnectionCountUpdate>(
             this,
             async (subscriber, update) =>
@@ -101,7 +110,7 @@
 
     private async Task ClearAlert()
     {
-        await ViewerHub.CleartAlerts();
+        await ViewerHub.ClearAlert();
     }
 
     private async Task RefreshAgentCount()

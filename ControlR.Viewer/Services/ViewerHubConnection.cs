@@ -20,7 +20,7 @@ namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task ClearAlerts();
+    Task ClearAlert();
 
     Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
@@ -30,6 +30,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<int>> GetAgentCount();
 
+    Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
@@ -54,23 +55,24 @@ public interface IViewerHubConnection : IHubConnectionBase
 }
 
 internal class ViewerHubConnection(
-    IServiceScopeFactory serviceScopeFactory,
+    IServiceScopeFactory _serviceScopeFactory,
     IHttpConfigurer _httpConfigurer,
     IAppState _appState,
     IDeviceCache _devicesCache,
     IKeyProvider _keyProvider,
     ISettings _settings,
-    ILogger<ViewerHubConnection> _logger,
-    IMessenger messenger) : HubConnectionBase(serviceScopeFactory, messenger, _logger), IViewerHubConnection, IViewerHubClient
+    IDelayer _delayer,
+    IMessenger _messenger,
+    ILogger<ViewerHubConnection> _logger) : HubConnectionBase(_serviceScopeFactory, _messenger, _delayer, _logger), IViewerHubConnection, IViewerHubClient
 {
-    public async Task ClearAlerts()
+    public async Task ClearAlert()
     {
         await TryInvoke(
             async () =>
             {
                 await WaitForConnection();
                 var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _appState.UserKeys.PrivateKey);
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert), signedDto);
             });
     }
 
@@ -127,6 +129,25 @@ internal class ViewerHubConnection(
             () => Result.Fail<int>("Failed to get agent count."));
     }
 
+    public async Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer()
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var alertResult = await Connection.InvokeAsync<Result<AlertBroadcastDto>>(nameof(IViewerHub.GetCurrentAlert));
+                if (alertResult.IsSuccess)
+                {
+                    await _messenger.Send(alertResult.Value);
+                }
+                else if (alertResult.HadException)
+                {
+                    alertResult.Log(_logger);
+                }
+                return alertResult;
+            },
+            () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
     {
         return await TryInvoke(
@@ -164,6 +185,11 @@ internal class ViewerHubConnection(
     {
         var message = new ServerAgentConnectionCountUpdate(agentConnectionCount);
         await _messenger.Send(message);
+    }
+
+    public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
+    {
+        await _messenger.Send(alert);
     }
 
     public Task ReceiveDeviceUpdate(DeviceDto device)
@@ -270,7 +296,7 @@ internal class ViewerHubConnection(
     {
         _messenger.UnregisterAll(this);
 
-        await WaitHelper.WaitForAsync(() => _appState.IsAuthenticated, TimeSpan.MaxValue);
+        await _delayer.WaitForAsync(() => _appState.IsAuthenticated, TimeSpan.MaxValue);
 
         using var _ = _appState.IncrementBusyCounter();
 
@@ -284,9 +310,9 @@ internal class ViewerHubConnection(
         _messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, HandleAuthStateChanged);
 
         await CheckIfServerAdministrator();
+        await GetCurrentAlertFromServer();
         await RequestDeviceUpdates();
     }
-
     public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
     {
         return await TryInvoke(
@@ -336,6 +362,7 @@ internal class ViewerHubConnection(
         connection.Reconnected += Connection_Reconnected;
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
         connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
+        connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

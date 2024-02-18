@@ -7,6 +7,8 @@ namespace ControlR.Shared.Hubs;
 public interface IViewerHub
 {
     Task<Result<bool>> CheckIfServerAdministrator(SignedPayloadDto signedDto);
+    Task<Result> ClearAlert(SignedPayloadDto signedDto);
+    Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto);
 
@@ -20,7 +22,7 @@ public interface IViewerHub
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
 
-    Task SendAlertBroadcast(SignedPayloadDto signedDto);
+    Task<Result> SendAlertBroadcast(SignedPayloadDto signedDto);
 
     Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto);
 

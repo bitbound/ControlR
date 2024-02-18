@@ -2,6 +2,7 @@
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Messages;
 using ControlR.Devices.Common.Services.Base;
+using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
 
@@ -15,15 +16,13 @@ public interface ILocalProxyViewer
 }
 
 internal class LocalProxyViewer(
-    ISettings settings,
+    ISettings _settings,
+    IAppState _appState,
     IMemoryProvider memoryProvider,
-    IAppState appState,
     IMessenger messenger,
-    ILogger<TcpWebsocketProxyBase> logger) : TcpWebsocketProxyBase(memoryProvider, messenger, logger), ILocalProxyViewer
+    IRetryer retryer,
+    ILogger<TcpWebsocketProxyBase> logger) : TcpWebsocketProxyBase(memoryProvider, messenger, retryer, logger), ILocalProxyViewer
 {
-    private readonly IAppState _appState = appState;
-    private readonly ISettings _settings = settings;
-
     public async Task<Result> ListenForLocalConnections(Guid sessionId, int portNumber)
     {
         return await StartProxySession(sessionId, portNumber, true);

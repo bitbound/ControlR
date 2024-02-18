@@ -76,7 +76,7 @@
             <div>
                 @if (_showAlert)
                 {
-                    <MudAlert Severity="Severity.Warning" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
+                    <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
                         @(_alertMessage)
                      </MudAlert>
                 }
@@ -93,7 +93,7 @@
 @code {
     private bool _drawerOpen = true;
     private bool _showAlert = false;
-    private Severity _alertSeverity = Severity.Normal;
+    private AlertSeverity _alertSeverity = AlertSeverity.Information;
     private string _alertMessage = string.Empty;
     private bool _updateAvailable;
 
@@ -102,6 +102,7 @@
         base.OnInitialized();
         Messenger.RegisterGenericMessage(this, HandleGeneric);
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
+        Messenger.Register<AlertBroadcastDto>(this, HandleAlertBroadcast);
     }
 
     private void CloseAlert()
@@ -112,6 +113,14 @@
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task HandleAlertBroadcast(object subscriber, AlertBroadcastDto alert)
+    {
+        _alertMessage = alert.Message;
+        _alertSeverity = alert.Severity;
+        _showAlert = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleGeneric(object subscriber, GenericMessageKind kind)

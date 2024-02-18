@@ -1,8 +1,8 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services;
-using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
+using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
 
@@ -13,6 +13,7 @@ internal class VncSessionLauncherLinux(
     IProcessManager _processes,
     ISettingsProvider _settings,
     IFileSystem _fileSystem,
+    IDelayer _delayer,
     ILogger<VncSessionLauncherLinux> _logger) : IVncSessionLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
@@ -69,7 +70,7 @@ internal class VncSessionLauncherLinux(
 
             _ = _processes.Start("sudo", $"vncserver -depth 24 -geometry 1280x800 -localhost -rfbport {_settings.VncPort}");
 
-            var launchSuccess = await WaitHelper.WaitForAsync(
+            var launchSuccess = await _delayer.WaitForAsync(
                 () =>
                 {
                     return _processes

@@ -22,6 +22,7 @@ internal class VncSessionLauncherWindows(
     IProcessManager _processInvoker,
     IEnvironmentHelper _environment,
     IElevationChecker _elevationChecker,
+    IDelayer _delayer,
     ILogger<VncSessionLauncherWindows> _logger) : IVncSessionLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
@@ -159,7 +160,7 @@ internal class VncSessionLauncherWindows(
             await _processInvoker.StartAndWaitForExit("sc.exe", "config start= demand", true, TimeSpan.FromSeconds(5));
         }
 
-        var startResult = await WaitHelper.WaitForAsync(
+        var startResult = await _delayer.WaitForAsync(
                () =>
                {
                    return _processInvoker
