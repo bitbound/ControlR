@@ -31,6 +31,7 @@ using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
 using ControlR.Devices.Common.Services;
+using ControlR.Shared.Services.Http;
 
 namespace ControlR.Viewer.Components;
 
@@ -44,6 +45,7 @@ public partial class Dashboard
 
     private bool _loading = true;
     private string? _searchText;
+    private Version? _agentReleaseVersion;
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -62,6 +64,9 @@ public partial class Dashboard
 
     [Inject]
     public required ILocalProxyViewer LocalProxy { get; init; }
+
+    [Inject]
+    public required IVersionApi VersionApi { get; init; }
 
     [Inject]
     public required ILogger<Dashboard> Logger { get; init; }
@@ -122,12 +127,31 @@ public partial class Dashboard
                 return true;
             }
 
-            return JsonSerializer.Serialize(x).Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+            var element = JsonSerializer.SerializeToElement(x);
+            foreach (var property in element.EnumerateObject())
+            {
+                try
+                {
+                    if (property.Value.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                catch { }
+            }
+            return false;
         };
 
     protected override async Task OnInitializedAsync()
     {
         using var _ = AppState.IncrementBusyCounter();
+
+        var agentVerResult = await VersionApi.GetCurrentAgentVersion();
+        if (agentVerResult.IsSuccess)
+        {
+            _agentReleaseVersion = agentVerResult.Value;
+        }
+
         Messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
         await base.OnInitializedAsync();

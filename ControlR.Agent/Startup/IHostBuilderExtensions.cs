@@ -76,6 +76,8 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IMemoryProvider, MemoryProvider>();
             services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
             services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
+            services.AddSingleton<IDelayer, Delayer>();
+            services.AddSingleton<IRetryer, Retryer>();
 
             if (startupMode == StartupMode.Run)
             {

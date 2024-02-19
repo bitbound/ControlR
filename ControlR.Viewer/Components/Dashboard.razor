@@ -22,8 +22,15 @@
 
     <ToolBarContent>
         <MudSpacer />
-        <MudTextField @bind-Value="_searchText" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
-                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        <MudTextField 
+            @bind-Value="_searchText" 
+            Placeholder="Search" 
+            Adornment="Adornment.Start" 
+            Immediate="true"
+            DebounceInterval="500"
+            AdornmentIcon="@Icons.Material.Filled.Search" 
+            IconSize="Size.Medium"
+            Class="mt-0"></MudTextField>
 
         <MudTooltip Text="Refresh">
             <MudIconButton Variant="Variant.Filled"
@@ -147,9 +154,20 @@
             <CellTemplate>
                 @if (context.Item.IsOnline)
                 {
-                    <MudTooltip Text="Online">
-                        <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
-                    </MudTooltip>
+                    if (_agentReleaseVersion is not null &&
+                        Version.TryParse(context.Item.AgentVersion, out var agentVersion) &&
+                        !agentVersion.Equals(_agentReleaseVersion))
+                    {
+                        <MudTooltip Text="Online (Outdated)">
+                            <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)" />
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="Online">
+                            <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
+                        </MudTooltip>
+                    }
                 }
                 else
                 {

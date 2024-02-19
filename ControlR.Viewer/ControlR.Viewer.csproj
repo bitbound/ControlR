@@ -24,7 +24,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2024.1.29.1937</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.2.18.1459</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 
@@ -109,12 +109,12 @@
 	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.1.0" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="7.0.1" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-		<PackageReference Include="MudBlazor" Version="6.14.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.6" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.6" />
+		<PackageReference Include="MudBlazor" Version="6.15.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.7" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.7" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -123,7 +123,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.6" />
+	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.7" />
 	</ItemGroup>
 
 </Project>

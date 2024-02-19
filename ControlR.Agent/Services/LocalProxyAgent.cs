@@ -4,6 +4,7 @@ using ControlR.Agent.Models;
 using ControlR.Devices.Common.Services.Base;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Primitives;
+using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,8 +25,9 @@ internal class LocalProxyAgent(
     ISettingsProvider _settings,
     IMemoryProvider _memoryProvider,
     IVncSessionLauncher _vncSessionLauncher,
-    IMessenger messenger,
-    ILogger<LocalProxyAgent> logger) : TcpWebsocketProxyBase(_memoryProvider, messenger, logger), ILocalProxyAgent
+    IMessenger _messenger,
+    IRetryer _retryer,
+    ILogger<LocalProxyAgent> logger) : TcpWebsocketProxyBase(_memoryProvider, _messenger, _retryer, logger), ILocalProxyAgent
 {
     private volatile int _sessionCount;
 

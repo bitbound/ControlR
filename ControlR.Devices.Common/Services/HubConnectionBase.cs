@@ -1,7 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Messages;
 using ControlR.Shared.Dtos;
-using ControlR.Shared.Helpers;
+using ControlR.Shared.Services;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,10 +21,12 @@ public interface IHubConnectionBase
 
 public abstract class HubConnectionBase(
     IServiceScopeFactory _scopeFactory,
-    IMessenger messenger,
+    IMessenger _messenger,
+    IDelayer _delayer,
     ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
-    protected readonly IMessenger _messenger = messenger;
+    protected readonly IMessenger _messenger = _messenger;
+    protected readonly IDelayer _delayer = _delayer;
     private CancellationToken _cancellationToken;
     private HubConnection? _connection;
     private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
@@ -138,7 +140,7 @@ public abstract class HubConnectionBase(
 
     protected async Task WaitForConnection()
     {
-        await WaitHelper.WaitForAsync(() => IsConnected, TimeSpan.MaxValue);
+        await _delayer.WaitForAsync(() => IsConnected, TimeSpan.MaxValue);
     }
 
     private Task HubConnection_Closed(Exception? arg)

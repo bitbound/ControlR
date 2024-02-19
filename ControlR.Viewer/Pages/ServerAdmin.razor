@@ -10,26 +10,92 @@
     Server Administration
 </MudText>
 
-<div class="d-flex mt-10">
-    <MudCard>
-        <MudCardHeader Class="pa-2">
-            Agent Count
-        </MudCardHeader>
-        <MudCardContent Class="pa-2">
-            <MudText Align="Align.Center">
-                <b>
-                    @(_serverAgentCount)
-                </b>
-            </MudText>
-        </MudCardContent>
-    </MudCard>
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Server Stats
+    </MudText>
+
+    <div class="d-flex">
+        <MudCard>
+            <MudCardHeader Class="pa-2">
+                Agent Count
+            </MudCardHeader>
+            <MudCardContent Class="pa-2">
+                <MudText Align="Align.Center">
+                    <b>
+                        @(_serverAgentCount)
+                    </b>
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </div>
+
 </div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Broadcast Alert
+    </MudText>
+    <MudText Typo="Typo.body1">
+        Broadcast a message that will be displayed to all viewers.
+    </MudText>
+
+    <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4">
+        Message
+    </MudText>
+    <MudTextField T="string" @bind-Value="_alertMessage" Label="The text that will be displayed in the alert." />
+
+    <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4">
+        Severity
+    </MudText>
+    <MudSelect 
+        @bind-Value="_alertSeverity" 
+        FullWidth="false"
+        Label="The severity (icon and color) to use for the alert.">
+        @foreach (var severity in Enum.GetValues<AlertSeverity>())
+        {
+            <MudSelectItem Value="@severity">
+                @severity
+            </MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4">
+        Sticky
+    </MudText>
+    <MudCheckBox 
+        @bind-Value="_alertIsSticky" 
+        Label="Whether the alert should persist through server reboots." />
+
+    <div class="d-flex">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Info" Variant="Variant.Filled" Class="me-3" OnClick="SendBroadcast">
+            Send
+        </MudButton>
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" Variant="Variant.Filled" OnClick="ClearAlert">
+            Clear
+        </MudButton>
+    </div>
+
+</div>
+
 @code {
     private int _serverAgentCount;
+    private string _alertMessage = string.Empty;
+    private AlertSeverity _alertSeverity = AlertSeverity.Information;
+    private bool _alertIsSticky = false;
 
     protected override async Task OnInitializedAsync()
     {
+        var result = await ViewerHub.GetCurrentAlertFromServer();
+        if (result.IsSuccess)
+        {
+            _alertMessage = result.Value.Message;
+            _alertSeverity = result.Value.Severity;
+            _alertIsSticky = result.Value.IsSticky;
+        }
+
         await base.OnInitializedAsync();
+
         Messenger.Register<ServerAgentConnectionCountUpdate>(
             this,
             async (subscriber, update) =>
@@ -40,6 +106,11 @@
         );
 
         await RefreshAgentCount();
+    }
+
+    private async Task ClearAlert()
+    {
+        await ViewerHub.ClearAlert();
     }
 
     private async Task RefreshAgentCount()
@@ -63,5 +134,10 @@
         }
 
         Snackbar.Add("Failed to retrieve agent count", Severity.Error);
+    }
+
+    private async Task SendBroadcast()
+    {
+        await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
     }
 }

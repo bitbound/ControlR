@@ -3,7 +3,6 @@ using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
-using ControlR.Shared.Helpers;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +15,7 @@ internal class AgentInstallerLinux(
     IFileSystem fileSystem,
     IProcessManager processInvoker,
     IEnvironmentHelper environmentHelper,
+    IRetryer _retryer,
     ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
@@ -54,7 +54,7 @@ internal class AgentInstallerLinux(
                 _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
             }
 
-            await TryHelper.Retry(
+            await _retryer.Retry(
                 () =>
                 {
                     _fileSystem.CopyFile(exePath, targetPath, true);

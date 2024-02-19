@@ -4,7 +4,6 @@ using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
-using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +22,7 @@ internal class AgentInstallerWindows(
     IFileSystem fileSystem,
     IEnvironmentHelper environmentHelper,
     IElevationChecker elevationChecker,
+    IRetryer _retryer,
     ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
@@ -71,7 +71,7 @@ internal class AgentInstallerWindows(
 
             try
             {
-                await TryHelper.Retry(
+                await _retryer.Retry(
                     () =>
                     {
                         _logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);

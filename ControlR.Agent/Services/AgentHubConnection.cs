@@ -48,9 +48,10 @@ internal class AgentHubConnection(
      IMessenger _messenger,
      ITerminalStore _terminalStore,
      IRegistryAccessor _registryAccessor,
+     IDelayer _delayer,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
-        : HubConnectionBase(_scopeFactory, _messenger, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
+        : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
 {
     public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto)
     {

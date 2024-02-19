@@ -1,5 +1,7 @@
-﻿using ControlR.Shared.Serialization;
+﻿using ControlR.Shared.Extensions;
+using ControlR.Shared.Serialization;
 using MessagePack;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
@@ -87,6 +89,11 @@ public class Result
         return new Result<T>(ex);
     }
 
+    public static Result<T> Fail<T>(Exception ex, string reason)
+    {
+        return new Result<T>(ex, reason);
+    }
+
     public static Result Ok()
     {
         return new Result(true);
@@ -95,6 +102,12 @@ public class Result
     public static Result<T> Ok<T>(T value)
     {
         return new Result<T>(value);
+    }
+
+    public Result Log<TLogger>(ILogger<TLogger> logger)
+    {
+        logger.LogResult(this);
+        return this;
     }
 }
 
@@ -135,6 +148,17 @@ public class Result<T>
     }
 
     /// <summary>
+    /// Returns an unsuccessful result with the given exception and reason.
+    /// </summary>
+    /// <param name="exception"></param>
+    public Result(Exception exception, string reason)
+    {
+        IsSuccess = false;
+        Exception = exception;
+        Reason = reason;
+    }
+
+    /// <summary>
     /// Returns an unsuccessful result with the given reason.
     /// </summary>
     /// <param name="errorMessage"></param>
@@ -164,6 +188,12 @@ public class Result<T>
 
     [MsgPackKey]
     public T? Value { get; init; }
+
+    public Result<T> Log<TLogger>(ILogger<TLogger> logger)
+    {
+        logger.LogResult(this);
+        return this;
+    }
 
     public Result ToResult()
     {

@@ -2,6 +2,7 @@
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
+using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -12,14 +13,15 @@ using System.Net.WebSockets;
 namespace ControlR.Devices.Common.Services.Base;
 
 public abstract class TcpWebsocketProxyBase(
-    IMemoryProvider memoryProvider,
-    IMessenger messenger,
-    ILogger<TcpWebsocketProxyBase> logger)
+    IMemoryProvider _memoryProvider,
+    IMessenger _messenger,
+    IRetryer _retryer,
+    ILogger<TcpWebsocketProxyBase> _logger)
 {
-    protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
+    protected readonly ILogger<TcpWebsocketProxyBase> _logger = _logger;
     private readonly ConcurrentDictionary<int, TcpListener> _listeners = [];
-    private readonly IMemoryProvider _memoryProvider = memoryProvider;
-    private readonly IMessenger _messenger = messenger;
+    private readonly IMemoryProvider _memoryProvider = _memoryProvider;
+    private readonly IMessenger _messenger = _messenger;
 
     protected Task<Result<Task>> ListenForLocalConnections(
        Guid sessionId,
@@ -101,7 +103,7 @@ public abstract class TcpWebsocketProxyBase(
                 localServicePort);
 
             var tcpClient = new TcpClient();
-            await TryHelper.Retry(
+            await _retryer.Retry(
                 async () =>
                 {
                     await tcpClient.ConnectAsync("127.0.0.1", localServicePort);
