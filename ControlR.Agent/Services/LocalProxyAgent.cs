@@ -15,9 +15,9 @@ internal interface ILocalProxyAgent
 {
     Task HandleVncSession(VncSession session);
 
-    Task<Result> ListenForLocalConnections(Guid sessionId, int portNumber);
+    Task<Result<Task>> ListenForLocalConnections(Guid sessionId, int portNumber);
 
-    Task<Result> ProxyToLocalService(Guid sessionId, int portNumber);
+    Task<Result<Task>> ProxyToLocalService(Guid sessionId, int portNumber);
 }
 
 internal class LocalProxyAgent(
@@ -59,36 +59,29 @@ internal class LocalProxyAgent(
         }
     }
 
-    public async Task<Result> ListenForLocalConnections(Guid sessionId, int portNumber)
+    public async Task<Result<Task>> ListenForLocalConnections(Guid sessionId, int portNumber)
     {
-        return await StartProxySession(sessionId, true, portNumber);
-    }
-
-    public async Task<Result> ProxyToLocalService(Guid sessionId, int portNumber)
-    {
-        return await StartProxySession(sessionId, false, portNumber);
-    }
-
-    private async Task<Result> StartProxySession(Guid sessionId, bool isListener, int portNumber)
-    {
-        var serverOrigin = _settings.ServerUri.GetOrigin();
-        var websocketEndpoint = new Uri($"{serverOrigin.Replace("http", "ws")}/agent-proxy/{sessionId}");
-
-        var startResult =
-            isListener ?
-
-            await ListenForLocalConnections(
-                sessionId,
-                portNumber,
-                websocketEndpoint,
-                _appLifetime.ApplicationStopping) :
-
-            await ProxyToLocalService(
+        var websocketEndpoint = GetWebsocketEndpoint(sessionId);
+        return await ListenForLocalConnections(
                 sessionId,
                 portNumber,
                 websocketEndpoint,
                 _appLifetime.ApplicationStopping);
+    }
 
-        return startResult.ToResult();
+    public async Task<Result<Task>> ProxyToLocalService(Guid sessionId, int portNumber)
+    {
+        var websocketEndpoint = GetWebsocketEndpoint(sessionId);
+        return await ProxyToLocalService(
+              sessionId,
+              portNumber,
+              websocketEndpoint,
+              _appLifetime.ApplicationStopping);
+    }
+
+    private Uri GetWebsocketEndpoint(Guid sessionId)
+    {
+        var serverOrigin = _settings.ServerUri.GetOrigin();
+        return new Uri($"{serverOrigin.Replace("http", "ws")}/agent-proxy/{sessionId}");
     }
 }

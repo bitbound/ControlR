@@ -6,7 +6,6 @@ using ControlR.Server.Services;
 using ControlR.Shared;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 
@@ -14,15 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<AppOptions>(
     builder.Configuration.GetSection(nameof(AppOptions)));
-
-builder.Services.AddRateLimiter(config =>
-{
-    config.AddFixedWindowLimiter(RateLimiterPolicies.CreateAccount, options =>
-    {
-        options.Window = TimeSpan.FromMinutes(1);
-        options.PermitLimit = 6;
-    });
-});
 
 builder.Services.AddAuthentication(options =>
 {

@@ -19,6 +19,8 @@
                                       Required="true"
                                       ErrorText="Invalid JSON."
                                       Class="no-wrap"
+                                      Immediate="true"
+                                      DebounceInterval="500"
                                       UserAttributes="_editorAttributes"
                                       Validation="@((string val) => ValidateJson(val))" />
 

@@ -5,6 +5,7 @@ using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
@@ -26,7 +27,9 @@ internal class SettingsProvider(
     IEnvironmentHelper _environment,
     IHostEnvironment _hostEnvironment,
     IMessenger _messenger,
-    IFileSystem _fileSystem) : ISettingsProvider
+    IDelayer _delayer,
+    IFileSystem _fileSystem,
+    ILogger<SettingsProvider> _logger) : ISettingsProvider
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -70,6 +73,10 @@ internal class SettingsProvider(
 
     public async Task UpdateSettings(AgentAppSettings settings)
     {
+        var serverUriChanged =
+            Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
+            newServerUri != ServerUri;
+
         var startupDir = _environment.StartupDirectory;
         var appsettingsPath = $"{startupDir}\\appsettings.json";
         var appsettingsEnvPath = $"{startupDir}\\appsettings.{_hostEnvironment.EnvironmentName}.json";
@@ -83,9 +90,20 @@ internal class SettingsProvider(
             }
         }
 
-        if (Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
-            newServerUri != ServerUri)
+        if (serverUriChanged)
         {
+            var waitResult = await _delayer.WaitForAsync(
+                () => ServerUri == newServerUri,
+                TimeSpan.FromSeconds(5));
+
+            if (!waitResult)
+            {
+                _logger.LogError(
+                    "ServerUri changed in appsettings, but timed out while waiting " +
+                    "for value to change in the options monitor.");
+                return;
+            }
+
             await _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
         }
     }

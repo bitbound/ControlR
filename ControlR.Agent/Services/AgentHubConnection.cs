@@ -274,7 +274,7 @@ internal class AgentHubConnection(
                 return regResult.ToResult();
             }
 
-            return await _localProxy.ProxyToLocalService(dto.SessionId, regResult.Value);
+            return (await _localProxy.ProxyToLocalService(dto.SessionId, regResult.Value)).ToResult();
         }
         catch (Exception ex)
         {

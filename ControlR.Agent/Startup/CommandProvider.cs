@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Agent.Services;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -63,8 +62,6 @@ internal class CommandProvider
 
         runCommand.SetHandler(async () =>
         {
-            var host = CreateHost(StartupMode.Run, args);
-
             var appDir = EnvironmentHelper.Instance.StartupDirectory;
             var appSettingsPath = Path.Combine(appDir!, "appsettings.json");
 
@@ -78,7 +75,7 @@ internal class CommandProvider
                 }
             }
 
-            var hubConnection = host.Services.GetRequiredService<IAgentHubConnection>();
+            var host = CreateHost(StartupMode.Run, args);
             await host.RunAsync();
         });
 

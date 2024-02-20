@@ -1,0 +1,22 @@
+version: '3.4'
+
+name: "controlr"
+
+services:
+  controlr:
+    image: translucency/controlr:latest
+    ports:
+      - 5120:8080
+      - 7031:8081
+    volumes:
+      - controlr-data:/app/AppData
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+    build:
+      context: ../ControlR.Server
+
+volumes:
+  controlr-data:
+    name: "controlr-data"
