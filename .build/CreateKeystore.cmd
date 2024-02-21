@@ -1,1 +1,1 @@
-keytool -genkeypair -v -keystore kontrolr.keystore -alias kontrolr -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkeypair -v -keystore controlr.keystore -alias controlr -keyalg RSA -keysize 2048 -validity 10000

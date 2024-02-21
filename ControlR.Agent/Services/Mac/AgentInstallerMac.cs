@@ -84,7 +84,7 @@ internal class AgentInstallerMac(
             catch (ProcessStatusException) { }
 
             _logger.LogInformation("Kickstarting service.");
-            psi.Arguments = "launchctl kickstart -k system/com.jaredg.controlr-agent";
+            psi.Arguments = "launchctl kickstart -k system/dev.jaredg.controlr-agent";
             _ = _processInvoker.Start(psi);
 
             _logger.LogInformation("Installer finished.");
@@ -164,7 +164,7 @@ internal class AgentInstallerMac(
             $"<plist version=\"1.0\">\n" +
             $"<dict>\n" +
             $"    <key>Label</key>\n" +
-            $"    <string>com.jaredg.controlr-agent</string>\n" +
+            $"    <string>dev.jaredg.controlr-agent</string>\n" +
             $"    <key>KeepAlive</key>\n" +
             $"    <true/>\n" +
             //$"    <key>StandardErrorPath</key>\n" +

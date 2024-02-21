@@ -22,8 +22,8 @@ internal interface IProxyLauncherAndroid
 [Service(ForegroundServiceType = ForegroundService.TypeDataSync)]
 internal class ProxyForegroundService : Service, IProxyLauncherAndroid
 {
-    public const string ActionStartProxy = "com.jaredg.controlr.action.StartControlrProxy";
-    public const string ActionStopProxy = "com.jaredg.controlr.action.StopControlrProxy";
+    public const string ActionStartProxy = "dev.jaredg.controlr.action.StartControlrProxy";
+    public const string ActionStopProxy = "dev.jaredg.controlr.action.StopControlrProxy";
     public const string LocalProxyServiceChannelName = "ControlR Proxy";
     public const int LocalProxyServiceNotificationId = 443809193;
 

@@ -18,13 +18,13 @@
 		<PublisherName>Jared Goodwin</PublisherName>
 
 		<!-- App Identifier -->
-		<ApplicationId Condition="'$(Configuration)'=='Release'">com.jaredg.controlr.viewer</ApplicationId>
+		<ApplicationId Condition="'$(Configuration)'=='Release'">dev.jaredg.controlr.viewer</ApplicationId>
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Release'">8956DD24-5084-4303-BE59-0E1119CDB38C</ApplicationIdGuid>
-		<ApplicationId Condition="'$(Configuration)'=='Debug'">com.jaredg.controlr.viewer.dev</ApplicationId>
+		<ApplicationId Condition="'$(Configuration)'=='Debug'">dev.jaredg.controlr.viewer.dev</ApplicationId>
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2024.2.18.1459</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.2.20.2131</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 
