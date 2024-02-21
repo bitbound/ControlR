@@ -82,8 +82,7 @@
             }
             SettingsStore.ServerUri = serverUri.ToString();
             Snackbar.Add("Server updated", Severity.Success);
-            DeviceCache.Clear();
-            HubConnection.Reconnect(AppState.AppExiting).AndForget(true);
+            DeviceCache.SetAllOffline();
             Dialogs.ShowMessageBox(
                 "Restart Required",
                 "Please restart the application soon for changes to fully take effect.")

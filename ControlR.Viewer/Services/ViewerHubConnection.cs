@@ -31,6 +31,7 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result<int>> GetAgentCount();
 
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
+
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
@@ -307,12 +308,13 @@ internal class ViewerHubConnection(
             OnConnectFailure,
             cancellationToken);
 
-        _messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, HandleAuthStateChanged);
+        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
         await CheckIfServerAdministrator();
         await GetCurrentAlertFromServer();
         await RequestDeviceUpdates();
     }
+
     public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
     {
         return await TryInvoke(
@@ -397,6 +399,28 @@ internal class ViewerHubConnection(
         {
             await Start(_appState.AppExiting);
         }
+    }
+
+    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+    {
+        switch (kind)
+        {
+            case GenericMessageKind.ServerUriChanged:
+                await HandleServerUriChanged();
+                break;
+
+            case GenericMessageKind.AuthStateChanged:
+                await HandleAuthStateChanged();
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private async Task HandleServerUriChanged()
+    {
+        await Reconnect(_appState.AppExiting);
     }
 
     private Task OnConnectFailure(string reason)

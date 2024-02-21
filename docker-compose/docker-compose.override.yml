@@ -6,6 +6,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
+      - ControlR_Authorization__AdminPublicKeys__0=MIIBCgKCAQEAwOEdUkXHB1lBYlA85lBcyVAR0LlbuQmsTQcvrpGbpBDIWwHrpMiAkXyinC+Oyi/NRil4PMCe1dWYB9duo/YlgZXmKFXohoyjEfQ0M+NBtX5P7/zJp/Vfa7O1i/Pgv9PFzgGNd5sJCiID9IV9WyXz+Z8TGwzuEC9y9Q1soKKiGV+TVosmxuNhmvCYgMQiXinZx/4CkZUO+OJeIULJLm4jCkHSAeeCdD6FpTLShNlsRNcBpfi8wwpb++56q2KIQKVBvx8yfjZou8X+KAirczsL+zouwrGB3kugVOr+LGxiJKKiPG8f0C5yXM6OInRBpF0p88y7EpnpxS4QGwWsUo+85QIDAQAB
+      - ControlR_Authorization__EnableRestrictedUserAccess=true
+      #- ControlR_Authorization__AuthorizedUserPublicKeys__0=
     ports:
       - 5120:8080
       - 7031:8081

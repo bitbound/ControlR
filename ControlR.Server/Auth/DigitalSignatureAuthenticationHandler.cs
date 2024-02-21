@@ -1,4 +1,4 @@
-﻿using ControlR.Server.Models;
+﻿using ControlR.Server.Options;
 using ControlR.Shared;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
@@ -16,10 +16,9 @@ public class DigitalSignatureAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> _options,
     ILoggerFactory _loggerFactory,
     IServiceScopeFactory _scopeFactory,
-    IOptionsMonitor<AppOptions> _appOptions,
+    IOptionsMonitor<AuthorizationOptions> _authOptions,
     ILogger<DigitalSignatureAuthenticationHandler> _logger) : AuthenticationHandler<AuthenticationSchemeOptions>(_options, _loggerFactory, _encoder)
 {
-
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         using var _ = _logger.BeginScope(nameof(HandleAuthenticateAsync));
@@ -98,9 +97,14 @@ public class DigitalSignatureAuthenticationHandler(
             new(ClaimNames.Username, account.Username),
         };
 
-        if (_appOptions.CurrentValue.AdminPublicKeys.Contains(signedDto.PublicKeyBase64))
+        if (_authOptions.CurrentValue.AdminPublicKeys.Contains(signedDto.PublicKeyBase64))
         {
             claims.Add(new(ClaimNames.IsAdministrator, "true"));
+        }
+        else if (_authOptions.CurrentValue.EnableRestrictedUserAccess &&
+                !_authOptions.CurrentValue.AuthorizedUserPublicKeys.Contains(signedDto.PublicKeyBase64))
+        {
+            return AuthenticateResult.Fail("Access to this server is restricted.");
         }
 
         var identity = new ClaimsIdentity(claims, AuthSchemes.DigitalSignature);

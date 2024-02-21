@@ -1,5 +1,5 @@
 # ControlR
-A zero-trust remote control solution built with .NET 8, MAUI, and ASP.NET Core.
+A secure VNC and RDP tunnel built with .NET 8, MAUI, and ASP.NET Core.
 
 Website: https://controlr.app
 

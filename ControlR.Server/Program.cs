@@ -1,7 +1,7 @@
 using ControlR.Server.Auth;
 using ControlR.Server.Hubs;
 using ControlR.Server.Middleware;
-using ControlR.Server.Models;
+using ControlR.Server.Options;
 using ControlR.Server.Services;
 using ControlR.Shared;
 using ControlR.Shared.Services;
@@ -11,8 +11,10 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<AppOptions>(
-    builder.Configuration.GetSection(nameof(AppOptions)));
+builder.Configuration.AddEnvironmentVariables("ControlR_");
+
+builder.Services.Configure<AuthorizationOptions>(
+    builder.Configuration.GetSection(AuthorizationOptions.SectionKey));
 
 builder.Services.AddAuthentication(options =>
 {

@@ -57,7 +57,7 @@ function App() {
                         </Typography>
 
                         <Typography variant='subtitle1'>
-                            Zero-trust remote control
+                            Secure VNC and RDP tunnel
                         </Typography>
                     </HeaderPaper>
                 </HeaderRow>
@@ -110,7 +110,6 @@ function App() {
                         </Button>
                     </ButtonWrapper>
 
-
                     <Typography
                         variant='h4'
                         color='success.main'
@@ -127,51 +126,39 @@ function App() {
                         <DeployAgentDialog isOpen={isAgentDialogOpen} onClose={closeAgentDialog} />
                     </Typography>
 
-                    <Typography variant='h6'>
-                        Windows
-                    </Typography>
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
                             href="/downloads/win-x86/ControlR.Agent.exe"
                             target='_blank'>
-                            EXE
+                            Windows
                         </Button>
                     </ButtonWrapper>
 
-                    <Typography variant='h6'>
-                        Ubuntu (x64)
-                    </Typography>
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
                             href="/downloads/linux-x64/ControlR.Agent"
                             target='_blank'>
-                            EXE
+                            Ubuntu
                         </Button>
                     </ButtonWrapper>
 
-                    <Typography variant='h6'>
-                        Mac (x64)
-                    </Typography>
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
                             href="/downloads/osx-x64/ControlR.Agent"
                             target='_blank'>
-                            EXE
+                            Mac (x64)
                         </Button>
                     </ButtonWrapper>
 
-                    <Typography variant='h6'>
-                        Mac (Apple Silicon)
-                    </Typography>
                     <ButtonWrapper>
                         <Button
                             variant='outlined'
                             href="/downloads/osx-arm64/ControlR.Agent"
                             target='_blank'>
-                            EXE
+                            Mac (arm64)
                         </Button>
                     </ButtonWrapper>
                 </Stack>
