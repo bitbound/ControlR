@@ -86,15 +86,18 @@ internal class AgentUpdater(
             // TODO: Sign Linux binary.
             if (OperatingSystem.IsWindows())
             {
-                var cert = X509Certificate.CreateFromSignedFile(tempPath);
+                using var cert = X509Certificate.CreateFromSignedFile(tempPath);
                 var thumbprint = cert.GetCertHashString().Trim();
 
-                if (!string.Equals(thumbprint, AppConstants.AgentCertificateThumbprint, StringComparison.OrdinalIgnoreCase))
+                using var selfCert = X509Certificate.CreateFromSignedFile(_environmentHelper.StartupExePath);
+                var expectedThumbprint = selfCert.GetCertHashString().Trim();
+
+                if (!string.Equals(thumbprint, expectedThumbprint, StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogCritical(
                         "The certificate thumbprint of the downloaded agent binary is invalid.  Aborting update.  " +
                         "Expected Thumbprint: {expected}.  Actual Thumbprint: {actual}.",
-                        AppConstants.AgentCertificateThumbprint,
+                        expectedThumbprint,
                         thumbprint);
                     return;
                 }

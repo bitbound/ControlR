@@ -1,10 +1,8 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
-using System.Reflection;
 
 namespace ControlR.Agent.Startup;
 
@@ -62,19 +60,6 @@ internal class CommandProvider
 
         runCommand.SetHandler(async () =>
         {
-            var appDir = EnvironmentHelper.Instance.StartupDirectory;
-            var appSettingsPath = Path.Combine(appDir!, "appsettings.json");
-
-            if (!File.Exists(appSettingsPath))
-            {
-                using var mrs = Assembly.GetExecutingAssembly().GetManifestResourceStream("ControlR.Agent.appsettings.json");
-                if (mrs is not null)
-                {
-                    using var fs = new FileStream(appSettingsPath, FileMode.Create);
-                    await mrs.CopyToAsync(fs);
-                }
-            }
-
             var host = CreateHost(StartupMode.Run, args);
             await host.RunAsync();
         });

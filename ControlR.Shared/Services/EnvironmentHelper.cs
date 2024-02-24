@@ -10,9 +10,11 @@ public interface IEnvironmentHelper
     string StartupDirectory { get; }
     string StartupExePath { get; }
 }
+
 internal class EnvironmentHelper : IEnvironmentHelper
 {
     public static EnvironmentHelper Instance { get; } = new();
+
     public bool IsDebug
     {
         get
@@ -66,8 +68,8 @@ internal class EnvironmentHelper : IEnvironmentHelper
         }
     }
 
-    public string StartupDirectory => 
-        Path.GetDirectoryName(StartupExePath) ?? 
+    public string StartupDirectory =>
+        Path.GetDirectoryName(StartupExePath) ??
         throw new DirectoryNotFoundException("Unable to determine startup directory.");
 
     public string StartupExePath { get; } = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();

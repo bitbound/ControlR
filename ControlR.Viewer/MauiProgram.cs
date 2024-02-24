@@ -85,6 +85,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
         builder.Services.AddSingleton<IDelayer, Delayer>();
         builder.Services.AddSingleton<IRetryer, Retryer>();
+        builder.Services.AddSingleton<INotificationProvider, NotificationProvider>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

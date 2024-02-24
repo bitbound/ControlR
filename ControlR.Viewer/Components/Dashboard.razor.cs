@@ -43,9 +43,10 @@ public partial class Dashboard
         ["Name"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.Name), false, 1, x => x.Name)
     };
 
+    private readonly FunnelLock _stateChangeLock = new(2, 2, 1, 1);
+    private Version? _agentReleaseVersion;
     private bool _loading = true;
     private string? _searchText;
-    private Version? _agentReleaseVersion;
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -64,9 +65,6 @@ public partial class Dashboard
 
     [Inject]
     public required ILocalProxyViewer LocalProxy { get; init; }
-
-    [Inject]
-    public required IVersionApi VersionApi { get; init; }
 
     [Inject]
     public required ILogger<Dashboard> Logger { get; init; }
@@ -94,6 +92,9 @@ public partial class Dashboard
     [Inject]
     public required ITightVncLauncherWindows TightVncLauncher { get; init; }
 #endif
+
+    [Inject]
+    public required IVersionApi VersionApi { get; init; }
 
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
@@ -146,11 +147,7 @@ public partial class Dashboard
     {
         using var _ = AppState.IncrementBusyCounter();
 
-        var agentVerResult = await VersionApi.GetCurrentAgentVersion();
-        if (agentVerResult.IsSuccess)
-        {
-            _agentReleaseVersion = agentVerResult.Value;
-        }
+        await RefreshLatestAgentVersion();
 
         Messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
@@ -205,8 +202,6 @@ public partial class Dashboard
         }
     }
 
-    private readonly FunnelLock _stateChangeLock = new(2, 2, 1, 1);
-
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
         switch (kind)
@@ -247,7 +242,17 @@ public partial class Dashboard
         await DeviceCache.SetAllOffline();
         await InvokeAsync(StateHasChanged);
         await ViewerHub.RequestDeviceUpdates();
+        await RefreshLatestAgentVersion();
         Snackbar.Add("Device refresh requested", Severity.Success);
+    }
+
+    private async Task RefreshLatestAgentVersion()
+    {
+        var agentVerResult = await VersionApi.GetCurrentAgentVersion();
+        if (agentVerResult.IsSuccess)
+        {
+            _agentReleaseVersion = agentVerResult.Value;
+        }
     }
 
     private async Task RemoveDevice(DeviceDto device)
@@ -264,20 +269,6 @@ public partial class Dashboard
         }
         await DeviceCache.Remove(device);
         Snackbar.Add("Device removed", Severity.Success);
-    }
-
-    private async Task WakeDevice(DeviceDto device)
-    {
-        if (device.MacAddresses is null ||
-            device.MacAddresses.Length == 0)
-        {
-            Snackbar.Add("No MAC addresses on device", Severity.Warning);
-            return;
-        }
-
-        await WakeOnLan.WakeDevices(device.MacAddresses);
-        await ViewerHub.SendWakeDevice(device.MacAddresses);
-        Snackbar.Add("Wake command sent", Severity.Success);
     }
 
     private async Task RestartDevice(DeviceDto device)
@@ -540,5 +531,19 @@ public partial class Dashboard
         await Task.Yield();
         Snackbar.Add("Platform not supported.", Severity.Error);
 #endif
+    }
+
+    private async Task WakeDevice(DeviceDto device)
+    {
+        if (device.MacAddresses is null ||
+            device.MacAddresses.Length == 0)
+        {
+            Snackbar.Add("No MAC addresses on device", Severity.Warning);
+            return;
+        }
+
+        await WakeOnLan.WakeDevices(device.MacAddresses);
+        await ViewerHub.SendWakeDevice(device.MacAddresses);
+        Snackbar.Add("Wake command sent", Severity.Success);
     }
 }

@@ -4,10 +4,12 @@ using ControlR.Devices.Common.Services;
 using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.Runtime.Versioning;
@@ -17,22 +19,24 @@ namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows")]
 internal class AgentInstallerWindows(
-    IHostApplicationLifetime lifetime,
-    IProcessManager processes,
-    IFileSystem fileSystem,
-    IEnvironmentHelper environmentHelper,
-    IElevationChecker elevationChecker,
+    IHostApplicationLifetime _lifetime,
+    IProcessManager _processes,
+    IFileSystem _fileSystem,
+    IEnvironmentHelper _environmentHelper,
+    IElevationChecker _elevationChecker,
     IRetryer _retryer,
-    ILogger<AgentInstallerWindows> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
+    ISettingsProvider _settingsProvider,
+    IOptionsMonitor<AgentAppOptions> _appOptions,
+    ILogger<AgentInstallerWindows> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
-    private readonly IElevationChecker _elevationChecker = elevationChecker;
-    private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
-    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly IElevationChecker _elevationChecker = _elevationChecker;
+    private readonly IEnvironmentHelper _environmentHelper = _environmentHelper;
+    private readonly IFileSystem _fileSystem = _fileSystem;
     private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
-    private readonly IHostApplicationLifetime _lifetime = lifetime;
-    private readonly ILogger<AgentInstallerWindows> _logger = logger;
-    private readonly IProcessManager _processes = processes;
+    private readonly IHostApplicationLifetime _lifetime = _lifetime;
+    private readonly ILogger<AgentInstallerWindows> _logger = _logger;
+    private readonly IProcessManager _processes = _processes;
     private readonly string _serviceName = "ControlR.Agent";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
@@ -87,7 +91,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await UpdateAppSettings(serverUri, authorizedPublicKey, vncPort, autoRunVnc);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
             var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";

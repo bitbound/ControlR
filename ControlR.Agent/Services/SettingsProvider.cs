@@ -4,7 +4,6 @@ using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -19,19 +18,52 @@ internal interface ISettingsProvider
     Uri ServerUri { get; }
     int VncPort { get; }
 
+    string GetAppSettingsPath();
+
     Task UpdateSettings(AgentAppSettings settings);
 }
 
 internal class SettingsProvider(
     IOptionsMonitor<AgentAppOptions> _appOptions,
-    IEnvironmentHelper _environment,
-    IHostEnvironment _hostEnvironment,
     IMessenger _messenger,
     IDelayer _delayer,
     IFileSystem _fileSystem,
     ILogger<SettingsProvider> _logger) : ISettingsProvider
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+    public static string AppSettingsPath
+    {
+        get
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var settingsDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "ControlR");
+
+                if (EnvironmentHelper.Instance.IsDebug)
+                {
+                    settingsDir = Path.Combine(settingsDir, "Debug");
+                }
+                var dir = Directory.CreateDirectory(settingsDir).FullName;
+                return Path.Combine(dir, "appsettings.json");
+            }
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                var settingsDir = "/etc/controlr";
+                if (EnvironmentHelper.Instance.IsDebug)
+                {
+                    settingsDir += "/debug";
+                }
+                var dir = Directory.CreateDirectory(settingsDir).FullName;
+                return Path.Combine(dir, "appsettings.json");
+            }
+
+            throw new PlatformNotSupportedException();
+        }
+    }
 
     public IReadOnlyList<string> AuthorizedKeys
     {
@@ -71,40 +103,42 @@ internal class SettingsProvider(
         get => _appOptions.CurrentValue.VncPort ?? 5900;
     }
 
+    public string GetAppSettingsPath()
+    {
+        return AppSettingsPath;
+    }
+
     public async Task UpdateSettings(AgentAppSettings settings)
     {
-        var serverUriChanged =
-            Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
-            newServerUri != ServerUri;
-
-        var startupDir = _environment.StartupDirectory;
-        var appsettingsPath = $"{startupDir}\\appsettings.json";
-        var appsettingsEnvPath = $"{startupDir}\\appsettings.{_hostEnvironment.EnvironmentName}.json";
-        var paths = new string[] { appsettingsPath, appsettingsEnvPath };
-        var content = JsonSerializer.Serialize(settings, _jsonOptions);
-        foreach (var path in paths)
+        try
         {
-            if (_fileSystem.FileExists(path))
+            var serverUriChanged =
+               Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
+               newServerUri != ServerUri;
+
+            var content = JsonSerializer.Serialize(settings, _jsonOptions);
+            await _fileSystem.WriteAllTextAsync(AppSettingsPath, content);
+
+            if (serverUriChanged)
             {
-                await _fileSystem.WriteAllTextAsync(path, content);
+                var waitResult = await _delayer.WaitForAsync(
+                    () => ServerUri == newServerUri,
+                    TimeSpan.FromSeconds(5));
+
+                if (!waitResult)
+                {
+                    _logger.LogError(
+                        "ServerUri changed in appsettings, but timed out while waiting " +
+                        "for value to change in the options monitor.");
+                    return;
+                }
+
+                await _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
             }
         }
-
-        if (serverUriChanged)
+        catch (Exception ex)
         {
-            var waitResult = await _delayer.WaitForAsync(
-                () => ServerUri == newServerUri,
-                TimeSpan.FromSeconds(5));
-
-            if (!waitResult)
-            {
-                _logger.LogError(
-                    "ServerUri changed in appsettings, but timed out while waiting " +
-                    "for value to change in the options monitor.");
-                return;
-            }
-
-            await _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
+            _logger.LogError(ex, "Failed to update settings.");
         }
     }
 }

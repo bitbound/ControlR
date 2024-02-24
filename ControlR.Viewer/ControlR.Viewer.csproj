@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-android</TargetFrameworks>
@@ -24,7 +24,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2024.2.21.2034</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.2.22.805</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 
@@ -50,7 +50,7 @@
 	<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
 		<AndroidKeyStore>True</AndroidKeyStore>
 		<AndroidSigningKeyStore>controlr.keystore</AndroidSigningKeyStore>
-		<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
+		<AndroidSigningKeyAlias>controlr</AndroidSigningKeyAlias>
 		<AndroidSigningKeyPass></AndroidSigningKeyPass>
 		<AndroidSigningStorePass></AndroidSigningStorePass>
 	</PropertyGroup>
@@ -100,7 +100,7 @@
 	  <None Remove="VncResources\tvnviewer.exe" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows'))">
 	  <EmbeddedResource Include="VncResources\LICENSE.txt" />
 	  <EmbeddedResource Include="VncResources\TightVNC Web Site.url" />
 	  <EmbeddedResource Include="VncResources\tvnviewer.exe" />

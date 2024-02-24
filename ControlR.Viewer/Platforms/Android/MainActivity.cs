@@ -36,6 +36,11 @@ public class MainActivity : MauiAppCompatActivity
         {
             if (intent.Extras is null)
             {
+                MauiApp.Current?.MainPage?.DisplayAlert(
+                    "Install Failed",
+                    $"Installation failed.  Intent.Extras is null.",
+                    "OK")
+                    .AndForget();
                 return;
             }
 

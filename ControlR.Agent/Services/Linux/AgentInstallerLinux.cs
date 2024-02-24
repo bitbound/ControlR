@@ -3,28 +3,32 @@ using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace ControlR.Agent.Services.Linux;
 
 internal class AgentInstallerLinux(
-    IHostApplicationLifetime lifetime,
-    IFileSystem fileSystem,
-    IProcessManager processInvoker,
-    IEnvironmentHelper environmentHelper,
+    IHostApplicationLifetime _lifetime,
+    IFileSystem _fileSystem,
+    IProcessManager _processInvoker,
+    IEnvironmentHelper _environmentHelper,
     IRetryer _retryer,
-    ILogger<AgentInstallerLinux> logger) : AgentInstallerBase(fileSystem, logger), IAgentInstaller
+    ISettingsProvider _settingsProvider,
+    IOptionsMonitor<AgentAppOptions> _appOptions,
+    ILogger<AgentInstallerLinux> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
-    private readonly IEnvironmentHelper _environment = environmentHelper;
-    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly IEnvironmentHelper _environment = _environmentHelper;
+    private readonly IFileSystem _fileSystem = _fileSystem;
     private readonly string _installDir = "/usr/local/bin/ControlR";
-    private readonly IHostApplicationLifetime _lifetime = lifetime;
-    private readonly ILogger<AgentInstallerLinux> _logger = logger;
-    private readonly IProcessManager _processInvoker = processInvoker;
+    private readonly IHostApplicationLifetime _lifetime = _lifetime;
+    private readonly ILogger<AgentInstallerLinux> _logger = _logger;
+    private readonly IProcessManager _processInvoker = _processInvoker;
     private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
@@ -64,7 +68,7 @@ internal class AgentInstallerLinux(
             var serviceFile = GetServiceFile().Trim();
 
             await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
-            var appOptions = await UpdateAppSettings(_installDir, serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await UpdateAppSettings(serverUri, authorizedPublicKey, vncPort, autoRunVnc);
 
             var psi = new ProcessStartInfo()
             {

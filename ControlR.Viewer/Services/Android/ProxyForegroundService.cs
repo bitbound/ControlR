@@ -56,7 +56,7 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
     {
         var intent = new Intent(MainActivity.Current, typeof(ProxyForegroundService));
         intent.SetAction(ActionStopProxy);
-        var stopIntent = PendingIntent.GetForegroundService(MainActivity.Current, 0, intent, 0);
+        var stopIntent = PendingIntent.GetForegroundService(MainActivity.Current, 0, intent, PendingIntentFlags.Immutable);
         return new NotificationCompat.Action(0, "Stop", stopIntent);
     }
 

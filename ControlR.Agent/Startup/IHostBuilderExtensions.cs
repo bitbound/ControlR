@@ -10,7 +10,6 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Devices.Common.Services.Linux;
 using ControlR.Devices.Common.Services.Mac;
 using ControlR.Devices.Common.Services.Windows;
-using ControlR.Shared.Helpers;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
@@ -46,14 +45,16 @@ internal static class IHostBuilderExtensions
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            var appDir = EnvironmentHelper.Instance.StartupDirectory;
-            Guard.IsNotNullOrWhiteSpace(appDir);
-            var appSettingsPath = Path.Combine(appDir, "appsettings.json");
+            var startupDir = EnvironmentHelper.Instance.StartupDirectory;
+
+            if (!EnvironmentHelper.Instance.IsDebug)
+            {
+                config.Sources.Clear();
+            }
 
             config
                 .AddEnvironmentVariables()
-                .AddJsonFile(Path.Combine(appSettingsPath), true, true)
-                .AddJsonFile(Path.Combine(appDir, $"appsettings.{context.HostingEnvironment.EnvironmentName}.json"), true, true);
+                .AddJsonFile(SettingsProvider.AppSettingsPath, true, true);
         });
 
         builder.ConfigureServices((context, services) =>

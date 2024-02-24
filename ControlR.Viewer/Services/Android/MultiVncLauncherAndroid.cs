@@ -1,4 +1,5 @@
 ﻿#if ANDROID
+
 using Android.Content;
 using Android.Content.PM;
 using ControlR.Shared.Helpers;
@@ -10,11 +11,13 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ControlR.Viewer.Services.Android;
+
 public interface IMultiVncLauncher
 {
     Task<Result> LaunchMultiVnc(int localPort, string? password = null);
 }
-internal class MultiVncLauncherAndroid(IClipboard _clipboard) : IMultiVncLauncher
+
+internal class MultiVncLauncherAndroid(IClipboard _clipboard, INotificationProvider _notify) : IMultiVncLauncher
 {
     private const string MultiVncPackageName = "com.coboltforge.dontmind.multivnc";
 
@@ -31,10 +34,10 @@ internal class MultiVncLauncherAndroid(IClipboard _clipboard) : IMultiVncLaunche
         {
             await _clipboard.SetTextAsync(password);
         }
-        
+
         if (!IsMultiVncInstalled(MainActivity.Current.PackageManager))
         {
-            var result = await MainPage.Current.DisplayAlert(
+            var result = await _notify.DisplayAlert(
                 "MultiVNC Required",
                 "The MultiVNC app is required.  Press OK to open the Play Store and download.",
                 "OK",

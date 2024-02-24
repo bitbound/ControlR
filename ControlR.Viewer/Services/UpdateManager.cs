@@ -35,6 +35,7 @@ internal class UpdateManager(
 #if ANDROID
     IHttpClientFactory _clientFactory,
     IDelayer _delayer,
+    INotificationProvider _notify,
 #endif
 #if WINDOWS
     IDownloadsApi _downloadsApi,
@@ -88,11 +89,19 @@ internal class UpdateManager(
         {
 #if WINDOWS
             return await InstallCurrentVersionWindows();
-
-#elif ANDROID26_0_OR_GREATER
-            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+#elif ANDROID
+            if (OperatingSystem.IsAndroidVersionAtLeast(31))
             {
                 return await InstallCurrentVersionAndroid();
+            }
+            else
+            {
+                await _notify.DisplayAlert(
+                    "Android 12 Required",
+                    "Android 12 or higher is required for in-app updates.  " +
+                    "Please download and install the update manually from the About page.",
+                    "OK");
+                return Result.Fail("Android 12 required.");
             }
 #else
 
@@ -112,7 +121,7 @@ internal class UpdateManager(
 
 #if ANDROID
 
-    [SupportedOSPlatform("android26.0")]
+    [SupportedOSPlatform("android31.0")]
     private async Task<Result> InstallCurrentVersionAndroid()
     {
         var context = Platform.CurrentActivity;
@@ -134,7 +143,7 @@ internal class UpdateManager(
         var packageManager = context.PackageManager;
         if (!packageManager.CanRequestPackageInstalls())
         {
-            await MainPage.Current.DisplayAlert(
+            await _notify.DisplayAlert(
                 "Permission Required",
                 "ControlR requires permission to install apps from external sources.  " +
                 "Press OK to open settings and enable the permission.",
@@ -188,7 +197,7 @@ internal class UpdateManager(
             context,
             0,
             intent,
-            0);
+            PendingIntentFlags.Mutable);
 
         installerSession.Commit(receiver!.IntentSender);
         return Result.Ok();

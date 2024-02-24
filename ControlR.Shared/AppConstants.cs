@@ -7,7 +7,6 @@ namespace ControlR.Shared;
 
 public static partial class AppConstants
 {
-    public const string AgentCertificateThumbprint = "4b6235f1c44ab3a5f29bf40ad85b442269f6ee52";
     private const string DevServerUri = "http://localhost:5120";
     private const string ProdServerUri = "https://app.controlr.app";
 

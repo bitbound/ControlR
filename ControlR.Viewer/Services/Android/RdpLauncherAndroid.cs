@@ -8,9 +8,10 @@ using MudBlazor;
 
 namespace ControlR.Viewer.Services.Android;
 
-internal class RdpLauncherAndroid() : IRdpLauncher
+internal class RdpLauncherAndroid(INotificationProvider _notify) : IRdpLauncher
 {
     private const string RdpPackageName = "com.microsoft.rdc.androidx";
+
     public async Task<Result> LaunchRdp(int localPort)
     {
         await Task.Yield();
@@ -23,7 +24,7 @@ internal class RdpLauncherAndroid() : IRdpLauncher
         var launchIntent = MainActivity.Current.PackageManager.GetLaunchIntentForPackage(RdpPackageName);
         if (launchIntent is null)
         {
-            var result = await MainPage.Current.DisplayAlert(
+            var result = await _notify.DisplayAlert(
                  "Microsoft RDP Required",
                  "The Microsoft RDP app is required.  Press OK to open the Play Store and download.",
                  "OK",
