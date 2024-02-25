@@ -30,12 +30,6 @@ public static partial class AppConstants
     {
         get
         {
-            var envUri = Environment.GetEnvironmentVariable("ControlRServerUri");
-            if (Uri.TryCreate(envUri, UriKind.Absolute, out _))
-            {
-                return envUri;
-            }
-
             if (OperatingSystem.IsWindows() && Debugger.IsAttached)
             {
                 return DevServerUri;

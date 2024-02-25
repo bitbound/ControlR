@@ -6,6 +6,8 @@ namespace ControlR.Server.Services;
 
 public interface IProxyStreamStore
 {
+    int Count { get; }
+
     void AddOrUpdate(Guid sessionId, StreamSignaler signaler, Func<Guid, StreamSignaler, StreamSignaler> updateFactory);
 
     bool Exists(Guid sessionId);
@@ -21,6 +23,8 @@ public class ProxyStreamStore(ILogger<ProxyStreamStore> logger) : IProxyStreamSt
 {
     private readonly ILogger<ProxyStreamStore> _logger = logger;
     private readonly ConcurrentDictionary<Guid, StreamSignaler> _proxyStreams = new();
+
+    public int Count => _proxyStreams.Count;
 
     public void AddOrUpdate(Guid sessionId, StreamSignaler signaler, Func<Guid, StreamSignaler, StreamSignaler> updateFactory)
     {

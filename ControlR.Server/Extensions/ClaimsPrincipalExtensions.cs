@@ -1,4 +1,5 @@
 ﻿using ControlR.Server.Auth;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
 namespace ControlR.Server.Extensions;
@@ -12,13 +13,17 @@ public static class ClaimsPrincipalExtensions
             bool.TryParse(claimValue, out var isAdmin) &&
             isAdmin;
     }
-    public static bool TryGetClaim(this ClaimsPrincipal user, string claimType, out string claimValue)
+
+    public static bool TryGetClaim(
+        this ClaimsPrincipal user,
+        string claimType,
+        [NotNullWhen(true)] out string? claimValue)
     {
         claimValue = user.Claims.FirstOrDefault(x => x.Type == claimType)?.Value ?? string.Empty;
         return !string.IsNullOrWhiteSpace(claimValue);
     }
 
-    public static bool TryGetPublicKey(this ClaimsPrincipal user, out string publicKey)
+    public static bool TryGetPublicKey(this ClaimsPrincipal user, [NotNullWhen(true)] out string? publicKey)
     {
         if (TryGetClaim(user, ClaimNames.PublicKey, out publicKey))
         {
@@ -27,5 +32,4 @@ public static class ClaimsPrincipalExtensions
 
         return false;
     }
-
 }

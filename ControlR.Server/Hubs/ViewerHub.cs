@@ -11,6 +11,7 @@ using ControlR.Shared.Primitives;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Server.Hubs;
@@ -18,51 +19,39 @@ namespace ControlR.Server.Hubs;
 [Authorize]
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
-    IProxyStreamStore _proxyStreamStore,
-    IAgentConnectionCounter _agentCounter,
+    IProxyStreamStore _streamStore,
+    IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
-    public async Task<Result<bool>> CheckIfServerAdministrator(SignedPayloadDto signedDto)
+    private bool IsServerAdmin
     {
-        try
+        get
         {
-            if (!VerifySignature(signedDto, out _))
+            if (Context.Items.TryGetValue(nameof(IsServerAdmin), out var cachedItem) &&
+                bool.TryParse($"{cachedItem}", out var isAdmin))
             {
-                return Result.Fail<bool>("Signature verification failed.");
+                return isAdmin;
             }
+            return false;
+        }
+        set
+        {
+            Context.Items[nameof(IsServerAdmin)] = value;
+        }
+    }
 
-            var isAdmin = Context.User?.IsAdministrator() ?? false;
-            if (isAdmin)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-                await Clients.Caller.ReceiveAgentConnectionCount(_agentCounter.AgentCount);
-            }
-            return Result.Ok(isAdmin);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while check if user is an administrator.");
-            return Result.Fail<bool>("An error occurred.");
-        }
+    public Task<bool> CheckIfServerAdministrator()
+    {
+        return IsServerAdmin.AsTaskResult();
     }
 
     public async Task<Result> ClearAlert(SignedPayloadDto signedDto)
     {
         using var scope = _logger.BeginMemberScope();
 
-        if (!VerifySignature(signedDto, out var publicKey))
+        if (!VerifyIsAdmin())
         {
-            return Result.Fail("Signature verification failed.");
-        }
-
-        var isAdmin = Context.User?.IsAdministrator() ?? false;
-        if (!isAdmin)
-        {
-            _logger.LogCritical(
-                "Non-administrator attempted to clear alerts.  " +
-                "Public Key: {PublicKey}",
-                publicKey);
             return Result.Fail("Unauthorized.");
         }
 
@@ -107,30 +96,6 @@ public class ViewerHub(
         }
     }
 
-    public Task<Result<int>> GetAgentCount(SignedPayloadDto signedDto)
-    {
-        try
-        {
-            if (!VerifySignature(signedDto, out _))
-            {
-                return Result.Fail<int>("Signature verification failed.").AsTaskResult();
-            }
-
-            var adminResult = VerifyIsAdmin(signedDto);
-            if (!adminResult.IsSuccess || !adminResult.Value)
-            {
-                return Result.Fail<int>("Failed to verify administrator access.").AsTaskResult();
-            }
-
-            return Result.Ok(_agentCounter.AgentCount).AsTaskResult();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting agent count.");
-            return Result.Fail<int>("Failed to get agent count.").AsTaskResult();
-        }
-    }
-
     public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
     {
         try
@@ -145,6 +110,29 @@ public class ViewerHub(
         }
     }
 
+    public Task<Result<ServerStatsDto>> GetServerStats()
+    {
+        try
+        {
+            if (!VerifyIsAdmin())
+            {
+                return Result.Fail<ServerStatsDto>("Unauthorized.").AsTaskResult();
+            }
+
+            var dto = new ServerStatsDto(
+                _connectionCounter.AgentCount,
+                _connectionCounter.ViewerCount,
+                _streamStore.Count);
+
+            return Result.Ok(dto).AsTaskResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting agent count.");
+            return Result.Fail<ServerStatsDto>("Failed to get agent count.").AsTaskResult();
+        }
+    }
+
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
     {
         try
@@ -155,7 +143,7 @@ public class ViewerHub(
             }
 
             var signaler = new StreamSignaler(sessionId);
-            _proxyStreamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
+            _streamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
 
             var sessionResult = await _agentHub.Clients
                    .Client(agentConnectionId)
@@ -190,19 +178,42 @@ public class ViewerHub(
 
     public override async Task OnConnectedAsync()
     {
+        _connectionCounter.IncrementViewerCount();
+        await SendUpdatedConnectionCountToAdmins();
+
         await base.OnConnectedAsync();
 
-        if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) != true)
+        if (Context.User is null)
+        {
+            _logger.LogWarning("User is null.  Authorize tag should have prevented this.");
+            return;
+        }
+
+        if (!Context.User.TryGetPublicKey(out var publicKey))
         {
             _logger.LogWarning("Failed to get public key from viewer user.");
             return;
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, publicKey);
+
+        IsServerAdmin = Context.User?.IsAdministrator() ?? false;
+        if (IsServerAdmin)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+            var statsDto = new ServerStatsDto(
+                _connectionCounter.AgentCount,
+                _connectionCounter.ViewerCount,
+                _streamStore.Count);
+            await Clients.Caller.ReceiveServerStats(statsDto);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        _connectionCounter.DecrementViewerCount();
+        await SendUpdatedConnectionCountToAdmins();
+
         if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, publicKey);
@@ -263,7 +274,6 @@ public class ViewerHub(
                 .Fail(ex, "Failed to send agent app settings.")
                 .Log(_logger);
         }
-
     }
 
     public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
@@ -313,7 +323,7 @@ public class ViewerHub(
             }
 
             var signaler = new StreamSignaler(sessionId);
-            _proxyStreamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
+            _streamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
 
             var sessionResult = await _agentHub.Clients
                    .Client(agentConnectionId)
@@ -328,33 +338,46 @@ public class ViewerHub(
         }
     }
 
-    private Result<bool> VerifyIsAdmin(
-        SignedPayloadDto signedDto,
-        [CallerMemberName] string callerMember = "")
+    private async Task SendUpdatedConnectionCountToAdmins()
     {
-        if (!VerifySignature(signedDto, out var publicKey))
+        try
         {
-            var result = Result.Fail<bool>("Signature verification failed.");
-            _logger.LogResult(result);
-            return result;
-        }
+            var dto = new ServerStatsDto(
+                _connectionCounter.AgentCount,
+                _connectionCounter.ViewerCount,
+                _streamStore.Count);
 
-        var isAdmin = Context.User?.IsAdministrator() ?? false;
-        if (!isAdmin)
+            await Clients
+                .Group(HubGroupNames.ServerAdministrators)
+                .ReceiveServerStats(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
+        }
+    }
+
+    private bool VerifyIsAdmin([CallerMemberName] string callerMember = "")
+    {
+        var publicKey = Context.User?.TryGetPublicKey(out var userPubKey) == true
+            ? userPubKey
+            : "Unknown";
+
+        if (!IsServerAdmin)
         {
             _logger.LogCritical(
                 "Admin verification failed when invoking membmer {MemberName}. Public Key: {PublicKey}",
                 callerMember,
                 publicKey);
         }
-        return Result.Ok(isAdmin);
+        return IsServerAdmin;
     }
 
-    private bool VerifySignature(SignedPayloadDto signedDto, out string publicKey)
+    private bool VerifySignature(SignedPayloadDto signedDto, [NotNullWhen(true)] out string? publicKey)
     {
-        publicKey = string.Empty;
+        publicKey = default;
 
-        if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out publicKey) != true)
+        if (Context.User?.TryGetPublicKey(out publicKey) != true)
         {
             _logger.LogCritical("Failed to get public key from viewer user.");
             return false;

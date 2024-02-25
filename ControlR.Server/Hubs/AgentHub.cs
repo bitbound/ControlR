@@ -10,7 +10,8 @@ namespace ControlR.Server.Hubs;
 public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
-    IAgentConnectionCounter _agentCounter,
+    IConnectionCounter _connectionCounter,
+    IProxyStreamStore _streamStore,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
@@ -32,14 +33,14 @@ public class AgentHub(
 
     public override async Task OnConnectedAsync()
     {
-        _agentCounter.Increment();
+        _connectionCounter.IncrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _agentCounter.Decrement();
+        _connectionCounter.DecrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
 
         if (Device is DeviceDto cachedDevice)
@@ -112,13 +113,19 @@ public class AgentHub(
             _logger.LogError(ex, "Error while updating device.");
         }
     }
+
     private async Task SendUpdatedConnectionCountToAdmins()
     {
         try
         {
+            var dto = new ServerStatsDto(
+                _connectionCounter.AgentCount,
+                _connectionCounter.ViewerCount,
+                _streamStore.Count);
+
             await _viewerHub.Clients
                 .Group(HubGroupNames.ServerAdministrators)
-                .ReceiveAgentConnectionCount(_agentCounter.AgentCount);
+                .ReceiveServerStats(dto);
         }
         catch (Exception ex)
         {

@@ -28,9 +28,9 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
 
-    Task<Result<int>> GetAgentCount();
-
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
+
+    Task<Result<ServerStatsDto>> GetServerStats();
 
     Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
 
@@ -113,23 +113,6 @@ internal class ViewerHubConnection(
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
     }
 
-    public async Task<Result<int>> GetAgentCount()
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentCountRequest, _appState.UserKeys.PrivateKey);
-                var result = await Connection.InvokeAsync<Result<int>>(nameof(IViewerHub.GetAgentCount), signedDto);
-                if (!result.IsSuccess)
-                {
-                    _logger.LogResult(result);
-                }
-
-                return result;
-            },
-            () => Result.Fail<int>("Failed to get agent count."));
-    }
-
     public async Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer()
     {
         return await TryInvoke(
@@ -147,6 +130,22 @@ internal class ViewerHubConnection(
                 return alertResult;
             },
             () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
+    }
+
+    public async Task<Result<ServerStatsDto>> GetServerStats()
+    {
+        return await TryInvoke(
+            async () =>
+            {
+                var result = await Connection.InvokeAsync<Result<ServerStatsDto>>(nameof(IViewerHub.GetServerStats));
+                if (!result.IsSuccess)
+                {
+                    _logger.LogResult(result);
+                }
+
+                return result;
+            },
+            () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
 
     public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
@@ -182,12 +181,6 @@ internal class ViewerHubConnection(
         }
     }
 
-    public async Task ReceiveAgentConnectionCount(int agentConnectionCount)
-    {
-        var message = new ServerAgentConnectionCountUpdate(agentConnectionCount);
-        await _messenger.Send(message);
-    }
-
     public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
     {
         await _messenger.Send(alert);
@@ -198,6 +191,12 @@ internal class ViewerHubConnection(
         _devicesCache.AddOrUpdate(device);
         _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
         return Task.CompletedTask;
+    }
+
+    public async Task ReceiveServerStats(ServerStatsDto serverStats)
+    {
+        var message = new ServerStatsUpdateMessage(serverStats);
+        await _messenger.Send(message);
     }
 
     public Task ReceiveTerminalOutput(TerminalOutputDto output)
@@ -343,15 +342,10 @@ internal class ViewerHubConnection(
         await TryInvoke(
             async () =>
             {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
-                var result = await Connection.InvokeAsync<Result<bool>>(nameof(IViewerHub.CheckIfServerAdministrator), signedDto);
-                if (!result.IsSuccess)
+                var isAdmin = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
+                if (_appState.IsServerAdministrator != isAdmin)
                 {
-                    _logger.LogResult(result);
-                }
-                if (result.IsSuccess && _appState.IsServerAdministrator != result.Value)
-                {
-                    _appState.IsServerAdministrator = result.Value;
+                    _appState.IsServerAdministrator = isAdmin;
                     await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
                 }
             });
@@ -365,6 +359,7 @@ internal class ViewerHubConnection(
         connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
         connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
         connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
+        connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

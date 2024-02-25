@@ -16,7 +16,7 @@ public class DigitalSignatureAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> _options,
     ILoggerFactory _loggerFactory,
     IServiceScopeFactory _scopeFactory,
-    IOptionsMonitor<AuthorizationOptions> _authOptions,
+    IOptionsMonitor<ApplicationOptions> _authOptions,
     ILogger<DigitalSignatureAuthenticationHandler> _logger) : AuthenticationHandler<AuthenticationSchemeOptions>(_options, _loggerFactory, _encoder)
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()

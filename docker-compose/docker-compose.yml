@@ -2,29 +2,40 @@ version: '3.4'
 
 name: "controlr"
 
+networks:
+  controlr:
+    name: controlr-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+          gateway: 172.29.0.1
+
 services:
   controlr:
     image: translucency/controlr:latest
     ports:
       - 5120:8080
-      - 7031:8081
+    networks:
+      - controlr
     volumes:
       - controlr-data:/app/AppData
     environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
+      - ControlR_ApplicationOptions__LogRetentionDays=7
+
       # Uncomment these variables to control access to your server.
       # For multiple values in an array, put each item on a new line
       # with the next consecutive number.  Example:
-      #     - ControlR_Authorization__AdminPublicKeys__0={first-admin-key}
-      #     - ControlR_Authorization__AdminPublicKeys__1={second-admin-key}
+      #     - ControlR_ApplicationOptions__AdminPublicKeys__0={first-admin-key}
+      #     - ControlR_ApplicationOptions__AdminPublicKeys__1={second-admin-key}
       #
-      #- ControlR_Authorization__AdminPublicKeys__0=
-      #- ControlR_Authorization__EnableRestrictedUserAccess=false
-      #- ControlR_Authorization__AuthorizedUserPublicKeys__0=
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
-    build:
-      context: ../ControlR.Server
+      #- ControlR_ApplicationOptions__AdminPublicKeys__0=
+      #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
+      #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
+      #- ControlR_ApplicationOptions__KnownProxies__0=
 
 volumes:
   controlr-data:

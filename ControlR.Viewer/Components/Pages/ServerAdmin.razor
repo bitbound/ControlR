@@ -15,7 +15,7 @@
         Server Stats
     </MudText>
 
-    <div class="d-flex">
+    <div class="d-flex gap-4">
         <MudCard>
             <MudCardHeader Class="pa-2">
                 Agent Count
@@ -23,7 +23,32 @@
             <MudCardContent Class="pa-2">
                 <MudText Align="Align.Center">
                     <b>
-                        @(_serverAgentCount)
+                        @(_serverStats?.AgentCount ?? 0)
+                    </b>
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+        <MudCard>
+            <MudCardHeader Class="pa-2">
+                Viewer Count
+            </MudCardHeader>
+            <MudCardContent Class="pa-2">
+                <MudText Align="Align.Center">
+                    <b>
+                        @(_serverStats?.ViewerCount ?? 0)
+                    </b>
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard>
+            <MudCardHeader Class="pa-2">
+                Stream Count
+            </MudCardHeader>
+            <MudCardContent Class="pa-2">
+                <MudText Align="Align.Center">
+                    <b>
+                        @(_serverStats?.StreamCount ?? 0)
                     </b>
                 </MudText>
             </MudCardContent>
@@ -79,7 +104,7 @@
 </div>
 
 @code {
-    private int _serverAgentCount;
+    private ServerStatsDto? _serverStats;
     private string _alertMessage = string.Empty;
     private AlertSeverity _alertSeverity = AlertSeverity.Information;
     private bool _alertIsSticky = false;
@@ -96,16 +121,16 @@
 
         await base.OnInitializedAsync();
 
-        Messenger.Register<ServerAgentConnectionCountUpdate>(
+        Messenger.Register<ServerStatsUpdateMessage>(
             this,
             async (subscriber, update) =>
             {
-                _serverAgentCount = update.AgentCount;
+                _serverStats = update.ServerStats;
                 await InvokeAsync(StateHasChanged);
             }
         );
 
-        await RefreshAgentCount();
+        await RefreshServerStats();
     }
 
     private async Task ClearAlert()
@@ -113,14 +138,14 @@
         await ViewerHub.ClearAlert();
     }
 
-    private async Task RefreshAgentCount()
+    private async Task RefreshServerStats()
     {
         try
         {
-            var result = await ViewerHub.GetAgentCount();
+            var result = await ViewerHub.GetServerStats();
             if (result.IsSuccess)
             {
-                _serverAgentCount = result.Value;
+                _serverStats = result.Value;
                 return;
             }
             else

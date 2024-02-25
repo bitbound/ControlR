@@ -53,8 +53,8 @@ internal static class IHostBuilderExtensions
             }
 
             config
-                .AddEnvironmentVariables()
-                .AddJsonFile(SettingsProvider.AppSettingsPath, true, true);
+                .AddJsonFile(SettingsProvider.AppSettingsPath, true, true)
+                .AddEnvironmentVariables();
         });
 
         builder.ConfigureServices((context, services) =>
