@@ -1,5 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Shared.Extensions;
+﻿using ControlR.Shared.Extensions;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
@@ -14,14 +13,12 @@ namespace ControlR.Devices.Common.Services.Base;
 
 public abstract class TcpWebsocketProxyBase(
     IMemoryProvider _memoryProvider,
-    IMessenger _messenger,
     IRetryer _retryer,
     ILogger<TcpWebsocketProxyBase> _logger)
 {
     protected readonly ILogger<TcpWebsocketProxyBase> _logger = _logger;
     private readonly ConcurrentDictionary<int, TcpListener> _listeners = [];
     private readonly IMemoryProvider _memoryProvider = _memoryProvider;
-    private readonly IMessenger _messenger = _messenger;
 
     protected Task<Result<Task>> ListenForLocalConnections(
        Guid sessionId,

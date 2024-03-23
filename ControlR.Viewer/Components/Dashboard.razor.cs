@@ -355,8 +355,8 @@ public partial class Dashboard
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while starting TightVNC session.");
-            Snackbar.Add("An error occurred while TightVNC session", Severity.Error);
+            Logger.LogError(ex, "Error while starting VNC session.");
+            Snackbar.Add("An error occurred while starting VNC session", Severity.Error);
         }
 #else
         // This is to prevent compiler warning on Android.

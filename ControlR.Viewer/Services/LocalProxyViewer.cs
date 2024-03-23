@@ -1,5 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Devices.Common.Services.Base;
+﻿using ControlR.Devices.Common.Services.Base;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
@@ -17,9 +16,8 @@ internal class LocalProxyViewer(
     ISettings _settings,
     IAppState _appState,
     IMemoryProvider memoryProvider,
-    IMessenger messenger,
     IRetryer retryer,
-    ILogger<TcpWebsocketProxyBase> logger) : TcpWebsocketProxyBase(memoryProvider, messenger, retryer, logger), ILocalProxyViewer
+    ILogger<TcpWebsocketProxyBase> logger) : TcpWebsocketProxyBase(memoryProvider, retryer, logger), ILocalProxyViewer
 {
     public async Task<Result<Task>> ListenForLocalConnections(Guid sessionId, int portNumber)
     {

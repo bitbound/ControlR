@@ -39,15 +39,26 @@ internal class ProxyForegroundService : Service, IProxyLauncherAndroid
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        if (intent?.Action == ActionStartProxy)
+        try
         {
-            StartProxy();
+            if (intent?.Action == ActionStartProxy)
+            {
+                StartProxy();
+            }
+
+            if (intent?.Action == ActionStopProxy)
+            {
+                StopSelf();
+            }
+        }
+        catch (Exception ex)
+        {
+            MainPage.Current.DisplayAlert(
+                "Service Error",
+                $"Failed to start foreground service.  Error: {ex.Message}",
+                "OK");
         }
 
-        if (intent?.Action == ActionStopProxy)
-        {
-            StopSelf();
-        }
         return StartCommandResult.Sticky;
     }
 
