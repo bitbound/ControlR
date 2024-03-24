@@ -14,15 +14,15 @@ internal interface IInputDesktopReporter
     Task Start(string agentPipeName, int parentProcessId);
 }
 
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform("windows6.0.6000")]
 internal class InputDesktopReporter(
     IHostApplicationLifetime hostLifetime,
-    IProcessInvoker processes,
+    IProcessManager processes,
     IIpcConnectionFactory ipcFactory,
     ILogger<InputDesktopReporter> logger) : IInputDesktopReporter
 {
     private readonly IHostApplicationLifetime _hostLifetime = hostLifetime;
-    private readonly IProcessInvoker _processes = processes;
+    private readonly IProcessManager _processes = processes;
     private readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
     private readonly ILogger<InputDesktopReporter> _logger = logger;
     private string _agentPipeName = string.Empty;

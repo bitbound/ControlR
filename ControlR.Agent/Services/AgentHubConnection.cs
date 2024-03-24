@@ -10,6 +10,7 @@ using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
@@ -29,6 +30,7 @@ namespace ControlR.Agent.Services;
 
 internal interface IAgentHubConnection : IHubConnectionBase
 {
+    Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
     Task SendDeviceHeartbeat();
 
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
@@ -94,7 +96,6 @@ internal class AgentHubConnection(
             return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
         }
     }
-
 
     public async Task<bool> GetStreamingSession(SignedPayloadDto signedDto)
     {
@@ -198,6 +199,17 @@ internal class AgentHubConnection(
         return Win32.GetActiveSessions().ToArray().AsTaskResult();
     }
 
+    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
+    {
+        try
+        {
+            await Connection.InvokeAsync(nameof(IAgentHub.NotifyViewerDesktopChanged), sessionId, desktopName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending device update.");
+        }
+    }
     public async Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
     {
         try
@@ -266,7 +278,7 @@ internal class AgentHubConnection(
                 return;
             }
 
-            await Connection.InvokeAsync("UpdateDevice", result.Value);
+            await Connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), result.Value);
         }
         catch (Exception ex)
         {
@@ -278,7 +290,7 @@ internal class AgentHubConnection(
     {
         try
         {
-            await Connection.InvokeAsync("SendTerminalOutputToViewer", viewerConnectionId, outputDto);
+            await Connection.InvokeAsync(nameof(IAgentHub.SendTerminalOutputToViewer), viewerConnectionId, outputDto);
         }
         catch (Exception ex)
         {

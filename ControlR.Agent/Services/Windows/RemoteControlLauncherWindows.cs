@@ -5,6 +5,7 @@ using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,50 +14,28 @@ using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Result = ControlR.Shared.Result;
+using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
 
-[SupportedOSPlatform("windows")]
-internal class RemoteControlLauncherWindows : IRemoteControlLauncher
+[SupportedOSPlatform("windows6.0.6000")]
+internal class RemoteControlLauncherWindows(
+    IFileSystem _fileSystem,
+    IProcessManager _processes,
+    IDownloadsApi _downloadsApi,
+    IEnvironmentHelper _environment,
+    IStreamingSessionCache _streamingSessionCache,
+    IIpcRouter _ipcRouter,
+    IHostApplicationLifetime _hostLifetime,
+    IServiceProvider _serviceProvider,
+    ISettingsProvider _settings,
+    ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
-    private readonly IDownloadsApi _downloadsApi;
-    private readonly IEnvironmentHelper _environment;
-    private readonly IFileSystem _fileSystem;
-    private readonly IHostApplicationLifetime _hostLifetime;
-    private readonly IIpcRouter _ipcRouter;
-    private readonly ILogger<RemoteControlLauncherWindows> _logger;
-    private readonly IProcessManager _processes;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IStreamingSessionCache _streamingSessionCache;
-    private readonly string _watcherBinaryPath;
-
-    public RemoteControlLauncherWindows(
-        IFileSystem fileSystem,
-        IProcessManager processManager,
-        IDownloadsApi downloadsApi,
-        IEnvironmentHelper environment,
-        IStreamingSessionCache streamingSessionCache,
-        IIpcRouter ipcRouter,
-        IHostApplicationLifetime hostLifetime,
-        IServiceProvider serviceProvider,
-        ILogger<RemoteControlLauncherWindows> logger)
-    {
-        _fileSystem = fileSystem;
-        _processes = processManager;
-        _downloadsApi = downloadsApi;
-        _environment = environment;
-        _streamingSessionCache = streamingSessionCache;
-        _ipcRouter = ipcRouter;
-        _hostLifetime = hostLifetime;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-
-        _watcherBinaryPath = _environment.StartupExePath;
-    }
-
+    private readonly string _remoteControlZipUri = $"{_settings.ServerUri}downloads/{AppConstants.RemoteControlZipFileName}";
+    private readonly string _watcherBinaryPath = _environment.StartupExePath;
     public async Task<Result> CreateSession(
         Guid sessionId,
         byte[] authorizedKey,
@@ -102,17 +81,14 @@ internal class RemoteControlLauncherWindows : IRemoteControlLauncher
                     forceConsoleSession: false,
                     desktopName: session.LastDesktop,
                     hiddenWindow: false,
-                    out var procInfo);
+                    out var process);
 
-                if (procInfo.dwProcessId == -1)
+                if (process is null || process.Id == -1)
                 {
                     return Result.Fail("Failed to start remote control process.");
                 }
-                else
-                {
-                    _processes.GetProcessById(procInfo.dwProcessId);
-                    session.StreamerProcess = _processes.GetProcessById(procInfo.dwProcessId);
-                }
+
+                session.StreamerProcess = process;
             }
             else
             {
@@ -189,7 +165,7 @@ internal class RemoteControlLauncherWindows : IRemoteControlLauncher
         try
         {
             var targetPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
-            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, onDownloadProgress);
+            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, onDownloadProgress);
             if (!result.IsSuccess)
             {
                 return result;
@@ -215,15 +191,15 @@ internal class RemoteControlLauncherWindows : IRemoteControlLauncher
                 forceConsoleSession: false,
                 desktopName: session.LastDesktop,
                 hiddenWindow: true,
-                out var procInfo);
+                out var process);
 
-            if (procInfo.dwProcessId == -1)
+            if (process is null || process.Id == -1)
             {
                 _logger.LogError("Failed to start streamer process watcher.");
             }
             else
             {
-                session.WatcherProcess = _processes.GetProcessById(procInfo.dwProcessId);
+                session.WatcherProcess = process;
             }
         }
         else

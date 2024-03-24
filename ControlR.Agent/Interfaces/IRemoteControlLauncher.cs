@@ -1,4 +1,4 @@
-﻿using ControlR.Shared;
+﻿using ControlR.Shared.Primitives;
 
 namespace ControlR.Agent.Interfaces;
 internal interface IRemoteControlLauncher

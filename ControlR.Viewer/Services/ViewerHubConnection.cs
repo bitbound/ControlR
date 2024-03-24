@@ -78,6 +78,7 @@ internal class ViewerHubConnection(
     IMessenger _messenger,
     ILogger<ViewerHubConnection> _logger) : HubConnectionBase(_serviceScopeFactory, _messenger, _delayer, _logger), IViewerHubConnection, IViewerHubClient
 {
+
     public async Task ClearAlert()
     {
         await TryInvoke(
@@ -174,7 +175,6 @@ internal class ViewerHubConnection(
         }
     }
 
-
     public async Task<Result<ServerStatsDto>> GetServerStats()
     {
         return await TryInvoke(
@@ -217,7 +217,6 @@ internal class ViewerHubConnection(
         }
     }
 
-
     public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
     {
         try
@@ -247,6 +246,11 @@ internal class ViewerHubConnection(
         await _messenger.Send(alert);
     }
 
+    public Task ReceiveDesktopChanged(Guid sessionId, string desktopName)
+    {
+        _messenger.Send(new DesktopChangedMessage(sessionId, desktopName));
+        return Task.CompletedTask;
+    }
     public Task ReceiveDeviceUpdate(DeviceDto device)
     {
         _devicesCache.AddOrUpdate(device);
@@ -254,6 +258,23 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
+    public Task ReceiveIceCandidate(Guid sessionId, string candidateJson)
+    {
+        _messenger.Send(new IceCandidateMessage(sessionId, candidateJson));
+        return Task.CompletedTask;
+    }
+
+    public Task ReceiveRemoteControlDownloadProgress(Guid streamingSessionId, double downloadProgress)
+    {
+        _messenger.Send(new RemoteControlDownloadProgressMessage(streamingSessionId, downloadProgress));
+        return Task.CompletedTask;
+    }
+
+    public Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
+    {
+        _messenger.Send(new RtcSessionDescriptionMessage(sessionId, sessionDescription));
+        return Task.CompletedTask;
+    }
     public async Task ReceiveServerStats(ServerStatsDto serverStats)
     {
         var message = new ServerStatsUpdateMessage(serverStats);

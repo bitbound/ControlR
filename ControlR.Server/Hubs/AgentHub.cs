@@ -12,6 +12,7 @@ public class AgentHub(
     ISystemTime _systemTime,
     IConnectionCounter _connectionCounter,
     IProxyStreamStore _streamStore,
+    IStreamerSessionCache _streamerSessionCache,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
@@ -31,6 +32,22 @@ public class AgentHub(
         }
     }
 
+    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
+    {
+        if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+        {
+            _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+        {
+            _logger.LogError("Viewer connection ID is unexpectedly empty.");
+            return;
+        }
+
+        await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId, desktopName);
+    }
     public override async Task OnConnectedAsync()
     {
         _connectionCounter.IncrementAgentCount();

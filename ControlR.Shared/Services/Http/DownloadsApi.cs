@@ -1,4 +1,5 @@
-﻿using ControlR.Shared.Primitives;
+﻿using ControlR.Shared.IO;
+using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Shared.Services.Http;
@@ -10,6 +11,9 @@ internal interface IDownloadsApi
     Task<Result> DownloadTightVncZip(string destinationPath);
 
     Task<Result> DownloadViewer(string destinationPath, string viewerDownloadUri);
+
+    Task<Result> DownloadRemoteControl(string destinationPath, string remoteControlDownloadUri);
+    Task<Result> DownloadRemoteControlZip(string destinationPath, string remoteControlDownloadUri, Func<double, Task>? onDownloadProgress);
 
     Task<Result<string>> GetAgentEtag(string agentDownloadUri);
 }
@@ -33,6 +37,58 @@ internal class DownloadsApi(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while downloading agent.");
+            return Result.Fail(ex);
+        }
+    }
+
+    public async Task<Result> DownloadRemoteControl(string destinationPath, string remoteControlDownloadUri)
+    {
+        try
+        {
+            using var webStream = await _client.GetStreamAsync(remoteControlDownloadUri);
+            using var fs = new FileStream(destinationPath, FileMode.Create);
+            await webStream.CopyToAsync(fs);
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while downloading remote control client.");
+            return Result.Fail(ex);
+        }
+    }
+
+    public async Task<Result> DownloadRemoteControlZip(string destinationPath, string remoteControlDownloadUri, Func<double, Task>? onDownloadProgress)
+    {
+        try
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Head, remoteControlDownloadUri);
+            using var response = await _client.SendAsync(message);
+            var totalSize = response.Content.Headers.ContentLength ?? 100_000_000; // rough estimate.
+
+            using var webStream = await _client.GetStreamAsync(remoteControlDownloadUri);
+            using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
+
+            fs.TotalBytesWrittenChanged += async (sender, written) =>
+            {
+                if (onDownloadProgress is not null)
+                {
+                    var progress = (double)written / totalSize;
+                    await onDownloadProgress.Invoke(progress);
+                }
+            };
+
+            await webStream.CopyToAsync(fs);
+
+            if (onDownloadProgress is not null)
+            {
+                await onDownloadProgress.Invoke(1);
+            }
+
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while downloading remote control client.");
             return Result.Fail(ex);
         }
     }
