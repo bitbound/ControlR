@@ -43,6 +43,7 @@ internal class AgentHubConnection(
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
      IVncSessionLauncher _vncSessionLauncher,
+     IRemoteControlLauncher _remoteControlLauncher,
      IAgentUpdater _updater,
      ILocalProxyAgent _localProxy,
      IMessenger _messenger,
@@ -91,6 +92,55 @@ internal class AgentHubConnection(
         {
             _logger.LogError(ex, "Error while getting agent appsettings.");
             return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
+        }
+    }
+
+
+    public async Task<bool> GetStreamingSession(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignedDto(signedDto))
+            {
+                return false;
+            }
+
+            var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
+
+            double downloadProgress = 0;
+
+            var result = await _remoteControlLauncher.CreateSession(
+                dto.StreamingSessionId,
+                signedDto.PublicKey,
+                dto.TargetSystemSession,
+                dto.TargetDesktop ?? string.Empty,
+                async progress =>
+                {
+                    if (progress == 1 || progress - downloadProgress > .05)
+                    {
+                        downloadProgress = progress;
+                        await Connection
+                            .InvokeAsync(
+                                "SendRemoteControlDownloadProgress",
+                                dto.StreamingSessionId,
+                                dto.ViewerConnectionId,
+                                downloadProgress)
+                            .ConfigureAwait(false);
+                    }
+                })
+                .ConfigureAwait(false);
+
+            if (!result.IsSuccess)
+            {
+                _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
+            }
+
+            return result.IsSuccess;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating streaming session.");
+            return false;
         }
     }
 

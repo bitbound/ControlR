@@ -303,163 +303,47 @@ public partial class Dashboard
         await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
     }
 
-    private async Task StartMultiVnc(DeviceDto device)
+    private async Task RemoteControlClicked(DeviceDto device)
     {
-#if ANDROID
-        try
+        switch (device.Platform)
         {
-            var sessionId = Guid.NewGuid();
-            var vncPassword = RandomGenerator.GenerateString(8);
+            case SystemPlatform.Windows:
+                var sessionResult = await ViewerHub.GetWindowsSessions(device);
+                if (!sessionResult.IsSuccess)
+                {
+                    Logger.LogResult(sessionResult);
+                    Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
+                    return;
+                }
 
-            Logger.LogInformation("Creating VNC session.");
-            Snackbar.Add("Requesting VNC session", Severity.Info);
+                var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
+                var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+                var result = await dialogRef.Result;
+                if (result.Canceled)
+                {
+                    return;
+                }
 
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
-
-            if (!vncSessionResult.SessionCreated)
-            {
-                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
-                return;
-            }
-
-            var hasNotifyPermission = await MainActivity.Current.VerifyNotificationPermissions();
-            if (!hasNotifyPermission)
-            {
-                Snackbar.Add("Notification permission required", Severity.Warning);
-                return;
-            }
-
-            MainActivity.Current.StartForegroundServiceCompat<ProxyForegroundService>(ProxyForegroundService.ActionStartProxy);
-
-            var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
-
-            if (!startResult.IsSuccess)
-            {
-                Snackbar.Add(startResult.Reason, Severity.Error);
-                return;
-            }
-
-            var launchResult = vncSessionResult.AutoRunUsed ?
-                await MultiVncLauncher.LaunchMultiVnc(Settings.LocalProxyPort, vncPassword) :
-                await MultiVncLauncher.LaunchMultiVnc(Settings.LocalProxyPort);
-
-            if (!launchResult.IsSuccess)
-            {
-                Logger.LogResult(launchResult);
-                Snackbar.Add(launchResult.Reason, Severity.Error);
-                return;
-            }
-
-            MainPage.Current.Window.Activated -= BroadcastProxyStopRequest;
-            MainPage.Current.Window.Activated += BroadcastProxyStopRequest;
+                if (result.Data is int sessionId)
+                {
+                    var remoteControlSession = new RemoteControlSession(device, sessionId);
+                    void RenderRemoteDisplay(RenderTreeBuilder builder)
+                    {
+                        builder.OpenComponent<RemoteDisplay>(0);
+                        builder.AddComponentParameter(1, nameof(RemoteDisplay.Session), remoteControlSession);
+                        builder.CloseComponent();
+                    }
+                    var contentInstance = new DeviceContentInstance(device, RenderRemoteDisplay, "Remote");
+                    AppState.RemoteControlSessions.Add(remoteControlSession);
+                }
+                break;
+            default:
+                Snackbar.Add("Platform is not supported", Severity.Warning);
+                break;
         }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while starting VNC session.");
-            Snackbar.Add("An error occurred while starting VNC session", Severity.Error);
-        }
-#else
-        // This is to prevent compiler warning on Android.
-        Snackbar.Add("Platform not supported.", Severity.Error);
-        await Task.Yield();
-#endif
+
     }
 
-    private async Task StartNoVnc(DeviceDto device)
-    {
-        try
-        {
-            var sessionId = Guid.NewGuid();
-            var vncPassword = RandomGenerator.GenerateString(8);
-
-            Logger.LogInformation("Creating VNC session");
-            Snackbar.Add("Requesting VNC session", Severity.Info);
-
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
-
-            if (!vncSessionResult.SessionCreated)
-            {
-                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
-                return;
-            }
-
-            var targetUrl = $"{Settings.ServerUri}/novnc/vnc.html?path=viewer-proxy/{sessionId}&show_dot=true";
-
-            if (vncSessionResult.AutoRunUsed == true)
-            {
-                targetUrl += $"&password={vncPassword}&autoconnect=true";
-            }
-
-            await Browser.OpenAsync(targetUrl);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while requesting VNC session.");
-            Snackbar.Add("An error occurred while requesting a VNC session", Severity.Error);
-        }
-    }
-
-    private async Task StartRdp(DeviceDto device)
-    {
-        try
-        {
-            if (device.Platform != SystemPlatform.Windows)
-            {
-                Snackbar.Add("Only available on Windows", Severity.Warning);
-                return;
-            }
-
-            Logger.LogInformation("Creating RDP session");
-            Snackbar.Add("Requesting RDP session", Severity.Info);
-
-            var sessionId = Guid.NewGuid();
-
-            var rdpProxyResult = await ViewerHub.StartRdpProxy(device.ConnectionId, sessionId);
-
-            if (!rdpProxyResult.IsSuccess)
-            {
-                Snackbar.Add("Failed to start RDP proxy session.", Severity.Error);
-                return;
-            }
-
-#if ANDROID
-            var hasNotifyPermission = await MainActivity.Current.VerifyNotificationPermissions();
-            if (!hasNotifyPermission)
-            {
-                Snackbar.Add("Notification permission required", Severity.Warning);
-                return;
-            }
-
-            MainActivity.Current.StartForegroundServiceCompat<ProxyForegroundService>(ProxyForegroundService.ActionStartProxy);
-#endif
-
-            var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
-
-            if (!startResult.IsSuccess)
-            {
-                Snackbar.Add(startResult.Reason, Severity.Error);
-                return;
-            }
-
-            var launchResult = await RdpLauncher.LaunchRdp(Settings.LocalProxyPort);
-            if (!launchResult.IsSuccess)
-            {
-                Snackbar.Add(launchResult.Reason, Severity.Error);
-                await Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
-                return;
-            }
-
-#if ANDROID
-            MainPage.Current.Window.Activated -= BroadcastProxyStopRequest;
-            MainPage.Current.Window.Activated += BroadcastProxyStopRequest;
-#endif
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while starting RDP session.");
-            Snackbar.Add("An error occurred while RDP session", Severity.Error);
-        }
-    }
 
     private void StartTerminal(DeviceDto device)
     {
@@ -482,55 +366,6 @@ public partial class Dashboard
             Logger.LogError(ex, "Error while starting terminal session.");
             Snackbar.Add("An error occurred while starting the terminal", Severity.Error);
         }
-    }
-
-    private async Task StartTightVnc(DeviceDto device)
-    {
-#if WINDOWS
-        try
-        {
-            var sessionId = Guid.NewGuid();
-            var vncPassword = RandomGenerator.GenerateString(8);
-
-            Logger.LogInformation("Creating TightVNC session.");
-            Snackbar.Add("Requesting TightVNC session", Severity.Info);
-
-            var vncSessionResult = await ViewerHub.GetVncSession(device.ConnectionId, sessionId, vncPassword);
-
-            if (!vncSessionResult.SessionCreated)
-            {
-                Snackbar.Add("Failed to acquire VNC session.", Severity.Error);
-                return;
-            }
-
-            var startResult = await LocalProxy.ListenForLocalConnections(sessionId, Settings.LocalProxyPort);
-
-            if (!startResult.IsSuccess)
-            {
-                Snackbar.Add(startResult.Reason, Severity.Error);
-                return;
-            }
-
-            var launchResult = vncSessionResult.AutoRunUsed ?
-                await TightVncLauncher.LaunchTightVnc(Settings.LocalProxyPort, vncPassword) :
-                await TightVncLauncher.LaunchTightVnc(Settings.LocalProxyPort);
-
-            if (!launchResult.IsSuccess)
-            {
-                Logger.LogResult(launchResult);
-                Snackbar.Add(launchResult.Reason, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while starting TightVNC session.");
-            Snackbar.Add("An error occurred while TightVNC session", Severity.Error);
-        }
-#else
-        // This is to prevent compiler warning on Android.
-        await Task.Yield();
-        Snackbar.Add("Platform not supported.", Severity.Error);
-#endif
     }
 
     private async Task WakeDevice(DeviceDto device)

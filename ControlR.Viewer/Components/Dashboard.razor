@@ -55,39 +55,9 @@
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => StartNoVnc(context.Item))"
-                                         OnTouch="@(() => StartNoVnc(context.Item))">
-                                Remote (noVNC)
+                                         OnClick="@(() => RemoteControlClicked(context.Item))">
+                                Remote Control
                             </MudMenuItem>
-                            @if (OperatingSystem.IsAndroid())
-                            {
-                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                                             IconColor="Color.Info"
-                                             OnClick="@(() => StartMultiVnc(context.Item))"
-                                             OnTouch="@(() => StartMultiVnc(context.Item))">
-                                    Remote (MultiVNC)
-                                </MudMenuItem>
-
-                            }
-                            @if (OperatingSystem.IsWindows())
-                            {
-                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                                             IconColor="Color.Info"
-                                             OnClick="@(() => StartTightVnc(context.Item))"
-                                             OnTouch="@(() => StartTightVnc(context.Item))">
-                                    Remote (TightVNC)
-                                </MudMenuItem>
-                            }
-
-                            @if (context.Item.Platform == SystemPlatform.Windows)
-                            {
-                                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                                             IconColor="Color.Info"
-                                             OnClick="@(() => StartRdp(context.Item))"
-                                             OnTouch="@(() => StartRdp(context.Item))">
-                                    Remote (Microsoft RDP)
-                                </MudMenuItem>
-                            }
                             <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
                                          IconColor="Color.Info"
                                          OnClick="@(() => StartTerminal(context.Item))"

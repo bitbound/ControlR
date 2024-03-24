@@ -1,0 +1,25 @@
+@keyframes spinLogo {
+    0% {
+        transform: rotateY(0deg) rotateX(0deg);
+    }
+
+    50% {
+        transform: rotateY(0deg) rotateX(0deg);
+    }
+
+    70% {
+        transform: rotateY(180deg) rotateX(0deg);
+    }
+
+    90% {
+        transform: rotateY(180deg) rotateX(180deg);
+    }
+
+    100% {
+        transform: rotateY(180deg) rotateX(180deg);
+    }
+}
+
+.draggable {
+    -webkit-app-region: drag;
+}

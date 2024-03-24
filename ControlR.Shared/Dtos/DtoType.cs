@@ -4,7 +4,7 @@ public enum DtoType
 {
     None = 0,
     IdentityAttestation = 1,
-    VncSessionRequest = 2,
+    StreamingSessionRequest = 2,
     WindowsSessions = 3,
     DeviceUpdateRequest = 4,
     TerminalSessionRequest = 5,
@@ -18,4 +18,9 @@ public enum DtoType
     GetAgentCountRequest = 14,
     SendAlertBroadcast = 15,
     ClearAlerts = 16,
+    RtcSessionDescription = 17,
+    RtcIceCandidate = 18,
+    CloseStreamingSession = 19,
+    InvokeCtrlAltDel = 20,
+
 }

@@ -26,6 +26,36 @@ public static partial class AppConstants
 
     public static string ExternalDownloadsUri => "https://controlr.app";
 
+    public static string RemoteControlFileName
+    {
+        get
+        {
+            return EnvironmentHelper.Instance.Platform switch
+            {
+                SystemPlatform.Windows => "controlr-streamer.exe",
+                SystemPlatform.Linux => "controlr-streamer",
+                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
+                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
+                _ => throw new PlatformNotSupportedException(),
+            };
+        }
+    }
+
+    public static string RemoteControlZipFileName
+    {
+        get
+        {
+            return EnvironmentHelper.Instance.Platform switch
+            {
+                SystemPlatform.Windows => "controlr-streamer-win.zip",
+                SystemPlatform.Linux => "controlr-streamer-linux.zip",
+                SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
+                SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
+                _ => throw new PlatformNotSupportedException(),
+            };
+        }
+    }
+
     public static string ServerUri
     {
         get
@@ -37,7 +67,6 @@ public static partial class AppConstants
             return ProdServerUri;
         }
     }
-
     public static string TightVncZipName { get; } = "tvnserver.zip";
 
     public static string ViewerFileName

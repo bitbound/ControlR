@@ -22,6 +22,8 @@ public interface IViewerHubConnection : IHubConnectionBase
 {
     Task ClearAlert();
 
+    Task CloseStreamingSession(Guid sessionId);
+
     Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
@@ -30,11 +32,17 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
 
+    Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId);
+
+    Task<Result<IceServer[]>> GetIceServers();
+
     Task<Result<ServerStatsDto>> GetServerStats();
 
-    Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword);
+    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default");
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
+
+    Task InvokeCtrlAltDel(string deviceId);
 
     Task Reconnect(CancellationToken cancellationToken);
 
@@ -44,7 +52,11 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
 
+    Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
+
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
+
+    Task SendRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription);
 
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
 
@@ -74,6 +86,16 @@ internal class ViewerHubConnection(
                 await WaitForConnection();
                 var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _appState.UserKeys.PrivateKey);
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert), signedDto);
+            });
+    }
+
+    public async Task CloseStreamingSession(Guid sessionId)
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.CloseStreamingSession, _appState.UserKeys.PrivateKey);
+                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), sessionId, signedDto);
             });
     }
 
@@ -132,6 +154,27 @@ internal class ViewerHubConnection(
             () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
     }
 
+    public Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId)
+    {
+        return Result.Fail<DisplayDto[]>("Not implemented.").AsTaskResult();
+    }
+
+    public async Task<Result<IceServer[]>> GetIceServers()
+    {
+        try
+        {
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
+            var iceServers = await Connection.InvokeAsync<IceServer[]>(nameof(IViewerHub.GetIceServers), signedDto);
+            return Result.Ok(iceServers);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting ICE servers..");
+            return Result.Fail<IceServer[]>(ex);
+        }
+    }
+
+
     public async Task<Result<ServerStatsDto>> GetServerStats()
     {
         return await TryInvoke(
@@ -148,23 +191,32 @@ internal class ViewerHubConnection(
             () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
 
-    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, string vncPassword)
+    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default")
     {
-        return await TryInvoke(
-            async () =>
-            {
-                var vncSession = new VncSessionRequest(sessionId, vncPassword);
-                var signedDto = _keyProvider.CreateSignedDto(vncSession, DtoType.VncSessionRequest, _appState.UserKeys.PrivateKey);
+        try
+        {
+            var streamingSessionRequest = new StreamerSessionRequestDto(
+                sessionId,
+                targetSystemSession,
+                targetDesktop,
+                Connection.ConnectionId);
 
-                var result = await Connection.InvokeAsync<VncSessionRequestResult>(nameof(IViewerHub.GetVncSession), agentConnectionId, sessionId, signedDto);
-                if (!result.SessionCreated)
-                {
-                    _logger.LogError("Failed to get VNC session.");
-                }
-                return result;
-            },
-            () => new(false));
+            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.UserKeys.PrivateKey);
+
+            var result = await Connection.InvokeAsync<Result<StreamerHubSession>>(nameof(IViewerHub.GetStreamingSession), agentConnectionId, sessionId, signedDto);
+            if (!result.IsSuccess)
+            {
+                _logger.LogResult(result);
+            }
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting remote streaming session.");
+            return Result.Fail<StreamerHubSession>(ex);
+        }
     }
+
 
     public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
     {
@@ -179,6 +231,15 @@ internal class ViewerHubConnection(
             _logger.LogError(ex, "Error while getting windows sessions.");
             return Result.Fail<WindowsSession[]>(ex);
         }
+    }
+
+    public async Task InvokeCtrlAltDel(string deviceId)
+    {
+        await TryInvoke(async () =>
+        {
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.InvokeCtrlAltDel, _appState.UserKeys.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
+        });
     }
 
     public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
@@ -259,6 +320,15 @@ internal class ViewerHubConnection(
             });
     }
 
+    public async Task SendIceCandidate(Guid sessionId, string iceCandidateJson)
+    {
+        await TryInvoke(async () =>
+        {
+            var signedDto = _keyProvider.CreateSignedDto(iceCandidateJson, DtoType.RtcIceCandidate, _appState.UserKeys.PrivateKey);
+            await Connection.InvokeAsync("SendSignedDtoToStreamer", sessionId, signedDto);
+        });
+    }
+
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
     {
         await TryInvoke(async () =>
@@ -266,6 +336,15 @@ internal class ViewerHubConnection(
             var powerDto = new PowerStateChangeDto(powerStateType);
             var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+        });
+    }
+
+    public async Task SendRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
+    {
+        await TryInvoke(async () =>
+        {
+            var signedDto = _keyProvider.CreateSignedDto(sessionDescription, DtoType.RtcSessionDescription, _appState.UserKeys.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), sessionId, signedDto);
         });
     }
 

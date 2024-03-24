@@ -1,6 +1,7 @@
 ﻿using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
 using ControlR.Server.Models;
+using ControlR.Server.Options;
 using ControlR.Server.Services;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
@@ -8,9 +9,12 @@ using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
+using ControlR.Shared.Services;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder.Extensions;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -19,9 +23,13 @@ namespace ControlR.Server.Hubs;
 [Authorize]
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
+    IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
     IProxyStreamStore _streamStore,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
+    IStreamerSessionCache _streamerSessionCache,
+    IOptionsMonitor<ApplicationOptions> _appOptions,
+    IDelayer _delayer,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
     private bool IsServerAdmin
@@ -39,6 +47,74 @@ public class ViewerHub(
         {
             Context.Items[nameof(IsServerAdmin)] = value;
         }
+    }
+
+    public Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
+    {
+        if (!VerifySignature(dto, out _))
+        {
+            return Array.Empty<IceServer>().AsTaskResult();
+        }
+
+        return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
+    }
+
+    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
+    {
+        try
+        {
+            if (!VerifySignature(sessionRequestDto, out _))
+            {
+                return Result.Fail<StreamerHubSession>(string.Empty);
+            }
+
+            var sessionSuccess = await _agentHub.Clients
+                   .Client(agentConnectionId)
+                   .GetStreamingSession(sessionRequestDto);
+
+            if (!sessionSuccess)
+            {
+                return Result.Fail<StreamerHubSession>("Failed to acquire streaming session.");
+            }
+
+            // TODO: Change to AsyncManualResetEvent.
+            await _delayer.WaitForAsync(
+                () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
+                TimeSpan.FromSeconds(30));
+
+            if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
+            {
+                return Result.Fail<StreamerHubSession>("Timed out while waiting for streaming to start.");
+            }
+
+            session.AgentConnectionId = agentConnectionId;
+            session.ViewerConnectionId = Context.ConnectionId;
+            return Result.Ok(session);
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail<StreamerHubSession>(ex);
+        }
+    }
+
+    public async Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto)
+    {
+        using var scope = _logger.BeginMemberScope();
+
+        if (!VerifySignature(signedDto, out _))
+        {
+            return;
+        }
+
+        if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
+        {
+            _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
+            return;
+        }
+
+        await _streamerHub.Clients
+            .Client(session.StreamerConnectionId)
+            .ReceiveDto(signedDto);
     }
 
     public Task<bool> CheckIfServerAdministrator()

@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "command": "npm start",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            // Doesn't seem to work.
+            "name": "Forge",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron-forge-vscode-nix",
+            "windows": {
+              "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron-forge-vscode-win.cmd"
+            },
+            // runtimeArgs will be passed directly to your Electron application
+            "runtimeArgs": [
+            ],
+            "cwd": "${workspaceFolder}"
+          }
+    ]
+}

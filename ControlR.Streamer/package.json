@@ -1,0 +1,60 @@
+{
+  "name": "controlr-streamer",
+  "productName": "controlr-streamer",
+  "version": "2023.10.030407",
+  "description": "Zero-trust remote control.",
+  "main": ".webpack/main",
+  "scripts": {
+    "start": "electron-forge start --inspect-electron",
+    "dev": "electron-forge start --inspect-electron -- --dev --session-id=f87d1ba5-b0c8-4f78-87d5-7baef64f8637",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "make-pwsh": "powershell -f ./make.ps1",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts,.tsx ."
+  },
+  "keywords": [],
+  "author": {
+    "name": "Jared Goodwin",
+    "email": "translucency@outlook.com"
+  },
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-rpm": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-webpack": "^6.4.2",
+    "@reforged/maker-appimage": "^3.3.1",
+    "@types/react": "^18.2.28",
+    "@types/react-bootstrap": "^0.32.33",
+    "@types/react-dom": "^18.2.13",
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "@typescript-eslint/parser": "^6.7.5",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "app-builder-lib": "^24.7.0",
+    "css-loader": "^6.8.1",
+    "electron": "^27.0.0",
+    "eslint": "^8.51.0",
+    "eslint-plugin-import": "^2.28.1",
+    "fork-ts-checker-webpack-plugin": "^9.0.0",
+    "node-loader": "^2.0.0",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.5.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^7.0.12",
+    "@microsoft/signalr-protocol-msgpack": "^7.0.12",
+    "@msgpack/msgpack": "^3.0.0-beta1",
+    "@nut-tree/nut-js": "^3.1.2",
+    "bootstrap": "^5.3.2",
+    "electron-squirrel-startup": "^1.0.0",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.9.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.11.0"
+  }
+}

@@ -2,7 +2,9 @@
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Enums;
+using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
+using System.Collections.ObjectModel;
 
 namespace ControlR.Viewer.Services;
 
@@ -10,11 +12,12 @@ public interface IAppState
 {
     CancellationToken AppExiting { get; }
     AuthenticationState AuthenticationState { get; }
-    bool IsServerAdministrator { get; internal set; }
     bool IsAuthenticated { get; }
     bool IsBusy { get; }
+    bool IsServerAdministrator { get; internal set; }
     bool KeysVerified { get; set; }
     int PendingOperations { get; }
+    ObservableCollection<RemoteControlSession> RemoteControlSessions { get; }
     UserKeyPair UserKeys { get; }
 
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
@@ -58,11 +61,12 @@ internal class AppState(
         }
     }
 
-    public bool IsServerAdministrator { get; set; }
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.Authenticated;
     public bool IsBusy => _busyCounter > 0;
+    public bool IsServerAdministrator { get; set; }
     public bool KeysVerified { get; set; }
     public int PendingOperations => _busyCounter;
+    public ObservableCollection<RemoteControlSession> RemoteControlSessions { get; } = [];
 
     public UserKeyPair UserKeys
     {
