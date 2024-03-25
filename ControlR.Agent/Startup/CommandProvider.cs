@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
+using ControlR.Agent.Services.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
@@ -12,7 +13,6 @@ internal class CommandProvider
     private static readonly string[] _autoRunVncAlias = ["-r", "--auto-run"];
     private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
     private static readonly string[] _vncPortAlias = ["-v", "--vnc-port"];
-
     internal static Command GetInstallCommand(string[] args)
     {
         var serverUriOption = new Option<Uri?>(
@@ -67,6 +67,43 @@ internal class CommandProvider
         return runCommand;
     }
 
+    internal static Command GetSidecarCommand(string[] args)
+    {
+        var agentPipeOption = new Option<string>(
+            new[] { "-a", "--agent-pipe" },
+            "The agent pipe name to which the watcher should connect.")
+        {
+            IsRequired = true
+        };
+
+        var parentIdOption = new Option<int>(
+            new[] { "-p", "--parent-id" },
+            "The calling process's ID.")
+        {
+            IsRequired = true
+        };
+
+        var sidecarCommand = new Command("sidecar", "Watches for desktop changes (winlogon/UAC) for the streamer process.")
+        {
+            agentPipeOption,
+            parentIdOption
+        };
+
+        sidecarCommand.SetHandler(async (agentPipeName, parentProcessId) =>
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Console.WriteLine("This command is only available on Windows.");
+                return;
+            }
+            var host = CreateHost(StartupMode.Sidecar, args);
+            var desktopReporter = host.Services.GetRequiredService<IInputDesktopReporter>();
+            await desktopReporter.Start(agentPipeName, parentProcessId);
+            await host.RunAsync();
+        }, agentPipeOption, parentIdOption);
+
+        return sidecarCommand;
+    }
     internal static Command GetUninstallCommand(string[] args)
     {
         var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.");

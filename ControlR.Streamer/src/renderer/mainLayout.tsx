@@ -113,7 +113,7 @@ export class MainLayout extends Component<any, MainLayoutState> {
 
 
 interface AppPage {
-    title: string,
+    title: "Home" | "Settings" | "About",
     icon: JSX.Element
 }
 

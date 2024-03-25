@@ -104,6 +104,8 @@ builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
 builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
 builder.Services.AddSingleton<IAlertStore, AlertStore>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
+builder.Services.AddSingleton<IDelayer, Delayer>();
+builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCache>();
 
 builder.Host.UseSystemd();
 

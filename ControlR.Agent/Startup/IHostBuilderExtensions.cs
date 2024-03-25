@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SimpleIpc;
 
 namespace ControlR.Agent.Startup;
 
@@ -79,6 +80,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
             services.AddSingleton<IDelayer, Delayer>();
             services.AddSingleton<IRetryer, Retryer>();
+            services.AddSimpleIpc();
 
             if (startupMode == StartupMode.Run)
             {
@@ -87,6 +89,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
                 services.AddSingleton<ITerminalStore, TerminalStore>();
+                services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
                 services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
                 services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
                 services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
@@ -96,6 +99,7 @@ internal static class IHostBuilderExtensions
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
+                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
                 services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();

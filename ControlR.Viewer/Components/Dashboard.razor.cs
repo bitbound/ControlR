@@ -324,9 +324,9 @@ public partial class Dashboard
                     return;
                 }
 
-                if (result.Data is int sessionId)
+                if (result.Data is uint sessionId)
                 {
-                    var remoteControlSession = new RemoteControlSession(device, sessionId);
+                    var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
                     void RenderRemoteDisplay(RenderTreeBuilder builder)
                     {
                         builder.OpenComponent<RemoteDisplay>(0);
@@ -334,7 +334,7 @@ public partial class Dashboard
                         builder.CloseComponent();
                     }
                     var contentInstance = new DeviceContentInstance(device, RenderRemoteDisplay, "Remote");
-                    AppState.RemoteControlSessions.Add(remoteControlSession);
+                    WindowStore.Add(contentInstance);
                 }
                 break;
             default:
