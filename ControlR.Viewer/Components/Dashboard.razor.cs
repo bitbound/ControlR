@@ -32,6 +32,7 @@ using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services.Http;
+using ControlR.Viewer.Components.RemoteDisplays;
 
 namespace ControlR.Viewer.Components;
 

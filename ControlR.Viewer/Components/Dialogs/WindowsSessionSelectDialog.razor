@@ -51,10 +51,8 @@
 
 @code {
 
-    #nullable disable
     [CascadingParameter]
-    public MudDialogInstance MudDialog { get; set; }
-    #nullable enable
+    public required MudDialogInstance MudDialog { get; set; }
 
     [Parameter]
     [EditorRequired]

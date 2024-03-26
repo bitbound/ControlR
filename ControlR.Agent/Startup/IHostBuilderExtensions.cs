@@ -73,6 +73,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
             services.AddSingleton<IKeyProvider, KeyProvider>();
+            services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<ISystemTime, SystemTime>();
             services.AddSingleton<IMemoryProvider, MemoryProvider>();
@@ -95,6 +96,11 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
                 services.AddHostedService<AgentHeartbeatTimer>();
                 services.AddHostedService<DtoHandler>();
+            }
+
+            if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindows())
+            {
+                services.AddSingleton<IInputDesktopReporter, InputDesktopReporter>();
             }
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))

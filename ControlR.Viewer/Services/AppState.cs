@@ -17,7 +17,6 @@ public interface IAppState
     bool IsServerAdministrator { get; internal set; }
     bool KeysVerified { get; set; }
     int PendingOperations { get; }
-    ObservableCollection<RemoteControlSession> RemoteControlSessions { get; }
     UserKeyPair UserKeys { get; }
 
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
@@ -66,7 +65,6 @@ internal class AppState(
     public bool IsServerAdministrator { get; set; }
     public bool KeysVerified { get; set; }
     public int PendingOperations => _busyCounter;
-    public ObservableCollection<RemoteControlSession> RemoteControlSessions { get; } = [];
 
     public UserKeyPair UserKeys
     {

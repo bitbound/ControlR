@@ -22,7 +22,7 @@ class StreamerHubConnection {
         }
 
         this.connection = new HubConnectionBuilder()
-            .withUrl(`${this.serverUri}/hubs/desktop`)
+            .withUrl(`${this.serverUri}/hubs/streamer`)
             .withHubProtocol(new MessagePackHubProtocol())
             .configureLogging(LogLevel.Information)
             .build();

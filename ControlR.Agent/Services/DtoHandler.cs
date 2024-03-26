@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
 using ControlR.Devices.Common.Messages;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
@@ -77,6 +78,15 @@ internal class DtoHandler(
                 {
                     var wakeDto = MessagePackSerializer.Deserialize<WakeDeviceDto>(dto.Payload);
                     await _wakeOnLan.WakeDevices(wakeDto.MacAddresses);
+                    break;
+                }
+
+            case DtoType.InvokeCtrlAltDel:
+                {
+                    if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+                    {
+                        Win32.InvokeCtrlAltDel();
+                    }
                     break;
                 }
 

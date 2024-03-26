@@ -5,8 +5,8 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
+using ControlR.Viewer.Components.Devices;
 using ControlR.Viewer.Enums;
-using ControlR.Viewer.Extensions;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
@@ -15,17 +15,16 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
-using System.Runtime.Versioning;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
-namespace ControlR.Viewer.Components;
+namespace ControlR.Viewer.Components.RemoteDisplays;
 
 public partial class RemoteDisplay : IAsyncDisposable
 {
     private readonly SemaphoreSlim _typeLock = new(1, 1);
     private readonly string _videoId = $"video-{Guid.NewGuid()}";
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
-    private ElementReference _contentArea;
+    private ElementReference _screenArea;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
     private IceServer[] _iceServers = [];
@@ -43,29 +42,37 @@ public partial class RemoteDisplay : IAsyncDisposable
     private double _videoWidth;
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
-    private WindowState _windowState = WindowState.Maximized;
-#nullable disable
+
 
     [Parameter, EditorRequired]
-    public RemoteControlSession Session { get; set; }
+    public required RemoteControlSession Session { get; set; }
+
+    [CascadingParameter]
+    public required DeviceContentInstance ContentInstance { get; init; }
+
+    [CascadingParameter]
+    public required DeviceContentWindow ContentWindow { get; init; }
 
     [Inject]
-    private IAppState AppState { get; init; }
+    public required IAppState AppState { get; init; }
 
     [Inject]
-    private IEnvironmentHelper EnvironmentHelper { get; init; }
+    public required IDeviceContentWindowStore WindowStore { get; init; }
 
     [Inject]
-    private IJSRuntime JsRuntime { get; init; }
+    public required IEnvironmentHelper EnvironmentHelper { get; init; }
 
     [Inject]
-    private ILogger<RemoteDisplay> Logger { get; init; }
+    public required IJSRuntime JsRuntime { get; init; }
 
     [Inject]
-    private IMessenger Messenger { get; init; }
+    public required ILogger<RemoteDisplay> Logger { get; init; }
 
     [Inject]
-    private ISnackbar Snackbar { get; init; }
+    public required IMessenger Messenger { get; init; }
+
+    [Inject]
+    public required ISnackbar Snackbar { get; init; }
 
     private string VideoDisplayCss
     {
@@ -90,7 +97,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     [Inject]
-    private IViewerHubConnection ViewerHub { get; init; }
+    public required IViewerHubConnection ViewerHub { get; init; }
 
     private string VirtualKeyboardText
     {
@@ -171,7 +178,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-        _module ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/RemoteDisplay.razor.js");
+        _module ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/RemoteDisplays/RemoteDisplay.razor.js");
 
         if (firstRender)
         {
@@ -207,7 +214,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         Messenger.Register<RemoteControlDownloadProgressMessage>(this, HandleRemoteControlDownloadProgress);
         Messenger.Register<IceCandidateMessage>(this, HandleIceCandidateReceived);
         Messenger.Register<RtcSessionDescriptionMessage>(this, HandleRtcSessionDescription);
-        Messenger.Register<RemoteDisplayWindowStateMessage>(this, HandleRemoteDisplayWindowStateChanged);
         Messenger.Register<DesktopChangedMessage>(this, HandleDesktopChanged);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
@@ -216,7 +222,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     private async Task Close()
     {
-        AppState.RemoteControlSessions.Remove(Session);
+        WindowStore.Remove(ContentInstance);
         await DisposeAsync();
     }
 
@@ -289,19 +295,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleRemoteDisplayWindowStateChanged(object recipient, RemoteDisplayWindowStateMessage message)
-    {
-        if (message.SessionId == Session.SessionId)
-        {
-            return;
-        }
-
-        if (message.State != WindowState.Minimized)
-        {
-            _windowState = WindowState.Minimized;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
 
     private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
     {
@@ -390,7 +383,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
         var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
 
-        await _module.InvokeVoidAsync("scrollTowardPinch", pinchCenterX, pinchCenterY, _contentArea, widthChange, heightChange);
+        await _module.InvokeVoidAsync("scrollTowardPinch", pinchCenterX, pinchCenterY, _screenArea, widthChange, heightChange);
     }
 
     private void OnTouchStart(TouchEventArgs ev)
@@ -448,13 +441,6 @@ public partial class RemoteDisplay : IAsyncDisposable
             Logger.LogError(ex, "Error while requesting streaming session.");
             Snackbar.Add("An error occurred while requesting streaming session", Severity.Error);
         }
-    }
-
-    private void SetWindowState(WindowState state)
-    {
-        _windowState = state;
-        _videoScale = 1;
-        Messenger.Send(new RemoteDisplayWindowStateMessage(Session.SessionId, state));
     }
 
     private async Task TypeText(string text)

@@ -460,6 +460,8 @@ internal class ViewerHubConnection(
         connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
         connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
         connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
+        connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
+        connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

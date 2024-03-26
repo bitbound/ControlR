@@ -113,6 +113,19 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors(builder =>
+    {
+        builder
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+}
+
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -158,6 +171,7 @@ app.MapControllers();
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
+app.MapHub<StreamerHub>("/hubs/streamer");
 
 app.Run();
 

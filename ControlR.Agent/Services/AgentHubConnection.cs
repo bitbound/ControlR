@@ -360,6 +360,7 @@ internal class AgentHubConnection(
         }
 
         hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
+        hubConnection.On<SignedPayloadDto, bool>(nameof(GetStreamingSession), GetStreamingSession);
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
         hubConnection.On<SignedPayloadDto, Result>(nameof(StartRdpProxy), StartRdpProxy);
