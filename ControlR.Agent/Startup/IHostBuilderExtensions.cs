@@ -2,6 +2,7 @@
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services;
+using ControlR.Agent.Services.Fakes;
 using ControlR.Agent.Services.Linux;
 using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
@@ -86,7 +87,6 @@ internal static class IHostBuilderExtensions
             if (startupMode == StartupMode.Run)
             {
                 services.AddSingleton<IAgentUpdater, AgentUpdater>();
-                services.AddSingleton<ILocalProxyAgent, LocalProxyAgent>();
                 services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
                 services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
                 services.AddSingleton<ITerminalStore, TerminalStore>();
@@ -98,7 +98,7 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService<DtoHandler>();
             }
 
-            if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindows())
+            if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
                 services.AddSingleton<IInputDesktopReporter, InputDesktopReporter>();
             }
@@ -108,23 +108,22 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
-                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
             }
             else if (OperatingSystem.IsLinux())
             {
+                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
-                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherLinux>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
             }
             else if (OperatingSystem.IsMacOS())
             {
+                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
-                services.AddSingleton<IVncSessionLauncher, VncSessionLauncherMac>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
             }

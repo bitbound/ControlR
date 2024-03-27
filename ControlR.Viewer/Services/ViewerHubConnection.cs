@@ -64,7 +64,6 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task Start(CancellationToken cancellationToken);
 
-    Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId);
 }
 
 internal class ViewerHubConnection(
@@ -414,29 +413,6 @@ internal class ViewerHubConnection(
         await RequestDeviceUpdates();
     }
 
-    public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId)
-    {
-        return await TryInvoke(
-        async () =>
-        {
-            var dto = new RdpProxyRequestDto(sessionId);
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.StartRdpProxy, _appState.UserKeys.PrivateKey);
-
-            var result = await Connection.InvokeAsync<Result>(
-                nameof(IViewerHub.StartRdpProxy),
-                agentConnectionId,
-                sessionId,
-                signedDto);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogError("Failed to start RDP proxy session.");
-            }
-            return result;
-        },
-        () => new(false));
-    }
-
     private async Task CheckIfServerAdministrator()
     {
         await TryInvoke(
@@ -462,6 +438,8 @@ internal class ViewerHubConnection(
         connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
         connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
         connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
+        connection.On<Guid, double>(nameof(ReceiveRemoteControlDownloadProgress), ReceiveRemoteControlDownloadProgress);
+        connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

@@ -97,7 +97,6 @@ builder.Services
 
 builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
-builder.Services.AddSingleton<IProxyStreamStore, ProxyStreamStore>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
@@ -144,23 +143,9 @@ else
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<Md5HeaderMiddleware>();
+
 ConfigureStaticFiles(app);
-
-app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/viewer-proxy"),
-    builder =>
-    {
-        builder.UseWebSockets();
-        builder.UseMiddleware<ViewerProxyMiddleware>();
-    });
-
-app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/agent-proxy"),
-    builder =>
-    {
-        builder.UseWebSockets();
-        builder.UseMiddleware<AgentProxyMiddleware>();
-    });
 
 app.UseRouting();
 

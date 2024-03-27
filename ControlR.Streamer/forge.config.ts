@@ -8,7 +8,6 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import PortableMaker from "./src/infrastructure/PortableMaker";
-import fs from 'fs';
 
 const config: ForgeConfig = {
   packagerConfig: {

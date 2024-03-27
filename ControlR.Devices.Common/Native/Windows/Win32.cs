@@ -98,7 +98,7 @@ public static unsafe partial class Win32
         // interaction with the new process.
         var si = new STARTUPINFOW();
         si.cb = (uint)Marshal.SizeOf(si);
-        var desktopPtr = Marshal.StringToHGlobalAuto(@$"winsta0\{desktopName}");
+        var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
         si.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
         // Flags that specify the priority and creation method of the process.
@@ -115,7 +115,7 @@ public static unsafe partial class Win32
             dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
         }
 
-        var cmdLineSpan = commandLine.ToCharArray().AsSpan();
+        var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
         // Create a new process in the current user's logon session.
         var result = PInvoke.CreateProcessAsUser(
             hUserTokenDup,

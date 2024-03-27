@@ -1,18 +1,9 @@
-﻿#if WINDOWS
-using ControlR.Viewer.Services.Windows;
-#elif ANDROID
-
-using ControlR.Viewer.Services.Android;
-
-#endif
-
-using Bitbound.SimpleMessenger;
+﻿using Bitbound.SimpleMessenger;
 using CommunityToolkit.Maui;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Services;
-using ControlR.Viewer.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -80,7 +71,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
         builder.Services.AddSingleton<IUpdateManager, UpdateManager>();
         builder.Services.AddSingleton<IProcessManager, ProcessManager>();
-        builder.Services.AddSingleton<ILocalProxyViewer, LocalProxyViewer>();
         builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
         builder.Services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
         builder.Services.AddSingleton<IDelayer, Delayer>();
@@ -93,13 +83,6 @@ public static class MauiProgram
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 
-#if WINDOWS
-        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherWindows>();
-        builder.Services.AddSingleton<ITightVncLauncherWindows, TightVncLauncherWindows>();
-#elif ANDROID
-        builder.Services.AddSingleton<IRdpLauncher, RdpLauncherAndroid>();
-        builder.Services.AddSingleton<IMultiVncLauncher, MultiVncLauncherAndroid>();
-#endif
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

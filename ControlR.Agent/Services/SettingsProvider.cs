@@ -13,10 +13,8 @@ namespace ControlR.Agent.Services;
 internal interface ISettingsProvider
 {
     IReadOnlyList<string> AuthorizedKeys { get; }
-    bool AutoRunVnc { get; }
     string DeviceId { get; }
     Uri ServerUri { get; }
-    int VncPort { get; }
 
     string GetAppSettingsPath();
 
@@ -70,11 +68,6 @@ internal class SettingsProvider(
         get => _appOptions.CurrentValue.AuthorizedKeys ?? [];
     }
 
-    public bool AutoRunVnc
-    {
-        get => _appOptions.CurrentValue.AutoRunVnc ?? false;
-    }
-
     public string DeviceId
     {
         get => _appOptions.CurrentValue.DeviceId;
@@ -96,11 +89,6 @@ internal class SettingsProvider(
 
             throw new InvalidOperationException("Server URI is not configured correctly.");
         }
-    }
-
-    public int VncPort
-    {
-        get => _appOptions.CurrentValue.VncPort ?? 5900;
     }
 
     public string GetAppSettingsPath()

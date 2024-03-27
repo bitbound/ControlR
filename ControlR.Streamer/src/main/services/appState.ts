@@ -4,9 +4,8 @@ const sessionId = app.commandLine.getSwitchValue("session-id");
 const authorizedKey = app.commandLine.getSwitchValue("authorized-key");
 const isDev = app.commandLine.hasSwitch("dev");
 
-const serverUri = !isDev ?
-    "https://app.controlr.app" :
-    "http://localhost:5120";
+const serverUri = app.commandLine.getSwitchValue("server-uri").replace(/\/$/, "") ?? "https://app.controlr.app";
+
 
 const websocketUri = serverUri.replace("http", "ws");
 

@@ -20,8 +20,6 @@ public interface IViewerHub
     Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
     Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto);
 
-    Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto);
-
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
@@ -34,5 +32,4 @@ public interface IViewerHub
 
     Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);
 
-    Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId, SignedPayloadDto requestDto);
 }

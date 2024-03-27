@@ -59,6 +59,10 @@ internal class RemoteControlLauncherWindows(
                 return Result.Fail("Failed to start desktop watcher process.");
             }
 
+            var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
+            var args = $"--session-id={sessionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64}";
+            _logger.LogInformation("Launching remote control with args: {StreamerArguments}", args);
+
             if (_processes.GetCurrentProcess().SessionId == 0)
             {
                 var startupDir = _environment.StartupDirectory;
@@ -76,7 +80,7 @@ internal class RemoteControlLauncherWindows(
                 }
 
                 Win32.CreateInteractiveSystemProcess(
-                    $"\"{binaryPath}\" --session-id={sessionId} --authorized-key={authorizedKeyBase64}",
+                    $"\"{binaryPath}\" {args}",
                     targetSessionId: targetWindowsSession,
                     forceConsoleSession: false,
                     desktopName: session.LastDesktop,
@@ -92,8 +96,6 @@ internal class RemoteControlLauncherWindows(
             }
             else
             {
-                var args = $"--session-id={sessionId} --authorized-key={authorizedKeyBase64}";
-
                 if (_environment.IsDebug)
                 {
                     args += " --dev";

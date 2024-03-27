@@ -11,7 +11,6 @@ public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
     IConnectionCounter _connectionCounter,
-    IProxyStreamStore _streamStore,
     IStreamerSessionCache _streamerSessionCache,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
@@ -31,23 +30,30 @@ public class AgentHub(
             Context.Items[nameof(Device)] = value;
         }
     }
-
     public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
     {
-        if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+        try
         {
-            _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
-            return;
-        }
+            if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+            {
+                _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
+                return;
+            }
 
-        if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+            if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+            {
+                _logger.LogError("Viewer connection ID is unexpectedly empty.");
+                return;
+            }
+
+            await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId, desktopName);
+        }
+        catch (Exception ex)
         {
-            _logger.LogError("Viewer connection ID is unexpectedly empty.");
-            return;
+            _logger.LogError(ex, "Error while notifying viewer of desktop change.");
         }
-
-        await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId, desktopName);
     }
+
     public override async Task OnConnectedAsync()
     {
         _connectionCounter.IncrementAgentCount();
@@ -74,6 +80,11 @@ public class AgentHub(
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    public async Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double downloadProgress)
+    {
+        await _viewerHub.Clients.Client(viewerConnectionId).ReceiveRemoteControlDownloadProgress(streamingSessionId, downloadProgress);
     }
 
     public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
@@ -137,8 +148,7 @@ public class AgentHub(
         {
             var dto = new ServerStatsDto(
                 _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount,
-                _streamStore.Count);
+                _connectionCounter.ViewerCount);
 
             await _viewerHub.Clients
                 .Group(HubGroupNames.ServerAdministrators)

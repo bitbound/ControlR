@@ -44,13 +44,10 @@ internal class AgentHubConnection(
      ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
-     IVncSessionLauncher _vncSessionLauncher,
      IRemoteControlLauncher _remoteControlLauncher,
      IAgentUpdater _updater,
-     ILocalProxyAgent _localProxy,
      IMessenger _messenger,
      ITerminalStore _terminalStore,
-     IRegistryAccessor _registryAccessor,
      IDelayer _delayer,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
@@ -117,16 +114,23 @@ internal class AgentHubConnection(
                 dto.TargetDesktop ?? string.Empty,
                 async progress =>
                 {
-                    if (progress == 1 || progress - downloadProgress > .05)
+                    try
                     {
-                        downloadProgress = progress;
-                        await Connection
-                            .InvokeAsync(
-                                "SendRemoteControlDownloadProgress",
-                                dto.StreamingSessionId,
-                                dto.ViewerConnectionId,
-                                downloadProgress)
-                            .ConfigureAwait(false);
+                        if (progress == 1 || progress - downloadProgress > .05)
+                        {
+                            downloadProgress = progress;
+                            await Connection
+                                .InvokeAsync(
+                                    nameof(IAgentHub.SendRemoteControlDownloadProgress),
+                                    dto.StreamingSessionId,
+                                    dto.ViewerConnectionId,
+                                    downloadProgress)
+                                .ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error while downloading remote control binaries.");
                     }
                 })
                 .ConfigureAwait(false);
@@ -142,44 +146,6 @@ internal class AgentHubConnection(
         {
             _logger.LogError(ex, "Error while creating streaming session.");
             return false;
-        }
-    }
-
-    public async Task<VncSessionRequestResult> GetVncSession(SignedPayloadDto signedDto)
-    {
-        try
-        {
-            if (!VerifySignedDto<VncSessionRequest>(signedDto, out var dto))
-            {
-                return new(false);
-            }
-
-            if (!_settings.AutoRunVnc)
-            {
-                var session = new VncSession(dto.SessionId, false);
-                await _localProxy.HandleVncSession(session);
-
-                return new(true);
-            }
-
-            var result = await _vncSessionLauncher
-                .CreateSession(dto.SessionId, dto.VncPassword)
-                .ConfigureAwait(false);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
-                return new(false);
-            }
-
-            await _localProxy.HandleVncSession(result.Value);
-
-            return new(true, result.Value.AutoRunUsed);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while creating streaming session.");
-            return new(false);
         }
     }
 
@@ -309,40 +275,6 @@ internal class AgentHubConnection(
                _appLifetime.ApplicationStopping);
 
         await SendDeviceHeartbeat();
-
-        if (_agentOptions.CurrentValue.AutoRunVnc == true)
-        {
-            await _vncSessionLauncher.CleanupSessions();
-        }
-    }
-
-    public async Task<Result> StartRdpProxy(SignedPayloadDto requestDto)
-    {
-        try
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                return Result.Fail("Platform not supported.");
-            }
-
-            if (!VerifySignedDto<RdpProxyRequestDto>(requestDto, out var dto))
-            {
-                return Result.Fail("Signature verification failed.");
-            }
-
-            var regResult = _registryAccessor.GetRdpPort();
-            if (!regResult.IsSuccess)
-            {
-                return regResult.ToResult();
-            }
-
-            return (await _localProxy.ProxyToLocalService(dto.SessionId, regResult.Value)).ToResult();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while starting RDP proxy session.");
-            return Result.Fail("An error occurred while starting RDP proxy.");
-        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -359,11 +291,9 @@ internal class AgentHubConnection(
             hubConnection.On<SignedPayloadDto, WindowsSession[]>(nameof(GetWindowsSessions), GetWindowsSessions);
         }
 
-        hubConnection.On<SignedPayloadDto, VncSessionRequestResult>(nameof(GetVncSession), GetVncSession);
         hubConnection.On<SignedPayloadDto, bool>(nameof(GetStreamingSession), GetStreamingSession);
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
-        hubConnection.On<SignedPayloadDto, Result>(nameof(StartRdpProxy), StartRdpProxy);
         hubConnection.On<SignedPayloadDto, Result<AgentAppSettings>>(nameof(GetAgentAppSettings), GetAgentAppSettings);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveAgentAppSettings), ReceiveAgentAppSettings);
     }
@@ -383,10 +313,6 @@ internal class AgentHubConnection(
 
     private async Task HubConnection_Reconnected(string? arg)
     {
-        if (_agentOptions.CurrentValue.AutoRunVnc == true)
-        {
-            await _vncSessionLauncher.CleanupSessions();
-        }
         await SendDeviceHeartbeat();
         await _updater.CheckForUpdate();
     }

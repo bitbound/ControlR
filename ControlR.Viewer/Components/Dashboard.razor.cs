@@ -10,20 +10,15 @@ using Android.Content.PM;
 
 #endif
 
-#if WINDOWS
-using ControlR.Viewer.Services.Windows;
-#endif
 
 using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
-using ControlR.Shared.Helpers;
 using ControlR.Viewer.Components.Devices;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
-using ControlR.Viewer.Services.Interfaces;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.Logging;
@@ -65,23 +60,10 @@ public partial class Dashboard
     public required IDialogService DialogService { get; init; }
 
     [Inject]
-    public required ILocalProxyViewer LocalProxy { get; init; }
-
-    [Inject]
     public required ILogger<Dashboard> Logger { get; init; }
 
     [Inject]
     public required IMessenger Messenger { get; init; }
-
-#if ANDROID
-
-    [Inject]
-    public required IMultiVncLauncher MultiVncLauncher { get; init; }
-
-#endif
-
-    [Inject]
-    public required IRdpLauncher RdpLauncher { get; init; }
 
     [Inject]
     public required ISettings Settings { get; init; }
@@ -89,10 +71,6 @@ public partial class Dashboard
     [Inject]
     public required ISnackbar Snackbar { get; init; }
 
-#if WINDOWS
-    [Inject]
-    public required ITightVncLauncherWindows TightVncLauncher { get; init; }
-#endif
 
     [Inject]
     public required IVersionApi VersionApi { get; init; }

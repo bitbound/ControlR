@@ -4,6 +4,3 @@
 [submodule "ControlR.RelayNode/wwwroot/novnc"]
 	path = ControlR.RelayNode/wwwroot/novnc
 	url = https://github.com/novnc/noVNC
-[submodule "ControlR.Server/wwwroot/novnc"]
-	path = ControlR.Server/wwwroot/novnc
-	url = git@github.com:bitbound/noVNC.git

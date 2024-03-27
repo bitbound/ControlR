@@ -39,7 +39,7 @@ internal class AgentInstallerWindows(
     private readonly IProcessManager _processes = _processes;
     private readonly string _serviceName = "ControlR.Agent";
 
-    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -91,7 +91,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await UpdateAppSettings(serverUri, authorizedPublicKey);
 
             var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
             var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";
@@ -287,7 +287,14 @@ internal class AgentInstallerWindows(
 
             foreach (var proc in procs)
             {
-                proc.Kill();
+                try
+                {
+                    proc.Kill();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to kill agent process with ID {AgentProcessId}.", proc.Id);
+                }
             }
 
             return Result.Ok();

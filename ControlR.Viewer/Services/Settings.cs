@@ -10,7 +10,6 @@ namespace ControlR.Viewer.Services;
 
 public interface ISettings
 {
-    bool AutoRunVnc { get; set; }
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
     int LocalProxyPort { get; set; }
@@ -21,7 +20,6 @@ public interface ISettings
     string ServerUri { get; set; }
     string Username { get; set; }
     string ViewerDownloadUri { get; }
-    int VncPort { get; set; }
 
     Task Clear();
 
@@ -45,12 +43,6 @@ internal class Settings(
     ILogger<Settings> _logger) : ISettings
 {
     private byte[] _privateKey = [];
-
-    public bool AutoRunVnc
-    {
-        get => GetPref(false);
-        set => SetPref(value);
-    }
 
     public bool HideOfflineDevices
     {
@@ -116,12 +108,6 @@ internal class Settings(
         {
             return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
         }
-    }
-
-    public int VncPort
-    {
-        get => GetPref(5900);
-        set => SetPref(value);
     }
 
     public Task Clear()

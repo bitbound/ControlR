@@ -31,7 +31,7 @@ internal class AgentInstallerLinux(
     private readonly IProcessManager _processInvoker = _processInvoker;
     private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
-    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, int? vncPort = null, bool? autoRunVnc = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -68,7 +68,7 @@ internal class AgentInstallerLinux(
             var serviceFile = GetServiceFile().Trim();
 
             await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
-            await UpdateAppSettings(serverUri, authorizedPublicKey, vncPort, autoRunVnc);
+            await UpdateAppSettings(serverUri, authorizedPublicKey);
 
             var psi = new ProcessStartInfo()
             {

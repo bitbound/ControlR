@@ -11,14 +11,13 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$KeystorePassword,
 
-    [Parameter(Mandatory=$true)]
-    [string]$TightVncResourcesDir,
-
     [string]$CurrentVersion,
 
     [switch]$BuildAgent,
 
     [switch]$BuildViewer,
+
+    [switch]$BuildStreamer,
 
     [switch]$BuildWebsite
 )
@@ -56,20 +55,6 @@ if (!(Test-Path $SignToolPath)) {
     return
 }
 
-if (!(Test-Path $TightVncResourcesDir)) {
-    Write-Error "TightVncResources directory not found."
-    return
-}
-
-if (!(Test-Path "$TightVncResourcesDir\Server")) {
-    Write-Error "Expected a folder named 'Server' in the TightVNC resources directory."
-    return
-}
-
-if (!(Test-Path "$TightVncResourcesDir\Viewer")) {
-    Write-Error "Expected a folder named 'Server' in the TightVNC resources directory."
-    return
-}
 
 Set-Location $Root
 
@@ -77,11 +62,6 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
     Write-Host "Unable to determine solution directory." -ForegroundColor Red
     return
 }
-
-[System.IO.Directory]::CreateDirectory("$Root\ControlR.Agent\Resources\TightVnc")
-[System.IO.Directory]::CreateDirectory("$Root\ControlR.Viewer\VncResources")
-Get-ChildItem -Path "$TightVncResourcesDir\Server" | Copy-Item -Destination "$Root\ControlR.Agent\Resources\TightVnc" -Force
-Get-ChildItem -Path "$TightVncResourcesDir\Viewer" | Copy-Item -Destination "$Root\ControlR.Viewer\VncResources" -Force
 
 if ($BuildAgent){
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
@@ -133,6 +113,19 @@ if ($BuildViewer) {
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "*Signed.apk" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
 
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
+}
+
+
+if ($BuildStreamer) {
+    [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
+    $Package = $PackageJson | ConvertFrom-Json
+    $Package.version = [DateTime]::UtcNow.ToString("yyyy.MM.ddHHmm")
+    [string]$PackageJson = $Package | ConvertTo-Json
+    [System.IO.File]::WriteAllText("$Root\ControlR.Streamer\package.json", $PackageJson)
+    Push-Location "$Root\ControlR.Streamer"
+    npm install
+    npm run make-pwsh
+    Pop-Location
 }
 
 

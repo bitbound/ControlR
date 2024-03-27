@@ -24,7 +24,6 @@ namespace ControlR.Server.Hubs;
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
     IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
-    IProxyStreamStore _streamStore,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     IStreamerSessionCache _streamerSessionCache,
@@ -197,8 +196,7 @@ public class ViewerHub(
 
             var dto = new ServerStatsDto(
                 _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount,
-                _streamStore.Count);
+                _connectionCounter.ViewerCount);
 
             return Result.Ok(dto).AsTaskResult();
         }
@@ -206,31 +204,6 @@ public class ViewerHub(
         {
             _logger.LogError(ex, "Error while getting agent count.");
             return Result.Fail<ServerStatsDto>("Failed to get agent count.").AsTaskResult();
-        }
-    }
-
-    public async Task<VncSessionRequestResult> GetVncSession(string agentConnectionId, Guid sessionId, SignedPayloadDto sessionRequestDto)
-    {
-        try
-        {
-            if (!VerifySignature(sessionRequestDto, out _))
-            {
-                return new(false);
-            }
-
-            var signaler = new StreamSignaler(sessionId);
-            _streamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
-
-            var sessionResult = await _agentHub.Clients
-                   .Client(agentConnectionId)
-                   .GetVncSession(sessionRequestDto);
-
-            return sessionResult;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while requesting VNC session.");
-            return new(false);
         }
     }
 
@@ -279,8 +252,7 @@ public class ViewerHub(
             await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
             var statsDto = new ServerStatsDto(
                 _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount,
-                _streamStore.Count);
+                _connectionCounter.ViewerCount);
             await Clients.Caller.ReceiveServerStats(statsDto);
         }
     }
@@ -389,39 +361,13 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result> StartRdpProxy(string agentConnectionId, Guid sessionId, SignedPayloadDto requestDto)
-    {
-        try
-        {
-            if (!VerifySignature(requestDto, out _))
-            {
-                return new(false);
-            }
-
-            var signaler = new StreamSignaler(sessionId);
-            _streamStore.AddOrUpdate(sessionId, signaler, (k, v) => signaler);
-
-            var sessionResult = await _agentHub.Clients
-                   .Client(agentConnectionId)
-                   .StartRdpProxy(requestDto);
-
-            return sessionResult;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while starting RDP proxy session.");
-            return new(false);
-        }
-    }
-
     private async Task SendUpdatedConnectionCountToAdmins()
     {
         try
         {
             var dto = new ServerStatsDto(
                 _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount,
-                _streamStore.Count);
+                _connectionCounter.ViewerCount);
 
             await Clients
                 .Group(HubGroupNames.ServerAdministrators)

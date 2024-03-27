@@ -12,14 +12,8 @@ public class AgentAppOptions
     public List<string> AuthorizedKeys { get; set; } = [];
 
     [MsgPackKey]
-    public bool? AutoRunVnc { get; set; }
-
-    [MsgPackKey]
     public string DeviceId { get; set; } = string.Empty;
 
     [MsgPackKey]
     public string? ServerUri { get; set; }
-
-    [MsgPackKey]
-    public int? VncPort { get; set; }
 }

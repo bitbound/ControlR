@@ -12,90 +12,87 @@
     @bind-value:event="oninput"
     @onkeydown="OnVkKeyDown" />
 
-<div>
-    <div class="display-grid">
-        <div class="action-bar pa-2">
-            <div class="desktop-actions">
-                <ViewModeMenu ViewMode="_viewMode"
-                              OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
+<div class="display-grid">
+    <div class="action-bar pa-2">
+        <div class="desktop-actions">
+            <ViewModeMenu ViewMode="_viewMode"
+                          OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
 
-                <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
+            <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
 
-                <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.KeyboardControlKey)" OnClick="InvokeCtrlAltDel">
-                    Ctrl+Alt+Del
-                </MudButton>
-            </div>
-
-            <div class="mobile-actions">
-
-                <MudTooltip Text="Actions">
-                    <MudIconButton Icon="@(Icons.Material.Filled.MoreVert)"
-                                   Color="Color.Info"
-                                   OnClick="@(() => _isMobileActionsMenuOpen = !_isMobileActionsMenuOpen)" />
-                </MudTooltip>
-
-                @if (_controlMode == ControlMode.Touch)
-                {
-                    <MudIconButton Variant="Variant.Outlined" Icon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard" />
-                }
-
-                <MudPopover Open="_isMobileActionsMenuOpen" Class="z9001" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
-                    <MudList>
-                        <MudListItem>
-                            <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
-                        </MudListItem>
-                        <MudListItem>
-                            <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
-                        </MudListItem>
-                        @if (_controlMode == ControlMode.Touch)
-                        {
-                            <MudListItem>
-                                <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard">
-                                    Keyboard
-                                </MudButton>
-                            </MudListItem>
-                        }
-                    </MudList>
-                </MudPopover>
-            </div>
+            <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.KeyboardControlKey)" OnClick="InvokeCtrlAltDel">
+                Ctrl+Alt+Del
+            </MudButton>
         </div>
-        <div class="screen-area"
-             @ref="_screenArea"
-             @ontouchstart="OnTouchStart"
-             @ontouchmove="OnTouchMove"
-             @ontouchcancel="OnTouchCancel"
-             @ontouchend="OnTouchEnd">
 
-            @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        <div class="mobile-actions">
+
+            <MudTooltip Text="Actions">
+                <MudIconButton Icon="@(Icons.Material.Filled.MoreVert)"
+                               Color="Color.Info"
+                               OnClick="@(() => _isMobileActionsMenuOpen = !_isMobileActionsMenuOpen)" />
+            </MudTooltip>
+
+            @if (_controlMode == ControlMode.Touch)
             {
-                <div class="text-center mt-5">
-                    <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom>
-                        @(_statusMessage)
-                    </MudText>
-
-                    @if (_statusProgress > 0)
-                    {
-                        <MudProgressCircular Min="0" Max="1" Value="_statusProgress" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
-                    }
-                    else if (_statusProgress < 0)
-                    {
-                        <MudProgressCircular Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
-                    }
-
-                    @if (_isStreamReady && !_isStreamLoaded)
-                    {
-                        <MudIconButton Icon="@(Icons.Material.Outlined.PlayCircle)" Size="Size.Large" />
-                    }
-                </div>
+                <MudIconButton Variant="Variant.Outlined" Icon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard" />
             }
 
-            <video id="@_videoId"
-                   @ref="_videoRef"
-                   autoplay="autoplay"
-                   muted
-                   class="@($"{_viewMode.ToString().ToLower()} {ContentWindow.WindowState.ToString().ToLower()} remote-screen")"
-                   style="@(VideoSizeCss) @(VideoDisplayCss)" />
-
+            <MudPopover Open="_isMobileActionsMenuOpen" Class="z9001" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+                <MudList>
+                    <MudListItem>
+                        <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
+                    </MudListItem>
+                    <MudListItem>
+                        <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
+                    </MudListItem>
+                    @if (_controlMode == ControlMode.Touch)
+                    {
+                        <MudListItem>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard">
+                                Keyboard
+                            </MudButton>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPopover>
         </div>
+    </div>
+    <div class="screen-area"
+         @ref="_screenArea"
+         @ontouchstart="OnTouchStart"
+         @ontouchmove="OnTouchMove"
+         @ontouchcancel="OnTouchCancel"
+         @ontouchend="OnTouchEnd">
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <div class="text-center mt-5">
+                <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom>
+                    @(_statusMessage)
+                </MudText>
+
+                @if (_statusProgress > 0)
+                {
+                    <MudProgressCircular Min="0" Max="1" Value="_statusProgress" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+                }
+                else if (_statusProgress < 0)
+                {
+                    <MudProgressCircular Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+                }
+
+                @if (_isStreamReady && !_isStreamLoaded)
+                {
+                    <MudIconButton Icon="@(Icons.Material.Outlined.PlayCircle)" Size="Size.Large" />
+                }
+            </div>
+        }
+        <video id="@_videoId"
+               @ref="_videoRef"
+               autoplay="autoplay"
+               muted
+               class="@($"{_viewMode.ToString().ToLower()} {ContentWindow.WindowState.ToString().ToLower()} remote-screen")"
+               style="@(VideoSizeCss) @(VideoDisplayCss)" />
+
     </div>
 </div>

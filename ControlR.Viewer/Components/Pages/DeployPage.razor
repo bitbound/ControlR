@@ -68,33 +68,19 @@
                   Value="MacArm64DeployScript"
                   Class="mb-5" />
 
-    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+   @*<MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Options
     </MudText>
 
     <div class="options-grid">
         <MudText Typo="Typo.subtitle2" Color="Color.Info">
-            Auto-Run VNC Server
+            Option Header
         </MudText>
         <MudText Typo="Typo.body1">
-            Windows and Ubuntu only.
-            This will cause the ControlR agent to automatically download (if necessary) and
-            run a temporary, loopback-only TightVNC server for each session. A new, random
-            password will be set for the server each time.  The VNC server will be closed
-            afterward.
+            Option Body
         </MudText>
-        <MudCheckBox @bind-Value="Settings.AutoRunVnc" Class="mb-3" />
-
-        <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom>
-            VNC Port
-        </MudText>
-        <MudText Typo="Typo.body1">
-            The VNC port to use, to which the ControlR agent will proxy connections.  If
-            auto-install is disabled, ControlR expects there to already be a VNC server
-            running on this port.
-        </MudText>
-        <MudTextField T="int" @bind-Value="Settings.VncPort" />
-    </div>
+        <MudCheckBox @bind-Value="Settings.OptionSetting" Class="mb-3" />
+    </div> *@
 
 </div>
 
@@ -109,7 +95,7 @@
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-arm64/ControlR.Agent && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+              $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
         }
     }
 
@@ -121,7 +107,7 @@
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-x64/ControlR.Agent && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+              $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
         }
     }
 
@@ -129,13 +115,12 @@
     {
         get
         {
-            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
 
             return
                 $"sudo rm -f /tmp/ControlR.Agent && " +
                 $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/linux-x64/ControlR.Agent && " +
-                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install {autoRunOption}" +
-                $"-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}";
+                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+                $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
         }
     }
 
@@ -143,12 +128,10 @@
     {
         get
         {
-            var autoRunOption = Settings.AutoRunVnc ? "-r " : "";
-
             return "$ProgressPreference = \"SilentlyContinue\"; " +
                 $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/win-x86/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
-                $"{autoRunOption}-s {Settings.ServerUri} -v {Settings.VncPort} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
+                $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
         }
     }
 
