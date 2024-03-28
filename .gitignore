@@ -374,3 +374,4 @@ ControlR.Server/wwwroot/novnc/
 /ControlR.Devices.Common/Resources/ControlR.WinVncPassword.lib
 /ControlR.Agent/Resources/TightVnc/*
 /ControlR.Viewer/VncResources/*
+/ControlR.Server/appsettings.Development.json

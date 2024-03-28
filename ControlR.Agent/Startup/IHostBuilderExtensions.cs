@@ -96,6 +96,11 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => (AgentHubConnection)services.GetRequiredService<IAgentHubConnection>());
                 services.AddHostedService<AgentHeartbeatTimer>();
                 services.AddHostedService<DtoHandler>();
+
+                if (OperatingSystem.IsWindows())
+                {
+                    services.AddHostedService<StreamingSessionWatcher>();
+                }
             }
 
             if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))

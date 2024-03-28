@@ -6,6 +6,7 @@ using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ControlR.Agent.Services;
@@ -47,20 +48,21 @@ internal class AgentUpdater(
         {
             _logger.LogInformation("Beginning version check.");
 
-            var versionResult = await _versionApi.GetCurrentAgentVersion();
-            if (!versionResult.IsSuccess)
+            var hashResult = await _versionApi.GetCurrentAgentHash();
+            if (!hashResult.IsSuccess)
             {
                 return;
             }
 
-            var exeVersion = typeof(AgentUpdater).Assembly.GetName().Version;
+            using var fs = new FileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var exeHash = await MD5.HashDataAsync(fs, cancellationToken);
 
             _logger.LogInformation(
-                "Comparing local version {LocalVersion} to latest version {ServerVersion}",
-                exeVersion,
-                versionResult.Value);
+                "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
+                Convert.ToBase64String(hashResult.Value),
+                Convert.ToBase64String(exeHash));
 
-            if (versionResult.Value == exeVersion)
+            if (hashResult.Value.SequenceEqual(exeHash))
             {
                 _logger.LogInformation("Version is current.");
                 return;

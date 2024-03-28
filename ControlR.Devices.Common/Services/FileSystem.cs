@@ -35,6 +35,7 @@ public interface IFileSystem
     void MoveFile(string sourceFile, string destinationFile, bool overwrite);
 
     FileStream OpenFileStream(string path, FileMode mode, FileAccess access);
+    FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
 
     Task<byte[]> ReadAllBytesAsync(string path);
 
@@ -135,6 +136,11 @@ public class FileSystem : IFileSystem
     public FileStream OpenFileStream(string path, FileMode mode, FileAccess access)
     {
         return File.Open(path, mode, access);
+    }
+
+    public FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare)
+    {
+        return File.Open(path, mode, access, fileShare);
     }
 
     public async Task<byte[]> ReadAllBytesAsync(string path)

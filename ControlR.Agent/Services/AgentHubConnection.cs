@@ -104,7 +104,7 @@ internal class AgentHubConnection(
             }
 
             var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
-
+            
             double downloadProgress = 0;
 
             var result = await _remoteControlLauncher.CreateSession(
@@ -112,6 +112,8 @@ internal class AgentHubConnection(
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.TargetDesktop ?? string.Empty,
+                dto.NotifyUserOnSessionStart,
+                dto.ViewerName,
                 async progress =>
                 {
                     try

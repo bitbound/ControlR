@@ -45,13 +45,10 @@
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-        Local Proxy Port
+        Show Notification to User
     </MudText>
-    <MudNumericField T="int"
-                  @bind-Value="LocalProxyPort"
-                  Label="Local port for proxying VNC and RDP connections from native apps">
-
-    </MudNumericField>
+    <MudCheckBox @bind-Value="NotifyUser"
+                 Label="Notify users when a remote control session starts" />
 </div>
 
 
@@ -63,10 +60,10 @@
         set => SettingsStore.RememberPassphrase = value;
     }
 
-    private int LocalProxyPort
+    private bool NotifyUser
     {
-        get => SettingsStore.LocalProxyPort;
-        set => SettingsStore.LocalProxyPort = value;
+        get => SettingsStore.NotifyUserSessionStart;
+        set => SettingsStore.NotifyUserSessionStart = value;
     }
 
 

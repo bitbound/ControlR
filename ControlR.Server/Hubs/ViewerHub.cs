@@ -10,9 +10,9 @@ using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
+using ControlR.Shared.Services.Http;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
@@ -29,6 +29,7 @@ public class ViewerHub(
     IStreamerSessionCache _streamerSessionCache,
     IOptionsMonitor<ApplicationOptions> _appOptions,
     IDelayer _delayer,
+    IMeteredApi _meteredApi,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
     private bool IsServerAdmin
@@ -48,25 +49,22 @@ public class ViewerHub(
         }
     }
 
-    public Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
+    public async Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
     {
-        if (!VerifySignature(dto, out _))
+        if (_appOptions.CurrentValue.UseMetered &&
+            !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
         {
-            return Array.Empty<IceServer>().AsTaskResult();
+            var servers = await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
+            return servers;
         }
-
-        return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
+        
+        return [.. _appOptions.CurrentValue.IceServers];
     }
 
     public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
-            if (!VerifySignature(sessionRequestDto, out _))
-            {
-                return Result.Fail<StreamerHubSession>(string.Empty);
-            }
-
             var sessionSuccess = await _agentHub.Clients
                    .Client(agentConnectionId)
                    .GetStreamingSession(sessionRequestDto);
@@ -100,11 +98,6 @@ public class ViewerHub(
     {
         using var scope = _logger.BeginMemberScope();
 
-        if (!VerifySignature(signedDto, out _))
-        {
-            return;
-        }
-
         if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
         {
             _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
@@ -137,11 +130,6 @@ public class ViewerHub(
     {
         try
         {
-            if (!VerifySignature(requestDto, out _))
-            {
-                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
-            }
-
             return await _agentHub.Clients
                 .Client(agentConnectionId)
                 .CreateTerminalSession(requestDto);
@@ -157,11 +145,6 @@ public class ViewerHub(
     {
         try
         {
-            if (!VerifySignature(signedDto, out _))
-            {
-                return Result.Fail<AgentAppSettings>("Signature verification failed.");
-            }
-
             return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings(signedDto);
         }
         catch (Exception ex)
@@ -211,11 +194,6 @@ public class ViewerHub(
     {
         try
         {
-            if (!VerifySignature(signedDto, out _))
-            {
-                return [];
-            }
-
             return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions(signedDto);
         }
         catch (Exception ex)
@@ -274,11 +252,6 @@ public class ViewerHub(
     {
         try
         {
-            if (!VerifySignature(signedDto, out _))
-            {
-                return Result.Fail("Signature verification failed.");
-            }
-
             return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(signedDto);
         }
         catch (Exception ex)
@@ -293,11 +266,6 @@ public class ViewerHub(
         try
         {
             using var scope = _logger.BeginMemberScope();
-
-            if (!VerifySignature(signedDto, out _))
-            {
-                return Result.Fail("Signature verification failed.");
-            }
 
             var alert = MessagePackSerializer.Deserialize<AlertBroadcastDto>(signedDto.Payload);
             if (alert is null)
@@ -328,11 +296,6 @@ public class ViewerHub(
     {
         using var scope = _logger.BeginMemberScope();
 
-        if (!VerifySignature(signedDto, out _))
-        {
-            return;
-        }
-
         await _agentHub.Clients.Group(deviceId).ReceiveDto(signedDto);
     }
 
@@ -340,8 +303,10 @@ public class ViewerHub(
     {
         using var _ = _logger.BeginMemberScope();
 
-        if (!VerifySignature(signedDto, out var publicKey))
+        if (Context.User is null ||
+            !Context.User.TryGetPublicKey(out var publicKey))
         {
+            _logger.LogCritical("Failed to get public key from principal.");
             return;
         }
 

@@ -26,6 +26,9 @@ public class DisplayDto
     public string Name { get; init; } = string.Empty;
 
     [MsgPackKey]
+    public double ScaleFactor { get; init; }
+
+    [MsgPackKey]
     public int Top { get; init; }
 
     [MsgPackKey]

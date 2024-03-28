@@ -6,9 +6,11 @@ declare interface MainApi {
   verifyDto(payload: Uint8Array, signature: Uint8Array, publicKey: Uint8Array, publicKeyPem: string): Promise<boolean>;
   getServerUri(): Promise<string>;
   getSessionId(): Promise<string>;
+  getNotifyUser(): Promise<boolean>;
+  getViewerName(): Promise<string>;
   getDisplays(): Promise<DisplayDto[]>;
   movePointer(x: number, y: number): Promise<void>;
-  invokeMouseButton(button: number, isPressed: boolean, x: number, y: number): Promise<void>;
+  invokeMouseButtonEvent(button: number, isPressed: boolean, x: number, y: number): Promise<void>;
   invokeKeyEvent(keyCode: string, isPressed: boolean, shouldRelease: boolean): Promise<void>;
   resetKeyboardState(): Promise<void>;
   invokeWheelScroll(deltaX: number, deltaY: number, deltaZ: number): Promise<void>;

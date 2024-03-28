@@ -17,6 +17,7 @@ public static partial class AppConstants
             return EnvironmentHelper.Instance.Platform switch
             {
                 SystemPlatform.Windows => "ControlR.Agent.exe",
+                SystemPlatform.Android => "ControlR.Agent.exe",
                 SystemPlatform.Linux => "ControlR.Agent",
                 SystemPlatform.MacOS => "ControlR.Agent",
                 _ => throw new PlatformNotSupportedException(),
@@ -33,6 +34,7 @@ public static partial class AppConstants
             return EnvironmentHelper.Instance.Platform switch
             {
                 SystemPlatform.Windows => "controlr-streamer.exe",
+                SystemPlatform.Android => "controlr-streamer.exe",
                 SystemPlatform.Linux => "controlr-streamer",
                 SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
                 SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
@@ -48,6 +50,7 @@ public static partial class AppConstants
             return EnvironmentHelper.Instance.Platform switch
             {
                 SystemPlatform.Windows => "controlr-streamer-win.zip",
+                SystemPlatform.Android => "controlr-streamer-win.zip",
                 SystemPlatform.Linux => "controlr-streamer-linux.zip",
                 SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
                 SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
@@ -67,7 +70,6 @@ public static partial class AppConstants
             return ProdServerUri;
         }
     }
-    public static string TightVncZipName { get; } = "tvnserver.zip";
 
     public static string ViewerFileName
     {

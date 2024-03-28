@@ -8,5 +8,7 @@ internal interface IRemoteControlLauncher
      byte[] authorizedKey,
      int targetWindowsSession = -1,
      string targetDesktop = "",
+     bool notifyUserOnSessionStart = false,
+     string? viewerName = null,
      Func<double, Task>? onDownloadProgress = null);
 }

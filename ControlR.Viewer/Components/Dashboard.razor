@@ -55,7 +55,8 @@
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => RemoteControlClicked(context.Item))">
+                                         OnClick="@(() => RemoteControlClicked(context.Item))"
+                                         OnTouch="@(() => RemoteControlClicked(context.Item))">
                                 Remote Control
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"

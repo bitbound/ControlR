@@ -12,7 +12,7 @@ public interface ISettings
 {
     bool HideOfflineDevices { get; set; }
     string KeypairExportPath { get; set; }
-    int LocalProxyPort { get; set; }
+    bool NotifyUserSessionStart { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
     string PublicKeyBase64 { get; }
@@ -56,9 +56,9 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public int LocalProxyPort
+    public bool NotifyUserSessionStart
     {
-        get => GetPref(48898);
+        get => GetPref(false);
         set => SetPref(value);
     }
 
@@ -85,7 +85,6 @@ internal class Settings(
         get => GetPref(false);
         set => SetPref(value);
     }
-
     public string ServerUri
     {
         get => GetPref(AppConstants.ServerUri).TrimEnd('/');

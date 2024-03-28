@@ -6,6 +6,7 @@ using ControlR.Server.Services;
 using ControlR.Shared;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
+using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
@@ -95,6 +96,8 @@ builder.Services
     })
     .AddMessagePackProtocol();
 
+builder.Services.AddHttpClient<IMeteredApi, MeteredApi>();
+
 builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
@@ -112,18 +115,15 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
-if (app.Environment.IsDevelopment())
+app.UseCors(builder =>
 {
-    app.UseCors(builder =>
-    {
-        builder
-            .WithOrigins("http://localhost:3000")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-}
-
+    // This is Electron's origin.
+    builder
+        .WithOrigins("http://localhost:3000")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

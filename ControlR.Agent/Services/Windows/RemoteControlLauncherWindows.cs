@@ -14,8 +14,8 @@ using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
@@ -31,6 +31,7 @@ internal class RemoteControlLauncherWindows(
     IHostApplicationLifetime _hostLifetime,
     IServiceProvider _serviceProvider,
     ISettingsProvider _settings,
+    IVersionApi _versionApi,
     ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
@@ -41,6 +42,8 @@ internal class RemoteControlLauncherWindows(
         byte[] authorizedKey,
         int targetWindowsSession = -1,
         string targetDesktop = "",
+        bool notifyViewerOnSessionStart = false,
+        string? viewerName = null,
         Func<double, Task>? onDownloadProgress = null)
     {
         await _createSessionLock.WaitAsync();
@@ -60,7 +63,12 @@ internal class RemoteControlLauncherWindows(
             }
 
             var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
-            var args = $"--session-id={sessionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64}";
+            var args = $"--session-id={sessionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64} --notify-user={notifyViewerOnSessionStart}";
+            if (!string.IsNullOrWhiteSpace(viewerName))
+            {
+                args += $" --viewer-name=\"{viewerName}\"";
+            }
+
             _logger.LogInformation("Launching remote control with args: {StreamerArguments}", args);
 
             if (_processes.GetCurrentProcess().SessionId == 0)
@@ -69,13 +77,32 @@ internal class RemoteControlLauncherWindows(
                 var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
                 _fileSystem.CreateDirectory(remoteControlDir);
                 var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
+                var zipPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
+
+                if (_fileSystem.FileExists(zipPath))
+                {
+                    var archiveCheckResult = await CheckArchiveHashWithRemote(zipPath, remoteControlDir);
+                    if (!archiveCheckResult.IsSuccess)
+                    {
+                        return archiveCheckResult;
+                    }
+                }
+                else
+                {
+                    // If the archive doesn't exist, clear out any remaining files.
+                    // Then future update checks will work normally.
+                    foreach (var file in _fileSystem.GetFiles(remoteControlDir))
+                    {
+                        _fileSystem.DeleteFile(file);
+                    }
+                }
 
                 if (!_fileSystem.FileExists(binaryPath))
                 {
-                    var result = await DownloadRemoteControl(remoteControlDir, onDownloadProgress);
-                    if (!result.IsSuccess)
+                    var downloadResult = await DownloadRemoteControl(remoteControlDir, onDownloadProgress);
+                    if (!downloadResult.IsSuccess)
                     {
-                        return Result.Fail(result.Reason);
+                        return downloadResult;
                     }
                 }
 
@@ -138,6 +165,42 @@ internal class RemoteControlLauncherWindows(
         {
             _createSessionLock.Release();
         }
+    }
+
+    private async Task<Result> CheckArchiveHashWithRemote(string zipPath, string remoteControlDir)
+    {
+        byte[] localHash = [];
+
+        using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            localHash = await MD5.HashDataAsync(zipFs);
+        }
+
+        _logger.LogInformation("Checking streamer remote archive hash.");
+        var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
+        if (!streamerHashResult.IsSuccess)
+        {
+            return streamerHashResult.ToResult();
+        }
+
+        _logger.LogInformation(
+            "Comparing local streamer archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
+            Convert.ToBase64String(localHash),
+            Convert.ToBase64String(streamerHashResult.Value));
+
+        if (streamerHashResult.Value.SequenceEqual(localHash))
+        {
+            _logger.LogInformation("Versions match.  Continuing.");
+        }
+        else
+        {
+            _logger.LogInformation("Versions differ.  Removing outdated files.");
+            foreach (var file in _fileSystem.GetFiles(remoteControlDir))
+            {
+                _fileSystem.DeleteFile(file);
+            }
+        }
+        return Result.Ok();
     }
 
     // For debugging.

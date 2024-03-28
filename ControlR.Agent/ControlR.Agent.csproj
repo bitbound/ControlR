@@ -48,8 +48,4 @@
     <ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Utilities\" />
-  </ItemGroup>
-
 </Project>

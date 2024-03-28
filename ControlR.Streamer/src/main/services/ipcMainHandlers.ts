@@ -1,63 +1,51 @@
-import { app, ipcMain, IpcMainInvokeEvent } from "electron";
-import { ipcRtmChannels } from "../../shared/ipcChannels";
+import { app, ipcMain } from "electron";
 import appState from "./appState";
-import { verify, createPublicKey } from "crypto";
 import { getDisplays } from "./mediaHelperMain";
-import { invokeKeyEvent, invokeMouseButtonEvent, movePointer, resetKeyboardState, scrollWheel, invokeTypeText } from "./inputSimulator";
+import {
+  invokeKeyEvent,
+  invokeMouseButtonEvent,
+  movePointer,
+  resetKeyboardState,
+  scrollWheel,
+  invokeTypeText,
+} from "./inputSimulator";
 import { writeLog } from "./logger";
+import { verifyDto } from "./dtoVerifier";
+import { MainApi } from "../../renderer/mainApi";
+
+type MainApiMethod = keyof MainApi;
+type MainIpcHandler = (
+  event: Electron.IpcMainInvokeEvent,
+  ...args: any[]
+) => any;
 
 export async function registerIpcHandlers() {
-  ipcMain.handle(ipcRtmChannels.getServerUri, () => appState.serverUri);
-  ipcMain.handle(ipcRtmChannels.getSessionId, () => appState.sessionId);
-  ipcMain.handle(ipcRtmChannels.verifyDto, verifyDto);
-  ipcMain.handle(ipcRtmChannels.getDisplays, () => getDisplays());
-  ipcMain.handle(ipcRtmChannels.movePointer, (_, x, y) => movePointer(x, y));
-  ipcMain.handle(ipcRtmChannels.exit, () => app.exit());
-  ipcMain.handle(ipcRtmChannels.invokeKeyEvent, (_, key, isPressed, shouldRelease) => invokeKeyEvent(key, isPressed, shouldRelease));
-  ipcMain.handle(ipcRtmChannels.invokeMouseButtonEvent, (_, button, isPressed, x, y) => invokeMouseButtonEvent(button, isPressed, x, y));
-  ipcMain.handle(ipcRtmChannels.resetKeyboardState, (_) => resetKeyboardState());
-  ipcMain.handle(ipcRtmChannels.invokeWheelScroll, (_, deltaX, deltaY, deltaZ) => scrollWheel(deltaX, deltaY, deltaZ));
-  ipcMain.handle(ipcRtmChannels.invokeTypeText, (_, text) => invokeTypeText(text));
-  ipcMain.handle(ipcRtmChannels.writeLog, (_, message, level, args) => writeLog(message, level, args));
+  handleMethod("getServerUri", () => appState.serverUri);
+  handleMethod("getSessionId", () => appState.sessionId);
+  handleMethod("getNotifyUser", () => appState.notifyUser);
+  handleMethod("getViewerName", () => appState.viewerName);
+  handleMethod("verifyDto", (_, payload, signature, publicKey, publicKeyPem) =>
+    verifyDto(payload, signature, publicKey, publicKeyPem),
+  );
+  handleMethod("getDisplays", () => getDisplays());
+  handleMethod("movePointer", (_, x, y) => movePointer(x, y));
+  handleMethod("exit", () => app.exit());
+  handleMethod("invokeKeyEvent", (_, key, isPressed, shouldRelease) =>
+    invokeKeyEvent(key, isPressed, shouldRelease),
+  );
+  handleMethod("invokeMouseButtonEvent", (_, button, isPressed, x, y) =>
+    invokeMouseButtonEvent(button, isPressed, x, y),
+  );
+  handleMethod("resetKeyboardState", (_) => resetKeyboardState());
+  handleMethod("invokeWheelScroll", (_, deltaX, deltaY, deltaZ) =>
+    scrollWheel(deltaX, deltaY, deltaZ),
+  );
+  handleMethod("invokeTypeText", (_, text) => invokeTypeText(text));
+  handleMethod("writeLog", (_, message, level, args) =>
+    writeLog(message, level, args),
+  );
 }
 
-const verifyDto = (
-  event: IpcMainInvokeEvent,
-  payload: Uint8Array,
-  signature: Uint8Array,
-  publicKey: Uint8Array,
-  publicKeyPem: string
-): boolean => {
-
-  console.log("Verifying DTO signature.");
-
-  const publicKeyBase64 = Buffer.from(publicKey).toString('base64');
-
-  writeLog(`Comparing public key ${publicKeyBase64}`);
-
-  if (publicKeyBase64 != appState.authorizedKey) {
-    writeLog("Public key from DTO does not match the authorized key.", 'Error');
-    return false;
-  }
-
-  const publicKeyObject = createPublicKey({
-    key: publicKeyPem,
-    type: "pkcs1",
-    format: "pem"
-  });
-  
-  const result = verify(
-    "RSA-SHA512", 
-    payload, 
-    publicKeyObject, 
-    signature);
-
-  if (!result) {
-    writeLog("Public key from DTO does not pass verification!", 'Error');
-    return false;
-  }
-
-  console.info("DTO passed signature verification.");
-
-  return true;
-};
+function handleMethod(methodName: MainApiMethod, handler: MainIpcHandler) {
+  ipcMain.handle(methodName, handler);
+}

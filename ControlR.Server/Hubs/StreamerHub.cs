@@ -5,22 +5,19 @@ using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
+using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Server.Hubs;
 
 public class StreamerHub(
-    IStreamerSessionCache streamerSessionCache,
-    IHubContext<ViewerHub, IViewerHubClient> viewerHubContext,
-    IOptionsMonitor<ApplicationOptions> appOptions,
-    ILogger<StreamerHub> logger) : Hub<IStreamerHubClient>
+    IStreamerSessionCache _streamerSessionCache,
+    IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
+    IOptionsMonitor<ApplicationOptions> _appOptions,
+    IMeteredApi _meteredApi,
+    ILogger<StreamerHub> _logger) : Hub<IStreamerHubClient>
 {
-    private readonly IStreamerSessionCache _streamerSessionCache = streamerSessionCache;
-    private readonly IOptionsMonitor<ApplicationOptions> _appOptions = appOptions;
-    private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHubContext;
-    private readonly ILogger<StreamerHub> _logger = logger;
-
     public Task SetSessionDetails(Guid sessionId, DisplayDto[] displays)
     {
         var session = new StreamerHubSession(sessionId, displays, Context.ConnectionId);
@@ -28,9 +25,16 @@ public class StreamerHub(
         return Task.CompletedTask;
     }
 
-    public Task<IceServer[]> GetIceServers()
+    public async Task<IceServer[]> GetIceServers()
     {
-        return _appOptions.CurrentValue.IceServers.ToArray().AsTaskResult();
+        if (_appOptions.CurrentValue.UseMetered &&
+             !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
+        {
+            var servers = await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
+            return servers;
+        }
+
+        return [.. _appOptions.CurrentValue.IceServers];
     }
 
     public async Task SendIceCandidate(Guid sessionId, string candidateJson)

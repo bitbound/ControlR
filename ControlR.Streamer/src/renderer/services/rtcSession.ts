@@ -12,85 +12,107 @@ class RtcSession {
 
   async startRtcSession() {
     window.mainApi.writeLog("Getting ICE servers.");
-  
-      const iceServers = await streamerHubConnection.getIceServers();
-      window.mainApi.writeLog("Got ICE servers: ", "Info", iceServers);
-  
-      this.peerConnection = new RTCPeerConnection({
-        iceServers: iceServers,
-      });
 
-      this.setConnectionHandlers();
-  
-      window.mainApi.writeLog("Getting screens from main API.");
-      this.screens = await window.mainApi.getDisplays();
-      window.mainApi.writeLog("Found screens: ", "Info", this.screens);
-  
-      this.currentScreen = this.screens[0];
-      window.mainApi.writeLog("Getting stream for first screen: ", "Info", this.currentScreen);
-  
-      window.mainApi.writeLog("Adding tracks from stream.");
-      await setMediaStreams(this.currentScreen.mediaId, this.peerConnection);
+    const iceServers = await streamerHubConnection.getIceServers();
+    window.mainApi.writeLog("Got ICE servers: ", "Info", iceServers);
 
-      window.mainApi.writeLog("Creating data channel.");
-      this.setDataChannel(this.peerConnection.createDataChannel("input"));
+    this.peerConnection = new RTCPeerConnection({
+      iceServers: iceServers,
+    });
+
+    this.setConnectionHandlers();
+
+    window.mainApi.writeLog("Getting screens from main API.");
+    this.screens = await window.mainApi.getDisplays();
+    window.mainApi.writeLog("Found screens: ", "Info", this.screens);
+
+    this.currentScreen = this.screens[0];
+    window.mainApi.writeLog(
+      "Getting stream for first screen: ",
+      "Info",
+      this.currentScreen,
+    );
+
+    window.mainApi.writeLog("Adding tracks from stream.");
+    await setMediaStreams(this.currentScreen.mediaId, this.peerConnection);
+
+    window.mainApi.writeLog("Creating data channel.");
+    this.setDataChannel(this.peerConnection.createDataChannel("input"));
   }
 
   async receiveRtcSessionDescription(remoteDescription: RTCSessionDescription) {
     try {
-      window.mainApi.writeLog("Received session description: ", "Info", remoteDescription);
+      window.mainApi.writeLog(
+        "Received session description: ",
+        "Info",
+        remoteDescription,
+      );
 
       const offerCollision =
         remoteDescription.type === "offer" &&
         (this.isMakingOffer || this.peerConnection.signalingState !== "stable");
-  
+
       if (offerCollision) {
-        window.mainApi.writeLog("Ignoring session description due to offer collision.", "Info", remoteDescription);
+        window.mainApi.writeLog(
+          "Ignoring session description due to offer collision.",
+          "Info",
+          remoteDescription,
+        );
         return;
       }
 
       window.mainApi.writeLog("Setting remote description.");
       await this.peerConnection.setRemoteDescription(remoteDescription);
-  
+
       if (remoteDescription.type == "offer") {
         window.mainApi.writeLog("Creating answer.");
         await this.peerConnection.setLocalDescription();
-  
-        window.mainApi.writeLog("Sending RTC answer: ", "Info", this.peerConnection.localDescription.toJSON());
+
+        window.mainApi.writeLog(
+          "Sending RTC answer: ",
+          "Info",
+          this.peerConnection.localDescription.toJSON(),
+        );
         await streamerHubConnection.sendRtcSessionDescription(
-          this.peerConnection.localDescription.toJSON()
+          this.peerConnection.localDescription.toJSON(),
         );
       }
-    }
-    catch (ex) {
-      window.mainApi.writeLog("Error while receiving session description: ", "Error", ex);
+    } catch (ex) {
+      window.mainApi.writeLog(
+        "Error while receiving session description: ",
+        "Error",
+        ex,
+      );
     }
   }
 
   async receiveIceCandidate(iceCandidateJson?: string): Promise<void> {
-    try{
+    try {
       if (!this.peerConnection || !this.peerConnection.remoteDescription) {
         window.mainApi.writeLog(
-          "Received ICE candidate, but initialization hasn't completed.  Retrying in 1 second."
+          "Received ICE candidate, but initialization hasn't completed.  Retrying in 1 second.",
         );
         setTimeout(() => {
           this.receiveIceCandidate(iceCandidateJson);
         }, 1000);
         return;
       }
-  
+
       if (!iceCandidateJson) {
         window.mainApi.writeLog("Received null (terminating) ICE candidate");
         await this.peerConnection.addIceCandidate(null);
         return;
       }
-  
+
       const iceCandidate = JSON.parse(iceCandidateJson);
       window.mainApi.writeLog("Received ICE candidate: ", "Info", iceCandidate);
       await this.peerConnection.addIceCandidate(iceCandidate);
-    }
-    catch (ex) {
-      window.mainApi.writeLog("Error while receiving ICE candidate: ", "Error", ex);
+    } catch (ex) {
+      window.mainApi.writeLog(
+        "Error while receiving ICE candidate: ",
+        "Error",
+        ex,
+      );
     }
   }
 
@@ -100,7 +122,7 @@ class RtcSession {
       window.mainApi.writeLog(
         "Connection state changed: ",
         "Info",
-        this.peerConnection.connectionState
+        this.peerConnection.connectionState,
       );
       switch (this.peerConnection.connectionState) {
         case "closed":
@@ -120,14 +142,14 @@ class RtcSession {
       window.mainApi.writeLog(
         "ICE connection state changed: ",
         "Info",
-        this.peerConnection.iceConnectionState
+        this.peerConnection.iceConnectionState,
       );
     });
     this.peerConnection.addEventListener("icegatheringstatechange", (ev) => {
       window.mainApi.writeLog(
         "ICE gathering state changed: ",
         "Info",
-        this.peerConnection.iceGatheringState
+        this.peerConnection.iceGatheringState,
       );
     });
     this.peerConnection.addEventListener("track", (ev) => {
@@ -138,36 +160,45 @@ class RtcSession {
         window.mainApi.writeLog("End of ICE candidates.");
         return;
       }
-      window.mainApi.writeLog("Sending ICE candidate: ", "Info", JSON.stringify(ev.candidate));
+      window.mainApi.writeLog(
+        "Sending ICE candidate: ",
+        "Info",
+        JSON.stringify(ev.candidate),
+      );
       await streamerHubConnection.sendIceCandidate(
-        JSON.stringify(ev.candidate)
+        JSON.stringify(ev.candidate),
       );
     });
-    this.peerConnection.addEventListener("icecandidateerror", async (ev: RTCPeerConnectionIceErrorEvent) => {
-      const err = {
-        errorCode: ev.errorCode,
-        errorText: ev.errorText,
-        port: ev.port,
-        url: ev.url,
-        address: ev.address
-    }
-      window.mainApi.writeLog("ICE candidate error: ", "Error", err);
-    });
+    this.peerConnection.addEventListener(
+      "icecandidateerror",
+      async (ev: RTCPeerConnectionIceErrorEvent) => {
+        const err = {
+          errorCode: ev.errorCode,
+          errorText: ev.errorText,
+          port: ev.port,
+          url: ev.url,
+          address: ev.address,
+        };
+        window.mainApi.writeLog("ICE candidate error: ", "Error", err);
+      },
+    );
     this.peerConnection.addEventListener("negotiationneeded", async () => {
       try {
         this.isMakingOffer = true;
         window.mainApi.writeLog("Negotiation needed. Creating new offer.");
         await this.peerConnection.setLocalDescription();
 
-        window.mainApi.writeLog("Sending RTC offer: ", "Info", this.peerConnection.localDescription.toJSON());
-        await streamerHubConnection.sendRtcSessionDescription(
-          this.peerConnection.localDescription.toJSON()
+        window.mainApi.writeLog(
+          "Sending RTC offer: ",
+          "Info",
+          this.peerConnection.localDescription.toJSON(),
         );
-      }
-      catch (ex) {
+        await streamerHubConnection.sendRtcSessionDescription(
+          this.peerConnection.localDescription.toJSON(),
+        );
+      } catch (ex) {
         window.mainApi.writeLog("Error during negotiation: ", "Error", ex);
-      }
-      finally {
+      } finally {
         this.isMakingOffer = false;
       }
     });
@@ -177,11 +208,15 @@ class RtcSession {
   }
 
   private getAbsoluteScreenPoint(percentX: number, percentY: number): Point {
-    const x = this.currentScreen.width * percentX + this.currentScreen.left;
-    const y = this.currentScreen.height * percentY + this.currentScreen.top;
+    const width = this.currentScreen.width * this.currentScreen.scaleFactor;
+    const height = this.currentScreen.height * this.currentScreen.scaleFactor;
+    const left = this.currentScreen.left * this.currentScreen.scaleFactor;
+    const top = this.currentScreen.top * this.currentScreen.scaleFactor;
+
+    const x = width * percentX + left;
+    const y = height * percentY + top;
     return { x: x, y: y };
   }
-
 
   private async handleDataChannelMessage(data: string) {
     const dto = JSON.parse(data) as BaseDto;
@@ -191,7 +226,7 @@ class RtcSession {
           const moveDto = dto as PointerMoveDto;
           const point = this.getAbsoluteScreenPoint(
             moveDto.percentX,
-            moveDto.percentY
+            moveDto.percentY,
           );
           await window.mainApi.movePointer(point.x, point.y);
         }
@@ -199,7 +234,11 @@ class RtcSession {
       case "keyEvent":
         {
           const keyDto = dto as KeyEventDto;
-          await window.mainApi.invokeKeyEvent(keyDto.keyCode, keyDto.isPressed, keyDto.shouldRelease);
+          await window.mainApi.invokeKeyEvent(
+            keyDto.keyCode,
+            keyDto.isPressed,
+            keyDto.shouldRelease,
+          );
         }
         break;
       case "mouseButtonEvent":
@@ -207,13 +246,13 @@ class RtcSession {
           const buttonDto = dto as MouseButtonEventDto;
           const point = this.getAbsoluteScreenPoint(
             buttonDto.percentX,
-            buttonDto.percentY
+            buttonDto.percentY,
           );
-          await window.mainApi.invokeMouseButton(
+          await window.mainApi.invokeMouseButtonEvent(
             buttonDto.button,
             buttonDto.isPressed,
             point.x,
-            point.y
+            point.y,
           );
         }
         break;
@@ -224,11 +263,15 @@ class RtcSession {
         break;
       case "wheelScrollEvent":
         {
-            const scrollDto = dto as WheelScrollDto;
-            await window.mainApi.invokeWheelScroll(scrollDto.deltaX, scrollDto.deltaY, scrollDto.deltaZ);
+          const scrollDto = dto as WheelScrollDto;
+          await window.mainApi.invokeWheelScroll(
+            scrollDto.deltaX,
+            scrollDto.deltaY,
+            scrollDto.deltaZ,
+          );
         }
         break;
-      case "typeText": 
+      case "typeText":
         {
           const typeDto = dto as TypeTextDto;
           await window.mainApi.invokeTypeText(typeDto.text);
@@ -240,7 +283,7 @@ class RtcSession {
     }
   }
 
-  private setDataChannel(channel: RTCDataChannel){
+  private setDataChannel(channel: RTCDataChannel) {
     this.dataChannel = channel;
     this.dataChannel.addEventListener("close", () => {
       window.mainApi.writeLog("DataChannel closed.");

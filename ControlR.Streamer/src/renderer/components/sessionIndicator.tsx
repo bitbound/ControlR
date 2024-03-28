@@ -1,48 +1,59 @@
-import { Component, CSSProperties } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { iconImage512x512Base64 } from "../images";
 import "./sessionIndicator.tsx.css";
 
-export class SessionIndicator extends Component {
-    render() {
-       
-        return (
-            <div style={wrapperCss} className="draggable">
-                <div>
-                    <img
-                        src={iconImage512x512Base64}
-                        style={logoCss} />
+export default function SessionIndicator() {
+  const [state, setState] = useState({
+    viewerName: "",
+  });
 
-                </div>
-                <div className="text-primary">
-                    Your screen is being viewed
-                </div>
-            </div>
-        );
-    }
+  useEffect(() => {
+    (async () => {
+      const viewerName = await window.mainApi.getViewerName();
+      window.mainApi.writeLog(
+        `Setting viewer name "${viewerName}" for session indicator.`,
+      );
+      setState({
+        ...state,
+        viewerName: viewerName,
+      });
+    })();
+  }, []);
+
+  const message = !state.viewerName
+    ? "Your screen is being viewed"
+    : `${state.viewerName} is viewing your screen`;
+
+  return (
+    <div style={wrapperCss} className="draggable">
+      <div>
+        <img src={iconImage512x512Base64} style={logoCss} />
+      </div>
+      <div className="text-primary">{message}</div>
+    </div>
+  );
 }
 
 const wrapperCss = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    display: "grid",
-    gridTemplateColumns: "auto 1fr",
-    columnGap: "5px",
-    alignItems: "center",
-    textAlign: "center",
-    transform: "translate(-50%, -50%)",
-    overflow: "hidden",
-    whiteSpace: "nowrap",
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  display: "grid",
+  gridTemplateColumns: "auto 1fr",
+  columnGap: "5px",
+  alignItems: "center",
+  textAlign: "center",
+  transform: "translate(-50%, -50%)",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
 } as CSSProperties;
 
 const logoCss = {
-    height: "50px",
-    width: "50px",
-    animationName: "spinLogo",
-    animationIterationCount: "infinite",
-    animationDirection: "alternate",
-    animationDuration: "3s",
-    animationTimeline: "linear"
+  height: "50px",
+  width: "50px",
+  animationName: "spinLogo",
+  animationIterationCount: "infinite",
+  animationDirection: "alternate",
+  animationDuration: "3s",
+  animationTimeline: "linear",
 } as CSSProperties;
-
-

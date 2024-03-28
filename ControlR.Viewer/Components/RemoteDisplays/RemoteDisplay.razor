@@ -65,10 +65,17 @@
          @ontouchcancel="OnTouchCancel"
          @ontouchend="OnTouchEnd">
 
+        <video id="@_videoId"
+               @ref="_videoRef"
+               autoplay="autoplay"
+               muted
+               class="@($"{_viewMode.ToString().ToLower()} {ContentWindow.WindowState.ToString().ToLower()} remote-screen")"
+               style="@(VideoSizeCss) @(VideoDisplayCss)" />
+
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
-            <div class="text-center mt-5">
-                <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom>
+            <div class="absolute text-center message-wrapper">
+                <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom Class="mt-5">
                     @(_statusMessage)
                 </MudText>
 
@@ -87,12 +94,5 @@
                 }
             </div>
         }
-        <video id="@_videoId"
-               @ref="_videoRef"
-               autoplay="autoplay"
-               muted
-               class="@($"{_viewMode.ToString().ToLower()} {ContentWindow.WindowState.ToString().ToLower()} remote-screen")"
-               style="@(VideoSizeCss) @(VideoDisplayCss)" />
-
     </div>
 </div>
