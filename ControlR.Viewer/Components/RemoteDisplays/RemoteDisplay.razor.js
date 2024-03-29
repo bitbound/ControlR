@@ -243,6 +243,8 @@ export async function initialize(componentRef, videoId, iceServers) {
     });
 
     video.addEventListener("wheel", ev => {
+        ev.preventDefault();
+
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
@@ -273,7 +275,7 @@ export async function initialize(componentRef, videoId, iceServers) {
     video.addEventListener("loadedmetadata", async () => {
         await video.play();
         await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
-        await invokeDotNet("NotifyStreamLoaded");
+        await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
     const onKeyDown = (ev) => {
@@ -559,9 +561,11 @@ function setPeerConnectionHandlers(peerConnection, videoId) {
             case "disconnected":
                 peerConnection.restartIce();
                 invokeDotNet("SetStatusMessage", videoId, "Reconnecting");
+                invokeDotNet("NotifyConnectionLost", videoId, false);
                 break;
             case "failed":
                 invokeDotNet("SetStatusMessage", videoId, "Connection failed");
+                invokeDotNet("NotifyConnectionLost", videoId, true);
                 break;
             case "connected":
                 break;

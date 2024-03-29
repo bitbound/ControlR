@@ -1,10 +1,4 @@
-import {
-  Component,
-  CSSProperties,
-  ReactNode,
-  useEffect,
-  useState,
-} from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { iconImage512x512Base64 } from "./images";
 import Home from "./pages/home";
 import { BiWrench, BiHelpCircle, BiInfoCircle } from "react-icons/bi";
@@ -15,7 +9,6 @@ import ConnectionStatusIcon from "./components/connectionStatusIcon";
 
 export default function MainLayout() {
   const [state, setState] = useState({
-    notifyUser: false,
     sessionId: "",
     initialized: false,
   });
@@ -25,14 +18,13 @@ export default function MainLayout() {
       const notifyUser = await window.mainApi.getNotifyUser();
       const sessionId = await window.mainApi.getSessionId();
       setState({
-        notifyUser: notifyUser,
         sessionId: sessionId,
         initialized: true,
       });
     })();
   });
 
-  if (!state.initialized || !state.notifyUser) {
+  if (!state.initialized) {
     return <></>;
   }
 

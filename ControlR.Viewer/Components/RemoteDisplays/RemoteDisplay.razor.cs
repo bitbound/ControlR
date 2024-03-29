@@ -146,6 +146,22 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+
+    [JSInvokable]
+    public async Task NotifyConnectionLost(bool shouldReconnect)
+    {
+        _isStreamReady = false;
+        _isStreamLoaded = false;
+        _statusProgress = -1;
+        if (shouldReconnect)
+        {
+            await SetStatusMessage("Creating new streaming session");
+            Session.CreateNewSessionId();
+            await RequestStreamingSessionFromAgent();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
     [JSInvokable]
     public async Task NotifyStreamReady()
     {
@@ -358,7 +374,7 @@ public partial class RemoteDisplay : IAsyncDisposable
             return;
         }
 
-        var pinchChange = pinchDistance - _lastPinchDistance;
+        var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
 
         _viewMode = ViewMode.Original;
 

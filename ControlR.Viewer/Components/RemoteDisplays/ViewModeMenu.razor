@@ -1,17 +1,20 @@
 ﻿<MudMenu Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.FitScreen)" Label="View" PopoverClass="z9001">
     <MudMenuItem Icon="@(Icons.Material.Filled.FitScreen)"
                  IconColor="@(ViewMode == ViewMode.Fit ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Fit))">
+                 OnClick="@(() => SelectViewMode(ViewMode.Fit))"
+                 OnTouch="@(()=> SelectViewMode(ViewMode.Fit))">
         Fit
     </MudMenuItem>
     <MudMenuItem Icon="@(Icons.Material.Filled.OpenInFull)"
                  IconColor="@(ViewMode == ViewMode.Stretch ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Stretch))">
+                 OnClick="@(() => SelectViewMode(ViewMode.Stretch))"
+                 OnTouch="@(()=> SelectViewMode(ViewMode.Stretch))">
         Stretch
     </MudMenuItem>
     <MudMenuItem Icon="@(Icons.Material.Filled.Fullscreen)"
                  IconColor="@(ViewMode == ViewMode.Original ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Original))">
+                 OnClick="@(() => SelectViewMode(ViewMode.Original))"
+                 OnTouch="@(()=> SelectViewMode(ViewMode.Original))">
         Original
     </MudMenuItem>
 </MudMenu>

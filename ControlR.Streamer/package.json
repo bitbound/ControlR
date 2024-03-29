@@ -1,11 +1,11 @@
 {
   "name": "controlr-streamer",
   "productName": "controlr-streamer",
-  "version": "2024.03.280101",
+  "version": "2024.03.280425",
   "description": "Zero-trust remote control.",
   "main": ".webpack/main",
   "scripts": {
-    "start": "electron-forge start --inspect-electron",
+    "start": "electron-forge start",
     "start (attended)": "electron-forge start --inspect-electron -- --server-uri=http://localhost:5120",
     "dev": "electron-forge start --inspect-electron -- --dev --session-id=f87d1ba5-b0c8-4f78-87d5-7baef64f8637",
     "package": "electron-forge package",
@@ -26,6 +26,7 @@
     "@electron-forge/maker-rpm": "^6.4.2",
     "@electron-forge/maker-squirrel": "^6.4.2",
     "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^6.4.2",
     "@electron-forge/plugin-webpack": "^6.4.2",
     "@reforged/maker-appimage": "^3.3.2",
     "@types/react": "^18.2.70",

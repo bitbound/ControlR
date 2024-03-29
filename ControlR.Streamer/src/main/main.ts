@@ -44,7 +44,7 @@ const createMainWindow = (): void => {
     mainWindow.setMenuBarVisibility(false);
   }
 
-  if (!appState.notifyUser) {
+  if (appState.isUnattended && !appState.notifyUser) {
     mainWindow.hide();
   }
   if (appState.isUnattended && !appState.isDev) {

@@ -75,7 +75,6 @@ internal class RemoteControlLauncherWindows(
             {
                 var startupDir = _environment.StartupDirectory;
                 var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
-                _fileSystem.CreateDirectory(remoteControlDir);
                 var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
                 var zipPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
 
@@ -87,14 +86,11 @@ internal class RemoteControlLauncherWindows(
                         return archiveCheckResult;
                     }
                 }
-                else
+                else if (_fileSystem.DirectoryExists(remoteControlDir))
                 {
                     // If the archive doesn't exist, clear out any remaining files.
                     // Then future update checks will work normally.
-                    foreach (var file in _fileSystem.GetFiles(remoteControlDir))
-                    {
-                        _fileSystem.DeleteFile(file);
-                    }
+                    _fileSystem.DeleteDirectory(remoteControlDir, true);
                 }
 
                 if (!_fileSystem.FileExists(binaryPath))
@@ -195,10 +191,7 @@ internal class RemoteControlLauncherWindows(
         else
         {
             _logger.LogInformation("Versions differ.  Removing outdated files.");
-            foreach (var file in _fileSystem.GetFiles(remoteControlDir))
-            {
-                _fileSystem.DeleteFile(file);
-            }
+            _fileSystem.DeleteDirectory(remoteControlDir, true);
         }
         return Result.Ok();
     }
@@ -229,6 +222,7 @@ internal class RemoteControlLauncherWindows(
     {
         try
         {
+            _fileSystem.CreateDirectory(remoteControlDir);
             var targetPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
             var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, onDownloadProgress);
             if (!result.IsSuccess)
