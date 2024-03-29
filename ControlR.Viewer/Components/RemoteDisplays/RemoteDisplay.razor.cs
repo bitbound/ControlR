@@ -24,7 +24,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private readonly SemaphoreSlim _typeLock = new(1, 1);
     private readonly string _videoId = $"video-{Guid.NewGuid()}";
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
-    private ElementReference _screenArea;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
     private IceServer[] _iceServers = [];
@@ -33,6 +32,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     private bool _isStreamReady;
     private double _lastPinchDistance = -1;
     private IJSObjectReference? _module;
+    private ElementReference _screenArea;
     private DisplayDto? _selectedDisplay;
     private string _statusMessage = "Starting remote control session";
     private double _statusProgress = -1;
@@ -44,20 +44,14 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ElementReference _virtualKeyboard;
 
 
-    [Parameter, EditorRequired]
-    public required RemoteControlSession Session { get; set; }
+    [Inject]
+    public required IAppState AppState { get; init; }
 
     [CascadingParameter]
     public required DeviceContentInstance ContentInstance { get; init; }
 
     [CascadingParameter]
     public required DeviceContentWindow ContentWindow { get; init; }
-
-    [Inject]
-    public required IAppState AppState { get; init; }
-
-    [Inject]
-    public required IDeviceContentWindowStore WindowStore { get; init; }
 
     [Inject]
     public required IEnvironmentHelper EnvironmentHelper { get; init; }
@@ -71,8 +65,18 @@ public partial class RemoteDisplay : IAsyncDisposable
     [Inject]
     public required IMessenger Messenger { get; init; }
 
+    [Parameter, EditorRequired]
+    public required RemoteControlSession Session { get; set; }
     [Inject]
     public required ISnackbar Snackbar { get; init; }
+
+    [Inject]
+    public required IViewerHubConnection ViewerHub { get; init; }
+
+    [Inject]
+    public required IDeviceContentWindowStore WindowStore { get; init; }
+    private IJSObjectReference JsModule => _module ??
+        throw new InvalidOperationException("JS module has not been initialized yet.");
 
     private string VideoDisplayCss
     {
@@ -83,7 +87,6 @@ public partial class RemoteDisplay : IAsyncDisposable
                 "display: none;";
         }
     }
-
     private string VideoSizeCss
     {
         get
@@ -95,10 +98,6 @@ public partial class RemoteDisplay : IAsyncDisposable
             return $"width: {_videoWidth}px; height: {_videoHeight}px;";
         }
     }
-
-    [Inject]
-    public required IViewerHubConnection ViewerHub { get; init; }
-
     private string VirtualKeyboardText
     {
         get
@@ -139,15 +138,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     [JSInvokable]
-    public async Task NotifyStreamLoaded()
-    {
-        _isStreamLoaded = true;
-        _statusMessage = string.Empty;
-        await InvokeAsync(StateHasChanged);
-    }
-
-
-    [JSInvokable]
     public async Task NotifyConnectionLost(bool shouldReconnect)
     {
         _isStreamReady = false;
@@ -162,6 +152,13 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    [JSInvokable]
+    public async Task NotifyStreamLoaded()
+    {
+        _isStreamLoaded = true;
+        _statusMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
     [JSInvokable]
     public async Task NotifyStreamReady()
     {
@@ -212,7 +209,7 @@ public partial class RemoteDisplay : IAsyncDisposable
             }
 
             _iceServers = iceServersResult.Value;
-            await _module.InvokeVoidAsync("initialize", _componentRef, _videoId, _iceServers);
+            await JsModule.InvokeVoidAsync("initialize", _componentRef, _videoId, _iceServers);
 
             await SetStatusMessage("Creating streaming session");
             await RequestStreamingSessionFromAgent();
@@ -234,6 +231,20 @@ public partial class RemoteDisplay : IAsyncDisposable
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
         return base.OnInitializedAsync();
+    }
+
+    private async Task ChangeDisplays(DisplayDto display)
+    {
+        try
+        {
+            _selectedDisplay = display;
+            await JsModule.InvokeVoidAsync("changeDisplays", _videoId, display.MediaId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while changing displays.");
+            Snackbar.Add("An error occurred while changing displays", Severity.Error);
+        }
     }
 
     private async Task Close()
@@ -352,54 +363,57 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     private async void OnTouchMove(TouchEventArgs ev)
     {
-        if (ev.Touches.Length != 2)
+        try
         {
-            return;
-        }
 
-        if (_selectedDisplay is null)
-        {
-            return;
-        }
+            if (ev.Touches.Length != 2)
+            {
+                return;
+            }
 
-        var pinchDistance = MathHelper.GetDistanceBetween(
-            ev.Touches[0].PageX,
-            ev.Touches[0].PageY,
-            ev.Touches[1].PageX,
-            ev.Touches[1].PageY);
+            if (_selectedDisplay is null)
+            {
+                return;
+            }
 
-        if (_lastPinchDistance <= 0)
-        {
+            var pinchDistance = MathHelper.GetDistanceBetween(
+                ev.Touches[0].PageX,
+                ev.Touches[0].PageY,
+                ev.Touches[1].PageX,
+                ev.Touches[1].PageY);
+
+            if (_lastPinchDistance <= 0)
+            {
+                _lastPinchDistance = pinchDistance;
+                return;
+            }
+
+            var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
+
+            _viewMode = ViewMode.Original;
+
+            _videoScale = Math.Max(.25, Math.Min(_videoScale + pinchChange / 100, 3));
+
+            var newWidth = _selectedDisplay.Width * _videoScale;
+            var widthChange = newWidth - _videoWidth;
+            _videoWidth = newWidth;
+
+            var newHeight = _selectedDisplay.Height * _videoScale;
+            var heightChange = newHeight - _videoHeight;
+            _videoHeight = newHeight;
+
             _lastPinchDistance = pinchDistance;
-            return;
+            await InvokeAsync(StateHasChanged);
+
+            var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
+            var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
+
+            await JsModule.InvokeVoidAsync("scrollTowardPinch", pinchCenterX, pinchCenterY, _screenArea, widthChange, heightChange);
         }
-
-        var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
-
-        _viewMode = ViewMode.Original;
-
-        _videoScale = Math.Max(.25, Math.Min(_videoScale + pinchChange / 100, 3));
-
-        var newWidth = _selectedDisplay.Width * _videoScale;
-        var widthChange = newWidth - _videoWidth;
-        _videoWidth = newWidth;
-
-        var newHeight = _selectedDisplay.Height * _videoScale;
-        var heightChange = newHeight - _videoHeight;
-        _videoHeight = newHeight;
-
-        _lastPinchDistance = pinchDistance;
-        await InvokeAsync(StateHasChanged);
-
-        if (_module is null)
+        catch (Exception ex)
         {
-            return;
+            Logger.LogError(ex, "Errror while handling touchmove event.");
         }
-
-        var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
-        var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
-
-        await _module.InvokeVoidAsync("scrollTowardPinch", pinchCenterX, pinchCenterY, _screenArea, widthChange, heightChange);
     }
 
     private void OnTouchStart(TouchEventArgs ev)
@@ -458,18 +472,12 @@ public partial class RemoteDisplay : IAsyncDisposable
             Snackbar.Add("An error occurred while requesting streaming session", Severity.Error);
         }
     }
-
     private async Task TypeText(string text)
     {
-        if (_module is null)
-        {
-            return;
-        }
-
         await _typeLock.WaitAsync();
         try
         {
-            await _module.InvokeVoidAsync("typeText", text, _videoId);
+            await JsModule.InvokeVoidAsync("typeText", text, _videoId);
         }
         catch (Exception ex)
         {

@@ -77,6 +77,20 @@ class WindowEventHandler {
 /**
  * 
  * @param {string} videoId
+ * @param {string} mediaId
+ */
+export async function changeDisplays(videoId, mediaId) {
+    const state = getState(videoId);
+    const dto = {
+        dtoType: "changeDisplay",
+        mediaId: mediaId
+    }
+    state.dataChannel.send(JSON.stringify(dto));
+}
+
+/**
+ * 
+ * @param {string} videoId
  */
 export async function dispose(videoId) {
     const state = getState(videoId);

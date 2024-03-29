@@ -1,7 +1,7 @@
-import { Point } from "@nut-tree/nut-js";
 import { DisplayDto } from "../../shared/signalrDtos/displayDto";
 import streamerHubConnection from "./streamerHubConnection";
 import { setMediaStreams } from "./mediaHelperRenderer";
+import { handleDataChannelMessage } from "./rtcDtoHandler";
 
 class RtcSession {
   peerConnection?: RTCPeerConnection;
@@ -10,6 +10,10 @@ class RtcSession {
   currentScreen?: DisplayDto;
   screens: DisplayDto[] = [];
 
+
+  changeCurrentScreen(mediaId: string) {
+    this.currentScreen = this.screens.find(x => x.mediaId === mediaId);
+  }
   async startRtcSession() {
     window.mainApi.writeLog("Getting ICE servers.");
 
@@ -207,81 +211,7 @@ class RtcSession {
     });
   }
 
-  private getAbsoluteScreenPoint(percentX: number, percentY: number): Point {
-    const width = this.currentScreen.width * this.currentScreen.scaleFactor;
-    const height = this.currentScreen.height * this.currentScreen.scaleFactor;
-    const left = this.currentScreen.left * this.currentScreen.scaleFactor;
-    const top = this.currentScreen.top * this.currentScreen.scaleFactor;
 
-    const x = width * percentX + left;
-    const y = height * percentY + top;
-    return { x: x, y: y };
-  }
-
-  private async handleDataChannelMessage(data: string) {
-    const dto = JSON.parse(data) as BaseDto;
-    switch (dto.dtoType) {
-      case "pointerMove":
-        {
-          const moveDto = dto as PointerMoveDto;
-          const point = this.getAbsoluteScreenPoint(
-            moveDto.percentX,
-            moveDto.percentY,
-          );
-          await window.mainApi.movePointer(point.x, point.y);
-        }
-        break;
-      case "keyEvent":
-        {
-          const keyDto = dto as KeyEventDto;
-          await window.mainApi.invokeKeyEvent(
-            keyDto.keyCode,
-            keyDto.isPressed,
-            keyDto.shouldRelease,
-          );
-        }
-        break;
-      case "mouseButtonEvent":
-        {
-          const buttonDto = dto as MouseButtonEventDto;
-          const point = this.getAbsoluteScreenPoint(
-            buttonDto.percentX,
-            buttonDto.percentY,
-          );
-          await window.mainApi.invokeMouseButtonEvent(
-            buttonDto.button,
-            buttonDto.isPressed,
-            point.x,
-            point.y,
-          );
-        }
-        break;
-      case "resetKeyboardState":
-        {
-          await window.mainApi.resetKeyboardState();
-        }
-        break;
-      case "wheelScrollEvent":
-        {
-          const scrollDto = dto as WheelScrollDto;
-          await window.mainApi.invokeWheelScroll(
-            scrollDto.deltaX,
-            scrollDto.deltaY,
-            scrollDto.deltaZ,
-          );
-        }
-        break;
-      case "typeText":
-        {
-          const typeDto = dto as TypeTextDto;
-          await window.mainApi.invokeTypeText(typeDto.text);
-        }
-        break;
-      default:
-        console.warn("Unhandled DTO type: ", dto.dtoType);
-        break;
-    }
-  }
 
   private setDataChannel(channel: RTCDataChannel) {
     this.dataChannel = channel;
@@ -298,7 +228,7 @@ class RtcSession {
     });
 
     this.dataChannel.addEventListener("message", async (ev) => {
-      await this.handleDataChannelMessage(ev.data);
+      await handleDataChannelMessage(ev.data);
     });
   }
 }

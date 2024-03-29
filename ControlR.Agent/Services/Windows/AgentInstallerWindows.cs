@@ -216,9 +216,9 @@ internal class AgentInstallerWindows(
         var exePath = Path.Combine(_installDir, AppConstants.AgentFileName);
         var fileName = Path.GetFileName(exePath);
         var version = FileVersionInfo.GetVersionInfo(exePath);
-        var baseKey = GetRegistryBaseKey();
+        using var baseKey = GetRegistryBaseKey();
 
-        var controlrKey = baseKey.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR", true);
+        using var controlrKey = baseKey.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR", true);
         controlrKey.SetValue("DisplayIcon", Path.Combine(_installDir, fileName));
         controlrKey.SetValue("DisplayName", "ControlR Agent");
         controlrKey.SetValue("DisplayVersion", version.FileVersion ?? "0.0.0");

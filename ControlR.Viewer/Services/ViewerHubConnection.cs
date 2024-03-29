@@ -51,7 +51,6 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
     Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
-
     Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);

@@ -18,7 +18,7 @@
             <ViewModeMenu ViewMode="_viewMode"
                           OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
 
-            <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
+            <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" OnDisplaySelected="ChangeDisplays" />
 
             <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.KeyboardControlKey)" OnClick="InvokeCtrlAltDel">
                 Ctrl+Alt+Del

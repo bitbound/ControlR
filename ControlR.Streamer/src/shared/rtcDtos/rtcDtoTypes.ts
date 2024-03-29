@@ -4,4 +4,5 @@ declare type RtcDtoType =
 | "mouseButtonEvent"
 | "resetKeyboardState"
 | "wheelScrollEvent"
-| "typeText";
+| "typeText"
+| "changeDisplay";

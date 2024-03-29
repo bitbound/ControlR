@@ -1,7 +1,6 @@
 ﻿#if ANDROID
 
 using ControlR.Viewer.Platforms.Android;
-using ControlR.Viewer.Services.Android;
 using ControlR.Viewer.Platforms.Android.Extensions;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
