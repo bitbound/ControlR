@@ -24,7 +24,9 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.3.29.1403</ApplicationDisplayVersion>
+
+
 		<ApplicationVersion>1</ApplicationVersion>
 	</PropertyGroup>
 
@@ -38,7 +40,8 @@
 		<Nullable>enable</Nullable>
 		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-		<PackageCertificateThumbprint>4B6235F1C44AB3A5F29BF40AD85B442269F6EE52</PackageCertificateThumbprint>
+		<PackageCertificateThumbprint>E0D825978AFF9CB4FDFE7C65398F417F92D07B6D</PackageCertificateThumbprint>
+
 		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
 		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
 		<AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
