@@ -34,7 +34,7 @@ internal class DeviceCache : IDeviceCache
         _deviceCachePath = Path.Combine(fileSystem.AppDataDirectory, "DeviceCache.json");
         _logger = logger;
 
-        Task.Run(TryLoadCache).AndForget();
+        Task.Run(TryLoadCache).Forget();
     }
 
     public IEnumerable<DeviceDto> Devices => _cache.Values;

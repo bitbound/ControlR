@@ -2,7 +2,7 @@
 
 public static class TaskExtensions
 {
-    public static async void AndForget(this Task task, Func<Exception, Task>? exceptionHandler = null)
+    public static async void Forget(this Task task, Func<Exception, Task>? exceptionHandler = null)
     {
         try
         {
@@ -23,7 +23,7 @@ public static class TaskExtensions
         }
     }
 
-    public static async void AndForget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
+    public static async void Forget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
     {
         try
         {

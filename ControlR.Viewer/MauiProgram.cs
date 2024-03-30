@@ -81,6 +81,7 @@ public static class MauiProgram
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
+        builder.Services.AddTransient<IClipboardManager, ClipboardManager>();
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 
 

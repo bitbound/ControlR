@@ -40,7 +40,7 @@ public class MainActivity : MauiAppCompatActivity
                     "Install Failed",
                     $"Installation failed.  Intent.Extras is null.",
                     "OK")
-                    .AndForget();
+                    .Forget();
                 return;
             }
 
@@ -62,7 +62,7 @@ public class MainActivity : MauiAppCompatActivity
                         "Install Successful",
                         "Installation completed successfully.",
                         "OK")
-                        .AndForget();
+                        .Forget();
                     break;
 
                 case (int)PackageInstallStatus.Failure:
@@ -76,7 +76,7 @@ public class MainActivity : MauiAppCompatActivity
                         "Install Failed",
                         $"Installation failed.  Message: {message}",
                         "OK")
-                        .AndForget();
+                        .Forget();
                     break;
             }
         }

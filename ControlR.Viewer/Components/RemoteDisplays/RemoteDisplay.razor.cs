@@ -15,12 +15,10 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
-using System.Runtime.Versioning;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Viewer.Components.RemoteDisplays;
 
-[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : IAsyncDisposable
 {
     private readonly SemaphoreSlim _typeLock = new(1, 1);
@@ -68,11 +66,15 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     [Parameter, EditorRequired]
     public required RemoteControlSession Session { get; set; }
+
     [Inject]
     public required ISnackbar Snackbar { get; init; }
 
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
+
+    [Inject]
+    public required IClipboardManager ClipboardManager { get; init; }
 
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
@@ -133,6 +135,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             await _module.InvokeVoidAsync("dispose", _videoId);
         }
+        await ClipboardManager.DisposeAsync();
         GC.SuppressFinalize(this);
     }
 
@@ -170,6 +173,8 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         _isStreamLoaded = true;
         _statusMessage = string.Empty;
+        ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
+        ClipboardManager.Start();
         await InvokeAsync(StateHasChanged);
     }
     [JSInvokable]
@@ -179,6 +184,22 @@ public partial class RemoteDisplay : IAsyncDisposable
         _statusMessage = "Stream ready";
         _statusProgress = 0;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClipboardManager_ClipboardChanged(object? sender, string? e)
+    {
+        Task
+            .Run(async () =>
+            {
+                Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
+                await JsModule.InvokeVoidAsync("sendClipboardText", e, _videoId);
+                await InvokeAsync(StateHasChanged);
+            })
+            .Forget(ex =>
+            {
+                Logger.LogError(ex, "Error while handling clipboard change.");
+                return Task.CompletedTask;
+            });
     }
 
     [JSInvokable]
@@ -199,6 +220,13 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         _statusMessage = message;
         await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task SetClipboardText(string text)
+    {
+        Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
+        await ClipboardManager.SetText(text);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

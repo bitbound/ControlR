@@ -12,7 +12,6 @@ using System.Runtime.Versioning;
 
 namespace ControlR.Viewer.Components.Devices;
 
-[SupportedOSPlatform("browser")]
 public partial class DeviceContentWindow : IAsyncDisposable
 {
     [Inject]

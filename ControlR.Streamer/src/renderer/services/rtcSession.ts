@@ -42,6 +42,10 @@ class RtcSession {
 
     window.mainApi.writeLog("Creating data channel.");
     this.setDataChannel(this.peerConnection.createDataChannel("input"));
+    window.mainApi.onLocalClipboardChanged(text => {
+      window.mainApi.writeLog("Received clipboard change in renderer from main process.");
+      this.sendClipboardChanged(text);
+    })
   }
 
   async receiveRtcSessionDescription(remoteDescription: RTCSessionDescription) {
@@ -118,6 +122,18 @@ class RtcSession {
         ex,
       );
     }
+  }
+
+  sendClipboardChanged(text: string | undefined | null) {
+    if (this.dataChannel?.readyState !== "open") {
+      return;
+    }
+
+    const dto = {
+      dtoType: "clipboardChanged",
+      text: text
+    } as ClipboardChangedDto;
+    this.dataChannel.send(JSON.stringify(dto));
   }
 
   private setConnectionHandlers() {

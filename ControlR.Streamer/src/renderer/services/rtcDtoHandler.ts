@@ -69,6 +69,13 @@ export async function handleDataChannelMessage(data: string) {
                 RtcSession.changeCurrentScreen(changeDisplayDto.mediaId);
             }
             break;
+        case "clipboardChanged":
+            {
+                const clipboardDto = dto as ClipboardChangedDto;
+                window.mainApi.writeLog("Received clipboard text.");
+                window.mainApi.setClipboardText(clipboardDto.text);
+            }
+            break;
         default:
             console.warn("Unhandled DTO type: ", dto.dtoType);
             break;

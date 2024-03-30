@@ -44,7 +44,7 @@ public class FileLogger(
             var message = FormatLogEntry(logLevel, _categoryName, $"{state}", exception, [.. _scopeStack]);
             _writeQueue.Enqueue(message);
 
-            DrainWriteQueue().AndForget();
+            DrainWriteQueue().Forget();
         }
         catch (Exception ex)
         {
