@@ -1,5 +1,6 @@
 ﻿using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
 
 namespace ControlR.Shared.Services.Http;
 
@@ -22,6 +23,11 @@ internal class KeyApi(
             using var response = await _client.GetAsync($"/api/key/verify");
             response.EnsureSuccessStatusCode();
             return Result.Ok();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Key API unavailable due to HTTP exception.");
+            return Result.Fail(ex);
         }
         catch (Exception ex)
         {

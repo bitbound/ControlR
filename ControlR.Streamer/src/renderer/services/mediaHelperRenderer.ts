@@ -4,11 +4,9 @@ export async function setMediaStreams(sourceId: string, peerConnection: RTCPeerC
     const constraints = getDefaultConstraints();
     if (sourceId) {
         constraints.video.mandatory.chromeMediaSourceId = sourceId;
-        constraints.audio.mandatory.chromeMediaSourceId = sourceId;
     }
     else {
         delete constraints.video.mandatory.chromeMediaSourceId;
-        delete constraints.audio.mandatory.chromeMediaSourceId;
     }
 
     let stream: MediaStream;
@@ -37,7 +35,6 @@ function getDefaultConstraints() {
         audio: {
             mandatory: {
                 chromeMediaSource: 'desktop',
-                chromeMediaSourceId: ''
             }
         }
     };

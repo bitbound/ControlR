@@ -203,7 +203,7 @@ export async function initialize(componentRef, videoId, iceServers) {
             ev.preventDefault();
             ev.stopPropagation();
 
-            sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
+            sendPointerMove(state.longPressStartOffsetX.offsetX, state.longPressStartOffsetX.offsetY, state);
 
             const moveDistance = getDistanceBetween(
                 state.longPressStartOffsetX,

@@ -169,6 +169,10 @@ else
                 AppState.KeysVerified = true;
                 await Messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
             }
+            else if (verifyResult.HadException)
+            {
+                Snackbar.Add($"A connection error occurred: {verifyResult.Reason}", Severity.Error);
+            }
             else
             {
                 Snackbar.Add("Verification with server failed", Severity.Error);
