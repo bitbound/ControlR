@@ -1,5 +1,5 @@
 # ControlR
-A zero-trust remote control prototype built with .NET 7, MAUI, Blazor WASM, Electron, and WebRTC.
+A zero-trust remote control prototype built with .NET 8, MAUI, Blazor WASM, Electron, and WebRTC.
 
 Website: https://controlr.app
 
