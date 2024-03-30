@@ -3,7 +3,7 @@ A zero-trust remote control prototype built with .NET 7, MAUI, Blazor WASM, Elec
 
 Website: https://controlr.app
 
-> Note: ControLR is still in alpha and isn't ready for self-hosting yet.  When it is, I'll add a quick start section here with Docker instructions.
+> Note: ControlR is still in alpha and isn't ready for self-hosting yet.  When it is, I'll add a quick start section here with Docker instructions.
 
 ## How It Works
 Zero-trust is implemented via public/private keypairs, similar to how ssh works.  When the agent is installed, you supply the public keys that are allowed to access the device (i.e. `authorized_keys`).
