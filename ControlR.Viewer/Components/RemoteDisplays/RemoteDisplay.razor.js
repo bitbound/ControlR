@@ -40,6 +40,9 @@
     /** @type {RTCPeerConnection} */
     peerConnection;
 
+    /** @type {PointerEvent} */
+    pointerDownEvent;
+
     /** @type {number} */
     previousPinchDistance;
 
@@ -85,6 +88,7 @@ export async function changeDisplays(videoId, mediaId) {
         dtoType: "changeDisplay",
         mediaId: mediaId
     }
+    
     state.dataChannel.send(JSON.stringify(dto));
 }
 
@@ -147,6 +151,12 @@ export async function initialize(componentRef, videoId, iceServers) {
     setPeerConnectionHandlers(state.peerConnection, videoId);
 
     video.addEventListener("pointerup", ev => {
+        if (video.classList.contains("scroll-mode")) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return;
+        }
+
         if (state.longPressStarted && !state.isDragging) {
             sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, 2, state);
             sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 2, state);
@@ -170,9 +180,30 @@ export async function initialize(componentRef, videoId, iceServers) {
     });
     
     video.addEventListener("pointermove", ev => {
+        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+            return;
+        }
+
+        if (video.classList.contains("scroll-mode")) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const wheelScrollDto = {
+                dtoType: "wheelScrollEvent",
+                deltaX: ev.movementX * 4,
+                deltaY: ev.movementY * -4,
+                deltaZ: 0
+            };
+            sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
+            state.dataChannel.send(JSON.stringify(wheelScrollDto));
+            return;
+        }
+
         if (state.longPressStarted && !state.isDragging) {
             ev.preventDefault();
             ev.stopPropagation();
+
+            sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
 
             const moveDistance = getDistanceBetween(
                 state.longPressStartOffsetX,
@@ -194,8 +225,10 @@ export async function initialize(componentRef, videoId, iceServers) {
         }
     })
 
+    
     video.addEventListener("pointerdown", ev => {
         state.currentPointerType = ev.pointerType;
+        state.pointerDownEvent = ev;
     });
 
     video.addEventListener("pointerenter", ev => {
@@ -203,7 +236,7 @@ export async function initialize(componentRef, videoId, iceServers) {
     });
 
     video.addEventListener("touchmove", ev => {
-        if (state.longPressStarted || state.isDragging) {
+        if (state.longPressStarted || state.isDragging || video.classList.contains("scroll-mode")) {
             ev.preventDefault();
         }
     });
@@ -275,7 +308,9 @@ export async function initialize(componentRef, videoId, iceServers) {
     video.addEventListener("contextmenu", async ev => {
         ev.preventDefault();
 
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (!isDataChannelReady(videoId) ||
+            video.classList.contains("minimized") ||
+            video.classList.contains("scroll-mode")) {
             return;
         }
      
@@ -288,6 +323,7 @@ export async function initialize(componentRef, videoId, iceServers) {
 
     video.addEventListener("loadedmetadata", async () => {
         await video.play();
+        video.muted = false;
         await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
         await invokeDotNet("NotifyStreamLoaded", videoId);
     });
@@ -633,6 +669,7 @@ function setPeerConnectionHandlers(peerConnection, videoId) {
             if (state.videoElement.played.length > 0) {
                 await invokeDotNet("NotifyStreamLoaded", videoId);
                 await state.videoElement.play();
+                state.videoElement.muted = false;
                 window.clearInterval(playInterval);
                 return;
             }

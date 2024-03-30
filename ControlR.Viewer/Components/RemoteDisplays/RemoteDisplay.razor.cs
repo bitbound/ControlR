@@ -15,10 +15,12 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using System.Runtime.Versioning;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Viewer.Components.RemoteDisplays;
 
+[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : IAsyncDisposable
 {
     private readonly SemaphoreSlim _typeLock = new(1, 1);
@@ -33,6 +35,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     private double _lastPinchDistance = -1;
     private IJSObjectReference? _module;
     private ElementReference _screenArea;
+    private bool _isScrollModeEnabled;
     private DisplayDto? _selectedDisplay;
     private string _statusMessage = "Starting remote control session";
     private double _statusProgress = -1;
@@ -42,8 +45,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private double _videoWidth;
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
-
-
     [Inject]
     public required IAppState AppState { get; init; }
 
@@ -78,6 +79,18 @@ public partial class RemoteDisplay : IAsyncDisposable
     private IJSObjectReference JsModule => _module ??
         throw new InvalidOperationException("JS module has not been initialized yet.");
 
+    private string VideoClasses
+    {
+        get
+        {
+            var classNames = $"{_viewMode} {ContentWindow.WindowState}";
+            if (_isScrollModeEnabled)
+            {
+                classNames += " scroll-mode";
+            }
+            return classNames.ToLower();
+        }
+    }
     private string VideoDisplayCss
     {
         get
@@ -338,6 +351,11 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             Logger.LogError(ex, "Error while invoking JavaScript function: {name}", "receiveRtcSessionDescription");
         }
+    }
+
+    private void HandleScrollModeToggled(bool isEnabled)
+    {
+        _isScrollModeEnabled = isEnabled;
     }
 
     private async Task InvokeCtrlAltDel()

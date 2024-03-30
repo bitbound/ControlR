@@ -36,6 +36,14 @@
             @if (_controlMode == ControlMode.Touch)
             {
                 <MudIconButton Variant="Variant.Outlined" Icon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard" />
+                <MudToggleIconButton 
+                    Title="Scroll Mode Off" 
+                    Variant="Variant.Outlined" 
+                    Icon="@(Icons.Material.Filled.UnfoldMoreDouble)" 
+                    ToggledTitle="Scroll Mode On" 
+                    ToggledColor="Color.Success" 
+                    ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                    ToggledChanged="HandleScrollModeToggled" />
             }
 
             <MudPopover Open="_isMobileActionsMenuOpen" Class="z9001" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
@@ -46,14 +54,6 @@
                     <MudListItem>
                         <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
                     </MudListItem>
-                    @if (_controlMode == ControlMode.Touch)
-                    {
-                        <MudListItem>
-                            <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard">
-                                Keyboard
-                            </MudButton>
-                        </MudListItem>
-                    }
                 </MudList>
             </MudPopover>
         </div>
@@ -69,7 +69,7 @@
                @ref="_videoRef"
                autoplay="autoplay"
                muted
-               class="@($"{_viewMode.ToString().ToLower()} {ContentWindow.WindowState.ToString().ToLower()} remote-screen")"
+               class="@($"remote-screen {VideoClasses}")"
                style="@(VideoSizeCss) @(VideoDisplayCss)" />
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
