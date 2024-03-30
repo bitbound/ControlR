@@ -22,5 +22,5 @@ public enum DtoType
     RtcIceCandidate = 18,
     CloseStreamingSession = 19,
     InvokeCtrlAltDel = 20,
-
+    ClipboardChanged = 21,
 }

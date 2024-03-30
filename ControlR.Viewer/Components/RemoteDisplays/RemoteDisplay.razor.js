@@ -325,7 +325,7 @@ export async function initialize(componentRef, videoId, iceServers) {
         await video.play();
         video.muted = false;
         await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
-        await invokeDotNet("NotifyStreamLoaded", videoId);
+        //await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
     const onKeyDown = (ev) => {
@@ -476,6 +476,21 @@ export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, 
     var scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
 
     contentDiv.scrollBy(scrollByX, scrollByY);
+}
+
+/**
+ * 
+ * @param {string} text
+ * @param {string} videoId
+ */
+export async function sendClipboardText(text, videoId) {
+    const state = getState(videoId);
+
+    const typeDto = {
+        dtoType: "clipboardChanged",
+        text: text
+    };
+    state.dataChannel.send(JSON.stringify(typeDto));
 }
 
 /**
@@ -743,6 +758,16 @@ function setDataChannelHandlers(dataChannel, videoId) {
     dataChannel.addEventListener("message", ev => {
         console.log("Got DataChannel message: ", ev.data);
         invokeDotNet("LogInfo", videoId, "Got DataChannel message: " + ev.data);
+        const dto = JSON.parse(ev.data);
+        switch (dto.dtoType) {
+            case "clipboardChanged":
+                invokeDotNet("SetClipboardText", videoId, dto.text)
+                break;
+            default:
+                console.log("Unrecogized DTO type: ", dto);
+                invokeDotNet("LogError", videoId, `Unrecognized DTO type: ${ev.data}`);
+                break;
+        }
     });
 }
 

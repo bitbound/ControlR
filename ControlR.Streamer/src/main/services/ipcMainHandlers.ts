@@ -12,6 +12,7 @@ import {
 import { writeLog } from "./logger";
 import { verifyDto } from "./dtoVerifier";
 import { MainApi } from "../../renderer/mainApi";
+import { setClipboardText } from "./clipboardManager";
 
 type MainApiMethod = keyof MainApi;
 type MainIpcHandler = (
@@ -41,6 +42,7 @@ export async function registerIpcHandlers() {
     scrollWheel(deltaX, deltaY, deltaZ),
   );
   handleMethod("invokeTypeText", (_, text) => invokeTypeText(text));
+  handleMethod("setClipboardText", (_, text) => setClipboardText(text));
   handleMethod("writeLog", (_, message, level, args) =>
     writeLog(message, level, args),
   );

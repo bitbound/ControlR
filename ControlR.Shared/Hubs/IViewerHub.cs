@@ -6,7 +6,6 @@ namespace ControlR.Shared.Hubs;
 public interface IViewerHub
 {
     Task<bool> CheckIfServerAdministrator();
-
     Task<Result> ClearAlert(SignedPayloadDto signedDto);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto);
@@ -15,11 +14,10 @@ public interface IViewerHub
 
     Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
-    Task<Result<ServerStatsDto>> GetServerStats();
     Task<IceServer[]> GetIceServers(SignedPayloadDto dto);
-    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
-    Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto);
 
+    Task<Result<ServerStatsDto>> GetServerStats();
+    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
@@ -30,6 +28,7 @@ public interface IViewerHub
 
     Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto);
 
+    Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto);
     Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);
 
 }

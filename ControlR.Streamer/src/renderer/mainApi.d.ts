@@ -2,6 +2,7 @@ import { SignedPayloadDto } from "src/shared/dtos/signedPayloadDto";
 import { DisplayDto } from "src/shared/signalrDtos/displayDto";
 
 declare interface MainApi {
+  setClipboardText(text: string): Promise<void>;
   exit(): Promise<void>;
   verifyDto(payload: Uint8Array, signature: Uint8Array, publicKey: Uint8Array, publicKeyPem: string): Promise<boolean>;
   getServerUri(): Promise<string>;
@@ -15,6 +16,7 @@ declare interface MainApi {
   resetKeyboardState(): Promise<void>;
   invokeWheelScroll(deltaX: number, deltaY: number, deltaZ: number): Promise<void>;
   invokeTypeText(text: string): Promise<void>;
+  onLocalClipboardChanged(callback: (text: string | undefined | null) => void);
   writeLog(message: string, level: LogLevel = "Info", ...args: any[]);
 }
 

@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld("mainApi", {
     ipcRenderer.invoke("invokeWheelScroll", deltaX, deltaY, deltaZ),
 
   invokeTypeText: (text: string) => ipcRenderer.invoke("invokeTypeText", text),
+  setClipboardText: (text: string | undefined | null) => ipcRenderer.invoke("setClipboardText", text),
+
+  onLocalClipboardChanged: (callback: (text: string | undefined | null) => void) =>
+    ipcRenderer.on("localClipboardChanged", (ev, text) => callback(text)),
 
   writeLog: (message, level, args) => {
     switch (level) {
