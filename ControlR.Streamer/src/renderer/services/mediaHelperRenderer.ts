@@ -2,7 +2,14 @@ export async function setMediaStreams(sourceId: string, peerConnection: RTCPeerC
     window.mainApi.writeLog("Getting stream for media source ID: ", "Info", sourceId);
 
     const constraints = getDefaultConstraints();
-    constraints.video.mandatory.chromeMediaSourceId = sourceId;
+    if (sourceId) {
+        constraints.video.mandatory.chromeMediaSourceId = sourceId;
+        constraints.audio.mandatory.chromeMediaSourceId = sourceId;
+    }
+    else {
+        delete constraints.video.mandatory.chromeMediaSourceId;
+        delete constraints.audio.mandatory.chromeMediaSourceId;
+    }
 
     let stream: MediaStream;
 
@@ -33,7 +40,7 @@ function getDefaultConstraints() {
                 chromeMediaSourceId: ''
             }
         }
-    };    
+    };
 }
 
 function setTrack(stream: MediaStream, peerConnection: RTCPeerConnection) {

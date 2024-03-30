@@ -474,8 +474,8 @@ public partial class RemoteDisplay : IAsyncDisposable
                 return;
             }
 
-            _displays = streamingSessionResult.Value.Displays;
-            _selectedDisplay = _displays?.FirstOrDefault();
+            _displays = streamingSessionResult.Value.Displays ?? [];
+            _selectedDisplay = _displays.FirstOrDefault();
             if (_selectedDisplay is not null)
             {
                 _videoWidth = _selectedDisplay.Width;
