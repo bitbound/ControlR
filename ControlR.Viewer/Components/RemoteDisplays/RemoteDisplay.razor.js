@@ -163,7 +163,7 @@ export async function initialize(componentRef, videoId, iceServers) {
         }
 
         if (state.longPressStarted && state.isDragging) {
-            sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 1, state);
+            sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 0, state);
         }
 
         resetTouchState(state);
