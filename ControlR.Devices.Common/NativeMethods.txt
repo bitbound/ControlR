@@ -2,6 +2,7 @@ SendSAS
 WTSQuerySessionInformation
 WTSGetActiveConsoleSessionId
 WTSEnumerateSessions
+WTSFreeMemory
 WTSOpenServer
 WTS_CURRENT_SERVER_HANDLE
 PROCESS_INFORMATION

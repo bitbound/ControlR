@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
-using System.Runtime.Versioning;
 
 namespace ControlR.Viewer.Components.Devices;
 
@@ -52,6 +51,11 @@ public partial class DeviceContentWindow : IAsyncDisposable
 
     protected override Task OnInitializedAsync()
     {
+        if (EnvironmentHelper.IsMobileDevice)
+        {
+            WindowState = WindowState.Maximized;
+        }
+
         Messenger.Register<DeviceContentWindowStateMessage>(this, HandleDeviceContentWindowStateChanged);
 
         return base.OnInitializedAsync();

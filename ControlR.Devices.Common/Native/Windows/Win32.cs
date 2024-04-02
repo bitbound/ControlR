@@ -151,7 +151,59 @@ public static unsafe partial class Win32
         return result;
     }
 
+
+
     public static IEnumerable<WindowsSession> GetActiveSessions()
+    {
+        var sessions = new List<WindowsSession>();
+        var consoleSessionId = PInvoke.WTSGetActiveConsoleSessionId();
+        sessions.Add(new WindowsSession()
+        {
+            Id = consoleSessionId,
+            Type = WindowsSessionType.Console,
+            Name = "Console",
+            Username = GetUsernameFromSessionId(consoleSessionId)
+        });
+
+        nint ppSessionInfo = nint.Zero;
+        var count = 0;
+        var enumSessionResult = WtsApi32.WTSEnumerateSessions(WtsApi32.WTS_CURRENT_SERVER_HANDLE, 0, 1, ref ppSessionInfo, ref count);
+        var dataSize = Marshal.SizeOf(typeof(WtsApi32.WTS_SESSION_INFO));
+        var current = ppSessionInfo;
+
+        if (enumSessionResult == 0)
+        {
+            return sessions;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            var wtsInfoObj = Marshal.PtrToStructure(current, typeof(WtsApi32.WTS_SESSION_INFO));
+            if (wtsInfoObj is not WtsApi32.WTS_SESSION_INFO sessionInfo)
+            {
+                continue;
+            }
+
+            current += dataSize;
+            if (sessionInfo.State == WtsApi32.WTS_CONNECTSTATE_CLASS.WTSActive && sessionInfo.SessionID != consoleSessionId)
+            {
+
+                sessions.Add(new WindowsSession()
+                {
+                    Id = sessionInfo.SessionID,
+                    Name = sessionInfo.pWinStationName,
+                    Type = WindowsSessionType.RDP,
+                    Username = GetUsernameFromSessionId(sessionInfo.SessionID)
+                });
+            }
+        }
+
+        WtsApi32.WTSFreeMemory(ppSessionInfo);
+
+        return sessions;
+    }
+
+    public static IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
     {
         var sessions = new List<WindowsSession>();
 
@@ -166,6 +218,7 @@ public static unsafe partial class Win32
                 Username = GetUsernameFromSessionId(consoleSessionId)
             });
 
+
             var enumSessionResult = PInvoke.WTSEnumerateSessions(
                 HANDLE.WTS_CURRENT_SERVER_HANDLE,
                 Reserved: 0,
@@ -177,29 +230,29 @@ public static unsafe partial class Win32
             {
                 return [.. sessions];
             }
-
+            
             var dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFOW));
 
-            for (var i = 0; i < count; i += dataSize)
-            {
-                var current = ppSessionInfos + i;
-                var sessionInfo = *current;
-
-                if (sessionInfo.State == WTS_CONNECTSTATE_CLASS.WTSActive && sessionInfo.SessionId != consoleSessionId)
+            for (var i = 0; i < count; i++)
+            { 
+                if (ppSessionInfos->State == WTS_CONNECTSTATE_CLASS.WTSActive && ppSessionInfos->SessionId != consoleSessionId)
                 {
                     sessions.Add(new WindowsSession()
                     {
-                        Id = sessionInfo.SessionId,
-                        Name = sessionInfo.pWinStationName.ToString(),
+                        Id = ppSessionInfos->SessionId,
+                        Name = ppSessionInfos->pWinStationName.ToString(),
                         Type = WindowsSessionType.RDP,
-                        Username = GetUsernameFromSessionId(sessionInfo.SessionId)
+                        Username = GetUsernameFromSessionId(ppSessionInfos->SessionId)
                     });
                 }
+                ppSessionInfos += dataSize;
             }
+            PInvoke.WTSFreeMemory(ppSessionInfos);
         }
 
         return [.. sessions];
     }
+
 
     public static bool GetCurrentThreadDesktop(out string desktopName)
     {

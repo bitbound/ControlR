@@ -5,6 +5,7 @@ namespace ControlR.Shared.Services;
 public interface IEnvironmentHelper
 {
     bool IsDebug { get; }
+    bool IsMobileDevice { get; }
     bool IsWindows { get; }
     SystemPlatform Platform { get; }
     string StartupDirectory { get; }
@@ -27,6 +28,7 @@ internal class EnvironmentHelper : IEnvironmentHelper
         }
     }
 
+    public bool IsMobileDevice => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
     public bool IsWindows => OperatingSystem.IsWindows();
 
     public SystemPlatform Platform

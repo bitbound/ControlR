@@ -35,6 +35,12 @@ services:
       #- ControlR_ApplicationOptions__AdminPublicKeys__0=
       #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
       #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
+
+      # Uncomment and add an entry for each proxy that will be forwarding traffic
+      # to ControlR.  The app will not work correctly if this isn't done or if the
+      # forwarded headers are not in the correct format.
+      # See the docs for more details:  
+      # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #- ControlR_ApplicationOptions__KnownProxies__0=
 
 volumes:
