@@ -1,25 +1,26 @@
 ﻿@inject IDialogService Dialogs
 @inject ISettings Settings
 @inject IAppState AppState
+@inject IFolderPicker FolderPicker
 @inject ControlR.Devices.Common.Services.IFileSystem FileIO
 @inject IKeyProvider KeyProvider
 @inject ILogger<KeypairExportDialog> Logger
 
 <MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h5" Color="Color.Primary">
+            Export Keypair
+        </MudText>
+    </TitleContent>
     <DialogContent>
         <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
             <MudCard>
-                <MudCardHeader Class="d-block">
-                    <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
-                        Export Keypair
-                    </MudText>
-                </MudCardHeader>
                 <MudCardContent>
-                    <MudText>
+                    <MudText GutterBottom>
                         Export your public/private keypair to a file, which can
                         be imported on other devices.
                     </MudText>
-                    <MudText>
+                    <MudText GutterBottom>
                         Your private key is encrypted within the file using the
                         same passphrase that you used when you created it.  If
                         you store this file long-term, it's recommended that you
@@ -51,7 +52,7 @@
     </DialogContent>
 </MudDialog>
 
- @code {
+@code {
     private bool _formIsValid;
     private MudForm? _form;
 
@@ -80,7 +81,7 @@
 
     private async Task OpenFolderDialog()
     {
-        var result = await FolderPicker.Default.PickAsync(KeyExportPath, CancellationToken.None);
+        var result = await FolderPicker.PickAsync(KeyExportPath, CancellationToken.None);
         if (result.Exception is not null)
         {
             Logger.LogError(result.Exception, "Error while picking export folder.");

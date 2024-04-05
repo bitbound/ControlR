@@ -12,6 +12,7 @@ using FileSystem = Microsoft.Maui.Storage.FileSystem;
 using FileSystemCore = ControlR.Devices.Common.Services.FileSystem;
 using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
 using ControlR.Shared.Services.Buffers;
+using CommunityToolkit.Maui.Storage;
 
 namespace ControlR.Viewer;
 
@@ -56,6 +57,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(Clipboard.Default);
         builder.Services.AddSingleton(Launcher.Default);
         builder.Services.AddSingleton(VersionTracking.Default);
+        builder.Services.AddSingleton(FolderPicker.Default);
 
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
@@ -89,7 +91,7 @@ public static class MauiProgram
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
 #endif
-
+        
         return builder.Build();
     }
 
