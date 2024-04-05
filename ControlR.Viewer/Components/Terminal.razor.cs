@@ -11,7 +11,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using System.Collections.Concurrent;
 
-namespace ControlR.Viewer.Components.Devices;
+namespace ControlR.Viewer.Components;
 
 public partial class Terminal : IAsyncDisposable
 {

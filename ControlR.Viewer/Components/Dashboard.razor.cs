@@ -14,7 +14,7 @@ using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
-using ControlR.Viewer.Components.Devices;
+using ControlR.Viewer.Components;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;

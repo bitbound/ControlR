@@ -5,7 +5,6 @@ using ControlR.Shared.Enums;
 using ControlR.Shared.Helpers;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
-using ControlR.Viewer.Components.Devices;
 using ControlR.Viewer.Enums;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;

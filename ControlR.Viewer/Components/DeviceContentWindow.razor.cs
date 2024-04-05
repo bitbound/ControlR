@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
 
-namespace ControlR.Viewer.Components.Devices;
+namespace ControlR.Viewer.Components;
 
 public partial class DeviceContentWindow : IAsyncDisposable
 {
