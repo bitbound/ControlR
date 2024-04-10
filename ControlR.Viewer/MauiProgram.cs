@@ -13,6 +13,12 @@ using FileSystemCore = ControlR.Devices.Common.Services.FileSystem;
 using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
 using ControlR.Shared.Services.Buffers;
 using CommunityToolkit.Maui.Storage;
+using ControlR.Viewer.Services.Interfaces;
+#if WINDOWS
+using ControlR.Viewer.Services.Windows;
+#elif ANDROID
+using ControlR.Viewer.Services.Android;
+#endif
 
 namespace ControlR.Viewer;
 
@@ -71,7 +77,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
-        builder.Services.AddSingleton<IUpdateManager, UpdateManager>();
         builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
         builder.Services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
@@ -85,6 +90,14 @@ public static class MauiProgram
 
         builder.Services.AddTransient<IClipboardManager, ClipboardManager>();
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+
+#if WINDOWS
+        builder.Services.AddSingleton<IUpdateManager, UpdateManagerWindows>();
+#elif ANDROID
+        builder.Services.AddSingleton<IUpdateManager, UpdateManagerAndroid>();
+#else
+        throw new PlatformNotSupportedException();
+#endif
 
 
 #if DEBUG

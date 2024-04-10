@@ -4,15 +4,7 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using ControlR.Viewer.Platforms.Android;
-
-#endif
-
-#if WINDOWS
-using ControlR.Devices.Common.Services;
-using ControlR.Shared;
-using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
-#endif
-
+using ControlR.Viewer.Services;
 using Bitbound.SimpleMessenger;
 using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Models.Messages;
@@ -20,31 +12,18 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Services;
+using ControlR.Viewer.Services.Interfaces;
 
-namespace ControlR.Viewer.Services;
+namespace ControlR.Viewer.Services.Android;
 
-internal interface IUpdateManager
-{
-    Task<Result<bool>> CheckForUpdate();
-
-    Task<Result> InstallCurrentVersion();
-}
-
-internal class UpdateManager(
+internal class UpdateManagerAndroid(
     IVersionApi _versionApi,
-#if ANDROID
     IHttpClientFactory _clientFactory,
     IDelayer _delayer,
     INotificationProvider _notify,
-#endif
-#if WINDOWS
-    IDownloadsApi _downloadsApi,
-    IFileSystem _fileSystem,
-    IProcessManager _processManager,
-#endif
     IMessenger _messenger,
     ISettings _settings,
-    ILogger<UpdateManager> _logger) : IUpdateManager
+    ILogger<UpdateManagerAndroid> _logger) : IUpdateManager
 {
     public const string PackageInstalledAction =
                      "com.example.android.apis.content.SESSION_API_PACKAGE_INSTALLED";
@@ -55,6 +34,7 @@ internal class UpdateManager(
     {
         try
         {
+
             var result = await _versionApi.GetCurrentViewerVersion();
             if (!result.IsSuccess)
             {
@@ -87,9 +67,6 @@ internal class UpdateManager(
 
         try
         {
-#if WINDOWS
-            return await InstallCurrentVersionWindows();
-#elif ANDROID
             if (OperatingSystem.IsAndroidVersionAtLeast(31))
             {
                 return await InstallCurrentVersionAndroid();
@@ -103,10 +80,6 @@ internal class UpdateManager(
                     "OK");
                 return Result.Fail("Android 12 required.");
             }
-#else
-
-            return Result.Fail("Platform not supported.");
-#endif
         }
         catch (Exception ex)
         {
@@ -118,8 +91,6 @@ internal class UpdateManager(
         }
         return Result.Fail("Installation failed.");
     }
-
-#if ANDROID
 
     [SupportedOSPlatform("android31.0")]
     private async Task<Result> InstallCurrentVersionAndroid()
@@ -202,34 +173,5 @@ internal class UpdateManager(
         installerSession.Commit(receiver!.IntentSender);
         return Result.Ok();
     }
-
-#endif
-
-#if WINDOWS
-    [SupportedOSPlatform("windows")]
-    private async Task<Result> InstallCurrentVersionWindows()
-    {
-        var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
-        if (_fileSystem.FileExists(tempPath))
-        {
-            _fileSystem.DeleteFile(tempPath);
-        }
-
-        var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
-        if (!downloadResult.IsSuccess)
-        {
-            return downloadResult;
-        }
-
-        await _processManager.StartAndWaitForExit(
-              "powershell.exe",
-              $"-Command \"& {{" +
-              $"Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion; " +
-              $"Start-Process -FilePath explorer.exe -ArgumentList shell:appsFolder\\8956DD24-5084-4303-BE59-0E1119CDB38C_44e6yepvw4x8a!App;}}\"",
-              true,
-              TimeSpan.FromMinutes(1));
-
-        return Result.Ok();
-    }
-#endif
 }
+#endif

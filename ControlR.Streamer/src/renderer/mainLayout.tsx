@@ -143,7 +143,6 @@ const layoutFrameCss = {
 } as CSSProperties;
 
 const brandingCss = {
-  //backgroundImage: "linear-gradient(145deg, rgb(30, 30, 30), #8bc34a 500%)",
   backgroundColor: "rgb(20, 20, 20)",
 } as CSSProperties;
 

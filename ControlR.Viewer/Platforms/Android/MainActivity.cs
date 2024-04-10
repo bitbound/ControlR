@@ -2,6 +2,7 @@
 using Android.Content;
 using Android.Content.PM;
 using ControlR.Viewer.Services;
+using ControlR.Viewer.Services.Android;
 using MauiApp = Microsoft.Maui.Controls.Application;
 
 namespace ControlR.Viewer.Platforms.Android;
@@ -32,7 +33,7 @@ public class MainActivity : MauiAppCompatActivity
             return;
         }
 
-        if (intent.Action == UpdateManager.PackageInstalledAction)
+        if (intent.Action == UpdateManagerAndroid.PackageInstalledAction)
         {
             if (intent.Extras is null)
             {
