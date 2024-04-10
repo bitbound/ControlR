@@ -1,7 +1,7 @@
 {
   "name": "controlr-streamer",
   "productName": "controlr-streamer",
-  "version": "2024.04.090303",
+  "version": "2024.04.100421",
   "description": "Zero-trust remote control.",
   "main": ".webpack/main",
   "scripts": {
@@ -38,7 +38,7 @@
     "app-builder-lib": "^24.13.3",
     "css-loader": "^7.1.0",
     "electron": "^29.2.0",
-    "eslint": "^9.0.0",
+    "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
     "fork-ts-checker-webpack-plugin": "^9.0.2",
     "node-loader": "^2.0.0",
@@ -52,7 +52,7 @@
     "@microsoft/signalr": "^8.0.0",
     "@microsoft/signalr-protocol-msgpack": "^8.0.0",
     "@msgpack/msgpack": "^3.0.0-beta2",
-    "@nut-tree/nut-js": "^4.1.0",
+    "@nut-tree/nut-js": "^3.1.2",
     "bootstrap": "^5.3.3",
     "electron-squirrel-startup": "^1.0.0",
     "react": "^18.2.0",
