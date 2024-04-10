@@ -216,12 +216,20 @@ public partial class Dashboard
 
     private async Task Refresh()
     {
-        using var _ = AppState.IncrementBusyCounter();
-        await DeviceCache.SetAllOffline();
-        await InvokeAsync(StateHasChanged);
-        await ViewerHub.RequestDeviceUpdates();
-        await RefreshLatestAgentVersion();
-        Snackbar.Add("Device refresh requested", Severity.Success);
+        try
+        {
+            using var _ = AppState.IncrementBusyCounter();
+            await DeviceCache.SetAllOffline();
+            await InvokeAsync(StateHasChanged);
+            await ViewerHub.RequestDeviceUpdates();
+            await RefreshLatestAgentVersion();
+            Snackbar.Add("Device refresh requested", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while refreshing the dashboard.");
+            Snackbar.Add("Dashboard refresh failed", Severity.Error);
+        }
     }
 
     private async Task RefreshLatestAgentVersion()

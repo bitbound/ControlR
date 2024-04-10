@@ -298,12 +298,12 @@ internal class ViewerHubConnection(
                     await Connection.StopAsync(cancellationToken);
                 }
                 await Start(cancellationToken);
+                break;
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
             }
-            break;
         }
     }
 
