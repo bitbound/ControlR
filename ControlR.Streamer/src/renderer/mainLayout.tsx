@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useState } from "react";
-import { iconImage512x512Base64 } from "./images";
+import appicon from "../../assets/appicon.png";
 import Home from "./pages/home";
 import { BiWrench, BiHelpCircle, BiInfoCircle } from "react-icons/bi";
 import SessionIndicator from "./components/sessionIndicator";
@@ -15,7 +15,6 @@ export default function MainLayout() {
 
   useEffect(() => {
     (async () => {
-      const notifyUser = await window.mainApi.getNotifyUser();
       const sessionId = await window.mainApi.getSessionId();
       setState({
         sessionId: sessionId,
@@ -84,10 +83,7 @@ const FullLayout = () => {
       <div style={sidebarCss}>
         <div className="px-2 py-1 text-light" style={brandingCss}>
           <div className="d-flex">
-            <img
-              src={iconImage512x512Base64}
-              style={{ width: "42px", height: "42px" }}
-            />
+            <img src={appicon} style={{ width: "42px", height: "42px" }} />
             <strong
               style={{
                 fontSize: "18px",

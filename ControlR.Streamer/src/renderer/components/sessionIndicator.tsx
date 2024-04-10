@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useState } from "react";
-import { iconImage512x512Base64 } from "../images";
+import appicon from "../../assets/appicon.png";
 import "./sessionIndicator.tsx.css";
 
 export default function SessionIndicator() {
@@ -27,7 +27,7 @@ export default function SessionIndicator() {
   return (
     <div style={wrapperCss} className="draggable">
       <div>
-        <img src={iconImage512x512Base64} style={logoCss} />
+        <img src={appicon} style={logoCss} />
       </div>
       <div className="text-primary">{message}</div>
     </div>

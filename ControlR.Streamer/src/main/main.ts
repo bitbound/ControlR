@@ -27,6 +27,7 @@ const createMainWindow = (): void => {
   const mainWindow = new BrowserWindow({
     height: windowHeight,
     width: windowWidth,
+    show: !appState.isUnattended || appState.notifyUser,
     title: "ControlR",
     titleBarStyle: titleBarStyle,
     icon: getAssetsPath() + "/appicon.png",
@@ -63,6 +64,11 @@ const createMainWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", async () => {
+  if (!appState.isUnattended) {
+    writeLog("Attended sessions are not implemented.", "Error");
+    app.exit();
+    return;
+  }
   setCspHandler();
   createMainWindow();
 });
@@ -92,8 +98,8 @@ function setCspHandler() {
         ...details.responseHeaders,
         "Content-Security-Policy": [
           "default-src 'self' 'unsafe-inline' 'unsafe-eval' " +
-          `${appState.serverUri} ${appState.websocketUri} data: https://fonts.googleapis.com; ` +
-          "font-src https://fonts.googleapis.com https://fonts.gstatic.com;",
+            `${appState.serverUri} ${appState.websocketUri} data: https://fonts.googleapis.com; ` +
+            "font-src https://fonts.googleapis.com https://fonts.gstatic.com;",
         ],
       },
     });

@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "allowJs": true,
-    "module": "commonjs",
+    "module": "CommonJS",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
