@@ -27,13 +27,6 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            // If AppId is populated, this was installed from the Windows Store.
-            // We'll let it manage updates.
-            if (CurrentApp.AppId != Guid.Empty)
-            {
-                return Result.Ok(false);
-            }
-
             var result = await _versionApi.GetCurrentViewerVersion();
             if (!result.IsSuccess)
             {
@@ -79,12 +72,18 @@ internal class UpdateManagerWindows(
             }
 
             await _processManager.StartAndWaitForExit(
-                  "powershell.exe",
-                  $"-Command \"& {{" +
-                  $"Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion; " +
-                  $"Start-Process -FilePath explorer.exe -ArgumentList shell:appsFolder\\8956DD24-5084-4303-BE59-0E1119CDB38C_44e6yepvw4x8a!App;}}\"",
-                  true,
-                  TimeSpan.FromMinutes(1));
+                fileName: "explorer.exe", 
+                arguments: tempPath, 
+                useShellExec: true, 
+                timeout: TimeSpan.FromMinutes(1));
+
+            //await _processManager.StartAndWaitForExit(
+            //      "powershell.exe",
+            //      $"-Command \"& {{" +
+            //      $"Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion; " +
+            //      $"Start-Process -FilePath explorer.exe -ArgumentList shell:appsFolder\\8956DD24-5084-4303-BE59-0E1119CDB38C_44e6yepvw4x8a!App;}}\"",
+            //      true,
+            //      TimeSpan.FromMinutes(1));
 
             return Result.Ok();
         }

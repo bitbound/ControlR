@@ -24,7 +24,8 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2024.4.9.2119</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.4.10.2047</ApplicationDisplayVersion>
+
 
 
 		<ApplicationVersion>1</ApplicationVersion>
@@ -43,11 +44,14 @@
 		<PackageCertificateThumbprint>E0D825978AFF9CB4FDFE7C65398F417F92D07B6D</PackageCertificateThumbprint>
 
 		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
-		<AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+		<AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+		<AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
-		<AppInstallerUri>https://controlr.app/downloads/ControlR.Viewer.msix</AppInstallerUri>
+		<AppInstallerUri>https://controlr.app/downloads</AppInstallerUri>
+
+
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+		<AppxPackageSigningTimestampServerUrl>http://timestamp.digicert.com</AppxPackageSigningTimestampServerUrl>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">

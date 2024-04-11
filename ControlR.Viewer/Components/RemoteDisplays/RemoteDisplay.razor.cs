@@ -92,26 +92,23 @@ public partial class RemoteDisplay : IAsyncDisposable
             return classNames.ToLower();
         }
     }
-    private string VideoDisplayCss
+    private string VideoStyle
     {
         get
         {
-            return _isStreamLoaded ?
+            var style = _isStreamLoaded ?
                 "display: unset;" :
                 "display: none;";
-        }
-    }
-    private string VideoSizeCss
-    {
-        get
-        {
+
             if (_viewMode is ViewMode.Fit or ViewMode.Stretch || _videoHeight < 1 || _videoWidth < 1)
             {
                 return string.Empty;
             }
-            return $"width: {_videoWidth}px; height: {_videoHeight}px;";
+
+            return $"{style} width: {_videoWidth}px; height: {_videoHeight}px;";
         }
     }
+
     private string VirtualKeyboardText
     {
         get
@@ -299,6 +296,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             return;
         }
+
+        _isStreamReady = false;
+        _isStreamLoaded = false;
+        _statusProgress = -1;
 
         await SetStatusMessage("Switching desktops");
 

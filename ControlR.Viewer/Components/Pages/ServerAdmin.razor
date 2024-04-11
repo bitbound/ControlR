@@ -122,7 +122,16 @@
 
     private async Task ClearAlert()
     {
-        await ViewerHub.ClearAlert();
+        try
+        {
+            await ViewerHub.ClearAlert();
+            Snackbar.Add("Alert cleared on the server", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while clearing alert on the server.");
+            Snackbar.Add("Failed to clear the alert");
+        }
     }
 
     private async Task RefreshServerStats()
@@ -150,6 +159,15 @@
 
     private async Task SendBroadcast()
     {
-        await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
+        try
+        {
+            await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
+            Snackbar.Add("Alert broadcasted", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while broadcasting alert");
+            Snackbar.Add("Failed to broadcast alert", Severity.Error);
+        }
     }
 }
