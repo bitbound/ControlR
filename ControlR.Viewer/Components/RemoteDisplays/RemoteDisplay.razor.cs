@@ -102,7 +102,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
             if (_viewMode is ViewMode.Fit or ViewMode.Stretch || _videoHeight < 1 || _videoWidth < 1)
             {
-                return string.Empty;
+                return style;
             }
 
             return $"{style} width: {_videoWidth}px; height: {_videoHeight}px;";
