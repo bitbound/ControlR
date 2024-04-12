@@ -14,7 +14,7 @@ public interface IViewerHub
 
     Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
-    Task<IceServer[]> GetIceServers(SignedPayloadDto dto);
+    Task<IceServer[]> GetIceServers();
 
     Task<Result<ServerStatsDto>> GetServerStats();
     Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);

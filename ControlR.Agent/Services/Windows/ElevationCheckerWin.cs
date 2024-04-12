@@ -1,8 +1,8 @@
-﻿using ControlR.Devices.Common.Services.Interfaces;
+﻿using ControlR.Agent.Interfaces;
 using System.Runtime.Versioning;
 using System.Security.Principal;
 
-namespace ControlR.Devices.Common.Services.Windows;
+namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows")]
 public class ElevationCheckerWin : IElevationChecker

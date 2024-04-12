@@ -1,11 +1,11 @@
 ﻿using ControlR.Agent.Models.IpcDtos;
-using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using SimpleIpc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
+using ControlR.Agent.Native.Windows;
 
 namespace ControlR.Agent.Services.Windows;
 

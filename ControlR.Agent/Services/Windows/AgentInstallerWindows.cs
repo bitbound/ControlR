@@ -1,7 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Services;
-using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;

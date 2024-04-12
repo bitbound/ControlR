@@ -1,7 +1,7 @@
-﻿using ControlR.Devices.Common.Native.Linux;
-using ControlR.Devices.Common.Services.Interfaces;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Native.Linux;
 
-namespace ControlR.Devices.Common.Services.Linux;
+namespace ControlR.Agent.Services.Linux;
 
 public class ElevationCheckerLinux : IElevationChecker
 {

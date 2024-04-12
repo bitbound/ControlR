@@ -1,7 +1,7 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Models.IpcDtos;
-using ControlR.Devices.Common.Native.Windows;
+using ControlR.Agent.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;

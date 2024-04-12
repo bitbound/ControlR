@@ -162,8 +162,7 @@ internal class ViewerHubConnection(
     {
         try
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.None, _appState.UserKeys.PrivateKey);
-            var iceServers = await Connection.InvokeAsync<IceServer[]>(nameof(IViewerHub.GetIceServers), signedDto);
+            var iceServers = await Connection.InvokeAsync<IceServer[]>(nameof(IViewerHub.GetIceServers));
             return Result.Ok(iceServers);
         }
         catch (Exception ex)

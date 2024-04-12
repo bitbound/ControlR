@@ -1,6 +1,6 @@
 ﻿using ControlR.Shared.Models;
 
-namespace ControlR.Devices.Common.Services.Interfaces;
+namespace ControlR.Agent.Interfaces;
 
 public interface IDeviceDataGenerator
 {

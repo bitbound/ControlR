@@ -1,4 +1,4 @@
-﻿namespace ControlR.Devices.Common.Services.Interfaces;
+﻿namespace ControlR.Agent.Interfaces;
 
 public interface IElevationChecker
 {

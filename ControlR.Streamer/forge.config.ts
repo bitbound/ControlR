@@ -3,7 +3,7 @@ import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
 import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerRpm } from "@electron-forge/maker-rpm";
-import { MakerAppImage } from "@reforged/maker-appimage";
+//import { MakerAppImage } from "@reforged/maker-appimage";
 import { WebpackPlugin } from "@electron-forge/plugin-webpack";
 import { mainConfig } from "./webpack.main.config";
 import { rendererConfig } from "./webpack.renderer.config";
@@ -37,12 +37,12 @@ const config: ForgeConfig = {
         icon: "./assets/assets/appicon.png",
       },
     }),
-    new MakerAppImage({
-      options: {
-        icon: "./assets/assets/appicon.png",
-        categories: ["Utility"],
-      },
-    }),
+    // new MakerAppImage({
+    //   options: {
+    //     icon: "./assets/assets/appicon.png",
+    //     categories: ["Utility"],
+    //   },
+    // }),
     new MakerDeb({
       options: {
         icon: "./assets/assets/appicon.png",

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Common.Native.Linux;
+namespace ControlR.Agent.Native.Linux;
 
 public partial class Libc
 {

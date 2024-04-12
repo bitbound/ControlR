@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
-using ControlR.Devices.Common.Native.Linux;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Models;
@@ -9,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using ControlR.Agent.Native.Linux;
 
 namespace ControlR.Agent.Services.Linux;
 

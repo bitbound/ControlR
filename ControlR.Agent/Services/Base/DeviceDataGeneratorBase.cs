@@ -5,7 +5,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Common.Services.Base;
+namespace ControlR.Agent.Services.Base;
 
 internal class DeviceDataGeneratorBase(
     IEnvironmentHelper environmentHelper,

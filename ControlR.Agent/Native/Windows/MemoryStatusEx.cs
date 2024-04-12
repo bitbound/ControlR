@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Common.Native.Windows;
+namespace ControlR.Agent.Native.Windows;
 
 /// <summary>
 /// contains information about the current state of both physical and virtual memory, including extended memory

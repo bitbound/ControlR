@@ -1,12 +1,12 @@
-﻿using ControlR.Devices.Common.Native.Windows;
-using ControlR.Devices.Common.Services.Base;
-using ControlR.Devices.Common.Services.Interfaces;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Native.Windows;
+using ControlR.Agent.Services.Base;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
 
-namespace ControlR.Devices.Common.Services.Windows;
+namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class DeviceDataGeneratorWin(

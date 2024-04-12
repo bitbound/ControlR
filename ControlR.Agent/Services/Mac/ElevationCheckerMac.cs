@@ -1,7 +1,7 @@
-﻿using ControlR.Devices.Common.Native.Linux;
-using ControlR.Devices.Common.Services.Interfaces;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Native.Linux;
 
-namespace ControlR.Devices.Common.Services.Mac;
+namespace ControlR.Agent.Services.Mac;
 
 public class ElevationCheckerMac : IElevationChecker
 {

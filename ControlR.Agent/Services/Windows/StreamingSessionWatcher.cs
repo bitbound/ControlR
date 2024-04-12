@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
-using System.Timers;
-using Timer = System.Timers.Timer;
 
 namespace ControlR.Agent.Services.Windows;
 

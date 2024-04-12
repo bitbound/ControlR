@@ -14,8 +14,7 @@ namespace ControlR.Server.Hubs;
 public class StreamerHub(
     IStreamerSessionCache _streamerSessionCache,
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
-    IOptionsMonitor<ApplicationOptions> _appOptions,
-    IMeteredApi _meteredApi,
+    IIceServerProvider _iceProvider,
     ILogger<StreamerHub> _logger) : Hub<IStreamerHubClient>
 {
     public Task SetSessionDetails(Guid sessionId, DisplayDto[] displays)
@@ -27,14 +26,7 @@ public class StreamerHub(
 
     public async Task<IceServer[]> GetIceServers()
     {
-        if (_appOptions.CurrentValue.UseMetered &&
-             !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
-        {
-            var servers = await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
-            return servers;
-        }
-
-        return [.. _appOptions.CurrentValue.IceServers];
+        return await _iceProvider.GetIceServers();
     }
 
     public async Task SendIceCandidate(Guid sessionId, string candidateJson)

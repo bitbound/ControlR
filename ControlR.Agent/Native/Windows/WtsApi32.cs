@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Common.Native.Windows;
+namespace ControlR.Agent.Native.Windows;
 public static class WtsApi32
 {
     public enum WTS_CONNECTSTATE_CLASS

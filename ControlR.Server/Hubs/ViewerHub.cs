@@ -29,7 +29,7 @@ public class ViewerHub(
     IStreamerSessionCache _streamerSessionCache,
     IOptionsMonitor<ApplicationOptions> _appOptions,
     IDelayer _delayer,
-    IMeteredApi _meteredApi,
+    IIceServerProvider _iceProvider,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
     private bool IsServerAdmin
@@ -49,16 +49,9 @@ public class ViewerHub(
         }
     }
 
-    public async Task<IceServer[]> GetIceServers(SignedPayloadDto dto)
+    public async Task<IceServer[]> GetIceServers()
     {
-        if (_appOptions.CurrentValue.UseMetered &&
-            !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
-        {
-            var servers = await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
-            return servers;
-        }
-        
-        return [.. _appOptions.CurrentValue.IceServers];
+        return await _iceProvider.GetIceServers();
     }
 
     public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)

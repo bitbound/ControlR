@@ -1,11 +1,12 @@
-﻿using ControlR.Devices.Common.Services.Base;
-using ControlR.Devices.Common.Services.Interfaces;
+﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Services.Base;
+using ControlR.Devices.Common.Services;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Devices.Common.Services.Linux;
+namespace ControlR.Agent.Services.Linux;
 
 internal class DeviceDataGeneratorLinux(
     IProcessManager processInvoker,

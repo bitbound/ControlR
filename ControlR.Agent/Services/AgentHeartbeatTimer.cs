@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Timer = System.Timers.Timer;
 
 namespace ControlR.Agent.Services;
 internal class AgentHeartbeatTimer(

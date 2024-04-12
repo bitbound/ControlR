@@ -1,12 +1,9 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using ControlR.Agent.Models;
-using ControlR.Agent.Services.Windows;
+using ControlR.Agent.Native.Windows;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Messages;
-using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
-using ControlR.Devices.Common.Services.Interfaces;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Extensions;

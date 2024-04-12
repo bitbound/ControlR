@@ -26,7 +26,7 @@ in this Software without prior written authorization from The Open Group.
 
 using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Common.Native.Linux;
+namespace ControlR.Agent.Native.Linux;
 
 internal static unsafe partial class LibX11
 {

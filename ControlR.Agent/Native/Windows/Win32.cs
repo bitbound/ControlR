@@ -1,6 +1,5 @@
 ﻿using ControlR.Shared.Models;
 using Microsoft.Win32.SafeHandles;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -13,7 +12,7 @@ using WTS_CONNECTSTATE_CLASS = global::Windows.Win32.System.RemoteDesktop.WTS_CO
 using WTS_INFO_CLASS = global::Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = global::Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
 
-namespace ControlR.Devices.Common.Native.Windows;
+namespace ControlR.Agent.Native.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 public static unsafe partial class Win32
