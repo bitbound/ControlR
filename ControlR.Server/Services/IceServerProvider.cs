@@ -21,36 +21,47 @@ public class IceServerProvider(
     public async Task<IceServer[]> GetIceServers()
     {
         var iceServers = new List<IceServer>();
-
         try
         {
-
-            if (_appOptions.CurrentValue.UseStaticIceServers &&
-                _appOptions.CurrentValue.IceServers.Count > 0)
-            {
-                iceServers.AddRange(_appOptions.CurrentValue.IceServers);
-            }
-
             if (_appOptions.CurrentValue.UseMetered &&
                 !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
             {
-                var servers = await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
-                iceServers.AddRange(servers);
+                return await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting Metered ICE servers.");
+        }
 
+        try
+        {
             if (_appOptions.CurrentValue.UseCoTurn &&
                 !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.CoTurnSecret))
             {
                 // TODO: Get coTURN creds.
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getitng coTURN ICE servers.");
+        }
 
+        try
+        {
+            if (_appOptions.CurrentValue.UseStaticIceServers &&
+               _appOptions.CurrentValue.IceServers.Count > 0)
+            {
+                return [.._appOptions.CurrentValue.IceServers];
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting ICE servers.");
         }
 
-        return [..iceServers];
+        _logger.LogWarning("No ICE server provider configured.");
+        return [];
     }
 
     private string GenerateTurnPassword(string secret, string username)
