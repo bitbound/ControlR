@@ -174,8 +174,8 @@
                 await Settings.SetPassphrase(_passphrase);
             }
 
-            Snackbar.Add("Keypair created", Severity.Success);
             await Settings.UpdateKeypair(_username, keypair);
+            Snackbar.Add("Keypair created", Severity.Success);
         }
         catch (Exception ex)
         {

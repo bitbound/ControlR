@@ -8,6 +8,7 @@
 @inject IAppState AppState
 @inject IMessenger Messenger
 @inject IFileSaver FileSaver
+@inject IKeyProvider KeyProvider
 @inject ILogger<KeysPage> Logger
 
 <PageTitle>Key Management</PageTitle>
@@ -32,7 +33,7 @@
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-        Export
+        Export Keypair
     </MudText>
     <MudText GutterBottom>
         Export your public/private keypair to a file, which can
@@ -43,8 +44,31 @@
         If you store this file long-term, it's recommended that you
         put it in a secure location, such as a password vault.
     </MudText>
-    <MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="ExportKeypair">
-        Export Keypair
+    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ExportKeypair" Class="mt-2">
+        Export
+    </MudButton>
+</div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Change Passphrase
+    </MudText>
+    <MudText GutterBottom>
+        Change the passphrase that's used to encrypt/decrypt your private key.
+    </MudText>
+    <MudTextField T="string"
+                  @bind-Value="_newPassphrase"
+                  @ref="_newPassphraseField"
+                  Label="New Passphrase"
+                  HelperText="Enter a new PIN or password to protected your private key."
+                  Immediate="true"
+                  InputType="InputType.Password"
+                  OnKeyDown="HandlePassphraseKeyDown"
+                  Required
+                  Validation="(string e) => ValidatePassphrase(e)" />
+
+    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ChangePassphrase" Class="mt-2">
+        Change
     </MudButton>
 </div>
 
@@ -57,19 +81,63 @@
         resetting to the app.  Export your keys first if you want
         to keep them, or they will be lost permanently.
     </MudText>
-    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair">
+    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair" Class="mt-2">
         Remove Keypair
     </MudButton>
 </div>
 
 @code {
     private string _publicKey = string.Empty;
+    private string _newPassphrase = string.Empty;
+    private MudTextField<string>? _newPassphraseField;
 
     protected override void OnInitialized()
     {
         _publicKey = Settings.PublicKeyBase64;
 
         base.OnInitialized();
+    }
+
+    private async Task ChangePassphrase()
+    {
+        try
+        {
+            if (_newPassphraseField is null)
+            {
+                return;
+            }
+
+            await _newPassphraseField.Validate();
+            if (_newPassphraseField.ValidationErrors.Any())
+            {
+                return;
+            }
+
+            var newKeyPair = KeyProvider.ChangePassword(AppState.UserKeys, _newPassphrase);
+            AppState.SetUserKeys(newKeyPair);
+            var keyDto = new IdentityDto()
+                {
+                    PublicKey = newKeyPair.PublicKey,
+                    Username = Settings.Username
+                };
+
+            HttpConfigurer.UpdateClientAuthorizations(keyDto);
+
+            if (Settings.RememberPassphrase)
+            {
+                await Settings.SetPassphrase(_newPassphrase);
+            }
+
+            await Settings.UpdateKeypair(Settings.Username, newKeyPair);
+
+            _newPassphrase = string.Empty;
+            Snackbar.Add("Passphrase changed successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while changing passphrase.");
+            Snackbar.Add("Failed to change passphrase (see logs)", Severity.Error);
+        }
     }
 
     private async Task CopyPublicKey()
@@ -86,7 +154,6 @@
                 {
                     EncryptedPrivateKey = Convert.ToBase64String(AppState.UserKeys.EncryptedPrivateKey),
                     PublicKey = Convert.ToBase64String(AppState.UserKeys.PublicKey),
-                    Username = Settings.Username
                 };
 
             var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
@@ -107,6 +174,14 @@
         }
     }
 
+    private async Task HandlePassphraseKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await ChangePassphrase();
+        }
+    }
+
     private async Task RemoveKeypair()
     {
         var result = await Dialogs.ShowMessageBox(
@@ -124,5 +199,20 @@
         AppState.RemoveUserKeys();
         await Settings.Clear();
         NavManager.NavigateTo(string.Empty, false);
+    }
+
+    private string? ValidatePassphrase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Passphrase is required.";
+        }
+
+
+        if (input is null || input.Length < 4 || input.Length > 64)
+        {
+            return "Passphrase must be between 4 and 64 characters.";
+        }
+        return null;
     }
 }

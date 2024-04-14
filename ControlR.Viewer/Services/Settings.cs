@@ -34,6 +34,7 @@ public interface ISettings
     Task UpdateKeypair(string username, UserKeyPair keypair);
 
     Task UpdateKeypair(KeypairExport export);
+    Task UpdateKeypair(UserKeyPair keypair);
 }
 
 internal class Settings(
@@ -148,6 +149,11 @@ internal class Settings(
     public async Task UpdateKeypair(string username, UserKeyPair keypair)
     {
         Username = username;
+        await UpdateKeypair(keypair);
+    }
+
+    public async Task UpdateKeypair(UserKeyPair keypair)
+    {
         PublicKey = keypair.PublicKey;
         PrivateKey = keypair.PrivateKey;
         await SetEncryptedPrivateKey(keypair.EncryptedPrivateKey);
@@ -156,7 +162,6 @@ internal class Settings(
 
     public async Task UpdateKeypair(KeypairExport export)
     {
-        Username = export.Username;
         PublicKey = Convert.FromBase64String(export.PublicKey);
         await SetEncryptedPrivateKey(Convert.FromBase64String(export.EncryptedPrivateKey));
         await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);

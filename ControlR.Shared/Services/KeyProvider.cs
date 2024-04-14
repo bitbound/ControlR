@@ -8,6 +8,7 @@ namespace ControlR.Shared.Services;
 
 public interface IKeyProvider
 {
+    UserKeyPair ChangePassword(UserKeyPair keyPair, string newPassword);
     SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey);
 
     SignedPayloadDto CreateSignedDto<T>(T payload, DtoType dtoType, byte[] privateKey);
@@ -29,6 +30,14 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
     private readonly RSASignaturePadding _signaturePadding = RSASignaturePadding.Pkcs1;
     private readonly ISystemTime _systemTime = systemTime;
 
+    public UserKeyPair ChangePassword(UserKeyPair keyPair, string newPassword)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(keyPair.PrivateKey, out _);
+        var encryptedPrivateKey = rsa.ExportEncryptedPkcs8PrivateKey(newPassword, _pbeParameters);
+        return new UserKeyPair(keyPair.PublicKey, keyPair.PrivateKey, encryptedPrivateKey);
+    }
+
     public SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey)
     {
         using var rsa = RSA.Create();
@@ -44,7 +53,6 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
         var payloadBytes = MessagePackSerializer.Serialize(payload);
         return CreateSignedDtoImpl(rsa, payloadBytes, dtoType);
     }
-
     public KeypairExport ExportKeypair(string username, string password, byte[] privateKey)
     {
         using var rsa = RSA.Create();
@@ -57,7 +65,6 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
         {
             EncryptedPrivateKey = Convert.ToBase64String(encryptedPrivateKey),
             PublicKey = Convert.ToBase64String(publicKey),
-            Username = username
         };
         return export;
     }
