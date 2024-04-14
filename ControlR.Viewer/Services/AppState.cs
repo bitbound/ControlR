@@ -17,13 +17,8 @@ public interface IAppState
     bool IsServerAdministrator { get; internal set; }
     bool KeysVerified { get; set; }
     int PendingOperations { get; }
-    UserKeyPair UserKeys { get; }
-
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
 
-    void RemoveUserKeys();
-
-    void SetUserKeys(UserKeyPair userKeys);
 }
 
 internal class AppState(
@@ -33,7 +28,6 @@ internal class AppState(
     private static readonly CancellationTokenSource _appExitingCts = new();
     private readonly CancellationToken _appExiting = _appExitingCts.Token;
     private volatile int _busyCounter;
-    private UserKeyPair? _userKeys;
 
     public CancellationToken AppExiting => _appExiting;
 
@@ -46,7 +40,7 @@ internal class AppState(
                 return AuthenticationState.NoKeysPresent;
             }
 
-            if (_userKeys is null)
+            if (!_settings.UserKeysPresent)
             {
                 return AuthenticationState.LocalKeysStored;
             }
@@ -66,11 +60,6 @@ internal class AppState(
     public bool KeysVerified { get; set; }
     public int PendingOperations => _busyCounter;
 
-    public UserKeyPair UserKeys
-    {
-        get => _userKeys ?? throw new InvalidOperationException("User keypair has not yet been loaded.");
-        set => _userKeys = value;
-    }
 
     public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
     {
@@ -85,15 +74,5 @@ internal class AppState(
 
             additionalDisposedAction?.Invoke();
         });
-    }
-
-    public void RemoveUserKeys()
-    {
-        _userKeys = null;
-    }
-
-    public void SetUserKeys(UserKeyPair userKeys)
-    {
-        _userKeys = userKeys;
     }
 }

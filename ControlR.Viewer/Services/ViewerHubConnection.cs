@@ -83,7 +83,7 @@ internal class ViewerHubConnection(
             async () =>
             {
                 await WaitForConnection();
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _settings.UserKeys.PrivateKey);
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert), signedDto);
             });
     }
@@ -93,7 +93,7 @@ internal class ViewerHubConnection(
         await TryInvoke(
             async () =>
             {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.CloseStreamingSession, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.CloseStreamingSession, _settings.UserKeys.PrivateKey);
                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), sessionId, signedDto);
             });
     }
@@ -103,7 +103,7 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var request = new CloseTerminalRequestDto(terminalId);
-            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
         });
     }
@@ -116,7 +116,7 @@ internal class ViewerHubConnection(
                 Guard.IsNotNull(Connection.ConnectionId);
 
                 var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _settings.UserKeys.PrivateKey);
                 return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, signedDto);
             },
             () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
@@ -127,8 +127,8 @@ internal class ViewerHubConnection(
         return await TryInvoke(
             async () =>
             {
-                var request = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentAppSettings, _appState.UserKeys.PrivateKey);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.UserKeys.PrivateKey);
+                var request = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentAppSettings, _settings.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _settings.UserKeys.PrivateKey);
                 return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, signedDto);
             },
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
@@ -200,7 +200,7 @@ internal class ViewerHubConnection(
                 _settings.NotifyUserSessionStart,
                 _settings.Username);
 
-            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _settings.UserKeys.PrivateKey);
 
             var result = await Connection.InvokeAsync<Result<StreamerHubSession>>(nameof(IViewerHub.GetStreamingSession), agentConnectionId, sessionId, signedDto);
             if (!result.IsSuccess)
@@ -220,7 +220,7 @@ internal class ViewerHubConnection(
     {
         try
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.WindowsSessions, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.WindowsSessions, _settings.UserKeys.PrivateKey);
             var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, signedDto);
             return Result.Ok(sessions);
         }
@@ -235,7 +235,7 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.InvokeCtrlAltDel, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.InvokeCtrlAltDel, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
         });
     }
@@ -311,7 +311,7 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             await WaitForConnection();
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
         });
     }
@@ -322,7 +322,7 @@ internal class ViewerHubConnection(
             async () =>
             {
                 await WaitForConnection();
-                var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _settings.UserKeys.PrivateKey);
                 return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, signedDto);
             },
             () => Result.Fail("Failed to send app settings"));
@@ -335,7 +335,7 @@ internal class ViewerHubConnection(
             {
                 await WaitForConnection();
                 var dto = new AlertBroadcastDto(message, severity, isSticky);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _settings.UserKeys.PrivateKey);
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
             });
     }
@@ -344,7 +344,7 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateSignedDto(iceCandidateJson, DtoType.RtcIceCandidate, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(iceCandidateJson, DtoType.RtcIceCandidate, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync("SendSignedDtoToStreamer", sessionId, signedDto);
         });
     }
@@ -354,7 +354,7 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
-            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
         });
     }
@@ -363,7 +363,7 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateSignedDto(sessionDescription, DtoType.RtcSessionDescription, _appState.UserKeys.PrivateKey);
+            var signedDto = _keyProvider.CreateSignedDto(sessionDescription, DtoType.RtcSessionDescription, _settings.UserKeys.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), sessionId, signedDto);
         });
     }
@@ -374,7 +374,7 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new TerminalInputDto(terminalId, input);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _settings.UserKeys.PrivateKey);
                 return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, signedDto);
             },
             () => Result.Fail("Failed to send terminal input"));
@@ -386,7 +386,7 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new WakeDeviceDto(macAddresses);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.UserKeys.PrivateKey);
+                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _settings.UserKeys.PrivateKey);
                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
             });
     }

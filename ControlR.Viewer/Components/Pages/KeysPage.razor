@@ -113,8 +113,10 @@
                 return;
             }
 
-            var newKeyPair = KeyProvider.ChangePassword(AppState.UserKeys, _newPassphrase);
-            AppState.SetUserKeys(newKeyPair);
+            var newKeyPair = KeyProvider.ChangePassword(Settings.UserKeys, _newPassphrase);
+
+            await Settings.UpdateKeypair(Settings.Username, newKeyPair);
+
             var keyDto = new IdentityDto()
                 {
                     PublicKey = newKeyPair.PublicKey,
@@ -127,8 +129,6 @@
             {
                 await Settings.SetPassphrase(_newPassphrase);
             }
-
-            await Settings.UpdateKeypair(Settings.Username, newKeyPair);
 
             _newPassphrase = string.Empty;
             Snackbar.Add("Passphrase changed successfully", Severity.Success);
@@ -152,8 +152,8 @@
         {
             var keyExport = new KeypairExport()
                 {
-                    EncryptedPrivateKey = Convert.ToBase64String(AppState.UserKeys.EncryptedPrivateKey),
-                    PublicKey = Convert.ToBase64String(AppState.UserKeys.PublicKey),
+                    EncryptedPrivateKey = Convert.ToBase64String(Settings.UserKeys.EncryptedPrivateKey),
+                    PublicKey = Convert.ToBase64String(Settings.UserKeys.PublicKey),
                 };
 
             var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
@@ -196,8 +196,7 @@
             return;
         }
 
-        AppState.RemoveUserKeys();
-        await Settings.Clear();
+        await Settings.RemoveAll();
         NavManager.NavigateTo(string.Empty, false);
     }
 

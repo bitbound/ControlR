@@ -103,7 +103,7 @@ else
         {
             Logger.LogError(ex, "Error while initializing settings.");
             Snackbar.Add("Failed to retrieve current settings", Severity.Error);
-            await Settings.Clear();
+            await Settings.RemoveAll();
         }
         finally
         {
@@ -144,7 +144,7 @@ else
         try
         {
             var userKeys = KeyProvider.ImportKeys(_passphrase, encryptedPrivateKey);
-            AppState.SetUserKeys(userKeys);
+            await Settings.UpdateKeypair(userKeys);
 
             var keyDto = new IdentityDto()
                 {

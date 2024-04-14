@@ -18,21 +18,22 @@ public interface ISettings
     string PublicKeyBase64 { get; }
     bool RememberPassphrase { get; set; }
     string ServerUri { get; set; }
+    UserKeyPair UserKeys { get; set; }
+    bool UserKeysPresent { get; }
     string Username { get; set; }
-    string ViewerDownloadUri { get; }
 
-    Task Clear();
+    string ViewerDownloadUri { get; }
 
     Task<byte[]> GetEncryptedPrivateKey();
 
     Task<string> GetPassphrase();
 
+    Task RemoveAll();
     Task SetEncryptedPrivateKey(byte[] value);
 
     Task SetPassphrase(string passphrase);
 
     Task UpdateKeypair(string username, UserKeyPair keypair);
-
     Task UpdateKeypair(KeypairExport export);
     Task UpdateKeypair(UserKeyPair keypair);
 }
@@ -44,7 +45,7 @@ internal class Settings(
     ILogger<Settings> _logger) : ISettings
 {
     private byte[] _privateKey = [];
-
+    private UserKeyPair? _userKeys;
     public bool HideOfflineDevices
     {
         get => GetPref(true);
@@ -80,6 +81,7 @@ internal class Settings(
         get => GetPref(false);
         set => SetPref(value);
     }
+
     public string ServerUri
     {
         get => GetPref(AppConstants.ServerUri).TrimEnd('/');
@@ -89,6 +91,13 @@ internal class Settings(
             _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
         }
     }
+
+    public UserKeyPair UserKeys
+    {
+        get => _userKeys ?? throw new InvalidOperationException("User keypair has not yet been loaded.");
+        set => _userKeys = value;
+    }
+    public bool UserKeysPresent => _userKeys is not null;
 
     public string Username
     {
@@ -103,24 +112,6 @@ internal class Settings(
             return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
         }
     }
-
-    public Task Clear()
-    {
-        try
-        {
-            RememberPassphrase = false;
-            PrivateKey = [];
-            PublicKey = [];
-            _secureStorage.RemoveAll();
-            _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while clearing settings.");
-        }
-        return Task.CompletedTask;
-    }
-
     public async Task<byte[]> GetEncryptedPrivateKey()
     {
         var stored = await _secureStorage.GetAsync("EncryptedPrivateKey");
@@ -136,6 +127,23 @@ internal class Settings(
         return await _secureStorage.GetAsync("Passphrase") ?? string.Empty;
     }
 
+    public async Task RemoveAll()
+    {
+        try
+        {
+            RememberPassphrase = false;
+            PrivateKey = [];
+            PublicKey = [];
+            _userKeys = null;
+            _secureStorage.RemoveAll();
+            await _messenger.SendGenericMessage(GenericMessageKind.AuthStateChanged);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while clearing settings.");
+        }
+    }
+
     public async Task SetEncryptedPrivateKey(byte[] value)
     {
         await _secureStorage.SetAsync("EncryptedPrivateKey", Convert.ToBase64String(value));
@@ -145,7 +153,6 @@ internal class Settings(
     {
         await _secureStorage.SetAsync("Passphrase", passphrase);
     }
-
     public async Task UpdateKeypair(string username, UserKeyPair keypair)
     {
         Username = username;
@@ -154,6 +161,7 @@ internal class Settings(
 
     public async Task UpdateKeypair(UserKeyPair keypair)
     {
+        _userKeys = keypair;
         PublicKey = keypair.PublicKey;
         PrivateKey = keypair.PrivateKey;
         await SetEncryptedPrivateKey(keypair.EncryptedPrivateKey);

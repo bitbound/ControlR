@@ -160,7 +160,9 @@
             });
 
             var keypair = KeyProvider.GenerateKeys(_passphrase);
-            AppState.SetUserKeys(keypair);
+
+            await Settings.UpdateKeypair(_username, keypair);
+
             var keyDto = new IdentityDto()
                 {
                     PublicKey = keypair.PublicKey,
@@ -174,7 +176,6 @@
                 await Settings.SetPassphrase(_passphrase);
             }
 
-            await Settings.UpdateKeypair(_username, keypair);
             Snackbar.Add("Keypair created", Severity.Success);
         }
         catch (Exception ex)
