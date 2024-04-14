@@ -2,6 +2,7 @@
 using ControlR.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using IFileIo = ControlR.Devices.Common.Services.IFileSystem;
 
@@ -12,12 +13,13 @@ public interface IDeviceCache
     IEnumerable<DeviceDto> Devices { get; }
 
     Task AddOrUpdate(DeviceDto device);
-
     void Clear();
 
     Task Remove(DeviceDto device);
 
     Task SetAllOffline();
+
+    bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device);
 }
 
 internal class DeviceCache : IDeviceCache
@@ -65,6 +67,11 @@ internal class DeviceCache : IDeviceCache
             device.IsOnline = false;
         }
         await TrySaveCache();
+    }
+
+    public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
+    {
+        return _cache.TryGetValue(deviceId, out device);
     }
 
     private async Task TryLoadCache()

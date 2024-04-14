@@ -64,6 +64,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(Launcher.Default);
         builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton(FolderPicker.Default);
+        builder.Services.AddSingleton(FileSaver.Default);
 
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
@@ -83,6 +84,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDelayer, Delayer>();
         builder.Services.AddSingleton<IRetryer, Retryer>();
         builder.Services.AddSingleton<INotificationProvider, NotificationProvider>();
+        builder.Services.AddSingleton<ISettingsExporter, SettingsExporter>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

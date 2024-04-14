@@ -1,5 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
+using ControlR.Devices.Common.Messages;
 using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Viewer.Models.Messages;
@@ -11,7 +12,6 @@ namespace ControlR.Viewer.Services;
 public interface ISettings
 {
     bool HideOfflineDevices { get; set; }
-    string KeypairExportPath { get; set; }
     bool NotifyUserSessionStart { get; set; }
     byte[] PrivateKey { get; set; }
     byte[] PublicKey { get; set; }
@@ -50,12 +50,6 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public string KeypairExportPath
-    {
-        get => GetPref(string.Empty);
-        set => SetPref(value);
-    }
-
     public bool NotifyUserSessionStart
     {
         get => GetPref(false);
@@ -91,7 +85,7 @@ internal class Settings(
         set
         {
             SetPref(value.TrimEnd('/'));
-            _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
+            _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
         }
     }
 

@@ -7,7 +7,8 @@
 @inject IHttpConfigurer HttpConfigurer
 @inject IAppState AppState
 @inject IMessenger Messenger
-
+@inject IFileSaver FileSaver
+@inject ILogger<KeysPage> Logger
 
 <PageTitle>Key Management</PageTitle>
 
@@ -33,6 +34,15 @@
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Export
     </MudText>
+    <MudText GutterBottom>
+        Export your public/private keypair to a file, which can
+        be imported on other devices.
+    </MudText>
+    <MudText GutterBottom>
+        Your private key is encrypted using your current passphrase.
+        If you store this file long-term, it's recommended that you
+        put it in a secure location, such as a password vault.
+    </MudText>
     <MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="ExportKeypair">
         Export Keypair
     </MudButton>
@@ -41,6 +51,11 @@
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Remove
+    </MudText>
+    <MudText GutterBottom>
+        This will remove your keypair and settings, essentially
+        resetting to the app.  Export your keys first if you want
+        to keep them, or they will be lost permanently.
     </MudText>
     <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair">
         Remove Keypair
@@ -65,15 +80,30 @@
 
     private async Task ExportKeypair()
     {
-        var dialogRef = await Dialogs.ShowAsync<KeypairExportDialog>("Export Keypair");
-        if (dialogRef is null)
+        try
         {
-            return;
-        }
-        var result = await dialogRef.Result;
-        if (result?.Data is bool boolValue && boolValue)
-        {
+            var keyExport = new KeypairExport()
+                {
+                    EncryptedPrivateKey = Convert.ToBase64String(AppState.UserKeys.EncryptedPrivateKey),
+                    PublicKey = Convert.ToBase64String(AppState.UserKeys.PublicKey),
+                    Username = Settings.Username
+                };
+
+            var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
+            using var ms = new MemoryStream();
+            await JsonSerializer.SerializeAsync(ms, keyExport);
+            ms.Seek(0, SeekOrigin.Begin);
+            var saveResult = await FileSaver.SaveAsync(fileName, ms);
+            if (!saveResult.IsSuccessful)
+            {
+                throw saveResult.Exception ?? new FileSaveException("Unknown save failure.");
+            }
             Snackbar.Add("Exported keys successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while exporting keypair.");
+            Snackbar.Add("Failed to export (see logs)", Severity.Error);
         }
     }
 

@@ -27,7 +27,6 @@ public class ViewerHub(
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     IStreamerSessionCache _streamerSessionCache,
-    IOptionsMonitor<ApplicationOptions> _appOptions,
     IDelayer _delayer,
     IIceServerProvider _iceProvider,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub

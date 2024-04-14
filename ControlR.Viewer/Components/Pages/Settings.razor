@@ -6,6 +6,8 @@
 @inject IDeviceCache DeviceCache
 @inject IAppState AppState
 @inject IDialogService Dialogs
+@inject ISettingsExporter SettingsExporter
+@inject ILogger<Settings> Logger
 
 <PageTitle>Settings</PageTitle>
 
@@ -51,6 +53,23 @@
                  Label="Notify users when a remote control session starts" />
 </div>
 
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Import/Export Settings
+    </MudText>
+    <MudText>
+        The export includes devices and preferences.  It does not include your public/private keypair.  That must be exported separately.
+    </MudText>
+    <div class="d-flex gap-4 mt-3">
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" Variant="Variant.Filled" OnClick="ExportSettings">
+            Export
+        </MudButton>
+        <MudButton ButtonType="ButtonType.Button" Color="Color.Default" Variant="Variant.Filled" OnClick="ImportSettings">
+            Import
+        </MudButton>
+    </div>
+</div>
+
 
 
 @code {
@@ -94,6 +113,57 @@
         {
             SettingsStore.Username = value;
             Snackbar.Add("Username updated", Severity.Success);
+        }
+    }
+
+    private async Task ExportSettings()
+    {
+        try
+        {
+            var result = await SettingsExporter.ExportSettings();
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Settings exported successfully", Severity.Success);
+            }
+            else
+            {
+                Logger.LogResult(result);
+                var severity = result.HadException ?
+                    Severity.Error :
+                    Severity.Warning;
+
+                Snackbar.Add(result.Reason, severity);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while exporting settings.");
+            Snackbar.Add("Failed to export settings (see logs)", Severity.Error);
+        }
+    }
+    private async Task ImportSettings()
+    {
+        try
+        {
+            var result = await SettingsExporter.ImportSettings();
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Settings imported successfully", Severity.Success);
+            }
+            else
+            {
+                Logger.LogResult(result);
+                var severity = result.HadException ?
+                    Severity.Error :
+                    Severity.Warning;
+
+                Snackbar.Add(result.Reason, severity);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while import settings.");
+            Snackbar.Add("Failed to import settings (see logs)", Severity.Error);
         }
     }
 }

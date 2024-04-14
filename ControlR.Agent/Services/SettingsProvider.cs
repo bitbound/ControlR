@@ -1,9 +1,11 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
+using ControlR.Devices.Common.Messages;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
+using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -100,9 +102,13 @@ internal class SettingsProvider(
     {
         try
         {
-            var serverUriChanged =
-               Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri) &&
-               newServerUri != ServerUri;
+            if (!Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri))
+            {
+                _logger.LogWarning("ServerUri was invalid while attempting to update app settings.");
+                return;
+            }
+
+            var serverUriChanged = newServerUri != ServerUri;
 
             var content = JsonSerializer.Serialize(settings, _jsonOptions);
             await _fileSystem.WriteAllTextAsync(AppSettingsPath, content);
@@ -121,7 +127,7 @@ internal class SettingsProvider(
                     return;
                 }
 
-                await _messenger.SendGenericMessage(Viewer.Models.Messages.GenericMessageKind.ServerUriChanged);
+                await _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
             }
         }
         catch (Exception ex)
