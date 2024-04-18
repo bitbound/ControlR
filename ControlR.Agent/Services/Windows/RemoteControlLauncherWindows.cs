@@ -7,35 +7,28 @@ using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Runtime.Versioning;
-using System.Security.Cryptography;
 using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class RemoteControlLauncherWindows(
-    IFileSystem _fileSystem,
     IProcessManager _processes,
-    IDownloadsApi _downloadsApi,
     IEnvironmentHelper _environment,
     IStreamingSessionCache _streamingSessionCache,
     IIpcRouter _ipcRouter,
     IHostApplicationLifetime _hostLifetime,
     IServiceProvider _serviceProvider,
     ISettingsProvider _settings,
-    IVersionApi _versionApi,
     ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
-    private readonly string _remoteControlZipUri = $"{_settings.ServerUri}downloads/{AppConstants.RemoteControlZipFileName}";
     private readonly string _watcherBinaryPath = _environment.StartupExePath;
     public async Task<Result> CreateSession(
         Guid sessionId,
@@ -54,11 +47,11 @@ internal class RemoteControlLauncherWindows(
 
             var session = new StreamingSession(sessionId, authorizedKey, targetWindowsSession, targetDesktop);
 
-            var watcherResult = await LaunchNewSidecarProcess(session);
+            var sidecarResult = await LaunchNewSidecarProcess(session);
 
-            if (!watcherResult.IsSuccess)
+            if (!sidecarResult.IsSuccess)
             {
-                _logger.LogResult(watcherResult);
+                _logger.LogResult(sidecarResult);
                 return Result.Fail("Failed to start desktop watcher process.");
             }
 
@@ -76,31 +69,6 @@ internal class RemoteControlLauncherWindows(
                 var startupDir = _environment.StartupDirectory;
                 var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
                 var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
-                var zipPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
-
-                if (_fileSystem.FileExists(zipPath))
-                {
-                    var archiveCheckResult = await CheckArchiveHashWithRemote(zipPath, remoteControlDir);
-                    if (!archiveCheckResult.IsSuccess)
-                    {
-                        return archiveCheckResult;
-                    }
-                }
-                else if (_fileSystem.DirectoryExists(remoteControlDir))
-                {
-                    // If the archive doesn't exist, clear out any remaining files.
-                    // Then future update checks will work normally.
-                    _fileSystem.DeleteDirectory(remoteControlDir, true);
-                }
-
-                if (!_fileSystem.FileExists(binaryPath))
-                {
-                    var downloadResult = await DownloadRemoteControl(remoteControlDir, onDownloadProgress);
-                    if (!downloadResult.IsSuccess)
-                    {
-                        return downloadResult;
-                    }
-                }
 
                 Win32.CreateInteractiveSystemProcess(
                     $"\"{binaryPath}\" {args}",
@@ -163,38 +131,6 @@ internal class RemoteControlLauncherWindows(
         }
     }
 
-    private async Task<Result> CheckArchiveHashWithRemote(string zipPath, string remoteControlDir)
-    {
-        byte[] localHash = [];
-
-        using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            localHash = await MD5.HashDataAsync(zipFs);
-        }
-
-        _logger.LogInformation("Checking streamer remote archive hash.");
-        var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
-        if (!streamerHashResult.IsSuccess)
-        {
-            return streamerHashResult.ToResult();
-        }
-
-        _logger.LogInformation(
-            "Comparing local streamer archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
-            Convert.ToBase64String(localHash),
-            Convert.ToBase64String(streamerHashResult.Value));
-
-        if (streamerHashResult.Value.SequenceEqual(localHash))
-        {
-            _logger.LogInformation("Versions match.  Continuing.");
-        }
-        else
-        {
-            _logger.LogInformation("Versions differ.  Removing outdated files.");
-            _fileSystem.DeleteDirectory(remoteControlDir, true);
-        }
-        return Result.Ok();
-    }
 
     // For debugging.
     private static Result<string> GetSolutionDir(string currentDir)
@@ -218,26 +154,6 @@ internal class RemoteControlLauncherWindows(
         return Result.Fail<string>("Not found.");
     }
 
-    private async Task<Result> DownloadRemoteControl(string remoteControlDir, Func<double, Task>? onDownloadProgress)
-    {
-        try
-        {
-            _fileSystem.CreateDirectory(remoteControlDir);
-            var targetPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
-            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, onDownloadProgress);
-            if (!result.IsSuccess)
-            {
-                return result;
-            }
-            ZipFile.ExtractToDirectory(targetPath, remoteControlDir);
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while extracting remote control archive.");
-            return Result.Fail(ex);
-        }
-    }
 
     private async Task<Result> LaunchNewSidecarProcess(StreamingSession session)
     {

@@ -25,11 +25,11 @@ using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Services;
 
-internal interface IAgentHubConnection : IHubConnectionBase
+internal interface IAgentHubConnection : IHubConnectionBase, IHostedService
 {
     Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
     Task SendDeviceHeartbeat();
-
+    Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double progress);
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
 }
 
@@ -42,56 +42,17 @@ internal class AgentHubConnection(
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
      IRemoteControlLauncher _remoteControlLauncher,
-     IAgentUpdater _updater,
+     IStreamerUpdater _streamerUpdater,
+     IAgentUpdater _agentUpdater,
      IMessenger _messenger,
      ITerminalStore _terminalStore,
      IDelayer _delayer,
+     IProcessManager _processManager,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
-        : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IHostedService, IAgentHubConnection, IAgentHubClient
+        : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
 {
-    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto)
-    {
-        try
-        {
-            if (!VerifySignedDto<TerminalSessionRequest>(requestDto, out var payload))
-            {
-                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
-            }
-
-            return await _terminalStore.CreateSession(payload.TerminalId, payload.ViewerConnectionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while creating terminal session.");
-            return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
-        }
-    }
-
-    public Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto)
-    {
-        try
-        {
-            if (!VerifySignedDto(signedDto))
-            {
-                return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
-            }
-
-            var agentOptions = _agentOptions.CurrentValue;
-            var settings = new AgentAppSettings()
-            {
-                AppOptions = agentOptions
-            };
-            return Result.Ok(settings).AsTaskResult();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting agent appsettings.");
-            return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
-        }
-    }
-
-    public async Task<bool> GetStreamingSession(SignedPayloadDto signedDto)
+    public async Task<bool> CreateStreamingSession(SignedPayloadDto signedDto)
     {
         try
         {
@@ -101,7 +62,16 @@ internal class AgentHubConnection(
             }
 
             var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
-            
+
+            if (_processManager.GetCurrentProcess().SessionId == 0)
+            {
+                var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
+                if (!versionResult.IsSuccess)
+                {
+                    return false;
+                }
+            }
+
             double downloadProgress = 0;
 
             var result = await _remoteControlLauncher.CreateSession(
@@ -148,6 +118,46 @@ internal class AgentHubConnection(
         }
     }
 
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto)
+    {
+        try
+        {
+            if (!VerifySignedDto<TerminalSessionRequest>(requestDto, out var payload))
+            {
+                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
+            }
+
+            return await _terminalStore.CreateSession(payload.TerminalId, payload.ViewerConnectionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while creating terminal session.");
+            return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
+        }
+    }
+
+    public Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto)
+    {
+        try
+        {
+            if (!VerifySignedDto(signedDto))
+            {
+                return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
+            }
+
+            var agentOptions = _agentOptions.CurrentValue;
+            var settings = new AgentAppSettings()
+            {
+                AppOptions = agentOptions
+            };
+            return Result.Ok(settings).AsTaskResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting agent appsettings.");
+            return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
+        }
+    }
     [SupportedOSPlatform("windows6.0.6000")]
     public Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto)
     {
@@ -251,6 +261,11 @@ internal class AgentHubConnection(
         }
     }
 
+    public async Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double progress)
+    {
+        await Connection.InvokeAsync(nameof(IAgentHub.SendRemoteControlDownloadProgress), streamingSessionId, viewerConnectionId, progress);
+    }
+
     public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
     {
         try
@@ -290,7 +305,7 @@ internal class AgentHubConnection(
             hubConnection.On<SignedPayloadDto, WindowsSession[]>(nameof(GetWindowsSessions), GetWindowsSessions);
         }
 
-        hubConnection.On<SignedPayloadDto, bool>(nameof(GetStreamingSession), GetStreamingSession);
+        hubConnection.On<SignedPayloadDto, bool>(nameof(CreateStreamingSession), CreateStreamingSession);
         hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
         hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
         hubConnection.On<SignedPayloadDto, Result<AgentAppSettings>>(nameof(GetAgentAppSettings), GetAgentAppSettings);
@@ -313,7 +328,7 @@ internal class AgentHubConnection(
     private async Task HubConnection_Reconnected(string? arg)
     {
         await SendDeviceHeartbeat();
-        await _updater.CheckForUpdate();
+        await _agentUpdater.CheckForUpdate();
     }
 
     private bool VerifySignedDto(SignedPayloadDto signedDto)
@@ -346,7 +361,6 @@ internal class AgentHubConnection(
         payload = MessagePackSerializer.Deserialize<TPayload>(signedDto.Payload);
         return payload is not null;
     }
-
     private class RetryPolicy : IRetryPolicy
     {
         public TimeSpan? NextRetryDelay(RetryContext retryContext)

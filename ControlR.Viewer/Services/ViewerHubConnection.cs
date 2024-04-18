@@ -192,6 +192,11 @@ internal class ViewerHubConnection(
     {
         try
         {
+            if (Connection.ConnectionId is null)
+            {
+                return Result.Fail<StreamerHubSession>("Unexpected connection state.");
+            }
+
             var streamingSessionRequest = new StreamerSessionRequestDto(
                 sessionId,
                 targetSystemSession,

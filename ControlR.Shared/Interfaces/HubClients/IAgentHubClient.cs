@@ -10,7 +10,7 @@ public interface IAgentHubClient : IHubClient
 
     Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto);
 
-    Task<bool> GetStreamingSession(SignedPayloadDto sessionRequest);
+    Task<bool> CreateStreamingSession(SignedPayloadDto sessionRequest);
     Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto);
     Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto);
     Task<Result> ReceiveTerminalInput(SignedPayloadDto dto);

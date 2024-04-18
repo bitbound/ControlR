@@ -59,7 +59,7 @@ public class ViewerHub(
         {
             var sessionSuccess = await _agentHub.Clients
                    .Client(agentConnectionId)
-                   .GetStreamingSession(sessionRequestDto);
+                   .CreateStreamingSession(sessionRequestDto);
 
             if (!sessionSuccess)
             {

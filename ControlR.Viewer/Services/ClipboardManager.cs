@@ -31,8 +31,12 @@ internal class ClipboardManager(
     public event EventHandler<string?>? ClipboardChanged;
     public async ValueTask DisposeAsync()
     {
-        await _cancellationSource.CancelAsync();
-        _cancellationSource.Dispose();
+        try
+        {
+            await _cancellationSource.CancelAsync();
+            _cancellationSource.Dispose();
+        }
+        catch { }
     }
 
     public async Task SetText(string? text)

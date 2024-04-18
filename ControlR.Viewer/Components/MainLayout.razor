@@ -158,7 +158,7 @@
 
     private async Task InstallUpdate()
     {
-        Snackbar.Add("Downloading and installing update", Severity.Info);
+        Snackbar.Add("Downloading update", Severity.Info);
         var installResult = await UpdateManager.InstallCurrentVersion();
         if (!installResult.IsSuccess)
         {
@@ -166,7 +166,7 @@
         }
         else
         {
-            Snackbar.Add("Download successful", Severity.Success);
+            Snackbar.Add("Launching installer", Severity.Success);
         }
     }
 }

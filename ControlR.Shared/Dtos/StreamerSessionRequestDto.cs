@@ -11,7 +11,7 @@ public class StreamerSessionRequestDto(
     Guid streamingSessionId, 
     int targetSystemSession, 
     string? targetDesktop, 
-    string? viewerConnectionId,
+    string viewerConnectionId,
     bool notifyUserOnSessionStart,
     string? viewerName)
 {
@@ -28,7 +28,7 @@ public class StreamerSessionRequestDto(
     public int TargetSystemSession { get; init; } = targetSystemSession;
 
     [MsgPackKey]
-    public string? ViewerConnectionId { get; init; } = viewerConnectionId;
+    public string ViewerConnectionId { get; init; } = viewerConnectionId;
 
     [MsgPackKey]
     public string? ViewerName { get; init; } = viewerName;
