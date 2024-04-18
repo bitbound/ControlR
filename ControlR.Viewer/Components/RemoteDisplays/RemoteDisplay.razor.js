@@ -462,10 +462,16 @@ export async function resetPeerConnection(iceServers, videoId) {
  * @param {number} pinchCenterX
  * @param {number} pinchCenterY
  * @param {HTMLDivElement} contentDiv
+ * @param {HTMLVideoElement} videoRef
+ * @param {number} videoCssWidth
+ * @param {number} videoCssHeight
  * @param {number} widthChange
  * @param {number} heightChange
  */
-export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, widthChange, heightChange) {
+export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, videoRef, videoCssWidth, videoCssHeight, widthChange, heightChange) {
+    videoRef.style.width = `${videoCssWidth}px`;
+    videoRef.style.height = `${videoCssHeight}px`;
+
     var clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
     var clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
     

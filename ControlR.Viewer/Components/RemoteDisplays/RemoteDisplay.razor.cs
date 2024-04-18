@@ -96,16 +96,15 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         get
         {
-            var style = _isStreamLoaded ?
+            return _isStreamLoaded ?
                 "display: unset;" :
                 "display: none;";
 
-            if (_viewMode is ViewMode.Fit or ViewMode.Stretch || _videoHeight < 1 || _videoWidth < 1)
-            {
-                return style;
-            }
-
-            return $"{style} width: {_videoWidth}px; height: {_videoHeight}px;";
+            //if (_viewMode is ViewMode.Fit or ViewMode.Stretch || _videoHeight < 1 || _videoWidth < 1)
+            //{
+            //    return style;
+            //}
+            //return $"{style} width: {_videoWidth}px; height: {_videoHeight}px;";
         }
     }
 
@@ -454,7 +453,15 @@ public partial class RemoteDisplay : IAsyncDisposable
             var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
             var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
 
-            await JsModule.InvokeVoidAsync("scrollTowardPinch", pinchCenterX, pinchCenterY, _screenArea, widthChange, heightChange);
+            await JsModule.InvokeVoidAsync("scrollTowardPinch", 
+                pinchCenterX, 
+                pinchCenterY, 
+                _screenArea,
+                _videoRef,
+                newWidth,
+                newHeight,
+                widthChange, 
+                heightChange);
         }
         catch (Exception ex)
         {
