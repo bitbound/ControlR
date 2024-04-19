@@ -24,7 +24,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2024.4.17.2206</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>2024.4.18.1618</ApplicationDisplayVersion>
 
 
 
@@ -39,7 +39,7 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<Nullable>enable</Nullable>
-		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
 		<PackageCertificateThumbprint>E0D825978AFF9CB4FDFE7C65398F417F92D07B6D</PackageCertificateThumbprint>
 
@@ -52,6 +52,7 @@
 
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageSigningTimestampServerUrl>http://timestamp.digicert.com</AppxPackageSigningTimestampServerUrl>
+		<GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">

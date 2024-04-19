@@ -1,15 +1,15 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Shared.Dtos;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.Agent.Services.Fakes;
-internal class StreamerUpdaterFake : BackgroundService, IStreamerUpdater
+internal class StreamerUpdaterFake(ILogger<StreamerUpdaterFake> _logger) : BackgroundService, IStreamerUpdater
 {
-    public Task<Result> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
+    public Task<bool> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
     {
-        return Result.Fail("Platform not supported.").AsTaskResult();
+        _logger.LogWarning("Platform not supported for desktop streaming.");
+        return Task.FromResult(false);
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

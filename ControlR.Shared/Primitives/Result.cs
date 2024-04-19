@@ -199,4 +199,13 @@ public class Result<T>
     {
         return new Result(IsSuccess, Exception, Reason);
     }
+
+    public Result<TNewValue> ToResult<TNewValue>(TNewValue value)
+    {
+        if (IsSuccess)
+        {
+            return Result.Ok(value);
+        }
+        return Result.Fail<TNewValue>(Exception ?? new Exception(Reason), Reason);
+    }
 }

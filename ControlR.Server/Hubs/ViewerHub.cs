@@ -67,7 +67,7 @@ public class ViewerHub(
             }
 
             // TODO: Change to AsyncManualResetEvent.
-            await _delayer.WaitForAsync(
+            _ = await _delayer.WaitForAsync(
                 () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
                 TimeSpan.FromSeconds(30));
 

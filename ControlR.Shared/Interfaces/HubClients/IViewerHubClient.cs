@@ -13,7 +13,7 @@ public interface IViewerHubClient : IHubClient
 
     Task ReceiveIceCandidate(Guid sessionId, string candidateJson);
 
-    Task ReceiveRemoteControlDownloadProgress(Guid streamingSessionId, double downloadProgress);
+    Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
 
     Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription);
 

@@ -260,7 +260,7 @@ public partial class RemoteDisplay : IAsyncDisposable
             _viewMode = ViewMode.Original;
         }
 
-        Messenger.Register<RemoteControlDownloadProgressMessage>(this, HandleRemoteControlDownloadProgress);
+        Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
         Messenger.Register<IceCandidateMessage>(this, HandleIceCandidateReceived);
         Messenger.Register<RtcSessionDescriptionMessage>(this, HandleRtcSessionDescription);
         Messenger.Register<DesktopChangedMessage>(this, HandleDesktopChanged);
@@ -341,7 +341,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-    private async Task HandleRemoteControlDownloadProgress(object recipient, RemoteControlDownloadProgressMessage message)
+    private async Task HandleStreamerDownloadProgress(object recipient, StreamerDownloadProgressMessage message)
     {
         if (message.StreamingSessionId != Session.SessionId)
         {
@@ -349,16 +349,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
 
         _statusProgress = message.DownloadProgress;
+        _statusMessage = message.Message;
 
-        if (_statusProgress < 1)
-        {
-            _statusMessage = "Downloading streamer on remote device";
-        }
-        else
-        {
-            _statusMessage = "Extracting and starting streamer";
-            _statusProgress = -1;
-        }
         await InvokeAsync(StateHasChanged);
     }
 

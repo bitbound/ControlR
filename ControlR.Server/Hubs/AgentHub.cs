@@ -82,9 +82,9 @@ public class AgentHub(
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double downloadProgress)
+    public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
     {
-        await _viewerHub.Clients.Client(viewerConnectionId).ReceiveRemoteControlDownloadProgress(streamingSessionId, downloadProgress);
+        await _viewerHub.Clients.Client(progressDto.ViewerConnectionId).ReceiveStreamerDownloadProgress(progressDto);
     }
 
     public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)

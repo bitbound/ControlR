@@ -268,9 +268,9 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveRemoteControlDownloadProgress(Guid streamingSessionId, double downloadProgress)
+    public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
     {
-        _messenger.Send(new RemoteControlDownloadProgressMessage(streamingSessionId, downloadProgress));
+        _messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress, progressDto.Message));
         return Task.CompletedTask;
     }
 
@@ -443,7 +443,7 @@ internal class ViewerHubConnection(
         connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
         connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
         connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
-        connection.On<Guid, double>(nameof(ReceiveRemoteControlDownloadProgress), ReceiveRemoteControlDownloadProgress);
+        connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress), ReceiveStreamerDownloadProgress);
         connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
     }
 

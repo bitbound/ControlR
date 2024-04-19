@@ -10,6 +10,8 @@ using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Octodiff.Core;
+using Octodiff.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
@@ -27,9 +29,10 @@ internal class StreamerUpdaterWindows(
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
     private readonly string _remoteControlZipUri = $"{_settings.ServerUri}downloads/{AppConstants.RemoteControlZipFileName}";
     private readonly SemaphoreSlim _updateLock = new(1, 1);
+    private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
     private double _previousProgress = 0;
 
-    public async Task<Result> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
+    public async Task<bool> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
     {
         _pendingRequests.Add(requestDto);
         try
@@ -59,7 +62,7 @@ internal class StreamerUpdaterWindows(
         }
     }
 
-    private async Task<Result> CheckArchiveHashWithRemote(string zipPath, string remoteControlDir)
+    private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
     {
         byte[] localHash = [];
 
@@ -72,7 +75,7 @@ internal class StreamerUpdaterWindows(
         var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
         if (!streamerHashResult.IsSuccess)
         {
-            return streamerHashResult.ToResult();
+            return streamerHashResult.ToResult(false);
         }
 
         _logger.LogInformation(
@@ -83,37 +86,43 @@ internal class StreamerUpdaterWindows(
         if (streamerHashResult.Value.SequenceEqual(localHash))
         {
             _logger.LogInformation("Versions match.  Continuing.");
+            return Result.Ok(false);
         }
         else
         {
-            _logger.LogInformation("Versions differ.  Removing outdated files.");
-            _fileSystem.DeleteDirectory(remoteControlDir, true);
+            _logger.LogInformation("Versions differ.  Proceeding with update.");
+            return Result.Ok(true);
         }
-        return Result.Ok();
     }
 
-    private async Task<Result> DownloadRemoteControl(string remoteControlDir, Func<double, Task>? onDownloadProgress)
+    private async Task<bool> DownloadRemoteControl(string remoteControlDir)
     {
         try
         {
-            _fileSystem.CreateDirectory(remoteControlDir);
-            var targetPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
-            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, onDownloadProgress);
+            var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.RemoteControlZipFileName);
+            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, async progress =>
+            {
+                await ReportDownloadProgress(progress, "Downloading streamer on remote device");
+            });
+
             if (!result.IsSuccess)
             {
-                return result;
+                return false;
             }
+
+            await ReportDownloadProgress(-1, "Extracting streamer archive");
+
             ZipFile.ExtractToDirectory(targetPath, remoteControlDir);
-            return Result.Ok();
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while extracting remote control archive.");
-            return Result.Fail(ex);
+            return false;
         }
     }
 
-    private async Task<Result> EnsureLatestVersion(CancellationToken cancellationToken)
+    private async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
     {
         await _updateLock.WaitAsync(cancellationToken);
         try
@@ -122,14 +131,32 @@ internal class StreamerUpdaterWindows(
             var startupDir = _environmentHelper.StartupDirectory;
             var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
             var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
-            var zipPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlZipFileName);
+            var zipPath = Path.Combine(startupDir, AppConstants.RemoteControlZipFileName);
 
             if (_fileSystem.FileExists(zipPath))
             {
-                var archiveCheckResult = await CheckArchiveHashWithRemote(zipPath, remoteControlDir);
+                var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
                 if (!archiveCheckResult.IsSuccess)
                 {
-                    return archiveCheckResult;
+                    return false;
+                }
+
+                if (!archiveCheckResult.Value)
+                {
+                    return true;
+                }
+
+                var patchResult = await TryPatchCurrentVersion(zipPath, remoteControlDir);
+                if (patchResult)
+                {
+                    return true;
+                }
+
+                _logger.LogWarning("Patching failed.  Attempting full upgrade.");
+
+                if (_fileSystem.DirectoryExists(remoteControlDir))
+                {
+                    _fileSystem.DeleteDirectory(remoteControlDir, true);
                 }
             }
             else if (_fileSystem.DirectoryExists(remoteControlDir))
@@ -142,31 +169,87 @@ internal class StreamerUpdaterWindows(
             if (!_fileSystem.FileExists(binaryPath))
             {
                 _previousProgress = 0;
-                var downloadResult = await DownloadRemoteControl(remoteControlDir, ReportDownloadProgress);
-                if (!downloadResult.IsSuccess)
+                var downloadResult = await DownloadRemoteControl(remoteControlDir);
+                if (!downloadResult)
                 {
                     return downloadResult;
                 }
             }
 
-            return Result.Ok();
+            return true;
         }
         catch (Exception ex)
         {
             var result = Result.Fail(ex, "Error while ensuring remote control latest version.");
             _logger.LogResult(result);
-            return result;            
+            return false;        
         }
         finally
         {
             _updateLock.Release();
         }
     }
-    private async Task ReportDownloadProgress(double progress)
+
+    private async Task<bool> TryPatchCurrentVersion(string streamerZipPath, string remoteControlDir)
+    {
+        try
+        {
+            _logger.LogInformation("Checking for differential patch for current version.");
+            await ReportDownloadProgress(-1, "Attempting to patch current version");
+
+            var tempStreamerPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(streamerZipPath));
+
+            using (var basisStream = _fileSystem.OpenFileStream(streamerZipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                var hash = await MD5.HashDataAsync(basisStream);
+                var hexValue = Convert.ToHexString(hash);
+                var deltaFileName = $"windows-streamer-{hexValue}.octodelta";
+                var deltaPath = Path.Combine(Path.GetTempPath(), deltaFileName);
+                var downloadUri = $"{_settings.ServerUri}downloads/deltas/{deltaFileName}";
+                var downloadResult = await _downloadsApi.DownloadFile(downloadUri, deltaPath);
+
+                if (!downloadResult.IsSuccess)
+                {
+                    return false;
+                }
+
+                _logger.LogInformation("Downloaded patch.  Applying.");
+                var deltaApplier = new DeltaApplier { SkipHashCheck = false };
+
+                basisStream.Seek(0, SeekOrigin.Begin);
+
+           
+                using var deltaStream = _fileSystem.OpenFileStream(deltaPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var newFileStream = _fileSystem.OpenFileStream(tempStreamerPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
+                deltaApplier.Apply(basisStream, new BinaryDeltaReader(deltaStream, _progressReporter), newFileStream);
+                _logger.LogInformation("Patch applied.");
+            }
+
+            _logger.LogInformation("Extracting patched archive.");
+            await ReportDownloadProgress(-1, "Extracting patched archive");
+
+            if (_fileSystem.DirectoryExists(remoteControlDir))
+            {
+                _fileSystem.DeleteDirectory(remoteControlDir, true);
+            }
+            _fileSystem.CreateDirectory(remoteControlDir);
+            _fileSystem.MoveFile(tempStreamerPath, streamerZipPath, true);
+            ZipFile.ExtractToDirectory(streamerZipPath, remoteControlDir);
+
+            _logger.LogInformation("Patching completed.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while attempting to patch streamer.");
+            return false;
+        }
+    }
+    private async Task ReportDownloadProgress(double progress, string message)
     {
         var connection = _serviceProvider.GetRequiredService<IAgentHubConnection>();
 
-        if (progress == 1 || progress - _previousProgress > .05)
+        if (progress == 1 || progress < 0 || progress - _previousProgress > .05)
         {
             _previousProgress = progress;
 
@@ -174,11 +257,14 @@ internal class StreamerUpdaterWindows(
             {
                 try
                 {
+                    var dto = new StreamerDownloadProgressDto(
+                        request.StreamingSessionId, 
+                        request.ViewerConnectionId, 
+                        progress, 
+                        message);
+
                     await connection
-                        .SendRemoteControlDownloadProgress(
-                            request.StreamingSessionId, 
-                            request.ViewerConnectionId, 
-                            progress)
+                        .SendStreamerDownloadProgress(dto)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex)

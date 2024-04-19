@@ -2,13 +2,13 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$CertificatePath,
 
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$CertificatePassword,
 
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$SignToolPath,
 
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$KeystorePassword,
 
     [string]$CurrentVersion,
@@ -22,17 +22,44 @@ param (
     [switch]$BuildWebsite
 )
 
-function Check-LastExitCode {
-    if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
-        throw "Received exit code $LASTEXITCODE.  Aborting."
-    }
-}
 
 $InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
 $VsWhere = "$InstallerDir\vswhere.exe"
 $MSBuildPath = (&"$VsWhere" -latest -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
+$Octodiff = "$Root\.build\octodiff.exe"
+
+function Check-LastExitCode {
+    if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
+        throw "Received exit code $LASTEXITCODE.  Aborting."
+    }
+}
+
+function Create-Signature($FilePath, $BaseSignatureFileName) {
+    if (!(Test-Path -Path $FilePath)) {
+        return "";
+    }
+
+    [System.IO.Directory]::CreateDirectory("$DownloadsFolder\signatures") | Out-Null
+    $Hash = Get-FileHash -Algorithm MD5 -Path $FilePath | Select-Object -ExpandProperty Hash
+    $SignaturePath = "$DownloadsFolder\signatures\$BaseSignatureFileName-$Hash.octosig"
+    &"$Octodiff" signature $FilePath $SignaturePath
+    Check-LastExitCode
+    return $SignaturePath
+}
+
+function Create-Delta($SignaturePath, $NewFilePath) {
+    if (!(Test-Path -Path $SignaturePath)) {
+        return;
+    }
+
+    [System.IO.Directory]::CreateDirectory("$DownloadsFolder\deltas") | Out-Null
+    $DeltaFileName = (Get-Item -Path $SignaturePath).Name.Replace(".octosig", ".octodelta")
+    &"$Octodiff" delta $SignaturePath $NewFilePath "$DownloadsFolder\deltas\$DeltaFileName"
+    Check-LastExitCode
+}
+
 
 if (!$CurrentVersion) {
     Push-Location -Path $Root
@@ -63,24 +90,30 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
     return
 }
 
-if ($BuildAgent){
+if ($BuildAgent) {
+    #$WinSigPath = Create-Signature -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe" -BaseSignatureFileName "windows-agent"
+    #$LinuxSigPath = Create-Signature -FilePath "$DownloadsFolder\linux-x64\ControlR.Agent" -BaseSignatureFileName "linux-agent"
+
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
-
-    dotnet publish --configuration Release -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-    Check-LastExitCode
-
-    dotnet publish --configuration Release -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-    Check-LastExitCode
-
+    
     dotnet publish --configuration Release -p:PublishProfile=linux-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
+
+    #dotnet publish --configuration Release -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    #Check-LastExitCode
+
+    #dotnet publish --configuration Release -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+    #Check-LastExitCode
 
     Start-Sleep -Seconds 1
     &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
     Check-LastExitCode
 
     Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
+
+    #Create-Delta -SignaturePath $WinSigPath -NewFilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
+    #Create-Delta -SignaturePath $LinuxSigPath -NewFilePath "$DownloadsFolder\linux-x64\ControlR.Agent"
 }
 
 
@@ -117,6 +150,8 @@ if ($BuildViewer) {
 
 
 if ($BuildStreamer) {
+    $WinSigPath = Create-Signature -FilePath "$DownloadsFolder\controlr-streamer-win.zip" -BaseSignatureFileName "windows-streamer"
+
     [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
     $Package = $PackageJson | ConvertFrom-Json
     $Package.version = [DateTime]::UtcNow.ToString("yyyy.MM.ddHHmm")
@@ -126,6 +161,8 @@ if ($BuildStreamer) {
     npm install
     npm run make-pwsh
     Pop-Location
+
+    Create-Delta -SignaturePath $WinSigPath -NewFilePath "$DownloadsFolder\controlr-streamer-win.zip"
 }
 
 

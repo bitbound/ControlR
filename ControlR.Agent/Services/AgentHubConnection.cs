@@ -29,7 +29,7 @@ internal interface IAgentHubConnection : IHubConnectionBase, IHostedService
 {
     Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
     Task SendDeviceHeartbeat();
-    Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double progress);
+    Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
 }
 
@@ -66,7 +66,7 @@ internal class AgentHubConnection(
             if (_processManager.GetCurrentProcess().SessionId == 0)
             {
                 var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
-                if (!versionResult.IsSuccess)
+                if (!versionResult)
                 {
                     return false;
                 }
@@ -90,7 +90,7 @@ internal class AgentHubConnection(
                             downloadProgress = progress;
                             await Connection
                                 .InvokeAsync(
-                                    nameof(IAgentHub.SendRemoteControlDownloadProgress),
+                                    nameof(IAgentHub.SendStreamerDownloadProgress),
                                     dto.StreamingSessionId,
                                     dto.ViewerConnectionId,
                                     downloadProgress)
@@ -261,9 +261,9 @@ internal class AgentHubConnection(
         }
     }
 
-    public async Task SendRemoteControlDownloadProgress(Guid streamingSessionId, string viewerConnectionId, double progress)
+    public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
     {
-        await Connection.InvokeAsync(nameof(IAgentHub.SendRemoteControlDownloadProgress), streamingSessionId, viewerConnectionId, progress);
+        await Connection.InvokeAsync(nameof(IAgentHub.SendStreamerDownloadProgress), progressDto);
     }
 
     public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)

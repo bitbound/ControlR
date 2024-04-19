@@ -65,7 +65,7 @@ internal class UpdateManagerWindows(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            var downloadResult = await _downloadsApi.DownloadViewer(tempPath, _settings.ViewerDownloadUri);
+            var downloadResult = await _downloadsApi.DownloadFile(_settings.ViewerDownloadUri, tempPath);
             if (!downloadResult.IsSuccess)
             {
                 return downloadResult;

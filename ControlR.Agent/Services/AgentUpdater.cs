@@ -78,7 +78,7 @@ internal class AgentUpdater(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            var result = await _downloadsApi.DownloadAgent(tempPath, _agentDownloadUri);
+            var result = await _downloadsApi.DownloadFile(_agentDownloadUri, tempPath);
             if (!result.IsSuccess)
             {
                 _logger.LogCritical("Download failed.  Aborting update.");
