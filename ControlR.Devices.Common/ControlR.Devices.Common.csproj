@@ -13,9 +13,6 @@
 		<PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="8.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.4" />
-		<PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.49-beta">
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>

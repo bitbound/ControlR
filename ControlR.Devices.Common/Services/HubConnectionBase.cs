@@ -15,8 +15,6 @@ public interface IHubConnectionBase
     bool IsConnected { get; }
 
     Task ReceiveDto(SignedPayloadDto dto);
-
-    Task StopConnection(CancellationToken cancellationToken);
 }
 
 public abstract class HubConnectionBase(
@@ -25,8 +23,8 @@ public abstract class HubConnectionBase(
     IDelayer _delayer,
     ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
-    protected readonly IMessenger _messenger = _messenger;
     protected readonly IDelayer _delayer = _delayer;
+    protected readonly IMessenger _messenger = _messenger;
     private CancellationToken _cancellationToken;
     private HubConnection? _connection;
     private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
@@ -36,17 +34,23 @@ public abstract class HubConnectionBase(
 
     protected HubConnection Connection => _connection ?? throw new Exception("You must start the connection first.");
 
-    public Task Connect(
-        string hubUrl,
+    public Task ReceiveDto(SignedPayloadDto dto)
+    {
+        _messenger.Send(new SignedDtoReceivedMessage(dto));
+        return Task.CompletedTask;
+    }
+
+    protected Task Connect(
+                Func<string> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         CancellationToken cancellationToken)
     {
-        return Connect(hubUrl, connectionConfig, optionsConfig, _onConnectFailure, cancellationToken);
+        return Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, cancellationToken);
     }
 
-    public async Task Connect(
-        string hubUrl,
+    protected async Task Connect(
+        Func<string> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         Func<string, Task> onConnectFailure,
@@ -72,6 +76,8 @@ public abstract class HubConnectionBase(
                 {
                     await _connection.DisposeAsync();
                 }
+
+                var hubUrl = hubUrlFactory();
 
                 _connection = builder
                     .WithUrl(hubUrl, options =>
@@ -112,13 +118,8 @@ public abstract class HubConnectionBase(
         }
     }
 
-    public Task ReceiveDto(SignedPayloadDto dto)
-    {
-        _messenger.Send(new SignedDtoReceivedMessage(dto));
-        return Task.CompletedTask;
-    }
-
-    public async Task Reconnect(string hubUrl,
+    protected async Task Reconnect(
+        Func<string> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig)
     {
@@ -127,17 +128,16 @@ public abstract class HubConnectionBase(
             await _connection.StopAsync();
         }
 
-        await Connect(hubUrl, connectionConfig, optionsConfig, _onConnectFailure, _cancellationToken);
+        await Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, _cancellationToken);
     }
 
-    public async Task StopConnection(CancellationToken cancellationToken)
+    protected async Task StopConnection(CancellationToken cancellationToken)
     {
         if (_connection is not null)
         {
             await _connection.StopAsync(cancellationToken);
         }
     }
-
     protected async Task WaitForConnection()
     {
         await _delayer.WaitForAsync(() => IsConnected, TimeSpan.MaxValue);
