@@ -41,7 +41,7 @@ public abstract class HubConnectionBase(
     }
 
     protected Task Connect(
-                Func<string> hubUrlFactory,
+        Func<string> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         CancellationToken cancellationToken)

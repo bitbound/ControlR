@@ -329,6 +329,7 @@ internal class AgentHubConnection(
     {
         await SendDeviceHeartbeat();
         await _agentUpdater.CheckForUpdate();
+        await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
     }
 
     private bool VerifySignedDto(SignedPayloadDto signedDto)

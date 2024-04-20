@@ -27,9 +27,9 @@ internal class StreamerUpdaterWindows(
     ILogger<StreamerUpdaterWindows> _logger) : BackgroundService, IStreamerUpdater
 {
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
+    private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
     private readonly string _remoteControlZipUri = $"{_settings.ServerUri}downloads/{AppConstants.RemoteControlZipFileName}";
     private readonly SemaphoreSlim _updateLock = new(1, 1);
-    private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
     private double _previousProgress = 0;
 
     public async Task<bool> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
@@ -45,84 +45,7 @@ internal class StreamerUpdaterWindows(
         }
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        if (_environmentHelper.IsDebug)
-        {
-            return;
-        }
-
-        await EnsureLatestVersion(stoppingToken);
-
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
-
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            await EnsureLatestVersion(stoppingToken);
-        }
-    }
-
-    private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
-    {
-        byte[] localHash = [];
-
-        using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            localHash = await MD5.HashDataAsync(zipFs);
-        }
-
-        _logger.LogInformation("Checking streamer remote archive hash.");
-        var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
-        if (!streamerHashResult.IsSuccess)
-        {
-            return streamerHashResult.ToResult(false);
-        }
-
-        _logger.LogInformation(
-            "Comparing local streamer archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
-            Convert.ToBase64String(localHash),
-            Convert.ToBase64String(streamerHashResult.Value));
-
-        if (streamerHashResult.Value.SequenceEqual(localHash))
-        {
-            _logger.LogInformation("Versions match.  Continuing.");
-            return Result.Ok(false);
-        }
-        else
-        {
-            _logger.LogInformation("Versions differ.  Proceeding with update.");
-            return Result.Ok(true);
-        }
-    }
-
-    private async Task<bool> DownloadRemoteControl(string remoteControlDir)
-    {
-        try
-        {
-            var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.RemoteControlZipFileName);
-            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, async progress =>
-            {
-                await ReportDownloadProgress(progress, "Downloading streamer on remote device");
-            });
-
-            if (!result.IsSuccess)
-            {
-                return false;
-            }
-
-            await ReportDownloadProgress(-1, "Extracting streamer archive");
-
-            ZipFile.ExtractToDirectory(targetPath, remoteControlDir);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while extracting remote control archive.");
-            return false;
-        }
-    }
-
-    private async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
+    public async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
     {
         await _updateLock.WaitAsync(cancellationToken);
         try
@@ -182,11 +105,117 @@ internal class StreamerUpdaterWindows(
         {
             var result = Result.Fail(ex, "Error while ensuring remote control latest version.");
             _logger.LogResult(result);
-            return false;        
+            return false;
         }
         finally
         {
             _updateLock.Release();
+        }
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (_environmentHelper.IsDebug)
+        {
+            return;
+        }
+
+        await EnsureLatestVersion(stoppingToken);
+
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            await EnsureLatestVersion(stoppingToken);
+        }
+    }
+
+    private async Task<bool> DownloadRemoteControl(string remoteControlDir)
+    {
+        try
+        {
+            var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.RemoteControlZipFileName);
+            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, async progress =>
+            {
+                await ReportDownloadProgress(progress, "Downloading streamer on remote device");
+            });
+
+            if (!result.IsSuccess)
+            {
+                return false;
+            }
+
+            await ReportDownloadProgress(-1, "Extracting streamer archive");
+
+            ZipFile.ExtractToDirectory(targetPath, remoteControlDir);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while extracting remote control archive.");
+            return false;
+        }
+    }
+
+    private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
+    {
+        byte[] localHash = [];
+
+        using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            localHash = await MD5.HashDataAsync(zipFs);
+        }
+
+        _logger.LogInformation("Checking streamer remote archive hash.");
+        var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
+        if (!streamerHashResult.IsSuccess)
+        {
+            return streamerHashResult.ToResult(false);
+        }
+
+        _logger.LogInformation(
+            "Comparing local streamer archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
+            Convert.ToBase64String(localHash),
+            Convert.ToBase64String(streamerHashResult.Value));
+
+        if (streamerHashResult.Value.SequenceEqual(localHash))
+        {
+            _logger.LogInformation("Versions match.  Continuing.");
+            return Result.Ok(false);
+        }
+        else
+        {
+            _logger.LogInformation("Versions differ.  Proceeding with update.");
+            return Result.Ok(true);
+        }
+    }
+    private async Task ReportDownloadProgress(double progress, string message)
+    {
+        var connection = _serviceProvider.GetRequiredService<IAgentHubConnection>();
+
+        if (progress == 1 || progress < 0 || progress - _previousProgress > .05)
+        {
+            _previousProgress = progress;
+
+            foreach (var request in _pendingRequests)
+            {
+                try
+                {
+                    var dto = new StreamerDownloadProgressDto(
+                        request.StreamingSessionId,
+                        request.ViewerConnectionId,
+                        progress,
+                        message);
+
+                    await connection
+                        .SendStreamerDownloadProgress(dto)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while sending remote control download progress.");
+                }
+            }
         }
     }
 
@@ -243,35 +272,6 @@ internal class StreamerUpdaterWindows(
         {
             _logger.LogError(ex, "Error while attempting to patch streamer.");
             return false;
-        }
-    }
-    private async Task ReportDownloadProgress(double progress, string message)
-    {
-        var connection = _serviceProvider.GetRequiredService<IAgentHubConnection>();
-
-        if (progress == 1 || progress < 0 || progress - _previousProgress > .05)
-        {
-            _previousProgress = progress;
-
-            foreach (var request in _pendingRequests)
-            {
-                try
-                {
-                    var dto = new StreamerDownloadProgressDto(
-                        request.StreamingSessionId, 
-                        request.ViewerConnectionId, 
-                        progress, 
-                        message);
-
-                    await connection
-                        .SendStreamerDownloadProgress(dto)
-                        .ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while sending remote control download progress.");
-                }
-            }
         }
     }
 }

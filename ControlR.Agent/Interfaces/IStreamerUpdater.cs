@@ -7,4 +7,7 @@ internal interface IStreamerUpdater : IHostedService
     Task<bool> EnsureLatestVersion(
         StreamerSessionRequestDto requestDto,
         CancellationToken cancellationToken);
+
+    Task<bool> EnsureLatestVersion(
+        CancellationToken cancellationToken);
 }

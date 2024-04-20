@@ -23,6 +23,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
       - ControlR_ApplicationOptions__LogRetentionDays=7
+      - ControlR_ApplicationOptions__EnableStoreIntegration=false
 
       # Uncomment these variables to control access to your server.
       # For multiple values in an array, put each item on a new line
@@ -36,6 +37,14 @@ services:
 
 
       - ControlR_ApplicationOptions__UseStaticIceServers=true
+      - ControlR_ApplicationOptions__IceServers__0__Urls=stun:stun.l.google.com:19302
+      - ControlR_ApplicationOptions__IceServers__0__CredentialType=password
+      - ControlR_ApplicationOptions__IceServers__0__Username=
+      - ControlR_ApplicationOptions__IceServers__0__Credential=
+      - ControlR_ApplicationOptions__IceServers__1__Urls=stun:stun3.l.google.com:19302
+      - ControlR_ApplicationOptions__IceServers__1__CredentialType=password
+      - ControlR_ApplicationOptions__IceServers__1__Username=
+      - ControlR_ApplicationOptions__IceServers__1__Credential=
       #- ControlR_ApplicationOptions__UseCoTurn=false
       #- ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
 
@@ -45,6 +54,7 @@ services:
       # See the docs for more details:  
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #- ControlR_ApplicationOptions__KnownProxies__0=
+
   coturn:
    image: coturn/coturn
    # By default, coTURN uses ports 3478 TCP/UDP, 5349 TCP/UDP, and 49152-65535 UDP.
@@ -52,7 +62,11 @@ services:
    # Docker does not perform well with large port ranges, so coTURN maintainers
    # recommend using host network.  See https://hub.docker.com/r/coturn/coturn.
    network_mode: "host"
-   command: "--use-auth-secret --static-auth-secret=${TURN_SECRET}"
+
+   entrypoint: [
+    "/bin/sh",
+    "-c",
+    "turnadmin -a -u controlr-user -p ${TURN_SECRET} && turnserver --use-auth-secret=true --static-auth-secret=${TURN_SECRET} --log-file=stdout --external-ip=$(detect-external-ip) --no-cli"]
    
 volumes:
   controlr-data:

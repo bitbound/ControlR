@@ -64,10 +64,12 @@ public class IceServerProvider(
         return [];
     }
 
-    private string GenerateTurnPassword(string secret, string username)
+    private string GenerateTurnPassword(string secret, string username = "")
     {
         var expiration = DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds();
-        var tempUser = $"{expiration}:{username}";
+        var tempUser = !string.IsNullOrWhiteSpace(username) ? 
+            $"{expiration}:{username}" :
+            $"{expiration}";
 
         var key = Encoding.ASCII.GetBytes(secret);
         using var hmacsha1 = new HMACSHA1(key);

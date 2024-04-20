@@ -11,7 +11,11 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$KeystorePassword,
 
+    [Parameter(Mandatory = $true)]
     [string]$CurrentVersion,
+
+    [Parameter(Mandatory = $true)]
+    [string]$OutputPath,
 
     [switch]$BuildAgent,
 
@@ -28,6 +32,7 @@ $VsWhere = "$InstallerDir\vswhere.exe"
 $MSBuildPath = (&"$VsWhere" -latest -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
+$PublishedDownloads = "$OutputPath\wwwroot\downloads"
 $Octodiff = "$Root\.build\octodiff.exe"
 
 function Check-LastExitCode {
@@ -41,9 +46,9 @@ function Create-Signature($FilePath, $BaseSignatureFileName) {
         return "";
     }
 
-    [System.IO.Directory]::CreateDirectory("$DownloadsFolder\signatures") | Out-Null
+    [System.IO.Directory]::CreateDirectory("$PublishedDownloads\signatures") | Out-Null
     $Hash = Get-FileHash -Algorithm MD5 -Path $FilePath | Select-Object -ExpandProperty Hash
-    $SignaturePath = "$DownloadsFolder\signatures\$BaseSignatureFileName-$Hash.octosig"
+    $SignaturePath = "$PublishedDownloads\signatures\$BaseSignatureFileName-$Hash.octosig"
     &"$Octodiff" signature $FilePath $SignaturePath
     Check-LastExitCode
     return $SignaturePath
@@ -54,22 +59,15 @@ function Create-Delta($SignaturePath, $NewFilePath) {
         return;
     }
 
-    [System.IO.Directory]::CreateDirectory("$DownloadsFolder\deltas") | Out-Null
+    [System.IO.Directory]::CreateDirectory("$PublishedDownloads\deltas") | Out-Null
     $DeltaFileName = (Get-Item -Path $SignaturePath).Name.Replace(".octosig", ".octodelta")
-    &"$Octodiff" delta $SignaturePath $NewFilePath "$DownloadsFolder\deltas\$DeltaFileName"
+    &"$Octodiff" delta $SignaturePath $NewFilePath "$PublishedDownloads\deltas\$DeltaFileName"
     Check-LastExitCode
 }
 
 
 if (!$CurrentVersion) {
-    Push-Location -Path $Root
-
-    $VersionString = git show -s --format=%ci
-    $VersionDate = [DateTimeOffset]::Parse($VersionString)
-
-    $CurrentVersion = $VersionDate.ToString("yyyy.M.d.Hmm")
-
-    Pop-Location
+    Write-Error "CurrentVersion is required."
 }
 
 if (!(Test-Path $CertificatePath)) {
@@ -90,9 +88,14 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
     return
 }
 
+New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
+New-Item -Path "$PublishedDownloads" -ItemType Directory -Force | Out-Null
+
+#$WinSigPath = Create-Signature -FilePath "$PublishedDownloads\win-x86\ControlR.Agent.exe" -BaseSignatureFileName "windows-agent"
+#$LinuxSigPath = Create-Signature -FilePath "$PublishedDownloads\linux-x64\ControlR.Agent" -BaseSignatureFileName "linux-agent"
+$WinSigPath = Create-Signature -FilePath "$PublishedDownloads\controlr-streamer-win.zip" -BaseSignatureFileName "windows-streamer"
+
 if ($BuildAgent) {
-    #$WinSigPath = Create-Signature -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe" -BaseSignatureFileName "windows-agent"
-    #$LinuxSigPath = Create-Signature -FilePath "$DownloadsFolder\linux-x64\ControlR.Agent" -BaseSignatureFileName "linux-agent"
 
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     Check-LastExitCode
@@ -111,9 +114,6 @@ if ($BuildAgent) {
     Check-LastExitCode
 
     Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
-
-    #Create-Delta -SignaturePath $WinSigPath -NewFilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
-    #Create-Delta -SignaturePath $LinuxSigPath -NewFilePath "$DownloadsFolder\linux-x64\ControlR.Agent"
 }
 
 
@@ -135,7 +135,6 @@ if ($BuildViewer) {
     dotnet publish -p:PublishProfile=msix --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
     Check-LastExitCode
 
-    New-Item -Path "$DownloadsFolder" -ItemType Directory -Force
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.msix" -Force
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.cer" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.cer" -Force
 
@@ -150,30 +149,30 @@ if ($BuildViewer) {
 
 
 if ($BuildStreamer) {
-    $WinSigPath = Create-Signature -FilePath "$DownloadsFolder\controlr-streamer-win.zip" -BaseSignatureFileName "windows-streamer"
-
     [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
     $Package = $PackageJson | ConvertFrom-Json
-    $Package.version = [DateTime]::UtcNow.ToString("yyyy.MM.ddHHmm")
+    $Package.version = $CurrentVersion.Split(".", [System.StringSplitOptions]::RemoveEmptyEntries) | Select-Object -First 3 | Join-String -Separator "."
     [string]$PackageJson = $Package | ConvertTo-Json
     [System.IO.File]::WriteAllText("$Root\ControlR.Streamer\package.json", $PackageJson)
     Push-Location "$Root\ControlR.Streamer"
     npm install
     npm run make-pwsh
     Pop-Location
-
-    Create-Delta -SignaturePath $WinSigPath -NewFilePath "$DownloadsFolder\controlr-streamer-win.zip"
+    
 }
 
+dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Server\"
+
+#Create-Delta -SignaturePath $WinSigPath -NewFilePath "$PublishedDownloads\win-x86\ControlR.Agent.exe"
+#Create-Delta -SignaturePath $LinuxSigPath -NewFilePath "$PublishedDownloads\linux-x64\ControlR.Agent"
+Create-Delta -SignaturePath $WinSigPath -NewFilePath "$PublishedDownloads\controlr-streamer-win.zip"
 
 if ($BuildWebsite) {
     [System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
-    Get-ChildItem -Path "$Root\ControlR.Server\wwwroot\downloads\" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
+    Get-ChildItem -Path $PublishedDownloads | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
     Push-Location "$Root\ControlR.Website"
     npm install
     npm run build
     Pop-Location
     Check-LastExitCode
 }
-
-dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output "$Root\ControlR.Server\bin\publish" --self-contained true "$Root\ControlR.Server\"

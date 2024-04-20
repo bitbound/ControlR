@@ -12,6 +12,11 @@ internal class StreamerUpdaterFake(ILogger<StreamerUpdaterFake> _logger) : Backg
         return Task.FromResult(false);
     }
 
+    public Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(true);
+    }
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         return Task.CompletedTask;
