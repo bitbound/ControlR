@@ -57,7 +57,7 @@ function App() {
                         </Typography>
 
                         <Typography variant='subtitle1'>
-                            Secure VNC and RDP tunnel
+                            Zero-trust remote control
                         </Typography>
                     </HeaderPaper>
                 </HeaderRow>
@@ -141,24 +141,6 @@ function App() {
                             href="/downloads/linux-x64/ControlR.Agent"
                             target='_blank'>
                             Ubuntu
-                        </Button>
-                    </ButtonWrapper>
-
-                    <ButtonWrapper>
-                        <Button
-                            variant='outlined'
-                            href="/downloads/osx-x64/ControlR.Agent"
-                            target='_blank'>
-                            Mac (x64)
-                        </Button>
-                    </ButtonWrapper>
-
-                    <ButtonWrapper>
-                        <Button
-                            variant='outlined'
-                            href="/downloads/osx-arm64/ControlR.Agent"
-                            target='_blank'>
-                            Mac (arm64)
                         </Button>
                     </ButtonWrapper>
                 </Stack>
