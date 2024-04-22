@@ -26,6 +26,7 @@ internal class RemoteControlLauncherWindows(
     IHostApplicationLifetime _hostLifetime,
     IServiceProvider _serviceProvider,
     ISettingsProvider _settings,
+    IFileSystem _fileSystem,
     ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
@@ -80,6 +81,10 @@ internal class RemoteControlLauncherWindows(
 
                 if (process is null || process.Id == -1)
                 {
+                    var streamerZipPath = Path.Combine(startupDir, AppConstants.RemoteControlZipFileName);
+                    // Delete streamer files so a clean install will be performed on the next attempt.
+                    _fileSystem.DeleteDirectory(remoteControlDir, true);
+                    _fileSystem.DeleteFile(streamerZipPath);
                     return Result.Fail("Failed to start remote control process.");
                 }
 

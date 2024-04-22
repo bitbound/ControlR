@@ -95,8 +95,10 @@ public static class MauiProgram
 
 #if WINDOWS
         builder.Services.AddSingleton<IUpdateManager, UpdateManagerWindows>();
+        builder.Services.AddSingleton<IStoreIntegration, StoreIntegrationWindows>();
 #elif ANDROID
         builder.Services.AddSingleton<IUpdateManager, UpdateManagerAndroid>();
+        builder.Services.AddSingleton<IStoreIntegration, StoreIntegrationAndroid>();
 #else
         throw new PlatformNotSupportedException();
 #endif

@@ -414,8 +414,19 @@ internal class ViewerHubConnection(
         _messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
         await CheckIfServerAdministrator();
+        await CheckIfStoreIntegrationEnabled();
         await GetCurrentAlertFromServer();
         await RequestDeviceUpdates();
+    }
+
+    private async Task CheckIfStoreIntegrationEnabled()
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var isStoreEnabled = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfStoreIntegrationEnabled));
+                _appState.IsStoreIntegrationEnabled = isStoreEnabled;
+            });
     }
 
     private async Task CheckIfServerAdministrator()

@@ -8,7 +8,6 @@ using ControlR.Devices.Common.Services;
 using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared;
-using Windows.ApplicationModel.Store;
 
 namespace ControlR.Viewer.Services.Windows;
 

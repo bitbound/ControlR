@@ -29,6 +29,7 @@ public class ViewerHub(
     IStreamerSessionCache _streamerSessionCache,
     IDelayer _delayer,
     IIceServerProvider _iceProvider,
+    IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
 {
     private bool IsServerAdmin
@@ -48,62 +49,14 @@ public class ViewerHub(
         }
     }
 
-    public async Task<IceServer[]> GetIceServers()
-    {
-        return await _iceProvider.GetIceServers();
-    }
-
-    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
-    {
-        try
-        {
-            var sessionSuccess = await _agentHub.Clients
-                   .Client(agentConnectionId)
-                   .CreateStreamingSession(sessionRequestDto);
-
-            if (!sessionSuccess)
-            {
-                return Result.Fail<StreamerHubSession>("Failed to acquire streaming session.");
-            }
-
-            // TODO: Change to AsyncManualResetEvent.
-            _ = await _delayer.WaitForAsync(
-                () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
-                TimeSpan.FromSeconds(30));
-
-            if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
-            {
-                return Result.Fail<StreamerHubSession>("Timed out while waiting for streaming to start.");
-            }
-
-            session.AgentConnectionId = agentConnectionId;
-            session.ViewerConnectionId = Context.ConnectionId;
-            return Result.Ok(session);
-        }
-        catch (Exception ex)
-        {
-            return Result.Fail<StreamerHubSession>(ex);
-        }
-    }
-
-    public async Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto)
-    {
-        using var scope = _logger.BeginMemberScope();
-
-        if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
-        {
-            _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
-            return;
-        }
-
-        await _streamerHub.Clients
-            .Client(session.StreamerConnectionId)
-            .ReceiveDto(signedDto);
-    }
-
     public Task<bool> CheckIfServerAdministrator()
     {
         return IsServerAdmin.AsTaskResult();
+    }
+
+    public Task<bool> CheckIfStoreIntegrationEnabled()
+    {
+        return _appOptions.CurrentValue.EnableStoreIntegration.AsTaskResult();
     }
 
     public async Task<Result> ClearAlert(SignedPayloadDto signedDto)
@@ -160,6 +113,11 @@ public class ViewerHub(
         }
     }
 
+    public async Task<IceServer[]> GetIceServers()
+    {
+        return await _iceProvider.GetIceServers();
+    }
+
     public Task<Result<ServerStatsDto>> GetServerStats()
     {
         try
@@ -179,6 +137,39 @@ public class ViewerHub(
         {
             _logger.LogError(ex, "Error while getting agent count.");
             return Result.Fail<ServerStatsDto>("Failed to get agent count.").AsTaskResult();
+        }
+    }
+
+    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
+    {
+        try
+        {
+            var sessionSuccess = await _agentHub.Clients
+                   .Client(agentConnectionId)
+                   .CreateStreamingSession(sessionRequestDto);
+
+            if (!sessionSuccess)
+            {
+                return Result.Fail<StreamerHubSession>("Failed to acquire streaming session.");
+            }
+
+            // TODO: Change to AsyncManualResetEvent.
+            _ = await _delayer.WaitForAsync(
+                () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
+                TimeSpan.FromSeconds(30));
+
+            if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
+            {
+                return Result.Fail<StreamerHubSession>("Timed out while waiting for streaming to start.");
+            }
+
+            session.AgentConnectionId = agentConnectionId;
+            session.ViewerConnectionId = Context.ConnectionId;
+            return Result.Ok(session);
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail<StreamerHubSession>(ex);
         }
     }
 
@@ -305,6 +296,20 @@ public class ViewerHub(
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
     }
 
+    public async Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto)
+    {
+        using var scope = _logger.BeginMemberScope();
+
+        if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
+        {
+            _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
+            return;
+        }
+
+        await _streamerHub.Clients
+            .Client(session.StreamerConnectionId)
+            .ReceiveDto(signedDto);
+    }
     public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)
     {
         try

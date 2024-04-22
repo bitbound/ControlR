@@ -69,6 +69,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.KnownProxies.Add(dockerGatewayIp);
     }
+    else
+    {
+        Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
+    }
 
     if (appOptions?.KnownProxies is { Length: > 0 } knownProxies)
     {
@@ -77,6 +81,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
             if (IPAddress.TryParse(proxy, out var ip))
             {
                 options.KnownProxies.Add(ip);
+            }
+            else
+            {
+                Log.Error("Invalid KnownProxy IP: {KnownProxyIp}", proxy);
             }
         }
     }

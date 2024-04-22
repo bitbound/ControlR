@@ -7,6 +7,9 @@
 @inject IUpdateManager UpdateManager
 @inject ISettings Settings
 @inject IDialogService Dialogs
+@inject IStoreIntegration StoreIntegration
+@inject IAppState AppState
+@inject IBrowser Browser
 
 <PageTitle>About</PageTitle>
 
@@ -28,7 +31,7 @@
 
         @if (_updateAvailable)
         {
-            <MudLink Href="@DownloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
+            <MudLink Href="@_downloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
                 Download Update
             </MudLink>
 
@@ -70,15 +73,15 @@
 
 @code {
     private bool _updateAvailable;
+    private Uri? _storePageUri;
+    private string _downloadLink = "";
 
-    private string DownloadLink
-    {
-        get => Settings.ViewerDownloadUri;
-    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
+        await SetUris();
 
         var checkResult = await UpdateManager.CheckForUpdate();
         if (!checkResult.IsSuccess)
@@ -92,6 +95,17 @@
 
     private async Task InstallUpdate()
     {
+        if (AppState.IsStoreIntegrationEnabled)
+        {
+            if (_storePageUri is null)
+            {
+                return;
+            }
+
+            await Browser.OpenAsync(_storePageUri);
+            return;
+        }
+
         Snackbar.Add("Downloading update", Severity.Info);
         var installResult = await UpdateManager.InstallCurrentVersion();
         if (!installResult.IsSuccess)
@@ -101,6 +115,25 @@
         else
         {
             Snackbar.Add("Launching installer", Severity.Success);
+        }
+    }
+
+    private async Task SetUris()
+    {
+        try
+        {
+            if (!AppState.IsStoreIntegrationEnabled)
+            {
+                _downloadLink = Settings.ViewerDownloadUri;
+                return;
+            }
+            _storePageUri = await StoreIntegration.GetStorePageUri();
+            _downloadLink = _storePageUri.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while getting store page URI.");
+            Snackbar.Add("Failed to get store page URI.", Severity.Error);
         }
     }
 }

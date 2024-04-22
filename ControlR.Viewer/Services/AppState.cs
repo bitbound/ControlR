@@ -17,6 +17,8 @@ public interface IAppState
     bool IsServerAdministrator { get; internal set; }
     bool KeysVerified { get; set; }
     int PendingOperations { get; }
+    bool IsStoreIntegrationEnabled { get; internal set; }
+
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
 
 }
@@ -57,6 +59,7 @@ internal class AppState(
     public bool IsAuthenticated => AuthenticationState == AuthenticationState.Authenticated;
     public bool IsBusy => _busyCounter > 0;
     public bool IsServerAdministrator { get; set; }
+    public bool IsStoreIntegrationEnabled { get; set; }
     public bool KeysVerified { get; set; }
     public int PendingOperations => _busyCounter;
 
