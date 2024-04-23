@@ -1,6 +1,7 @@
 import { platform, tmpdir, EOL } from "os";
 import { appendFileSync, statSync, readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "fs";
 import path from "path";
+import appState from "./appState"
 
 const maxLogAge = 1000 * 60 * 60 * 24 * 7; // 7 days
 
@@ -73,11 +74,13 @@ export function writeLog(message: string, level: LogLevel = "Info", ...args: unk
 }
 
 function getLogDir() {
-    let logDir = path.join(tmpdir(), "ControlR", "Logs");
+    const logEnvDir = appState.isDev ? "Logs_Debug" : "Logs";
+
+    let logDir = path.join(tmpdir(), "ControlR", logEnvDir);
     const rootDir = path.parse(logDir).root;
 
     if (platform() == "win32") {
-        logDir = path.join(rootDir, "ProgramData", "ControlR", "Logs", "ControlR.Streamer");
+        logDir = path.join(rootDir, "ProgramData", "ControlR", logEnvDir, "ControlR.Streamer");
     }
 
     if (!existsSync(logDir)) {

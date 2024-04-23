@@ -52,7 +52,7 @@
                         <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
                     </MudListItem>
                     <MudListItem>
-                        <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" />
+                        <MonitorsMenu Displays="_displays" SelectedDisplay="_selectedDisplay" OnDisplaySelected="ChangeDisplays" />
                     </MudListItem>
                     <MudListItem>
                         <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.KeyboardControlKey)" OnClick="InvokeCtrlAltDel">
