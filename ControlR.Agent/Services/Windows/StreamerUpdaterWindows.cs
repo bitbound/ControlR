@@ -24,6 +24,7 @@ internal class StreamerUpdaterWindows(
     IEnvironmentHelper _environmentHelper,
     IVersionApi _versionApi,
     ISettingsProvider _settings,
+    IAgentUpdater _agentUpdater,
     ILogger<StreamerUpdaterWindows> _logger) : BackgroundService, IStreamerUpdater
 {
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
@@ -47,6 +48,7 @@ internal class StreamerUpdaterWindows(
 
     public async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
     {
+        await _agentUpdater.UpdateCheckCompletedSignal.Wait(cancellationToken);
         await _updateLock.WaitAsync(cancellationToken);
         try
         {
@@ -58,21 +60,28 @@ internal class StreamerUpdaterWindows(
 
             if (_fileSystem.FileExists(zipPath))
             {
-                var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
-                if (!archiveCheckResult.IsSuccess)
+                while (true)
                 {
-                    return false;
-                }
+                    var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
+                    if (!archiveCheckResult.IsSuccess)
+                    {
+                        return false;
+                    }
 
-                if (!archiveCheckResult.Value)
-                {
-                    return true;
-                }
+                    if (!archiveCheckResult.Value && _fileSystem.FileExists(binaryPath))
+                    {
+                        return true;
+                    }
 
-                var patchResult = await TryPatchCurrentVersion(zipPath, remoteControlDir);
-                if (patchResult)
-                {
-                    return true;
+                    var patchResult = await TryPatchCurrentVersion(zipPath, remoteControlDir);
+                    if (patchResult)
+                    {
+                        // We may need multiple patches to get to latest version,
+                        // so we'll iterate until the current zip hash matches the remote.
+                        continue;
+                    }
+                    // Else, we'll break and continue with full upgrade.
+                    break;
                 }
 
                 _logger.LogWarning("Patching failed.  Attempting full upgrade.");

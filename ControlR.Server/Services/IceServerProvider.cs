@@ -1,10 +1,11 @@
 ﻿using ControlR.Server.Options;
 using ControlR.Shared.Models;
-using ControlR.Shared.Primitives;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Text;
+using Twilio;
+using Twilio.Rest.Api.V2010.Account;
 
 namespace ControlR.Server.Services;
 
@@ -20,7 +21,30 @@ public class IceServerProvider(
 {
     public async Task<IceServer[]> GetIceServers()
     {
-        var iceServers = new List<IceServer>();
+        try
+        {
+            if (_appOptions.CurrentValue.UseTwilio &&
+                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSid) &&
+                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSecret))
+            {
+                TwilioClient.Init(_appOptions.CurrentValue.TwilioSid, _appOptions.CurrentValue.TwilioSecret);
+                var token = TokenResource.Create();
+                return token.IceServers
+                    .Select(x => new IceServer()
+                    {
+                        Credential = x.Credential,
+                        CredentialType = "password",
+                        Urls = x.Urls.ToString(),
+                        Username = x.Username
+                    })
+                    .ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting Metered ICE servers.");
+        }
+
         try
         {
             if (_appOptions.CurrentValue.UseMetered &&

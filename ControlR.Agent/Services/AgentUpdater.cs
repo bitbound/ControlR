@@ -1,6 +1,7 @@
 ﻿using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +15,7 @@ namespace ControlR.Agent.Services;
 internal interface IAgentUpdater : IHostedService
 {
     Task CheckForUpdate(CancellationToken cancellationToken = default);
+    ManualResetEventAsync UpdateCheckCompletedSignal { get; }
 }
 
 internal class AgentUpdater(
@@ -28,6 +30,8 @@ internal class AgentUpdater(
     private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.AgentFileName}";
     private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
     private readonly ILogger<AgentUpdater> _logger = logger;
+
+    public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new ManualResetEventAsync(false);
 
     public async Task CheckForUpdate(CancellationToken cancellationToken = default)
     {
@@ -46,6 +50,8 @@ internal class AgentUpdater(
 
         try
         {
+            UpdateCheckCompletedSignal.Reset();
+
             _logger.LogInformation("Beginning version check.");
 
             var hashResult = await _versionApi.GetCurrentAgentHash();
@@ -85,7 +91,6 @@ internal class AgentUpdater(
                 return;
             }
 
-            // TODO: Sign Linux binary.
             if (OperatingSystem.IsWindows())
             {
                 using var cert = X509Certificate.CreateFromSignedFile(tempPath);
@@ -93,7 +98,7 @@ internal class AgentUpdater(
 
                 using var selfCert = X509Certificate.CreateFromSignedFile(_environmentHelper.StartupExePath);
                 var expectedThumbprint = selfCert.GetCertHashString().Trim();
-
+                
                 if (!string.Equals(thumbprint, expectedThumbprint, StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogCritical(
@@ -111,7 +116,9 @@ internal class AgentUpdater(
             {
                 case Shared.Enums.SystemPlatform.Windows:
                     {
-                        _processInvoker.Start(tempPath, "install");
+                        await _processInvoker
+                            .Start(tempPath, "install")
+                            .WaitForExitAsync(cancellationToken);
                     }
                     break;
 
@@ -121,7 +128,11 @@ internal class AgentUpdater(
                           .Start("sudo", $"chmod +x {tempPath}")
                           .WaitForExitAsync(cancellationToken);
 
-                        _processInvoker.Start("/bin/bash", $"-c \"{tempPath} install &\"", true);
+                        await _processInvoker.StartAndWaitForExit(
+                            "/bin/bash", 
+                            $"-c \"{tempPath} install &\"", 
+                            true, 
+                            cancellationToken);
                     }
                     break;
 
@@ -131,7 +142,11 @@ internal class AgentUpdater(
                          .Start("sudo", $"chmod +x {tempPath}")
                          .WaitForExitAsync(cancellationToken);
 
-                        _processInvoker.Start("/bin/zsh", $"-c \"{tempPath} install &\"", true);
+                        await _processInvoker.StartAndWaitForExit(
+                            "/bin/zsh",
+                            $"-c \"{tempPath} install &\"",
+                            true,
+                            cancellationToken);
                     }
                     break;
 
@@ -145,6 +160,7 @@ internal class AgentUpdater(
         }
         finally
         {
+            UpdateCheckCompletedSignal.Set();
             _checkForUpdatesLock.Release();
         }
     }

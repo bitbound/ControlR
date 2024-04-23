@@ -65,7 +65,7 @@ internal class RemoteControlLauncherWindows(
 
             _logger.LogInformation("Launching remote control with args: {StreamerArguments}", args);
 
-            if (_processes.GetCurrentProcess().SessionId == 0)
+            if (!_environment.IsDebug)
             {
                 var startupDir = _environment.StartupDirectory;
                 var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
@@ -162,7 +162,7 @@ internal class RemoteControlLauncherWindows(
 
     private async Task<Result> LaunchNewSidecarProcess(StreamingSession session)
     {
-        if (_processes.GetCurrentProcess().SessionId == 0)
+        if (!_environment.IsDebug)
         {
             var args = $"--parent-id {Environment.ProcessId} --agent-pipe \"{session.AgentPipeName}\"";
             Win32.CreateInteractiveSystemProcess(

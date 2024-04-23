@@ -37,6 +37,14 @@ export async function movePointer(x: number, y: number) {
   await mouse.setPosition({ x: x, y: y });
 }
 
+export async function movePointerBy(x: number, y: number) {
+    const currentPos = await mouse.getPosition();
+    await mouse.setPosition({
+        x: currentPos.x + x,
+        y: currentPos.y + y
+    })
+}
+
 export async function pressMouseButton(button: number) {
   await mouse.pressButton(button);
 }

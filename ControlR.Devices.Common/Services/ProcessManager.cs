@@ -30,6 +30,7 @@ public interface IProcessManager
     Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
 
     Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout);
+    Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken);
 }
 
 public class ProcessManager : IProcessManager
@@ -142,6 +143,12 @@ public class ProcessManager : IProcessManager
 
     public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout)
     {
+        using var cts = new CancellationTokenSource(timeout);
+        await StartAndWaitForExit(fileName, arguments, useShellExec, cts.Token);
+    }
+
+    public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken)
+    {
         var psi = new ProcessStartInfo()
         {
             FileName = fileName,
@@ -149,9 +156,8 @@ public class ProcessManager : IProcessManager
             UseShellExecute = useShellExec,
         };
 
-        using var cts = new CancellationTokenSource(timeout);
         using var process = Process.Start(psi);
         Guard.IsNotNull(process);
-        await process.WaitForExitAsync(cts.Token);
+        await process.WaitForExitAsync(cancellationToken);
     }
 }

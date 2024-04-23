@@ -48,8 +48,8 @@ public static unsafe partial class Win32
         }
 
         // Obtain the process ID of the winlogon process that is running within the currently active session.
-        Process[] processes = Process.GetProcessesByName("winlogon");
-        foreach (Process p in processes)
+        var processes = Process.GetProcessesByName("winlogon");
+        foreach (var p in processes)
         {
             if ((uint)p.SessionId == dwSessionId)
             {
@@ -67,27 +67,27 @@ public static unsafe partial class Win32
 
         // Obtain a handle to the access token of the winlogon process.
 
-        if (!PInvoke.OpenProcessToken(winLogonSafeHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var hPToken))
+        if (!PInvoke.OpenProcessToken(winLogonSafeHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonAccessToken))
         {
             PInvoke.CloseHandle(winLogonHandle);
             return false;
         }
 
         // Security attibute structure used in DuplicateTokenEx and CreateProcessAsUser.
-        var sa = new SECURITY_ATTRIBUTES();
-        sa.nLength = (uint)Marshal.SizeOf(sa);
+        var securityAttributes = new SECURITY_ATTRIBUTES();
+        securityAttributes.nLength = (uint)Marshal.SizeOf(securityAttributes);
 
         // Copy the access token of the winlogon process; the newly created token will be a primary token.
         if (!PInvoke.DuplicateTokenEx(
-            hPToken,
+            winLogonAccessToken,
             (TOKEN_ACCESS_MASK)MAXIMUM_ALLOWED_RIGHTS,
-            sa,
+            securityAttributes,
             SECURITY_IMPERSONATION_LEVEL.SecurityIdentification,
             TOKEN_TYPE.TokenPrimary,
-            out var hUserTokenDup))
+            out var duplicatedToken))
         {
             PInvoke.CloseHandle(winLogonHandle);
-            hPToken.Close();
+            winLogonAccessToken.Close();
             return false;
         }
 
@@ -95,10 +95,10 @@ public static unsafe partial class Win32
         // the window station has a desktop that is invisible and the process is incapable of receiving
         // user input. To remedy this we set the lpDesktop parameter to indicate we want to enable user
         // interaction with the new process.
-        var si = new STARTUPINFOW();
-        si.cb = (uint)Marshal.SizeOf(si);
+        var startupInfo = new STARTUPINFOW();
+        startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
         var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
-        si.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
+        startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
         // Flags that specify the priority and creation method of the process.
         PROCESS_CREATION_FLAGS dwCreationFlags;
@@ -106,8 +106,8 @@ public static unsafe partial class Win32
         if (hiddenWindow)
         {
             dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_NO_WINDOW | PROCESS_CREATION_FLAGS.DETACHED_PROCESS;
-            si.dwFlags = STARTUPINFOW_FLAGS.STARTF_USESHOWWINDOW;
-            si.wShowWindow = 0;
+            startupInfo.dwFlags = STARTUPINFOW_FLAGS.STARTF_USESHOWWINDOW;
+            startupInfo.wShowWindow = 0;
         }
         else
         {
@@ -117,23 +117,23 @@ public static unsafe partial class Win32
         var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
         // Create a new process in the current user's logon session.
         var result = PInvoke.CreateProcessAsUser(
-            hUserTokenDup,
+            duplicatedToken,
             null,
             ref cmdLineSpan,
-            sa,
-            sa,
+            securityAttributes,
+            securityAttributes,
             false,
             dwCreationFlags,
             IntPtr.Zero.ToPointer(),
             null,
-            in si,
+            in startupInfo,
             out var procInfo);
 
         // Invalidate the handles.
         PInvoke.CloseHandle(winLogonHandle);
         Marshal.FreeHGlobal(desktopPtr);
-        hPToken.Close();
-        hUserTokenDup.Close();
+        winLogonAccessToken.Close();
+        duplicatedToken.Close();
 
         if (result)
         {

@@ -402,6 +402,10 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         try
         {
+            if (_isScrollModeEnabled)
+            {
+                return;
+            }
 
             if (ev.Touches.Length != 2)
             {

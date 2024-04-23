@@ -2,7 +2,7 @@ export async function setMediaStreams(sourceId: string, peerConnection: RTCPeerC
     window.mainApi.writeLog("Getting stream for media source ID: ", "Info", sourceId);
 
     const constraints = getDefaultConstraints();
-    if (sourceId) {
+    if (sourceId && sourceId !== "all") {
         constraints.video.mandatory.chromeMediaSourceId = sourceId;
     }
     else {
@@ -16,8 +16,7 @@ export async function setMediaStreams(sourceId: string, peerConnection: RTCPeerC
         setTrack(stream, peerConnection);
     }
     catch (ex) {
-        console.warn(ex);
-        window.mainApi.writeLog("Failed to get media with audio constraints.  Dropping audio.", "Warning");
+        window.mainApi.writeLog("Failed to get media with audio constraints.  Dropping audio.", "Warning", ex);
         delete constraints.audio;
         stream = await navigator.mediaDevices.getUserMedia(constraints as MediaStreamConstraints);
         setTrack(stream, peerConnection);

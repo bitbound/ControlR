@@ -47,7 +47,6 @@ internal class AgentHubConnection(
      IMessenger _messenger,
      ITerminalStore _terminalStore,
      IDelayer _delayer,
-     IProcessManager _processManager,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
@@ -63,7 +62,7 @@ internal class AgentHubConnection(
 
             var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
 
-            if (_processManager.GetCurrentProcess().SessionId == 0)
+            if (!_environmentHelper.IsDebug)
             {
                 var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
                 if (!versionResult)
