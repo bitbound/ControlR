@@ -11,13 +11,13 @@ public class DisplayDto
     public string DisplayId { get; init; } = string.Empty;
 
     [MsgPackKey]
-    public int Height { get; init; }
+    public double Height { get; init; }
 
     [MsgPackKey]
     public bool IsPrimary { get; init; }
 
     [MsgPackKey]
-    public int Left { get; init; }
+    public double Left { get; init; }
 
     [MsgPackKey]
     public string MediaId { get; init; } = string.Empty;
@@ -29,8 +29,8 @@ public class DisplayDto
     public double ScaleFactor { get; init; }
 
     [MsgPackKey]
-    public int Top { get; init; }
+    public double Top { get; init; }
 
     [MsgPackKey]
-    public int Width { get; init; }
+    public double Width { get; init; }
 }

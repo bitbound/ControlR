@@ -94,9 +94,27 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
                 services.AddHostedService<DtoHandler>();
 
-                if (OperatingSystem.IsWindows())
+                if (OperatingSystem.IsWindowsVersionAtLeast(6,0,6000))
                 {
+                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
+                    services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
                     services.AddHostedService<StreamingSessionWatcher>();
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
+                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
+
+                }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
+                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
+
+                }
+                else
+                {
+                    throw new PlatformNotSupportedException();
                 }
             }
 
@@ -107,8 +125,6 @@ internal static class IHostBuilderExtensions
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
-                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
-                services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();
@@ -116,8 +132,6 @@ internal static class IHostBuilderExtensions
             }
             else if (OperatingSystem.IsLinux())
             {
-                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
-                services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
@@ -125,8 +139,6 @@ internal static class IHostBuilderExtensions
             }
             else if (OperatingSystem.IsMacOS())
             {
-                services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
-                services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
