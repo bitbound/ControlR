@@ -1,4 +1,4 @@
-import { app, ipcMain } from "electron";
+import { app, ipcMain, screen, Point } from "electron";
 import appState from "./appState";
 import { getDisplays } from "./mediaHelperMain";
 import {
@@ -29,6 +29,9 @@ export async function registerIpcHandlers() {
     verifyDto(payload, signature, publicKey, publicKeyPem),
   );
   handleMethod("getDisplays", () => getDisplays());
+  handleMethod("dipToScreenPoint", (_, point: Point) => {
+    return screen.dipToScreenPoint(point);
+  });
   handleMethod("movePointer", (_, x, y) => movePointer(x, y));
   handleMethod("exit", () => app.exit());
   handleMethod("invokeKeyEvent", (_, key, isPressed, shouldRelease) =>

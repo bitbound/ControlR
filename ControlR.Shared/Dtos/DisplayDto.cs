@@ -17,6 +17,9 @@ public class DisplayDto
     public bool IsPrimary { get; init; }
 
     [MsgPackKey]
+    public string Label { get; init; } = string.Empty;
+
+    [MsgPackKey]
     public double Left { get; init; }
 
     [MsgPackKey]
@@ -24,7 +27,6 @@ public class DisplayDto
 
     [MsgPackKey]
     public string Name { get; init; } = string.Empty;
-
     [MsgPackKey]
     public double ScaleFactor { get; init; }
 

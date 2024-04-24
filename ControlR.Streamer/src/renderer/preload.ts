@@ -4,41 +4,36 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { MainApi } from "./mainApi";
 
-contextBridge.exposeInMainWorld("mainApi", {
-  getServerUri: () => ipcRenderer.invoke("getServerUri"),
-  getSessionId: () => ipcRenderer.invoke("getSessionId"),
-  getNotifyUser: () => ipcRenderer.invoke("getNotifyUser"),
-  getViewerName: () => ipcRenderer.invoke("getViewerName"),
+type MainApiMethod = keyof MainApi;
+
+const mainApiIpc: MainApi = {
+  getServerUri: () => invokeInMain("getServerUri"),
+  getSessionId: () => invokeInMain("getSessionId"),
+  getNotifyUser: () => invokeInMain("getNotifyUser"),
+  getViewerName: () => invokeInMain("getViewerName"),
 
   verifyDto: (payload, signature, publicKey, publicKeyPem) =>
-    ipcRenderer.invoke(
-      "verifyDto",
-      payload,
-      signature,
-      publicKey,
-      publicKeyPem,
-    ),
+    invokeInMain("verifyDto", payload, signature, publicKey, publicKeyPem),
 
-  getDisplays: () => ipcRenderer.invoke("getDisplays"),
-  movePointer: (x, y) => ipcRenderer.invoke("movePointer", x, y),
-  exit: () => ipcRenderer.invoke("exit"),
+  getDisplays: () => invokeInMain("getDisplays"),
+  movePointer: (x, y) => invokeInMain("movePointer", x, y),
+  dipToScreenPoint: (point) => invokeInMain("dipToScreenPoint", point),
+  exit: () => invokeInMain("exit"),
 
   invokeKeyEvent: (key, isPressed, shouldRelease) =>
-    ipcRenderer.invoke("invokeKeyEvent", key, isPressed, shouldRelease),
+    invokeInMain("invokeKeyEvent", key, isPressed, shouldRelease),
 
   invokeMouseButtonEvent: (button, isPressed, x, y) =>
-    ipcRenderer.invoke("invokeMouseButtonEvent", button, isPressed, x, y),
+    invokeInMain("invokeMouseButtonEvent", button, isPressed, x, y),
 
-  resetKeyboardState: () => ipcRenderer.invoke("resetKeyboardState"),
+  resetKeyboardState: () => invokeInMain("resetKeyboardState"),
 
   invokeWheelScroll: (deltaX, deltaY, deltaZ) =>
-    ipcRenderer.invoke("invokeWheelScroll", deltaX, deltaY, deltaZ),
+    invokeInMain("invokeWheelScroll", deltaX, deltaY, deltaZ),
 
-  invokeTypeText: (text: string) => ipcRenderer.invoke("invokeTypeText", text),
-  setClipboardText: (text: string | undefined | null) => ipcRenderer.invoke("setClipboardText", text),
-
-  onLocalClipboardChanged: (callback: (text: string | undefined | null) => void) =>
-    ipcRenderer.on("localClipboardChanged", (ev, text) => callback(text)),
+  invokeTypeText: (text: string) => invokeInMain("invokeTypeText", text),
+  setClipboardText: (text: string | undefined | null) =>
+    invokeInMain("setClipboardText", text),
 
   writeLog: (message, level, args) => {
     switch (level) {
@@ -54,6 +49,16 @@ contextBridge.exposeInMainWorld("mainApi", {
       default:
         break;
     }
-    ipcRenderer.invoke("writeLog", message, level, args);
+    return invokeInMain("writeLog", message, level, args);
   },
-} as MainApi);
+
+  onLocalClipboardChanged: (
+    callback: (text: string | undefined | null) => void,
+  ) => ipcRenderer.on("localClipboardChanged", (ev, text) => callback(text)),
+};
+
+contextBridge.exposeInMainWorld("mainApi", mainApiIpc);
+
+function invokeInMain(methodName: MainApiMethod, ...args: any[]) {
+  return ipcRenderer.invoke(methodName, ...args);
+}

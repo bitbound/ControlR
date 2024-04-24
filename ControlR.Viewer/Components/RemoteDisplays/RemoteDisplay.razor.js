@@ -282,28 +282,16 @@ export async function initialize(componentRef, videoId, iceServers) {
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-        const mouseButtonDto = {
-            dtoType: "mouseButtonEvent",
-            percentX: ev.offsetX / state.videoElement.clientWidth,
-            percentY: ev.offsetY / state.videoElement.clientHeight,
-            isPressed: true,
-            button: ev.button
-        };
-        state.dataChannel.send(JSON.stringify(mouseButtonDto));
+        
+        sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, ev.button, state);
     });
 
     video.addEventListener("mouseup", async ev => {
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-        const mouseButtonDto = {
-            dtoType: "mouseButtonEvent",
-            percentX: ev.offsetX / state.videoElement.clientWidth,
-            percentY: ev.offsetY / state.videoElement.clientHeight,
-            isPressed: false,
-            button: ev.button
-        };
-        state.dataChannel.send(JSON.stringify(mouseButtonDto));
+        
+        sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, ev.button, state);
     });
 
     video.addEventListener("wheel", ev => {
