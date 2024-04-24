@@ -220,15 +220,13 @@ export async function initialize(componentRef, videoId, iceServers) {
             ev.preventDefault();
             ev.stopPropagation();
 
-            sendPointerMove(state.longPressStartOffsetX.offsetX, state.longPressStartOffsetX.offsetY, state);
-
             const moveDistance = getDistanceBetween(
                 state.longPressStartOffsetX,
                 state.longPressStartOffsetY,
                 ev.offsetX,
                 ev.offsetY);
 
-            if (moveDistance > 5) { 
+            if (moveDistance > 10) { 
                 state.isDragging = true;
                 sendPointerMove(state.longPressStartOffsetX, state.longPressStartOffsetY, state);
                 sendMouseButtonEvent(state.longPressStartOffsetX, state.longPressStartOffsetY, true, 0, state);
