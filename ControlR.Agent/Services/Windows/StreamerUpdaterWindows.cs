@@ -179,6 +179,7 @@ internal class StreamerUpdaterWindows(
         var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
         if (!streamerHashResult.IsSuccess)
         {
+            _logger.LogResult(streamerHashResult);
             return streamerHashResult.ToResult(false);
         }
 
