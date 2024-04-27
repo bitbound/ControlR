@@ -161,6 +161,11 @@
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(_alertMessage))
+            {
+                Snackbar.Add("Alert message cannot be empty", Severity.Warning);
+                return;
+            }
             await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
             Snackbar.Add("Alert broadcasted", Severity.Success);
         }

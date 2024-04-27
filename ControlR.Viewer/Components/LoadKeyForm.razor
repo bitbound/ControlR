@@ -87,14 +87,14 @@ else
         {
             if (Settings.RememberPassphrase)
             {
-                _passphrase = await Settings.GetPassphrase();
-
-                if (string.IsNullOrWhiteSpace(_passphrase))
+                var passphraseResult = await Settings.GetPassphrase();
+                if (!passphraseResult.IsSuccess)
                 {
-                    Snackbar.Add("Stored passphrase is empty", Severity.Warning);
+                    Snackbar.Add("Failed to load passphrase", Severity.Warning);
                     return;
                 }
 
+                _passphrase = passphraseResult.Value;
                 _formIsValid = true;
                 await LoadKeys(false);
             }
@@ -139,8 +139,15 @@ else
             InvokeAsync(StateHasChanged);
         });
 
-        var encryptedPrivateKey = await Settings.GetEncryptedPrivateKey();
+        var keyResult = await Settings.GetEncryptedPrivateKey();
 
+        if (!keyResult.IsSuccess)
+        {
+            Snackbar.Add("Failed to load private key", Severity.Error);
+            return;
+        }
+
+        var encryptedPrivateKey = keyResult.Value;
         try
         {
             var userKeys = KeyProvider.ImportKeys(_passphrase, encryptedPrivateKey);

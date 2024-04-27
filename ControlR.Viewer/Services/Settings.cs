@@ -24,9 +24,9 @@ public interface ISettings
 
     string ViewerDownloadUri { get; }
 
-    Task<byte[]> GetEncryptedPrivateKey();
+    Task<Result<byte[]>> GetEncryptedPrivateKey();
 
-    Task<string> GetPassphrase();
+    Task<Result<string>> GetPassphrase();
 
     Task RemoveAll();
     Task SetEncryptedPrivateKey(byte[] value);
@@ -112,19 +112,44 @@ internal class Settings(
             return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
         }
     }
-    public async Task<byte[]> GetEncryptedPrivateKey()
+    public async Task<Result<byte[]>> GetEncryptedPrivateKey()
     {
-        var stored = await _secureStorage.GetAsync("EncryptedPrivateKey");
-        if (string.IsNullOrWhiteSpace(stored))
+        try
         {
-            return [];
+            var stored = await _secureStorage.GetAsync("EncryptedPrivateKey");
+            if (string.IsNullOrWhiteSpace(stored))
+            {
+                return Result.Fail<byte[]>("Stored key is empty.");
+            }
+            return Result.Ok(Convert.FromBase64String(stored));
         }
-        return Convert.FromBase64String(stored);
+        catch (Exception ex)
+        {
+            var result = Result.Fail<byte[]>(ex, "Error while getting key from secure storage.");
+            _logger.LogResult(result);
+            _secureStorage.Remove("EncryptedPrivateKey");
+            return result;
+        }
     }
 
-    public async Task<string> GetPassphrase()
+    public async Task<Result<string>> GetPassphrase()
     {
-        return await _secureStorage.GetAsync("Passphrase") ?? string.Empty;
+        try
+        {
+            var passphrase = await _secureStorage.GetAsync("Passphrase") ?? string.Empty;
+            if (string.IsNullOrEmpty(passphrase))
+            {
+                return Result.Fail<string>("Stored passphrase is empty.");
+            }
+            return Result.Ok(passphrase);
+        }
+        catch (Exception ex)
+        {
+            var result = Result.Fail<string>(ex, "Error while getting passphrase from secure storage.");
+            _logger.LogResult(result);
+            _secureStorage.Remove("Passphrase");
+            return result;
+        }
     }
 
     public async Task RemoveAll()
