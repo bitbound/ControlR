@@ -20,3 +20,5 @@ SwitchDesktop
 SendInput
 VkKeyScan
 GetKeyState
+GetMessageExtraInfo
+GetSystemMetrics

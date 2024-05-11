@@ -59,25 +59,19 @@ rootCommand.SetHandler(async (streamerPipeName, parentProcessId) =>
                 options.StreamerPipeName = streamerPipeName;
             });
 
+            services.AddSingleton<IStreamerIpcConnection, StreamerIpcConnection>();
+            services.AddSingleton<IProcessManager, ProcessManager>();
+            services.AddSingleton(WeakReferenceMessenger.Default);
+
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
-                services.AddSingleton<IStreamerIpcConnection, StreamerIpcConnection>();
-                services.AddSingleton<IInputSimulator, InputSimulator>();
-                services.AddSingleton(WeakReferenceMessenger.Default);
-                services.AddSingleton<IProcessManager, ProcessManager>();
+                services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
                 services.AddHostedService<InputDesktopReporter>();
             }
-        })
-        .ConfigureLogging(logging =>
-        {
-            logging.AddConsole();
-            logging.AddDebug();
-            var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-            logging.AddProvider(new FileLoggerProvider(
-                version,
-                () => LoggingConstants.LogPath,
-                TimeSpan.FromDays(7)));
-            logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+            else
+            {
+                throw new PlatformNotSupportedException();
+            }
         })
         .BootstrapSerilog(LoggingConstants.LogPath, TimeSpan.FromDays(7))
         .Build();

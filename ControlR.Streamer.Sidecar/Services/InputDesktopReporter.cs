@@ -1,6 +1,6 @@
 ﻿using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
-using ControlR.Streamer.Sidecar.IpcDtos;
+using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Streamer.Sidecar.Options;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

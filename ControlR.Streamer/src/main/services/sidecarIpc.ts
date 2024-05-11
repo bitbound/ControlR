@@ -1,11 +1,12 @@
 import { spawn } from "child_process";
 import crypto from "crypto";
 import net from "net";
-import appState from "./appState";
 import { writeLog } from "./logger";
 import { app } from "electron";
+import { SidecarDtoBase } from "../../shared/sidecarDtos";
 
 let server: net.Server;
+let client: net.Socket;
 
 export function launchSidecar(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -36,6 +37,8 @@ export function launchSidecar(): Promise<void> {
         writeLog("Sidecar pipe server closing.");
         server.close();
       });
+
+      client = stream;
       resolve();
     });
 
@@ -60,12 +63,14 @@ export function launchSidecar(): Promise<void> {
       binaryPath = `.\\.artifacts\\${binaryPath}`;
     }
 
-    const sidecarProc = spawn(binaryPath, [
-      "--streamer-pipe",
-      pipeName,
-      "--parent-id",
-      process.pid.toString(),
-    ]);
+    const sidecarProc = spawn(
+      binaryPath,
+      ["--streamer-pipe", pipeName, "--parent-id", process.pid.toString()],
+      {
+        shell: app.isPackaged ? undefined : true,
+        detached: app.isPackaged ? undefined : true,
+      },
+    );
 
     if (sidecarProc.exitCode !== null) {
       writeLog("Sidecar failed to start.", "Error");
@@ -74,4 +79,15 @@ export function launchSidecar(): Promise<void> {
   });
 }
 
-type SidecarDtoType = "Unknown" | "DesktopChanged";
+export async function sendMessage<T extends SidecarDtoBase>(dto: T) {
+  const json = JSON.stringify(dto);
+  const result = client.write(`${json}\n`, (err) => {
+    if (err) {
+      writeLog("Error while sending message to sidecar: ", "Error", err);
+    }
+  });
+
+  if (!result) {
+    writeLog("Drain needed in sidecar IPC.");
+  }
+}

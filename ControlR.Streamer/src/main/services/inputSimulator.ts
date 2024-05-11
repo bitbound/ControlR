@@ -1,10 +1,19 @@
 import { mouse, keyboard, Key } from "@nut-tree/nut-js";
+import {
+  MovePointerDto,
+  KeyEventDto,
+  MouseButtonEventDto,
+} from "../../shared/sidecarDtos";
+
+import { sendMessage } from "./sidecarIpc";
 
 export async function invokeKeyEvent(
   keyCode: string,
   isPressed: boolean,
   shouldRelease: boolean,
 ) {
+  const dto = {} as KeyEventDto;
+
   if (isPressed) {
     pressKey(keyCode);
     if (shouldRelease) {
@@ -21,12 +30,15 @@ export async function invokeMouseButtonEvent(
   x: number,
   y: number,
 ) {
-  movePointer(x, y);
-  if (isPressed) {
-    pressMouseButton(button);
-  } else {
-    releaseMouseButton(button);
-  }
+  const dto = {
+    button: button,
+    isPressed: isPressed,
+    x: x,
+    y: y,
+    dtoType: "MouseButtonEvent",
+  } as MouseButtonEventDto;
+
+  sendMessage(dto);
 }
 
 export async function invokeTypeText(text: string) {
@@ -34,20 +46,28 @@ export async function invokeTypeText(text: string) {
 }
 
 export async function movePointer(x: number, y: number) {
-  await mouse.setPosition({ x: x, y: y });
+  const dto = {
+    dtoType: "MovePointer",
+    moveType: "Absolute",
+    x: x,
+    y: y,
+  } as MovePointerDto;
+
+  await sendMessage(dto);
 }
 
 export async function movePointerBy(x: number, y: number) {
-    const currentPos = await mouse.getPosition();
-    await mouse.setPosition({
-        x: currentPos.x + x,
-        y: currentPos.y + y
-    })
+  const dto = {
+    dtoType: "MovePointer",
+    moveType: "Relative",
+    x: x,
+    y: y,
+  } as MovePointerDto;
+
+  await sendMessage(dto);
 }
 
-export async function pressMouseButton(button: number) {
-  await mouse.pressButton(button);
-}
+export async function pressMouseButton(button: number) {}
 
 export async function releaseMouseButton(button: number) {
   await mouse.releaseButton(button);

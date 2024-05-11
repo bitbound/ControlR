@@ -99,12 +99,6 @@ public partial class RemoteDisplay : IAsyncDisposable
             return _isStreamLoaded ?
                 "display: unset;" :
                 "display: none;";
-
-            //if (_viewMode is ViewMode.Fit or ViewMode.Stretch || _videoHeight < 1 || _videoWidth < 1)
-            //{
-            //    return style;
-            //}
-            //return $"{style} width: {_videoWidth}px; height: {_videoHeight}px;";
         }
     }
 

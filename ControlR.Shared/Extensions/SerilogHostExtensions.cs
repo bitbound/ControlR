@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using ControlR.Shared.Services;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace ControlR.Shared.Extensions;
@@ -12,9 +13,14 @@ public static class SerilogHostExtensions
     {
         try
         {
+            var minLogLevel = EnvironmentHelper.Instance.IsDebug ? 
+                Serilog.Events.LogEventLevel.Debug : 
+                Serilog.Events.LogEventLevel.Information;
+
             void ApplySharedLoggerConfig(LoggerConfiguration loggerConfiguration)
             {
                 loggerConfiguration
+                    .MinimumLevel.Is(minLogLevel)
                     .Enrich.FromLogContext()
                     .Enrich.WithThreadId()
                     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")

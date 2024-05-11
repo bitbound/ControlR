@@ -1,31 +1,30 @@
-﻿using Bitbound.SimpleMessenger;
+﻿using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Extensions;
-using ControlR.Streamer.Sidecar.IpcDtos;
-using ControlR.Streamer.Sidecar.Options;
-using Microsoft.AspNetCore.SignalR.Client;
+using ControlR.Streamer.Sidecar.Services.Windows;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
 using System.IO.Pipes;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace ControlR.Streamer.Sidecar.Services;
 
 public interface IStreamerIpcConnection
 {
-    Task Send<T>(T dto)
-        where T : SidecarDtoBase;
     Task<bool> Connect(string serverPipeName, CancellationToken cancellationToken);
+
+    Task Send<T>(T dto) where T : SidecarDtoBase;
 }
 internal class StreamerIpcConnection(
     IHostApplicationLifetime _appLifetime,
+    IInputSimulator _inputSimulator,
     ILogger<StreamerIpcConnection> _logger) : IStreamerIpcConnection
 {
+    private readonly JsonSerializerOptions _jsonOptions = new() 
+    { 
+        PropertyNameCaseInsensitive = true, 
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+    };
+
     private NamedPipeClientStream? _client;
     private StreamReader? _reader;
     private StreamWriter? _writer;
@@ -64,7 +63,7 @@ internal class StreamerIpcConnection(
 
     public async Task Send<T>(T dto) where T : SidecarDtoBase
     {
-        var json = JsonSerializer.Serialize(dto);
+        var json = JsonSerializer.Serialize(dto, _jsonOptions);
         await Writer.WriteAsync(json);
         await Writer.FlushAsync();
     }
@@ -76,15 +75,47 @@ internal class StreamerIpcConnection(
             try
             {
                 var message = await Reader.ReadLineAsync();
-                if (!string.IsNullOrWhiteSpace(message))
+                if (string.IsNullOrWhiteSpace(message))
                 {
-                    var baseDto = JsonSerializer.Deserialize<SidecarDtoBase>(message);
-                    switch (baseDto?.DtoType)
-                    {
-                        default:
-                            _logger.LogWarning("Invalid IPC DTO type: {DtoType}", baseDto?.DtoType);
+                    _logger.LogWarning("Received empty message from streamer IPC pipe.");
+                    continue;
+                }
+
+                _logger.LogDebug("Message received from streamer: {IpcMessage}", message);
+
+                var baseDto = JsonSerializer.Deserialize<SidecarDtoBase>(message, _jsonOptions);
+                switch (baseDto?.DtoType)
+                {
+                    case SidecarDtoType.MovePointer:
+                        {
+                            var moveDto = JsonSerializer.Deserialize<MovePointerDto>(message, _jsonOptions) ??
+                                throw new JsonException("Failed to deserialize MovePointerDto.");
+                            _logger.LogDebug("Received MovePointer IPC DTO: {MoveDto}", moveDto);
+
+                            _inputSimulator.MovePointer(moveDto.X, moveDto.Y, moveDto.MoveType);
                             break;
-                    }
+                        }
+                    case SidecarDtoType.MouseButtonEvent:
+                        {
+                            var buttonDto = JsonSerializer.Deserialize<MouseButtonEventDto>(message, _jsonOptions) ??
+                                                           throw new JsonException("Failed to deserialize MovePointerDto.");
+                            _logger.LogDebug("Received ButtonEvent IPC DTO: {EventDto}", buttonDto);
+
+                            _inputSimulator.InvokeMouseButtonEvent(buttonDto.X, buttonDto.Y, buttonDto.Button, buttonDto.IsPressed);
+                            break;
+                        }
+                    case SidecarDtoType.KeyEvent:
+                        {
+                            var keyDto = JsonSerializer.Deserialize<KeyEventDto>(message, _jsonOptions) ??
+                                throw new JsonException("Failed to deserialize KeyEventDto.");
+                            _logger.LogDebug("Received KeyEvent IPC DTO: {KeyDto}", keyDto);
+
+                            _inputSimulator.InvokeKeyEvent(keyDto.Key, keyDto.IsPressed);
+                            break;
+                        }
+                    default:
+                        _logger.LogWarning("Invalid IPC DTO type: {DtoType}", baseDto?.DtoType);
+                        break;
                 }
 
             }
