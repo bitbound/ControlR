@@ -1,5 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Agent.Native.Linux;
+using ControlR.Devices.Common.Native.Linux;
 using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;

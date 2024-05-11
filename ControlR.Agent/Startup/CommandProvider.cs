@@ -52,43 +52,6 @@ internal class CommandProvider
         return runCommand;
     }
 
-    internal static Command GetSidecarCommand(string[] args)
-    {
-        var agentPipeOption = new Option<string>(
-            new[] { "-a", "--agent-pipe" },
-            "The agent pipe name to which the watcher should connect.")
-        {
-            IsRequired = true
-        };
-
-        var parentIdOption = new Option<int>(
-            new[] { "-p", "--parent-id" },
-            "The calling process's ID.")
-        {
-            IsRequired = true
-        };
-
-        var sidecarCommand = new Command("sidecar", "Watches for desktop changes (winlogon/UAC) for the streamer process.")
-        {
-            agentPipeOption,
-            parentIdOption
-        };
-
-        sidecarCommand.SetHandler(async (agentPipeName, parentProcessId) =>
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                Console.WriteLine("This command is only available on Windows.");
-                return;
-            }
-            var host = CreateHost(StartupMode.Sidecar, args);
-            var desktopReporter = host.Services.GetRequiredService<IInputDesktopReporter>();
-            await desktopReporter.Start(agentPipeName, parentProcessId);
-            await host.RunAsync();
-        }, agentPipeOption, parentIdOption);
-
-        return sidecarCommand;
-    }
     internal static Command GetUninstallCommand(string[] args)
     {
         var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.");

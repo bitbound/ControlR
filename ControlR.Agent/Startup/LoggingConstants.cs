@@ -4,7 +4,7 @@ namespace ControlR.Agent.Startup;
 
 internal static class LoggingConstants
 {
-    public static string LogPath => Path.Combine(LogsFolderPath, "ControlR.Agent", $"LogFile_{DateTime.Now:yyyy-MM-dd}.log");
+    public static string LogPath => Path.Combine(LogsFolderPath, "ControlR.Agent", "LogFile.log");
 
     public static string LogsFolderPath
     {

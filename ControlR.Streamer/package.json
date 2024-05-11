@@ -28,7 +28,6 @@
     "@electron-forge/maker-zip": "^7.4.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
     "@electron-forge/plugin-webpack": "^7.4.0",
-    "@reforged/maker-appimage": "^4.0.2",
     "@types/react": "^18.2.79",
     "@types/react-bootstrap": "^0.32.36",
     "@types/react-dom": "^18.2.25",

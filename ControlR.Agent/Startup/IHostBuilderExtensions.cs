@@ -7,6 +7,7 @@ using ControlR.Agent.Services.Linux;
 using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
 using ControlR.Devices.Common.Services;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
@@ -94,7 +95,7 @@ internal static class IHostBuilderExtensions
                 services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
                 services.AddHostedService<DtoHandler>();
 
-                if (OperatingSystem.IsWindowsVersionAtLeast(6,0,6000))
+                if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
                 {
                     services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
                     services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
@@ -116,11 +117,6 @@ internal static class IHostBuilderExtensions
                 {
                     throw new PlatformNotSupportedException();
                 }
-            }
-
-            if (startupMode == StartupMode.Sidecar && OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
-            {
-                services.AddSingleton<IInputDesktopReporter, InputDesktopReporter>();
             }
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
@@ -148,18 +144,9 @@ internal static class IHostBuilderExtensions
             {
                 throw new PlatformNotSupportedException();
             }
-        })
-        .ConfigureLogging(logging =>
-        {
-            logging.AddConsole();
-            logging.AddDebug();
-            var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-            logging.AddProvider(new FileLoggerProvider(
-                version,
-                () => LoggingConstants.LogPath,
-                TimeSpan.FromDays(7)));
-            logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
         });
+
+        builder.BootstrapSerilog(LoggingConstants.LogPath, TimeSpan.FromDays(7));
 
         return builder;
     }

@@ -104,8 +104,6 @@ public class FileLogger(
                 CheckLogFileExists();
                 CleanupLogs();
 
-                await Task.Delay(_writeInterval);
-
                 var outputBuilder = new StringBuilder();
                 while (_writeQueue.TryDequeue(out var message))
                 {
@@ -118,6 +116,8 @@ public class FileLogger(
                 }
                 
                 File.AppendAllText(_logPathFactory(), outputBuilder.ToString());
+
+                await Task.Delay(_writeInterval);
             }
             finally
             {

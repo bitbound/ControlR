@@ -152,6 +152,9 @@ if ($BuildViewer) {
 
 
 if ($BuildStreamer) {
+    dotnet publish --configuration Release -p:PublishProfile=Artifacts -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Streamer.Sidecar\"
+    Check-LastExitCode
+
     [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
     $Package = $PackageJson | ConvertFrom-Json
     $Package.version = $CurrentVersion.Split(".", [System.StringSplitOptions]::RemoveEmptyEntries) | Select-Object -First 3 | Join-String -Separator "."

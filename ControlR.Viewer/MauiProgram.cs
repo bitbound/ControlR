@@ -48,6 +48,7 @@ public static class MauiProgram
             config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
         });
         builder.Logging.AddDebug();
+     
         builder.Logging.AddProvider(new FileLoggerProvider(
             VersionTracking.Default.CurrentVersion,
             () => LogPath,

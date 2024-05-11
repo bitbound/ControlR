@@ -231,6 +231,8 @@ export async function initialize(componentRef, videoId, iceServers) {
                 sendPointerMove(state.longPressStartOffsetX, state.longPressStartOffsetY, state);
                 sendMouseButtonEvent(state.longPressStartOffsetX, state.longPressStartOffsetY, true, 0, state);
             }
+
+            return;
         }
 
         if (state.isDragging) {

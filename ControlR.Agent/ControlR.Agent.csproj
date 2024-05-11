@@ -8,6 +8,7 @@
     <ApplicationIcon>appicon.ico</ApplicationIcon>
     <Platforms>AnyCPU;x86;ARM64;x64</Platforms>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Authors>jaredg</Authors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,11 +20,6 @@
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
-    <None Remove="NativeMethods.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Include="NativeMethods.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,10 +41,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.49-beta">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Octopus.Octodiff" Version="2.0.546" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />

@@ -8,7 +8,6 @@ var rootCommand = new RootCommand("Provides zero-trust remote control and remote
     CommandProvider.GetInstallCommand(args),
     CommandProvider.GetRunCommand(args),
     CommandProvider.GetUninstallCommand(args),
-    CommandProvider.GetSidecarCommand(args)
 };
 
 return await rootCommand.InvokeAsync(args);

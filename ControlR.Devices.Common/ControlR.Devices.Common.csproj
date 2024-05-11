@@ -9,10 +9,22 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="NativeMethods.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <AdditionalFiles Include="NativeMethods.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="8.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.4" />
+		<PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.106">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>

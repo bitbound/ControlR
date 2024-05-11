@@ -1,6 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using ControlR.Agent.Native.Windows;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Messages;
 using ControlR.Devices.Common.Services;

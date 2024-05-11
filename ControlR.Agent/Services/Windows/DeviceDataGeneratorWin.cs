@@ -1,5 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Agent.Native.Windows;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Agent.Services.Base;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;

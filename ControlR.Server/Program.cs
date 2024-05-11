@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using System.Net;
+using ControlR.Shared.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +25,7 @@ var appOptions = builder.Configuration
     .GetSection(ApplicationOptions.SectionKey)
     .Get<ApplicationOptions>() ?? new();
 
-ConfigureSerilog(builder, appOptions);
+ConfigureSerilog(appOptions);
 
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
@@ -191,50 +192,19 @@ static void ConfigureStaticFiles(WebApplication app)
     });
 }
 
-void ConfigureSerilog(WebApplicationBuilder webAppBuilder, ApplicationOptions applicationOptions)
+void ConfigureSerilog(ApplicationOptions applicationOptions)
 {
-    try
+    var logsRetention = applicationOptions.LogRetentionDays;
+    if (logsRetention <= 0)
     {
-        var logsRetention = applicationOptions.LogRetentionDays;
-        if (logsRetention <= 0)
-        {
-            logsRetention = 7;
-        }
-
-        var logsPath = Path.Combine(
-          AppDomain.CurrentDomain.BaseDirectory,
-          "AppData",
-          "logs");
-
-        void ApplySharedLoggerConfig(LoggerConfiguration loggerConfiguration)
-        {
-            loggerConfiguration
-                .Enrich.FromLogContext()
-                .Enrich.WithThreadId()
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")
-                .WriteTo.File($"{logsPath}/ControlR.Server.log",
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileTimeLimit: TimeSpan.FromDays(logsRetention),
-                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}",
-                    shared: true);
-        }
-
-        // https://github.com/serilog/serilog-aspnetcore#two-stage-initialization
-        var loggerConfig = new LoggerConfiguration();
-        ApplySharedLoggerConfig(loggerConfig);
-        Log.Logger = loggerConfig.CreateBootstrapLogger();
-
-        builder.Host.UseSerilog((context, services, configuration) =>
-        {
-            configuration
-                .ReadFrom.Configuration(context.Configuration)
-                .ReadFrom.Services(services);
-
-            ApplySharedLoggerConfig(configuration);
-        });
+        logsRetention = 7;
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Failed to configure Serilog file logging.  Error: {ex.Message}");
-    }
+
+    var logsPath = Path.Combine(
+      AppDomain.CurrentDomain.BaseDirectory,
+      "AppData",
+      "logs");
+
+    builder.Host.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
+
 }

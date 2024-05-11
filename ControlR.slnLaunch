@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "Server \u002B Agent \u002B Frontend",
+    "Projects": [
+      {
+        "Path": "ControlR.Viewer\\ControlR.Viewer.csproj",
+        "Action": "Start",
+        "DebugTarget": "Windows Machine"
+      },
+      {
+        "Path": "ControlR.Server\\ControlR.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
+      }
+    ]
+  }
+]
