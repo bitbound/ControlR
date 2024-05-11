@@ -35,7 +35,9 @@ public class Md5HeaderMiddleware(
         if (_memoryCache.TryGetValue(filePath, out var cachedObject) &&
             cachedObject is string cachedHash)
         {
+            // TODO: Remove after a few cycles.
             context.Response.Headers["MD5"] = cachedHash;
+            context.Response.Headers.ContentMD5 = cachedHash;
             await _next(context);
             return;
         }
@@ -44,7 +46,9 @@ public class Md5HeaderMiddleware(
         var hash = await MD5.HashDataAsync(fs, _appLifetime.ApplicationStopping);
         var base64Hash = Convert.ToBase64String(hash);
         _memoryCache.Set(filePath, base64Hash, TimeSpan.FromMinutes(10));
+        // TODO: Remove after a few cycles.
         context.Response.Headers["MD5"] = base64Hash;
+        context.Response.Headers.ContentMD5 = base64Hash;
 
         await _next(context);
     }

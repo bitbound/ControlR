@@ -31,7 +31,7 @@ internal class VersionApi(
             using var request = new HttpRequestMessage(HttpMethod.Head, _agentBinaryPath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            if (response.Headers.TryGetValues("MD5", out var values))
+            if (response.Headers.TryGetValues("Content-MD5", out var values))
             {
                 var hash = Convert.FromBase64String(values.First());
                 return Result.Ok(hash);
@@ -74,12 +74,13 @@ internal class VersionApi(
             using var request = new HttpRequestMessage(HttpMethod.Head, _streamerZipPath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            if (response.Headers.TryGetValues("MD5", out var values))
+
+            if (response.Headers.TryGetValues("Content-MD5", out var values))
             {
                 var hash = Convert.FromBase64String(values.First());
                 return Result.Ok(hash);
             }
-            return Result.Fail<byte[]>("Failed to get agent file hash.");
+            return Result.Fail<byte[]>("Failed to get streamer file hash.");
         }
         catch (Exception ex)
         {
