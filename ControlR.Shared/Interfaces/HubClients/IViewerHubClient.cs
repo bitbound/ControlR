@@ -7,7 +7,7 @@ public interface IViewerHubClient : IHubClient
 {
     Task ReceiveAlertBroadcast(AlertBroadcastDto alert);
 
-    Task ReceiveDesktopChanged(Guid sessionId, string desktopName);
+    Task ReceiveDesktopChanged(Guid sessionId);
 
     Task ReceiveDeviceUpdate(DeviceDto device);
 

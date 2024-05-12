@@ -1,6 +1,6 @@
 import { app, desktopCapturer, DesktopCapturerSource, screen } from "electron";
-import { DisplayDto } from "../../shared/signalrDtos/displayDto";
-import { movePointer, movePointerBy } from "./inputSimulator";
+import { DisplayDto } from "../../shared/signalrDtos";
+import { movePointerBy } from "./inputSimulator";
 import { writeLog } from "./logger";
 
 export async function getDisplays(): Promise<DisplayDto[]> {

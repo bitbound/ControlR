@@ -1,12 +1,14 @@
 import {
   HubConnection,
   HubConnectionBuilder,
+  HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { SignedPayloadDto } from "../../shared/signalrDtos/signedPayloadDto";
+import { SignedPayloadDto } from "../../shared/signalrDtos";
 import { receiveDto } from "./signalrDtoHandler";
 import rtcSession from "./rtcSession";
 import { MessagePackHubProtocol } from "@microsoft/signalr-protocol-msgpack";
+import { waitFor } from "../../shared/helpers";
 
 class StreamerHubConnection {
   connection?: HubConnection;
@@ -34,6 +36,16 @@ class StreamerHubConnection {
 
       this.setHandlers();
 
+      window.mainApi.onInputDesktopChanged(async (ev) => {
+        const sessionId = await window.mainApi.getSessionId();
+        window.mainApi.writeLog(
+          "Notifying viewer of desktop change.  Session ID: ",
+          "Info",
+          sessionId,
+        );
+        await streamerHubConnection.notifyViewerDesktopChanged(sessionId);
+      });
+
       await this.connection.start();
 
       if (this.sessionId) {
@@ -56,24 +68,73 @@ class StreamerHubConnection {
     // TODO: Broadcast state changes.
   }
 
+  async notifyViewerDesktopChanged(sessionId: string) {
+    if (!(await this.waitForConnection())) {
+      return;
+    }
+
+    try {
+      await this.connection.invoke("notifyViewerDesktopChanged", sessionId);
+    } catch (err) {
+      window.mainApi.writeLog(
+        "Error while notifying viewer of desktop change.",
+        "Error",
+        err,
+      );
+    }
+  }
+
   async getIceServers(): Promise<RTCIceServer[]> {
-    return await this.connection.invoke("getIceServers");
+    if (!(await this.waitForConnection())) {
+      return [];
+    }
+
+    try {
+      return await this.connection.invoke("getIceServers");
+    } catch (err) {
+      window.mainApi.writeLog("Error while getting ICE servers.", "Error", err);
+    }
+    return [];
   }
 
   async sendIceCandidate(candidateJson: string): Promise<void> {
-    await this.connection.invoke(
-      "sendIceCandidate",
-      this.sessionId,
-      candidateJson,
-    );
+    if (!(await this.waitForConnection())) {
+      return;
+    }
+
+    try {
+      await this.connection.invoke(
+        "sendIceCandidate",
+        this.sessionId,
+        candidateJson,
+      );
+    } catch (err) {
+      window.mainApi.writeLog(
+        "Error while sending ICE candidate.",
+        "Error",
+        err,
+      );
+    }
   }
 
   async sendRtcSessionDescription(sessionDescription: RTCSessionDescription) {
-    await this.connection.invoke(
-      "sendRtcSessionDescription",
-      this.sessionId,
-      sessionDescription,
-    );
+    if (!(await this.waitForConnection())) {
+      return;
+    }
+
+    try {
+      await this.connection.invoke(
+        "sendRtcSessionDescription",
+        this.sessionId,
+        sessionDescription,
+      );
+    } catch (err) {
+      window.mainApi.writeLog(
+        "Error while sending RTC session description.",
+        "Error",
+        err,
+      );
+    }
   }
 
   private setHandlers() {
@@ -87,6 +148,14 @@ class StreamerHubConnection {
     this.connection.on("receiveDto", async (dto: SignedPayloadDto) => {
       await receiveDto(dto);
     });
+  }
+
+  private async waitForConnection() {
+    return await waitFor(
+      () => this.connection?.state == HubConnectionState.Connected,
+      100,
+      10000,
+    );
   }
 }
 

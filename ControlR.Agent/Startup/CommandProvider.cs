@@ -1,9 +1,15 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using ControlR.Agent.Dtos;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services.Windows;
+using ControlR.Devices.Common.Native.Windows;
+using ControlR.Shared.Dtos.SidecarDtos;
+using ControlR.Shared.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SimpleIpc;
 using System.CommandLine;
+using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Startup;
 
@@ -11,6 +17,30 @@ internal class CommandProvider
 {
     private static readonly string[] _authorizedKeyAlias = ["-a", "--authorized-key"];
     private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
+    private static readonly string[] _pipeNameAlias = ["-p", "--pipe-name"];
+
+    internal static Command GetEchoDesktopCommand(string[] args)
+    {
+        var pipeNameOption = new Option<string>(
+            _pipeNameAlias,
+            "The name of the named pipe server to which to send the current input desktop.");
+
+        var echoDesktopCommand = new Command("echo-desktop", "Writes the current input desktop to standard out, then exits.")
+        {
+            pipeNameOption
+        };
+
+        echoDesktopCommand.SetHandler(async (pipeName) =>
+        {
+            var host = CreateHost(StartupMode.EchoDesktop, args);
+            var desktopEcho = host.Services.GetRequiredService<IDesktopEchoer>();
+            await host.StartAsync();
+            await desktopEcho.EchoInputDesktop(pipeName);
+
+        }, pipeNameOption);
+        return echoDesktopCommand;
+    }
+
     internal static Command GetInstallCommand(string[] args)
     {
         var serverUriOption = new Option<Uri?>(

@@ -1,6 +1,16 @@
-import { Point } from "@nut-tree/nut-js";
 import RtcSession from "./rtcSession";
 import { setMediaStreams } from "./mediaHelperRenderer";
+import {
+  BaseDto,
+  PointerMoveDto,
+  WheelScrollDto,
+  TypeTextDto,
+  ChangeDisplayDto,
+  ClipboardChangedDto,
+  KeyEventDto,
+  MouseButtonEventDto,
+} from "../../shared/rtcDtos";
+import { Point } from "electron";
 
 export async function handleDataChannelMessage(data: string) {
   const dto = JSON.parse(data) as BaseDto;
@@ -48,10 +58,14 @@ export async function handleDataChannelMessage(data: string) {
     case "wheelScrollEvent":
       {
         const scrollDto = dto as WheelScrollDto;
+        const point = await getAbsoluteScreenPoint(
+          scrollDto.percentX,
+          scrollDto.percentY,
+        );
         await window.mainApi.invokeWheelScroll(
-          scrollDto.deltaX,
-          scrollDto.deltaY,
-          scrollDto.deltaZ,
+          point.x,
+          point.y,
+          scrollDto.scrollY,
         );
       }
       break;
@@ -95,5 +109,5 @@ async function getAbsoluteScreenPoint(
 
   const x = currentScreen.left + currentScreen.width * percentX;
   const y = currentScreen.top + currentScreen.height * percentY;
-  return await window.mainApi.dipToScreenPoint({ x: x, y: y });
+  return { x: x, y: y };
 }

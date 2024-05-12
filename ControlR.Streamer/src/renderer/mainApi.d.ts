@@ -30,14 +30,12 @@ declare interface MainApi {
     shouldRelease: boolean,
   ): Promise<void>;
   resetKeyboardState(): Promise<void>;
-  invokeWheelScroll(
-    deltaX: number,
-    deltaY: number,
-    deltaZ: number,
-  ): Promise<void>;
+  invokeWheelScroll(x: number, y: number, scrollY: number): Promise<void>;
   invokeTypeText(text: string): Promise<void>;
-  onLocalClipboardChanged(callback: (text: string | undefined | null) => void);
   writeLog(message: string, level: LogLevel = "Info", ...args: any[]);
+
+  onLocalClipboardChanged(callback: (text: string | undefined | null) => void);
+  onInputDesktopChanged(callback: (desktopName: string) => void);
 }
 
 declare global {

@@ -1,13 +1,8 @@
-﻿using ControlR.Server.Models;
-using ControlR.Server.Options;
-using ControlR.Server.Services;
+﻿using ControlR.Server.Services;
 using ControlR.Shared.Dtos;
-using ControlR.Shared.Extensions;
 using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
-using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Server.Hubs;
 
@@ -28,6 +23,31 @@ public class StreamerHub(
     {
         return await _iceProvider.GetIceServers();
     }
+
+    public async Task NotifyViewerDesktopChanged(Guid sessionId)
+    {
+        try
+        {
+            if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+            {
+                _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+            {
+                _logger.LogError("Viewer connection ID is unexpectedly empty.");
+                return;
+            }
+
+            await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while notifying viewer of desktop change.");
+        }
+    }
+
 
     public async Task SendIceCandidate(Guid sessionId, string candidateJson)
     {

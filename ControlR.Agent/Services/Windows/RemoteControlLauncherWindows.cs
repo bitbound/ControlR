@@ -1,4 +1,5 @@
-﻿using ControlR.Agent.Interfaces;
+﻿using ControlR.Agent.Dtos;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
@@ -6,7 +7,6 @@ using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleIpc;
@@ -18,7 +18,9 @@ namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class RemoteControlLauncherWindows(
+    IHostApplicationLifetime _appLifetime,
     IProcessManager _processes,
+    IIpcRouter _ipcRouter,
     IEnvironmentHelper _environment,
     IStreamingSessionCache _streamingSessionCache,
     ISettingsProvider _settings,
@@ -30,7 +32,6 @@ internal class RemoteControlLauncherWindows(
         Guid sessionId,
         byte[] authorizedKey,
         int targetWindowsSession = -1,
-        string targetDesktop = "",
         bool notifyViewerOnSessionStart = false,
         string? viewerName = null,
         Func<double, Task>? onDownloadProgress = null)
@@ -39,6 +40,17 @@ internal class RemoteControlLauncherWindows(
 
         try
         {
+            var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
+
+            if (!echoResult.IsSuccess)
+            {
+                _logger.LogResult(echoResult);
+                return Result.Fail("Failed to determine initial input desktop.");
+            }
+
+            var targetDesktop = echoResult.Value.Trim();
+            _logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
+
             var authorizedKeyBase64 = Convert.ToBase64String(authorizedKey);
 
             var session = new StreamingSession(sessionId);
@@ -123,6 +135,55 @@ internal class RemoteControlLauncherWindows(
         }
     }
 
+    private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
+    {
+        var pipeName = Guid.NewGuid().ToString();
+        using var ipcServer = await _ipcRouter.CreateServer(pipeName);
+
+        Process? process = null;
+
+        if (Environment.UserInteractive)
+        {
+            process = _processes.Start(
+                _environment.StartupExePath,
+                $"echo-desktop --pipe-name {pipeName}");
+        }
+        else
+        {
+            Win32.CreateInteractiveSystemProcess(
+            $"\"{_environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
+            targetSessionId: targetWindowsSession,
+            forceConsoleSession: false,
+            desktopName: "Default",
+            hiddenWindow: true,
+            out process);
+        }
+
+        if (process is null || process.Id == -1)
+        {
+            return Result.Fail<string>("Failed to start echo-desktop process.");
+        }
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_appLifetime.ApplicationStopping, cts.Token);
+        if (!await ipcServer.WaitForConnection(linkedCts.Token))
+        {
+            return Result.Fail<string>("Failed to connect to echo-desktop process.");
+        }
+
+        ipcServer.BeginRead(_appLifetime.ApplicationStopping);
+        _logger.LogInformation("Desktop echoer connected to pipe server.");
+        var desktopResult = await ipcServer.Invoke<DesktopRequestDto, DesktopResponseDto>(new());
+        if (desktopResult.IsSuccess)
+        {
+            _logger.LogInformation("Received current input desktop from echoer: {CurrentDesktop}", desktopResult.Value.DesktopName);
+            await ipcServer.Send(new ShutdownRequestDto());
+            return Result.Ok(desktopResult.Value.DesktopName);
+        }
+        _logger.LogError("Failed to get initial desktop from desktop echo.");
+        return Result.Fail<string>(desktopResult.Error);
+    }
+
 
     // For debugging.
     private static Result<string> GetSolutionDir(string currentDir)
@@ -145,86 +206,4 @@ internal class RemoteControlLauncherWindows(
 
         return Result.Fail<string>("Not found.");
     }
-
-
-    //private async Task<Result> LaunchNewSidecarProcess(StreamingSession session)
-    //{
-    //    if (!_environment.IsDebug)
-    //    {
-    //        var args = $"--parent-id {Environment.ProcessId} --agent-pipe \"{session.AgentPipeName}\"";
-    //        Win32.CreateInteractiveSystemProcess(
-    //            $"\"{_watcherBinaryPath}\" sidecar {args}",
-    //            targetSessionId: session.TargetWindowsSession,
-    //            forceConsoleSession: false,
-    //            desktopName: session.LastDesktop,
-    //            hiddenWindow: true,
-    //            out var process);
-
-    //        if (process is null || process.Id == -1)
-    //        {
-    //            _logger.LogError("Failed to start streamer process watcher.");
-    //        }
-    //        else
-    //        {
-    //            session.WatcherProcess = process;
-    //        }
-    //    }
-    //    else
-    //    {
-    //        var args = $"sidecar --parent-id {Environment.ProcessId} --agent-pipe \"{session.AgentPipeName}\"";
-    //        var process = _processes.Start(_watcherBinaryPath, args);
-    //        session.WatcherProcess = process;
-
-    //        if (process is null)
-    //        {
-    //            _logger.LogError("Failed to start streamer process watcher.");
-    //        }
-    //    }
-
-    //    if (session.WatcherProcess?.HasExited != false)
-    //    {
-    //        _logger.LogError("Watching process is unexpectedly null.");
-    //        return Result.Fail("Watcher process failed to start.");
-    //    }
-
-    //    _logger.LogInformation("Creating pipe server for desktop watcher: {name}", session.AgentPipeName);
-    //    session.IpcServer = await _ipcRouter.CreateServer(session.AgentPipeName);
-    //    session.IpcServer.On<DesktopChangeDto>(async dto =>
-    //    {
-    //        var agentHub = _serviceProvider.GetRequiredService<IAgentHubConnection>();
-    //        var desktopName = dto.DesktopName.Trim();
-
-    //        if (!string.IsNullOrWhiteSpace(desktopName) &&
-    //            !string.Equals(session.LastDesktop, desktopName, StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            _logger.LogInformation(
-    //                "Desktop has changed from {LastDesktop} to {CurrentDesktop}.  Notifying viewer.",
-    //                session.LastDesktop,
-    //                desktopName);
-
-    //            session.LastDesktop = desktopName;
-    //            await agentHub.NotifyViewerDesktopChanged(session.SessionId, desktopName);
-    //        }
-    //    });
-
-    //    var result = await session.IpcServer.WaitForConnection(_hostLifetime.ApplicationStopping);
-    //    if (result)
-    //    {
-    //        session.IpcServer.BeginRead(_hostLifetime.ApplicationStopping);
-    //        _logger.LogInformation("Desktop watcher connected to pipe server.");
-    //        var desktopResult = await session.IpcServer.Invoke<DesktopRequestDto, DesktopChangeDto>(new());
-    //        if (desktopResult.IsSuccess)
-    //        {
-    //            session.LastDesktop = desktopResult.Value.DesktopName;
-    //            return Result.Ok();
-    //        }
-    //        _logger.LogError("Failed to get initial desktop from watcher.");
-    //        return Result.Fail(desktopResult.Error);
-    //    }
-    //    else
-    //    {
-    //        _logger.LogWarning("Desktop watcher failed to connect to pipe server.");
-    //        return Result.Fail("Desktop watcher failed to connect to pipe server.");
-    //    }
-    //}
 }

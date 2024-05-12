@@ -240,7 +240,7 @@ public class ViewerHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while sending agent appsettings.");
-            return Result.Fail("Failed to sending agent app settings.");
+            return Result.Fail("Failed to send agent app settings.");
         }
     }
 

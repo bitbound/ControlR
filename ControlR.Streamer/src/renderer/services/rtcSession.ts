@@ -1,4 +1,5 @@
-import { DisplayDto } from "../../shared/signalrDtos/displayDto";
+import { DisplayDto } from "../../shared/signalrDtos";
+import { ClipboardChangedDto } from "../../shared/rtcDtos";
 import streamerHubConnection from "./streamerHubConnection";
 import { setMediaStreams } from "./mediaHelperRenderer";
 import { handleDataChannelMessage } from "./rtcDtoHandler";
@@ -10,10 +11,10 @@ class RtcSession {
   currentScreen?: DisplayDto;
   screens: DisplayDto[] = [];
 
-
   changeCurrentScreen(mediaId: string) {
-    this.currentScreen = this.screens.find(x => x.mediaId === mediaId);
+    this.currentScreen = this.screens.find((x) => x.mediaId === mediaId);
   }
+
   async startRtcSession() {
     window.mainApi.writeLog("Getting ICE servers.");
 
@@ -42,10 +43,13 @@ class RtcSession {
 
     window.mainApi.writeLog("Creating data channel.");
     this.setDataChannel(this.peerConnection.createDataChannel("input"));
-    window.mainApi.onLocalClipboardChanged(text => {
-      window.mainApi.writeLog("Received clipboard change in renderer from main process.");
+
+    window.mainApi.onLocalClipboardChanged((text) => {
+      window.mainApi.writeLog(
+        "Received clipboard change in renderer from main process.",
+      );
       this.sendClipboardChanged(text);
-    })
+    });
   }
 
   async receiveRtcSessionDescription(remoteDescription: RTCSessionDescription) {
@@ -131,7 +135,7 @@ class RtcSession {
 
     const dto = {
       dtoType: "clipboardChanged",
-      text: text
+      text: text,
     } as ClipboardChangedDto;
     this.dataChannel.send(JSON.stringify(dto));
   }
@@ -226,8 +230,6 @@ class RtcSession {
       this.setDataChannel(ev.channel);
     });
   }
-
-
 
   private setDataChannel(channel: RTCDataChannel) {
     this.dataChannel = channel;

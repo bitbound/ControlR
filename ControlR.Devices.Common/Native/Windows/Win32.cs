@@ -1,5 +1,6 @@
 ﻿using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Models;
+using ControlR.Shared.Primitives;
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Frozen;
 using System.Diagnostics;
@@ -23,7 +24,7 @@ namespace ControlR.Devices.Common.Native.Windows;
 public static unsafe partial class Win32
 {
     private const uint MAXIMUM_ALLOWED_RIGHTS = 0x2000000;
-    private static FrozenDictionary<string, int>? _keyMap;
+    private static FrozenDictionary<string, ushort>? _keyMap;
     private static HDESK _lastInputDesktop;
     public static bool CreateInteractiveSystemProcess(
         string commandLine,
@@ -274,6 +275,7 @@ public static unsafe partial class Win32
 
         return GetDesktopName(inputDesktop, out desktopName);
     }
+
     public static bool GetThreadDesktop(uint threadId, out string desktopName)
     {
         var hdesk = PInvoke.GetThreadDesktop(threadId);
@@ -307,6 +309,39 @@ public static unsafe partial class Win32
     {
         var isService = Process.GetCurrentProcess().SessionId == 0;
         PInvoke.SendSAS(!isService);
+    }
+
+    public static Result InvokeKeyEvent(string key, bool isPressed)
+    {
+        if (!GetKeyMap().TryGetValue(key, out var keyCode))
+        {
+            return Result.Fail("Key not found in key map.");
+        }
+
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
+
+        if (!isPressed)
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        }
+
+        var kbdInput = new KEYBDINPUT()
+        {
+            wScan = keyCode,
+            dwExtraInfo = (nuint)extraInfo.Value,
+            dwFlags = kbdFlags
+        };
+
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_KEYBOARD,
+            Anonymous = { ki = kbdInput }
+        };
+
+        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+
+        return Result.Ok();
     }
 
     public static void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
@@ -399,14 +434,62 @@ public static unsafe partial class Win32
             Anonymous = { mi = mouseInput }
         };
 
-        var inputs = new INPUT[] { input };
-
-        PInvoke.SendInput(inputs, Marshal.SizeOf<INPUT>());
+        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
     }
 
     public static nint OpenInputDesktop()
     {
         return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u).Value;
+    }
+
+    public static void ResetKeyboardState()
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var inputs = new List<INPUT>();
+
+        foreach (var key in Enum.GetValues<VIRTUAL_KEY>())
+        {
+            try
+            {
+                var state = PInvoke.GetAsyncKeyState((int)key);
+
+                switch (key)
+                {
+                    // Skip mouse buttons and toggleable keys.
+                    case VIRTUAL_KEY.VK_LBUTTON:
+                    case VIRTUAL_KEY.VK_RBUTTON:
+                    case VIRTUAL_KEY.VK_MBUTTON:
+                    case VIRTUAL_KEY.VK_NUMLOCK:
+                    case VIRTUAL_KEY.VK_CAPITAL:
+                    case VIRTUAL_KEY.VK_SCROLL:
+                        continue;
+                    default:
+                        break;
+                }
+
+                if (state != 0)
+                {
+                    var kbdInput = new KEYBDINPUT()
+                    {
+                        wVk = key,
+                        dwExtraInfo = (nuint)extraInfo.Value,
+                        dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP
+                    };
+
+                    var input = new INPUT()
+                    {
+                        type = INPUT_TYPE.INPUT_KEYBOARD,
+                        Anonymous = { ki = kbdInput }
+                    };
+
+                    inputs.Add(input);
+                }
+                
+            }
+            catch { }
+        }
+
+        PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
     }
 
     public static bool SwitchToInputDesktop()
@@ -433,6 +516,71 @@ public static unsafe partial class Win32
             return false;
         }
     }
+    public static void TypeText(string text)
+    {
+        var inputs = new List<INPUT>();
+
+        foreach (var character in text)
+        {
+            var vk = PInvoke.VkKeyScan(character);
+
+            var extraInfo = PInvoke.GetMessageExtraInfo();
+            KEYBD_EVENT_FLAGS kbdFlags = default;
+
+            var kbdInput = new KEYBDINPUT()
+            {
+                wVk = (VIRTUAL_KEY)vk,
+                dwExtraInfo = (nuint)extraInfo.Value,
+                dwFlags = kbdFlags
+            };
+
+            var input = new INPUT()
+            {
+                type = INPUT_TYPE.INPUT_KEYBOARD,
+                Anonymous = { ki = kbdInput }
+            };
+
+            inputs.Add(input);
+        }
+
+        PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+    }
+
+    public static void ScrollWheel(int x, int y, int scrollY)
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+
+        var normalizedPoint = GetNormalizedPoint(x, y);
+
+        // Invert the Y delta to be compatible with the Windows API.
+        if (scrollY > 0)
+        {
+            scrollY = -120;
+        }
+        else if (scrollY < 0)
+        {
+            scrollY = 120;
+        }
+
+        var mouseInput = new MOUSEINPUT
+        {
+            dx = normalizedPoint.X,
+            dy = normalizedPoint.Y,
+            dwFlags = mouseEventFlags,
+            mouseData = (uint)scrollY,
+            dwExtraInfo = (nuint)extraInfo.Value,
+        };
+
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_MOUSE,
+            Anonymous = { mi = mouseInput }
+        };
+
+        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+    }
+
     private static bool GetDesktopName(HDESK handle, out string desktopName)
     {
         var outValue = Marshal.AllocHGlobal(256);
@@ -454,9 +602,9 @@ public static unsafe partial class Win32
         return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
     }
 
-    private static FrozenDictionary<string, int> GetKeyMap()
+    private static FrozenDictionary<string, ushort> GetKeyMap()
     {
-        return _keyMap ??= new Dictionary<string, int>()
+        return _keyMap ??= new Dictionary<string, ushort>()
         {
             ["Escape"] = 0x0001,
             ["Digit1"] = 0x0002,

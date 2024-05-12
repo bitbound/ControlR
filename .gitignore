@@ -375,4 +375,4 @@ ControlR.Server/wwwroot/novnc/
 /ControlR.Agent/Resources/TightVnc/*
 /ControlR.Viewer/VncResources/*
 /ControlR.Server/appsettings.Development.json
-/ControlR.Streamer/.artifacts/ControlR.Streamer.Sidecar.exe
+/ControlR.Streamer/.artifacts/*

@@ -38,7 +38,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<ServerStatsDto>> GetServerStats();
 
-    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default");
+    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
@@ -188,7 +188,7 @@ internal class ViewerHubConnection(
             () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
 
-    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession, string targetDesktop = "Default")
+    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession)
     {
         try
         {
@@ -200,7 +200,6 @@ internal class ViewerHubConnection(
             var streamingSessionRequest = new StreamerSessionRequestDto(
                 sessionId,
                 targetSystemSession,
-                targetDesktop,
                 Connection.ConnectionId,
                 _settings.NotifyUserSessionStart,
                 _settings.Username);
@@ -250,9 +249,9 @@ internal class ViewerHubConnection(
         await _messenger.Send(alert);
     }
 
-    public Task ReceiveDesktopChanged(Guid sessionId, string desktopName)
+    public Task ReceiveDesktopChanged(Guid sessionId)
     {
-        _messenger.Send(new DesktopChangedMessage(sessionId, desktopName));
+        _messenger.Send(new DesktopChangedMessage(sessionId));
         return Task.CompletedTask;
     }
     public Task ReceiveDeviceUpdate(DeviceDto device)
@@ -455,7 +454,7 @@ internal class ViewerHubConnection(
         connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
         connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
         connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress), ReceiveStreamerDownloadProgress);
-        connection.On<Guid, string>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
+        connection.On<Guid>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

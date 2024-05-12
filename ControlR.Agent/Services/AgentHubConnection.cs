@@ -27,7 +27,6 @@ namespace ControlR.Agent.Services;
 
 internal interface IAgentHubConnection : IHubConnectionBase, IHostedService
 {
-    Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName);
     Task SendDeviceHeartbeat();
     Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
@@ -77,7 +76,6 @@ internal class AgentHubConnection(
                 dto.StreamingSessionId,
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
-                dto.TargetDesktop ?? string.Empty,
                 dto.NotifyUserOnSessionStart,
                 dto.ViewerName,
                 async progress =>
@@ -173,17 +171,6 @@ internal class AgentHubConnection(
         return Win32.GetActiveSessions().ToArray().AsTaskResult();
     }
 
-    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
-    {
-        try
-        {
-            await Connection.InvokeAsync(nameof(IAgentHub.NotifyViewerDesktopChanged), sessionId, desktopName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while sending device update.");
-        }
-    }
     public async Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
     {
         try

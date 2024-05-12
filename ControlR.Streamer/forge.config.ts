@@ -14,25 +14,27 @@ const config: ForgeConfig = {
     icon: "./assets/appicon",
     beforeCopyExtraResources: [
       (_buildPath, _electronVersion, _platform, _arch, callback) => {
-        if (!fs.existsSync("./artifacts")) {
-          fs.mkdirSync("./artifacts");
+        if (!fs.existsSync("./.artifacts")) {
+          fs.mkdirSync("./.artifacts");
         }
-        if (!fs.existsSync("./artifacts/ControlR.Streamer.Sidecar.exe")) {
+        if (!fs.existsSync("./.artifacts/ControlR.Streamer.Sidecar.exe")) {
           fs.createWriteStream(
-            "./artifacts/ControlR.Streamer.Sidecar.exe",
+            "./.artifacts/ControlR.Streamer.Sidecar.exe",
           ).close();
         }
 
-        if (!fs.existsSync("./artifacts/ControlR.Streamer.Sidecar")) {
-          fs.createWriteStream("./artifacts/ControlR.Streamer.Sidecar").close();
+        if (!fs.existsSync("./.artifacts/ControlR.Streamer.Sidecar")) {
+          fs.createWriteStream(
+            "./.artifacts/ControlR.Streamer.Sidecar",
+          ).close();
         }
 
         callback();
       },
     ],
     extraResource: [
-      "./artifacts/ControlR.Streamer.Sidecar.exe",
-      "./artifacts/ControlR.Streamer.Sidecar",
+      "./.artifacts/ControlR.Streamer.Sidecar.exe",
+      "./.artifacts/ControlR.Streamer.Sidecar",
       "./assets/appicon.icns",
       "./assets/appicon.ico",
       "./assets/appicon.png",

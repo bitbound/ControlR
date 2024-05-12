@@ -162,6 +162,8 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         _isStreamLoaded = true;
         _statusMessage = string.Empty;
+        _statusProgress = 0;
+        ClipboardManager.ClipboardChanged -= ClipboardManager_ClipboardChanged;
         ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
         ClipboardManager.Start();
         await InvokeAsync(StateHasChanged);
@@ -170,7 +172,10 @@ public partial class RemoteDisplay : IAsyncDisposable
     public async Task NotifyStreamReady()
     {
         _isStreamReady = true;
-        _statusMessage = "Stream ready";
+        if (!_isStreamLoaded)
+        {
+            _statusMessage = "Stream ready";
+        }
         _statusProgress = 0;
         await InvokeAsync(StateHasChanged);
     }
@@ -302,7 +307,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         await _module.InvokeVoidAsync("resetPeerConnection", _iceServers, _videoId);
 
-        await RequestStreamingSessionFromAgent(message.DesktopName);
+        await RequestStreamingSessionFromAgent();
     }
 
     private async Task HandleIceCandidateReceived(object recipient, IceCandidateMessage message)
@@ -477,7 +482,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-    private async Task RequestStreamingSessionFromAgent(string desktopName = "Default")
+    private async Task RequestStreamingSessionFromAgent()
     {
         try
         {
@@ -488,7 +493,7 @@ public partial class RemoteDisplay : IAsyncDisposable
             }
 
             Logger.LogInformation("Creating streaming session");
-            var streamingSessionResult = await ViewerHub.GetStreamingSession(Session.Device.ConnectionId, Session.SessionId, Session.InitialSystemSession, desktopName);
+            var streamingSessionResult = await ViewerHub.GetStreamingSession(Session.Device.ConnectionId, Session.SessionId, Session.InitialSystemSession);
 
             _statusProgress = -1;
 

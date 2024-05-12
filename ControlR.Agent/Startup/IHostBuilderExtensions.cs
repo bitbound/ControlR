@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SimpleIpc;
 
@@ -117,6 +116,11 @@ internal static class IHostBuilderExtensions
                 {
                     throw new PlatformNotSupportedException();
                 }
+            }
+
+            if (startupMode == StartupMode.EchoDesktop)
+            {
+                services.AddSingleton<IDesktopEchoer, DesktopEchoer>();
             }
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))

@@ -11,7 +11,6 @@ public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
     IConnectionCounter _connectionCounter,
-    IStreamerSessionCache _streamerSessionCache,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
@@ -28,29 +27,6 @@ public class AgentHub(
         set
         {
             Context.Items[nameof(Device)] = value;
-        }
-    }
-    public async Task NotifyViewerDesktopChanged(Guid sessionId, string desktopName)
-    {
-        try
-        {
-            if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
-            {
-                _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
-            {
-                _logger.LogError("Viewer connection ID is unexpectedly empty.");
-                return;
-            }
-
-            await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId, desktopName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while notifying viewer of desktop change.");
         }
     }
 

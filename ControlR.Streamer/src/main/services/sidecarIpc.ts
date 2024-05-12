@@ -2,8 +2,10 @@ import { spawn } from "child_process";
 import crypto from "crypto";
 import net from "net";
 import { writeLog } from "./logger";
-import { app } from "electron";
-import { SidecarDtoBase } from "../../shared/sidecarDtos";
+import { app, dialog } from "electron";
+import fs from "fs";
+import { DesktopChangedDto, SidecarDtoBase } from "../../shared/sidecarDtos";
+import { sendDesktopChanged } from "./rendererApi";
 
 let server: net.Server;
 let client: net.Socket;
@@ -29,8 +31,23 @@ export function launchSidecar(): Promise<void> {
       writeLog("Sidecar connected to IPC channel.");
 
       stream.on("data", function (data) {
-        const message = JSON.parse(data.toString());
+        const message = JSON.parse(data.toString()) as SidecarDtoBase;
         writeLog("Received message from sidecar: ", "Info", message);
+        switch (message?.dtoType) {
+          case "DesktopChanged": {
+            const changeDto = message as DesktopChangedDto;
+            writeLog(
+              "Input desktop changed to: ",
+              "Info",
+              changeDto.desktopName,
+            );
+            sendDesktopChanged();
+            break;
+          }
+          default:
+            writeLog("Unexpected DTO type.", "Warning");
+            break;
+        }
       });
 
       stream.on("end", function () {
@@ -59,8 +76,19 @@ export function launchSidecar(): Promise<void> {
         ? "ControlR.Streamer.Sidecar.exe"
         : "ControlR.Streamer.Sidecar";
 
-    if (!app.isPackaged) {
+    if (app.isPackaged) {
+      binaryPath = `${process.resourcesPath}\\${binaryPath}`;
+    } else {
       binaryPath = `.\\.artifacts\\${binaryPath}`;
+    }
+
+    if (!fs.existsSync(binaryPath)) {
+      dialog.showErrorBox(
+        "File Not Found",
+        `File does not exist: ${binaryPath}`,
+      );
+      reject();
+      return;
     }
 
     const sidecarProc = spawn(
@@ -69,6 +97,8 @@ export function launchSidecar(): Promise<void> {
       {
         shell: app.isPackaged ? undefined : true,
         detached: app.isPackaged ? undefined : true,
+        env: process.env,
+        cwd: app.getAppPath(),
       },
     );
 

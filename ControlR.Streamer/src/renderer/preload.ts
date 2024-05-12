@@ -1,8 +1,10 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, session } from "electron";
 import { MainApi } from "./mainApi";
+import rtcSession from "./services/rtcSession";
+import streamerHubConnection from "./services/streamerHubConnection";
 
 type MainApiMethod = keyof MainApi;
 
@@ -28,8 +30,8 @@ const mainApiIpc: MainApi = {
 
   resetKeyboardState: () => invokeInMain("resetKeyboardState"),
 
-  invokeWheelScroll: (deltaX, deltaY, deltaZ) =>
-    invokeInMain("invokeWheelScroll", deltaX, deltaY, deltaZ),
+  invokeWheelScroll: (x, y, scrollY) =>
+    invokeInMain("invokeWheelScroll", x, y, scrollY),
 
   invokeTypeText: (text: string) => invokeInMain("invokeTypeText", text),
   setClipboardText: (text: string | undefined | null) =>
@@ -52,9 +54,15 @@ const mainApiIpc: MainApi = {
     return invokeInMain("writeLog", message, level, args);
   },
 
-  onLocalClipboardChanged: (
-    callback: (text: string | undefined | null) => void,
-  ) => ipcRenderer.on("localClipboardChanged", (ev, text) => callback(text)),
+  onLocalClipboardChanged(callback: (text: string | undefined | null) => void) {
+    ipcRenderer.on("localClipboardChanged", (ev, text) => callback(text));
+  },
+
+  onInputDesktopChanged(callback: (desktopName: string) => void) {
+    ipcRenderer.on("inputDesktopChanged", (ev, desktopName) =>
+      callback(desktopName),
+    );
+  },
 };
 
 contextBridge.exposeInMainWorld("mainApi", mainApiIpc);

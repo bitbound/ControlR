@@ -10,5 +10,8 @@ public enum SidecarDtoType
     DesktopRequest,
     MovePointer,
     MouseButtonEvent,
-    KeyEvent
+    KeyEvent,
+    TypeText,
+    ResetKeyboardState,
+    WheelScroll
 }

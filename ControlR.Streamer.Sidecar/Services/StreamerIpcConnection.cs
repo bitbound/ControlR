@@ -1,5 +1,6 @@
 ﻿using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Helpers;
 using ControlR.Streamer.Sidecar.Services.Windows;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -92,7 +93,7 @@ internal class StreamerIpcConnection(
                                 throw new JsonException("Failed to deserialize MovePointerDto.");
                             _logger.LogDebug("Received MovePointer IPC DTO: {MoveDto}", moveDto);
 
-                            _inputSimulator.MovePointer(moveDto.X, moveDto.Y, moveDto.MoveType);
+                            _inputSimulator.MovePointer((int)moveDto.X, (int)moveDto.Y, moveDto.MoveType);
                             break;
                         }
                     case SidecarDtoType.MouseButtonEvent:
@@ -101,7 +102,7 @@ internal class StreamerIpcConnection(
                                                            throw new JsonException("Failed to deserialize MovePointerDto.");
                             _logger.LogDebug("Received ButtonEvent IPC DTO: {EventDto}", buttonDto);
 
-                            _inputSimulator.InvokeMouseButtonEvent(buttonDto.X, buttonDto.Y, buttonDto.Button, buttonDto.IsPressed);
+                            _inputSimulator.InvokeMouseButtonEvent((int)buttonDto.X, (int)buttonDto.Y, buttonDto.Button, buttonDto.IsPressed);
                             break;
                         }
                     case SidecarDtoType.KeyEvent:
@@ -111,6 +112,30 @@ internal class StreamerIpcConnection(
                             _logger.LogDebug("Received KeyEvent IPC DTO: {KeyDto}", keyDto);
 
                             _inputSimulator.InvokeKeyEvent(keyDto.Key, keyDto.IsPressed);
+                            break;
+                        }
+                    case SidecarDtoType.TypeText:
+                        {
+                            var textDto = JsonSerializer.Deserialize<TypeTextDto>(message, _jsonOptions) ??
+                                throw new JsonException("Failed to deserialize TypeTextDto.");
+
+                            _logger.LogDebug("Received TypeText IPC DTO: {TextDto}", textDto);
+                            _inputSimulator.TypeText(textDto.Text);
+
+                            break;
+                        }
+                    case SidecarDtoType.ResetKeyboardState:
+                        {
+                            _logger.LogDebug("Received ResetKeyboardState IPC DTO.");
+                            _inputSimulator.ResetKeyboardState();
+                            break;
+                        }
+                    case SidecarDtoType.WheelScroll:
+                        {
+                            var wheelDto = JsonSerializer.Deserialize<WheelScrollDto>(message, _jsonOptions) ??
+                                throw new JsonException("Failed to deserialize WheelScrollDto.");
+                            _logger.LogDebug("Received WheelScroll IPC DTO: {WheelDto}", wheelDto);
+                            _inputSimulator.ScrollWheel((int)wheelDto.X, (int)wheelDto.Y, (int)wheelDto.ScrollY);
                             break;
                         }
                     default:
@@ -125,9 +150,7 @@ internal class StreamerIpcConnection(
             }
         }
 
-        Reader.Dispose();
-        Writer.Dispose();
-        Client.Dispose();
+        DisposeHelper.DisposeAll(Reader, Writer, Client);
         _appLifetime.StopApplication();
     }
 }

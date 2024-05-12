@@ -52,7 +52,8 @@
     position: absolute;
     touch-action: pan-x pan-y;
     object-fit: fill;
-    cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAMUExURf///39/fwAAAD8/P3lJiBsAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAlSURBVCjPY4ACRkUGVDA8BQQhQFgZymBQQgOYKgaL0wdCgIEBAOjpCEPOMv3qAAAAAElFTkSuQmCC') 0 0, default !important;
+    cursor: crosshair;
+    /*cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAMUExURf///39/fwAAAD8/P3lJiBsAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAlSURBVCjPY4ACRkUGVDA8BQQhQFgZymBQQgOYKgaL0wdCgIEBAOjpCEPOMv3qAAAAAElFTkSuQmCC') 0 0, default !important;*/
 }
 
     .remote-screen.fit {

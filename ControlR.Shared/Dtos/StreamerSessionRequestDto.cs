@@ -10,7 +10,6 @@ namespace ControlR.Shared.Dtos;
 public class StreamerSessionRequestDto(
     Guid streamingSessionId, 
     int targetSystemSession, 
-    string? targetDesktop, 
     string viewerConnectionId,
     bool notifyUserOnSessionStart,
     string? viewerName)
@@ -21,8 +20,6 @@ public class StreamerSessionRequestDto(
     [MsgPackKey]
     public Guid StreamingSessionId { get; init; } = streamingSessionId;
 
-    [MsgPackKey]
-    public string? TargetDesktop { get; init; } = targetDesktop;
 
     [MsgPackKey]
     public int TargetSystemSession { get; init; } = targetSystemSession;

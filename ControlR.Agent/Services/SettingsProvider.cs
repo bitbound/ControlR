@@ -2,6 +2,7 @@
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Models.Messages;
@@ -126,7 +127,7 @@ internal class SettingsProvider(
                     return;
                 }
 
-                await _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
+                _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
             }
         }
         catch (Exception ex)

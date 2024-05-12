@@ -1,6 +1,7 @@
 ﻿using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Dtos.SidecarDtos;
+using ControlR.Shared.Extensions;
 using ControlR.Streamer.Sidecar.Options;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,16 +16,28 @@ internal class InputDesktopReporter(
     IOptions<StartupOptions> _startupOptions,
     IProcessManager _processes,
     IStreamerIpcConnection _streamerIpc,
-    ILogger<InputDesktopReporter> _logger) : BackgroundService
+    ILogger<InputDesktopReporter> _logger) : IHostedService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    private Thread? _watcherThread;
+
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        await WatchDesktop(stoppingToken);
-        _logger.LogInformation("Exiting desktop watcher.");
-        _hostLifetime.StopApplication();
+        _watcherThread = new Thread(() =>
+        {
+            WatchDesktop(_hostLifetime.ApplicationStopping);
+        });
+        _watcherThread.SetApartmentState(ApartmentState.STA);
+        _watcherThread.Start();
+
+        return Task.CompletedTask;
     }
 
-    private async Task WatchDesktop(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void WatchDesktop(CancellationToken cancellationToken)
     {
         var parentId = _startupOptions.Value.ParentProcessId;
 
@@ -63,16 +76,16 @@ internal class InputDesktopReporter(
             _logger.LogWarning("Failed to switch to initial input desktop.");
         }
 
-        while (!_hostLifetime.ApplicationStopping.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(50, _hostLifetime.ApplicationStopping);
+                Thread.Sleep(100);
 
                 if (parentProcess.HasExited)
                 {
                     _logger.LogInformation("Parent ID {ParentProcessId} no longer exists.  Exiting watcher process.", parentId);
-                    return;
+                    break;
                 }
 
                 if (!Win32.GetInputDesktop(out var inputDesktop))
@@ -92,11 +105,11 @@ internal class InputDesktopReporter(
                     !string.Equals(inputDesktop, threadDesktop, StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogInformation(
-                        "Desktop has changed from {LastDesktop} to {CurrentDesktop}.  Sending to agent.",
+                        "Desktop has changed from {LastDesktop} to {CurrentDesktop}.  Sending to streamer.",
                         threadDesktop,
                         inputDesktop);
 
-                    await _streamerIpc.Send(new DesktopChangedDto(inputDesktop));
+                    _streamerIpc.Send(new DesktopChangedDto(inputDesktop)).Forget();
 
                     if (!Win32.SwitchToInputDesktop())
                     {

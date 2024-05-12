@@ -300,12 +300,15 @@ export async function initialize(componentRef, videoId, iceServers) {
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-
+        
+        const percentX = ev.offsetX / state.videoElement.clientWidth;
+        const percentY = ev.offsetY / state.videoElement.clientHeight;
+        
         const wheelScrollDto = {
             dtoType: "wheelScrollEvent",
-            deltaX: ev.deltaX,
-            deltaY: ev.deltaY,
-            deltaZ: ev.deltaZ
+            percentX: percentX,
+            percentY: percentY,
+            scrollY: ev.deltaY
         };
         state.dataChannel.send(JSON.stringify(wheelScrollDto));
     });
@@ -330,7 +333,7 @@ export async function initialize(componentRef, videoId, iceServers) {
         await video.play();
         video.muted = false;
         await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
-        //await invokeDotNet("NotifyStreamLoaded", videoId);
+        await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
     const onKeyDown = (ev) => {
@@ -693,10 +696,10 @@ function setPeerConnectionHandlers(peerConnection, videoId) {
             }
 
             if (state.videoElement.played.length > 0) {
-                await invokeDotNet("NotifyStreamLoaded", videoId);
+                window.clearInterval(playInterval);
                 await state.videoElement.play();
                 state.videoElement.muted = false;
-                window.clearInterval(playInterval);
+                await invokeDotNet("NotifyStreamLoaded", videoId);
                 return;
             }
 

@@ -31,7 +31,8 @@ internal class VersionApi(
             using var request = new HttpRequestMessage(HttpMethod.Head, _agentBinaryPath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            if (response.Headers.TryGetValues("Content-MD5", out var values))
+            _logger.LogInformation("Got headers from remote agent file: {Headers}", response.Headers);
+            if (response.Headers.TryGetValues("MD5", out var values))
             {
                 var hash = Convert.FromBase64String(values.First());
                 return Result.Ok(hash);
@@ -75,7 +76,7 @@ internal class VersionApi(
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            if (response.Headers.TryGetValues("Content-MD5", out var values))
+            if (response.Headers.TryGetValues("MD5", out var values))
             {
                 var hash = Convert.FromBase64String(values.First());
                 return Result.Ok(hash);

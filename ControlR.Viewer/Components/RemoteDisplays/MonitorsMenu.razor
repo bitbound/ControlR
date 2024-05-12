@@ -5,9 +5,12 @@
             <MudText Color="@(display == SelectedDisplay ? Color.Success : Color.Default)">
                 @(display.Name)
             </MudText>
-            <MudText Color="Color.Secondary">
-                (@(display.Label))
-            </MudText>
+            @if (!string.IsNullOrWhiteSpace(display.Label))
+            {
+                <MudText Color="Color.Secondary">
+                    (@(display.Label))
+                </MudText>
+            }
         </MudMenuItem>
     }
 </MudMenu>
