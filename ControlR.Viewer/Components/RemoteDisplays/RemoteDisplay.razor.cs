@@ -268,7 +268,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             _selectedDisplay = display;
-            await JsModule.InvokeVoidAsync("changeDisplays", _videoId, display.MediaId);
+            await JsModule.InvokeVoidAsync("changeDisplays", _videoId, display.MediaId, display.Name);
         }
         catch (Exception ex)
         {
@@ -455,7 +455,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Errror while handling touchmove event.");
+            Logger.LogError(ex, "Error while handling touchmove event.");
         }
     }
 

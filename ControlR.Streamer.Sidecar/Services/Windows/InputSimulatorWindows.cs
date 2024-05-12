@@ -1,5 +1,6 @@
 ﻿using ControlR.Devices.Common.Native.Windows;
 using ControlR.Shared.Dtos.SidecarDtos;
+using ControlR.Shared.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -9,7 +10,7 @@ namespace ControlR.Streamer.Sidecar.Services.Windows;
 
 public interface IInputSimulator
 {
-    void InvokeKeyEvent(string key, bool isPressed);
+    void InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed);
     void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
     void MovePointer(int x, int y, MovePointerType moveType);
     void ResetKeyboardState();
@@ -63,7 +64,7 @@ internal class InputSimulatorWindows: IInputSimulator
         }
     }
 
-    public void InvokeKeyEvent(string key, bool isPressed)
+    public void InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -73,7 +74,7 @@ internal class InputSimulatorWindows: IInputSimulator
 
         _actionQueue.Enqueue(() => {
             _win32Interop.SwitchToInputDesktop();
-            var result = _win32Interop.InvokeKeyEvent(key, isPressed);
+            var result = _win32Interop.InvokeKeyEvent(key, jsKeyType, isPressed);
             if (!result.IsSuccess)
             {
                 _logger.LogWarning("Failed to invoke key event. Key: {Key}, IsPressed: {IsPressed}, Reason: {Reason}", key, isPressed, result.Reason);

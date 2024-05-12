@@ -1,4 +1,5 @@
 ﻿using ControlR.Shared.Dtos.SidecarDtos;
+using ControlR.Shared.Enums;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -33,7 +34,7 @@ public interface IWin32Interop
     string GetUsernameFromSessionId(uint sessionId);
     bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
     void InvokeCtrlAltDel();
-    Result InvokeKeyEvent(string key, bool isPressed);
+    Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed);
     void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
     void InvokeWheelScroll(int x, int y, int scrollY);
     void MovePointer(int x, int y, MovePointerType moveType);
@@ -338,26 +339,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         PInvoke.SendSAS(!isService);
     }
 
-    public Result InvokeKeyEvent(string key, bool isPressed)
+    public Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed)
     {
-        if (!GetKeyMap().TryGetValue(key, out var scanCode))
+        switch (jsKeyType)
         {
-            return Result.Fail("Key not found in key map.");
+            case JsKeyType.Key:
+                return InvokeJsKeyEvent(key, isPressed);
+            case JsKeyType.Code:
+                return InvokeJsKeyCodeEvent(key, isPressed);
+            case JsKeyType.Unknown:
+            default:
+                _logger.LogWarning("Unknown JsKeyType: {JsKeyType}.", jsKeyType);
+                return Result.Fail("Unknown JsKeyType.");
+
         }
-
-
-        var kbdInput = CreateKeybdInput(scanCode, isPressed);
-
-        var input = new INPUT()
-        {
-            type = INPUT_TYPE.INPUT_KEYBOARD,
-            Anonymous = { ki = kbdInput }
-        };
-
-        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
-
-
-        return Result.Ok();
     }
 
     public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
@@ -418,7 +413,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             Anonymous = { mi = mouseInput }
         };
 
-        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send mouse input: {MouseInput}.", mouseInput);
+        }
     }
 
     public void InvokeWheelScroll(int x, int y, int scrollY)
@@ -443,7 +442,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             Anonymous = { mi = mouseInput }
         };
 
-        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);
+        }
     }
 
     public void MovePointer(int x, int y, MovePointerType moveType)
@@ -473,7 +476,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             Anonymous = { mi = mouseInput }
         };
 
-        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send pointer move input: {MouseInput}.", mouseInput);
+        }
     }
 
     public nint OpenInputDesktop()
@@ -528,7 +535,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             catch { }
         }
 
-        PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        if (result != inputs.Count)
+        {
+            _logger.LogWarning("Failed to reset keyboard state.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
+        }
     }
 
     public bool SwitchToInputDesktop()
@@ -583,12 +594,155 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             inputs.Add(input);
         }
 
-        PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        if (result != inputs.Count)
+        {
+            _logger.LogWarning("Failed to type text.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
+        }
+    }
+
+    private static KEYBDINPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        KEYBD_EVENT_FLAGS kbdFlags = default;
+
+        if (IsExtendedKey(key))
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        }
+
+        if (!isPressed)
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        }
+
+        var kbdInput = new KEYBDINPUT()
+        {
+            wVk = key,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+            dwFlags = kbdFlags,
+            time = 0
+        };
+
+        return kbdInput;
+    }
+
+    private static KEYBDINPUT CreateKeyboardInput(ushort scanCode, bool isPressed)
+    {
+        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+        var vk = (VIRTUAL_KEY)PInvoke.MapVirtualKeyEx(scanCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
+
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
+
+        if (IsExtendedKey(vk))
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        }
+
+        if (!isPressed)
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        }
+
+        var kbdInput = new KEYBDINPUT()
+        {
+            wVk = 0,
+            wScan = scanCode,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+            dwFlags = kbdFlags,
+            time = 0
+        };
+
+        return kbdInput;
+    }
+
+    private static bool GetDesktopName(HDESK handle, out string desktopName)
+    {
+        var outValue = Marshal.AllocHGlobal(256);
+        var outLength = Marshal.AllocHGlobal(256);
+        var deskHandle = new HANDLE(handle.Value);
+
+        if (!PInvoke.GetUserObjectInformation(deskHandle, USER_OBJECT_INFORMATION_INDEX.UOI_NAME, outValue.ToPointer(), 256, (uint*)outLength.ToPointer()))
+        {
+            desktopName = string.Empty;
+            return false;
+        }
+
+        desktopName = Marshal.PtrToStringAuto(outValue)?.Trim() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(desktopName);
+    }
+
+    private static HDESK GetInputDesktop()
+    {
+        return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
+    }
+
+    private static HKL GetKeyboardLayout()
+    {
+        return PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+    }
+
+    private static VIRTUAL_KEY[] GetModKeysPressed()
+    {
+        var keys = new List<VIRTUAL_KEY>();
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_SHIFT) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_SHIFT);
+        }
+
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_CONTROL) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_CONTROL);
+        }
+
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_MENU) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_MENU);
+        }
+
+        return [.. keys];
+    }
+
+    private static Point GetNormalizedPoint(int x, int y)
+    {
+        var width = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
+        var height = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
+
+        return new Point((int)(x / width * 65535), (int)(y / height * 65535));
     }
 
     [return: MarshalAs(UnmanagedType.Bool)]
     [LibraryImport("kernel32.dll", SetLastError = true)]
     private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
+
+    private static bool IsExtendedKey(VIRTUAL_KEY vk)
+    {
+        return vk switch
+        {
+            VIRTUAL_KEY.VK_RCONTROL or
+            VIRTUAL_KEY.VK_RMENU or
+            VIRTUAL_KEY.VK_INSERT or
+            VIRTUAL_KEY.VK_DELETE or
+            VIRTUAL_KEY.VK_HOME or
+            VIRTUAL_KEY.VK_END or
+            VIRTUAL_KEY.VK_PRIOR or
+            VIRTUAL_KEY.VK_NEXT or
+            VIRTUAL_KEY.VK_LEFT or
+            VIRTUAL_KEY.VK_UP or
+            VIRTUAL_KEY.VK_RIGHT or
+            VIRTUAL_KEY.VK_DOWN or
+            VIRTUAL_KEY.VK_NUMLOCK or
+            VIRTUAL_KEY.VK_CANCEL or
+            VIRTUAL_KEY.VK_DIVIDE or
+            VIRTUAL_KEY.VK_SNAPSHOT or
+            VIRTUAL_KEY.VK_LWIN or
+            VIRTUAL_KEY.VK_RWIN or
+            VIRTUAL_KEY.VK_RETURN => true,
+            _ => false,
+        };
+    }
+
     private bool ConvertJavaScriptKeyToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
     {
         result = key switch
@@ -642,89 +796,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         return true;
     }
 
-    private KEYBDINPUT CreateKeybdInput(VIRTUAL_KEY key, bool isPressed)
-    {
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        KEYBD_EVENT_FLAGS kbdFlags = default;
-
-        if (IsExtendedKey(key))
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
-        }
-
-        if (!isPressed)
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
-        }
-
-        var kbdInput = new KEYBDINPUT()
-        {
-            wVk = key,
-            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-            dwFlags = kbdFlags,
-            time = 0
-        };
-
-        return kbdInput;
-    }
-
-    private KEYBDINPUT CreateKeybdInput(ushort scanCode, bool isPressed)
-    {
-        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
-        var vk = (VIRTUAL_KEY)PInvoke.MapVirtualKeyEx(scanCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
-
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
-
-        if (IsExtendedKey(vk))
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
-        }
-
-        if (!isPressed)
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
-        }
-
-        var kbdInput = new KEYBDINPUT()
-        {
-            wVk = 0,
-            wScan = scanCode,
-            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-            dwFlags = kbdFlags,
-            time = 0
-        };
-
-        return kbdInput;
-    }
-
-    private bool GetDesktopName(HDESK handle, out string desktopName)
-    {
-        var outValue = Marshal.AllocHGlobal(256);
-        var outLength = Marshal.AllocHGlobal(256);
-        var deskHandle = new HANDLE(handle.Value);
-
-        if (!PInvoke.GetUserObjectInformation(deskHandle, USER_OBJECT_INFORMATION_INDEX.UOI_NAME, outValue.ToPointer(), 256, (uint*)outLength.ToPointer()))
-        {
-            desktopName = string.Empty;
-            return false;
-        }
-
-        desktopName = Marshal.PtrToStringAuto(outValue)?.Trim() ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(desktopName);
-    }
-
-    private HDESK GetInputDesktop()
-    {
-        return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
-    }
-
-    private HKL GetKeyboardLayout()
-    {
-        return PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
-    }
-
-    private FrozenDictionary<string, ushort> GetKeyMap()
+    private FrozenDictionary<string, ushort> GetScanCodeKeyMap()
     {
         return _keyMap ??= new Dictionary<string, ushort>()
         {
@@ -886,58 +958,56 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }.ToFrozenDictionary();
     }
 
-    private VIRTUAL_KEY[] GetModKeysPressed()
+    private Result InvokeJsKeyCodeEvent(string key, bool isPressed)
     {
-        var keys = new List<VIRTUAL_KEY>();
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_SHIFT) < 0)
+        if (!GetScanCodeKeyMap().TryGetValue(key, out var scanCode))
         {
-            keys.Add(VIRTUAL_KEY.VK_SHIFT);
+            return Result.Fail("Key not found in key map.");
         }
 
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_CONTROL) < 0)
+
+        var kbdInput = CreateKeyboardInput(scanCode, isPressed);
+
+        var input = new INPUT()
         {
-            keys.Add(VIRTUAL_KEY.VK_CONTROL);
-        }
-
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_MENU) < 0)
-        {
-            keys.Add(VIRTUAL_KEY.VK_MENU);
-        }
-
-        return [.. keys];
-    }
-    private Point GetNormalizedPoint(int x, int y)
-    {
-        var width = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
-        var height = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
-
-        return new Point((int)(x / width * 65535), (int)(y / height * 65535));
-    }
-
-    private bool IsExtendedKey(VIRTUAL_KEY vk)
-    {
-        return vk switch
-        {
-            VIRTUAL_KEY.VK_RCONTROL or
-            VIRTUAL_KEY.VK_RMENU or
-            VIRTUAL_KEY.VK_INSERT or
-            VIRTUAL_KEY.VK_DELETE or
-            VIRTUAL_KEY.VK_HOME or
-            VIRTUAL_KEY.VK_END or
-            VIRTUAL_KEY.VK_PRIOR or
-            VIRTUAL_KEY.VK_NEXT or
-            VIRTUAL_KEY.VK_LEFT or
-            VIRTUAL_KEY.VK_UP or
-            VIRTUAL_KEY.VK_RIGHT or
-            VIRTUAL_KEY.VK_DOWN or
-            VIRTUAL_KEY.VK_NUMLOCK or
-            VIRTUAL_KEY.VK_CANCEL or
-            VIRTUAL_KEY.VK_DIVIDE or
-            VIRTUAL_KEY.VK_SNAPSHOT or
-            VIRTUAL_KEY.VK_LWIN or
-            VIRTUAL_KEY.VK_RWIN or
-            VIRTUAL_KEY.VK_RETURN => true,
-            _ => false,
+            type = INPUT_TYPE.INPUT_KEYBOARD,
+            Anonymous = { ki = kbdInput }
         };
+
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send key input. Key: {Key}, ScanCode: {ScanCode}, IsPressed: {IsPressed}.", key, scanCode, isPressed);
+            return Result.Fail("Failed to send key input.");
+        }
+
+        return Result.Ok();
+    }
+
+    private Result InvokeJsKeyEvent(string key, bool isPressed)
+    {
+        if (!ConvertJavaScriptKeyToVirtualKey(key, out var convertResult))
+        {
+            return Result.Fail("Failed to convert key to virtual key.");
+        }
+
+        var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
+
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_KEYBOARD,
+            Anonymous = { ki = kbdInput }
+        };
+        
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
+            return Result.Fail("Failed to send key input.");
+        }
+
+        return Result.Ok();
     }
 }

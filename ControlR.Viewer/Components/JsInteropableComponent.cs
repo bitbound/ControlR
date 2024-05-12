@@ -23,6 +23,8 @@ public class JsInteropableComponent : ComponentBase
                 + ".razor.js";
 
             _jsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", jsPath);
+
+            JsModuleReady.Set();
         }
     }
 }

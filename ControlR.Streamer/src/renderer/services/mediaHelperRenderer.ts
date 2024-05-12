@@ -16,11 +16,17 @@ export async function setMediaStreams(
 
   let stream: MediaStream;
 
+  window.mainApi.writeLog(
+    "Getting user media with constraints: ",
+    "Info",
+    constraints,
+  );
+
   try {
     stream = await navigator.mediaDevices.getUserMedia(
       constraints as MediaStreamConstraints,
     );
-    setTrack(stream, peerConnection);
+    setTracks(stream, peerConnection);
   } catch (ex) {
     window.mainApi.writeLog(
       "Failed to get media with audio constraints.  Dropping audio.",
@@ -31,18 +37,18 @@ export async function setMediaStreams(
     stream = await navigator.mediaDevices.getUserMedia(
       constraints as MediaStreamConstraints,
     );
-    setTrack(stream, peerConnection);
+    setTracks(stream, peerConnection);
   }
 }
 
 function getDefaultConstraints() {
   return {
-    video: {
+    audio: {
       mandatory: {
         chromeMediaSource: "desktop",
       },
     },
-    audio: {
+    video: {
       mandatory: {
         chromeMediaSource: "desktop",
       },
@@ -50,9 +56,9 @@ function getDefaultConstraints() {
   } as ElectronMediaStreamConstraints;
 }
 
-function setTrack(stream: MediaStream, peerConnection: RTCPeerConnection) {
+function setTracks(stream: MediaStream, peerConnection: RTCPeerConnection) {
+  const existingSenders = peerConnection.getSenders();
   stream.getTracks().forEach((track) => {
-    const existingSenders = peerConnection.getSenders();
     const existingTracks = existingSenders.filter(
       (x) => x.track.kind == track.kind,
     );

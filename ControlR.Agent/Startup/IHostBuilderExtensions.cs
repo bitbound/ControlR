@@ -138,6 +138,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
+                services.AddSingleton<IWin32Interop, Win32InteropFake>();
             }
             else if (OperatingSystem.IsMacOS())
             {
@@ -145,6 +146,7 @@ internal static class IHostBuilderExtensions
                 services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
                 services.AddSingleton<IPowerControl, PowerControlMac>();
                 services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
+                services.AddSingleton<IWin32Interop, Win32InteropFake>();
             }
             else
             {

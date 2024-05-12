@@ -29,7 +29,8 @@ export async function handleDataChannelMessage(data: string) {
       {
         const keyDto = dto as KeyEventDto;
         await window.mainApi.invokeKeyEvent(
-          keyDto.keyCode,
+          keyDto.key,
+          keyDto.jsKeyType,
           keyDto.isPressed,
           keyDto.shouldRelease,
         );
@@ -83,6 +84,7 @@ export async function handleDataChannelMessage(data: string) {
         );
         await setMediaStreams(
           changeDisplayDto.mediaId,
+          changeDisplayDto.name,
           RtcSession.peerConnection,
         );
         RtcSession.changeCurrentScreen(changeDisplayDto.mediaId);

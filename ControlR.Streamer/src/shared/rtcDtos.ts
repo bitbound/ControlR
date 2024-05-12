@@ -14,6 +14,7 @@ export interface BaseDto {
 
 export interface ChangeDisplayDto extends BaseDto {
   mediaId: string;
+  name: string;
 }
 
 export interface ClipboardChangedDto extends BaseDto {
@@ -22,8 +23,9 @@ export interface ClipboardChangedDto extends BaseDto {
 
 export interface KeyEventDto extends BaseDto {
   isPressed: boolean;
-  keyCode: string;
-  shouldRelease: boolean;
+  key: string;
+  jsKeyType: JsKeyType;
+  shouldRelease?: boolean;
 }
 
 export interface MouseButtonEventDto extends BaseDto {

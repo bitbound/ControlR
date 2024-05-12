@@ -81,12 +81,14 @@ class WindowEventHandler {
  * 
  * @param {string} videoId
  * @param {string} mediaId
+ * @param {string} name
  */
-export async function changeDisplays(videoId, mediaId) {
+export async function changeDisplays(videoId, mediaId, name) {
     const state = getState(videoId);
     const dto = {
         dtoType: "changeDisplay",
-        mediaId: mediaId
+        mediaId: mediaId,
+        name: name
     }
     
     state.dataChannel.send(JSON.stringify(dto));
@@ -338,6 +340,7 @@ export async function initialize(componentRef, videoId, iceServers) {
         await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
+    /** @param {KeyboardEvent} ev */
     const onKeyDown = (ev) => {
         if (document.querySelector("input:focus") || document.querySelector("textarea:focus")) {
             return;
@@ -354,13 +357,15 @@ export async function initialize(componentRef, videoId, iceServers) {
         const keyPressDto = {
             dtoType: "keyEvent",
             isPressed: true,
-            keyCode: ev.code
+            jsKeyType: "Key",
+            key: ev.key
         };
         state.dataChannel.send(JSON.stringify(keyPressDto));
     };
     window.addEventListener("keydown", onKeyDown);
     state.windowEventHandlers.push(new WindowEventHandler("keydown", onKeyDown));
 
+    /** @param {KeyboardEvent} ev */
     const onKeyUp = (ev) => {
         if (document.querySelector("input:focus") || document.querySelector("textarea:focus")) {
             return;
@@ -373,7 +378,8 @@ export async function initialize(componentRef, videoId, iceServers) {
         const keyPressDto = {
             dtoType: "keyEvent",
             isPressed: false,
-            keyCode: ev.code
+            jsKeyType: "Key",
+            key: ev.key
         };
         state.dataChannel.send(JSON.stringify(keyPressDto));
     }
@@ -521,7 +527,8 @@ export async function sendKeyPress(key, videoId) {
         dtoType: "keyEvent",
         isPressed: true,
         shouldRelease: true,
-        keyCode: key
+        key: key,
+        jsKeyType: "Key",
     };
     state.dataChannel.send(JSON.stringify(keyPressDto));
 }

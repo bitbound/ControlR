@@ -3,8 +3,6 @@
 
 import { contextBridge, ipcRenderer, session } from "electron";
 import { MainApi } from "./mainApi";
-import rtcSession from "./services/rtcSession";
-import streamerHubConnection from "./services/streamerHubConnection";
 
 type MainApiMethod = keyof MainApi;
 
@@ -22,8 +20,8 @@ const mainApiIpc: MainApi = {
   dipToScreenPoint: (point) => invokeInMain("dipToScreenPoint", point),
   exit: () => invokeInMain("exit"),
 
-  invokeKeyEvent: (key, isPressed, shouldRelease) =>
-    invokeInMain("invokeKeyEvent", key, isPressed, shouldRelease),
+  invokeKeyEvent: (key, jsKeyType, isPressed, shouldRelease) =>
+    invokeInMain("invokeKeyEvent", key, jsKeyType, isPressed, shouldRelease),
 
   invokeMouseButtonEvent: (button, isPressed, x, y) =>
     invokeInMain("invokeMouseButtonEvent", button, isPressed, x, y),

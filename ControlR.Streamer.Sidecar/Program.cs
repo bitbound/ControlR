@@ -72,6 +72,7 @@ rootCommand.SetHandler(async (streamerPipeName, parentProcessId) =>
             }
             else
             {
+                services.AddSingleton<IWin32Interop, Win32InteropFake>();
                 throw new PlatformNotSupportedException();
             }
         })

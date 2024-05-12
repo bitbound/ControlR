@@ -34,8 +34,10 @@ export async function registerIpcHandlers() {
   });
   handleMethod("movePointer", (_, x, y) => movePointer(x, y));
   handleMethod("exit", () => app.exit());
-  handleMethod("invokeKeyEvent", (_, key, isPressed, shouldRelease) =>
-    invokeKeyEvent(key, isPressed, shouldRelease),
+  handleMethod(
+    "invokeKeyEvent",
+    (_, key, jsKeyType, isPressed, shouldRelease) =>
+      invokeKeyEvent(key, jsKeyType, isPressed, shouldRelease),
   );
   handleMethod("invokeMouseButtonEvent", (_, button, isPressed, x, y) =>
     invokeMouseButtonEvent(button, isPressed, x, y),

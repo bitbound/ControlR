@@ -25,7 +25,8 @@ declare interface MainApi {
     y: number,
   ): Promise<void>;
   invokeKeyEvent(
-    keyCode: string,
+    key: string,
+    jsKeyType: JsKeyType,
     isPressed: boolean,
     shouldRelease: boolean,
   ): Promise<void>;

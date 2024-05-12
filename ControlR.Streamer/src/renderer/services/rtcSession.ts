@@ -39,7 +39,11 @@ class RtcSession {
     );
 
     window.mainApi.writeLog("Adding tracks from stream.");
-    await setMediaStreams(this.currentScreen.mediaId, this.peerConnection);
+    await setMediaStreams(
+      this.currentScreen.mediaId,
+      this.currentScreen.name,
+      this.peerConnection,
+    );
 
     window.mainApi.writeLog("Creating data channel.");
     this.setDataChannel(this.peerConnection.createDataChannel("input"));
