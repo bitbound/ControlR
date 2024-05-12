@@ -22,5 +22,6 @@ VkKeyScanEx
 MapVirtualKeyEx
 GetKeyboardLayout
 GetAsyncKeyState
+GetKeyState
 GetMessageExtraInfo
 GetSystemMetrics

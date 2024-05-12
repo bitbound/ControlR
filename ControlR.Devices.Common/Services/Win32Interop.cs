@@ -686,17 +686,24 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private static VIRTUAL_KEY[] GetModKeysPressed()
     {
         var keys = new List<VIRTUAL_KEY>();
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_SHIFT) < 0)
+
+        var code = PInvoke.GetKeyState((int)VIRTUAL_KEY.VK_SHIFT);
+        var shortHelper = new ShortHelper(code);
+        if (shortHelper.High == 255)
         {
             keys.Add(VIRTUAL_KEY.VK_SHIFT);
         }
 
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_CONTROL) < 0)
+        code = PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_CONTROL);
+        shortHelper = new ShortHelper(code);
+        if (shortHelper.High == 255)
         {
             keys.Add(VIRTUAL_KEY.VK_CONTROL);
         }
 
-        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_MENU) < 0)
+        code = PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_MENU);
+        shortHelper = new ShortHelper(code);
+        if (shortHelper.High == 255)
         {
             keys.Add(VIRTUAL_KEY.VK_MENU);
         }
@@ -1010,4 +1017,28 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         return Result.Ok();
     }
+
+    [Flags]
+    private enum ShiftState : byte
+    {
+        None = 0,
+        ShiftPressed = 1 << 0,
+        CtrlPressed = 1 << 1,
+        AltPressed = 1 << 2,
+        HankakuPressed = 1 << 3,
+        Reserved1 = 1 << 4,
+        Reserved2 = 1 << 5,
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct ShortHelper(short value)
+    {
+        [FieldOffset(0)]
+        public short Value = value;
+        [FieldOffset(0)]
+        public byte Low;
+        [FieldOffset(1)]
+        public byte High;
+    }
+
 }
