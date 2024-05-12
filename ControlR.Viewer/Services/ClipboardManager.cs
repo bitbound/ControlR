@@ -72,8 +72,10 @@ internal class ClipboardManager(
 
         _watcherTask = StartWatching(_cancellationSource.Token);
     }
+
     private async Task StartWatching(CancellationToken cancellationToken)
     {
+        await TrySetInitialText(cancellationToken);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
@@ -101,6 +103,23 @@ internal class ClipboardManager(
             {
                 _clipboardLock.Release();
             }
+        }
+    }
+
+    private async Task TrySetInitialText(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _clipboardLock.WaitAsync();
+            _lastClipboardText = await _clipboard.GetTextAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get initial clipboard text.");
+        }
+        finally
+        {
+            _clipboardLock.Release();
         }
     }
 }

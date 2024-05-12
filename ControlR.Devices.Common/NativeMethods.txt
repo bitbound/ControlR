@@ -18,7 +18,7 @@ CloseDesktop
 SetThreadDesktop
 SwitchDesktop
 SendInput
-VkKeyScan
+VkKeyScanEx
 MapVirtualKeyEx
 GetKeyboardLayout
 GetAsyncKeyState

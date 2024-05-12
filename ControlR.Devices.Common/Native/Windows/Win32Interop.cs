@@ -1,9 +1,11 @@
 ﻿using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Frozen;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -20,13 +22,35 @@ using WTS_SESSION_INFOW = global::Windows.Win32.System.RemoteDesktop.WTS_SESSION
 
 namespace ControlR.Devices.Common.Native.Windows;
 
+public interface IWin32Interop
+{
+    bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool forceConsoleSession, string desktopName, bool hiddenWindow, out Process? startedProcess);
+    IEnumerable<WindowsSession> GetActiveSessions();
+    IEnumerable<WindowsSession> GetActiveSessionsCsWin32();
+    bool GetCurrentThreadDesktop(out string desktopName);
+    bool GetInputDesktop(out string desktopName);
+    bool GetThreadDesktop(uint threadId, out string desktopName);
+    string GetUsernameFromSessionId(uint sessionId);
+    bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
+    void InvokeCtrlAltDel();
+    Result InvokeKeyEvent(string key, bool isPressed);
+    void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
+    void InvokeWheelScroll(int x, int y, int scrollY);
+    void MovePointer(int x, int y, MovePointerType moveType);
+    nint OpenInputDesktop();
+    void ResetKeyboardState();
+    bool SwitchToInputDesktop();
+    void TypeText(string text);
+}
+
 [SupportedOSPlatform("windows6.0.6000")]
-public static unsafe partial class Win32
+public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32Interop
 {
     private const uint MAXIMUM_ALLOWED_RIGHTS = 0x2000000;
-    private static FrozenDictionary<string, ushort>? _keyMap;
-    private static HDESK _lastInputDesktop;
-    public static bool CreateInteractiveSystemProcess(
+    private FrozenDictionary<string, ushort>? _keyMap;
+    private HDESK _lastInputDesktop;
+
+    public bool CreateInteractiveSystemProcess(
         string commandLine,
         int targetSessionId,
         bool forceConsoleSession,
@@ -158,7 +182,7 @@ public static unsafe partial class Win32
 
 
 
-    public static IEnumerable<WindowsSession> GetActiveSessions()
+    public IEnumerable<WindowsSession> GetActiveSessions()
     {
         var sessions = new List<WindowsSession>();
         var consoleSessionId = PInvoke.WTSGetActiveConsoleSessionId();
@@ -208,7 +232,7 @@ public static unsafe partial class Win32
         return sessions;
     }
 
-    public static IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
+    public IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
     {
         var sessions = new List<WindowsSession>();
 
@@ -258,13 +282,13 @@ public static unsafe partial class Win32
         return [.. sessions];
     }
 
-    public static bool GetCurrentThreadDesktop(out string desktopName)
+    public bool GetCurrentThreadDesktop(out string desktopName)
     {
         var threadId = PInvoke.GetCurrentThreadId();
         return GetThreadDesktop(threadId, out desktopName);
     }
 
-    public static bool GetInputDesktop(out string desktopName)
+    public bool GetInputDesktop(out string desktopName)
     {
         var inputDesktop = GetInputDesktop();
         if (inputDesktop.IsNull)
@@ -276,7 +300,7 @@ public static unsafe partial class Win32
         return GetDesktopName(inputDesktop, out desktopName);
     }
 
-    public static bool GetThreadDesktop(uint threadId, out string desktopName)
+    public bool GetThreadDesktop(uint threadId, out string desktopName)
     {
         var hdesk = PInvoke.GetThreadDesktop(threadId);
         if (hdesk.IsNull)
@@ -288,7 +312,7 @@ public static unsafe partial class Win32
         return GetDesktopName(hdesk, out desktopName);
     }
 
-    public static string GetUsernameFromSessionId(uint sessionId)
+    public string GetUsernameFromSessionId(uint sessionId)
     {
         var result = PInvoke.WTSQuerySessionInformation(HANDLE.Null, sessionId, WTS_INFO_CLASS.WTSUserName, out var username, out var bytesReturned);
 
@@ -300,47 +324,29 @@ public static unsafe partial class Win32
         return string.Empty;
     }
 
-    [return: MarshalAs(UnmanagedType.Bool)]
-    [LibraryImport("kernel32.dll", SetLastError = true)]
-    public static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
+
+    public bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer)
+    {
+        return GlobalMemoryStatusEx(ref lpBuffer);
+    }
+
 
     [SupportedOSPlatform("windows6.1")]
-    public static void InvokeCtrlAltDel()
+    public void InvokeCtrlAltDel()
     {
         var isService = Process.GetCurrentProcess().SessionId == 0;
         PInvoke.SendSAS(!isService);
     }
 
-    public static Result InvokeKeyEvent(string key, bool isPressed)
+    public Result InvokeKeyEvent(string key, bool isPressed)
     {
-        if (!GetKeyMap().TryGetValue(key, out var keyCode))
+        if (!GetKeyMap().TryGetValue(key, out var scanCode))
         {
             return Result.Fail("Key not found in key map.");
         }
 
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
-        var vk = PInvoke.MapVirtualKeyEx(keyCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
-        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
 
-        if (IsExtendedKey((VIRTUAL_KEY)vk))
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
-        }
-
-        if (!isPressed)
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
-        }
-
-        var kbdInput = new KEYBDINPUT()
-        {
-            wVk = 0,
-            wScan = keyCode,
-            dwExtraInfo = (nuint)extraInfo.Value,
-            dwFlags = kbdFlags,
-            time = 0
-        };
+        var kbdInput = CreateKeybdInput(scanCode, isPressed);
 
         var input = new INPUT()
         {
@@ -350,37 +356,11 @@ public static unsafe partial class Win32
 
         PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
 
+
         return Result.Ok();
     }
 
-    private static bool IsExtendedKey(VIRTUAL_KEY vk)
-    {
-        return vk switch
-        {
-            VIRTUAL_KEY.VK_RCONTROL or
-            VIRTUAL_KEY.VK_RMENU or
-            VIRTUAL_KEY.VK_INSERT or
-            VIRTUAL_KEY.VK_DELETE or
-            VIRTUAL_KEY.VK_HOME or
-            VIRTUAL_KEY.VK_END or
-            VIRTUAL_KEY.VK_PRIOR or
-            VIRTUAL_KEY.VK_NEXT or
-            VIRTUAL_KEY.VK_LEFT or
-            VIRTUAL_KEY.VK_UP or
-            VIRTUAL_KEY.VK_RIGHT or
-            VIRTUAL_KEY.VK_DOWN or
-            VIRTUAL_KEY.VK_NUMLOCK or
-            VIRTUAL_KEY.VK_CANCEL or
-            VIRTUAL_KEY.VK_DIVIDE or
-            VIRTUAL_KEY.VK_SNAPSHOT or
-            VIRTUAL_KEY.VK_LWIN or
-            VIRTUAL_KEY.VK_RWIN or
-            VIRTUAL_KEY.VK_RETURN => true,
-            _ => false,
-        };
-    }
-
-    public static void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
+    public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
         var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
@@ -429,7 +409,7 @@ public static unsafe partial class Win32
             dy = normalizedPoint.Y,
             dwFlags = mouseEventFlags,
             mouseData = 0,
-            dwExtraInfo = (nuint)extraInfo.Value,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };
 
         var input = new INPUT()
@@ -438,12 +418,35 @@ public static unsafe partial class Win32
             Anonymous = { mi = mouseInput }
         };
 
-        var inputs = new INPUT[] { input };
-
-        PInvoke.SendInput(inputs, Marshal.SizeOf<INPUT>());
+        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
     }
 
-    public static void MovePointer(int x, int y, MovePointerType moveType)
+    public void InvokeWheelScroll(int x, int y, int scrollY)
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+
+        var normalizedPoint = GetNormalizedPoint(x, y);
+
+        var mouseInput = new MOUSEINPUT
+        {
+            dx = normalizedPoint.X,
+            dy = normalizedPoint.Y,
+            dwFlags = mouseEventFlags,
+            mouseData = (uint)-scrollY,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+        };
+
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_MOUSE,
+            Anonymous = { mi = mouseInput }
+        };
+
+        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+    }
+
+    public void MovePointer(int x, int y, MovePointerType moveType)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
         var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
@@ -461,7 +464,7 @@ public static unsafe partial class Win32
             dy = normalizedPoint.Y,
             dwFlags = mouseEventFlags,
             mouseData = 0,
-            dwExtraInfo = (nuint)extraInfo.Value,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };
 
         var input = new INPUT()
@@ -473,12 +476,12 @@ public static unsafe partial class Win32
         PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
     }
 
-    public static nint OpenInputDesktop()
+    public nint OpenInputDesktop()
     {
         return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u).Value;
     }
 
-    public static void ResetKeyboardState()
+    public void ResetKeyboardState()
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
         var inputs = new List<INPUT>();
@@ -508,7 +511,7 @@ public static unsafe partial class Win32
                     var kbdInput = new KEYBDINPUT()
                     {
                         wVk = key,
-                        dwExtraInfo = (nuint)extraInfo.Value,
+                        dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
                         dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP
                     };
 
@@ -528,7 +531,7 @@ public static unsafe partial class Win32
         PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
     }
 
-    public static bool SwitchToInputDesktop()
+    public bool SwitchToInputDesktop()
     {
         try
         {
@@ -552,21 +555,22 @@ public static unsafe partial class Win32
             return false;
         }
     }
-    public static void TypeText(string text)
+
+    public void TypeText(string text)
     {
         var inputs = new List<INPUT>();
 
         foreach (var character in text)
         {
-            var vk = PInvoke.VkKeyScan(character);
+            var vk = (VIRTUAL_KEY)PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
 
             var extraInfo = PInvoke.GetMessageExtraInfo();
             KEYBD_EVENT_FLAGS kbdFlags = default;
 
             var kbdInput = new KEYBDINPUT()
             {
-                wVk = (VIRTUAL_KEY)vk,
-                dwExtraInfo = (nuint)extraInfo.Value,
+                wVk = vk,
+                dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
                 dwFlags = kbdFlags
             };
 
@@ -582,32 +586,119 @@ public static unsafe partial class Win32
         PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
     }
 
-    public static void ScrollWheel(int x, int y, int scrollY)
+    [return: MarshalAs(UnmanagedType.Bool)]
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
+    private bool ConvertJavaScriptKeyToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
     {
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
-
-        var normalizedPoint = GetNormalizedPoint(x, y);
-
-        var mouseInput = new MOUSEINPUT
+        result = key switch
         {
-            dx = normalizedPoint.X,
-            dy = normalizedPoint.Y,
-            dwFlags = mouseEventFlags,
-            mouseData = (uint)-scrollY,
-            dwExtraInfo = (nuint)extraInfo.Value,
+            "Down" or "ArrowDown" => VIRTUAL_KEY.VK_DOWN,
+            "Up" or "ArrowUp" => VIRTUAL_KEY.VK_UP,
+            "Left" or "ArrowLeft" => VIRTUAL_KEY.VK_LEFT,
+            "Right" or "ArrowRight" => VIRTUAL_KEY.VK_RIGHT,
+            "Enter" => VIRTUAL_KEY.VK_RETURN,
+            "Esc" or "Escape" => VIRTUAL_KEY.VK_ESCAPE,
+            "Alt" => VIRTUAL_KEY.VK_MENU,
+            "Control" => VIRTUAL_KEY.VK_CONTROL,
+            "Shift" => VIRTUAL_KEY.VK_SHIFT,
+            "PAUSE" => VIRTUAL_KEY.VK_PAUSE,
+            "BREAK" => VIRTUAL_KEY.VK_PAUSE,
+            "Backspace" => VIRTUAL_KEY.VK_BACK,
+            "Tab" => VIRTUAL_KEY.VK_TAB,
+            "CapsLock" => VIRTUAL_KEY.VK_CAPITAL,
+            "Delete" => VIRTUAL_KEY.VK_DELETE,
+            "Home" => VIRTUAL_KEY.VK_HOME,
+            "End" => VIRTUAL_KEY.VK_END,
+            "PageUp" => VIRTUAL_KEY.VK_PRIOR,
+            "PageDown" => VIRTUAL_KEY.VK_NEXT,
+            "NumLock" => VIRTUAL_KEY.VK_NUMLOCK,
+            "Insert" => VIRTUAL_KEY.VK_INSERT,
+            "ScrollLock" => VIRTUAL_KEY.VK_SCROLL,
+            "F1" => VIRTUAL_KEY.VK_F1,
+            "F2" => VIRTUAL_KEY.VK_F2,
+            "F3" => VIRTUAL_KEY.VK_F3,
+            "F4" => VIRTUAL_KEY.VK_F4,
+            "F5" => VIRTUAL_KEY.VK_F5,
+            "F6" => VIRTUAL_KEY.VK_F6,
+            "F7" => VIRTUAL_KEY.VK_F7,
+            "F8" => VIRTUAL_KEY.VK_F8,
+            "F9" => VIRTUAL_KEY.VK_F9,
+            "F10" => VIRTUAL_KEY.VK_F10,
+            "F11" => VIRTUAL_KEY.VK_F11,
+            "F12" => VIRTUAL_KEY.VK_F12,
+            "Meta" => VIRTUAL_KEY.VK_LWIN,
+            "ContextMenu" => VIRTUAL_KEY.VK_MENU,
+            _ => key.Length == 1 ?
+                    (VIRTUAL_KEY)PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout()) :
+                    null
         };
 
-        var input = new INPUT()
+        if (result is null)
         {
-            type = INPUT_TYPE.INPUT_MOUSE,
-            Anonymous = { mi = mouseInput }
-        };
-
-        PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+            _logger.LogWarning("Unable to parse key input: {key}.", key);
+            return false;
+        }
+        return true;
     }
 
-    private static bool GetDesktopName(HDESK handle, out string desktopName)
+    private KEYBDINPUT CreateKeybdInput(VIRTUAL_KEY key, bool isPressed)
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        KEYBD_EVENT_FLAGS kbdFlags = default;
+
+        if (IsExtendedKey(key))
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        }
+
+        if (!isPressed)
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        }
+
+        var kbdInput = new KEYBDINPUT()
+        {
+            wVk = key,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+            dwFlags = kbdFlags,
+            time = 0
+        };
+
+        return kbdInput;
+    }
+
+    private KEYBDINPUT CreateKeybdInput(ushort scanCode, bool isPressed)
+    {
+        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+        var vk = (VIRTUAL_KEY)PInvoke.MapVirtualKeyEx(scanCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
+
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
+
+        if (IsExtendedKey(vk))
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        }
+
+        if (!isPressed)
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        }
+
+        var kbdInput = new KEYBDINPUT()
+        {
+            wVk = 0,
+            wScan = scanCode,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+            dwFlags = kbdFlags,
+            time = 0
+        };
+
+        return kbdInput;
+    }
+
+    private bool GetDesktopName(HDESK handle, out string desktopName)
     {
         var outValue = Marshal.AllocHGlobal(256);
         var outLength = Marshal.AllocHGlobal(256);
@@ -623,12 +714,17 @@ public static unsafe partial class Win32
         return !string.IsNullOrWhiteSpace(desktopName);
     }
 
-    private static HDESK GetInputDesktop()
+    private HDESK GetInputDesktop()
     {
         return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
     }
 
-    private static FrozenDictionary<string, ushort> GetKeyMap()
+    private HKL GetKeyboardLayout()
+    {
+        return PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+    }
+
+    private FrozenDictionary<string, ushort> GetKeyMap()
     {
         return _keyMap ??= new Dictionary<string, ushort>()
         {
@@ -790,11 +886,58 @@ public static unsafe partial class Win32
         }.ToFrozenDictionary();
     }
 
-    private static Point GetNormalizedPoint(int x, int y)
+    private VIRTUAL_KEY[] GetModKeysPressed()
+    {
+        var keys = new List<VIRTUAL_KEY>();
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_SHIFT) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_SHIFT);
+        }
+
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_CONTROL) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_CONTROL);
+        }
+
+        if (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_MENU) < 0)
+        {
+            keys.Add(VIRTUAL_KEY.VK_MENU);
+        }
+
+        return [.. keys];
+    }
+    private Point GetNormalizedPoint(int x, int y)
     {
         var width = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
         var height = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
 
         return new Point((int)(x / width * 65535), (int)(y / height * 65535));
+    }
+
+    private bool IsExtendedKey(VIRTUAL_KEY vk)
+    {
+        return vk switch
+        {
+            VIRTUAL_KEY.VK_RCONTROL or
+            VIRTUAL_KEY.VK_RMENU or
+            VIRTUAL_KEY.VK_INSERT or
+            VIRTUAL_KEY.VK_DELETE or
+            VIRTUAL_KEY.VK_HOME or
+            VIRTUAL_KEY.VK_END or
+            VIRTUAL_KEY.VK_PRIOR or
+            VIRTUAL_KEY.VK_NEXT or
+            VIRTUAL_KEY.VK_LEFT or
+            VIRTUAL_KEY.VK_UP or
+            VIRTUAL_KEY.VK_RIGHT or
+            VIRTUAL_KEY.VK_DOWN or
+            VIRTUAL_KEY.VK_NUMLOCK or
+            VIRTUAL_KEY.VK_CANCEL or
+            VIRTUAL_KEY.VK_DIVIDE or
+            VIRTUAL_KEY.VK_SNAPSHOT or
+            VIRTUAL_KEY.VK_LWIN or
+            VIRTUAL_KEY.VK_RWIN or
+            VIRTUAL_KEY.VK_RETURN => true,
+            _ => false,
+        };
     }
 }

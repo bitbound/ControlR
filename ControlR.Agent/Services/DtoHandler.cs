@@ -19,6 +19,7 @@ internal class DtoHandler(
     IPowerControl _powerControl,
     ITerminalStore _terminalStore,
     ISettingsProvider _settings,
+    IWin32Interop _win32Interop,
     IWakeOnLanService _wakeOnLan,
     ILogger<DtoHandler> _logger) : IHostedService
 {
@@ -85,7 +86,7 @@ internal class DtoHandler(
                 {
                     if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
                     {
-                        Win32.InvokeCtrlAltDel();
+                        _win32Interop.InvokeCtrlAltDel();
                     }
                     break;
                 }

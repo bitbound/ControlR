@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Dtos;
 using ControlR.Devices.Common.Native.Windows;
-using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +15,7 @@ internal interface IDesktopEchoer
 internal class DesktopEchoer(
     IIpcConnectionFactory _ipcFactory,
     IHostApplicationLifetime _appLifetime,
+    IWin32Interop _win32Interop,
     ILogger<DesktopEchoer> _logger) : IDesktopEchoer
 {
     public async Task EchoInputDesktop(string pipeName)
@@ -32,7 +32,7 @@ internal class DesktopEchoer(
                     throw new PlatformNotSupportedException();
                 }
 
-                if (Win32.GetInputDesktop(out var desktop))
+                if (_win32Interop.GetInputDesktop(out var desktop))
                 {
                     return new DesktopResponseDto(desktop.Trim());
                 }

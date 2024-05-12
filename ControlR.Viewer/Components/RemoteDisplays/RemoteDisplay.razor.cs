@@ -14,14 +14,17 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using System.Runtime.Versioning;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Viewer.Components.RemoteDisplays;
 
+[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : IAsyncDisposable
 {
     private readonly SemaphoreSlim _typeLock = new(1, 1);
     private readonly string _videoId = $"video-{Guid.NewGuid()}";
+    private readonly CancellationTokenSource _componentClosing = new();
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
@@ -30,7 +33,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private bool _isStreamLoaded;
     private bool _isStreamReady;
     private double _lastPinchDistance = -1;
-    private IJSObjectReference? _module;
     private ElementReference _screenArea;
     private bool _isScrollModeEnabled;
     private DisplayDto? _selectedDisplay;
@@ -42,6 +44,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     private double _videoWidth;
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
+
     [Inject]
     public required IAppState AppState { get; init; }
 
@@ -53,9 +56,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     [Inject]
     public required IEnvironmentHelper EnvironmentHelper { get; init; }
-
-    [Inject]
-    public required IJSRuntime JsRuntime { get; init; }
 
     [Inject]
     public required ILogger<RemoteDisplay> Logger { get; init; }
@@ -77,8 +77,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
-    private IJSObjectReference JsModule => _module ??
-        throw new InvalidOperationException("JS module has not been initialized yet.");
 
     private string VideoClasses
     {
@@ -118,12 +116,10 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _componentClosing.Cancel();
         await ViewerHub.CloseStreamingSession(Session.SessionId);
         Messenger.UnregisterAll(this);
-        if (_module is not null)
-        {
-            await _module.InvokeVoidAsync("dispose", _videoId);
-        }
+        await JsModule.InvokeVoidAsync("dispose", _videoId);
         await ClipboardManager.DisposeAsync();
         GC.SuppressFinalize(this);
     }
@@ -226,7 +222,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-        _module ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/RemoteDisplays/RemoteDisplay.razor.js");
 
         if (firstRender)
         {
@@ -290,7 +285,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     private async Task HandleDesktopChanged(object recipient, DesktopChangedMessage message)
     {
-        if (message.SessionId != Session.SessionId || _module is null)
+        if (message.SessionId != Session.SessionId)
         {
             return;
         }
@@ -305,21 +300,21 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         Session.CreateNewSessionId();
 
-        await _module.InvokeVoidAsync("resetPeerConnection", _iceServers, _videoId);
+        await JsModule.InvokeVoidAsync("resetPeerConnection", _iceServers, _videoId);
 
         await RequestStreamingSessionFromAgent();
     }
 
     private async Task HandleIceCandidateReceived(object recipient, IceCandidateMessage message)
     {
-        if (message.SessionId != Session.SessionId || _module is null)
+        if (message.SessionId != Session.SessionId)
         {
             return;
         }
 
         try
         {
-            await _module.InvokeVoidAsync("receiveIceCandidate", message.CandidateJson, _videoId);
+            await JsModule.InvokeVoidAsync("receiveIceCandidate", message.CandidateJson, _videoId);
         }
         catch (Exception ex)
         {
@@ -356,14 +351,14 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
     {
-        if (message.SessionId != Session.SessionId || _module is null)
+        if (message.SessionId != Session.SessionId)
         {
             return;
         }
 
         try
         {
-            await _module.InvokeVoidAsync("receiveRtcSessionDescription", message.SessionDescription, _videoId);
+            await JsModule.InvokeVoidAsync("receiveRtcSessionDescription", message.SessionDescription, _videoId);
         }
         catch (Exception ex)
         {
@@ -471,14 +466,11 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     private async Task OnVkKeyDown(KeyboardEventArgs args)
     {
-        if (_module is null)
-        {
-            return;
-        }
+        await JsModuleReady.Wait(_componentClosing.Token);
 
         if (args.Key == "Enter" || args.Key == "Backspace")
         {
-            await _module.InvokeVoidAsync("sendKeyPress", args.Key, _videoId);
+            await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _videoId);
         }
     }
 
@@ -486,12 +478,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         try
         {
-            if (_module is null)
-            {
-                Snackbar.Add("JavaScript services must be initialized before remote control", Severity.Error);
-                return;
-            }
-
             Logger.LogInformation("Creating streaming session");
             var streamingSessionResult = await ViewerHub.GetStreamingSession(Session.Device.ConnectionId, Session.SessionId, Session.InitialSystemSession);
 

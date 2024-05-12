@@ -1,4 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Extensions;
 using ControlR.Streamer.Sidecar;
@@ -65,6 +66,7 @@ rootCommand.SetHandler(async (streamerPipeName, parentProcessId) =>
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
+                services.AddSingleton<IWin32Interop, Win32Interop>();
                 services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
                 services.AddHostedService<InputDesktopReporter>();
             }

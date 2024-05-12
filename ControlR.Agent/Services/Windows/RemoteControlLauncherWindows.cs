@@ -19,6 +19,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows6.0.6000")]
 internal class RemoteControlLauncherWindows(
     IHostApplicationLifetime _appLifetime,
+    IWin32Interop _win32Interop,
     IProcessManager _processes,
     IIpcRouter _ipcRouter,
     IEnvironmentHelper _environment,
@@ -70,7 +71,7 @@ internal class RemoteControlLauncherWindows(
                 var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
                 var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
 
-                Win32.CreateInteractiveSystemProcess(
+                _win32Interop.CreateInteractiveSystemProcess(
                     $"\"{binaryPath}\" {args}",
                     targetSessionId: targetWindowsSession,
                     forceConsoleSession: false,
@@ -150,13 +151,13 @@ internal class RemoteControlLauncherWindows(
         }
         else
         {
-            Win32.CreateInteractiveSystemProcess(
-            $"\"{_environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
-            targetSessionId: targetWindowsSession,
-            forceConsoleSession: false,
-            desktopName: "Default",
-            hiddenWindow: true,
-            out process);
+            _win32Interop.CreateInteractiveSystemProcess(
+                $"\"{_environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
+                targetSessionId: targetWindowsSession,
+                forceConsoleSession: false,
+                desktopName: "Default",
+                hiddenWindow: true,
+                out process);
         }
 
         if (process is null || process.Id == -1)

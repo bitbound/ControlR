@@ -46,6 +46,7 @@ internal class AgentHubConnection(
      IMessenger _messenger,
      ITerminalStore _terminalStore,
      IDelayer _delayer,
+     IWin32Interop _win32Interop,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
@@ -168,7 +169,7 @@ internal class AgentHubConnection(
             return Array.Empty<WindowsSession>().AsTaskResult();
         }
 
-        return Win32.GetActiveSessions().ToArray().AsTaskResult();
+        return _win32Interop.GetActiveSessions().ToArray().AsTaskResult();
     }
 
     public async Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)

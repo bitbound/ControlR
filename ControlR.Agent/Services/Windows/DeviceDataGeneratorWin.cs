@@ -10,6 +10,7 @@ namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class DeviceDataGeneratorWin(
+    IWin32Interop _win32Interop,
     IEnvironmentHelper environmentHelper,
     ILogger<DeviceDataGeneratorWin> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
@@ -24,7 +25,7 @@ internal class DeviceDataGeneratorWin(
             var (usedStorage, totalStorage) = GetSystemDriveInfo();
             var (usedMemory, totalMemory) = await GetMemoryInGB();
 
-            device.CurrentUser = Win32.GetActiveSessions().LastOrDefault()?.Username ?? string.Empty;
+            device.CurrentUser = _win32Interop.GetActiveSessions().LastOrDefault()?.Username ?? string.Empty;
             device.Drives = GetAllDrives();
             device.UsedStorage = usedStorage;
             device.TotalStorage = totalStorage;
@@ -50,7 +51,7 @@ internal class DeviceDataGeneratorWin(
         {
             var memoryStatus = new MemoryStatusEx();
 
-            if (Win32.GlobalMemoryStatusEx(ref memoryStatus))
+            if (_win32Interop.GlobalMemoryStatus(ref memoryStatus))
             {
                 freeGB = Math.Round((double)memoryStatus.ullAvailPhys / 1024 / 1024 / 1024, 2);
                 totalGB = Math.Round((double)memoryStatus.ullTotalPhys / 1024 / 1024 / 1024, 2);

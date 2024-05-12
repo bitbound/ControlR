@@ -13,6 +13,7 @@ namespace ControlR.Streamer.Sidecar.Services;
 [SupportedOSPlatform("windows6.0.6000")]
 internal class InputDesktopReporter(
     IHostApplicationLifetime _hostLifetime,
+    IWin32Interop _win32Interop,
     IOptions<StartupOptions> _startupOptions,
     IProcessManager _processes,
     IStreamerIpcConnection _streamerIpc,
@@ -58,7 +59,7 @@ internal class InputDesktopReporter(
         _logger.LogInformation("Beginning desktop watch for streamer process: {ParentProcessId}", parentId);
 
 
-        if (Win32.GetInputDesktop(out var initialInputDesktop))
+        if (_win32Interop.GetInputDesktop(out var initialInputDesktop))
         {
             _logger.LogInformation("Initial desktop: {DesktopName}", initialInputDesktop);
         }
@@ -67,7 +68,7 @@ internal class InputDesktopReporter(
             _logger.LogWarning("Failed to get initial desktop.");
         }
 
-        if (Win32.SwitchToInputDesktop())
+        if (_win32Interop.SwitchToInputDesktop())
         {
             _logger.LogInformation("Switched to initial input desktop.");
         }
@@ -88,13 +89,13 @@ internal class InputDesktopReporter(
                     break;
                 }
 
-                if (!Win32.GetInputDesktop(out var inputDesktop))
+                if (!_win32Interop.GetInputDesktop(out var inputDesktop))
                 {
                     _logger.LogError("Failed to get input desktop.");
                     break;
                 }
 
-                if (!Win32.GetCurrentThreadDesktop(out var threadDesktop))
+                if (!_win32Interop.GetCurrentThreadDesktop(out var threadDesktop))
                 {
                     _logger.LogError("Failed to get thread desktop.");
                     break;
@@ -111,7 +112,7 @@ internal class InputDesktopReporter(
 
                     _streamerIpc.Send(new DesktopChangedDto(inputDesktop)).Forget();
 
-                    if (!Win32.SwitchToInputDesktop())
+                    if (!_win32Interop.SwitchToInputDesktop())
                     {
                         _logger.LogWarning("Failed to switch to input desktop.");
                         break;

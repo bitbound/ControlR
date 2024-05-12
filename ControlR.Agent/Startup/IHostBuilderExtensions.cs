@@ -6,6 +6,7 @@ using ControlR.Agent.Services.Fakes;
 using ControlR.Agent.Services.Linux;
 using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
+using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
@@ -125,6 +126,7 @@ internal static class IHostBuilderExtensions
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {
+                services.AddSingleton<IWin32Interop, Win32Interop>();
                 services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
                 services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
                 services.AddSingleton<IPowerControl, PowerControlWindows>();

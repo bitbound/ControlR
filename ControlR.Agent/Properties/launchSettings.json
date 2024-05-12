@@ -8,6 +8,15 @@
         "AppOptions__ServerUri": "http://localhost:5120"
       }
     },
+    "Run (Native Debug)": {
+      "commandName": "Project",
+      "commandLineArgs": "run",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "AppOptions__ServerUri": "http://localhost:5120"
+      },
+      "nativeDebugging": true
+    },
     "Install": {
       "commandName": "Project",
       "commandLineArgs": "install -r -s https://dev.controlr.app -v 5900 -a MIIBCgKCAQEAwOEdUkXHB1lBYlA85lBcyVAR0LlbuQmsTQcvrpGbpBDIWwHrpMiAkXyinC+Oyi/NRil4PMCe1dWYB9duo/YlgZXmKFXohoyjEfQ0M+NBtX5P7/zJp/Vfa7O1i/Pgv9PFzgGNd5sJCiID9IV9WyXz+Z8TGwzuEC9y9Q1soKKiGV+TVosmxuNhmvCYgMQiXinZx/4CkZUO+OJeIULJLm4jCkHSAeeCdD6FpTLShNlsRNcBpfi8wwpb++56q2KIQKVBvx8yjZou8X+KAirczsL+zouwrGB3kugVOr+LGxiJKKiPG8f0C5yXM6OInRBpF0p88y7EpnpxS4QGwWsUo+85QIDAQAB",
