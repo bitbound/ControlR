@@ -235,11 +235,11 @@ public static unsafe partial class Win32
             {
                 return [.. sessions];
             }
-            
+
             var dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFOW));
 
             for (var i = 0; i < count; i++)
-            { 
+            {
                 if (ppSessionInfos->State == WTS_CONNECTSTATE_CLASS.WTSActive && ppSessionInfos->SessionId != consoleSessionId)
                 {
                     sessions.Add(new WindowsSession()
@@ -319,7 +319,14 @@ public static unsafe partial class Win32
         }
 
         var extraInfo = PInvoke.GetMessageExtraInfo();
+        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+        var vk = PInvoke.MapVirtualKeyEx(keyCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
         var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
+
+        if (IsExtendedKey((VIRTUAL_KEY)vk))
+        {
+            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        }
 
         if (!isPressed)
         {
@@ -328,9 +335,11 @@ public static unsafe partial class Win32
 
         var kbdInput = new KEYBDINPUT()
         {
+            wVk = 0,
             wScan = keyCode,
             dwExtraInfo = (nuint)extraInfo.Value,
-            dwFlags = kbdFlags
+            dwFlags = kbdFlags,
+            time = 0
         };
 
         var input = new INPUT()
@@ -342,6 +351,33 @@ public static unsafe partial class Win32
         PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
 
         return Result.Ok();
+    }
+
+    private static bool IsExtendedKey(VIRTUAL_KEY vk)
+    {
+        return vk switch
+        {
+            VIRTUAL_KEY.VK_RCONTROL or
+            VIRTUAL_KEY.VK_RMENU or
+            VIRTUAL_KEY.VK_INSERT or
+            VIRTUAL_KEY.VK_DELETE or
+            VIRTUAL_KEY.VK_HOME or
+            VIRTUAL_KEY.VK_END or
+            VIRTUAL_KEY.VK_PRIOR or
+            VIRTUAL_KEY.VK_NEXT or
+            VIRTUAL_KEY.VK_LEFT or
+            VIRTUAL_KEY.VK_UP or
+            VIRTUAL_KEY.VK_RIGHT or
+            VIRTUAL_KEY.VK_DOWN or
+            VIRTUAL_KEY.VK_NUMLOCK or
+            VIRTUAL_KEY.VK_CANCEL or
+            VIRTUAL_KEY.VK_DIVIDE or
+            VIRTUAL_KEY.VK_SNAPSHOT or
+            VIRTUAL_KEY.VK_LWIN or
+            VIRTUAL_KEY.VK_RWIN or
+            VIRTUAL_KEY.VK_RETURN => true,
+            _ => false,
+        };
     }
 
     public static void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
@@ -484,7 +520,7 @@ public static unsafe partial class Win32
 
                     inputs.Add(input);
                 }
-                
+
             }
             catch { }
         }
@@ -553,22 +589,12 @@ public static unsafe partial class Win32
 
         var normalizedPoint = GetNormalizedPoint(x, y);
 
-        // Invert the Y delta to be compatible with the Windows API.
-        if (scrollY > 0)
-        {
-            scrollY = -120;
-        }
-        else if (scrollY < 0)
-        {
-            scrollY = 120;
-        }
-
         var mouseInput = new MOUSEINPUT
         {
             dx = normalizedPoint.X,
             dy = normalizedPoint.Y,
             dwFlags = mouseEventFlags,
-            mouseData = (uint)scrollY,
+            mouseData = (uint)-scrollY,
             dwExtraInfo = (nuint)extraInfo.Value,
         };
 

@@ -19,6 +19,8 @@ SetThreadDesktop
 SwitchDesktop
 SendInput
 VkKeyScan
+MapVirtualKeyEx
+GetKeyboardLayout
 GetAsyncKeyState
 GetMessageExtraInfo
 GetSystemMetrics

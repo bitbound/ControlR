@@ -191,21 +191,23 @@ export async function initialize(componentRef, videoId, iceServers) {
             sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
 
             let wheelScrollDto = {};
+            const percentX = ev.offsetX / state.videoElement.clientWidth;
+            const percentY = ev.offsetY / state.videoElement.clientHeight;
 
             if (Math.abs(ev.movementY) > Math.abs(ev.movementX)) {
                 wheelScrollDto = {
                     dtoType: "wheelScrollEvent",
-                    deltaX: 0,
-                    deltaY: ev.movementY * -4,
-                    deltaZ: 0
+                    percentX: percentX,
+                    percentY: percentY,
+                    scrollY: ev.movementY * -4,
                 };
             }
             else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
                 wheelScrollDto = {
                     dtoType: "wheelScrollEvent",
-                    deltaX: ev.movementX * 4,
-                    deltaY: 0,
-                    deltaZ: 0
+                    percentX: percentX,
+                    percentY: percentY,
+                    scrollY: ev.movementX * 4,
                 };
             }
             else {
