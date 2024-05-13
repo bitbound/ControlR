@@ -135,7 +135,11 @@ internal class StreamerIpcConnection(
                             var wheelDto = JsonSerializer.Deserialize<WheelScrollDto>(message, _jsonOptions) ??
                                 throw new JsonException("Failed to deserialize WheelScrollDto.");
                             _logger.LogDebug("Received WheelScroll IPC DTO: {WheelDto}", wheelDto);
-                            _inputSimulator.ScrollWheel((int)wheelDto.X, (int)wheelDto.Y, (int)wheelDto.ScrollY);
+                            _inputSimulator.ScrollWheel(
+                                (int)wheelDto.X, 
+                                (int)wheelDto.Y, 
+                                (int)(wheelDto.ScrollY ?? 0),
+                                (int)(wheelDto.ScrollX ?? 0));
                             break;
                         }
                     default:

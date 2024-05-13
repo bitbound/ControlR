@@ -43,5 +43,6 @@ export interface TypeTextDto extends SidecarDtoBase {
 export interface WheelScrollDto extends SidecarDtoBase {
   x: number;
   y: number;
-  scrollY: number;
+  scrollY?: number;
+  scrollX?: number;
 }

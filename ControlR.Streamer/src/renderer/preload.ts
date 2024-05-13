@@ -28,8 +28,8 @@ const mainApiIpc: MainApi = {
 
   resetKeyboardState: () => invokeInMain("resetKeyboardState"),
 
-  invokeWheelScroll: (x, y, scrollY) =>
-    invokeInMain("invokeWheelScroll", x, y, scrollY),
+  invokeWheelScroll: (x, y, scrollY, scrollX) =>
+    invokeInMain("invokeWheelScroll", x, y, scrollY, scrollX),
 
   invokeTypeText: (text: string) => invokeInMain("invokeTypeText", text),
   setClipboardText: (text: string | undefined | null) =>

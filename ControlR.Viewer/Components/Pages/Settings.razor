@@ -135,6 +135,11 @@
                 Snackbar.Add(result.Reason, severity);
             }
         }
+        catch (OperationCanceledException)
+        {
+            Logger.LogWarning("Export settings operation was canceled.");
+            Snackbar.Add("Export operation aborted", Severity.Warning);
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while exporting settings.");

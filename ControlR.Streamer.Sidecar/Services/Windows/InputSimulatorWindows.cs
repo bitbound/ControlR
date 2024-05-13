@@ -14,7 +14,7 @@ public interface IInputSimulator
     void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
     void MovePointer(int x, int y, MovePointerType moveType);
     void ResetKeyboardState();
-    void ScrollWheel(int x, int y, int scrollY);
+    void ScrollWheel(int x, int y, int scrollY, int scrollX);
     void TypeText(string text);
 }
 
@@ -110,11 +110,11 @@ internal class InputSimulatorWindows: IInputSimulator
         _queueSignal.Set();
     }
 
-    public void ScrollWheel(int x, int y, int scrollY)
+    public void ScrollWheel(int x, int y, int scrollY, int scrollX)
     {
         _actionQueue.Enqueue(() => {
             _win32Interop.SwitchToInputDesktop();
-            _win32Interop.InvokeWheelScroll(x, y, scrollY);
+            _win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX);
         });
         _queueSignal.Set();
     }

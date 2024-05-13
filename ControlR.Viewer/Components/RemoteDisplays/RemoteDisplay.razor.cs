@@ -14,12 +14,10 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
-using System.Runtime.Versioning;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Viewer.Components.RemoteDisplays;
 
-[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : IAsyncDisposable
 {
     private readonly SemaphoreSlim _typeLock = new(1, 1);

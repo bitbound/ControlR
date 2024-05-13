@@ -63,7 +63,7 @@ internal class Win32InteropFake : IWin32Interop
         throw new NotImplementedException();
     }
 
-    public void InvokeWheelScroll(int x, int y, int scrollY)
+    public void InvokeWheelScroll(int x, int y, int scrollY, int scrollX)
     {
         throw new NotImplementedException();
     }

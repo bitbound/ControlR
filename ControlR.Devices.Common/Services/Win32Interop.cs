@@ -36,7 +36,7 @@ public interface IWin32Interop
     void InvokeCtrlAltDel();
     Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed);
     void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
-    void InvokeWheelScroll(int x, int y, int scrollY);
+    void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
     void MovePointer(int x, int y, MovePointerType moveType);
     nint OpenInputDesktop();
     void ResetKeyboardState();
@@ -51,8 +51,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
 
+    [Flags]
+    private enum ShiftState : byte
+    {
+        None = 0,
+        ShiftPressed = 1 << 0,
+        CtrlPressed = 1 << 1,
+        AltPressed = 1 << 2,
+        HankakuPressed = 1 << 3,
+        Reserved1 = 1 << 4,
+        Reserved2 = 1 << 5,
+    }
+
     public bool CreateInteractiveSystemProcess(
-        string commandLine,
+            string commandLine,
         int targetSessionId,
         bool forceConsoleSession,
         string desktopName,
@@ -420,32 +432,16 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }
     }
 
-    public void InvokeWheelScroll(int x, int y, int scrollY)
+    public void InvokeWheelScroll(int x, int y, int scrollY, int scrollX)
     {
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
-
-        var normalizedPoint = GetNormalizedPoint(x, y);
-
-        var mouseInput = new MOUSEINPUT
+        if (Math.Abs(scrollY) > 0)
         {
-            dx = normalizedPoint.X,
-            dy = normalizedPoint.Y,
-            dwFlags = mouseEventFlags,
-            mouseData = (uint)-scrollY,
-            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-        };
+            InvokeWheelScroll(x, y, scrollY, true);
+        }
 
-        var input = new INPUT()
+        if (Math.Abs(scrollX) > 0)
         {
-            type = INPUT_TYPE.INPUT_MOUSE,
-            Anonymous = { mi = mouseInput }
-        };
-
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
-        if (result == 0)
-        {
-            _logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);
+            InvokeWheelScroll(x, y, scrollX, false);
         }
     }
 
@@ -1006,7 +1002,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             type = INPUT_TYPE.INPUT_KEYBOARD,
             Anonymous = { ki = kbdInput }
         };
-        
+
         var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
 
         if (result == 0)
@@ -1018,16 +1014,42 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         return Result.Ok();
     }
 
-    [Flags]
-    private enum ShiftState : byte
+    private void InvokeWheelScroll(int x, int y, int delta, bool isVertical)
     {
-        None = 0,
-        ShiftPressed = 1 << 0,
-        CtrlPressed = 1 << 1,
-        AltPressed = 1 << 2,
-        HankakuPressed = 1 << 3,
-        Reserved1 = 1 << 4,
-        Reserved2 = 1 << 5,
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var mouseEventFlags =MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+
+        if (isVertical)
+        {
+            mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL;
+        }
+        else
+        {
+            mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_HWHEEL;
+        }
+
+        var normalizedPoint = GetNormalizedPoint(x, y);
+
+        var mouseInput = new MOUSEINPUT
+        {
+            dx = normalizedPoint.X,
+            dy = normalizedPoint.Y,
+            dwFlags = mouseEventFlags,
+            mouseData = (uint)-delta,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+        };
+
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_MOUSE,
+            Anonymous = { mi = mouseInput }
+        };
+
+        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);
+        }
     }
 
     [StructLayout(LayoutKind.Explicit)]

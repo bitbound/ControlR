@@ -47,5 +47,6 @@ export interface TypeTextDto extends BaseDto {
 export interface WheelScrollDto extends BaseDto {
   percentX: number;
   percentY: number;
-  scrollY: number;
+  scrollX?: number;
+  scrollY?: number;
 }

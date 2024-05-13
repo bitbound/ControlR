@@ -1,15 +1,9 @@
-﻿using ControlR.Agent.Dtos;
-using ControlR.Agent.Interfaces;
+﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Agent.Services.Windows;
-using ControlR.Devices.Common.Native.Windows;
-using ControlR.Shared.Dtos.SidecarDtos;
-using ControlR.Shared.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SimpleIpc;
 using System.CommandLine;
-using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Startup;
 

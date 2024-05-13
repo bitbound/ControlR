@@ -67,6 +67,7 @@ export async function handleDataChannelMessage(data: string) {
           point.x,
           point.y,
           scrollDto.scrollY,
+          scrollDto.scrollX,
         );
       }
       break;

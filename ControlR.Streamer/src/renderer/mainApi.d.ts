@@ -31,7 +31,12 @@ declare interface MainApi {
     shouldRelease: boolean,
   ): Promise<void>;
   resetKeyboardState(): Promise<void>;
-  invokeWheelScroll(x: number, y: number, scrollY: number): Promise<void>;
+  invokeWheelScroll(
+    x: number,
+    y: number,
+    scrollY?: number,
+    scrollX?: number,
+  ): Promise<void>;
   invokeTypeText(text: string): Promise<void>;
   writeLog(message: string, level: LogLevel = "Info", ...args: any[]);
 
