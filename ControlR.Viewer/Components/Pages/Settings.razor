@@ -32,17 +32,10 @@
     </MudText>
     <MudTextField T="string"
                   @bind-Value="Username"
+                  Validation="(string e) => ValidateUsername(e)"
                   Label="Shown to partners when connecting">
 
     </MudTextField>
-</div>
-
-<div class="mt-10">
-    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-        Remember Me
-    </MudText>
-    <MudCheckBox @bind-Value="RememberPassphrase"
-                 Label="Remember private key passphrase on this device" />
 </div>
 
 <div class="mt-10">
@@ -73,12 +66,6 @@
 
 
 @code {
-    private bool RememberPassphrase
-    {
-        get => SettingsStore.RememberPassphrase;
-        set => SettingsStore.RememberPassphrase = value;
-    }
-
     private bool NotifyUser
     {
         get => SettingsStore.NotifyUserSessionStart;
@@ -100,7 +87,7 @@
             Snackbar.Add("Server updated", Severity.Success);
             DeviceCache.SetAllOffline();
             Dialogs.ShowMessageBox(
-                "Restart Required",
+                "Restart Recommended",
                 "Please restart the application soon for changes to fully take effect.")
                 .AndForget(true);
         }
@@ -170,5 +157,21 @@
             Logger.LogError(ex, "Error while import settings.");
             Snackbar.Add("Failed to import settings (see logs)", Severity.Error);
         }
+    }
+
+
+    private string? ValidateUsername(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Username is required.";
+        }
+
+        if (AppConstants.UsernameValidator().IsMatch(input))
+        {
+            return "Username can only contain letters, numbers, underscores, and hyphens.";
+        }
+
+        return null;
     }
 }

@@ -39,7 +39,7 @@ Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-co
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ControlR.Streamer", "ControlR.Streamer\ControlR.Streamer.esproj", "{DCC5E491-D2ED-4901-842B-50FA80CB413A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Streamer.Sidecar", "ControlR.Streamer.Sidecar\ControlR.Streamer.Sidecar.csproj", "{AB490A14-3952-4D41-8BB1-AC424E18A6DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Streamer.Sidecar", "ControlR.Streamer.Sidecar\ControlR.Streamer.Sidecar.csproj", "{AB490A14-3952-4D41-8BB1-AC424E18A6DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -243,7 +243,7 @@ Global
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal

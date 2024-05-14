@@ -1,0 +1,97 @@
+﻿<div>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h5" Color="Color.Primary">
+                @Title
+            </MudText>
+            <MudText Typo="Typo.subtitle1">
+                @Subtitle
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
+                <MudCard>
+                    <MudCardContent>
+                        <MudTextField T="string"
+                                      @bind-Value="_passphrase"
+                                      Label="Passphrase"
+                                      HelperText="Enter your passphrase to decrypt the private key."
+                                      Immediate="true"
+                                      InputType="InputType.Password"
+                                      OnKeyDown="InputKeyDown"
+                                      Required
+                                      Validation="(string e) => ValidatePassphrase(e)" />
+
+                    </MudCardContent>
+                    <MudCardActions Class="justify-end">
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Class="me-3"
+                                   OnClick="Cancel">
+                            Cancel
+                        </MudButton>
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="!_formIsValid"
+                                   OnClick="Submit">
+                            Submit
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudForm>
+        </DialogContent>
+    </MudDialog>
+
+</div>
+
+@code {
+    private string? _passphrase;
+    private bool _formIsValid;
+    private MudForm? _form;
+
+    [CascadingParameter]
+    public required MudDialogInstance MudDialog { get; init; }
+
+    [Parameter]
+    public required string Subtitle { get; set; }
+
+    [Parameter]
+    public required string Title { get; set; }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void InputKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            Submit();
+        }
+    }
+
+    private void Submit()
+    {
+        if (_formIsValid)
+        {
+            MudDialog.Close(_passphrase);
+        }
+    }
+
+    private string? ValidatePassphrase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Passphrase is required.";
+        }
+
+        if (input is null || input.Length < 8)
+        {
+            return "Passphrase must be at least 8 characters.";
+        }
+        return null;
+    }
+}

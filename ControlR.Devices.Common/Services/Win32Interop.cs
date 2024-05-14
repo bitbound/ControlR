@@ -569,25 +569,22 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         foreach (var character in text)
         {
-            var vk = (VIRTUAL_KEY)PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
+            
+            var keyCode = PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
+            var shortHelper = new ShortHelper(keyCode);
+            var vkCode = (VIRTUAL_KEY)shortHelper.Low;
+            var shiftState = (ShiftState)shortHelper.High;
 
-            var extraInfo = PInvoke.GetMessageExtraInfo();
-            KEYBD_EVENT_FLAGS kbdFlags = default;
 
-            var kbdInput = new KEYBDINPUT()
-            {
-                wVk = vk,
-                dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-                dwFlags = kbdFlags
-            };
+            AddShiftInput(inputs, shiftState, true);
 
-            var input = new INPUT()
-            {
-                type = INPUT_TYPE.INPUT_KEYBOARD,
-                Anonymous = { ki = kbdInput }
-            };
+            var keyDown = CreateKeyboardInput(vkCode, true);
+            inputs.Add(keyDown);
 
-            inputs.Add(input);
+            var keyUp = CreateKeyboardInput(vkCode, false);
+            inputs.Add(keyUp);
+
+            AddShiftInput(inputs, shiftState, false);
         }
 
         var result = PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
@@ -596,8 +593,34 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             _logger.LogWarning("Failed to type text.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
         }
     }
-
-    private static KEYBDINPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
+    private static void AddShiftInput(List<INPUT> inputs, ShiftState shiftState, bool isPressed)
+    {
+        switch (shiftState)
+        {
+            case ShiftState.ShiftPressed:
+                {
+                    inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_SHIFT, isPressed));
+                    break;
+                }
+            case ShiftState.CtrlPressed:
+                {
+                    inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_CONTROL, isPressed));
+                    break;
+                }
+            case ShiftState.AltPressed:
+                {
+                    inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_MENU, isPressed));
+                    break;
+                }
+            case ShiftState.HankakuPressed:
+            case ShiftState.None:
+            case ShiftState.Reserved1:
+            case ShiftState.Reserved2:
+            default:
+                break;
+        }
+    }
+    private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
         KEYBD_EVENT_FLAGS kbdFlags = default;
@@ -620,10 +643,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             time = 0
         };
 
-        return kbdInput;
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_KEYBOARD,
+            Anonymous = { ki = kbdInput }
+        };
+        return input;
     }
 
-    private static KEYBDINPUT CreateKeyboardInput(ushort scanCode, bool isPressed)
+    private static INPUT CreateKeyboardInput(ushort scanCode, bool isPressed)
     {
         var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
         var vk = (VIRTUAL_KEY)PInvoke.MapVirtualKeyEx(scanCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
@@ -650,7 +678,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             time = 0
         };
 
-        return kbdInput;
+        var input = new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_KEYBOARD,
+            Anonymous = { ki = kbdInput }
+        };
+        return input;
     }
 
     private static bool GetDesktopName(HDESK handle, out string desktopName)
@@ -750,6 +783,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     {
         result = key switch
         {
+            " " => VIRTUAL_KEY.VK_SPACE,
             "Down" or "ArrowDown" => VIRTUAL_KEY.VK_DOWN,
             "Up" or "ArrowUp" => VIRTUAL_KEY.VK_UP,
             "Left" or "ArrowLeft" => VIRTUAL_KEY.VK_LEFT,
@@ -971,13 +1005,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         var kbdInput = CreateKeyboardInput(scanCode, isPressed);
 
-        var input = new INPUT()
-        {
-            type = INPUT_TYPE.INPUT_KEYBOARD,
-            Anonymous = { ki = kbdInput }
-        };
 
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([kbdInput], Marshal.SizeOf<INPUT>());
 
         if (result == 0)
         {
@@ -997,13 +1026,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
 
-        var input = new INPUT()
-        {
-            type = INPUT_TYPE.INPUT_KEYBOARD,
-            Anonymous = { ki = kbdInput }
-        };
-
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([kbdInput], Marshal.SizeOf<INPUT>());
 
         if (result == 0)
         {
@@ -1029,6 +1052,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }
 
         var normalizedPoint = GetNormalizedPoint(x, y);
+
+        _logger.LogDebug("Invoking mouse wheel scroll. Point: {Point}, Delta: {Delta}, IsVertical: {IsVertical}.", normalizedPoint, delta, isVertical);
 
         var mouseInput = new MOUSEINPUT
         {

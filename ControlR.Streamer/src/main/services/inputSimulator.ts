@@ -85,11 +85,17 @@ export async function resetKeyboardState() {
   sendMessage(dto);
 }
 
-export async function scrollWheel(x: number, y: number, scrollY: number) {
+export async function scrollWheel(
+  x: number,
+  y: number,
+  scrollY: number,
+  scrollX: number,
+) {
   const dto = {
     x: x,
     y: y,
     scrollY: scrollY,
+    scrollX: scrollX,
     dtoType: "WheelScroll",
   } as WheelScrollDto;
   sendMessage(dto);

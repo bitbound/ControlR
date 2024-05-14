@@ -5,16 +5,13 @@
 
 <PageTitle>Home</PageTitle>
 
-@switch (AppState.AuthenticationState)
+@switch (AppState.KeypairState)
 {
-    case AuthenticationState.LocalKeysStored:
-    case AuthenticationState.PrivateKeyLoaded:
-        <LoadKeyForm />
-        break;
-    case AuthenticationState.NoKeysPresent:
+    case KeypairState.NoKeysPresent:
+    case KeypairState.KeysUnverified:
         <KeyCreatorForm />
         break;
-    case AuthenticationState.Authenticated:
+    case KeypairState.KeysVerified:
         <Dashboard />
         break;
     default:
@@ -26,7 +23,7 @@
 
     protected override void OnInitialized()
     {
-        Messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
+        Messenger.RegisterGenericMessage(this, GenericMessageKind.KeysStateChanged, () => InvokeAsync(StateHasChanged));
         base.OnInitializedAsync();
     }
 

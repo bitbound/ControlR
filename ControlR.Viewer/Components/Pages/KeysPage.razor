@@ -9,6 +9,8 @@
 @inject IMessenger Messenger
 @inject IFileSaver FileSaver
 @inject IKeyProvider KeyProvider
+@inject IClipboard Clipboard
+@inject IDeviceCache DeviceCache
 @inject ILogger<KeysPage> Logger
 
 <PageTitle>Key Management</PageTitle>
@@ -33,44 +35,52 @@
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-        Export Keypair
+        Private Key
+    </MudText>
+    <MudText GutterBottom Color="Color.Warning">
+        Caution: This value is not encrypted.  If copied, make sure it is stored securely.
+    </MudText>
+    <MudTextField T="string"
+                  Label="Your Private Key"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  InputType="InputType.Password"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyPrivateKey"
+                  AdornmentColor="Color.Error"
+                  Adornment="Adornment.End"
+                  Value="_privateKey" />
+</div>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Export Private Key
     </MudText>
     <MudText GutterBottom>
-        Export your public/private keypair to a file, which can
+        Export your private key to an encrypted file, which can
         be imported on other devices.
     </MudText>
     <MudText GutterBottom>
-        Your private key is encrypted using your current passphrase.
+        Your private key is encrypted using the given passphrase.
         If you store this file long-term, it's recommended that you
         put it in a secure location, such as a password vault.
     </MudText>
-    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ExportKeypair" Class="mt-2">
+    <MudTextField T="string"
+                  @bind-Value="_passphrase"
+                  @ref="_passphraseField"
+                  Label="Encryption Passphrase"
+                  HelperText="Enter a passphrase to encrypt the exported private key."
+                  Immediate="true"
+                  InputType="InputType.Password"
+                  OnKeyDown="HandleExportPassphraseKeyDown"
+                  Required
+                  Validation="(string e) => ValidatePassphrase(e)" />
+    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ExportPrivateKey" Class="mt-2">
         Export
     </MudButton>
 </div>
 
-<div class="mt-10">
-    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-        Change Passphrase
-    </MudText>
-    <MudText GutterBottom>
-        Change the passphrase that's used to encrypt/decrypt your private key.
-    </MudText>
-    <MudTextField T="string"
-                  @bind-Value="_newPassphrase"
-                  @ref="_newPassphraseField"
-                  Label="New Passphrase"
-                  HelperText="Enter a new PIN or password to protected your private key."
-                  Immediate="true"
-                  InputType="InputType.Password"
-                  OnKeyDown="HandlePassphraseKeyDown"
-                  Required
-                  Validation="(string e) => ValidatePassphrase(e)" />
-
-    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ChangePassphrase" Class="mt-2">
-        Change
-    </MudButton>
-</div>
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -88,97 +98,64 @@
 
 @code {
     private string _publicKey = string.Empty;
-    private string _newPassphrase = string.Empty;
-    private MudTextField<string>? _newPassphraseField;
+    private string _privateKey = string.Empty;
+    private string _passphrase = string.Empty;
+    private MudTextField<string>? _passphraseField;
 
     protected override void OnInitialized()
     {
-        _publicKey = Settings.PublicKeyBase64;
+        _publicKey = AppState.PublicKeyBase64;
+        _privateKey = AppState.PrivateKeyBase64;
 
         base.OnInitialized();
     }
 
-    private async Task ChangePassphrase()
+    private async Task CopyPrivateKey()
     {
-        try
-        {
-            if (_newPassphraseField is null)
-            {
-                return;
-            }
-
-            await _newPassphraseField.Validate();
-            if (_newPassphraseField.ValidationErrors.Any())
-            {
-                return;
-            }
-
-            var newKeyPair = KeyProvider.ChangePassword(Settings.UserKeys, _newPassphrase);
-
-            await Settings.UpdateKeypair(Settings.Username, newKeyPair);
-
-            var keyDto = new IdentityDto()
-                {
-                    PublicKey = newKeyPair.PublicKey,
-                    Username = Settings.Username
-                };
-
-            HttpConfigurer.UpdateClientAuthorizations(keyDto);
-
-            if (Settings.RememberPassphrase)
-            {
-                await Settings.SetPassphrase(_newPassphrase);
-            }
-
-            _newPassphrase = string.Empty;
-            Snackbar.Add("Passphrase changed successfully", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while changing passphrase.");
-            Snackbar.Add("Failed to change passphrase (see logs)", Severity.Error);
-        }
+        await Clipboard.SetTextAsync(_privateKey);
+        Snackbar.Add("Private key copied to clipboard", Severity.Success);
     }
 
     private async Task CopyPublicKey()
     {
-        await Clipboard.Default.SetTextAsync(_publicKey);
+        await Clipboard.SetTextAsync(_publicKey);
         Snackbar.Add("Public key copied to clipboard", Severity.Success);
     }
 
-    private async Task ExportKeypair()
+    private async Task ExportPrivateKey()
     {
         try
         {
-            var keyExport = new KeypairExport()
-                {
-                    EncryptedPrivateKey = Convert.ToBase64String(Settings.UserKeys.EncryptedPrivateKey),
-                    PublicKey = Convert.ToBase64String(Settings.UserKeys.PublicKey),
-                };
+            Guard.IsNotNull(_passphraseField);
 
-            var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
+            if (_passphraseField.ValidationErrors.Count > 0)
+            {
+                return;
+            }
+            var encryptedKey = KeyProvider.EncryptPrivateKey(_passphrase, AppState.PrivateKey);
             using var ms = new MemoryStream();
-            await JsonSerializer.SerializeAsync(ms, keyExport);
+            await ms.WriteAsync(encryptedKey);
             ms.Seek(0, SeekOrigin.Begin);
+            var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
             var saveResult = await FileSaver.SaveAsync(fileName, ms);
             if (!saveResult.IsSuccessful)
             {
                 throw saveResult.Exception ?? new FileSaveException("Unknown save failure.");
             }
-            Snackbar.Add("Exported keys successfully", Severity.Success);
+            Snackbar.Add("Exported private key successfully", Severity.Success);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while exporting keypair.");
+            Logger.LogError(ex, "Error while exporting private key.");
             Snackbar.Add("Failed to export (see logs)", Severity.Error);
         }
     }
 
-    private async Task HandlePassphraseKeyDown(KeyboardEventArgs args)
+    private async Task HandleExportPassphraseKeyDown(KeyboardEventArgs args)
     {
         if (args.Key == "Enter")
         {
-            await ChangePassphrase();
+            await ExportPrivateKey();
         }
     }
 
@@ -196,7 +173,8 @@
             return;
         }
 
-        await Settings.RemoveAll();
+        await Settings.Reset();
+        DeviceCache.Clear();
         NavManager.NavigateTo(string.Empty, false);
     }
 
@@ -204,13 +182,12 @@
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            return "Passphrase cannot be empty.";
+            return "Passphrase is required.";
         }
 
-
-        if (input is null || input.Length < 4 || input.Length > 64)
+        if (input is null || input.Length < 8)
         {
-            return "Passphrase must be between 4 and 64 characters.";
+            return "Passphrase must be at least 8 characters.";
         }
         return null;
     }

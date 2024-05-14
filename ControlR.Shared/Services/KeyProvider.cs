@@ -8,17 +8,12 @@ namespace ControlR.Shared.Services;
 
 public interface IKeyProvider
 {
-    UserKeyPair ChangePassword(UserKeyPair keyPair, string newPassword);
     SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey);
-
     SignedPayloadDto CreateSignedDto<T>(T payload, DtoType dtoType, byte[] privateKey);
-
-    KeypairExport ExportKeypair(string username, string password, byte[] privateKey);
-
-    UserKeyPair GenerateKeys(string password);
-
-    UserKeyPair ImportKeys(string password, byte[] encryptedPrivateKey);
-
+    byte[] EncryptPrivateKey(string password, byte[] privateKey);
+    UserKeyPair GenerateKeys();
+    UserKeyPair ImportPrivateKey(string password, byte[] encryptedPrivateKey);
+    UserKeyPair ImportPrivateKey(byte[] privateKey);
     bool Verify(SignedPayloadDto signedDto);
 }
 
@@ -26,17 +21,9 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 {
     private readonly HashAlgorithmName _hashAlgName = HashAlgorithmName.SHA512;
     private readonly ILogger<KeyProvider> _logger = logger;
-    private readonly PbeParameters _pbeParameters = new(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA512, 5_000);
+    private readonly PbeParameters _pbeParameters = new(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA512, 10_000);
     private readonly RSASignaturePadding _signaturePadding = RSASignaturePadding.Pkcs1;
     private readonly ISystemTime _systemTime = systemTime;
-
-    public UserKeyPair ChangePassword(UserKeyPair keyPair, string newPassword)
-    {
-        using var rsa = RSA.Create();
-        rsa.ImportRSAPrivateKey(keyPair.PrivateKey, out _);
-        var encryptedPrivateKey = rsa.ExportEncryptedPkcs8PrivateKey(newPassword, _pbeParameters);
-        return new UserKeyPair(keyPair.PublicKey, keyPair.PrivateKey, encryptedPrivateKey);
-    }
 
     public SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey)
     {
@@ -53,38 +40,37 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
         var payloadBytes = MessagePackSerializer.Serialize(payload);
         return CreateSignedDtoImpl(rsa, payloadBytes, dtoType);
     }
-    public KeypairExport ExportKeypair(string username, string password, byte[] privateKey)
+    public byte[] EncryptPrivateKey(string password, byte[] privateKey)
     {
         using var rsa = RSA.Create();
 
         rsa.ImportRSAPrivateKey(privateKey, out _);
-        var encryptedPrivateKey = rsa.ExportEncryptedPkcs8PrivateKey(password, _pbeParameters);
-        var publicKey = rsa.ExportRSAPublicKey();
-
-        var export = new KeypairExport()
-        {
-            EncryptedPrivateKey = Convert.ToBase64String(encryptedPrivateKey),
-            PublicKey = Convert.ToBase64String(publicKey),
-        };
-        return export;
+        return rsa.ExportEncryptedPkcs8PrivateKey(password, _pbeParameters);
     }
 
-    public UserKeyPair GenerateKeys(string password)
+    public UserKeyPair GenerateKeys()
     {
         using var rsa = RSA.Create();
-        var encryptedPrivateKey = rsa.ExportEncryptedPkcs8PrivateKey(password, _pbeParameters);
         var privateKey = rsa.ExportRSAPrivateKey();
         var publicKey = rsa.ExportRSAPublicKey();
-        return new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
+        return new UserKeyPair(publicKey, privateKey);
     }
 
-    public UserKeyPair ImportKeys(string password, byte[] encryptedPrivateKey)
+    public UserKeyPair ImportPrivateKey(string password, byte[] encryptedPrivateKey)
     {
         using var rsa = RSA.Create();
         rsa.ImportEncryptedPkcs8PrivateKey(password, encryptedPrivateKey, out _);
         var privateKey = rsa.ExportRSAPrivateKey();
         var publicKey = rsa.ExportRSAPublicKey();
-        return new UserKeyPair(publicKey, privateKey, encryptedPrivateKey);
+        return new UserKeyPair(publicKey, privateKey);
+    }
+
+    public UserKeyPair ImportPrivateKey(byte[] privateKey)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(privateKey, out _);
+        var publicKey = rsa.ExportRSAPublicKey();
+        return new UserKeyPair(publicKey, privateKey);
     }
 
     public bool Verify(SignedPayloadDto signedDto)

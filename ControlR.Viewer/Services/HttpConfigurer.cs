@@ -36,7 +36,7 @@ internal class HttpConfigurer(
         {
             var keyDto = new IdentityDto()
             {
-                PublicKey = _settings.PublicKey,
+                PublicKey = _appState.PublicKey,
                 Username = _settings.Username
             };
 
@@ -56,7 +56,7 @@ internal class HttpConfigurer(
 
     public string GetDigitalSignature(IdentityDto keyDto)
     {
-        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.IdentityAttestation, _settings.UserKeys.PrivateKey);
+        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.IdentityAttestation, _appState.PrivateKey);
         var dtoBytes = MessagePackSerializer.Serialize(signedDto);
         var base64Payload = Convert.ToBase64String(dtoBytes);
         return base64Payload;
@@ -66,7 +66,7 @@ internal class HttpConfigurer(
     {
         var identityDto = new IdentityDto()
         {
-            PublicKey = _settings.PublicKey,
+            PublicKey = _appState.PublicKey,
             Username = _settings.Username
         };
         return GetDigitalSignature(identityDto);

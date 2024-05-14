@@ -33,6 +33,6 @@
     {
         base.OnInitialized();
 
-        Messenger.RegisterGenericMessage(this, GenericMessageKind.AuthStateChanged, () => InvokeAsync(StateHasChanged));
+        Messenger.RegisterGenericMessage(this, GenericMessageKind.KeysStateChanged, () => InvokeAsync(StateHasChanged));
     }
 }

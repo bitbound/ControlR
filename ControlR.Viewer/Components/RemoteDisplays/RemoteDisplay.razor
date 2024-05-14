@@ -5,13 +5,14 @@
 @using System.Runtime.InteropServices.JavaScript;
 @using ControlR.Viewer.Components.RemoteDisplays;
 
-<input @ref="_virtualKeyboard" 
-    class="virtual-keyboard" 
-    type="password" 
-    autocomplete="off" 
-    @bind-value="VirtualKeyboardText" 
-    @bind-value:event="oninput"
-    @onkeydown="OnVkKeyDown" />
+<input @ref="_virtualKeyboard"
+       class="virtual-keyboard"
+       type="text"
+       autocomplete="off"
+       @onblur="HandleVirtualKeyboardBlurred"
+       @bind-value="VirtualKeyboardText"
+       @bind-value:event="oninput"
+       @onkeydown="OnVkKeyDown" />
 
 <div class="display-grid">
     <div class="action-bar pa-2">
@@ -36,15 +37,21 @@
 
             @if (_controlMode == ControlMode.Touch)
             {
-                <MudIconButton Variant="Variant.Outlined" Icon="@(Icons.Material.Filled.Keyboard)" OnClick="InvokeKeyboard" />
-                <MudToggleIconButton 
-                    Title="Scroll Mode Off" 
-                    Variant="Variant.Outlined" 
-                    Icon="@(Icons.Material.Filled.UnfoldMoreDouble)" 
-                    ToggledTitle="Scroll Mode On" 
-                    ToggledColor="Color.Success" 
-                    ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
-                    ToggledChanged="HandleScrollModeToggled" />
+                <MudToggleIconButton Title="Virtual Keyboard Off"
+                                     Variant="Variant.Outlined"
+                                     Icon="@(Icons.Material.Filled.Keyboard)"
+                                     ToggledTitle="Virtual Keyboard On"
+                                     ToggledColor="Color.Success"
+                                     ToggledIcon="@(Icons.Material.Filled.Keyboard)"
+                                     ToggledChanged="HandleKeyboardToggled" />
+
+                <MudToggleIconButton Title="Scroll Mode Off"
+                                     Variant="Variant.Outlined"
+                                     Icon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                                     ToggledTitle="Scroll Mode On"
+                                     ToggledColor="Color.Success"
+                                     ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                                     ToggledChanged="HandleScrollModeToggled" />
             }
 
             <MudPopover Open="_isMobileActionsMenuOpen" Class="z9001" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">

@@ -5,7 +5,7 @@ internal enum GenericMessageKind
     PrivateKeyChanged,
     ServerUriChanged,
     ShuttingDown,
-    AuthStateChanged,
+    KeysStateChanged,
     PendingOperationsChanged,
     DevicesCacheUpdated,
     HubConnectionStateChanged,

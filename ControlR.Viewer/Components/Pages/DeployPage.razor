@@ -2,6 +2,8 @@
 
 @inject ISettings Settings
 @inject ISnackbar Snackbar
+@inject IClipboard Clipboard
+@inject IAppState AppState
 
 <PageTitle>Deploy</PageTitle>
 
@@ -21,7 +23,7 @@
     </MudText>
 
     <MudTextField T="string"
-                  Label="Copy and paste to deploy an agent"
+                  Label="Copy and paste on a remote device to install an agent"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyWindowsScript"
@@ -34,7 +36,7 @@
     </MudText>
 
     <MudTextField T="string"
-                  Label="Copy and paste to deploy an agent"
+                  Label="Copy and paste on a remote device to install an agent"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyUbuntuScript"
@@ -47,7 +49,7 @@
     </MudText>
 
     <MudTextField T="string"
-                  Label="Copy and paste to deploy an agent"
+                  Label="Copy and paste on a remote device to install an agent"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyMacX64Script"
@@ -60,7 +62,7 @@
     </MudText>
 
     <MudTextField T="string"
-                  Label="Copy and paste to deploy an agent"
+                  Label="Copy and paste on a remote device to install an agent"
                   Variant="Variant.Filled"
                   AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                   OnAdornmentClick="CopyMacArm64Script"
@@ -95,7 +97,7 @@
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-arm64/ControlR.Agent && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
+              $"-s {Settings.ServerUri} -a {AppState.PublicKeyBase64}";
         }
     }
 
@@ -107,7 +109,7 @@
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-x64/ControlR.Agent && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
+              $"-s {Settings.ServerUri} -a {AppState.PublicKeyBase64}";
         }
     }
 
@@ -120,7 +122,7 @@
                 $"sudo rm -f /tmp/ControlR.Agent && " +
                 $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/linux-x64/ControlR.Agent && " +
                 $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-                $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}";
+                $"-s {Settings.ServerUri} -a {AppState.PublicKeyBase64}";
         }
     }
 
@@ -131,32 +133,32 @@
             return "$ProgressPreference = \"SilentlyContinue\"; " +
                 $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/win-x86/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
-                $"-s {Settings.ServerUri} -a {Settings.PublicKeyBase64}\" -Verb RunAs;";
+                $"-s {Settings.ServerUri} -a {AppState.PublicKeyBase64}\" -Verb RunAs;";
         }
     }
 
     private async Task CopyMacArm64Script()
     {
-        await Clipboard.Default.SetTextAsync(MacArm64DeployScript);
-        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+        await Clipboard.SetTextAsync(MacArm64DeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyMacX64Script()
     {
-        await Clipboard.Default.SetTextAsync(MacX64DeployScript);
-        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+        await Clipboard.SetTextAsync(MacX64DeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyUbuntuScript()
     {
-        await Clipboard.Default.SetTextAsync(UbuntuDeployScript);
-        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+        await Clipboard.SetTextAsync(UbuntuDeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyWindowsScript()
     {
-        await Clipboard.Default.SetTextAsync(WindowsDeployScript);
-        Snackbar.Add("Deploy script copied to clipboard", Severity.Success);
+        await Clipboard.SetTextAsync(WindowsDeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
 }

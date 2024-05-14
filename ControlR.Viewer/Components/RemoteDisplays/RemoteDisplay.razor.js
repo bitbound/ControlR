@@ -202,6 +202,7 @@ export async function initialize(componentRef, videoId, iceServers) {
                     percentX: percentX,
                     percentY: percentY,
                     scrollY: ev.movementY * -4,
+                    scrollX: 0
                 };
             }
             else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
@@ -209,7 +210,8 @@ export async function initialize(componentRef, videoId, iceServers) {
                     dtoType: "wheelScrollEvent",
                     percentX: percentX,
                     percentY: percentY,
-                    scrollX: ev.movementX * 4,
+                    scrollY: 0,
+                    scrollX: ev.movementX * -4,
                 };
             }
             else {

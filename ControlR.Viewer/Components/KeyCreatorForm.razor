@@ -1,99 +1,204 @@
-﻿@inject IAppState AppState
+﻿@using System.Security.Cryptography
+@inject IAppState AppState
 @inject ISettings Settings
 @inject ISnackbar Snackbar
 @inject IHttpConfigurer HttpConfigurer
+@inject IDialogService Dialogs
 @inject IFilePicker FilePicker
+@inject IKeyApi KeyApi
+@inject IMessenger Messenger
 @inject IKeyProvider KeyProvider
+@inject IClipboard Clipboard
 @inject ILogger<KeyCreatorForm> Logger
 
+@if (_isLoading)
+{
+    <div class="text-center mt-8">
+        <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+            Loading
+        </MudText>
+        <MudProgressCircular Min="0" Max="1" Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+    </div>
+}
+else if (AppState.UserKeysPresent && !AppState.KeysVerified)
+{
+    <div class="text-center mt-8">
+        <MudText Typo="Typo.h5" Color="Color.Warning" Class="mb-8">
+            Failed to verify stored keys.
+        </MudText>
+        <div>
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       Class="mb-4"
+                       OnClick="HandleRetryLoadClicked">
+                Retry
+            </MudButton>
+        </div>
 
-<MudGrid Justify="Justify.Center">
-    <MudItem>
-        <MudPaper MinWidth="350px" MaxWidth="600px">
-            <MudForm @ref="_createForm" @bind-IsValid="@_isFormValid">
+        <div>
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Filled"
+                       Color="Color.Error"
+                       Size="Size.Large"
+                       OnClick="() => Settings.Reset()">
+                Reset Keys
+            </MudButton>
+        </div>
+    </div>
+}
+else
+{
+    <MudGrid Justify="Justify.Center">
+        <MudItem>
+            <MudPaper MinWidth="350px" MaxWidth="600px">
                 <MudCard>
-                    <MudCardHeader Class="d-block">
-                        <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom>
-                            Generate Keypair
-                        </MudText>
-                        <MudText GutterBottom Class="mb-2">
-                            Create or import a public/private keypair.
-                        </MudText>
-                        <MudText GutterBottom Class="mb-2">
-                            Only the public key is sent to the server.  The private key stays in secure
-                            storage on your local device and is used to sign outgoing messages.
-                        </MudText>
-                        <MudText GutterBottom Class="mb-2">
-                            Remote devices that have your public key installed can verify your messages.
-                        </MudText>
-                        <MudText>
-                            The server does not store any data about keys or devices.
+                    <MudCardHeader Class="d-block text-center">
+                        <MudText Typo="Typo.h3" Color="Color.Primary">
+                            Welcome
                         </MudText>
                     </MudCardHeader>
 
-                    <MudCardContent>
-
-                        <MudTextField T="string"
-                                      @bind-Value="_username"
-                                      Label="Username"
-                                      HelperText="A friendly name that remote devices will see"
-                                      Immediate="true"
-                                      InputType="InputType.Text"
-                                      OnKeyDown="InputKeyDown"
-                                      Required
-                                      Validation="(string e) => ValidateUsername(e)" />
-
-                        <MudTextField T="string"
-                                      @bind-Value="_passphrase"
-                                      Label="Passphrase"
-                                      HelperText="Enter a PIN or password to protected your private key."
-                                      Immediate="true"
-                                      InputType="InputType.Password"
-                                      OnKeyDown="InputKeyDown"
-                                      Required
-                                      Validation="(string e) => ValidatePassphrase(e)" />
-
-                        <MudCheckBox @bind-Value="RememberPassphrase"
-                                     Label="Remember on this device" />
+                    <MudCardContent Class="pt-0 px-8">
+                        <MudText Class="mb-4">
+                            Start by creating or importing a public/private keypair.  The private key
+                            never leaves your device and is stored in Microsoft's platform-specific
+                            secure storage implementation.  It is used to sign outgoing messages.
+                        </MudText>
+                        <MudText Class="mb-4">
+                            Remote devices independently verify all messages they receive.  They do
+                            not implicitly trust the server's authentication of users. Devices will
+                            only respond to messages that are signed by private keys associated with
+                            the public keys that the device trusts.
+                        </MudText>
+                        <MudText>
+                            No data about keys, users, or devices is stored on the server.
+                        </MudText>
                     </MudCardContent>
 
-                    <MudCardActions Class="justify-end">
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Default"
-                                   Class="me-2"
-                                   OnClick="ImportButtonClicked">
-                            Import
-                        </MudButton>
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Disabled="!_isFormValid || _requestPending"
-                                   OnClick="SubmitButtonClicked">
-                            Submit
-                        </MudButton>
+                    <MudCardActions Class="d-block text-center">
+                        @if (_isVerifyingKeys)
+                        {
+                            <div>
+                                <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+                                    Verifying keys
+                                </MudText>
+                                <MudProgressCircular Min="0" Max="1" Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Info" GutterBottom>
+                                Generate a new keypair.
+                            </MudText>
+                            <div class="mb-6">
+                                <MudButton ButtonType="ButtonType.Button"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           Disabled="_isVerifyingKeys"
+                                           Size="Size.Large"
+                                           OnClick="CreateButtonClicked">
+                                    Create
+                                </MudButton>
+                            </div>
+
+                            <MudText Color="Color.Info" GutterBottom>
+                                Import an encrypted private key from disk.
+                            </MudText>
+                            <div class="mb-6">
+                                <MudButton ButtonType="ButtonType.Button"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Default"
+                                           Size="Size.Large"
+                                           OnClick="ImportButtonClicked">
+                                    Import
+                                </MudButton>
+                            </div>
+
+                            <MudText Color="Color.Info" GutterBottom>
+                                Import a base64 private key from the clipboard.
+                            </MudText>
+                            <div>
+                                <MudButton ButtonType="ButtonType.Button"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Default"
+                                           Size="Size.Large"
+                                           OnClick="PasteButtonClicked">
+                                    Paste
+                                </MudButton>
+                            </div>
+                        }
                     </MudCardActions>
                 </MudCard>
-            </MudForm>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+@code {
+    private bool _isVerifyingKeys;
+    private bool _isLoading = true;
 
- @code {
-    #nullable disable
-    private MudForm _createForm;
-    private string _passphrase;
-    private string _username;
-    #nullable enable
-
-    private bool _isFormValid;
-    private bool _requestPending;
-
-    private bool RememberPassphrase
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        get => Settings.RememberPassphrase;
-        set => Settings.RememberPassphrase = value;
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            try
+            {
+                var storedKey = await Settings.GetSecurePrivateKey();
+                if (storedKey.IsSuccess)
+                {
+                    var keypair = KeyProvider.ImportPrivateKey(storedKey.Value);
+
+                    _ = await VerifyKeys(keypair, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while importing private key on initialization.");
+            }
+            finally
+            {
+                _isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+    private async Task CreateButtonClicked(MouseEventArgs args)
+    {
+        try
+        {
+            _isVerifyingKeys = true;
+            using var _ = AppState.IncrementBusyCounter(() =>
+            {
+                _isVerifyingKeys = false;
+                InvokeAsync(StateHasChanged);
+            });
+
+            var keypair = KeyProvider.GenerateKeys();
+
+            if (!await VerifyKeys(keypair, true))
+            {
+                return;
+            }
+
+            Snackbar.Add("Keypair created", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while creating keypair.");
+            Snackbar.Add("Failed to create keypair", Severity.Error);
+        }
+    }
+
+    private async Task HandleRetryLoadClicked()
+    {
+        _isLoading = true;
+        await VerifyKeys(AppState.UserKeys, true);
+        _isLoading = false;
     }
 
     private async Task ImportButtonClicked(MouseEventArgs args)
@@ -119,13 +224,31 @@
 
         try
         {
+            var parameters = new DialogParameters();
+            parameters.Add(nameof(PassphrasePromptDialog.Title), "Decrypt Private Key");
+            parameters.Add(
+                nameof(PassphrasePromptDialog.Subtitle),
+                "Enter your passphrase to decrypt your private key.  It will be stored in MAUI's ISecureStorage implementation.");
+
+            var dialogRef = await Dialogs.ShowAsync<PassphrasePromptDialog>("Decrypt Private Key", parameters);
+            var dialogResult = await dialogRef.Result;
+            if (dialogResult.Canceled || dialogResult.Data is not string passphrase)
+            {
+                return;
+            }
+
             using var cts = new CancellationTokenSource(5_000);
             using var fs = await result.OpenReadAsync();
-            var importedKeys = await JsonSerializer.DeserializeAsync<KeypairExport>(fs, cancellationToken: cts.Token);
+            var encryptedPrivateKey = new byte[fs.Length];
+            await fs.ReadAsync(encryptedPrivateKey, cts.Token);
 
-            Guard.IsNotNull(importedKeys);
+            var keypair = KeyProvider.ImportPrivateKey(passphrase, encryptedPrivateKey);
 
-            await Settings.UpdateKeypair(importedKeys);
+            if (!await VerifyKeys(keypair, true))
+            {
+                return;
+            }
+
             Snackbar.Add("Keys imported successfully.", Severity.Success);
         }
         catch (Exception ex)
@@ -135,85 +258,89 @@
         }
     }
 
-    private async Task InputKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-        {
-            await Create();
-        }
-    }
-
-    private async Task SubmitButtonClicked(MouseEventArgs args)
-    {
-        await Create();
-    }
-
-    private async Task Create()
+    private async Task PasteButtonClicked(MouseEventArgs args)
     {
         try
         {
-            _requestPending = true;
-            using var _ = AppState.IncrementBusyCounter(() =>
+            var base64 = await Clipboard.GetTextAsync();
+            if (string.IsNullOrWhiteSpace(base64))
             {
-                _requestPending = false;
-                InvokeAsync(StateHasChanged);
-            });
+                Snackbar.Add("Clipboard is empty.", Severity.Warning);
+                return;
+            }
 
-            var keypair = KeyProvider.GenerateKeys(_passphrase);
+            var privateKey = Convert.FromBase64String(base64.Trim());
+            var keypair = KeyProvider.ImportPrivateKey(privateKey);
 
-            await Settings.UpdateKeypair(_username, keypair);
+            if (!await VerifyKeys(keypair, true))
+            {
+                return;
+            }
+
+            Snackbar.Add("Keys imported successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while importing keys.");
+            Snackbar.Add("Failed to import keys", Severity.Error);
+        }
+    }
+
+    private async Task<bool> VerifyKeys(UserKeyPair keypair, bool showVerificationToast)
+    {
+        _isVerifyingKeys = true;
+        await InvokeAsync(StateHasChanged);
+
+        using var counter = AppState.IncrementBusyCounter(() =>
+        {
+            _isVerifyingKeys = false;
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await AppState.UpdateKeypair(keypair);
 
             var keyDto = new IdentityDto()
                 {
                     PublicKey = keypair.PublicKey,
-                    Username = _username
+                    Username = Settings.Username
                 };
-
             HttpConfigurer.UpdateClientAuthorizations(keyDto);
 
-            if (RememberPassphrase)
+            var verifyResult = await KeyApi.VerifyKeys();
+            if (verifyResult.IsSuccess)
             {
-                await Settings.SetPassphrase(_passphrase);
-            }
+                await Settings.StoreSecurePrivateKey(keypair.PrivateKey);
+                if (showVerificationToast)
+                {
+                    Snackbar.Add("Private key decrypted", Severity.Success);
+                }
 
-            Snackbar.Add("Keypair created", Severity.Success);
+                AppState.KeysVerified = true;
+                await Messenger.SendGenericMessage(GenericMessageKind.KeysStateChanged);
+                return true;
+            }
+            else if (verifyResult.HadException)
+            {
+                Snackbar.Add($"A connection error occurred: {verifyResult.Reason}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Verification with server failed", Severity.Error);
+            }
+        }
+        catch (CryptographicException ex) when (ex.Message.Contains("password may be incorrect"))
+        {
+            Logger.LogWarning(ex, "Failed to decrypt private key.");
+            Snackbar.Add("Passphrase is incorrect", Severity.Error);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while creating keypair.");
-            Snackbar.Add("Failed to create keypair", Severity.Error);
+            Logger.LogError(ex, "Error while loading user keys.");
+            Snackbar.Add("An error occurred", Severity.Error);
         }
-    }
-
-
-    private string? ValidateUsername(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return "Username is required.";
-        }
-
-        if (AppConstants.UsernameValidator().IsMatch(input))
-        {
-            return "Username can only contain letters, numbers, underscores, and hyphens.";
-        }
-
-        return null;
-    }
-
-    private string? ValidatePassphrase(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return "Passphrase is required.";
-        }
-
-
-        if (input is null || input.Length < 4 || input.Length > 64)
-        {
-            return "Passphrase must be between 4 and 64 characters.";
-        }
-        return null;
+        return false;
     }
 
 }

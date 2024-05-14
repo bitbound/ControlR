@@ -43,8 +43,8 @@ export async function registerIpcHandlers() {
     invokeMouseButtonEvent(button, isPressed, x, y),
   );
   handleMethod("resetKeyboardState", (_) => resetKeyboardState());
-  handleMethod("invokeWheelScroll", (_, x, y, scrollY) =>
-    scrollWheel(x, y, scrollY),
+  handleMethod("invokeWheelScroll", (_, x, y, scrollY, scrollX) =>
+    scrollWheel(x, y, scrollY, scrollX),
   );
   handleMethod("invokeTypeText", (_, text) => invokeTypeText(text));
   handleMethod("setClipboardText", (_, text) => setClipboardText(text));

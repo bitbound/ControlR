@@ -1,5 +1,6 @@
 ﻿using ControlR.Shared.Dtos;
 using ControlR.Shared.Extensions;
+using ControlR.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
@@ -116,26 +117,32 @@ internal class DeviceCache : IDeviceCache
         }
     }
 
-    private async Task TrySaveCache()
+    private Task TrySaveCache()
     {
-        await _fileLock.WaitAsync();
-        try
-        {
-            if (!_fileIo.FileExists(_deviceCachePath))
+        Debouncer.Debounce(
+            TimeSpan.FromSeconds(3), 
+            async () =>
             {
-                _fileIo.CreateFile(_deviceCachePath).Close();
-            }
+                await _fileLock.WaitAsync();
+                try
+                {
+                    if (!_fileIo.FileExists(_deviceCachePath))
+                    {
+                        _fileIo.CreateFile(_deviceCachePath).Close();
+                    }
 
-            var json = JsonSerializer.Serialize(_cache.Values);
-            _fileIo.WriteAllText(_deviceCachePath, json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while trying to save device cache to file system.");
-        }
-        finally
-        {
-            _fileLock.Release();
-        }
+                    var json = JsonSerializer.Serialize(_cache.Values);
+                    _fileIo.WriteAllText(_deviceCachePath, json);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while trying to save device cache to file system.");
+                }
+                finally
+                {
+                    _fileLock.Release();
+                }
+            });
+        return Task.CompletedTask;
     }
 }

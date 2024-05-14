@@ -58,9 +58,6 @@
                         break;
                 }
             }
-            <MudTooltip Text="Website">
-                <MudIconButton Icon="@(Icons.Material.Filled.WebAsset)" Color="Color.Inherit" Href="https://controlr.app/" Target="_blank" />
-            </MudTooltip>
             <MudTooltip Text="GitHub">
                 <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/bitbound/controlr/" Target="_blank" />
             </MudTooltip>
@@ -127,7 +124,7 @@
     {
         switch (kind)
         {
-            case GenericMessageKind.AuthStateChanged:
+            case GenericMessageKind.KeysStateChanged:
                 if (AppState.IsAuthenticated)
                 {
                     var result = await UpdateManager.CheckForUpdate();

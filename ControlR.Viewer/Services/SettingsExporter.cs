@@ -25,7 +25,6 @@ internal class SettingsExporter(
             ServerUri = _settings.ServerUri,
             HideOfflineDevices = _settings.HideOfflineDevices,
             NotifyUserSessionStart = _settings.NotifyUserSessionStart,
-            RememberPassphrase = _settings.RememberPassphrase,
             Devices = _deviceCache.Devices.ToArray()
         };
 
@@ -76,7 +75,6 @@ internal class SettingsExporter(
         }
 
         _settings.Username = export.Username;
-        _settings.RememberPassphrase = export.RememberPassphrase;
         _settings.HideOfflineDevices = export.HideOfflineDevices;
         _settings.NotifyUserSessionStart = export.NotifyUserSessionStart;
 

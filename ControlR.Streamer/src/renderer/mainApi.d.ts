@@ -34,8 +34,8 @@ declare interface MainApi {
   invokeWheelScroll(
     x: number,
     y: number,
-    scrollY?: number,
-    scrollX?: number,
+    scrollY: number,
+    scrollX: number,
   ): Promise<void>;
   invokeTypeText(text: string): Promise<void>;
   writeLog(message: string, level: LogLevel = "Info", ...args: any[]);

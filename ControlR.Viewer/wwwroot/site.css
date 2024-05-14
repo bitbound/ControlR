@@ -10,6 +10,10 @@
     text-align: center;
 }
 
+.text-justify {
+    text-align: justify;
+}
+
 .d-grid {
     display: grid;
 }
@@ -21,6 +25,7 @@
 .no-wrap {
     white-space: nowrap;
 }
+
 
 #mud-snackbar-container {
     /* Place above content windows. */

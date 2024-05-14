@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using FocusEventArgs = Microsoft.AspNetCore.Components.Web.FocusEventArgs;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Viewer.Components.RemoteDisplays;
@@ -27,6 +28,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
     private IceServer[] _iceServers = [];
+    private bool _virtualKeyboardToggled;
     private bool _isMobileActionsMenuOpen;
     private bool _isStreamLoaded;
     private bool _isStreamReady;
@@ -110,7 +112,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-#nullable enable
 
     public async ValueTask DisposeAsync()
     {
@@ -374,10 +375,22 @@ public partial class RemoteDisplay : IAsyncDisposable
         await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
     }
 
-    private async Task InvokeKeyboard()
+    private async Task HandleKeyboardToggled()
     {
+        _virtualKeyboardToggled = !_virtualKeyboardToggled;
         _isMobileActionsMenuOpen = false;
-        await _virtualKeyboard.FocusAsync();
+        if (_virtualKeyboardToggled)
+        {
+            await _virtualKeyboard.FocusAsync();
+        }
+    }
+
+    private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
+    {
+        if (_virtualKeyboardToggled)
+        {
+            await _virtualKeyboard.FocusAsync();
+        }
     }
 
     private void OnTouchCancel(TouchEventArgs ev)

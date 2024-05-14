@@ -16,8 +16,6 @@ public class SettingsExport
     [MsgPackKey]
     public required bool NotifyUserSessionStart { get; init; }
 
-    [MsgPackKey]
-    public required bool RememberPassphrase { get; init; }
 
     [MsgPackKey]
     public required string ServerUri { get; init; }
