@@ -201,7 +201,7 @@ export async function initialize(componentRef, videoId, iceServers) {
                     dtoType: "wheelScrollEvent",
                     percentX: percentX,
                     percentY: percentY,
-                    scrollY: ev.movementY * -4,
+                    scrollY: ev.movementY * 4,
                     scrollX: 0
                 };
             }

@@ -1060,7 +1060,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             dx = normalizedPoint.X,
             dy = normalizedPoint.Y,
             dwFlags = mouseEventFlags,
-            mouseData = (uint)-delta,
+            mouseData = (uint)delta,
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };
 
