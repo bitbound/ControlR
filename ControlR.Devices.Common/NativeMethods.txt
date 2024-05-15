@@ -30,3 +30,5 @@ CreateEnvironmentBlock
 DestroyEnvironmentBlock
 ImpersonateLoggedOnUser
 RevertToSelf
+LookupPrivilegeValue
+AdjustTokenPrivileges

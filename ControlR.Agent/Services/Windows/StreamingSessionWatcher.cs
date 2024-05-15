@@ -38,5 +38,7 @@ internal class StreamingSessionWatcher(
                
             }
         }
+
+        _cache.KillAllSessions();
     }
 }
