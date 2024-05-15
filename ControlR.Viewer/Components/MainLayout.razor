@@ -131,11 +131,23 @@
                     if (result.IsSuccess)
                     {
                         _updateAvailable = result.Value;
+                        await InvokeAsync(StateHasChanged);
                     }
                 }
                 break;
             case GenericMessageKind.PendingOperationsChanged:
+                await InvokeAsync(StateHasChanged);
+                break;
             case GenericMessageKind.HubConnectionStateChanged:
+                if (AppState.IsAuthenticated && ViewerHub.IsConnected)
+                {
+                    var result = await UpdateManager.CheckForUpdate();
+                    if (result.IsSuccess)
+                    {
+                        _updateAvailable = result.Value;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                }
                 await InvokeAsync(StateHasChanged);
                 break;
             case GenericMessageKind.AppUpdateAvailable:
@@ -143,7 +155,7 @@
                 await InvokeAsync(StateHasChanged);
                 break;
             default:
-                break;
+                return;
         }
     }
 
