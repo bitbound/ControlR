@@ -42,6 +42,7 @@ declare interface MainApi {
 
   onLocalClipboardChanged(callback: (text: string | undefined | null) => void);
   onInputDesktopChanged(callback: (desktopName: string) => void);
+  onDisplaysChanged(callback: () => void);
 }
 
 declare global {

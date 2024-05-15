@@ -188,13 +188,14 @@ internal class RemoteControlLauncherWindows(
                 out process);
         }
 
-        if (process is null || process.Id == -1)
+        if (process is null || process.HasExited)
         {
             return Result.Fail<string>("Failed to start echo-desktop process.");
         }
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_appLifetime.ApplicationStopping, cts.Token);
+        process.Exited += (_, _) => linkedCts.Cancel();
         if (!await ipcServer.WaitForConnection(linkedCts.Token))
         {
             return Result.Fail<string>("Failed to connect to echo-desktop process.");

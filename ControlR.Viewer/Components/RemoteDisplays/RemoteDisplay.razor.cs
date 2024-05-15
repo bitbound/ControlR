@@ -192,6 +192,13 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     [JSInvokable]
+    public async Task SetCurrentDisplay(DisplayDto display)
+    {
+        _selectedDisplay = display;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
     public async Task SendIceCandidate(string iceCandidateJson)
     {
         await ViewerHub.SendIceCandidate(Session.SessionId, iceCandidateJson);
@@ -202,6 +209,13 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         await InvokeAsync(StateHasChanged);
         await ViewerHub.SendRtcSessionDescription(Session.SessionId, sessionDescription);
+    }
+
+    [JSInvokable]
+    public async Task SetDisplays(DisplayDto[] displays)
+    {
+        _displays = displays;
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]

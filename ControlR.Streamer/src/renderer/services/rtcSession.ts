@@ -1,5 +1,5 @@
-import { DisplayDto } from "../../shared/signalrDtos";
-import { ClipboardChangedDto } from "../../shared/rtcDtos";
+import { DisplayDto } from "../../shared/sharedDtos";
+import { ClipboardChangedDto, DisplaysChangedDto } from "../../shared/rtcDtos";
 import streamerHubConnection from "./streamerHubConnection";
 import { setMediaStreams } from "./mediaHelperRenderer";
 import { handleDataChannelMessage } from "./rtcDtoHandler";
@@ -53,6 +53,11 @@ class RtcSession {
         "Received clipboard change in renderer from main process.",
       );
       this.sendClipboardChanged(text);
+    });
+
+    window.mainApi.onDisplaysChanged(async () => {
+      await window.mainApi.writeLog("Displays changed.  Sending update.");
+      await this.updateDisplays();
     });
   }
 
@@ -252,6 +257,27 @@ class RtcSession {
     this.dataChannel.addEventListener("message", async (ev) => {
       await handleDataChannelMessage(ev.data);
     });
+  }
+
+  private async updateDisplays() {
+    this.screens = await window.mainApi.getDisplays();
+    this.currentScreen =
+      this.screens.find((x) => x.displayId === this.currentScreen?.displayId) ??
+      this.screens[0];
+
+    await setMediaStreams(
+      this.currentScreen.mediaId,
+      this.currentScreen.name,
+      this.peerConnection,
+    );
+
+    const dto = {
+      allDisplays: this.screens,
+      currentDisplay: this.currentScreen,
+      dtoType: "displaysChanged",
+    } as DisplaysChangedDto;
+
+    this.dataChannel.send(JSON.stringify(dto));
   }
 }
 

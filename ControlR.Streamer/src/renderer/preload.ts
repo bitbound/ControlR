@@ -61,6 +61,11 @@ const mainApiIpc: MainApi = {
       callback(desktopName),
     );
   },
+  onDisplaysChanged(callback: () => void) {
+    ipcRenderer.on("displaysChanged", (ev) => {
+      callback();
+    });
+  },
 };
 
 contextBridge.exposeInMainWorld("mainApi", mainApiIpc);

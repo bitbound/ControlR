@@ -1,3 +1,5 @@
+import { DisplayDto } from "./sharedDtos";
+
 declare type RtcDtoType =
   | "pointerMove"
   | "keyEvent"
@@ -6,7 +8,8 @@ declare type RtcDtoType =
   | "wheelScrollEvent"
   | "typeText"
   | "changeDisplay"
-  | "clipboardChanged";
+  | "clipboardChanged"
+  | "displaysChanged";
 
 export interface BaseDto {
   dtoType: RtcDtoType;
@@ -49,4 +52,9 @@ export interface WheelScrollDto extends BaseDto {
   percentY: number;
   scrollX: number;
   scrollY: number;
+}
+
+export interface DisplaysChangedDto extends BaseDto {
+  currentDisplay: DisplayDto;
+  allDisplays: DisplayDto[];
 }

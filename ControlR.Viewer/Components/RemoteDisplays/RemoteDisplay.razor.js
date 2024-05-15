@@ -780,17 +780,21 @@ function setDataChannelHandlers(dataChannel, videoId) {
         invokeDotNet("LogInfo", videoId, "DataChannel opened.");
     });
 
-    dataChannel.addEventListener("message", ev => {
+    dataChannel.addEventListener("message", async ev => {
         console.log("Got DataChannel message: ", ev.data);
-        invokeDotNet("LogInfo", videoId, "Got DataChannel message: " + ev.data);
+        await invokeDotNet("LogInfo", videoId, "Got DataChannel message: " + ev.data);
         const dto = JSON.parse(ev.data);
         switch (dto.dtoType) {
             case "clipboardChanged":
-                invokeDotNet("SetClipboardText", videoId, dto.text)
+                await invokeDotNet("SetClipboardText", videoId, dto.text)
+                break;
+            case "displaysChanged":
+                await invokeDotNet("SetDisplays", videoId, dto.allDisplays);
+                await invokeDotNet("SetCurrentDisplay", videoId, dto.currentDisplay);
                 break;
             default:
                 console.log("Unrecogized DTO type: ", dto);
-                invokeDotNet("LogError", videoId, `Unrecognized DTO type: ${ev.data}`);
+                await invokeDotNet("LogError", videoId, `Unrecognized DTO type: ${ev.data}`);
                 break;
         }
     });

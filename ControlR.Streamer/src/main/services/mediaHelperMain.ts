@@ -1,7 +1,8 @@
 import { app, desktopCapturer, DesktopCapturerSource, screen } from "electron";
-import { DisplayDto } from "../../shared/signalrDtos";
+import { DisplayDto } from "../../shared/sharedDtos";
 import { movePointerBy } from "./inputSimulator";
 import { writeLog } from "./logger";
+import { sendDisplaysChanged } from "./rendererApi";
 
 export async function getDisplays(): Promise<DisplayDto[]> {
   try {
@@ -50,6 +51,18 @@ export async function getDisplays(): Promise<DisplayDto[]> {
       JSON.stringify(exception),
     );
   }
+}
+
+export function watchForDisplayChanges() {
+  screen.on("display-added", () => {
+    sendDisplaysChanged();
+  });
+  screen.on("display-metrics-changed", () => {
+    sendDisplaysChanged();
+  });
+  screen.on("display-removed", () => {
+    sendDisplaysChanged();
+  });
 }
 
 function getCaptureSources(): Promise<DesktopCapturerSource[]> {

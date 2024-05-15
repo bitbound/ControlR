@@ -13,3 +13,10 @@ export function sendDesktopChanged() {
     mainWindow.webContents.send("inputDesktopChanged");
   }
 }
+
+export function sendDisplaysChanged() {
+  const mainWindow = BrowserWindow.getAllWindows()[0];
+  if (mainWindow) {
+    mainWindow.webContents.send("displaysChanged");
+  }
+}

@@ -48,6 +48,7 @@ public interface IWin32Interop
 public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32Interop
 {
     private const uint MAXIMUM_ALLOWED_RIGHTS = 0x2000000;
+    private const string SE_SECURITY_NAME = "SeSecurityPrivilege\0";
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
 
@@ -128,7 +129,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
             // Flags that specify the priority and creation method of the process.
-            var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT;
+            var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS;
 
             if (hiddenWindow)
             {
@@ -141,11 +142,35 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
             }
 
-            void* lpEnvironment = null;
-            if (!TryGetExplorerDuplicateToken(sessionId, out var userPrimaryToken) ||
-                !PInvoke.CreateEnvironmentBlock(out lpEnvironment, userPrimaryToken, false))
+            if (!TryGetExplorerDuplicateToken(sessionId, out var userPrimaryToken))
             {
-                _logger.LogWarning("Failed to create environment block.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
+                _logger.LogWarning("Failed to get explorer token.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
+            }
+
+            if (PInvoke.LookupPrivilegeValue(null, SE_SECURITY_NAME, out var luid))
+            {
+                var attributes = new LUID_AND_ATTRIBUTES()
+                {
+                    Luid = luid,
+                    Attributes = TOKEN_PRIVILEGES_ATTRIBUTES.SE_PRIVILEGE_ENABLED
+                };
+                var tp = new TOKEN_PRIVILEGES()
+                { 
+                    PrivilegeCount = 1,
+                    Privileges = new VariableLengthInlineArray<LUID_AND_ATTRIBUTES>() { e0 = attributes }
+                };
+
+                TOKEN_PRIVILEGES* tokenPtr = stackalloc TOKEN_PRIVILEGES[] { tp };
+                var size = (uint)Marshal.SizeOf<TOKEN_PRIVILEGES>();
+
+                if (!PInvoke.AdjustTokenPrivileges(userPrimaryToken, false, tokenPtr, size, null, null))
+                {
+                    _logger.LogWarning("Failed to adjust explorer token privileges.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Failed to get SE_SECURITY_NAME value.");
             }
 
             var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
@@ -158,7 +183,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 securityAttributes,
                 false,
                 dwCreationFlags,
-                lpEnvironment,
+                null,
                 null,
                 in startupInfo,
                 out var procInfo);
@@ -168,8 +193,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             Marshal.FreeHGlobal(desktopPtr);
             winLogonToken.Close();
             duplicatedToken.Close();
-            PInvoke.DestroyEnvironmentBlock(lpEnvironment);
-            PInvoke.RevertToSelf();
 
             if (!result)
             {
