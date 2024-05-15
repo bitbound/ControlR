@@ -26,6 +26,7 @@ internal class AgentInstallerWindows(
     IRetryer _retryer,
     ISettingsProvider _settingsProvider,
     IOptionsMonitor<AgentAppOptions> _appOptions,
+    IRegistryAccessor _registryAccessor,
     ILogger<AgentInstallerWindows> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
@@ -104,9 +105,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            // Set Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-            var subkey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
-            subkey?.SetValue("SoftwareSASGeneration", "3", Microsoft.Win32.RegistryValueKind.DWord);
+            _registryAccessor.EnableSoftwareSas();
 
             _logger.LogInformation("Creating uninstall registry key.");
             CreateUninstallKey();

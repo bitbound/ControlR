@@ -17,7 +17,10 @@ internal class CommandProvider
     {
         var pipeNameOption = new Option<string>(
             _pipeNameAlias,
-            "The name of the named pipe server to which to send the current input desktop.");
+            "The name of the named pipe server to which to send the current input desktop.")
+        {
+            IsRequired = true,
+        };
 
         var echoDesktopCommand = new Command("echo-desktop", "Writes the current input desktop to standard out, then exits.")
         {
@@ -27,10 +30,9 @@ internal class CommandProvider
         echoDesktopCommand.SetHandler(async (pipeName) =>
         {
             var host = CreateHost(StartupMode.EchoDesktop, args);
-            var desktopEcho = host.Services.GetRequiredService<IDesktopEchoer>();
             await host.StartAsync();
+            var desktopEcho = host.Services.GetRequiredService<IDesktopEchoer>();
             await desktopEcho.EchoInputDesktop(pipeName);
-
         }, pipeNameOption);
         return echoDesktopCommand;
     }

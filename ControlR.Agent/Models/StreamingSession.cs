@@ -1,13 +1,12 @@
 ﻿using ControlR.Shared.Helpers;
-using SimpleIpc;
 using System.Diagnostics;
 
 namespace ControlR.Agent.Models;
-internal class StreamingSession(Guid sessionId) : IDisposable
+internal class StreamingSession(Guid sessionId, bool lowerUacDuringSession) : IDisposable
 {
-    public Process? StreamerProcess { get; set; }
+    public bool LowerUacDuringSession { get; } = lowerUacDuringSession;
     public Guid SessionId { get; } = sessionId;
-
+    public Process? StreamerProcess { get; set; }
     public void Dispose()
     {
         try

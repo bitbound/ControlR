@@ -64,7 +64,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     }
 
     public bool CreateInteractiveSystemProcess(
-            string commandLine,
+        string commandLine,
         int targetSessionId,
         bool forceConsoleSession,
         string desktopName,
@@ -72,128 +72,122 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         out Process? startedProcess)
     {
         startedProcess = null;
-        uint winlogonPid = 0;
-
-        // If not force console, find target session.  If not present,
-        // use last active session.
-        var dwSessionId = PInvoke.WTSGetActiveConsoleSessionId();
-        if (!forceConsoleSession)
+        try
         {
-            var activeSessions = GetActiveSessions();
-            if (activeSessions.Any(x => x.Id == targetSessionId))
+            uint winLogonPid = 0;
+
+            // If not force console, find target session.  If not present,
+            // use last active session.
+            var sessionId = GetTargetSessionId(targetSessionId, forceConsoleSession);
+
+            var winLogonProcs = Process.GetProcessesByName("winlogon");
+            foreach (var p in winLogonProcs)
             {
-                dwSessionId = (uint)targetSessionId;
+                if ((uint)p.SessionId == sessionId)
+                {
+                    winLogonPid = (uint)p.Id;
+                }
+            }
+
+            // Obtain a handle to the winlogon process;
+            var winLogonProcessHandle = PInvoke.OpenProcess(
+                (PROCESS_ACCESS_RIGHTS)MAXIMUM_ALLOWED_RIGHTS,
+                true,
+                winLogonPid);
+
+            // Obtain a handle to the access token of the winlogon process.
+            using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle.Value, true);
+            if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
+            {
+                PInvoke.CloseHandle(winLogonProcessHandle);
+                return false;
+            }
+
+            // Security attibute structure used in DuplicateTokenEx and CreateProcessAsUser.
+            var securityAttributes = new SECURITY_ATTRIBUTES();
+            securityAttributes.nLength = (uint)Marshal.SizeOf(securityAttributes);
+
+            // Copy the access token of the winlogon process; the newly created token will be a primary token.
+            if (!PInvoke.DuplicateTokenEx(
+                winLogonToken,
+                (TOKEN_ACCESS_MASK)MAXIMUM_ALLOWED_RIGHTS,
+                securityAttributes,
+                SECURITY_IMPERSONATION_LEVEL.SecurityIdentification,
+                TOKEN_TYPE.TokenPrimary,
+                out var duplicatedToken))
+            {
+                PInvoke.CloseHandle(winLogonProcessHandle);
+                winLogonToken.Close();
+                return false;
+            }
+
+            // Target the interactive windows station and desktop.
+            var startupInfo = new STARTUPINFOW();
+            startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
+            var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
+            startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
+
+            // Flags that specify the priority and creation method of the process.
+            var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT;
+
+            if (hiddenWindow)
+            {
+                dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NO_WINDOW | PROCESS_CREATION_FLAGS.DETACHED_PROCESS;
+                startupInfo.dwFlags = STARTUPINFOW_FLAGS.STARTF_USESHOWWINDOW;
+                startupInfo.wShowWindow = 0;
             }
             else
             {
-                dwSessionId = activeSessions.Last().Id;
+                dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
             }
-        }
 
-        // Obtain the process ID of the winlogon process that is running within the currently active session.
-        var processes = Process.GetProcessesByName("winlogon");
-        foreach (var p in processes)
-        {
-            if ((uint)p.SessionId == dwSessionId)
+            void* lpEnvironment = null;
+            if (!TryGetExplorerDuplicateToken(sessionId, out var userPrimaryToken) ||
+                !PInvoke.CreateEnvironmentBlock(out lpEnvironment, userPrimaryToken, false))
             {
-                winlogonPid = (uint)p.Id;
+                _logger.LogWarning("Failed to create environment block.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
             }
-        }
 
-        // Obtain a handle to the winlogon process.
-        var winLogonHandle = PInvoke.OpenProcess(
-            (PROCESS_ACCESS_RIGHTS)MAXIMUM_ALLOWED_RIGHTS,
-            false,
-            winlogonPid);
+            var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
+            // Create a new process in the current user's logon session.
+            var result = PInvoke.CreateProcessAsUser(
+                duplicatedToken,
+                null,
+                ref cmdLineSpan,
+                securityAttributes,
+                securityAttributes,
+                false,
+                dwCreationFlags,
+                lpEnvironment,
+                null,
+                in startupInfo,
+                out var procInfo);
 
-        using var winLogonSafeHandle = new SafeProcessHandle(winLogonHandle.Value, true);
+            // Invalidate the handles.
+            PInvoke.CloseHandle(winLogonProcessHandle);
+            Marshal.FreeHGlobal(desktopPtr);
+            winLogonToken.Close();
+            duplicatedToken.Close();
+            PInvoke.DestroyEnvironmentBlock(lpEnvironment);
+            PInvoke.RevertToSelf();
 
-        // Obtain a handle to the access token of the winlogon process.
-
-        if (!PInvoke.OpenProcessToken(winLogonSafeHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonAccessToken))
-        {
-            PInvoke.CloseHandle(winLogonHandle);
-            return false;
-        }
-
-        // Security attibute structure used in DuplicateTokenEx and CreateProcessAsUser.
-        var securityAttributes = new SECURITY_ATTRIBUTES();
-        securityAttributes.nLength = (uint)Marshal.SizeOf(securityAttributes);
-
-        // Copy the access token of the winlogon process; the newly created token will be a primary token.
-        if (!PInvoke.DuplicateTokenEx(
-            winLogonAccessToken,
-            (TOKEN_ACCESS_MASK)MAXIMUM_ALLOWED_RIGHTS,
-            securityAttributes,
-            SECURITY_IMPERSONATION_LEVEL.SecurityIdentification,
-            TOKEN_TYPE.TokenPrimary,
-            out var duplicatedToken))
-        {
-            PInvoke.CloseHandle(winLogonHandle);
-            winLogonAccessToken.Close();
-            return false;
-        }
-
-        // By default, CreateProcessAsUser creates a process on a non-interactive window station, meaning
-        // the window station has a desktop that is invisible and the process is incapable of receiving
-        // user input. To remedy this we set the lpDesktop parameter to indicate we want to enable user
-        // interaction with the new process.
-        var startupInfo = new STARTUPINFOW();
-        startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
-        var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
-        startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
-
-        // Flags that specify the priority and creation method of the process.
-        PROCESS_CREATION_FLAGS dwCreationFlags;
-
-        if (hiddenWindow)
-        {
-            dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_NO_WINDOW | PROCESS_CREATION_FLAGS.DETACHED_PROCESS;
-            startupInfo.dwFlags = STARTUPINFOW_FLAGS.STARTF_USESHOWWINDOW;
-            startupInfo.wShowWindow = 0;
-        }
-        else
-        {
-            dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
-        }
-
-        var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
-        // Create a new process in the current user's logon session.
-        var result = PInvoke.CreateProcessAsUser(
-            duplicatedToken,
-            null,
-            ref cmdLineSpan,
-            securityAttributes,
-            securityAttributes,
-            false,
-            dwCreationFlags,
-            IntPtr.Zero.ToPointer(),
-            null,
-            in startupInfo,
-            out var procInfo);
-
-        // Invalidate the handles.
-        PInvoke.CloseHandle(winLogonHandle);
-        Marshal.FreeHGlobal(desktopPtr);
-        winLogonAccessToken.Close();
-        duplicatedToken.Close();
-
-        if (result)
-        {
-            try
+            if (!result)
             {
-                startedProcess = Process.GetProcessById((int)procInfo.dwProcessId);
-            }
-            catch
-            {
+                var lastWin32 = Marshal.GetLastWin32Error();
+                _logger.LogError("CreateProcessAsUser failed.  Last Win32 error: {LastWin32Error}", lastWin32);
                 return false;
             }
+
+            startedProcess = Process.GetProcessById((int)procInfo.dwProcessId);
+            return true;
         }
-
-        return result;
+        catch (Exception ex)
+        {
+            var lastWin32 = Marshal.GetLastWin32Error();
+            _logger.LogError(ex, "Error while starting interactive system process.  Last Win32 error: {LastWin32Error}", lastWin32);
+            return false;
+        }
     }
-
-
 
     public IEnumerable<WindowsSession> GetActiveSessions()
     {
@@ -337,12 +331,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         return string.Empty;
     }
 
-
     public bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer)
     {
         return GlobalMemoryStatusEx(ref lpBuffer);
     }
-
 
     [SupportedOSPlatform("windows6.1")]
     public void InvokeCtrlAltDel()
@@ -569,7 +561,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         foreach (var character in text)
         {
-            
+
             var keyCode = PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
             var shortHelper = new ShortHelper(keyCode);
             var vkCode = (VIRTUAL_KEY)shortHelper.Low;
@@ -593,6 +585,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             _logger.LogWarning("Failed to type text.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
         }
     }
+
     private static void AddShiftInput(List<INPUT> inputs, ShiftState shiftState, bool isPressed)
     {
         switch (shiftState)
@@ -620,6 +613,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 break;
         }
     }
+
     private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
@@ -995,6 +989,29 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }.ToFrozenDictionary();
     }
 
+    private uint GetTargetSessionId(int initialTarget, bool forceConsoleSession)
+    {
+        // If not force console, find target session.  If not present,
+        // use last active session.
+        var sessionId = PInvoke.WTSGetActiveConsoleSessionId();
+        if (forceConsoleSession)
+        {
+            return sessionId;
+        }
+
+        var activeSessions = GetActiveSessions();
+        if (activeSessions.Any(x => x.Id == initialTarget))
+        {
+            sessionId = (uint)initialTarget;
+        }
+        else
+        {
+            sessionId = activeSessions.Last().Id;
+        }
+
+        return sessionId;
+    }
+
     private Result InvokeJsKeyCodeEvent(string key, bool isPressed)
     {
         if (!GetScanCodeKeyMap().TryGetValue(key, out var scanCode))
@@ -1040,7 +1057,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private void InvokeWheelScroll(int x, int y, int delta, bool isVertical)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
-        var mouseEventFlags =MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK | MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
 
         if (isVertical)
         {
@@ -1077,6 +1094,91 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }
     }
 
+    private bool TryGetExplorerDuplicateToken(uint sessionId, [NotNullWhen(true)] out SafeFileHandle? primaryToken)
+    {
+        primaryToken = null;
+
+        try
+        {
+            uint explorerPid = 0;
+            var explorerProcs = Process.GetProcessesByName("explorer");
+            foreach (var p in explorerProcs)
+            {
+                if ((uint)p.SessionId == sessionId)
+                {
+                    explorerPid = (uint)p.Id;
+                    break;
+                }
+            }
+
+            if (explorerPid == 0)
+            {
+                return false;
+            }
+
+            // Obtain a handle to the winlogon process;
+            var explorerProcessHandle = PInvoke.OpenProcess(
+                PROCESS_ACCESS_RIGHTS.PROCESS_ALL_ACCESS,
+                true,
+                explorerPid);
+
+            // Obtain a handle to the access token of the winlogon process.
+            using var explorerSafeProcHandle = new SafeProcessHandle(explorerProcessHandle.Value, true);
+            if (!PInvoke.OpenProcessToken(
+                explorerSafeProcHandle, 
+                TOKEN_ACCESS_MASK.TOKEN_ALL_ACCESS, 
+                out var explorerToken))
+            {
+                PInvoke.CloseHandle(explorerProcessHandle);
+                return false;
+            }
+
+            // Copy the access token of the winlogon process; the newly created token will be a primary token.
+            var result = PInvoke.DuplicateTokenEx(
+                explorerToken,
+                TOKEN_ACCESS_MASK.TOKEN_ALL_ACCESS,
+                null,
+                SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
+                TOKEN_TYPE.TokenPrimary,
+                out primaryToken);
+
+            PInvoke.CloseHandle(explorerProcessHandle);
+            explorerToken.Close();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to duplicate Explorer token.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
+            return false;
+        }
+    }
+
+    private bool TryGetUserPrimaryToken(uint sessionId, [NotNullWhen(true)] out SafeFileHandle? primaryToken)
+    {
+        HANDLE userToken = default;
+        primaryToken = null;
+
+        if (!PInvoke.WTSQueryUserToken(sessionId, ref userToken))
+        {
+            _logger.LogWarning("Failed to query user token.");
+            return false;
+        }
+        using var safeUserToken = new SafeAccessTokenHandle(userToken);
+
+        if (!PInvoke.DuplicateTokenEx(
+            safeUserToken,
+            0,
+            null,
+            SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
+            TOKEN_TYPE.TokenPrimary,
+            out primaryToken))
+        {
+            _logger.LogWarning("Failed to duplicate primary token.");
+            return false;
+        }
+
+        return true;
+    }
     [StructLayout(LayoutKind.Explicit)]
     private struct ShortHelper(short value)
     {

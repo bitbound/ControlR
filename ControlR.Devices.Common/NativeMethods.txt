@@ -25,3 +25,8 @@ GetAsyncKeyState
 GetKeyState
 GetMessageExtraInfo
 GetSystemMetrics
+WTSQueryUserToken
+CreateEnvironmentBlock
+DestroyEnvironmentBlock
+ImpersonateLoggedOnUser
+RevertToSelf

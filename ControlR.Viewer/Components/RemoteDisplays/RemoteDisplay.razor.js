@@ -314,7 +314,7 @@ export async function initialize(componentRef, videoId, iceServers) {
             dtoType: "wheelScrollEvent",
             percentX: percentX,
             percentY: percentY,
-            scrollY: ev.deltaY
+            scrollY: -ev.deltaY
         };
         state.dataChannel.send(JSON.stringify(wheelScrollDto));
     });

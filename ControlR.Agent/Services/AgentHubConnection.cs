@@ -78,6 +78,7 @@ internal class AgentHubConnection(
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.NotifyUserOnSessionStart,
+                dto.LowerUacDuringSession,
                 dto.ViewerName,
                 async progress =>
                 {

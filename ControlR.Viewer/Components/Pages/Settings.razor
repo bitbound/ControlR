@@ -47,6 +47,18 @@
 </div>
 
 <div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary">
+        Lower UAC Level During Session
+    </MudText>
+    <MudText GutterBottom>
+        During a remote control session, lower the UAC prompt elevation to reduce desktop switching.
+        UAC prompts will appear on the interactive desktop instead of the secure desktop.
+    </MudText>
+    <MudCheckBox @bind-Value="LowerUacDuringSession"
+                 Label="Show UAC prompts on the interactive desktop" />
+</div>
+
+<div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Import/Export Settings
     </MudText>
@@ -70,6 +82,12 @@
     {
         get => SettingsStore.NotifyUserSessionStart;
         set => SettingsStore.NotifyUserSessionStart = value;
+    }
+
+    private bool LowerUacDuringSession
+    {
+        get => SettingsStore.LowerUacDuringSession;
+        set => SettingsStore.LowerUacDuringSession = value;
     }
 
 

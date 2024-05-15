@@ -12,10 +12,14 @@ public class StreamerSessionRequestDto(
     int targetSystemSession, 
     string viewerConnectionId,
     bool notifyUserOnSessionStart,
+    bool lowerUacDuringSession,
     string? viewerName)
 {
     [MsgPackKey]
     public bool NotifyUserOnSessionStart { get; init; } = notifyUserOnSessionStart;
+
+    [MsgPackKey]
+    public bool LowerUacDuringSession { get; init; } = lowerUacDuringSession;
 
     [MsgPackKey]
     public Guid StreamingSessionId { get; init; } = streamingSessionId;

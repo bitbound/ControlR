@@ -63,6 +63,7 @@ rootCommand.SetHandler(async (streamerPipeName, parentProcessId) =>
             services.AddSingleton<IStreamerIpcConnection, StreamerIpcConnection>();
             services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddSingleton(WeakReferenceMessenger.Default);
+            services.AddHostedService<HostLifetimeEventResponder>();
 
             if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
             {

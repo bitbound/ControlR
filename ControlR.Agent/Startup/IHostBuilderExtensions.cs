@@ -80,6 +80,7 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IDelayer, Delayer>();
             services.AddSingleton<IRetryer, Retryer>();
             services.AddSimpleIpc();
+            services.AddHostedService<HostLifetimeEventResponder>();
 
             if (startupMode == StartupMode.Run)
             {

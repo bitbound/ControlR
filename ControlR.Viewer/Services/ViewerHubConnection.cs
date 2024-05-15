@@ -202,6 +202,7 @@ internal class ViewerHubConnection(
                 targetSystemSession,
                 Connection.ConnectionId,
                 _settings.NotifyUserSessionStart,
+                _settings.LowerUacDuringSession,
                 _settings.Username);
 
             var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);

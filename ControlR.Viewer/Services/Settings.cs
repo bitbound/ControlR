@@ -12,7 +12,7 @@ public interface ISettings
 {
     bool HideOfflineDevices { get; set; }
     bool NotifyUserSessionStart { get; set; }
- 
+    bool LowerUacDuringSession { get; set; }
     string ServerUri { get; set; }
     string Username { get; set; }
 
@@ -46,7 +46,11 @@ internal class Settings(
         set => SetPref(value);
     }
 
-
+    public bool LowerUacDuringSession
+    {
+        get => GetPref(false);
+        set => SetPref(value);
+    }
 
     public string ServerUri
     {

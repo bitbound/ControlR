@@ -11,7 +11,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Runtime.Versioning;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Result = ControlR.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
@@ -34,6 +37,7 @@ internal class RemoteControlLauncherWindows(
         byte[] authorizedKey,
         int targetWindowsSession = -1,
         bool notifyViewerOnSessionStart = false,
+        bool lowerUacDuringSession = false,
         string? viewerName = null,
         Func<double, Task>? onDownloadProgress = null)
     {
@@ -54,7 +58,7 @@ internal class RemoteControlLauncherWindows(
 
             var authorizedKeyBase64 = Convert.ToBase64String(authorizedKey);
 
-            var session = new StreamingSession(sessionId);
+            var session = new StreamingSession(sessionId, lowerUacDuringSession);
 
             var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
             var args = $"--session-id={sessionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64} --notify-user={notifyViewerOnSessionStart}";
@@ -118,10 +122,7 @@ internal class RemoteControlLauncherWindows(
                 }
             }
 
-            _streamingSessionCache.Sessions.AddOrUpdate(
-               sessionId,
-               session,
-               (k, v) => session);
+            _streamingSessionCache.AddOrUpdate(session);
 
             return Result.Ok();
         }
@@ -136,11 +137,38 @@ internal class RemoteControlLauncherWindows(
         }
     }
 
+    // For debugging.
+    private static Result<string> GetSolutionDir(string currentDir)
+    {
+        var dirInfo = new DirectoryInfo(currentDir);
+        if (!dirInfo.Exists)
+        {
+            return Result.Fail<string>("Not found.");
+        }
+
+        if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
+        {
+            return Result.Ok(currentDir);
+        }
+
+        if (dirInfo.Parent is not null)
+        {
+            return GetSolutionDir(dirInfo.Parent.FullName);
+        }
+
+        return Result.Fail<string>("Not found.");
+    }
+
     private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
     {
         var pipeName = Guid.NewGuid().ToString();
-        using var ipcServer = await _ipcRouter.CreateServer(pipeName);
-
+        var pipeSecurity = new PipeSecurity();
+        var authedUsersId = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
+        var systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        pipeSecurity.AddAccessRule(new PipeAccessRule(authedUsersId, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+        pipeSecurity.AddAccessRule(new PipeAccessRule(systemId, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+        using var ipcServer = await _ipcRouter.CreateServer(pipeName, pipeSecurity);
+        
         Process? process = null;
 
         if (Environment.UserInteractive)
@@ -183,28 +211,5 @@ internal class RemoteControlLauncherWindows(
         }
         _logger.LogError("Failed to get initial desktop from desktop echo.");
         return Result.Fail<string>(desktopResult.Error);
-    }
-
-
-    // For debugging.
-    private static Result<string> GetSolutionDir(string currentDir)
-    {
-        var dirInfo = new DirectoryInfo(currentDir);
-        if (!dirInfo.Exists)
-        {
-            return Result.Fail<string>("Not found.");
-        }
-
-        if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
-        {
-            return Result.Ok(currentDir);
-        }
-
-        if (dirInfo.Parent is not null)
-        {
-            return GetSolutionDir(dirInfo.Parent.FullName);
-        }
-
-        return Result.Fail<string>("Not found.");
     }
 }

@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.IO.Pipes;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace ControlR.Streamer.Sidecar.Services;
 
@@ -78,7 +80,6 @@ internal class StreamerIpcConnection(
                 var message = await Reader.ReadLineAsync();
                 if (string.IsNullOrWhiteSpace(message))
                 {
-                    _logger.LogWarning("Received empty message from streamer IPC pipe.");
                     continue;
                 }
 
