@@ -100,6 +100,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle.Value, true);
             if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
             {
+                _logger.LogWarning("Failed to open winlogon process.");
                 PInvoke.CloseHandle(winLogonProcessHandle);
                 return false;
             }
@@ -112,7 +113,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             if (!PInvoke.DuplicateTokenEx(
                 winLogonToken,
                 (TOKEN_ACCESS_MASK)MAXIMUM_ALLOWED_RIGHTS,
-                securityAttributes,
+                null,
                 SECURITY_IMPERSONATION_LEVEL.SecurityIdentification,
                 TOKEN_TYPE.TokenPrimary,
                 out var duplicatedToken))
@@ -129,7 +130,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
             // Flags that specify the priority and creation method of the process.
-            var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS;
+            var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT;
 
             if (hiddenWindow)
             {
@@ -142,40 +143,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
             }
 
-            if (!TryGetExplorerDuplicateToken(sessionId, out var userPrimaryToken))
-            {
-                _logger.LogWarning("Failed to get explorer token.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
-            }
-
-            if (PInvoke.LookupPrivilegeValue(null, SE_SECURITY_NAME, out var luid))
-            {
-                var attributes = new LUID_AND_ATTRIBUTES()
-                {
-                    Luid = luid,
-                    Attributes = TOKEN_PRIVILEGES_ATTRIBUTES.SE_PRIVILEGE_ENABLED
-                };
-                var tp = new TOKEN_PRIVILEGES()
-                { 
-                    PrivilegeCount = 1,
-                    Privileges = new VariableLengthInlineArray<LUID_AND_ATTRIBUTES>() { e0 = attributes }
-                };
-
-                TOKEN_PRIVILEGES* tokenPtr = stackalloc TOKEN_PRIVILEGES[] { tp };
-                var size = (uint)Marshal.SizeOf<TOKEN_PRIVILEGES>();
-
-                if (!PInvoke.AdjustTokenPrivileges(userPrimaryToken, false, tokenPtr, size, null, null))
-                {
-                    _logger.LogWarning("Failed to adjust explorer token privileges.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Failed to get SE_SECURITY_NAME value.");
-            }
-
             var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
             // Create a new process in the current user's logon session.
-            var result = PInvoke.CreateProcessAsUser(
+            var createResult = PInvoke.CreateProcessAsUser(
                 duplicatedToken,
                 null,
                 ref cmdLineSpan,
@@ -194,7 +164,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             winLogonToken.Close();
             duplicatedToken.Close();
 
-            if (!result)
+            if (!createResult)
             {
                 var lastWin32 = Marshal.GetLastWin32Error();
                 _logger.LogError("CreateProcessAsUser failed.  Last Win32 error: {LastWin32Error}", lastWin32);
@@ -1141,15 +1111,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
             // Obtain a handle to the winlogon process;
             var explorerProcessHandle = PInvoke.OpenProcess(
-                PROCESS_ACCESS_RIGHTS.PROCESS_ALL_ACCESS,
+                (PROCESS_ACCESS_RIGHTS)MAXIMUM_ALLOWED_RIGHTS,
                 true,
                 explorerPid);
 
             // Obtain a handle to the access token of the winlogon process.
             using var explorerSafeProcHandle = new SafeProcessHandle(explorerProcessHandle.Value, true);
             if (!PInvoke.OpenProcessToken(
-                explorerSafeProcHandle, 
-                TOKEN_ACCESS_MASK.TOKEN_ALL_ACCESS, 
+                explorerSafeProcHandle,
+                TOKEN_ACCESS_MASK.TOKEN_DUPLICATE,
                 out var explorerToken))
             {
                 PInvoke.CloseHandle(explorerProcessHandle);
@@ -1159,7 +1129,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             // Copy the access token of the winlogon process; the newly created token will be a primary token.
             var result = PInvoke.DuplicateTokenEx(
                 explorerToken,
-                TOKEN_ACCESS_MASK.TOKEN_ALL_ACCESS,
+                (TOKEN_ACCESS_MASK)MAXIMUM_ALLOWED_RIGHTS,
                 null,
                 SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
                 TOKEN_TYPE.TokenPrimary,
@@ -1176,6 +1146,22 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }
     }
 
+    private bool TryGetTokenInformation(SafeFileHandle token, TOKEN_INFORMATION_CLASS tokenClass, out nint infoPtr, out uint ptrSize)
+    {
+        _logger.LogInformation("Getting token information for class: {TokenInformationClass}", tokenClass);
+
+        _ = PInvoke.GetTokenInformation(token, tokenClass, null, 0, out var neededLength);
+        _logger.LogInformation("Token information length needed: {NeededLength}.", neededLength);
+
+        infoPtr = Marshal.AllocHGlobal((int)neededLength);
+        if (!PInvoke.GetTokenInformation(token, tokenClass, infoPtr.ToPointer(), neededLength, out ptrSize))
+        {
+            _logger.LogWarning("Failed to get token information.  Last Win32 Error: {LastWin32Error}", Marshal.GetLastWin32Error());
+            return false;
+        }
+        _logger.LogInformation("Successfully got token information.");
+        return true;
+    }
     private bool TryGetUserPrimaryToken(uint sessionId, [NotNullWhen(true)] out SafeFileHandle? primaryToken)
     {
         HANDLE userToken = default;

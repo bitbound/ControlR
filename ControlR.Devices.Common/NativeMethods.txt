@@ -26,9 +26,4 @@ GetKeyState
 GetMessageExtraInfo
 GetSystemMetrics
 WTSQueryUserToken
-CreateEnvironmentBlock
-DestroyEnvironmentBlock
-ImpersonateLoggedOnUser
-RevertToSelf
-LookupPrivilegeValue
-AdjustTokenPrivileges
+GetTokenInformation

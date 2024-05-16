@@ -153,6 +153,7 @@ if ($BuildViewer) {
 
 if ($BuildStreamer) {
     dotnet publish --configuration Release -p:PublishProfile=Artifacts -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Streamer.Sidecar\"
+    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$Root\ControlR.Streamer\.artifacts\ControlR.Streamer.Sidecar.exe"
     Check-LastExitCode
 
     [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"

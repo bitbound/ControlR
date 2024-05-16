@@ -66,7 +66,7 @@ internal class InputSimulatorWindows: IInputSimulator
 
     public void InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed)
     {
-        if (string.IsNullOrWhiteSpace(key))
+        if (string.IsNullOrEmpty(key))
         {
             _logger.LogWarning("Key cannot be empty.");
             return;
