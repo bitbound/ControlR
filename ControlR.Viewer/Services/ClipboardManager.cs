@@ -83,7 +83,7 @@ internal class ClipboardManager(
             try
             {
                 var clipboardText = await _clipboard.GetTextAsync();
-                if (clipboardText == _lastClipboardText)
+                if (clipboardText is null || clipboardText == _lastClipboardText)
                 {
                     continue;
                 }

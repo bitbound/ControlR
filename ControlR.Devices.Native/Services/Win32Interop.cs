@@ -1,4 +1,5 @@
-﻿using ControlR.Shared.Dtos.SidecarDtos;
+﻿using ControlR.Devices.Native.Windows;
+using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
@@ -21,7 +22,7 @@ using WTS_CONNECTSTATE_CLASS = global::Windows.Win32.System.RemoteDesktop.WTS_CO
 using WTS_INFO_CLASS = global::Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = global::Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
 
-namespace ControlR.Devices.Common.Native.Windows;
+namespace ControlR.Devices.Native.Services;
 
 public interface IWin32Interop
 {

@@ -6,7 +6,7 @@ using ControlR.Agent.Services.Fakes;
 using ControlR.Agent.Services.Linux;
 using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
-using ControlR.Devices.Common.Native.Windows;
+using ControlR.Devices.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SimpleIpc;
+using ControlR.Devices.Native.Services;
 
 namespace ControlR.Agent.Startup;
 

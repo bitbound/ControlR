@@ -1,11 +1,11 @@
-﻿using ControlR.Devices.Common.Native.Windows;
+﻿using ControlR.Devices.Native.Windows;
 using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Enums;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using System.Diagnostics;
 
-namespace ControlR.Devices.Common.Services;
+namespace ControlR.Devices.Native.Services;
 internal class Win32InteropFake : IWin32Interop
 {
     public bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool forceConsoleSession, string desktopName, bool hiddenWindow, out Process? startedProcess)

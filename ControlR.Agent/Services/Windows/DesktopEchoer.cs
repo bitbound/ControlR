@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Dtos;
-using ControlR.Devices.Common.Native.Windows;
+using ControlR.Devices.Native.Services;
+using ControlR.Devices.Native.Windows;
 using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

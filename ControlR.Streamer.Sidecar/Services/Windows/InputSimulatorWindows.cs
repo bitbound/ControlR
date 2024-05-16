@@ -1,4 +1,4 @@
-﻿using ControlR.Devices.Common.Native.Windows;
+﻿using ControlR.Devices.Native.Services;
 using ControlR.Shared.Dtos.SidecarDtos;
 using ControlR.Shared.Enums;
 using Microsoft.Extensions.Hosting;

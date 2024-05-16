@@ -1,7 +1,7 @@
 ﻿using ControlR.Agent.Dtos;
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Devices.Common.Native.Windows;
+using ControlR.Devices.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
@@ -16,6 +16,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using Result = ControlR.Shared.Primitives.Result;
+using ControlR.Devices.Native.Services;
 
 namespace ControlR.Agent.Services.Windows;
 

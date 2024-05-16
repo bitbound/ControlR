@@ -1,6 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using ControlR.Devices.Common.Native.Windows;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Messages;
 using ControlR.Devices.Common.Services;
@@ -22,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
+using ControlR.Devices.Native.Services;
 
 namespace ControlR.Agent.Services;
 
