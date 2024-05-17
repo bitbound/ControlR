@@ -1,7 +1,6 @@
 ﻿using ControlR.Agent.Dtos;
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Devices.Native.Windows;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
@@ -13,7 +12,6 @@ using SimpleIpc;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.Versioning;
-using System.Security.AccessControl;
 using System.Security.Principal;
 using Result = ControlR.Shared.Primitives.Result;
 using ControlR.Devices.Native.Services;
@@ -163,12 +161,7 @@ internal class RemoteControlLauncherWindows(
     private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
     {
         var pipeName = Guid.NewGuid().ToString();
-        var pipeSecurity = new PipeSecurity();
-        var authedUsersId = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
-        var systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
-        pipeSecurity.AddAccessRule(new PipeAccessRule(authedUsersId, PipeAccessRights.ReadWrite, AccessControlType.Allow));
-        pipeSecurity.AddAccessRule(new PipeAccessRule(systemId, PipeAccessRights.ReadWrite, AccessControlType.Allow));
-        using var ipcServer = await _ipcRouter.CreateServer(pipeName, pipeSecurity);
+        using var ipcServer = await _ipcRouter.CreateServer(pipeName);
         
         Process? process = null;
 
