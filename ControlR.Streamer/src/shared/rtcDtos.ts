@@ -27,7 +27,6 @@ export interface ClipboardChangedDto extends BaseDto {
 export interface KeyEventDto extends BaseDto {
   isPressed: boolean;
   key: string;
-  jsKeyType: JsKeyType;
   shouldRelease?: boolean;
 }
 

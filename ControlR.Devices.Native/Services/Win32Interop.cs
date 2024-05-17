@@ -35,7 +35,7 @@ public interface IWin32Interop
     string GetUsernameFromSessionId(uint sessionId);
     bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
     void InvokeCtrlAltDel();
-    Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed);
+    Result InvokeKeyEvent(string key, bool isPressed);
     void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
     void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
     void MovePointer(int x, int y, MovePointerType moveType);
@@ -107,8 +107,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             }
 
             // Security attibute structure used in DuplicateTokenEx and CreateProcessAsUser.
-            var securityAttributes = new SECURITY_ATTRIBUTES();
-            securityAttributes.nLength = (uint)Marshal.SizeOf(securityAttributes);
+            var securityAttributes = new SECURITY_ATTRIBUTES
+            {
+                nLength = (uint)sizeof(SECURITY_ATTRIBUTES)
+            };
 
             // Copy the access token of the winlogon process; the newly created token will be a primary token.
             if (!PInvoke.DuplicateTokenEx(
@@ -125,8 +127,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             }
 
             // Target the interactive windows station and desktop.
-            var startupInfo = new STARTUPINFOW();
-            startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
+            var startupInfo = new STARTUPINFOW
+            {
+                cb = (uint)sizeof(STARTUPINFOW)
+            };
             var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
             startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
@@ -198,7 +202,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         nint ppSessionInfo = nint.Zero;
         var count = 0;
         var enumSessionResult = WtsApi32.WTSEnumerateSessions(WtsApi32.WTS_CURRENT_SERVER_HANDLE, 0, 1, ref ppSessionInfo, ref count);
-        var dataSize = Marshal.SizeOf(typeof(WtsApi32.WTS_SESSION_INFO));
+        var dataSize = Marshal.SizeOf<WtsApi32.WTS_SESSION_INFO>();
         var current = ppSessionInfo;
 
         if (enumSessionResult == 0)
@@ -261,7 +265,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 return [.. sessions];
             }
 
-            var dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFOW));
+            var dataSize = sizeof(WTS_SESSION_INFOW);
 
             for (var i = 0; i < count; i++)
             {
@@ -337,26 +341,32 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         PInvoke.SendSAS(!isService);
     }
 
-    public Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed)
+    public Result InvokeKeyEvent(string key, bool isPressed)
     {
-        switch (jsKeyType)
+        if (!ConvertJavaScriptKeyToVirtualKey(key, out var convertResult))
         {
-            case JsKeyType.Key:
-                return InvokeJsKeyEvent(key, isPressed);
-            case JsKeyType.Code:
-                return InvokeJsKeyCodeEvent(key, isPressed);
-            case JsKeyType.Unknown:
-            default:
-                _logger.LogWarning("Unknown JsKeyType: {JsKeyType}.", jsKeyType);
-                return Result.Fail("Unknown JsKeyType.");
-
+            return Result.Fail("Failed to convert key to virtual key.");
         }
+
+        var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
+
+        var result = PInvoke.SendInput([kbdInput], sizeof(INPUT));
+
+        if (result == 0)
+        {
+            _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
+            return Result.Fail("Failed to send key input.");
+        }
+
+        return Result.Ok();
     }
 
     public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
     {
+        var moveInput = GetPointerMoveInput(x, y, MovePointerType.Absolute);
+
         var extraInfo = PInvoke.GetMessageExtraInfo();
-        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
+        MOUSE_EVENT_FLAGS mouseEventFlags = 0;
 
         switch (button)
         {
@@ -394,24 +404,19 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 return;
         }
 
-        var normalizedPoint = GetNormalizedPoint(x, y);
-
         var mouseInput = new MOUSEINPUT
         {
-            dx = normalizedPoint.X,
-            dy = normalizedPoint.Y,
             dwFlags = mouseEventFlags,
-            mouseData = 0,
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };
 
-        var input = new INPUT()
+        var buttonInput = new INPUT()
         {
             type = INPUT_TYPE.INPUT_MOUSE,
             Anonymous = { mi = mouseInput }
         };
 
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([moveInput, buttonInput], sizeof(INPUT));
         if (result == 0)
         {
             _logger.LogWarning("Failed to send mouse input: {MouseInput}.", mouseInput);
@@ -433,35 +438,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
     public void MovePointer(int x, int y, MovePointerType moveType)
     {
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
+        var input = GetPointerMoveInput(x, y, moveType);
 
-        if (moveType == MovePointerType.Absolute)
-        {
-            mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
-        }
-
-        var normalizedPoint = GetNormalizedPoint(x, y);
-
-        var mouseInput = new MOUSEINPUT
-        {
-            dx = normalizedPoint.X,
-            dy = normalizedPoint.Y,
-            dwFlags = mouseEventFlags,
-            mouseData = 0,
-            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-        };
-
-        var input = new INPUT()
-        {
-            type = INPUT_TYPE.INPUT_MOUSE,
-            Anonymous = { mi = mouseInput }
-        };
-
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([input], sizeof(INPUT));
         if (result == 0)
         {
-            _logger.LogWarning("Failed to send pointer move input: {MouseInput}.", mouseInput);
+            _logger.LogWarning("Failed to send pointer move input: {@MouseInput}.", input);
         }
     }
 
@@ -517,7 +499,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             catch { }
         }
 
-        var result = PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput(inputs.ToArray(), sizeof(INPUT));
         if (result != inputs.Count)
         {
             _logger.LogWarning("Failed to reset keyboard state.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
@@ -555,7 +537,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         foreach (var character in text)
         {
-
             var keyCode = PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
             var shortHelper = new ShortHelper(keyCode);
             var vkCode = (VIRTUAL_KEY)shortHelper.Low;
@@ -573,7 +554,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             AddShiftInput(inputs, shiftState, false);
         }
 
-        var result = PInvoke.SendInput(inputs.ToArray(), Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput(inputs.ToArray(), sizeof(INPUT));
         if (result != inputs.Count)
         {
             _logger.LogWarning("Failed to type text.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
@@ -611,7 +592,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
     {
         var extraInfo = PInvoke.GetMessageExtraInfo();
-        KEYBD_EVENT_FLAGS kbdFlags = default;
+        KEYBD_EVENT_FLAGS kbdFlags = 0;
 
         if (IsExtendedKey(key))
         {
@@ -626,41 +607,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         var kbdInput = new KEYBDINPUT()
         {
             wVk = key,
-            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
-            dwFlags = kbdFlags,
-            time = 0
-        };
-
-        var input = new INPUT()
-        {
-            type = INPUT_TYPE.INPUT_KEYBOARD,
-            Anonymous = { ki = kbdInput }
-        };
-        return input;
-    }
-
-    private static INPUT CreateKeyboardInput(ushort scanCode, bool isPressed)
-    {
-        var kbdLayout = PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
-        var vk = (VIRTUAL_KEY)PInvoke.MapVirtualKeyEx(scanCode, MAP_VIRTUAL_KEY_TYPE.MAPVK_VSC_TO_VK_EX, kbdLayout);
-
-        var extraInfo = PInvoke.GetMessageExtraInfo();
-        var kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
-
-        if (IsExtendedKey(vk))
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
-        }
-
-        if (!isPressed)
-        {
-            kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
-        }
-
-        var kbdInput = new KEYBDINPUT()
-        {
-            wVk = 0,
-            wScan = scanCode,
+            wScan = (ushort)(PInvoke.MapVirtualKeyEx((uint)key, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC_EX, GetKeyboardLayout()) & 0xFFU),
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
             dwFlags = kbdFlags,
             time = 0
@@ -760,8 +707,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             VIRTUAL_KEY.VK_CANCEL or
             VIRTUAL_KEY.VK_DIVIDE or
             VIRTUAL_KEY.VK_SNAPSHOT or
-            VIRTUAL_KEY.VK_LWIN or
-            VIRTUAL_KEY.VK_RWIN or
             VIRTUAL_KEY.VK_RETURN => true,
             _ => false,
         };
@@ -808,6 +753,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             "F12" => VIRTUAL_KEY.VK_F12,
             "Meta" => VIRTUAL_KEY.VK_LWIN,
             "ContextMenu" => VIRTUAL_KEY.VK_MENU,
+            "Hankaku" => VIRTUAL_KEY.VK_OEM_AUTO,
+            "Hiragana" => VIRTUAL_KEY.VK_OEM_COPY,
+            "KanaMode" => VIRTUAL_KEY.VK_KANA,
+            "KanjiMode" => VIRTUAL_KEY.VK_KANJI,
+            "Katakana" => VIRTUAL_KEY.VK_OEM_FINISH,
+            "Romaji" => VIRTUAL_KEY.VK_OEM_BACKTAB,
+            "Zenkaku" => VIRTUAL_KEY.VK_OEM_ENLW,
             _ => key.Length == 1 ?
                     (VIRTUAL_KEY)PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout()) :
                     null
@@ -821,6 +773,33 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         return true;
     }
 
+    private INPUT GetPointerMoveInput(int x, int y, MovePointerType moveType)
+    {
+        var extraInfo = PInvoke.GetMessageExtraInfo();
+        var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
+
+        if (moveType == MovePointerType.Absolute)
+        {
+            mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+        }
+
+        var normalizedPoint = GetNormalizedPoint(x, y);
+
+        var mouseInput = new MOUSEINPUT
+        {
+            dx = normalizedPoint.X,
+            dy = normalizedPoint.Y,
+            dwFlags = mouseEventFlags,
+            mouseData = 0,
+            dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+        };
+
+        return new INPUT()
+        {
+            type = INPUT_TYPE.INPUT_MOUSE,
+            Anonymous = { mi = mouseInput }
+        };
+    }
     private FrozenDictionary<string, ushort> GetScanCodeKeyMap()
     {
         return _keyMap ??= new Dictionary<string, ushort>()
@@ -1006,47 +985,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         return sessionId;
     }
 
-    private Result InvokeJsKeyCodeEvent(string key, bool isPressed)
-    {
-        if (!GetScanCodeKeyMap().TryGetValue(key, out var scanCode))
-        {
-            return Result.Fail("Key not found in key map.");
-        }
-
-
-        var kbdInput = CreateKeyboardInput(scanCode, isPressed);
-
-
-        var result = PInvoke.SendInput([kbdInput], Marshal.SizeOf<INPUT>());
-
-        if (result == 0)
-        {
-            _logger.LogWarning("Failed to send key input. Key: {Key}, ScanCode: {ScanCode}, IsPressed: {IsPressed}.", key, scanCode, isPressed);
-            return Result.Fail("Failed to send key input.");
-        }
-
-        return Result.Ok();
-    }
-
-    private Result InvokeJsKeyEvent(string key, bool isPressed)
-    {
-        if (!ConvertJavaScriptKeyToVirtualKey(key, out var convertResult))
-        {
-            return Result.Fail("Failed to convert key to virtual key.");
-        }
-
-        var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
-
-        var result = PInvoke.SendInput([kbdInput], Marshal.SizeOf<INPUT>());
-
-        if (result == 0)
-        {
-            _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
-            return Result.Fail("Failed to send key input.");
-        }
-
-        return Result.Ok();
-    }
 
     private void InvokeWheelScroll(int x, int y, int delta, bool isVertical)
     {
@@ -1081,7 +1019,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             Anonymous = { mi = mouseInput }
         };
 
-        var result = PInvoke.SendInput([input], Marshal.SizeOf<INPUT>());
+        var result = PInvoke.SendInput([input], sizeof(INPUT));
         if (result == 0)
         {
             _logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);

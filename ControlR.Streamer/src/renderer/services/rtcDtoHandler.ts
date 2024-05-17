@@ -30,7 +30,6 @@ export async function handleDataChannelMessage(data: string) {
         const keyDto = dto as KeyEventDto;
         await window.mainApi.invokeKeyEvent(
           keyDto.key,
-          keyDto.jsKeyType,
           keyDto.isPressed,
           keyDto.shouldRelease,
         );

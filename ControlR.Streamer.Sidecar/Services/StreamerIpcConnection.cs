@@ -112,7 +112,7 @@ internal class StreamerIpcConnection(
                                 throw new JsonException("Failed to deserialize KeyEventDto.");
                             _logger.LogDebug("Received KeyEvent IPC DTO: {KeyDto}", keyDto);
 
-                            _inputSimulator.InvokeKeyEvent(keyDto.Key, keyDto.JsKeyType, keyDto.IsPressed);
+                            _inputSimulator.InvokeKeyEvent(keyDto.Key, keyDto.IsPressed);
                             break;
                         }
                     case SidecarDtoType.TypeText:

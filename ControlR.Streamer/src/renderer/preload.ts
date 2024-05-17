@@ -20,8 +20,8 @@ const mainApiIpc: MainApi = {
   dipToScreenPoint: (point) => invokeInMain("dipToScreenPoint", point),
   exit: () => invokeInMain("exit"),
 
-  invokeKeyEvent: (key, jsKeyType, isPressed, shouldRelease) =>
-    invokeInMain("invokeKeyEvent", key, jsKeyType, isPressed, shouldRelease),
+  invokeKeyEvent: (key, isPressed, shouldRelease) =>
+    invokeInMain("invokeKeyEvent", key, isPressed, shouldRelease),
 
   invokeMouseButtonEvent: (button, isPressed, x, y) =>
     invokeInMain("invokeMouseButtonEvent", button, isPressed, x, y),

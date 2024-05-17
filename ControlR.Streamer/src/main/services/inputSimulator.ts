@@ -11,14 +11,12 @@ import { sendMessage } from "./sidecarIpc";
 
 export async function invokeKeyEvent(
   key: string,
-  jsKeyType: JsKeyType,
   isPressed: boolean,
   shouldRelease: boolean,
 ) {
   const dto = {
     dtoType: "KeyEvent",
     key: key,
-    jsKeyType: jsKeyType,
     isPressed: isPressed,
   } as KeyEventDto;
 

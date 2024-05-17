@@ -53,7 +53,7 @@ internal class Win32InteropFake : IWin32Interop
         throw new NotImplementedException();
     }
 
-    public Result InvokeKeyEvent(string key, JsKeyType jsKeyType, bool isPressed)
+    public Result InvokeKeyEvent(string key, bool isPressed)
     {
         throw new NotImplementedException();
     }

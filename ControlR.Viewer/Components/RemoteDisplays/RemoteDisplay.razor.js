@@ -359,7 +359,6 @@ export async function initialize(componentRef, videoId, iceServers) {
         const keyPressDto = {
             dtoType: "keyEvent",
             isPressed: true,
-            jsKeyType: "Key",
             key: ev.key
         };
         state.dataChannel.send(JSON.stringify(keyPressDto));
@@ -380,7 +379,6 @@ export async function initialize(componentRef, videoId, iceServers) {
         const keyPressDto = {
             dtoType: "keyEvent",
             isPressed: false,
-            jsKeyType: "Key",
             key: ev.key
         };
         state.dataChannel.send(JSON.stringify(keyPressDto));
@@ -530,7 +528,6 @@ export async function sendKeyPress(key, videoId) {
         isPressed: true,
         shouldRelease: true,
         key: key,
-        jsKeyType: "Key",
     };
     state.dataChannel.send(JSON.stringify(keyPressDto));
 }

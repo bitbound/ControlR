@@ -397,6 +397,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             await _virtualKeyboard.FocusAsync();
         }
+        else
+        {
+            await _virtualKeyboard.MudBlurAsync();
+        }
     }
 
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)

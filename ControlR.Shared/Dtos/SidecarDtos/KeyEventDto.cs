@@ -2,4 +2,4 @@
 
 namespace ControlR.Shared.Dtos.SidecarDtos;
 
-public record KeyEventDto(string Key, JsKeyType JsKeyType, bool IsPressed) : SidecarDtoBase(SidecarDtoType.KeyEvent);
+public record KeyEventDto(string Key, bool IsPressed) : SidecarDtoBase(SidecarDtoType.KeyEvent);
