@@ -42,7 +42,7 @@ else if (AppState.UserKeysPresent && !AppState.KeysVerified)
                        Variant="Variant.Filled"
                        Color="Color.Error"
                        Size="Size.Large"
-                       OnClick="() => Settings.Reset()">
+                       OnClick="HandleResetKeysClicked">
                 Reset Keys
             </MudButton>
         </div>
@@ -194,12 +194,27 @@ else
         }
     }
 
+    private async Task HandleResetKeysClicked()
+    {
+        var result = await Dialogs.ShowMessageBox(
+            "Confirm Reset",
+            "Are you sure you want to delete your keys and reset the app?  This cannot be undone.",
+            "Remove",
+            "Cancel");
+
+        if (result == true)
+        {
+            await Settings.Reset();
+        }
+    }
+
     private async Task HandleRetryLoadClicked()
     {
         _isLoading = true;
         await VerifyKeys(AppState.UserKeys, true);
         _isLoading = false;
     }
+
 
     private async Task ImportButtonClicked(MouseEventArgs args)
     {

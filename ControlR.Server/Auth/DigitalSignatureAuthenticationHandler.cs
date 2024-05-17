@@ -22,7 +22,6 @@ public class DigitalSignatureAuthenticationHandler(
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         using var _ = _logger.BeginScope(nameof(HandleAuthenticateAsync));
-        _logger.LogInformation("Start auth handler.");
         var authHeader = Context.Request.Headers.Authorization.FirstOrDefault(x =>
             x?.StartsWith(AuthSchemes.DigitalSignature) == true);
 

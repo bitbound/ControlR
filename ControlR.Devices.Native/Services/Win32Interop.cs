@@ -607,7 +607,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         var kbdInput = new KEYBDINPUT()
         {
             wVk = key,
-            wScan = (ushort)(PInvoke.MapVirtualKeyEx((uint)key, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC_EX, GetKeyboardLayout()) & 0xFFU),
+            wScan = (ushort)(PInvoke.MapVirtualKeyEx((uint)key, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC_EX, GetKeyboardLayout())),
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
             dwFlags = kbdFlags,
             time = 0
@@ -691,6 +691,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     {
         return vk switch
         {
+            VIRTUAL_KEY.VK_SHIFT or
+            VIRTUAL_KEY.VK_CONTROL or
+            VIRTUAL_KEY.VK_MENU or
             VIRTUAL_KEY.VK_RCONTROL or
             VIRTUAL_KEY.VK_RMENU or
             VIRTUAL_KEY.VK_INSERT or
