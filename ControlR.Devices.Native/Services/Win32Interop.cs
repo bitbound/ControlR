@@ -1,6 +1,5 @@
 ﻿using ControlR.Devices.Native.Windows;
 using ControlR.Shared.Dtos.SidecarDtos;
-using ControlR.Shared.Enums;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -537,27 +536,54 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         foreach (var character in text)
         {
-            var keyCode = PInvoke.VkKeyScanEx(character, GetKeyboardLayout());
-            var shortHelper = new ShortHelper(keyCode);
-            var vkCode = (VIRTUAL_KEY)shortHelper.Low;
-            var shiftState = (ShiftState)shortHelper.High;
+            ushort scanCode = character;
 
+            var flags = KEYBD_EVENT_FLAGS.KEYEVENTF_UNICODE;
 
-            AddShiftInput(inputs, shiftState, true);
+            var down = new INPUT()
+            {
+                type = INPUT_TYPE.INPUT_KEYBOARD,
+                Anonymous =
+                {
+                    ki = new KEYBDINPUT()
+                    {
+                        wVk = 0,
+                        wScan = scanCode,
+                        dwFlags = flags,
+                        dwExtraInfo = new nuint(PInvoke.GetMessageExtraInfo().Value.ToPointer()),
+                        time = 0,
+                    }
+                }
+            };
 
-            var keyDown = CreateKeyboardInput(vkCode, true);
-            inputs.Add(keyDown);
+            var up = new INPUT()
+            {
+                type = INPUT_TYPE.INPUT_KEYBOARD,
+                Anonymous =
+                {
+                    ki = new KEYBDINPUT()
+                    {
+                        wVk = 0,
+                        wScan = scanCode,
+                        dwFlags = flags | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
+                        dwExtraInfo = new nuint(PInvoke.GetMessageExtraInfo().Value.ToPointer()),
+                        time = 0,
+                    }
+                }
+            };
 
-            var keyUp = CreateKeyboardInput(vkCode, false);
-            inputs.Add(keyUp);
-
-            AddShiftInput(inputs, shiftState, false);
+            inputs.Add(down);
+            inputs.Add(up);
         }
 
-        var result = PInvoke.SendInput(inputs.ToArray(), sizeof(INPUT));
-        if (result != inputs.Count)
+        foreach (var input in inputs)
         {
-            _logger.LogWarning("Failed to type text.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
+            var result = PInvoke.SendInput([input], sizeof(INPUT));
+            if (result != 1)
+            {
+                _logger.LogWarning("Failed to type character in text.");
+            }
+            Thread.Sleep(1);
         }
     }
 

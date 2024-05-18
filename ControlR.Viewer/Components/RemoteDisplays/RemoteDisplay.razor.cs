@@ -507,7 +507,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         try
         {
-            Logger.LogInformation("Creating streaming session");
+            Logger.LogInformation("Creating streaming session.");
             var streamingSessionResult = await ViewerHub.GetStreamingSession(Session.Device.ConnectionId, Session.SessionId, Session.InitialSystemSession);
 
             _statusProgress = -1;

@@ -69,6 +69,7 @@ rootCommand.SetHandler(async (streamerPipeName, parentProcessId) =>
                 services.AddSingleton<IWin32Interop, Win32Interop>();
                 services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
                 services.AddHostedService<InputDesktopReporter>();
+                services.AddHostedService<MessagePump>();
             }
             else
             {

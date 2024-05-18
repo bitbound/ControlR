@@ -1,6 +1,5 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Shared.Dtos.SidecarDtos;
-using ControlR.Shared.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -54,7 +53,7 @@ internal class InputSimulatorWindows: IInputSimulator
             {
                 try
                 {
-                    action();
+                    action.Invoke();
                 }
                 catch (Exception ex)
                 {
