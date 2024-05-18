@@ -362,7 +362,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
     public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
     {
-        var moveInput = GetPointerMoveInput(x, y, MovePointerType.Absolute);
+        MovePointer(x, y, MovePointerType.Absolute);
 
         var extraInfo = PInvoke.GetMessageExtraInfo();
         MOUSE_EVENT_FLAGS mouseEventFlags = 0;
@@ -409,13 +409,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };
 
-        var buttonInput = new INPUT()
+        var input = new INPUT()
         {
             type = INPUT_TYPE.INPUT_MOUSE,
             Anonymous = { mi = mouseInput }
         };
 
-        var result = PInvoke.SendInput([moveInput, buttonInput], sizeof(INPUT));
+        var result = PInvoke.SendInput([input], sizeof(INPUT));
         if (result == 0)
         {
             _logger.LogWarning("Failed to send mouse input: {MouseInput}.", mouseInput);
@@ -498,10 +498,14 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             catch { }
         }
 
-        var result = PInvoke.SendInput(inputs.ToArray(), sizeof(INPUT));
-        if (result != inputs.Count)
+        foreach (var input in inputs)
         {
-            _logger.LogWarning("Failed to reset keyboard state.  Expected {Expected} inputs, but only sent {Sent}.", inputs.Count, result);
+            var result = PInvoke.SendInput([input], sizeof(INPUT));
+            if (result != 1)
+            {
+                _logger.LogWarning("Failed to reset key state.");
+            }
+            Thread.Sleep(1);
         }
     }
 
