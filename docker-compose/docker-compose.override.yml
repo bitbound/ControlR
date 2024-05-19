@@ -13,8 +13,8 @@ services:
       - 5120:8080
       - 7031:8081
     build:
-      context: .
-      dockerfile: ../ControlR.Server/Dockerfile
+      context: ../
+      dockerfile: ControlR.Server/Dockerfile
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
