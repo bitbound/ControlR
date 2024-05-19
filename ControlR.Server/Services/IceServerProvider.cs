@@ -78,14 +78,15 @@ public class IceServerProvider(
                     return [];
                 }
 
-                var host = _httpContext.HttpContext.Request.Host.ToString();
+                var host = _httpContext.HttpContext.Request.Host.Host;
                 var iceServer = new IceServer()
                 {
                     Credential = password,
                     CredentialType = "password",
                     Username = user,
-                    Urls = $"turn:{host}"
+                    Urls = $"turn:{host}:{_appOptions.CurrentValue.CoTurnPort}"
                 };
+                return [iceServer];
             }
         }
         catch (Exception ex)

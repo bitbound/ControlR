@@ -7,6 +7,7 @@ public class ApplicationOptions
     public const string SectionKey = "ApplicationOptions";
     public IReadOnlyList<string> AdminPublicKeys { get; init; } = [];
     public IReadOnlyList<string> AuthorizedUserPublicKeys { get; init; } = [];
+    public int CoTurnPort { get; init; }
     public string? CoTurnSecret { get; init; }
     public string? CoTurnUsername { get; init; }
     public string? DockerGatewayIp { get; init; }

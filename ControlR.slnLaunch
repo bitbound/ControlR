@@ -54,7 +54,7 @@
       },
       {
         "Path": "docker-compose\\docker-compose.dcproj",
-        "Action": "StartWithoutDebugging",
+        "Action": "Start",
         "DebugTarget": "Docker Compose"
       }
     ]

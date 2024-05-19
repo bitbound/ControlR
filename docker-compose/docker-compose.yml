@@ -11,7 +11,7 @@ networks:
 
 services:
   controlr:
-    image: translucency/controlr:latest
+    image: ${DOCKER_REGISTRY-}translucency/controlr:latest
     container_name: controlr
     ports:
       - 5120:8080
@@ -36,7 +36,10 @@ services:
       #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
       #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
 
-
+      - ControlR_ApplicationOptions__UseCoTurn=true
+      - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
+      - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
+      - ControlR_ApplicationOptions__CoTurnPort=3478
       #- ControlR_ApplicationOptions__UseStaticIceServers=true
       - ControlR_ApplicationOptions__IceServers__0__Urls=stun:stun.l.google.com:19302
       - ControlR_ApplicationOptions__IceServers__0__CredentialType=password
@@ -46,9 +49,8 @@ services:
       - ControlR_ApplicationOptions__IceServers__1__CredentialType=password
       - ControlR_ApplicationOptions__IceServers__1__Username=
       - ControlR_ApplicationOptions__IceServers__1__Credential=
-      - ControlR_ApplicationOptions__UseCoTurn=true
-      - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
-      - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
+      - ControlR_ApplicationOptions__UseMetered=false
+      - ControlR_ApplicationOptions__UseTwilio=false
 
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
@@ -59,6 +61,7 @@ services:
 
   coturn:
    image: coturn/coturn
+   container_name: coturn
    # By default, coTURN uses ports 3478 TCP/UDP, 5349 TCP/UDP, and 49152-65535 UDP.
    # It requires such a large port range for media relay.  It's been reported that
    # Docker does not perform well with large port ranges, so coTURN maintainers
