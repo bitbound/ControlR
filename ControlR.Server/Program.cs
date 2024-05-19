@@ -118,6 +118,7 @@ builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCache>();
 builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Host.UseSystemd();
 

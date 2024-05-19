@@ -12,6 +12,7 @@ networks:
 services:
   controlr:
     image: translucency/controlr:latest
+    container_name: controlr
     ports:
       - 5120:8080
     networks:
@@ -36,7 +37,7 @@ services:
       #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
 
 
-      - ControlR_ApplicationOptions__UseStaticIceServers=true
+      #- ControlR_ApplicationOptions__UseStaticIceServers=true
       - ControlR_ApplicationOptions__IceServers__0__Urls=stun:stun.l.google.com:19302
       - ControlR_ApplicationOptions__IceServers__0__CredentialType=password
       - ControlR_ApplicationOptions__IceServers__0__Username=
@@ -45,8 +46,9 @@ services:
       - ControlR_ApplicationOptions__IceServers__1__CredentialType=password
       - ControlR_ApplicationOptions__IceServers__1__Username=
       - ControlR_ApplicationOptions__IceServers__1__Credential=
-      #- ControlR_ApplicationOptions__UseCoTurn=false
-      #- ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
+      - ControlR_ApplicationOptions__UseCoTurn=true
+      - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
+      - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
 
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the

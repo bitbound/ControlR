@@ -38,5 +38,25 @@
         "DebugTarget": "Run"
       }
     ]
+  },
+  {
+    "Name": "Compose \u002B Agent \u002B Viewer (Win)",
+    "Projects": [
+      {
+        "Path": "ControlR.Viewer\\ControlR.Viewer.csproj",
+        "Action": "Start",
+        "DebugTarget": "Windows Machine"
+      },
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
+      },
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "Docker Compose"
+      }
+    ]
   }
 ]

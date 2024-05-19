@@ -1,4 +1,5 @@
 ﻿using ControlR.Server.Options;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Options;
@@ -15,18 +16,19 @@ public interface IIceServerProvider
 }
 
 public class IceServerProvider(
-    IOptionsMonitor<ApplicationOptions> _appOptions,
     IMeteredApi _meteredApi,
+    IHttpContextAccessor _httpContext,
+    IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<IceServerProvider> _logger) : IIceServerProvider
 {
     public async Task<IceServer[]> GetIceServers()
     {
         try
         {
-            if (_appOptions.CurrentValue.UseTwilio &&
-                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSid) &&
-                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSecret))
+            if (_appOptions.CurrentValue.UseTwilio)
             {
+                Guard.IsNotNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSid);
+                Guard.IsNotNullOrWhiteSpace(_appOptions.CurrentValue.TwilioSecret);
                 TwilioClient.Init(_appOptions.CurrentValue.TwilioSid, _appOptions.CurrentValue.TwilioSecret);
                 var token = TokenResource.Create();
                 return token.IceServers
@@ -47,9 +49,9 @@ public class IceServerProvider(
 
         try
         {
-            if (_appOptions.CurrentValue.UseMetered &&
-                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey))
+            if (_appOptions.CurrentValue.UseMetered)
             {
+                Guard.IsNotNullOrWhiteSpace(_appOptions.CurrentValue.MeteredApiKey);
                 return await _meteredApi.GetIceServers(_appOptions.CurrentValue.MeteredApiKey);
             }
         }
@@ -60,15 +62,35 @@ public class IceServerProvider(
 
         try
         {
-            if (_appOptions.CurrentValue.UseCoTurn &&
-                !string.IsNullOrWhiteSpace(_appOptions.CurrentValue.CoTurnSecret))
+            if (_appOptions.CurrentValue.UseCoTurn)
             {
-                // TODO: Get coTURN creds.
+                var coturnUser = _appOptions.CurrentValue.CoTurnUsername;
+                var coturnSecret = _appOptions.CurrentValue.CoTurnSecret;
+
+                Guard.IsNotNullOrWhiteSpace(coturnUser);
+                Guard.IsNotNullOrWhiteSpace(coturnSecret);
+
+                var (user, password) = GenerateTurnPassword(coturnSecret, coturnUser);
+
+                if (_httpContext.HttpContext is null)
+                {
+                    _logger.LogError("HttpContext is null.  Unable to provide CoTurn ICE servers.");
+                    return [];
+                }
+
+                var host = _httpContext.HttpContext.Request.Host.ToString();
+                var iceServer = new IceServer()
+                {
+                    Credential = password,
+                    CredentialType = "password",
+                    Username = user,
+                    Urls = $"turn:{host}"
+                };
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while getitng coTURN ICE servers.");
+            _logger.LogError(ex, "Error while getting coTURN ICE servers.");
         }
 
         try
@@ -88,7 +110,7 @@ public class IceServerProvider(
         return [];
     }
 
-    private string GenerateTurnPassword(string secret, string username = "")
+    private static (string tempUser, string tempPassword) GenerateTurnPassword(string secret, string username = "")
     {
         var expiration = DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds();
         var tempUser = !string.IsNullOrWhiteSpace(username) ? 
@@ -100,6 +122,8 @@ public class IceServerProvider(
 
         var buffer = Encoding.ASCII.GetBytes(tempUser);
         var hashValue = hmacsha1.ComputeHash(buffer);
-        return Convert.ToBase64String(hashValue);
+        var tempPassword = Convert.ToBase64String(hashValue);
+
+        return (tempUser, tempPassword);
     }
 }

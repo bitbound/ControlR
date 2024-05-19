@@ -31,7 +31,17 @@ public static class Guard
         throw new ArgumentNullException(name);
     }
 
-    public static void IsNotNullOrWhiteSpace(string? text, [CallerArgumentExpression(nameof(text))] string name = "")
+    public static void IsNotNullOrEmpty([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        throw new ArgumentNullException(name);
+    }
+
+    public static void IsNotNullOrWhiteSpace([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
     {
         if (!string.IsNullOrWhiteSpace(text))
         {

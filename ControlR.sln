@@ -41,7 +41,7 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ControlR.Streamer", "Contro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Streamer.Sidecar", "ControlR.Streamer.Sidecar\ControlR.Streamer.Sidecar.csproj", "{AB490A14-3952-4D41-8BB1-AC424E18A6DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Devices.Native", "ControlR.Devices.Native\ControlR.Devices.Native.csproj", "{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Devices.Native", "ControlR.Devices.Native\ControlR.Devices.Native.csproj", "{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -200,6 +200,7 @@ Global
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Build.0 = Release|Any CPU
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Deploy.0 = Release|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|ARM64.ActiveCfg = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -261,7 +262,7 @@ Global
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal
