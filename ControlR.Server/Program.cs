@@ -66,13 +66,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardLimit = null;
 
     // Default Docker host. We want to allow forwarded headers from this address.
-    if (IPAddress.TryParse(appOptions?.DockerGatewayIp, out var dockerGatewayIp))
+    if (!string.IsNullOrWhiteSpace(appOptions?.DockerGatewayIp))
     {
-        options.KnownProxies.Add(dockerGatewayIp);
-    }
-    else
-    {
-        Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
+        if (IPAddress.TryParse(appOptions?.DockerGatewayIp, out var dockerGatewayIp))
+        {
+            options.KnownProxies.Add(dockerGatewayIp);
+        }
+        else
+        {
+            Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
+        }
     }
 
     if (appOptions?.KnownProxies is { Length: > 0 } knownProxies)

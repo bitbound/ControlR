@@ -6,7 +6,10 @@
       "serviceActions": {
         "controlr": "StartDebugging",
         "coturn": "StartWithoutDebugging"
-      }
+      },
+      "environmentVariables": {
+        "TURN_SECRET": "CEWKxEnGt965tDr6FU2rxsDDWAVufr6U"
+      },
     }
   }
 }
