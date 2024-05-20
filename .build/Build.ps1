@@ -36,7 +36,6 @@ $MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Curr
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
 
-
 function Check-LastExitCode {
     if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
         throw "Received exit code $LASTEXITCODE.  Aborting."
