@@ -31,8 +31,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B85287-C904-4672-821E-D0B96BBDF89C}"
 	ProjectSection(SolutionItems) = preProject
 		.build\Build.ps1 = .build\Build.ps1
+		.build\CreateDelta.ps1 = .build\CreateDelta.ps1
 		.build\CreateKeystore.cmd = .build\CreateKeystore.cmd
-		.build\octodiff.exe = .build\octodiff.exe
 	EndProjectSection
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose\docker-compose.dcproj", "{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}"
@@ -200,7 +200,6 @@ Global
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Build.0 = Release|Any CPU
 		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|x86.Deploy.0 = Release|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|ARM64.ActiveCfg = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -262,7 +261,7 @@ Global
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
+		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 	EndGlobalSection
 EndGlobal

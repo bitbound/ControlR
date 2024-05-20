@@ -35,39 +35,13 @@ $VsWhere = "$InstallerDir\vswhere.exe"
 $MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
-$PublishedDownloads = "$OutputPath\wwwroot\downloads"
-$Octodiff = "$Root\.build\octodiff.exe"
+
 
 function Check-LastExitCode {
     if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
         throw "Received exit code $LASTEXITCODE.  Aborting."
     }
 }
-
-function Create-Signature($FilePath, $BaseSignatureFileName) {
-    if (!(Test-Path -Path $FilePath)) {
-        return "";
-    }
-
-    [System.IO.Directory]::CreateDirectory("$PublishedDownloads\signatures") | Out-Null
-    $Hash = Get-FileHash -Algorithm MD5 -Path $FilePath | Select-Object -ExpandProperty Hash
-    $SignaturePath = "$PublishedDownloads\signatures\$BaseSignatureFileName-$Hash.octosig"
-    &"$Octodiff" signature $FilePath $SignaturePath
-    Check-LastExitCode
-    return $SignaturePath
-}
-
-function Create-Delta($SignaturePath, $NewFilePath) {
-    if (!(Test-Path -Path $SignaturePath)) {
-        return;
-    }
-
-    [System.IO.Directory]::CreateDirectory("$PublishedDownloads\deltas") | Out-Null
-    $DeltaFileName = (Get-Item -Path $SignaturePath).Name.Replace(".octosig", ".octodelta")
-    &"$Octodiff" delta $SignaturePath $NewFilePath "$PublishedDownloads\deltas\$DeltaFileName"
-    Check-LastExitCode
-}
-
 
 if (!$CurrentVersion) {
     Write-Error "CurrentVersion is required."
@@ -92,11 +66,6 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 }
 
 New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
-New-Item -Path "$PublishedDownloads" -ItemType Directory -Force | Out-Null
-
-#$WinSigPath = Create-Signature -FilePath "$PublishedDownloads\win-x86\ControlR.Agent.exe" -BaseSignatureFileName "windows-agent"
-#$LinuxSigPath = Create-Signature -FilePath "$PublishedDownloads\linux-x64\ControlR.Agent" -BaseSignatureFileName "linux-agent"
-$WinSigPath = Create-Signature -FilePath "$PublishedDownloads\controlr-streamer-win.zip" -BaseSignatureFileName "windows-streamer"
 
 if ($BuildAgent) {
 
@@ -170,13 +139,10 @@ if ($BuildStreamer) {
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Server\"
 
-#Create-Delta -SignaturePath $WinSigPath -NewFilePath "$PublishedDownloads\win-x86\ControlR.Agent.exe"
-#Create-Delta -SignaturePath $LinuxSigPath -NewFilePath "$PublishedDownloads\linux-x64\ControlR.Agent"
-Create-Delta -SignaturePath $WinSigPath -NewFilePath "$PublishedDownloads\controlr-streamer-win.zip"
 
 if ($BuildWebsite) {
     [System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
-    Get-ChildItem -Path $PublishedDownloads | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
+    Get-ChildItem -Path "$OutputPath\wwwroot\downloads" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
     Push-Location "$Root\ControlR.Website"
     npm install
     npm run build
