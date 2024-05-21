@@ -89,10 +89,6 @@ if ($BuildAgent) {
 
 
 if ($BuildViewer) {
-    Push-Location -Path "$Root\ControlR.Viewer"
-    dotnet workload restore
-    Pop-Location
-    
     $Csproj = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\ControlR.Viewer.csproj"
     $AppVersion = $Csproj.Node.SelectNodes("//ApplicationVersion")
     $AppVersion[0].InnerText = "1";
