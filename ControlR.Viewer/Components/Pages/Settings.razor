@@ -180,9 +180,9 @@
 
     private string? ValidateUsername(string input)
     {
-        if (string.IsNullOrWhiteSpace(input))
+        if (string.IsNullOrEmpty(input))
         {
-            return "Username is required.";
+            return null;
         }
 
         if (AppConstants.UsernameValidator().IsMatch(input))
