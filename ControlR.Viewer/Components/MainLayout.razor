@@ -21,7 +21,7 @@
              @if (_updateAvailable)
             {
                 <MudTooltip Text="Update Available">
-                    <MudBadge Content="@("!")" Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
+                    <MudBadge Content='"!"' Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
                         <MudIconButton Color="Color.Info"
                                        Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
                                        OnClick="InstallUpdate" />
@@ -29,7 +29,7 @@
 
                 </MudTooltip>
             }
-            @if (AppState.IsBusy)
+            @if (AppState.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
             {
                 <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
                     <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
