@@ -11,7 +11,7 @@ networks:
 
 services:
   controlr:
-    image: ${DOCKER_REGISTRY-}translucency/controlr:latest
+    image: translucency/controlr:latest
     container_name: controlr
     ports:
       - 5120:8080
@@ -36,11 +36,13 @@ services:
       #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
       #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
 
+      # UseTwilio, UseMetered, UseCoTurn, and UseStaticIceServers are mutually exclusive.
+      # They will be evaluated in that order.
       - ControlR_ApplicationOptions__UseCoTurn=true
       - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
       - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
       - ControlR_ApplicationOptions__CoTurnPort=3478
-      #- ControlR_ApplicationOptions__UseStaticIceServers=true
+      - ControlR_ApplicationOptions__UseStaticIceServers=false
       - ControlR_ApplicationOptions__IceServers__0__Urls=stun:stun.l.google.com:19302
       - ControlR_ApplicationOptions__IceServers__0__CredentialType=password
       - ControlR_ApplicationOptions__IceServers__0__Username=
@@ -50,7 +52,10 @@ services:
       - ControlR_ApplicationOptions__IceServers__1__Username=
       - ControlR_ApplicationOptions__IceServers__1__Credential=
       - ControlR_ApplicationOptions__UseMetered=false
+      - ControlR_ApplicationOptions__MeteredApiKey=
       - ControlR_ApplicationOptions__UseTwilio=false
+      - ControlR_ApplicationOptions__TwilioSid=
+      - ControlR_ApplicationOptions__TwilioSecret=
 
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
