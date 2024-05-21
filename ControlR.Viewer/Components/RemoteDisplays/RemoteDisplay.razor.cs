@@ -403,6 +403,11 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
+    private async Task HandlePlayButtonClicked()
+    {
+        await JsModule.InvokeVoidAsync("playVideo", _videoRef);
+    }
+
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
     {
         if (_virtualKeyboardToggled)

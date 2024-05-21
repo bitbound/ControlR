@@ -81,7 +81,7 @@
 
         <video id="@_videoId"
                @ref="_videoRef"
-               autoplay="autoplay"
+               autoplay
                muted
                class="@($"remote-screen {VideoClasses}")"
                style="@(VideoStyle)" />
@@ -104,7 +104,7 @@
 
                 @if (_isStreamReady && !_isStreamLoaded)
                 {
-                    <MudIconButton Icon="@(Icons.Material.Outlined.PlayCircle)" Size="Size.Large" />
+                    <MudIconButton Icon="@(Icons.Material.Outlined.PlayCircle)" Size="Size.Large" OnClick="HandlePlayButtonClicked" />
                 }
             </div>
         }

@@ -335,11 +335,12 @@ export async function initialize(componentRef, videoId, iceServers) {
         }
     });
 
-    video.addEventListener("loadedmetadata", async () => {
+    video.addEventListener("canplay", async () => {
+        await invokeDotNet("LogInfo", videoId, "CanPlay event fired.  Playing.");
         await video.play();
-        video.muted = false;
-        await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
-        await invokeDotNet("NotifyStreamLoaded", videoId);
+        //video.muted = false;
+        //await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
+        //await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
     /** @param {KeyboardEvent} ev */
@@ -397,6 +398,15 @@ export async function initialize(componentRef, videoId, iceServers) {
     }
     window.addEventListener("blur", onBlur);
     state.windowEventHandlers.push("blur", onBlur);
+}
+
+/**
+ * 
+ * @param {HTMLVideoElement} videoElement
+ */
+export async function playVideo(videoElement) {
+    videoElement.muted = false;
+    await videoElement.play();
 }
 
 /**
@@ -706,7 +716,7 @@ function setPeerConnectionHandlers(peerConnection, videoId) {
             if (state.videoElement.played.length > 0) {
                 window.clearInterval(playInterval);
                 await state.videoElement.play();
-                state.videoElement.muted = false;
+                //state.videoElement.muted = false;
                 await invokeDotNet("NotifyStreamLoaded", videoId);
                 return;
             }
