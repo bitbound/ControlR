@@ -171,6 +171,11 @@ app.MapControllers();
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
 app.MapHub<StreamerHub>("/hubs/streamer");
+app.MapGet("/", x =>
+{
+    x.Response.Redirect("https://controlr.app");
+    return Task.CompletedTask;
+});
 
 app.Run();
 
