@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using ControlR.Agent.Options;
 
 namespace ControlR.Agent.Services.Mac;
 
@@ -21,16 +22,15 @@ internal class AgentInstallerMac(
     IRetryer _retryer,
     ISettingsProvider _settingsProvider,
     IOptionsMonitor<AgentAppOptions> _appOptions,
+    IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentInstallerMac> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environment = _environmentHelper;
     private readonly IFileSystem _fileSystem = _fileSystem;
-    private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = _lifetime;
     private readonly ILogger<AgentInstallerMac> _logger = _logger;
     private readonly IProcessManager _processInvoker = _processInvoker;
-    private readonly string _serviceFilePath = "/Library/LaunchDaemons/controlr-agent.plist";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
     {
@@ -49,10 +49,12 @@ internal class AgentInstallerMac(
                 _logger.LogError("Install command must be run with sudo.");
             }
 
+            var installDir = GetInstallDirectory();
+
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(_installDir, AppConstants.AgentFileName);
-            _fileSystem.CreateDirectory(_installDir);
+            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            _fileSystem.CreateDirectory(installDir);
 
             if (_fileSystem.FileExists(targetPath))
             {
@@ -67,9 +69,10 @@ internal class AgentInstallerMac(
                 }, 5, TimeSpan.FromSeconds(1));
 
             var serviceFile = GetServiceFile().Trim();
+            var serviceFilePath = GetServiceFilePath();
 
             _logger.LogInformation("Writing service file.");
-            await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
+            await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
             await UpdateAppSettings(serverUri, authorizedPublicKey);
 
             var psi = new ProcessStartInfo()
@@ -82,7 +85,7 @@ internal class AgentInstallerMac(
             try
             {
                 _logger.LogInformation("Bootstrapping service.");
-                psi.Arguments = $"launchctl bootstrap system {_serviceFilePath}";
+                psi.Arguments = $"launchctl bootstrap system {serviceFilePath}";
                 await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
             }
             catch (ProcessStatusException) { }
@@ -121,10 +124,12 @@ internal class AgentInstallerMac(
                 _logger.LogError("Uninstall command must be run with sudo.");
             }
 
+            var serviceFilePath = GetServiceFilePath();
+
             var psi = new ProcessStartInfo()
             {
                 FileName = "sudo",
-                Arguments = $"launchctl bootout system {_serviceFilePath}",
+                Arguments = $"launchctl bootout system {serviceFilePath}",
                 WorkingDirectory = "/tmp",
                 UseShellExecute = true
             };
@@ -132,19 +137,20 @@ internal class AgentInstallerMac(
             try
             {
                 _logger.LogInformation("Booting out service.");
-                psi.Arguments = $"launchctl bootout system {_serviceFilePath}";
+                psi.Arguments = $"launchctl bootout system {serviceFilePath}";
                 await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
             }
             catch (ProcessStatusException) { }
 
-            if (_fileSystem.FileExists(_serviceFilePath))
+            if (_fileSystem.FileExists(serviceFilePath))
             {
-                _fileSystem.DeleteFile(_serviceFilePath);
+                _fileSystem.DeleteFile(serviceFilePath);
             }
 
-            if (_fileSystem.DirectoryExists(_installDir))
+            var installDir = GetInstallDirectory();
+            if (_fileSystem.DirectoryExists(installDir))
             {
-                _fileSystem.DeleteDirectory(_installDir, true);
+                _fileSystem.DeleteDirectory(installDir, true);
             }
 
             _logger.LogInformation("Uninstall completed.");
@@ -160,6 +166,15 @@ internal class AgentInstallerMac(
         }
     }
 
+    private string GetInstallDirectory()
+    {
+        var dir = "/usr/local/bin/ControlR";
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return dir;
+        }
+        return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+    }
     private string GetServiceFile()
     {
         return
@@ -177,10 +192,24 @@ internal class AgentInstallerMac(
             //$"    <string>/var/log/ControlR/plist-std-log</string> \n" +
             $"    <key>ProgramArguments</key>\n" +
             $"    <array>\n" +
-            $"        <string>{_installDir}/ControlR.Agent</string>\n" +
+            $"        <string>{GetInstallDirectory()}/ControlR.Agent</string>\n" +
             $"        <string>run</string>\n" +
             $"    </array>\n" +
             $"</dict>\n" +
             $"</plist>";
+    }
+
+    private string GetServiceFilePath()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return "/Library/LaunchDaemons/controlr-agent.plist";
+        }
+        return $"/Library/LaunchDaemons/controlr-agent-{_instanceOptions.Value.InstanceId}.plist";
+    }
+
+    private string GetServiceName()
+    {
+        return Path.GetFileName(GetServiceFilePath());
     }
 }

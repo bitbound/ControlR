@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using ControlR.Agent.Options;
 
 namespace ControlR.Agent.Services.Linux;
 
@@ -20,16 +21,15 @@ internal class AgentInstallerLinux(
     IRetryer _retryer,
     ISettingsProvider _settingsProvider,
     IOptionsMonitor<AgentAppOptions> _appOptions,
+    IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentInstallerLinux> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IEnvironmentHelper _environment = _environmentHelper;
     private readonly IFileSystem _fileSystem = _fileSystem;
-    private readonly string _installDir = "/usr/local/bin/ControlR";
     private readonly IHostApplicationLifetime _lifetime = _lifetime;
     private readonly ILogger<AgentInstallerLinux> _logger = _logger;
     private readonly IProcessManager _processInvoker = _processInvoker;
-    private readonly string _serviceFilePath = "/etc/systemd/system/controlr.agent.service";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
     {
@@ -48,10 +48,12 @@ internal class AgentInstallerLinux(
                 _logger.LogError("Install command must be run with sudo.");
             }
 
+            var installDir = GetInstallDirectory();
+
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(_installDir, AppConstants.AgentFileName);
-            _fileSystem.CreateDirectory(_installDir);
+            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            _fileSystem.CreateDirectory(installDir);
 
             if (_fileSystem.FileExists(targetPath))
             {
@@ -67,13 +69,14 @@ internal class AgentInstallerLinux(
 
             var serviceFile = GetServiceFile().Trim();
 
-            await _fileSystem.WriteAllTextAsync(_serviceFilePath, serviceFile);
+            await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
             await UpdateAppSettings(serverUri, authorizedPublicKey);
+            var serviceName = GetServiceName();
 
             var psi = new ProcessStartInfo()
             {
                 FileName = "sudo",
-                Arguments = "systemctl enable controlr.agent.service",
+                Arguments = $"systemctl enable {serviceName}",
                 WorkingDirectory = "/tmp",
                 UseShellExecute = true
             };
@@ -82,7 +85,7 @@ internal class AgentInstallerLinux(
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Restarting service.");
-            psi.Arguments = "systemctl restart controlr.agent.service";
+            psi.Arguments = $"systemctl restart {serviceName}";
             await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
             _logger.LogInformation("Install completed.");
@@ -115,21 +118,23 @@ internal class AgentInstallerLinux(
                 _logger.LogError("Uninstall command must be run with sudo.");
             }
 
+            var serviceName = GetServiceName();
+
             await _processInvoker
-                .Start("sudo", "systemctl stop controlr.agent.service")
+                .Start("sudo", $"systemctl stop {serviceName}")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);
 
             await _processInvoker
-                .Start("sudo", "systemctl disable controlr.agent.service")
+                .Start("sudo", $"systemctl disable {serviceName}")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);
 
-            _fileSystem.DeleteFile(_serviceFilePath);
+            _fileSystem.DeleteFile(GetServiceFilePath());
 
             await _processInvoker
                 .Start("sudo", "systemctl daemon-reload")
                 .WaitForExitAsync(_lifetime.ApplicationStopping);
 
-            _fileSystem.DeleteDirectory(_installDir, true);
+            _fileSystem.DeleteDirectory(GetInstallDirectory(), true);
 
             _logger.LogInformation("Uninstall completed.");
         }
@@ -144,19 +149,45 @@ internal class AgentInstallerLinux(
         }
     }
 
+    private string GetInstallDirectory()
+    {
+        var dir = "/usr/local/bin/ControlR";
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return dir;
+        }
+        return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+    }
+
     private string GetServiceFile()
     {
+        var installDir = GetInstallDirectory();
         return
             $"[Unit]\n" +
             "Description=ControlR provides zero-trust remote control and administration.\n\n" +
             "[Service]\n" +
-            $"WorkingDirectory={_installDir}\n" +
-            $"ExecStart={_installDir}/{AppConstants.AgentFileName} run\n" +
+            $"WorkingDirectory={installDir}\n" +
+            $"ExecStart={installDir}/{AppConstants.AgentFileName} run\n" +
             "Restart=always\n" +
             "StartLimitIntervalSec=0\n" +
             "Environment=DOTNET_ENVIRONMENT=Production\n" +
             "RestartSec=10\n\n" +
             "[Install]\n" +
             "WantedBy=graphical.target";
+    }
+
+    private string GetServiceFilePath()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return "/etc/systemd/system/controlr.agent.service";
+        }
+
+        return $"/etc/systemd/system/controlr.agent-{_instanceOptions.Value.InstanceId}.service";
+    }
+
+    private string GetServiceName()
+    {
+        return Path.GetFileName(GetServiceFilePath());
     }
 }

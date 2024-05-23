@@ -71,36 +71,13 @@ internal class AgentHubConnection(
                 }
             }
 
-            double downloadProgress = 0;
-
             var result = await _remoteControlLauncher.CreateSession(
                 dto.StreamingSessionId,
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.NotifyUserOnSessionStart,
                 dto.LowerUacDuringSession,
-                dto.ViewerName,
-                async progress =>
-                {
-                    try
-                    {
-                        if (progress == 1 || progress - downloadProgress > .05)
-                        {
-                            downloadProgress = progress;
-                            await Connection
-                                .InvokeAsync(
-                                    nameof(IAgentHub.SendStreamerDownloadProgress),
-                                    dto.StreamingSessionId,
-                                    dto.ViewerConnectionId,
-                                    downloadProgress)
-                                .ConfigureAwait(false);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error while downloading remote control binaries.");
-                    }
-                })
+                dto.ViewerName)
                 .ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -173,22 +150,29 @@ internal class AgentHubConnection(
         return _win32Interop.GetActiveSessions().ToArray().AsTaskResult();
     }
 
-    public async Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
+    public Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
     {
         try
         {
             if (!VerifySignedDto<AgentAppSettings>(signedDto, out var payload))
             {
-                return Result.Fail("Signature verification failed.");
+                return Result.Fail("Signature verification failed.").AsTaskResult();
             }
 
-            await _settings.UpdateSettings(payload);
-            return Result.Ok();
+            // Perform the update in a background thread after a short delay,
+            // allowing the RPC call to complete okay.
+            Task.Run(async () =>
+            {
+                await _delayer.Delay(TimeSpan.FromSeconds(1), _appLifetime.ApplicationStopping);
+                await _settings.UpdateSettings(payload);
+            }).Forget();
+
+            return Result.Ok().AsTaskResult();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while saving app settings to disk.");
-            return Result.Fail("Failed to save settings to disk.");
+            return Result.Fail("Failed to save settings to disk.").AsTaskResult();
         }
     }
 

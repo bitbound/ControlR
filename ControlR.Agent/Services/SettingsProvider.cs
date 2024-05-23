@@ -1,8 +1,9 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Agent.Options;
+using ControlR.Agent.Startup;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
-using ControlR.Shared.Extensions;
 using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using ControlR.Viewer.Models.Messages;
@@ -28,42 +29,11 @@ internal class SettingsProvider(
     IMessenger _messenger,
     IDelayer _delayer,
     IFileSystem _fileSystem,
+    IOptions<InstanceOptions> _instanceOptions,
     ILogger<SettingsProvider> _logger) : ISettingsProvider
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    public static string AppSettingsPath
-    {
-        get
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                var settingsDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "ControlR");
-
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    settingsDir = Path.Combine(settingsDir, "Debug");
-                }
-                var dir = Directory.CreateDirectory(settingsDir).FullName;
-                return Path.Combine(dir, "appsettings.json");
-            }
-
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-            {
-                var settingsDir = "/etc/controlr";
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    settingsDir += "/debug";
-                }
-                var dir = Directory.CreateDirectory(settingsDir).FullName;
-                return Path.Combine(dir, "appsettings.json");
-            }
-
-            throw new PlatformNotSupportedException();
-        }
-    }
 
     public IReadOnlyList<string> AuthorizedKeys
     {
@@ -95,7 +65,7 @@ internal class SettingsProvider(
 
     public string GetAppSettingsPath()
     {
-        return AppSettingsPath;
+        return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
     }
 
     public async Task UpdateSettings(AgentAppSettings settings)
@@ -111,7 +81,7 @@ internal class SettingsProvider(
             var serverUriChanged = newServerUri != ServerUri;
 
             var content = JsonSerializer.Serialize(settings, _jsonOptions);
-            await _fileSystem.WriteAllTextAsync(AppSettingsPath, content);
+            await _fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
 
             if (serverUriChanged)
             {
@@ -127,7 +97,7 @@ internal class SettingsProvider(
                     return;
                 }
 
-                _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
+                await _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
             }
         }
         catch (Exception ex)

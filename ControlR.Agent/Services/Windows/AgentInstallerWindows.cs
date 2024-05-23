@@ -1,4 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
+using ControlR.Agent.Options;
 using ControlR.Agent.Services.Base;
 using ControlR.Devices.Common.Services;
 using ControlR.Shared;
@@ -27,17 +28,16 @@ internal class AgentInstallerWindows(
     ISettingsProvider _settingsProvider,
     IOptionsMonitor<AgentAppOptions> _appOptions,
     IRegistryAccessor _registryAccessor,
+    IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentInstallerWindows> _logger) : AgentInstallerBase(_fileSystem, _settingsProvider, _appOptions, _logger), IAgentInstaller
 {
     private static readonly SemaphoreSlim _installLock = new(1, 1);
     private readonly IElevationChecker _elevationChecker = _elevationChecker;
     private readonly IEnvironmentHelper _environmentHelper = _environmentHelper;
     private readonly IFileSystem _fileSystem = _fileSystem;
-    private readonly string _installDir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
     private readonly IHostApplicationLifetime _lifetime = _lifetime;
     private readonly ILogger<AgentInstallerWindows> _logger = _logger;
     private readonly IProcessManager _processes = _processes;
-    private readonly string _serviceName = "ControlR.Agent";
 
     public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
     {
@@ -68,10 +68,11 @@ internal class AgentInstallerWindows(
                 return;
             }
 
+            var installDir = GetInstallDirectory();
             var exePath = _environmentHelper.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(_installDir, AppConstants.AgentFileName);
-            _fileSystem.CreateDirectory(_installDir);
+            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            _fileSystem.CreateDirectory(installDir);
 
             try
             {
@@ -93,9 +94,17 @@ internal class AgentInstallerWindows(
 
             await UpdateAppSettings(serverUri, authorizedPublicKey);
 
-            var createString = $"sc.exe create {_serviceName} binPath= \"\\\"{targetPath}\\\" run\" start= auto";
-            var configString = $"sc.exe failure \"{_serviceName}\" reset= 5 actions= restart/5000";
-            var startString = $"sc.exe start {_serviceName}";
+            var serviceName = GetServiceName();
+
+            var subcommand = "run";
+            if (_instanceOptions.Value.InstanceId is { } instanceId)
+            {
+                subcommand += $" -i {instanceId}";
+            }
+
+            var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetPath}\\\" {subcommand}\" start= auto";
+            var configString = $"sc.exe failure \"{serviceName}\" reset= 5 actions= restart/5000";
+            var startString = $"sc.exe start \"{serviceName}\"";
 
             var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString} & {startString}");
 
@@ -152,7 +161,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            var deleteResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe delete {_serviceName}");
+            var deleteResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe delete \"{GetServiceName()}\"");
             if (!deleteResult.IsSuccess)
             {
                 _logger.LogError("{msg}", deleteResult.Reason);
@@ -168,7 +177,7 @@ internal class AgentInstallerWindows(
                         _logger.LogWarning("Unable to delete installation directory.  Continuing.");
                         break;
                     }
-                    _fileSystem.DeleteDirectory(_installDir, true);
+                    _fileSystem.DeleteDirectory(GetInstallDirectory(), true);
                     break;
                 }
                 catch (Exception ex)
@@ -182,7 +191,7 @@ internal class AgentInstallerWindows(
             var subkey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
             subkey?.DeleteValue("SoftwareSASGeneration", false);
 
-            GetRegistryBaseKey().DeleteSubKeyTree(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR", false);
+            GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 
             _logger.LogInformation("Uninstall completed.");
         }
@@ -211,29 +220,67 @@ internal class AgentInstallerWindows(
 
     private void CreateUninstallKey()
     {
-        var exePath = Path.Combine(_installDir, AppConstants.AgentFileName);
+        var installDir = GetInstallDirectory();
+
+        var displayName = "ControlR Agent";
+        var exePath = Path.Combine(installDir, AppConstants.AgentFileName);
         var fileName = Path.GetFileName(exePath);
         var version = FileVersionInfo.GetVersionInfo(exePath);
+        var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");
+
+        if (_instanceOptions.Value.InstanceId is { } instanceId)
+        {
+            displayName += $" ({instanceId})";
+            uninstallCommand += $" -i {instanceId}";
+        }
+
         using var baseKey = GetRegistryBaseKey();
 
-        using var controlrKey = baseKey.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR", true);
-        controlrKey.SetValue("DisplayIcon", Path.Combine(_installDir, fileName));
-        controlrKey.SetValue("DisplayName", "ControlR Agent");
+        using var controlrKey = baseKey.CreateSubKey(GetUninstallKeyPath(), true);
+        controlrKey.SetValue("DisplayIcon", Path.Combine(installDir, fileName));
+        controlrKey.SetValue("DisplayName", displayName);
         controlrKey.SetValue("DisplayVersion", version.FileVersion ?? "0.0.0");
         controlrKey.SetValue("InstallDate", DateTime.Now.ToShortDateString());
         controlrKey.SetValue("Publisher", "Jared Goodwin");
         controlrKey.SetValue("VersionMajor", $"{version.FileMajorPart}", RegistryValueKind.DWord);
         controlrKey.SetValue("VersionMinor", $"{version.FileMinorPart}", RegistryValueKind.DWord);
-        controlrKey.SetValue("UninstallString", Path.Combine(_installDir, $"{fileName} uninstall"));
-        controlrKey.SetValue("QuietUninstallString", Path.Combine(_installDir, $"{fileName} uninstall"));
+        controlrKey.SetValue("UninstallString", uninstallCommand);
+        controlrKey.SetValue("QuietUninstallString", uninstallCommand);
     }
 
+    private string GetInstallDirectory()
+    {
+        var dir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return dir;
+        }
+
+        return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+    }
+
+    private string GetServiceName()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return "ControlR.Agent";
+        }
+        return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
+    }
+    private string GetUninstallKeyPath()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR";
+        }
+        return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({_instanceOptions.Value.InstanceId})";
+    }
     private bool IsRunningFromAppDir()
     {
         var exePath = _environmentHelper.StartupExePath;
         var appDir = _environmentHelper.StartupDirectory;
 
-        if (!string.Equals(appDir, _installDir, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(appDir.TrimEnd('\\'), GetInstallDirectory().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -263,7 +310,7 @@ internal class AgentInstallerWindows(
     {
         try
         {
-            using var existingService = ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == _serviceName);
+            using var existingService = ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == GetServiceName());
             if (existingService is not null)
             {
                 _logger.LogInformation("Existing service found.  CanStop value: {value}", existingService.CanStop);

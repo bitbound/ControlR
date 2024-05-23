@@ -37,8 +37,7 @@ internal class RemoteControlLauncherWindows(
         int targetWindowsSession = -1,
         bool notifyViewerOnSessionStart = false,
         bool lowerUacDuringSession = false,
-        string? viewerName = null,
-        Func<double, Task>? onDownloadProgress = null)
+        string? viewerName = null)
     {
         await _createSessionLock.WaitAsync();
 

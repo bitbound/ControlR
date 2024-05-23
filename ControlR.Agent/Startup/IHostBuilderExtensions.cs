@@ -20,12 +20,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SimpleIpc;
 using ControlR.Devices.Native.Services;
+using ControlR.Agent.Options;
 
 namespace ControlR.Agent.Startup;
 
 internal static class IHostBuilderExtensions
 {
-    internal static IHostBuilder AddControlRAgent(this IHostBuilder builder, StartupMode startupMode)
+    internal static IHostBuilder AddControlRAgent(this IHostBuilder builder, StartupMode startupMode, string? instanceId)
     {
         if (Environment.UserInteractive)
         {
@@ -53,15 +54,24 @@ internal static class IHostBuilderExtensions
             }
 
             config
-                .AddJsonFile(SettingsProvider.AppSettingsPath, true, true)
+                .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
                 .AddEnvironmentVariables();
+
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "InstanceOptions:InstanceId", instanceId }
+            });
         });
 
         builder.ConfigureServices((context, services) =>
         {
             services
                 .AddOptions<AgentAppOptions>()
-                .Bind(context.Configuration.GetSection(AgentAppOptions.ConfigurationKey));
+                .Bind(context.Configuration.GetSection(AgentAppOptions.SectionKey));
+
+            services
+                .AddOptions<InstanceOptions>()
+                .Bind(context.Configuration.GetSection(InstanceOptions.SectionKey));
 
             services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
             services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
@@ -156,7 +166,7 @@ internal static class IHostBuilderExtensions
             }
         });
 
-        builder.BootstrapSerilog(LoggingConstants.LogPath, TimeSpan.FromDays(7));
+        builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));
 
         return builder;
     }

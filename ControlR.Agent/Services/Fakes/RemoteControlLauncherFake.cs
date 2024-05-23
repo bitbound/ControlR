@@ -11,8 +11,7 @@ internal class RemoteControlLauncherFake : IRemoteControlLauncher
         int targetWindowsSession = -1, 
         bool notifyUserOnSessionStart = false,
         bool lowerUacDuringSession = false,
-        string? viewerName = null, 
-        Func<double, Task>? onDownloadProgress = null)
+        string? viewerName = null)
     {
         return Result.Fail("Platform not supported.").AsTaskResult();
     }

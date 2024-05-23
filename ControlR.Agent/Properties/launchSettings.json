@@ -2,7 +2,7 @@
   "profiles": {
     "Run": {
       "commandName": "Project",
-      "commandLineArgs": "run",
+      "commandLineArgs": "run -i localhost",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
         "AppOptions__ServerUri": "http://localhost:5120"

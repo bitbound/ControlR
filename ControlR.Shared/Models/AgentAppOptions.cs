@@ -6,7 +6,7 @@ namespace ControlR.Shared.Models;
 [MessagePackObject]
 public class AgentAppOptions
 {
-    public const string ConfigurationKey = "AppOptions";
+    public const string SectionKey = "AppOptions";
 
     [MsgPackKey]
     public List<string> AuthorizedKeys { get; set; } = [];

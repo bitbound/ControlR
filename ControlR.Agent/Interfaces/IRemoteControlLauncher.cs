@@ -9,6 +9,5 @@ internal interface IRemoteControlLauncher
      int targetWindowsSession = -1,
      bool notifyUserOnSessionStart = false,
      bool lowerUacDuringSession = false,
-     string? viewerName = null,
-     Func<double, Task>? onDownloadProgress = null);
+     string? viewerName = null);
 }
