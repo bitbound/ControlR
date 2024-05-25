@@ -71,6 +71,17 @@
                                          OnTouch="@(() => ConfigureDeviceSettings(context.Item))">
                                 Configure
                             </MudMenuItem>
+
+                            @if (IsAgentOutdated(context.Item))
+                            {
+                                <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
+                                             IconColor="Color.Error"
+                                             OnClick="@(() => UpdateDevice(context.Item))"
+                                             OnTouch="@(() => UpdateDevice(context.Item))">
+                                    Update
+                                </MudMenuItem>
+                            }
+
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
                                          IconColor="Color.Error"
                                          OnClick="@(() => ShutdownDevice(context.Item))"
@@ -125,9 +136,7 @@
             <CellTemplate>
                 @if (context.Item.IsOnline)
                 {
-                    if (_agentReleaseVersion is not null &&
-                        Version.TryParse(context.Item.AgentVersion, out var agentVersion) &&
-                        !agentVersion.Equals(_agentReleaseVersion))
+                    if (IsAgentOutdated(context.Item))
                     {
                         <MudTooltip Text="Online (Outdated)">
                             <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)" />

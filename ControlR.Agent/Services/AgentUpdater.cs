@@ -27,6 +27,7 @@ internal class AgentUpdater(
     IProcessManager _processInvoker,
     IEnvironmentHelper _environmentHelper,
     ISettingsProvider _settings,
+    IHostApplicationLifetime _appLifetime,
     IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
@@ -45,7 +46,9 @@ internal class AgentUpdater(
 
         using var logScope = _logger.BeginMemberScope();
 
-        if (!await _checkForUpdatesLock.WaitAsync(0, cancellationToken))
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping);
+
+        if (!await _checkForUpdatesLock.WaitAsync(0, linkedCts.Token))
         {
             _logger.LogWarning("Failed to acquire lock in agent updater.  Aborting check.");
             return;
@@ -64,7 +67,7 @@ internal class AgentUpdater(
             }
 
             using var fs = new FileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var exeHash = await MD5.HashDataAsync(fs, cancellationToken);
+            var exeHash = await MD5.HashDataAsync(fs, linkedCts.Token);
 
             _logger.LogInformation(
                 "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
@@ -127,7 +130,7 @@ internal class AgentUpdater(
                     {
                         await _processInvoker
                             .Start(tempPath, installCommand)
-                            .WaitForExitAsync(cancellationToken);
+                            .WaitForExitAsync(linkedCts.Token);
                     }
                     break;
 
@@ -135,13 +138,13 @@ internal class AgentUpdater(
                     {
                         await _processInvoker
                           .Start("sudo", $"chmod +x {tempPath}")
-                          .WaitForExitAsync(cancellationToken);
+                          .WaitForExitAsync(linkedCts.Token);
 
                         await _processInvoker.StartAndWaitForExit(
                             "/bin/bash", 
                             $"-c \"{tempPath} {installCommand} &\"", 
-                            true, 
-                            cancellationToken);
+                            true,
+                            linkedCts.Token);
                     }
                     break;
 
@@ -149,13 +152,13 @@ internal class AgentUpdater(
                     {
                         await _processInvoker
                          .Start("sudo", $"chmod +x {tempPath}")
-                         .WaitForExitAsync(cancellationToken);
+                         .WaitForExitAsync(linkedCts.Token);
 
                         await _processInvoker.StartAndWaitForExit(
                             "/bin/zsh",
                             $"-c \"{tempPath} {installCommand} &\"",
                             true,
-                            cancellationToken);
+                            linkedCts.Token);
                     }
                     break;
 

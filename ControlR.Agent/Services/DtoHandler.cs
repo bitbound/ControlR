@@ -21,6 +21,7 @@ internal class DtoHandler(
     ISettingsProvider _settings,
     IWin32Interop _win32Interop,
     IWakeOnLanService _wakeOnLan,
+    IAgentUpdater _agentUpdater,
     ILogger<DtoHandler> _logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -90,7 +91,11 @@ internal class DtoHandler(
                     }
                     break;
                 }
-
+            case DtoType.AgentUpdateTrigger:
+                {
+                    await _agentUpdater.CheckForUpdate();
+                    break;
+                }
             default:
                 _logger.LogWarning("Unhandled DTO type: {type}", dto.DtoType);
                 break;

@@ -51,6 +51,7 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
     Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
+    Task SendAgentUpdateTrigger(DeviceDto device);
     Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
@@ -268,23 +269,23 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
-    {
-        _messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress, progressDto.Message));
-        return Task.CompletedTask;
-    }
-
     public Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
     {
         _messenger.Send(new RtcSessionDescriptionMessage(sessionId, sessionDescription));
         return Task.CompletedTask;
     }
+
     public async Task ReceiveServerStats(ServerStatsDto serverStats)
     {
         var message = new ServerStatsUpdateMessage(serverStats);
         await _messenger.Send(message);
     }
 
+    public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
+    {
+        _messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress, progressDto.Message));
+        return Task.CompletedTask;
+    }
     public Task ReceiveTerminalOutput(TerminalOutputDto output)
     {
         _messenger.Send(new TerminalOutputMessage(output));
@@ -343,6 +344,15 @@ internal class ViewerHubConnection(
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.PrivateKey);
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
             });
+    }
+
+    public async Task SendAgentUpdateTrigger(DeviceDto device)
+    {
+        await TryInvoke(async () =>
+        {
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.AgentUpdateTrigger, _appState.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+        });
     }
 
     public async Task SendIceCandidate(Guid sessionId, string iceCandidateJson)
@@ -419,16 +429,6 @@ internal class ViewerHubConnection(
         await RequestDeviceUpdates();
     }
 
-    private async Task CheckIfStoreIntegrationEnabled()
-    {
-        await TryInvoke(
-            async () =>
-            {
-                var isStoreEnabled = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfStoreIntegrationEnabled));
-                _appState.IsStoreIntegrationEnabled = isStoreEnabled;
-            });
-    }
-
     private async Task CheckIfServerAdministrator()
     {
         await TryInvoke(
@@ -443,6 +443,15 @@ internal class ViewerHubConnection(
             });
     }
 
+    private async Task CheckIfStoreIntegrationEnabled()
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var isStoreEnabled = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfStoreIntegrationEnabled));
+                _appState.IsStoreIntegrationEnabled = isStoreEnabled;
+            });
+    }
     private void ConfigureConnection(HubConnection connection)
     {
         connection.Closed += Connection_Closed;
@@ -546,7 +555,6 @@ internal class ViewerHubConnection(
             return defaultValue();
         }
     }
-
     private class RetryPolicy : IRetryPolicy
     {
         public TimeSpan? NextRetryDelay(RetryContext retryContext)

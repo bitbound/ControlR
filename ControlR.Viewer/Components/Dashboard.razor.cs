@@ -210,6 +210,13 @@ public partial class Dashboard
         await InvokeAsync(StateHasChanged);
     }
 
+    private bool IsAgentOutdated(DeviceDto device)
+    {
+        return _agentReleaseVersion is not null &&
+                Version.TryParse(device.AgentVersion, out var agentVersion) &&
+                !agentVersion.Equals(_agentReleaseVersion);
+    }
+
     private async Task Refresh()
     {
         try
@@ -285,6 +292,11 @@ public partial class Dashboard
         await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
     }
 
+    private async Task UpdateDevice(DeviceDto device)
+    {
+        Snackbar.Add("Sending update request", Severity.Success);
+        await ViewerHub.SendAgentUpdateTrigger(device);
+    }
     private async Task RemoteControlClicked(DeviceDto device)
     {
         switch (device.Platform)

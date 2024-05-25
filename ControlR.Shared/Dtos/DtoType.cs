@@ -23,4 +23,5 @@ public enum DtoType
     CloseStreamingSession = 19,
     InvokeCtrlAltDel = 20,
     ClipboardChanged = 21,
+    AgentUpdateTrigger = 22,
 }
