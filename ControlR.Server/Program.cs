@@ -121,6 +121,7 @@ builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCache>();
 builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
+builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Host.UseSystemd();

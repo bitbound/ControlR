@@ -18,15 +18,15 @@
 		<PublisherName>Jared Goodwin</PublisherName>
 
 		<!-- App Identifier -->
-		<ApplicationId Condition="'$(Configuration)'=='Release'">dev.jaredg.controlr.viewer</ApplicationId>
-		<ApplicationIdGuid Condition="'$(Configuration)'=='Release'">8956DD24-5084-4303-BE59-0E1119CDB38C</ApplicationIdGuid>
-		<ApplicationId Condition="'$(Configuration)'=='Debug'">dev.jaredg.controlr.viewer.dev</ApplicationId>
-		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
+		<ApplicationId>dev.jaredg.controlr.viewer</ApplicationId>
+		<ApplicationIdGuid>8956DD24-5084-4303-BE59-0E1119CDB38C</ApplicationIdGuid>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>0.10.208.0</ApplicationDisplayVersion>
 
 		<ApplicationVersion>1</ApplicationVersion>
+
+		<ApplicationTitle>ControlR</ApplicationTitle>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -52,13 +52,6 @@
 		<DefaultLanguage>en-us</DefaultLanguage>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
-		<ApplicationTitle>ControlR (Dev)</ApplicationTitle>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<ApplicationTitle>ControlR</ApplicationTitle>
-	</PropertyGroup>
-	
 	<PropertyGroup Condition="'$(TargetFramework)'=='net8.0-android'">
 	  <AndroidPackageFormat>apk</AndroidPackageFormat>
 	</PropertyGroup>
@@ -68,7 +61,7 @@
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#141414" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#141414" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#141414" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -109,5 +102,4 @@
 	<ItemGroup>
 	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
-
 </Project>
