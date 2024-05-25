@@ -48,7 +48,7 @@
         </MudText>
     </div>
     <div>
-        <MudLink Href="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" Target="_blank">
+        <MudLink Color="Color.Info" Href="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" Target="_blank">
             GNU General Public License v3.0
         </MudLink>
     </div>
@@ -59,7 +59,7 @@
         </MudText>
     </div>
     <div>
-        <MudLink Href="https://github.com/bitbound/controlr" Target="_blank">
+        <MudLink Color="Color.Info" Href="https://github.com/bitbound/controlr" Target="_blank">
             https://github.com/bitbound/controlr
         </MudLink>
     </div>
@@ -70,10 +70,24 @@
         </MudText>
     </div>
     <div>
-        <MudLink Href="https://controlr.app" Target="_blank">
+        <MudLink Color="Color.Info" Href="https://controlr.app" Target="_blank">
             https://controlr.app
         </MudLink>
     </div>
+
+    @if (_storePageUri is not null)
+    {
+        <div>
+            <MudText Color="Color.Primary">
+                Store Page:
+            </MudText>
+        </div>
+        <div>
+            <MudLink Color="Color.Info" Href="@(_storePageUri.ToString())" Target="_blank">
+                @_storePageLinkText
+            </MudLink>
+        </div>
+    }
 
     <div>
         <MudText Color="Color.Primary">
@@ -90,22 +104,22 @@
 
         <MudText Class="mb-2">
             MudBlazor
-            <MudLink Href="https://github.com/MudBlazor/MudBlazor" Class="ms-4 me-2">source</MudLink>
-            <MudLink Href="https://github.com/MudBlazor/MudBlazor/blob/dev/LICENSE">license</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/MudBlazor/MudBlazor" Class="ms-4 me-2">source</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/MudBlazor/MudBlazor/blob/dev/LICENSE">license</MudLink>
         </MudText>
 
         <MudText Class="mb-2">
             Electron
-            <MudLink Href="https://github.com/electron/electron/" Class="ms-4 me-2">source</MudLink>
-            <MudLink Href="https://github.com/electron/electron/blob/main/LICENSE">license</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/electron/electron/" Class="ms-4 me-2">source</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/electron/electron/blob/main/LICENSE">license</MudLink>
         </MudText>
         <MudText Class="mb-2">
             Various Microsoft Libraries
-            <MudLink Href="https://github.com/microsoft" Class="ms-4 me-2">source</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/microsoft" Class="ms-4 me-2">source</MudLink>
         </MudText>
     </div>
 
-     <div>
+    <div>
         <MudText Color="Color.Primary">
             Donate:
         </MudText>
@@ -113,7 +127,7 @@
     <div>
         <MudText>
             ControlR is free, open-source, self-hostable, and powered by donations.  Sponsor the work here:
-            <MudLink Href="https://github.com/sponsors/bitbound">GitHub Sponsors</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/sponsors/bitbound">GitHub Sponsors</MudLink>
         </MudText>
     </div>
 </div>
@@ -122,13 +136,24 @@
     private bool _updateAvailable;
     private Uri? _storePageUri;
     private string _downloadLink = "";
+    private string _storePageLinkText = "Open External";
 
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
-
         await SetUris();
+
+        if (OperatingSystem.IsWindows())
+        {
+            _storePageLinkText = "Microsoft Store";
+        }
+
+        if (OperatingSystem.IsAndroid())
+        {
+            _storePageLinkText = "Play Store";
+        }
+
+        await base.OnInitializedAsync();
 
         var checkResult = await UpdateManager.CheckForUpdate();
         if (!checkResult.IsSuccess)
@@ -146,6 +171,7 @@
         {
             if (_storePageUri is null)
             {
+                Snackbar.Add("Failed to find store page", Severity.Error);
                 return;
             }
 
@@ -169,13 +195,12 @@
     {
         try
         {
-            if (!AppState.IsStoreIntegrationEnabled)
-            {
-                _downloadLink = Settings.ViewerDownloadUri;
-                return;
-            }
             _storePageUri = await StoreIntegration.GetStorePageUri();
-            _downloadLink = _storePageUri.ToString();
+            var storeProtocolUri = await StoreIntegration.GetStoreProtocolUri();
+
+            _downloadLink = AppState.IsStoreIntegrationEnabled ?
+                storeProtocolUri.ToString() :
+                Settings.ViewerDownloadUri;
         }
         catch (Exception ex)
         {

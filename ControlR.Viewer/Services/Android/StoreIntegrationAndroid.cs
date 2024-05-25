@@ -14,6 +14,11 @@ internal class StoreIntegrationAndroid : IStoreIntegration
         return new Uri("https://controlr.app").AsTaskResult();
     }
 
+    public Task<Uri> GetStoreProtocolUri()
+    {
+        return new Uri("https://controlr.app").AsTaskResult();
+    }
+
     public Task<bool> IsProLicenseActive()
     {
         return false.AsTaskResult();

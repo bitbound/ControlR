@@ -3,8 +3,11 @@
 @inject IMessenger Messenger
 @inject IAppState AppState
 @inject IViewerHubConnection ViewerHub
+@inject IStoreIntegration StoreIntegration
+@inject ILauncher Launcher
 @inject ISnackbar Snackbar
 @inject IUpdateManager UpdateManager
+@inject ILogger<MainLayout> Logger
 @inject NavigationManager NavManager
 
 <!-- This div has to be here in order for ::deep selector to work on child components. -->
@@ -167,6 +170,12 @@
 
     private async Task InstallUpdate()
     {
+        if (AppState.IsStoreIntegrationEnabled)
+        {
+            await LaunchStoreProtocolUri();
+            return;    
+        }
+
         Snackbar.Add("Downloading update", Severity.Info);
         var installResult = await UpdateManager.InstallCurrentVersion();
         if (!installResult.IsSuccess)
@@ -176,6 +185,20 @@
         else
         {
             Snackbar.Add("Launching installer", Severity.Success);
+        }
+    }
+
+    private async Task LaunchStoreProtocolUri()
+    {
+        try
+        {
+            var uri = await StoreIntegration.GetStoreProtocolUri();
+            await Launcher.OpenAsync(uri);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while launching store protocol URI.");
+            Snackbar.Add("Failed to launch store URI", Severity.Error);
         }
     }
 }

@@ -2,5 +2,6 @@
 internal interface IStoreIntegration
 {
     Task<Uri> GetStorePageUri();
+    Task<Uri> GetStoreProtocolUri();
     Task<bool> IsProLicenseActive();
 }
