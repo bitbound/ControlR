@@ -29,6 +29,11 @@
 		<ApplicationTitle>ControlR</ApplicationTitle>
 	</PropertyGroup>
 
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) AND '$(Configuration)' == 'Debug'">
+		<AppxManifest Remove="Platforms\Windows\Package.appxmanifest" />
+		<AppxManifest Include="Platforms\Windows\Package.Debug.appxmanifest" />
+	</ItemGroup>
+
 	<PropertyGroup>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">14.0</SupportedOSPlatformVersion>
@@ -102,4 +107,5 @@
 	<ItemGroup>
 	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
+
 </Project>
