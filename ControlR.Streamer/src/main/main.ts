@@ -66,11 +66,11 @@ const createMainWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", async () => {
-  //if (!appState.isUnattended) {
-  //  writeLog("Attended sessions are not implemented.", "Error");
-  //  app.exit();
-  //  return;
-  //}
+  if (!appState.isUnattended) {
+    writeLog("Attended sessions are not implemented.", "Error");
+    app.exit();
+    return;
+  }
 
   try {
     await launchSidecar();
