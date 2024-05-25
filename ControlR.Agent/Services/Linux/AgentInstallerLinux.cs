@@ -161,19 +161,21 @@ internal class AgentInstallerLinux(
 
     private string GetServiceFile()
     {
+        var installDir = GetInstallDirectory();
+        var fileName = AppConstants.GetAgentFileName(_environment.Platform);
+
         var runCommand = "run";
         if (_instanceOptions.Value.InstanceId is string instanceId)
         {
             runCommand += $" -i {instanceId}";
         }
 
-        var installDir = GetInstallDirectory();
         return
             $"[Unit]\n" +
             "Description=ControlR provides zero-trust remote control and administration.\n\n" +
             "[Service]\n" +
             $"WorkingDirectory={installDir}\n" +
-            $"ExecStart={installDir}/{AppConstants.GetAgentFileName} {runCommand}\n" +
+            $"ExecStart={installDir}/{fileName} {runCommand}\n" +
             "Restart=always\n" +
             "StartLimitIntervalSec=0\n" +
             "Environment=DOTNET_ENVIRONMENT=Production\n" +

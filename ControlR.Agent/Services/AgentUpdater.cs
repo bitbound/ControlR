@@ -31,7 +31,6 @@ internal class AgentUpdater(
     IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
-    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.GetAgentFileName}";
     private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
     private readonly ILogger<AgentUpdater> _logger = logger;
 
@@ -90,7 +89,12 @@ internal class AgentUpdater(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            var result = await _downloadsApi.DownloadFile(_agentDownloadUri, tempPath);
+            //private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.GetAgentFileName}";
+            var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
+            var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
+            var downloadUri = $"{serverOrigin}{downloadPath}";
+
+            var result = await _downloadsApi.DownloadFile(downloadUri, tempPath);
             if (!result.IsSuccess)
             {
                 _logger.LogCritical("Download failed.  Aborting update.");

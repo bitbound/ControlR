@@ -10,9 +10,10 @@ namespace ControlR.Viewer.Services;
 
 public interface ISettings
 {
+    bool AppendInstanceIdToAgentInstall { get; set; }
     bool HideOfflineDevices { get; set; }
-    bool NotifyUserSessionStart { get; set; }
     bool LowerUacDuringSession { get; set; }
+    bool NotifyUserSessionStart { get; set; }
     string ServerUri { get; set; }
     string Username { get; set; }
 
@@ -40,18 +41,17 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public bool NotifyUserSessionStart
-    {
-        get => GetPref(false);
-        set => SetPref(value);
-    }
-
     public bool LowerUacDuringSession
     {
         get => GetPref(false);
         set => SetPref(value);
     }
 
+    public bool NotifyUserSessionStart
+    {
+        get => GetPref(false);
+        set => SetPref(value);
+    }
     public string ServerUri
     {
         get => GetPref(AppConstants.ServerUri).TrimEnd('/');
@@ -74,6 +74,13 @@ internal class Settings(
             return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
         }
     }
+
+    public bool AppendInstanceIdToAgentInstall
+    {
+        get => GetPref(false);
+        set => SetPref(value);
+    }
+
     public async Task<Result<byte[]>> GetSecurePrivateKey()
     {
         try
