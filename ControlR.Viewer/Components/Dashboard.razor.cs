@@ -344,6 +344,7 @@ public partial class Dashboard
                 builder.AddComponentParameter(2, nameof(Terminal.Id), terminalId);
                 builder.CloseComponent();
             }
+            
             var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
             WindowStore.Add(contentInstance);
         }

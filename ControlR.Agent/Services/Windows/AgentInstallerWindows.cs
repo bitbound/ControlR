@@ -97,7 +97,7 @@ internal class AgentInstallerWindows(
             var serviceName = GetServiceName();
 
             var subcommand = "run";
-            if (_instanceOptions.Value.InstanceId is { } instanceId)
+            if (_instanceOptions.Value.InstanceId is string instanceId)
             {
                 subcommand += $" -i {instanceId}";
             }

@@ -6,7 +6,7 @@
 
         @foreach (var session in Sessions)
         {
-            <MudCard Class="mb-3" Outlined>
+            <MudCard @key=(session) Class="mb-3" Outlined>
                 <MudCardContent>
                     <div class="d-grid" style="grid-template-columns: auto 1fr; column-gap: 20px; min-width: 250px; align-items: center;">
                         <div>

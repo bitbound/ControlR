@@ -1,7 +1,7 @@
 ﻿<MudMenu Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.ScreenshotMonitor)" Label="Monitor" PopoverClass="z9001">
     @foreach (var display in Displays)
     {
-        <MudMenuItem OnClick="@(() => SelectDisplay(display))" OnTouch="@(() => SelectDisplay(display))">
+        <MudMenuItem @key=(display) OnClick="@(() => SelectDisplay(display))" OnTouch="@(() => SelectDisplay(display))">
             <MudText Color="@(display == SelectedDisplay ? Color.Success : Color.Default)">
                 @(display.Name)
             </MudText>

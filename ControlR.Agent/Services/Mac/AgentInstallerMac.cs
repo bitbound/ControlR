@@ -177,6 +177,12 @@ internal class AgentInstallerMac(
     }
     private string GetServiceFile()
     {
+        var runCommand = "run";
+        if (_instanceOptions.Value.InstanceId is string instanceId)
+        {
+            runCommand += $" -i {instanceId}";
+        }
+
         return
             $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             $"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
@@ -193,7 +199,7 @@ internal class AgentInstallerMac(
             $"    <key>ProgramArguments</key>\n" +
             $"    <array>\n" +
             $"        <string>{GetInstallDirectory()}/ControlR.Agent</string>\n" +
-            $"        <string>run</string>\n" +
+            $"        <string>{runCommand}</string>\n" +
             $"    </array>\n" +
             $"</dict>\n" +
             $"</plist>";

@@ -16,7 +16,7 @@ else
 
             @foreach (var line in Output)
             {
-                <div class="@(Terminal.GetOutputColor(line))">
+                <div @key=(line) class="@(GetOutputColor(line))">
                     @(line.Output)
                 </div>
             }

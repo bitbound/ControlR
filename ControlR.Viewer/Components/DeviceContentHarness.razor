@@ -6,7 +6,7 @@
 <div class="device-content-window-harness">
     @foreach (var instance in WindowStore.Windows)
     {
-        <DeviceContentWindow ContentInstance="@(instance)" />
+        <DeviceContentWindow @key=(instance.WindowId) ContentInstance="@(instance)" />
     }
 </div>
 

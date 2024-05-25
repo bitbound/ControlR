@@ -1,4 +1,5 @@
-﻿using ControlR.Devices.Common.Services;
+﻿using ControlR.Agent.Options;
+using ControlR.Devices.Common.Services;
 using ControlR.Shared;
 using ControlR.Shared.Extensions;
 using ControlR.Shared.Primitives;
@@ -6,6 +7,7 @@ using ControlR.Shared.Services;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -25,6 +27,7 @@ internal class AgentUpdater(
     IProcessManager _processInvoker,
     IEnvironmentHelper _environmentHelper,
     ISettingsProvider _settings,
+    IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
     private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.AgentFileName}";
@@ -112,12 +115,18 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Launching installer.");
 
+            var installCommand = "install";
+            if (_instanceOptions.Value.InstanceId is string instanceId)
+            {
+                installCommand += $" -i {instanceId}";
+            }
+
             switch (_environmentHelper.Platform)
             {
                 case Shared.Enums.SystemPlatform.Windows:
                     {
                         await _processInvoker
-                            .Start(tempPath, "install")
+                            .Start(tempPath, installCommand)
                             .WaitForExitAsync(cancellationToken);
                     }
                     break;
@@ -130,7 +139,7 @@ internal class AgentUpdater(
 
                         await _processInvoker.StartAndWaitForExit(
                             "/bin/bash", 
-                            $"-c \"{tempPath} install &\"", 
+                            $"-c \"{tempPath} {installCommand} &\"", 
                             true, 
                             cancellationToken);
                     }
@@ -144,7 +153,7 @@ internal class AgentUpdater(
 
                         await _processInvoker.StartAndWaitForExit(
                             "/bin/zsh",
-                            $"-c \"{tempPath} install &\"",
+                            $"-c \"{tempPath} {installCommand} &\"",
                             true,
                             cancellationToken);
                     }

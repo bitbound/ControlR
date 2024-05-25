@@ -66,7 +66,7 @@
         Label="The severity (icon and color) to use for the alert.">
         @foreach (var severity in Enum.GetValues<AlertSeverity>())
         {
-            <MudSelectItem Value="@severity">
+            <MudSelectItem @key=@(severity) Value="@severity">
                 @severity
             </MudSelectItem>
         }
