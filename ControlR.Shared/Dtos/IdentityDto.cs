@@ -8,7 +8,4 @@ public class IdentityDto
 {
     [MsgPackKey]
     public required string Username { get; init; }
-
-    [MsgPackKey]
-    public required byte[] PublicKey { get; init; }
 }

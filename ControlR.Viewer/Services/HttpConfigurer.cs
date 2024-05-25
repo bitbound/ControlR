@@ -36,7 +36,6 @@ internal class HttpConfigurer(
         {
             var keyDto = new IdentityDto()
             {
-                PublicKey = _appState.PublicKey,
                 Username = _settings.Username
             };
 
@@ -66,7 +65,6 @@ internal class HttpConfigurer(
     {
         var identityDto = new IdentityDto()
         {
-            PublicKey = _appState.PublicKey,
             Username = _settings.Username
         };
         return GetDigitalSignature(identityDto);

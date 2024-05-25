@@ -91,7 +91,7 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 
         if (!Verify(rsa, signedDto.Timestamp, signedDto.TimestampSignature))
         {
-            _logger.LogCritical("Timestamp verification failed. Are clocks set correctly on both ends? " +
+            _logger.LogCritical("Timestamp verification failed. " +
                 "DTO type: {DtoType}.  " +
                 "Public key: {PublicKey}.  " +
                 "Timestamp Signature: {Signature}",
@@ -108,7 +108,17 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 
         var timestamp = MessagePackSerializer.Deserialize<DateTimeOffset>(signedDto.Timestamp);
         // Timestamp shouldn't be any older than 10 seconds.
-        return timestamp > _systemTime.Now.AddSeconds(-10);
+        var result = timestamp > _systemTime.Now.AddSeconds(-10);
+        if (!result)
+        {
+            _logger.LogCritical("Timestamp has expired. Are clocks set correctly on both ends? " +
+              "DTO type: {DtoType}.  " +
+              "Public key: {PublicKey}.  ",
+              signedDto.DtoType,
+              signedDto.PublicKeyBase64);
+        }
+
+        return result;
     }
 
     private SignedPayloadDto CreateSignedDtoImpl(RSA rsa, byte[] payload, DtoType dtoType)
