@@ -74,8 +74,8 @@
 
                             @if (IsAgentOutdated(context.Item))
                             {
-                                <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
-                                             IconColor="Color.Error"
+                                <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
+                                             IconColor="Color.Warning"
                                              OnClick="@(() => UpdateDevice(context.Item))"
                                              OnTouch="@(() => UpdateDevice(context.Item))">
                                     Update
