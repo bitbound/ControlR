@@ -93,7 +93,7 @@ public static partial class AppConstants
     {
         return runtime switch
         {
-            RuntimeId.WinX64 or RuntimeId.WinX86 => "/downloads/win-x64/controlr-streamer-win.zip",
+            RuntimeId.WinX64 or RuntimeId.WinX86 => "/downloads/controlr-streamer-win.zip",
             _ => throw new PlatformNotSupportedException()
         };
     }
