@@ -1,14 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
 
 namespace ControlR.Shared.Services.Http;
 
 public interface IVersionApi
 {
-    Task<Result<byte[]>> GetCurrentAgentHash();
+    Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
     Task<Result<Version>> GetCurrentAgentVersion();
 
-    Task<Result<byte[]>> GetCurrentStreamerHash();
+    Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
 
     Task<Result<Version>> GetCurrentViewerVersion();
 }
@@ -17,21 +16,19 @@ internal class VersionApi(
     HttpClient client,
     ILogger<KeyApi> logger) : IVersionApi
 {
-    private readonly string _agentBinaryPath = $"/downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.AgentFileName}";
     private readonly string _agentVersionFile = "/downloads/AgentVersion.txt";
     private readonly HttpClient _client = client;
     private readonly ILogger<KeyApi> _logger = logger;
-    private readonly string _streamerZipPath = $"/downloads/{AppConstants.RemoteControlZipFileName}";
     private readonly string _viewerVersionFile = "/downloads/ViewerVersion.txt";
 
-    public async Task<Result<byte[]>> GetCurrentAgentHash()
+    public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Head, _agentBinaryPath);
+            var fileRelativePath = AppConstants.GetAgentFileDownloadPath(runtime);
+            using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            _logger.LogInformation("Got headers from remote agent file: {Headers}", response.Headers);
             if (response.Headers.TryGetValues("MD5", out var values))
             {
                 var hash = Convert.FromBase64String(values.First());
@@ -68,11 +65,12 @@ internal class VersionApi(
         }
     }
 
-    public async Task<Result<byte[]>> GetCurrentStreamerHash()
+    public async Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime)
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Head, _streamerZipPath);
+            var fileRelativePath = AppConstants.GetStreamerFileDownloadPath(runtime);
+            using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
 

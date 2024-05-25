@@ -176,7 +176,7 @@ internal class StreamerUpdaterWindows(
         }
 
         _logger.LogInformation("Checking streamer remote archive hash.");
-        var streamerHashResult = await _versionApi.GetCurrentStreamerHash();
+        var streamerHashResult = await _versionApi.GetCurrentStreamerHash(_environmentHelper.Runtime);
         if (!streamerHashResult.IsSuccess)
         {
             _logger.LogResult(streamerHashResult);

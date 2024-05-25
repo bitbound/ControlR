@@ -52,7 +52,7 @@ internal class AgentInstallerLinux(
 
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
             _fileSystem.CreateDirectory(installDir);
 
             if (_fileSystem.FileExists(targetPath))
@@ -173,7 +173,7 @@ internal class AgentInstallerLinux(
             "Description=ControlR provides zero-trust remote control and administration.\n\n" +
             "[Service]\n" +
             $"WorkingDirectory={installDir}\n" +
-            $"ExecStart={installDir}/{AppConstants.AgentFileName} {runCommand}\n" +
+            $"ExecStart={installDir}/{AppConstants.GetAgentFileName} {runCommand}\n" +
             "Restart=always\n" +
             "StartLimitIntervalSec=0\n" +
             "Environment=DOTNET_ENVIRONMENT=Production\n" +

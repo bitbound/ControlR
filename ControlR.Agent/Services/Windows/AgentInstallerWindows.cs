@@ -71,7 +71,7 @@ internal class AgentInstallerWindows(
             var installDir = GetInstallDirectory();
             var exePath = _environmentHelper.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
             _fileSystem.CreateDirectory(installDir);
 
             try
@@ -223,7 +223,7 @@ internal class AgentInstallerWindows(
         var installDir = GetInstallDirectory();
 
         var displayName = "ControlR Agent";
-        var exePath = Path.Combine(installDir, AppConstants.AgentFileName);
+        var exePath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
         var fileName = Path.GetFileName(exePath);
         var version = FileVersionInfo.GetVersionInfo(exePath);
         var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");

@@ -30,7 +30,7 @@ internal class AgentUpdater(
     IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
-    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.AgentFileName}";
+    private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.GetAgentFileName}";
     private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
     private readonly ILogger<AgentUpdater> _logger = logger;
 
@@ -57,7 +57,7 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Beginning version check.");
 
-            var hashResult = await _versionApi.GetCurrentAgentHash();
+            var hashResult = await _versionApi.GetCurrentAgentHash(_environmentHelper.Runtime);
             if (!hashResult.IsSuccess)
             {
                 return;
@@ -80,7 +80,7 @@ internal class AgentUpdater(
             _logger.LogInformation("Update found. Downloading update.");
 
             var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update"));
-            var tempPath = Path.Combine(tempDir.FullName, AppConstants.AgentFileName);
+            var tempPath = Path.Combine(tempDir.FullName, AppConstants.GetAgentFileName(_environmentHelper.Platform));
 
             if (_fileSystem.FileExists(tempPath))
             {

@@ -1,4 +1,5 @@
-﻿using ControlR.Shared.Enums;
+﻿using System.Runtime.InteropServices;
+using ControlR.Shared.Enums;
 
 namespace ControlR.Shared.Services;
 
@@ -8,6 +9,7 @@ public interface IEnvironmentHelper
     bool IsMobileDevice { get; }
     bool IsWindows { get; }
     SystemPlatform Platform { get; }
+    RuntimeId Runtime { get; }
     string StartupDirectory { get; }
     string StartupExePath { get; }
 }
@@ -30,7 +32,6 @@ internal class EnvironmentHelper : IEnvironmentHelper
 
     public bool IsMobileDevice => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
     public bool IsWindows => OperatingSystem.IsWindows();
-
     public SystemPlatform Platform
     {
         get
@@ -67,6 +68,22 @@ internal class EnvironmentHelper : IEnvironmentHelper
             {
                 return SystemPlatform.Unknown;
             }
+        }
+    }
+
+    public RuntimeId Runtime
+    {
+        get
+        {
+            return RuntimeInformation.RuntimeIdentifier switch
+            {
+                "win-x64" => RuntimeId.WinX64,
+                "win-x86" => RuntimeId.WinX86,
+                "linux-x64" => RuntimeId.LinuxX64,
+                "osx-x64" => RuntimeId.OsxX64,
+                "osx-arm64" => RuntimeId.OsxArm64,
+                _ => throw new PlatformNotSupportedException()
+            };
         }
     }
 

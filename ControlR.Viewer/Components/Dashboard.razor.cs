@@ -1,20 +1,16 @@
 ﻿#if ANDROID
-
 using ControlR.Viewer.Platforms.Android;
 using ControlR.Viewer.Platforms.Android.Extensions;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
 using Android;
 using Android.Content.PM;
-
 #endif
-
 
 using Bitbound.SimpleMessenger;
 using ControlR.Devices.Common.Extensions;
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Enums;
-using ControlR.Viewer.Components;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;

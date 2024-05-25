@@ -28,6 +28,7 @@ internal class DeviceContentWindowStore: IDeviceContentWindowStore
     }
 
     public IEnumerable<DeviceContentInstance> Windows => _cache;
+
     public void Add(DeviceContentInstance instance)
     {
         _cache.Add(instance);

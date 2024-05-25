@@ -53,7 +53,7 @@ internal class AgentInstallerMac(
 
             var exePath = _environment.StartupExePath;
             var fileName = Path.GetFileName(exePath);
-            var targetPath = Path.Combine(installDir, AppConstants.AgentFileName);
+            var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
             _fileSystem.CreateDirectory(installDir);
 
             if (_fileSystem.FileExists(targetPath))
