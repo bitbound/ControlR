@@ -24,6 +24,7 @@ jobs:
       targetType: inline
       script: >-
         $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
+
         Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
       pwsh: true
   - task: DownloadSecureFile@1
@@ -48,7 +49,9 @@ jobs:
       targetType: inline
       script: >-
         Push-Location "$(Build.SourcesDirectory)\ControlR.Viewer"
+
         dotnet workload restore
+        
         Pop-Location
   - task: PowerShell@2
     displayName: Invoke Build.ps1
