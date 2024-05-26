@@ -7,6 +7,7 @@
     <UserSecretsId>965f8803-22ef-46e5-bb85-7d51909b4164</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerComposeProjectPath>..\docker-compose\docker-compose.dcproj</DockerComposeProjectPath>
+    <Configurations>Debug;Release;DebugStore</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

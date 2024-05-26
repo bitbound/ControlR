@@ -28,7 +28,7 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            if (_appState.IsStoreIntegrationEnabled)
+            if (_appState.IsStoreIntegrationEnabled && _storeIntegration.CanCheckForUpdates)
             {
                 return await CheckForStoreUpdate();
             }

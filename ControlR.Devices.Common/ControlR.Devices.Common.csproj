@@ -6,6 +6,7 @@
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Platforms>AnyCPU</Platforms>
+		<Configurations>Debug;Release;DebugStore</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

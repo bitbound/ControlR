@@ -27,6 +27,8 @@
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<ApplicationTitle>ControlR</ApplicationTitle>
+
+		<Configurations>Debug;Release;DebugStore</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) AND '$(Configuration)' == 'Debug'">
