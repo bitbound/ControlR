@@ -18,6 +18,8 @@ internal class UpdateManagerWindows(
     IProcessManager _processManager,
     IMessenger _messenger,
     ISettings _settings,
+    IStoreIntegration _storeIntegration,
+    IAppState _appState,
     ILogger<UpdateManagerWindows> _logger) : IUpdateManager
 {
     private readonly SemaphoreSlim _installLock = new(1, 1);
@@ -26,27 +28,42 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            var result = await _versionApi.GetCurrentViewerVersion();
-            if (!result.IsSuccess)
+            if (_appState.IsStoreIntegrationEnabled)
             {
-                _logger.LogResult(result);
-                return Result.Fail<bool>(result.Reason);
+                return await CheckForStoreUpdate();
             }
-
-            var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
-            if (result.Value != currentVersion)
-            {
-                await _messenger.SendGenericMessage(GenericMessageKind.AppUpdateAvailable);
-                return Result.Ok(true);
-            }
-
-            return Result.Ok(false);
+            return await CheckForSelfHostedUpdate();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while checking for new versions.");
             return Result.Fail<bool>("An error occurred.");
         }
+    }
+
+    private async Task<Result<bool>> CheckForSelfHostedUpdate()
+    {
+        var result = await _versionApi.GetCurrentViewerVersion();
+        if (!result.IsSuccess)
+        {
+            _logger.LogResult(result);
+            return Result.Fail<bool>(result.Reason);
+        }
+
+        var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
+        if (result.Value != currentVersion)
+        {
+            await _messenger.SendGenericMessage(GenericMessageKind.AppUpdateAvailable);
+            return Result.Ok(true);
+        }
+
+        return Result.Ok(false);
+    }
+
+    private async Task<Result<bool>> CheckForStoreUpdate()
+    {
+        var updateAvailable = await _storeIntegration.IsUpdateAvailable();
+        return Result.Ok(updateAvailable);
     }
 
     public async Task<Result> InstallCurrentVersion()
@@ -58,32 +75,12 @@ internal class UpdateManagerWindows(
 
         try
         {
-            var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
-            if (_fileSystem.FileExists(tempPath))
+            if (_appState.IsStoreIntegrationEnabled)
             {
-                _fileSystem.DeleteFile(tempPath);
+                return await InstallCurrentVersionSelfHosted();
             }
 
-            var downloadResult = await _downloadsApi.DownloadFile(_settings.ViewerDownloadUri, tempPath);
-            if (!downloadResult.IsSuccess)
-            {
-                return downloadResult;
-            }
-
-            await _processManager.StartAndWaitForExit(
-                fileName: "explorer.exe", 
-                arguments: tempPath, 
-                useShellExec: true, 
-                timeout: TimeSpan.FromMinutes(1));
-
-            //await _processManager.StartAndWaitForExit(
-            //      "powershell.exe",
-            //      $"-Command \"& {{" +
-            //      $"Add-AppxPackage -Path {tempPath} -ForceApplicationShutdown -ForceUpdateFromAnyVersion; " +
-            //      $"Start-Process -FilePath explorer.exe -ArgumentList shell:appsFolder\\8956DD24-5084-4303-BE59-0E1119CDB38C_44e6yepvw4x8a!App;}}\"",
-            //      true,
-            //      TimeSpan.FromMinutes(1));
-
+            await _storeIntegration.InstallCurrentVersion();
             return Result.Ok();
         }
         catch (Exception ex)
@@ -95,6 +92,29 @@ internal class UpdateManagerWindows(
             _installLock.Release();
         }
         return Result.Fail("Installation failed.");
+    }
+
+    private async Task<Result> InstallCurrentVersionSelfHosted()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
+        if (_fileSystem.FileExists(tempPath))
+        {
+            _fileSystem.DeleteFile(tempPath);
+        }
+
+        var downloadResult = await _downloadsApi.DownloadFile(_settings.ViewerDownloadUri, tempPath);
+        if (!downloadResult.IsSuccess)
+        {
+            return downloadResult;
+        }
+
+        await _processManager.StartAndWaitForExit(
+            fileName: "explorer.exe",
+            arguments: tempPath,
+            useShellExec: true,
+            timeout: TimeSpan.FromMinutes(1));
+
+        return Result.Ok();
     }
 }
 #endif

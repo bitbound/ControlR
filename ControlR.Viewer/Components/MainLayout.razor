@@ -170,35 +170,29 @@
 
     private async Task InstallUpdate()
     {
-        if (AppState.IsStoreIntegrationEnabled)
-        {
-            await LaunchStoreProtocolUri();
-            return;    
-        }
-
-        Snackbar.Add("Downloading update", Severity.Info);
-        var installResult = await UpdateManager.InstallCurrentVersion();
-        if (!installResult.IsSuccess)
-        {
-            Snackbar.Add(installResult.Reason, Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add("Launching installer", Severity.Success);
-        }
-    }
-
-    private async Task LaunchStoreProtocolUri()
-    {
         try
         {
-            var uri = await StoreIntegration.GetStoreProtocolUri();
-            await Launcher.OpenAsync(uri);
+            if (AppState.IsStoreIntegrationEnabled && StoreIntegration.CanInstallUpdates)
+            {
+                await StoreIntegration.InstallCurrentVersion();
+                return;    
+            }
+
+            Snackbar.Add("Downloading update", Severity.Info);
+            var installResult = await UpdateManager.InstallCurrentVersion();
+            if (!installResult.IsSuccess)
+            {
+                Snackbar.Add(installResult.Reason, Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Launching installer", Severity.Success);
+            }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while launching store protocol URI.");
-            Snackbar.Add("Failed to launch store URI", Severity.Error);
+            Logger.LogError(ex, "Error while installing update.");
+            Snackbar.Add("Failed to install update", Severity.Error);
         }
     }
 }

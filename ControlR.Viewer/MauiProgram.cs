@@ -54,7 +54,6 @@ public static class MauiProgram
             () => LogPath,
             TimeSpan.FromDays(7)));
 
-        // TODO: In-memory logger.
 
         builder.Services.AddSingleton(SecureStorage.Default);
         builder.Services.AddSingleton(Preferences.Default);

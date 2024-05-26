@@ -141,8 +141,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await SetUris();
-
         if (OperatingSystem.IsWindows())
         {
             _storePageLinkText = "Microsoft Store";
@@ -152,6 +150,8 @@
         {
             _storePageLinkText = "Play Store";
         }
+
+        await SetUris();
 
         await base.OnInitializedAsync();
 
@@ -167,27 +167,29 @@
 
     private async Task InstallUpdate()
     {
-        if (AppState.IsStoreIntegrationEnabled)
+        try
         {
-            if (_storePageUri is null)
+            if (AppState.IsStoreIntegrationEnabled && StoreIntegration.CanInstallUpdates)
             {
-                Snackbar.Add("Failed to find store page", Severity.Error);
+                await StoreIntegration.InstallCurrentVersion();
                 return;
             }
 
-            await Browser.OpenAsync(_storePageUri);
-            return;
+            Snackbar.Add("Downloading update", Severity.Info);
+            var installResult = await UpdateManager.InstallCurrentVersion();
+            if (!installResult.IsSuccess)
+            {
+                Snackbar.Add(installResult.Reason, Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Launching installer", Severity.Success);
+            }
         }
-
-        Snackbar.Add("Downloading update", Severity.Info);
-        var installResult = await UpdateManager.InstallCurrentVersion();
-        if (!installResult.IsSuccess)
+        catch (Exception ex)
         {
-            Snackbar.Add(installResult.Reason, Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add("Launching installer", Severity.Success);
+            Logger.LogError(ex, "Error while installing update.");
+            Snackbar.Add("Failed to install update", Severity.Error);
         }
     }
 
