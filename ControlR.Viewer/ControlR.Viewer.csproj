@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-android</TargetFrameworks>
@@ -67,11 +67,14 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net8.0-android'">
-	  <AndroidUseAapt2>True</AndroidUseAapt2>
-	  <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
-	  <AndroidPackageFormat>aab</AndroidPackageFormat>
-	  <AndroidLinkTool>r8</AndroidLinkTool>
+	    <AndroidUseAapt2>True</AndroidUseAapt2>
+	    <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
+	    <AndroidPackageFormat>aab</AndroidPackageFormat>
+	    <AndroidLinkTool>r8</AndroidLinkTool>
 	</PropertyGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
+	    <ProguardConfiguration Include="Platforms\Android\proguard.cfg" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->
@@ -91,6 +94,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Platforms\Android\Resources\xml\auto_backup_rules.xml" />
 	  <None Remove="Resources\Raw\appicon.png" />
 	</ItemGroup>
 

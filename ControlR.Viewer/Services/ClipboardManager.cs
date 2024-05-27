@@ -94,7 +94,7 @@ internal class ClipboardManager(
     {
         try
         {
-            await _clipboardLock.WaitAsync();
+            await _clipboardLock.WaitAsync(cancellationToken);
             _lastClipboardText = await _clipboard.GetTextAsync();
         }
         catch (Exception ex)
