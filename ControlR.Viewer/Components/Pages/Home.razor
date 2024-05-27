@@ -2,6 +2,7 @@
 @inject ISettings Settings
 @inject IAppState AppState
 @inject IMessenger Messenger
+@inject IDeviceCache DeviceCache
 
 <PageTitle>Home</PageTitle>
 
@@ -12,6 +13,10 @@
         <KeyCreatorForm />
         break;
     case KeypairState.KeysVerified:
+        @if (!DeviceCache.Devices.Any())
+        {
+            <NoDevicesAlert />
+        }
         <Dashboard />
         break;
     default:

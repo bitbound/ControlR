@@ -1,0 +1,48 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Agent (Run)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build agent",
+            "program": "${workspaceFolder}/ControlR.Agent/bin/Debug/net8.0/ControlR.Agent.dll",
+            "launchSettingsFilePath": "${workspaceFolder}/ControlR.Agent/Properties/launchSettings.json",
+            "launchSettingsProfile": "Run",
+            "cwd": "${workspaceFolder}/ControlR.Agent",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "Server (https)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build server",
+            "program": "${workspaceFolder}/ControlR.Server/bin/Debug/net8.0/ControlR.Server.dll",
+            "launchSettingsFilePath": "${workspaceFolder}/ControlR.Server/Properties/launchSettings.json",
+            "launchSettingsProfile": "https",
+            "cwd": "${workspaceFolder}/ControlR.Server",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "Viewer (Debug)",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "maui: Build",
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server + Agent + Viewer",
+            "configurations": [
+                "Server (https)",
+                "Agent (Run)",
+                "Viewer (Debug)"
+            ]
+        }
+    ],
+}
