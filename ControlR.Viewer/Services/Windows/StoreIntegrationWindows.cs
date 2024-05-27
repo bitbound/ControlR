@@ -13,8 +13,6 @@ internal class StoreIntegrationWindows(
     ILogger<StoreIntegrationWindows> _logger) : IStoreIntegration
 {
     private const string AddOnIdProSubscription = "9P0VDWFNRX3K";
-    private readonly Uri _storeProtocolUri = new("ms-windows-store://pdp/?productid=9NS914B8GR04");
-    private readonly Uri _storePageUri = new("https://www.microsoft.com/store/apps/9NS914B8GR04");
 
     public bool CanCheckForUpdates => true;
 
@@ -33,12 +31,12 @@ internal class StoreIntegrationWindows(
         //    _logger.LogError(ex, "Error while getting store page.");
         //    return new Uri("https://www.microsoft.com/store/apps/9NS914B8GR04");
         //}
-        return new Uri("https://www.microsoft.com/store/apps/9NS914B8GR04").AsTaskResult();
+        return ViewerConstants.MicrosofStorePageUri.AsTaskResult();
     }
 
     public Task<Uri> GetStoreProtocolUri()
     {
-        return _storeProtocolUri.AsTaskResult();
+        return ViewerConstants.MicrosoftStoreProtocolUri.AsTaskResult();
     }
 
     public async Task<bool> IsUpdateAvailable()
@@ -60,13 +58,13 @@ internal class StoreIntegrationWindows(
         var store = StoreContext.GetDefault();
         if (!store.CanSilentlyDownloadStorePackageUpdates)
         {
-            await _launcher.OpenAsync(_storeProtocolUri);
+            await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
             return;
         }
 
         await _messenger.Send(new ToastMessage("Requesting update from store", Severity.Info));
         var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
-        var results = await store.RequestDownloadAndInstallStorePackageUpdatesAsync(updates);
+        var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
 
         _logger.LogInformation(
             "Package update request sent to store.  " +
