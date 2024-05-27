@@ -96,3 +96,9 @@ jobs:
     inputs:
       path: ControlR.Server\bin\publish\wwwroot\downloads\ControlR.Viewer.apk
       artifactName: ViewerApk
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish AAB
+    inputs:
+      path: ControlR.Server\bin\publish\wwwroot\downloads\ControlR.Viewer.aab
+      artifactName: ViewerAab
