@@ -1,4 +1,4 @@
-import "../App.css";
+import "./App.tsx.css";
 import { Routes, Route } from "react-router";
 import Layout from "./Layout";
 import Home from "./Home";

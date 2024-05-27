@@ -17,9 +17,9 @@ function Layout() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Container fixed>
-        <Paper elevation={0.5} sx={{ mt: 5 }}>
+        <Paper elevation={1} sx={{ mt: 5 }}>
           <HeaderRow>
-            <HeaderPaper>
+            <HeaderPaper variant="outlined">
               <Typography variant="h2" color="primary.main">
                 ControlR
                 <Logo src={controlrIcon} />

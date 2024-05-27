@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 
 import DeployAgentDialog from "./DeployAgentDialog";
+import MsStoreBadge from "./MsStoreBadge";
 
 function Home() {
   const [isAgentDialogOpen, setAgentDialogOpen] = React.useState(false);
@@ -30,13 +31,13 @@ function Home() {
 
       <Typography variant="h6">Windows 10/11</Typography>
       <ButtonWrapper>
-        <ms-store-badge
+        <MsStoreBadge
           productid="9NS914B8GR04"
           window-mode="full"
           theme="dark"
           language="en-us"
           animation="on">
-        </ms-store-badge>
+        </MsStoreBadge>
       </ButtonWrapper>
 
       <Typography variant="h6">Android</Typography>

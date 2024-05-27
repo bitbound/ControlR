@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 declare module 'react' {
     namespace JSX {
         interface IntrinsicElements {
@@ -7,6 +9,21 @@ declare module 'react' {
 }
 
 function MsStoreBadge(props: MsStoreBadgeProps) {
+    useEffect(() => {
+        // CSS can't target shadow elements, so we have to
+        // inject it after the component loads.
+        const imgStyle = document.createElement('style');
+        imgStyle.innerHTML = 'img { width: 200px !important; height: auto !important; }'
+        const storeBadge = document.querySelector('ms-store-badge');
+
+        if (!storeBadge?.shadowRoot) {
+            console.warn("Store badge shadow element not found.");
+            return;
+        }
+
+        storeBadge?.shadowRoot?.appendChild(imgStyle);
+    }, []);
+    
     return  <ms-store-badge
         productid={props.productid}
         window-mode={props["window-mode"]}
