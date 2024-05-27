@@ -4,7 +4,7 @@ trigger:
     include:
     - refs/heads/main
   batch: True
-name: 0.10.$(Rev:r).0
+name: 0.$(MinorBuild).$(Rev:r).0
 jobs:
 - job: Windows_Build
   displayName: Build
@@ -12,6 +12,7 @@ jobs:
     name: Default
   steps:
   - checkout: self
+    clean: true
     fetchDepth: 1
   - task: DownloadSecureFile@1
     name: pfxCertificate
