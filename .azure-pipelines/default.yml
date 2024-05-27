@@ -12,6 +12,7 @@ jobs:
     name: Default
   steps:
   - checkout: self
+    clean: true
     fetchDepth: 1
   - task: DownloadSecureFile@1
     name: pfxCertificate
