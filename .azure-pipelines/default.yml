@@ -10,6 +10,8 @@ jobs:
   displayName: Build
   pool:
     name: Default
+  variables:
+    AndroidVersionCode: $[counter('AndroidVersion', 2)]
   steps:
   - checkout: self
     clean: true
@@ -56,8 +58,6 @@ jobs:
         Pop-Location
   - task: PowerShell@2
     displayName: Invoke Build.ps1
-    variables:
-      androidVersionCode: $[counter(AndroidVersion, 2)]
     inputs:
       filePath: .build/Build.ps1
       arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificatePath "$(pfxCertificate.secureFilePath)" -CertificatePassword "$(CertificatePassword)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -AndroidVersionCode "$(AndroidVersionCode)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
