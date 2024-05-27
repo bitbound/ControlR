@@ -47,6 +47,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Shared.Tests", "Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Server.Tests", "Tests\ControlR.Server.Tests\ControlR.Server.Tests.csproj", "{F6D09A60-CD6A-4BD3-AC76-3A595F23717C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".azure-pipelines", ".azure-pipelines", "{E49A955D-AC20-46C0-9DAB-1357B896BB18}"
+	ProjectSection(SolutionItems) = preProject
+		.azure-pipelines\default.yml = .azure-pipelines\default.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -385,6 +390,7 @@ Global
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 		{91599A08-98F0-4DE7-921C-76D8E83BB86A} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{F6D09A60-CD6A-4BD3-AC76-3A595F23717C} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
+		{E49A955D-AC20-46C0-9DAB-1357B896BB18} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
