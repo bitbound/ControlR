@@ -50,8 +50,9 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
-    Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
     Task SendAgentUpdateTrigger(DeviceDto device);
+
+    Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
     Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
@@ -334,6 +335,15 @@ internal class ViewerHubConnection(
             () => Result.Fail("Failed to send app settings"));
     }
 
+    public async Task SendAgentUpdateTrigger(DeviceDto device)
+    {
+        await TryInvoke(async () =>
+        {
+            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.AgentUpdateTrigger, _appState.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+        });
+    }
+
     public async Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky)
     {
         await TryInvoke(
@@ -345,16 +355,6 @@ internal class ViewerHubConnection(
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
             });
     }
-
-    public async Task SendAgentUpdateTrigger(DeviceDto device)
-    {
-        await TryInvoke(async () =>
-        {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.AgentUpdateTrigger, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
-        });
-    }
-
     public async Task SendIceCandidate(Guid sessionId, string iceCandidateJson)
     {
         await TryInvoke(async () =>
@@ -423,10 +423,7 @@ internal class ViewerHubConnection(
 
         _messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
-        await CheckIfServerAdministrator();
-        await CheckIfStoreIntegrationEnabled();
-        await GetCurrentAlertFromServer();
-        await RequestDeviceUpdates();
+        await PerformAfterConnectInit();
     }
 
     private async Task CheckIfServerAdministrator()
@@ -449,9 +446,10 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var isStoreEnabled = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfStoreIntegrationEnabled));
-                _appState.IsStoreIntegrationEnabled = isStoreEnabled;
+                _appState.SetStoreIntegrationEnabled(isStoreEnabled);
             });
     }
+
     private void ConfigureConnection(HubConnection connection)
     {
         connection.Closed += Connection_Closed;
@@ -479,10 +477,9 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    private Task Connection_Reconnected(string? arg)
+    private async Task Connection_Reconnected(string? arg)
     {
-        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
-        return Task.CompletedTask;
+        await PerformAfterConnectInit();
     }
 
     private Task Connection_Reconnecting(Exception? arg)
@@ -529,6 +526,15 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
+    private async Task PerformAfterConnectInit()
+    {
+        await CheckIfServerAdministrator();
+        await CheckIfStoreIntegrationEnabled();
+        await GetCurrentAlertFromServer();
+        await _devicesCache.SetAllOffline();
+        await RequestDeviceUpdates();
+        await _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
+    }
     private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")
     {
         try

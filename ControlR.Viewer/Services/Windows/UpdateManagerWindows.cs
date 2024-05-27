@@ -28,9 +28,17 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            if (_appState.IsStoreIntegrationEnabled && _storeIntegration.CanCheckForUpdates)
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+
+            if (integrationResult is not bool integrationEnabled)
             {
-                return await CheckForStoreUpdate();
+                return Result.Ok(false);
+            }
+
+            if (integrationEnabled && _storeIntegration.CanCheckForUpdates)
+            {
+                var updateAvailable = await _storeIntegration.IsUpdateAvailable();
+                return Result.Ok(updateAvailable);
             }
             return await CheckForSelfHostedUpdate();
         }
@@ -60,12 +68,6 @@ internal class UpdateManagerWindows(
         return Result.Ok(false);
     }
 
-    private async Task<Result<bool>> CheckForStoreUpdate()
-    {
-        var updateAvailable = await _storeIntegration.IsUpdateAvailable();
-        return Result.Ok(updateAvailable);
-    }
-
     public async Task<Result> InstallCurrentVersion()
     {
         if (!await _installLock.WaitAsync(0))
@@ -75,13 +77,20 @@ internal class UpdateManagerWindows(
 
         try
         {
-            if (_appState.IsStoreIntegrationEnabled)
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+            
+            if (integrationResult is not bool integrationEnabled)
             {
-                return await InstallCurrentVersionSelfHosted();
+                return Result.Fail("Store integration has not yet been checked.");
             }
 
-            await _storeIntegration.InstallCurrentVersion();
-            return Result.Ok();
+            if (integrationEnabled)
+            {
+                await _storeIntegration.InstallCurrentVersion();
+                return Result.Ok();
+            }
+
+            return await InstallCurrentVersionSelfHosted();
         }
         catch (Exception ex)
         {

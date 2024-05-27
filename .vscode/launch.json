@@ -33,7 +33,14 @@
             "type": "maui",
             "request": "launch",
             "preLaunchTask": "maui: Build",
-        }
+        },
+        {
+            "name": "Viewer (Store)",
+            "type": "maui",
+            "request": "launch",
+            "configuration": "DebugStore",
+            "preLaunchTask": "maui: BuildStore",
+        },
     ],
     "compounds": [
         {

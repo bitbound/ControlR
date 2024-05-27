@@ -13,10 +13,6 @@
         <KeyCreatorForm />
         break;
     case KeypairState.KeysVerified:
-        @if (!DeviceCache.Devices.Any())
-        {
-            <NoDevicesAlert />
-        }
         <Dashboard />
         break;
     default:

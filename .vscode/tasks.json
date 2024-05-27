@@ -4,6 +4,16 @@
         {
             "type": "dotnet",
             "task": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "label": "dotnet: build"
+        },
+        {
+            "type": "dotnet",
+            "task": "build",
             "group": "build",
             "problemMatcher": [],
             "label": "build agent",
@@ -23,9 +33,19 @@
             "configuration": "Debug",
             "project": "C:\\Repos\\ControlR\\ControlR.Viewer\\ControlR.Viewer.csproj",
             "problemMatcher": [
-                "$msCompile",
+                "$msCompile"
             ],
             "label": "maui: Build"
+        },
+        {
+            "type": "maui",
+            "targetFramework": "net8.0-windows10.0.19041.0",
+            "configuration": "DebugStore",
+            "project": "C:\\Repos\\ControlR\\ControlR.Viewer\\ControlR.Viewer.csproj",
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "label": "maui: BuildStore"
         }
     ]
 }

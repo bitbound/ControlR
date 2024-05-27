@@ -11,8 +11,6 @@ param (
   [string]$OctodiffPath
 )
 
-$Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
-
 function Check-LastExitCode {
   if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
     throw "Received exit code $LASTEXITCODE.  Aborting."

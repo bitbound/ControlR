@@ -62,7 +62,7 @@ internal class StoreIntegrationWindows(
             return;
         }
 
-        await _messenger.Send(new ToastMessage("Requesting update from store", Severity.Info));
+        await _messenger.Send(new ToastMessage("Attempting update from store", Severity.Info));
         var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
         var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
 
@@ -75,7 +75,20 @@ internal class StoreIntegrationWindows(
             results.StorePackageUpdateStatuses.Count,
             results.StoreQueueItems.Count);
 
-        await _messenger.Send(new ToastMessage($"Request state: {results.OverallState}", Severity.Info));
+        switch (results.OverallState)
+        {
+            case StorePackageUpdateState.Canceled:
+            case StorePackageUpdateState.ErrorLowBattery:
+            case StorePackageUpdateState.ErrorWiFiRecommended:
+            case StorePackageUpdateState.OtherError:
+                await _messenger.Send(new ToastMessage("Store update error", Severity.Error));
+                await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
+                break;
+
+            default:
+                await _messenger.Send(new ToastMessage($"Request state: {results.OverallState}", Severity.Info));
+                break;
+        }
     }
 }
 #endif

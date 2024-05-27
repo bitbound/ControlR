@@ -34,7 +34,6 @@ internal class UpdateManagerAndroid(
     {
         try
         {
-
             var result = await _versionApi.GetCurrentViewerVersion();
             if (!result.IsSuccess)
             {

@@ -10,6 +10,7 @@
 @inject IStoreIntegration StoreIntegration
 @inject IAppState AppState
 @inject IBrowser Browser
+@inject IDelayer Delayer
 
 <PageTitle>About</PageTitle>
 
@@ -169,21 +170,11 @@
     {
         try
         {
-            if (AppState.IsStoreIntegrationEnabled && StoreIntegration.CanInstallUpdates)
-            {
-                await StoreIntegration.InstallCurrentVersion();
-                return;
-            }
-
             Snackbar.Add("Downloading update", Severity.Info);
             var installResult = await UpdateManager.InstallCurrentVersion();
             if (!installResult.IsSuccess)
             {
                 Snackbar.Add(installResult.Reason, Severity.Error);
-            }
-            else
-            {
-                Snackbar.Add("Launching installer", Severity.Success);
             }
         }
         catch (Exception ex)
@@ -198,11 +189,23 @@
         try
         {
             _storePageUri = await StoreIntegration.GetStorePageUri();
-            var storeProtocolUri = await StoreIntegration.GetStoreProtocolUri();
 
-            _downloadLink = AppState.IsStoreIntegrationEnabled ?
-                storeProtocolUri.ToString() :
-                Settings.ViewerDownloadUri;
+           var integrationResult = await AppState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+
+            if (integrationResult is not bool integrationEnabled)
+            {
+                return;
+            }
+            
+            if (integrationEnabled)
+            {
+                var storeProtocolUri = await StoreIntegration.GetStoreProtocolUri();
+                _downloadLink = storeProtocolUri.ToString();
+            }
+            else
+            {
+                _downloadLink = Settings.ViewerDownloadUri;
+            }
         }
         catch (Exception ex)
         {

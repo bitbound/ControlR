@@ -1,4 +1,12 @@
-﻿<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+﻿@if (!DeviceCache.Devices.Any())
+{
+    <MudAlert Severity="Severity.Info">
+        No devices found.  Head over to the <MudLink Href="/deploy">Deploy Page</MudLink>
+        to install an agent!
+    </MudAlert>
+}
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
     Devices
 </MudText>
 

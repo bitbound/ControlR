@@ -128,16 +128,6 @@
         switch (kind)
         {
             case GenericMessageKind.KeysStateChanged:
-                if (AppState.IsAuthenticated)
-                {
-                    var result = await UpdateManager.CheckForUpdate();
-                    if (result.IsSuccess)
-                    {
-                        _updateAvailable = result.Value;
-                        await InvokeAsync(StateHasChanged);
-                    }
-                }
-                break;
             case GenericMessageKind.PendingOperationsChanged:
                 await InvokeAsync(StateHasChanged);
                 break;
@@ -172,21 +162,11 @@
     {
         try
         {
-            if (AppState.IsStoreIntegrationEnabled && StoreIntegration.CanInstallUpdates)
-            {
-                await StoreIntegration.InstallCurrentVersion();
-                return;    
-            }
-
             Snackbar.Add("Downloading update", Severity.Info);
             var installResult = await UpdateManager.InstallCurrentVersion();
             if (!installResult.IsSuccess)
             {
                 Snackbar.Add(installResult.Reason, Severity.Error);
-            }
-            else
-            {
-                Snackbar.Add("Launching installer", Severity.Success);
             }
         }
         catch (Exception ex)

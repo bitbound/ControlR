@@ -222,10 +222,8 @@ public partial class Dashboard
         try
         {
             using var _ = AppState.IncrementBusyCounter();
-            await DeviceCache.SetAllOffline();
-            await InvokeAsync(StateHasChanged);
-            await ViewerHub.RequestDeviceUpdates();
             await RefreshLatestAgentVersion();
+            await InvokeAsync(StateHasChanged);
             Snackbar.Add("Device refresh requested", Severity.Success);
         }
         catch (Exception ex)
