@@ -114,7 +114,7 @@ if ($BuildViewer) {
     Check-LastExitCode
 
     Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
-    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer.aab" -Destination "$DownloadsFolder\ControlR.Viewer.aab" -Force
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer-Signed.aab" -Destination "$DownloadsFolder\ControlR.Viewer.aab" -Force
 
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
