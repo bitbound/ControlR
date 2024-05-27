@@ -56,9 +56,11 @@ jobs:
         Pop-Location
   - task: PowerShell@2
     displayName: Invoke Build.ps1
+    variables:
+      androidVersionCode: $[counter(AndroidVersion, 2)]
     inputs:
       filePath: .build/Build.ps1
-      arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificatePath "$(pfxCertificate.secureFilePath)" -CertificatePassword "$(CertificatePassword)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
+      arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificatePath "$(pfxCertificate.secureFilePath)" -CertificatePassword "$(CertificatePassword)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -AndroidVersionCode "$(AndroidVersionCode)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
       pwsh: true
   - task: PublishPipelineArtifact@1
     displayName: Publish Server
@@ -75,11 +77,6 @@ jobs:
     inputs:
       path: .build/CreateDelta.ps1
       artifactName: CreateDelta
-  - task: PublishPipelineArtifact@1
-    displayName: Publish Dockerfile
-    inputs:
-      path: ControlR.Server/Dockerfile
-      artifactName: Dockerfile
   - task: PublishPipelineArtifact@1
     displayName: Publish docker-compose.yml
     inputs:

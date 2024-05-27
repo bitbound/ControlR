@@ -18,6 +18,9 @@ param (
     [string]$CurrentVersion,
 
     [Parameter(Mandatory = $true)]
+    [int]$AndroidVersionCode,
+
+    [Parameter(Mandatory = $true)]
     [string]$OutputPath,
 
     [switch]$BuildAgent,
@@ -91,7 +94,7 @@ if ($BuildAgent) {
 if ($BuildViewer) {
     $Csproj = Select-Xml -XPath "/" -Path "$Root\ControlR.Viewer\ControlR.Viewer.csproj"
     $AppVersion = $Csproj.Node.SelectNodes("//ApplicationVersion")
-    $AppVersion[0].InnerText = "1";
+    $AppVersion[0].InnerText = "$AndroidVersionCode";
 
     $DisplayVersion = $Csproj.Node.SelectNodes("//ApplicationDisplayVersion")
     $DisplayVersion[0].InnerText = $CurrentVersion.ToString()
