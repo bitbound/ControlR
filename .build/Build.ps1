@@ -113,7 +113,8 @@ if ($BuildViewer) {
     dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword -o "$Root\ControlR.Viewer\bin\publish\"
     Check-LastExitCode
 
-    Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "*Signed.apk" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer.aab" -Destination "$DownloadsFolder\ControlR.Viewer.aab" -Force
 
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
