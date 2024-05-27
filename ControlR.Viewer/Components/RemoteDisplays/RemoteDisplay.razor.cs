@@ -160,7 +160,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         _statusProgress = 0;
         ClipboardManager.ClipboardChanged -= ClipboardManager_ClipboardChanged;
         ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
-        ClipboardManager.Start();
+        await ClipboardManager.Start();
         await InvokeAsync(StateHasChanged);
     }
     [JSInvokable]

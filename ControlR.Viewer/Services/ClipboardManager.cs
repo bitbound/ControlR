@@ -1,10 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ControlR.Viewer.Services;
 
@@ -13,7 +7,7 @@ public interface IClipboardManager : IAsyncDisposable
     event EventHandler<string?>? ClipboardChanged;
     Task SetText(string text);
 
-    void Start();
+    Task Start();
 }
 
 internal class ClipboardManager(
@@ -25,8 +19,6 @@ internal class ClipboardManager(
     private static readonly SemaphoreSlim _clipboardLock = new(1, 1);
     private readonly CancellationTokenSource _cancellationSource = new();
     private string? _lastClipboardText;
-
-    private Task? _watcherTask;
 
     public event EventHandler<string?>? ClipboardChanged;
     public async ValueTask DisposeAsync()
@@ -63,46 +55,38 @@ internal class ClipboardManager(
         }
     }
 
-    public void Start()
+    public async Task Start()
     {
-        if (_watcherTask is not null)
-        {
-            return;
-        }
-
-        _watcherTask = StartWatching(_cancellationSource.Token);
+        await TrySetInitialText(_cancellationSource.Token);
+        _clipboard.ClipboardContentChanged -= HandleClipboardContentChange;
+        _clipboard.ClipboardContentChanged += HandleClipboardContentChange;
     }
 
-    private async Task StartWatching(CancellationToken cancellationToken)
+    private async void HandleClipboardContentChange(object? sender, EventArgs e)
     {
-        await TrySetInitialText(cancellationToken);
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        while (await timer.WaitForNextTickAsync(cancellationToken))
+        await _clipboardLock.WaitAsync(_cancellationSource.Token);
+        try
         {
-            await _clipboardLock.WaitAsync(cancellationToken);
-            try
+            var clipboardText = await _clipboard.GetTextAsync();
+            if (clipboardText is null || clipboardText == _lastClipboardText)
             {
-                var clipboardText = await _clipboard.GetTextAsync();
-                if (clipboardText is null || clipboardText == _lastClipboardText)
-                {
-                    continue;
-                }
+                return;
+            }
 
-                _lastClipboardText = clipboardText;
-                ClipboardChanged?.Invoke(this, clipboardText);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Clipboard manager disposed.  Aborting watch.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while watching the clipboard.");
-            }
-            finally
-            {
-                _clipboardLock.Release();
-            }
+            _lastClipboardText = clipboardText;
+            ClipboardChanged?.Invoke(this, clipboardText);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Clipboard manager disposed.  Aborting watch.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while watching the clipboard.");
+        }
+        finally
+        {
+            _clipboardLock.Release();
         }
     }
 
