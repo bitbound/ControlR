@@ -3,6 +3,7 @@ trigger:
   branches:
     include:
     - refs/heads/main
+    - refs/heads/dev
   batch: True
 name: 0.$(MinorBuild).$(Rev:r).0
 jobs:

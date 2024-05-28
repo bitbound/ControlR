@@ -16,18 +16,18 @@
     <MudDialogProvider />
     <MudSnackbarProvider />
 
-     <MudLayout>
-         <MudAppBar Elevation="0">
-             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-             <MudSpacer />
+    <MudLayout>
+        <MudAppBar Elevation="0">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                OnClick="@((e) => DrawerToggle())" />
+            <MudSpacer />
 
-             @if (_updateAvailable)
+            @if (_updateAvailable)
             {
                 <MudTooltip Text="Update Available">
                     <MudBadge Content='"!"' Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
-                        <MudIconButton Color="Color.Info"
-                                       Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
-                                       OnClick="InstallUpdate" />
+                        <MudIconButton Color="Color.Info" Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
+                            OnClick="InstallUpdate" />
                     </MudBadge>
 
                 </MudTooltip>
@@ -35,8 +35,9 @@
             @if (AppState.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
             {
                 <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
-                    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
-                 </MudTooltip>
+                    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
+                        Class="mx-3 mt-1" />
+                </MudTooltip>
             }
             else
             {
@@ -49,8 +50,9 @@
                         break;
                     case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
                         <MudTooltip Text="Reconnecting">
-                            <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
-                         </MudTooltip>
+                            <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
+                                Class="mx-3 mt-1" />
+                        </MudTooltip>
                         break;
                     case HubConnectionState.Disconnected:
                         <MudTooltip Text="Disconnected">
@@ -62,7 +64,8 @@
                 }
             }
             <MudTooltip Text="GitHub">
-                <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/bitbound/controlr/" Target="_blank" />
+                <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+                    Href="https://github.com/bitbound/controlr/" Target="_blank" />
             </MudTooltip>
         </MudAppBar>
         <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
@@ -78,7 +81,7 @@
                 {
                     <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
                         @(_alertMessage)
-                     </MudAlert>
+                    </MudAlert>
                 }
             </div>
             <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="my-4 pt-4">

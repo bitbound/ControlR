@@ -127,7 +127,7 @@
     </div>
     <div>
         <MudText>
-            ControlR is free, open-source, self-hostable, and powered by donations.  Sponsor the work here:
+            ControlR is free, open-source, self-hostable, and powered by donations. Sponsor the work here:
             <MudLink Color="Color.Info" Href="https://github.com/sponsors/bitbound">GitHub Sponsors</MudLink>
         </MudText>
     </div>
@@ -190,13 +190,13 @@
         {
             _storePageUri = await StoreIntegration.GetStorePageUri();
 
-           var integrationResult = await AppState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+            var integrationResult = await AppState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
 
             if (integrationResult is not bool integrationEnabled)
             {
                 return;
             }
-            
+
             if (integrationEnabled)
             {
                 var storeProtocolUri = await StoreIntegration.GetStoreProtocolUri();
