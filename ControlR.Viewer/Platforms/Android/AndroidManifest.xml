@@ -21,6 +21,5 @@
 	<uses-permission android:name="android.permission.WRITE_INTERNAL_STORAGE" />
 	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 	<uses-permission android:name="android.permission.INSTALL_PACKAGES" />
-	<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 	<uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
 </manifest>
