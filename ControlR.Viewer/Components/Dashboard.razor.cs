@@ -130,11 +130,6 @@ public partial class Dashboard
         _loading = false;
     }
 
-    private void BroadcastProxyStopRequest(object? sender, EventArgs e)
-    {
-        Messenger.SendGenericMessage(GenericMessageKind.LocalProxyListenerStopRequested);
-    }
-
     private async Task ConfigureDeviceSettings(DeviceDto device)
     {
         try
@@ -178,30 +173,55 @@ public partial class Dashboard
 
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
     {
-        switch (kind)
+        try
         {
-            case GenericMessageKind.DevicesCacheUpdated:
-                {
-                    using var result = await _stateChangeLock.WaitAsync(AppState.AppExiting);
-                    if (result.Value)
+            switch (kind)
+            {
+                case GenericMessageKind.DevicesCacheUpdated:
                     {
-                        await InvokeAsync(StateHasChanged);
+                        using var result = await _stateChangeLock.WaitAsync(AppState.AppExiting);
+                        if (result.Value)
+                        {
+                            await InvokeAsync(StateHasChanged);
+                        }
                     }
-                }
-                break;
+                    break;
 
-            case GenericMessageKind.HubConnectionStateChanged:
-                {
-                    if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+                case GenericMessageKind.HubConnectionStateChanged:
                     {
-                        await Refresh();
+                        if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+                        {
+                            await RefreshLatestAgentVersion();
+                        }
                     }
-                }
-                break;
+                    break;
 
-            default:
-                break;
+                default:
+                    break;
+            }
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
+        }
+    }
+
+    private async Task HandleRefreshClicked()
+    {
+        try
+        {
+            using var _ = AppState.IncrementBusyCounter();
+            await DeviceCache.SetAllOffline();
+            await ViewerHub.RequestDeviceUpdates();
+            await RefreshLatestAgentVersion();
+            Snackbar.Add("Device refresh requested", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while refreshing the dashboard.");
+            Snackbar.Add("Dashboard refresh failed", Severity.Error);
+        }
+
     }
 
     private async Task HideOfflineDevicesChanged(bool isChecked)
@@ -215,22 +235,6 @@ public partial class Dashboard
         return _agentReleaseVersion is not null &&
                 Version.TryParse(device.AgentVersion, out var agentVersion) &&
                 !agentVersion.Equals(_agentReleaseVersion);
-    }
-
-    private async Task Refresh()
-    {
-        try
-        {
-            using var _ = AppState.IncrementBusyCounter();
-            await RefreshLatestAgentVersion();
-            await InvokeAsync(StateHasChanged);
-            Snackbar.Add("Device refresh requested", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while refreshing the dashboard.");
-            Snackbar.Add("Dashboard refresh failed", Severity.Error);
-        }
     }
 
     private async Task RefreshLatestAgentVersion()

@@ -165,6 +165,8 @@ internal class AgentHubConnection(
             {
                 await _delayer.Delay(TimeSpan.FromSeconds(1), _appLifetime.ApplicationStopping);
                 await _settings.UpdateSettings(payload);
+                // Device heartbeat will sync authorized keys with current ones.
+                await SendDeviceHeartbeat();
             }).Forget();
 
             return Result.Ok().AsTaskResult();
