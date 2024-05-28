@@ -41,9 +41,11 @@ internal class StoreIntegrationWindows(
 
     public async Task<bool> IsUpdateAvailable()
     {
+        _logger.LogInformation("Checking Microsoft Store for updates.");
         var store = StoreContext.GetDefault();
         var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
-        return updates.Any(x => x.Mandatory);
+        _logger.LogInformation("Found {UpdateCount} update(s).", updates.Count);
+        return updates.Count > 0;
     }
 
     public async Task<bool> IsProLicenseActive()
@@ -55,14 +57,16 @@ internal class StoreIntegrationWindows(
 
     public async Task InstallCurrentVersion()
     {
+        _logger.LogInformation("Starting update from Microsoft Store.");
         var store = StoreContext.GetDefault();
         if (!store.CanSilentlyDownloadStorePackageUpdates)
         {
+            _logger.LogInformation("CanSilentlyDownloadStorePackageUpdates is false.");
             await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
             return;
         }
 
-        await _messenger.Send(new ToastMessage("Attempting update from store", Severity.Info));
+        _logger.LogInformation("Attempting silent upgrade.");
         var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
         var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
 
@@ -84,9 +88,8 @@ internal class StoreIntegrationWindows(
                 await _messenger.Send(new ToastMessage("Store update error", Severity.Error));
                 await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
                 break;
-
             default:
-                await _messenger.Send(new ToastMessage($"Request state: {results.OverallState}", Severity.Info));
+                await _messenger.Send(new ToastMessage("Background update started", Severity.Info));
                 break;
         }
     }
