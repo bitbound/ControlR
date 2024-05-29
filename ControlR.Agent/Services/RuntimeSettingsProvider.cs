@@ -85,7 +85,15 @@ public class RuntimeSettingsProvider(
             if (_fileSystem.FileExists(filePath))
             {
                 using var readStream = _fileSystem.OpenFileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                settings = await JsonSerializer.DeserializeAsync<AgentRuntimeSettings>(readStream) ?? new();
+                try
+                {
+                    settings = await JsonSerializer.DeserializeAsync<AgentRuntimeSettings>(readStream) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while deserializing settings.");
+                    settings = new();
+                }
             }
             else
             {
@@ -94,7 +102,7 @@ public class RuntimeSettingsProvider(
 
             var newSettings = setter.Invoke(settings);
 
-            using var writeStream = _fileSystem.OpenFileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write);
+            using var writeStream = _fileSystem.OpenFileStream(filePath, FileMode.Create, FileAccess.Write);
             await JsonSerializer.SerializeAsync(writeStream, newSettings, _jsonOptions);
         }
         catch (Exception ex)
