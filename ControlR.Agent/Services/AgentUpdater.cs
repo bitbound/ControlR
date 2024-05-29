@@ -28,6 +28,7 @@ internal class AgentUpdater(
     IEnvironmentHelper _environmentHelper,
     ISettingsProvider _settings,
     IHostApplicationLifetime _appLifetime,
+    IRuntimeSettingsProvider _runtimeSettings,
     IOptions<InstanceOptions> _instanceOptions,
     ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
@@ -187,6 +188,8 @@ internal class AgentUpdater(
         {
             return;
         }
+
+        await _runtimeSettings.ServerProvidedSettingsSignal.Wait(stoppingToken);
 
         await CheckForUpdate(stoppingToken);
 

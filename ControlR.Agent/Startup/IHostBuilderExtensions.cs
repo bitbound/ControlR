@@ -77,6 +77,7 @@ internal static class IHostBuilderExtensions
             services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
 
             services.AddSingleton<ISettingsProvider, SettingsProvider>();
+            services.AddSingleton<IRuntimeSettingsProvider, RuntimeSettingsProvider>();
             services.AddSingleton<IProcessManager, ProcessManager>();
             services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
             services.AddSingleton<IFileSystem, FileSystem>();

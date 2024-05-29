@@ -25,6 +25,7 @@ services:
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
       - ControlR_ApplicationOptions__LogRetentionDays=7
       - ControlR_ApplicationOptions__EnableStoreIntegration=false
+      - ControlR_ApplicationOptions__EnableGitHubIntegration=false
 
       # Uncomment these variables to control access to your server.
       # For multiple values in an array, put each item on a new line

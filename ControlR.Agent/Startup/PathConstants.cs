@@ -4,16 +4,6 @@ namespace ControlR.Agent.Startup;
 
 internal static class PathConstants
 {
-    public static string GetLogsPath(string? instanceId)
-    {
-        if (string.IsNullOrWhiteSpace(instanceId))
-        {
-            return Path.Combine(LogsFolderPath, "ControlR.Agent", "LogFile.log");
-        }
-
-        return Path.Combine(LogsFolderPath, "ControlR.Agent", instanceId, $"LogFile.log");
-    }
-
     private static string LogsFolderPath
     {
         get
@@ -45,8 +35,28 @@ internal static class PathConstants
         }
     }
 
-
     public static string GetAppSettingsPath(string? instanceId)
+    {
+        var dir = GetSettingsDirectory(instanceId);
+        return Path.Combine(dir, "appsettings.json");
+    }
+
+    public static string GetLogsPath(string? instanceId)
+    {
+        if (string.IsNullOrWhiteSpace(instanceId))
+        {
+            return Path.Combine(LogsFolderPath, "ControlR.Agent", "LogFile.log");
+        }
+
+        return Path.Combine(LogsFolderPath, "ControlR.Agent", instanceId, $"LogFile.log");
+    }
+    public static string GetRuntimeSettingsFilePath(string? instanceId)
+    {
+        var dir = GetSettingsDirectory(instanceId);
+        return Path.Combine(dir, "runtime-settings.json");
+    }
+
+    public static string GetSettingsDirectory(string? instanceId)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -62,8 +72,7 @@ internal static class PathConstants
             {
                 settingsDir = Path.Combine(settingsDir, instanceId);
             }
-            var dir = Directory.CreateDirectory(settingsDir).FullName;
-            return Path.Combine(dir, "appsettings.json");
+            return Directory.CreateDirectory(settingsDir).FullName;
         }
 
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
@@ -77,8 +86,7 @@ internal static class PathConstants
             {
                 settingsDir = Path.Combine(settingsDir, instanceId);
             }
-            var dir = Directory.CreateDirectory(settingsDir).FullName;
-            return Path.Combine(dir, "appsettings.json");
+            return Directory.CreateDirectory(settingsDir).FullName;
         }
 
         throw new PlatformNotSupportedException();

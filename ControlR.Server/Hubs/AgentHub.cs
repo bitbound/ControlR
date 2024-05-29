@@ -1,9 +1,13 @@
-﻿using ControlR.Server.Services;
+﻿using ControlR.Server.Options;
+using ControlR.Server.Services;
 using ControlR.Shared.Dtos;
+using ControlR.Shared.Extensions;
 using ControlR.Shared.Hubs;
 using ControlR.Shared.Interfaces.HubClients;
+using ControlR.Shared.Models;
 using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Server.Hubs;
 
@@ -11,6 +15,7 @@ public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
     IConnectionCounter _connectionCounter,
+    IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
@@ -28,6 +33,16 @@ public class AgentHub(
         {
             Context.Items[nameof(Device)] = value;
         }
+    }
+
+    public Task<AgentRuntimeSettings> GetAgentRuntimeSettings()
+    {
+        var settings = new AgentRuntimeSettings()
+        {
+            GitHubEnabled = _appOptions.CurrentValue.EnableGitHubIntegration
+        };
+
+        return Task.FromResult(settings);
     }
 
     public override async Task OnConnectedAsync()
