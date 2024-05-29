@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard } from "electron";
+import { clipboard } from "electron";
 import { writeLog } from "./logger";
 import { sendClipboardChanged } from "./rendererApi";
 
@@ -19,15 +19,15 @@ export function watchClipboard() {
 
   writeLog("Clipboard manager started.");
   try {
-    lastClipboardText = clipboard.readText();
+    lastClipboardText = clipboard.readText("clipboard");
   } catch (err) {
     writeLog("Error while getting initial clipboard text.", "Error", err);
   }
 
   watcherInterval = setInterval(async () => {
     try {
-      const currentText = clipboard.readText();
-      if (currentText === lastClipboardText) {
+      const currentText = clipboard.readText("clipboard");
+      if (!currentText || currentText === lastClipboardText) {
         return;
       }
 

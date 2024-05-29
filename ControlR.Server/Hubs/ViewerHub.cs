@@ -1,6 +1,5 @@
 ﻿using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
-using ControlR.Server.Models;
 using ControlR.Server.Options;
 using ControlR.Server.Services;
 using ControlR.Shared.Dtos;
@@ -10,12 +9,10 @@ using ControlR.Shared.Interfaces.HubClients;
 using ControlR.Shared.Models;
 using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Server.Hubs;
@@ -355,28 +352,5 @@ public class ViewerHub(
                 publicKey);
         }
         return IsServerAdmin;
-    }
-
-    private bool VerifySignature(SignedPayloadDto signedDto, [NotNullWhen(true)] out string? publicKey)
-    {
-        publicKey = default;
-
-        if (Context.User?.TryGetPublicKey(out publicKey) != true)
-        {
-            _logger.LogCritical("Failed to get public key from viewer user.");
-            return false;
-        }
-
-        if (publicKey != signedDto.PublicKeyBase64)
-        {
-            _logger.LogCritical(
-                "Public key doesn't match what was retrieved during authentication.  " +
-                "Public Key: {ReceivedPublicKey}",
-                publicKey);
-
-            return false;
-        }
-
-        return true;
     }
 }

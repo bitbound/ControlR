@@ -248,7 +248,7 @@ internal class AgentHubConnection(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while sending VNC stream.");
+            _logger.LogError(ex, "Error while sending output to viewer.");
         }
     }
 
