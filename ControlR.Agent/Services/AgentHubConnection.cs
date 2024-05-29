@@ -47,7 +47,6 @@ internal class AgentHubConnection(
      ITerminalStore _terminalStore,
      IDelayer _delayer,
      IWin32Interop _win32Interop,
-     IRuntimeSettingsProvider _runtimeSettings,
      IOptionsMonitor<AgentAppOptions> _agentOptions,
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
@@ -264,7 +263,6 @@ internal class AgentHubConnection(
                _appLifetime.ApplicationStopping);
 
         await SendDeviceHeartbeat();
-        _runtimeSettings.ServerProvidedSettingsSignal.Set();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

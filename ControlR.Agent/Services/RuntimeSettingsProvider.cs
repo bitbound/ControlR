@@ -12,7 +12,6 @@ namespace ControlR.Agent.Services;
 
 public interface IRuntimeSettingsProvider
 {
-    ManualResetEventAsync ServerProvidedSettingsSignal { get; }
     Task<T?> TryGet<T>(Func<AgentRuntimeSettings, T?> getter, [CallerMemberName] string? caller = null);
 
     Task<AgentRuntimeSettings?> TryGetSettings();
@@ -26,8 +25,6 @@ public class RuntimeSettingsProvider(
 {
     private readonly SemaphoreSlim _fileLock = new(1, 1);
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-    public ManualResetEventAsync ServerProvidedSettingsSignal { get; } = new();
-
     public async Task<T?> TryGet<T>(Func<AgentRuntimeSettings, T?> getter, [CallerMemberName] string? caller = null)
     {
         if (!await _fileLock.WaitAsync(TimeSpan.FromSeconds(5)))
