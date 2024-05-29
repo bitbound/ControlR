@@ -91,12 +91,12 @@ internal class AgentUpdater(
                 remoteHash = hashResult.Value;
                 var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
                 var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
-                var downloadUri = $"{serverOrigin}{downloadPath}";
+                downloadUrl = $"{serverOrigin}{downloadPath}";
             }
 
 
 
-            using var fs = new FileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var fs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var exeHash = await MD5.HashDataAsync(fs, linkedCts.Token);
 
             _logger.LogInformation(
@@ -112,7 +112,7 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Update found. Downloading update.");
 
-            var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update"));
+            var tempDir = _fileSystem.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update"));
             var tempPath = Path.Combine(tempDir.FullName, AppConstants.GetAgentFileName(_environmentHelper.Platform));
 
             if (_fileSystem.FileExists(tempPath))
