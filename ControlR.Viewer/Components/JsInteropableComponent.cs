@@ -15,7 +15,7 @@ public class JsInteropableComponent : ComponentBase
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-            var componentType = this.GetType();
+            var componentType = GetType();
             var assembly = componentType.Assembly.GetName().Name!;
             var jsPath = componentType.FullName!
                 .Replace($"{assembly}", "")

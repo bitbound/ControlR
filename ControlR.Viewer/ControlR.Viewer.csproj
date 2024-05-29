@@ -121,6 +121,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Components\Js\" />
 	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
 

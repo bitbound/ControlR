@@ -22,7 +22,7 @@
     /** @type {boolean} */
     isMakingOffer;
 
-    /** @type {number] */
+    /** @type {number} */
     lastPointerMove;
 
     /** @type {boolean} */
