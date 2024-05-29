@@ -120,33 +120,11 @@ internal class AgentUpdater(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            
-
-
             var result = await _downloadsApi.DownloadFile(downloadUrl, tempPath);
             if (!result.IsSuccess)
             {
                 _logger.LogCritical("Download failed.  Aborting update.");
                 return;
-            }
-
-            if (OperatingSystem.IsWindows())
-            {
-                using var cert = X509Certificate.CreateFromSignedFile(tempPath);
-                var thumbprint = cert.GetCertHashString().Trim();
-
-                using var selfCert = X509Certificate.CreateFromSignedFile(_environmentHelper.StartupExePath);
-                var expectedThumbprint = selfCert.GetCertHashString().Trim();
-                
-                if (!string.Equals(thumbprint, expectedThumbprint, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogCritical(
-                        "The certificate thumbprint of the downloaded agent binary is invalid.  Aborting update.  " +
-                        "Expected Thumbprint: {expected}.  Actual Thumbprint: {actual}.",
-                        expectedThumbprint,
-                        thumbprint);
-                    return;
-                }
             }
 
             _logger.LogInformation("Launching installer.");
