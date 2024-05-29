@@ -12,7 +12,7 @@ public static class ILoggerExtensions
         return logger.BeginScope(callerMemberName);
     }
 
-    public static void LogResult<T, ResultT>(
+    public static Result<ResultT> LogResult<T, ResultT>(
         this ILogger<T> logger, 
         Result<ResultT> result, 
         [CallerMemberName]string callerName = "")
@@ -34,9 +34,10 @@ public static class ILoggerExtensions
         {
             logger.LogWarning("Failed result. Reason: {reason}", result.Reason);
         }
+        return result;
     }
 
-    public static void LogResult<T>(
+    public static Result LogResult<T>(
       this ILogger<T> logger,
       Result result,
       [CallerMemberName] string callerName = "")
@@ -58,5 +59,6 @@ public static class ILoggerExtensions
         {
             logger.LogWarning("Failed result. Reason: {reason}", result.Reason);
         }
+        return result;
     }
 }

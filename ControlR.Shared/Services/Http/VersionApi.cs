@@ -14,11 +14,11 @@ public interface IVersionApi
 
 internal class VersionApi(
     HttpClient client,
-    ILogger<KeyApi> logger) : IVersionApi
+    ILogger<VersionApi> logger) : IVersionApi
 {
     private readonly string _agentVersionFile = "/downloads/AgentVersion.txt";
     private readonly HttpClient _client = client;
-    private readonly ILogger<KeyApi> _logger = logger;
+    private readonly ILogger<VersionApi> _logger = logger;
     private readonly string _viewerVersionFile = "/downloads/ViewerVersion.txt";
 
     public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)

@@ -8,7 +8,6 @@ using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -22,6 +21,7 @@ internal interface IAgentUpdater : IHostedService
 
 internal class AgentUpdater(
     IVersionApi _versionApi,
+    IGitHubApi _githubApi,
     IDownloadsApi _downloadsApi,
     IFileSystem _fileSystem,
     IProcessManager _processInvoker,
@@ -60,11 +60,41 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Beginning version check.");
 
-            var hashResult = await _versionApi.GetCurrentAgentHash(_environmentHelper.Runtime);
-            if (!hashResult.IsSuccess)
+            var githubResult = await _runtimeSettings.GetGitHubEnabled();
+            if (githubResult is not bool useGithub)
             {
+                _logger.LogError("GitHubEnabled is not present in runtime settings.");
                 return;
             }
+
+            byte[] remoteHash = [];
+            string downloadUrl = "";
+
+            if (useGithub)
+            {
+                var hashResult = await _githubApi.GetLatestAgentHash(_environmentHelper.Runtime);
+                if (!hashResult.IsSuccess)
+                {
+                    return;
+                }
+
+                remoteHash = hashResult.Value.ContentMd5;
+                downloadUrl = hashResult.Value.DownloadUrl;
+            }
+            else
+            {
+                var hashResult = await _versionApi.GetCurrentAgentHash(_environmentHelper.Runtime);
+                if (!hashResult.IsSuccess)
+                {
+                    return;
+                }
+                remoteHash = hashResult.Value;
+                var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
+                var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
+                var downloadUri = $"{serverOrigin}{downloadPath}";
+            }
+
+
 
             using var fs = new FileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var exeHash = await MD5.HashDataAsync(fs, linkedCts.Token);
@@ -72,9 +102,9 @@ internal class AgentUpdater(
             _logger.LogInformation(
                 "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
                 Convert.ToBase64String(exeHash),
-                Convert.ToBase64String(hashResult.Value));
+                Convert.ToBase64String(remoteHash));
 
-            if (hashResult.Value.SequenceEqual(exeHash))
+            if (remoteHash.SequenceEqual(exeHash))
             {
                 _logger.LogInformation("Version is current.");
                 return;
@@ -90,12 +120,10 @@ internal class AgentUpdater(
                 _fileSystem.DeleteFile(tempPath);
             }
 
-            //private readonly string _agentDownloadUri = $"{_settings.ServerUri}downloads/{RuntimeInformation.RuntimeIdentifier}/{AppConstants.GetAgentFileName}";
-            var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
-            var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
-            var downloadUri = $"{serverOrigin}{downloadPath}";
+            
 
-            var result = await _downloadsApi.DownloadFile(downloadUri, tempPath);
+
+            var result = await _downloadsApi.DownloadFile(downloadUrl, tempPath);
             if (!result.IsSuccess)
             {
                 _logger.LogCritical("Download failed.  Aborting update.");
