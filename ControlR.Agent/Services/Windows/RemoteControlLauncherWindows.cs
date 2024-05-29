@@ -120,7 +120,7 @@ internal class RemoteControlLauncherWindows(
                 }
             }
 
-            _streamingSessionCache.AddOrUpdate(session);
+            await _streamingSessionCache.AddOrUpdate(session);
 
             return Result.Ok();
         }

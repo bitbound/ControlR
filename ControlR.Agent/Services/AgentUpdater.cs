@@ -60,7 +60,7 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Beginning version check.");
 
-            var githubResult = await _runtimeSettings.GetGitHubEnabled();
+            var githubResult = await _runtimeSettings.TryGet(x => x.GitHubEnabled);
             if (githubResult is not bool useGithub)
             {
                 _logger.LogError("GitHubEnabled is not present in runtime settings.");

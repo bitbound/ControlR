@@ -4,7 +4,7 @@ using ControlR.Shared.Models;
 namespace ControlR.Shared.Hubs;
 public interface IAgentHub
 {
-    Task<AgentRuntimeSettings> GetAgentRuntimeSettings();
+    Task<bool> GetGitHubIntegrationEnabled();
 
     Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);

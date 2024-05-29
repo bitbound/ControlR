@@ -1,43 +1,51 @@
 ﻿using ControlR.Agent.Models;
-using Microsoft.Extensions.Logging;
+using ControlR.Shared.Primitives;
+using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.Agent.Services.Windows;
 
 internal interface IStreamingSessionCache
 {
     IReadOnlyDictionary<Guid, StreamingSession> Sessions { get; }
-    void AddOrUpdate(StreamingSession session);
-    void KillAllSessions();
-    bool TryRemove(Guid sessionId, [NotNullWhen(true)] out StreamingSession? session);
+    Task AddOrUpdate(StreamingSession session);
+    Task KillAllSessions();
+    Task<Result<StreamingSession>> TryRemove(Guid sessionId);
 }
-internal class StreamingSessionCache(IRegistryAccessor _registryAccessor) : IStreamingSessionCache
+internal class StreamingSessionCache(
+    IRuntimeSettingsProvider _runtimeSettings,
+    IHostApplicationLifetime _appLifetime,
+    IRegistryAccessor _registryAccessor) : IStreamingSessionCache
 {
     private readonly ConcurrentDictionary<Guid, StreamingSession> _sessions = new();
-    private readonly object _uacLock = new();
-    private bool? _originalPromptValue;
+    private readonly SemaphoreSlim _uacLock = new(1,1);
 
     public IReadOnlyDictionary<Guid, StreamingSession> Sessions => _sessions;
 
-    public void AddOrUpdate(StreamingSession session)
+    public async Task AddOrUpdate(StreamingSession session)
     {
-        lock (_uacLock)
+        await _uacLock.WaitAsync(_appLifetime.ApplicationStopping);
+        try
         {
             if (session.LowerUacDuringSession && _sessions.IsEmpty)
             {
-                _originalPromptValue = _registryAccessor.GetPromptOnSecureDesktop();
+                var originalPromptValue = _registryAccessor.GetPromptOnSecureDesktop();
+                await _runtimeSettings.TrySet(x => x.LowerUacDuringSession = originalPromptValue);
                 _registryAccessor.SetPromptOnSecureDesktop(false);
             }
 
             _sessions.AddOrUpdate(session.SessionId, session, (_, _) => session);
         }
-
+        finally
+        {
+            _uacLock.Release();
+        }
     }
 
-    public void KillAllSessions()
+    public async Task KillAllSessions()
     {
-        lock (_uacLock)
+        await _uacLock.WaitAsync(_appLifetime.ApplicationStopping);
+        try
         {
             foreach (var key in _sessions.Keys.ToArray())
             {
@@ -46,28 +54,42 @@ internal class StreamingSessionCache(IRegistryAccessor _registryAccessor) : IStr
                     session.Dispose();
                 }
             }
-            if (_originalPromptValue.HasValue)
+
+            var originalPromptValue = await _runtimeSettings.TryGet(x => x.LowerUacDuringSession);
+            if (originalPromptValue.HasValue)
             {
-                _registryAccessor.SetPromptOnSecureDesktop(_originalPromptValue.Value);
-                _originalPromptValue = null;
+                _registryAccessor.SetPromptOnSecureDesktop(originalPromptValue.Value);
+                await _runtimeSettings.TrySet(x => x.LowerUacDuringSession = null);
             }
+        }
+        finally
+        {
+            _uacLock.Release();
         }
     }
 
 
-    public bool TryRemove(Guid sessionId, [NotNullWhen(true)] out StreamingSession? session)
+    public async Task<Result<StreamingSession>> TryRemove(Guid sessionId)
     {
-        lock (_uacLock)
+        await _uacLock.WaitAsync(_appLifetime.ApplicationStopping);
+        try
         {
+            if (!_sessions.TryRemove(sessionId, out var session))
             {
-                var result = _sessions.TryRemove(sessionId, out session);
-                if (result && _sessions.IsEmpty && _originalPromptValue.HasValue)
-                {
-                    _registryAccessor.SetPromptOnSecureDesktop(_originalPromptValue.Value);
-                    _originalPromptValue = null;
-                }
-                return result;
+                return Result.Fail<StreamingSession>("Session ID not present in cache.");
             }
+
+            var originalPromptValue = await _runtimeSettings.TryGet(x => x.LowerUacDuringSession);
+            if ( _sessions.IsEmpty && originalPromptValue.HasValue)
+            {
+                _registryAccessor.SetPromptOnSecureDesktop(originalPromptValue.Value);
+                await _runtimeSettings.TrySet(x => x.LowerUacDuringSession = null);
+            }
+            return Result.Ok(session);
+        }
+        finally
+        {
+            _uacLock.Release();
         }
     }
 }

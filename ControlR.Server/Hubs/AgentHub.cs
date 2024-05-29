@@ -35,14 +35,9 @@ public class AgentHub(
         }
     }
 
-    public Task<AgentRuntimeSettings> GetAgentRuntimeSettings()
+    public Task<bool> GetGitHubIntegrationEnabled()
     {
-        var settings = new AgentRuntimeSettings()
-        {
-            GitHubEnabled = _appOptions.CurrentValue.EnableGitHubIntegration
-        };
-
-        return Task.FromResult(settings);
+        return _appOptions.CurrentValue.EnableGitHubIntegration.AsTaskResult();
     }
 
     public override async Task OnConnectedAsync()

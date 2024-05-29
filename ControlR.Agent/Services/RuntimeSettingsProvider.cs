@@ -13,12 +13,11 @@ namespace ControlR.Agent.Services;
 public interface IRuntimeSettingsProvider
 {
     ManualResetEventAsync ServerProvidedSettingsSignal { get; }
-    Task<bool?> GetGitHubEnabled();
-
-    Task SetGitHubEnabled(bool isEnabled);
+    Task<T?> TryGet<T>(Func<AgentRuntimeSettings, T?> getter, [CallerMemberName] string? caller = null);
 
     Task<AgentRuntimeSettings?> TryGetSettings();
-    Task TrySetSettings(AgentRuntimeSettings settings);
+    Task TrySet(Func<AgentRuntimeSettings, AgentRuntimeSettings> setter, [CallerMemberName] string? caller = null);
+    Task TrySet(Action<AgentRuntimeSettings> setter, [CallerMemberName] string? caller = null);
 }
 public class RuntimeSettingsProvider(
     IFileSystem _fileSystem,
@@ -29,31 +28,7 @@ public class RuntimeSettingsProvider(
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     public ManualResetEventAsync ServerProvidedSettingsSignal { get; } = new();
 
-    public async Task<bool?> GetGitHubEnabled()
-    {
-        return await TryGet(x => x.GitHubEnabled);
-    }
-
-    public async Task SetGitHubEnabled(bool isEnabled)
-    {
-        await TrySet(x => 
-        {
-            x.GitHubEnabled = isEnabled;
-            return x;
-        });
-    }
-
-    public async Task<AgentRuntimeSettings?> TryGetSettings()
-    {
-        return await TryGet(x => x);
-    }
-
-    public async Task TrySetSettings(AgentRuntimeSettings settings)
-    {
-        await TrySet(x => x = settings);
-    }
-
-    private async Task<T?> TryGet<T>(Func<AgentRuntimeSettings, T?> getter, [CallerMemberName] string? caller = null)
+    public async Task<T?> TryGet<T>(Func<AgentRuntimeSettings, T?> getter, [CallerMemberName] string? caller = null)
     {
         if (!await _fileLock.WaitAsync(TimeSpan.FromSeconds(5)))
         {
@@ -91,7 +66,11 @@ public class RuntimeSettingsProvider(
         }
     }
 
-    private async Task TrySet(Func<AgentRuntimeSettings, AgentRuntimeSettings> setter, [CallerMemberName] string? caller = null)
+    public async Task<AgentRuntimeSettings?> TryGetSettings()
+    {
+        return await TryGet(x => x);
+    }
+    public async Task TrySet(Func<AgentRuntimeSettings, AgentRuntimeSettings> setter, [CallerMemberName] string? caller = null)
     {
         if (!await _fileLock.WaitAsync(TimeSpan.FromSeconds(5)))
         {
@@ -129,5 +108,15 @@ public class RuntimeSettingsProvider(
         {
             _fileLock.Release();
         }
+    }
+
+    public async Task TrySet(Action<AgentRuntimeSettings> setter, [CallerMemberName] string? caller = null)
+    {
+        await TrySet(x =>
+        {
+            setter.Invoke(x);
+            return x;
+        },
+        caller);
     }
 }
