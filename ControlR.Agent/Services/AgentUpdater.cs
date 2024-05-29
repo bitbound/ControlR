@@ -21,7 +21,6 @@ internal interface IAgentUpdater : IHostedService
 
 internal class AgentUpdater(
     IVersionApi _versionApi,
-    IGitHubApi _githubApi,
     IDownloadsApi _downloadsApi,
     IFileSystem _fileSystem,
     IProcessManager _processInvoker,
@@ -60,41 +59,16 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Beginning version check.");
 
-            var githubResult = await _runtimeSettings.TryGet(x => x.GitHubEnabled);
-            if (githubResult is not bool useGithub)
+
+            var hashResult = await _versionApi.GetCurrentAgentHash(_environmentHelper.Runtime);
+            if (!hashResult.IsSuccess)
             {
-                _logger.LogError("GitHubEnabled is not present in runtime settings.");
                 return;
             }
-
-            byte[] remoteHash = [];
-            string downloadUrl = "";
-
-            if (useGithub)
-            {
-                var hashResult = await _githubApi.GetLatestAgentHash(_environmentHelper.Runtime);
-                if (!hashResult.IsSuccess)
-                {
-                    return;
-                }
-
-                remoteHash = hashResult.Value.ContentMd5;
-                downloadUrl = hashResult.Value.DownloadUrl;
-            }
-            else
-            {
-                var hashResult = await _versionApi.GetCurrentAgentHash(_environmentHelper.Runtime);
-                if (!hashResult.IsSuccess)
-                {
-                    return;
-                }
-                remoteHash = hashResult.Value;
-                var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
-                var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
-                downloadUrl = $"{serverOrigin}{downloadPath}";
-            }
-
-
+            var remoteHash = hashResult.Value;
+            var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
+            var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
+            var downloadUrl = $"{serverOrigin}{downloadPath}";
 
             using var fs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var exeHash = await MD5.HashDataAsync(fs, linkedCts.Token);

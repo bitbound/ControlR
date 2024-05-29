@@ -3,8 +3,6 @@
 [MessagePackObject]
 public class AgentRuntimeSettings
 {
-    [MsgPackKey]
-    public bool? GitHubEnabled { get; set; }
 
     [MsgPackKey]
     public bool? LowerUacDuringSession { get; set; }

@@ -15,7 +15,6 @@ public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
     IConnectionCounter _connectionCounter,
-    IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
     private DeviceDto? Device
@@ -33,11 +32,6 @@ public class AgentHub(
         {
             Context.Items[nameof(Device)] = value;
         }
-    }
-
-    public Task<bool> GetGitHubIntegrationEnabled()
-    {
-        return _appOptions.CurrentValue.EnableGitHubIntegration.AsTaskResult();
     }
 
     public override async Task OnConnectedAsync()

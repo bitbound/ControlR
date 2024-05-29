@@ -263,15 +263,8 @@ internal class AgentHubConnection(
               ConfigureHttpOptions,
                _appLifetime.ApplicationStopping);
 
-        await GetRuntimeSettingsFromServer();
         await SendDeviceHeartbeat();
         _runtimeSettings.ServerProvidedSettingsSignal.Set();
-    }
-
-    private async Task GetRuntimeSettingsFromServer()
-    {
-        var githubEnabled = await Connection.InvokeAsync<bool>(nameof(IAgentHub.GetGitHubIntegrationEnabled));
-        await _runtimeSettings.TrySet(x => x.GitHubEnabled = githubEnabled);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -311,7 +304,6 @@ internal class AgentHubConnection(
     private async Task HubConnection_Reconnected(string? arg)
     {
         await SendDeviceHeartbeat();
-        await GetRuntimeSettingsFromServer();
         await _agentUpdater.CheckForUpdate();
         await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
     }
