@@ -12,4 +12,5 @@ internal enum GenericMessageKind
     DeviceContentWindowsChanged,
     AppUpdateAvailable,
     LocalProxyListenerStopRequested,
+    IsServerAdminChanged,
 }

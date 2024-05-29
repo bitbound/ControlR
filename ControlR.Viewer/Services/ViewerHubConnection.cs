@@ -431,12 +431,8 @@ internal class ViewerHubConnection(
         await TryInvoke(
             async () =>
             {
-                var isAdmin = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
-                if (_appState.IsServerAdministrator != isAdmin)
-                {
-                    _appState.IsServerAdministrator = isAdmin;
-                    await _messenger.SendGenericMessage(GenericMessageKind.KeysStateChanged);
-                }
+                _appState.IsServerAdministrator = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
+                await _messenger.SendGenericMessage(GenericMessageKind.IsServerAdminChanged);
             });
     }
 

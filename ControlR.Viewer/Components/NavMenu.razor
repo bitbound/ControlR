@@ -33,6 +33,19 @@
     {
         base.OnInitialized();
 
-        Messenger.RegisterGenericMessage(this, GenericMessageKind.KeysStateChanged, () => InvokeAsync(StateHasChanged));
+        Messenger.RegisterGenericMessage(this, HandleGenericMessage);
+    }
+
+    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+    {
+        switch (kind)
+        {
+            case GenericMessageKind.KeysStateChanged:
+            case GenericMessageKind.IsServerAdminChanged:
+                await InvokeAsync(StateHasChanged);
+                break;
+            default: 
+                break;
+        }
     }
 }
