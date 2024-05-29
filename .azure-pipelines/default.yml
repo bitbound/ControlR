@@ -10,7 +10,7 @@ jobs:
 - job: Windows_Build
   displayName: Build
   pool:
-    vmImage: windows-latest
+    name: Default
   variables:
     AndroidVersionCode: $[counter('AndroidVersion', 2)]
   steps:
