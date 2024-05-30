@@ -2,6 +2,7 @@
 using ControlR.Shared.Dtos;
 using ControlR.Shared.Services;
 using MessagePack;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 
@@ -24,13 +25,21 @@ internal class HttpConfigurer(
     IHttpClientFactory _clientFactory,
     ISettings _settings,
     IKeyProvider _keyProvider,
-    IAppState _appState) : IHttpConfigurer
+    IAppState _appState,
+    ILogger<HttpConfigurer> _logger) : IHttpConfigurer
 {
     private static readonly ConcurrentBag<HttpClient> _clients = [];
 
     public void ConfigureClient(HttpClient client)
     {
-        client.BaseAddress = new Uri(_settings.ServerUri);
+        if (Uri.TryCreate(_settings.ServerUri, UriKind.Absolute, out var serverUri))
+        {
+            client.BaseAddress = serverUri;
+        }
+        else
+        {
+            _logger.LogError("Server URI in settings is invalid: {ServerUri}", _settings.ServerUri);
+        }
 
         if (_appState.IsAuthenticated)
         {

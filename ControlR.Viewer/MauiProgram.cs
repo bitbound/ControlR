@@ -88,7 +88,7 @@ public static class MauiProgram
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-        builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
+        builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureAnonymousHttpClient);
 
         builder.Services.AddTransient<IClipboardManager, ClipboardManager>();
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
@@ -112,6 +112,14 @@ public static class MauiProgram
         return builder.Build();
     }
 
+    private static void ConfigureAnonymousHttpClient(IServiceProvider services, HttpClient client)
+    {
+        var settings = services.GetRequiredService<ISettings>();
+        if (Uri.TryCreate(settings.ServerUri, UriKind.Absolute, out var serverUri))
+        {
+            client.BaseAddress = serverUri;
+        }
+    }
     private static void ConfigureHttpClient(IServiceProvider services, HttpClient client)
     {
         var httpConfig = services.GetRequiredService<IHttpConfigurer>();

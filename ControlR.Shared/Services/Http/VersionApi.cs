@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Net.Http.Json;
 
 namespace ControlR.Shared.Services.Http;
 
@@ -16,10 +17,10 @@ internal class VersionApi(
     HttpClient client,
     ILogger<VersionApi> logger) : IVersionApi
 {
-    private readonly string _agentVersionFile = "/downloads/AgentVersion.txt";
+    private readonly string _agentVersionEndpoint = "/api/version/agent";
     private readonly HttpClient _client = client;
     private readonly ILogger<VersionApi> _logger = logger;
-    private readonly string _viewerVersionFile = "/downloads/ViewerVersion.txt";
+    private readonly string _viewerVersionEndpoint = "/api/version/viewer";
 
     public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
     {
@@ -47,16 +48,13 @@ internal class VersionApi(
     {
         try
         {
-            var versionResult = await _client.GetStringAsync(_agentVersionFile);
-
-            _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", versionResult);
-            if (!Version.TryParse(versionResult?.Trim(), out var agentVersion))
+            var version = await _client.GetFromJsonAsync<Version>(_agentVersionEndpoint);
+            _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
+            if (version is null)
             {
-                var result = Result.Fail<Version>("Failed to get latest version from server.");
-                _logger.LogResult(result);
-                return result;
+                return Result.Fail<Version>("Server version response was empty.");
             }
-            return Result.Ok(agentVersion);
+            return Result.Ok(version);
         }
         catch (Exception ex)
         {
@@ -91,16 +89,13 @@ internal class VersionApi(
     {
         try
         {
-            var versionResult = await _client.GetStringAsync(_viewerVersionFile);
-
-            _logger.LogInformation("Latest viewer version on server: {LatestViewerVersion}", versionResult);
-            if (!Version.TryParse(versionResult?.Trim(), out var viewerVersion))
+            var version = await _client.GetFromJsonAsync<Version>(_viewerVersionEndpoint);
+            _logger.LogInformation("Latest viewer version on server: {LatestViewerVersion}", version);
+            if (version is null)
             {
-                var result = Result.Fail<Version>("Failed to get latest version from server.");
-                _logger.LogResult(result);
-                return result;
+                return Result.Fail<Version>("Server version response was empty.");
             }
-            return Result.Ok(viewerVersion);
+            return Result.Ok(version);
         }
         catch (Exception ex)
         {

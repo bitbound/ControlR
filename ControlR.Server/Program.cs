@@ -108,6 +108,8 @@ builder.Services
     })
     .AddMessagePackProtocol();
 
+builder.Services.AddOutputCache();
+
 builder.Services.AddHttpClient<IMeteredApi, MeteredApi>();
 
 builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
@@ -162,10 +164,10 @@ app.UseMiddleware<Md5HeaderMiddleware>();
 
 ConfigureStaticFiles(app);
 
-app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseOutputCache();
 
 app.MapControllers();
 

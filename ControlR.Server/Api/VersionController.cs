@@ -1,15 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.FileProviders;
 
 namespace ControlR.Server.Api;
 
 [Route("api/[controller]")]
 [ApiController]
-public partial class VersionController(
-    IFileProvider _phyiscalFileProvider) : ControllerBase
+public partial class VersionController(IFileProvider _phyiscalFileProvider) : ControllerBase
 {
     [HttpGet("agent")]
+    [OutputCache]
     public async Task<ActionResult<Version>> GetCurrentAgentVersion()
     {
         var fileInfo = _phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/AgentVersion.txt");
@@ -32,7 +32,7 @@ public partial class VersionController(
     }
 
     [HttpGet("viewer")]
-    [Authorize]
+    [OutputCache]
     public async Task<ActionResult<Version>> GetCurrentViewerVersion()
     {
         var fileInfo = _phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/ViewerVersion.txt");
