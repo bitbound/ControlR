@@ -7,10 +7,12 @@ import {
   Typography,
   Tooltip,
   IconButton,
+  Link,
 } from "@mui/material";
 
 import DeployAgentDialog from "./DeployAgentDialog";
 import MsStoreBadge from "./MsStoreBadge";
+import CertificateInstructionsDialog from "./CertificateInstructionsDialog";
 
 function Home() {
   const [isAgentDialogOpen, setAgentDialogOpen] = React.useState(false);
@@ -18,7 +20,16 @@ function Home() {
   const openAgentDialog = () => {
     setAgentDialogOpen(true);
   };
+  const [isCertificateDialogOpen, setCertificateDialogOpen] =
+    React.useState(false);
 
+  const openCertificateDialog = () => {
+    setCertificateDialogOpen(true);
+  };
+
+  const closeCertificateDialog = () => {
+    setCertificateDialogOpen(false);
+  };
   const closeAgentDialog = () => {
     setAgentDialogOpen(false);
   };
@@ -29,18 +40,41 @@ function Home() {
         Viewer
       </Typography>
 
-      <Typography variant="h6">Windows 10/11</Typography>
+      <Typography variant="h6">Store Links</Typography>
       <ButtonWrapper>
         <MsStoreBadge
           productid="9NS914B8GR04"
           window-mode="full"
           theme="dark"
           language="en-us"
-          animation="on">
-        </MsStoreBadge>
+          animation="on"
+        ></MsStoreBadge>
       </ButtonWrapper>
 
-      <Typography variant="h6">Android</Typography>
+      <Typography variant="h6">Windows 10/11</Typography>
+      <ButtonWrapper>
+        <CertificateInfoWrapper>
+          <Button
+            variant="outlined"
+            href="/downloads/ControlR.Viewer.msix"
+            target="_blank"
+          >
+            MSIX
+          </Button>
+          <Tooltip title="Certificate Instructions">
+            <CertificateHelpButton onClick={openCertificateDialog}>
+              <HelpOutline />
+            </CertificateHelpButton>
+          </Tooltip>
+
+          <CertificateInstructionsDialog
+            isOpen={isCertificateDialogOpen}
+            onClose={closeCertificateDialog}
+          />
+        </CertificateInfoWrapper>
+      </ButtonWrapper>
+
+      <Typography variant="h6" className="mt-10">Android</Typography>
       <ButtonWrapper>
         <Button
           variant="outlined"
@@ -95,6 +129,15 @@ const ButtonWrapper = styled("div")({
 const AgentHelpButton = styled(IconButton)({
   position: "absolute",
   transform: "translateX(5px)",
+});
+
+const CertificateInfoWrapper = styled("div")({
+  marginBottom: "1rem",
+});
+
+const CertificateHelpButton = styled(IconButton)({
+  position: "absolute",
+  transform: "translate(5px, -25%)",
 });
 
 export default Home;
