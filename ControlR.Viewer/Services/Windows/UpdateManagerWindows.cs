@@ -35,10 +35,14 @@ internal class UpdateManagerWindows(
                 return Result.Ok(false);
             }
 
+            // If store integration is enabled, we only want to show available update
+            // if it exists in both the store and the ControlR backend.
             if (integrationEnabled && _storeIntegration.CanCheckForUpdates)
             {
-                var updateAvailable = await _storeIntegration.IsUpdateAvailable();
-                return Result.Ok(updateAvailable);
+                if (!await _storeIntegration.IsUpdateAvailable())
+                {
+                    return Result.Ok(false);
+                }
             }
             return await CheckForSelfHostedUpdate();
         }
