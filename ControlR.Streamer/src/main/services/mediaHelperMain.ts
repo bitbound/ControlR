@@ -55,12 +55,15 @@ export async function getDisplays(): Promise<DisplayDto[]> {
 
 export function watchForDisplayChanges() {
   screen.on("display-added", () => {
+    writeLog("Display added.  Sending change notification.");
     sendDisplaysChanged();
   });
   screen.on("display-metrics-changed", () => {
+    writeLog("Display metris changed.  Sending change notification.");
     sendDisplaysChanged();
   });
   screen.on("display-removed", () => {
+    writeLog("Display removed.  Sending change notification.");
     sendDisplaysChanged();
   });
 }
