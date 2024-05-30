@@ -26,6 +26,14 @@
 				<uap:DefaultTile Square71x71Logo="$placeholder$.png" Wide310x150Logo="$placeholder$.png" Square310x310Logo="$placeholder$.png"  ShortName="ControlR (Dev)"/>
 				<uap:SplashScreen Image="$placeholder$.png" />
 			</uap:VisualElements>
+			<Extensions>
+				<uap:Extension Category="windows.protocol">
+					<uap:Protocol Name="ctrlr-dev">
+						<uap:Logo>Resources\Raw\appicon.png</uap:Logo>
+						<uap:DisplayName>ControlR (Dev)</uap:DisplayName>
+					</uap:Protocol>
+				</uap:Extension>
+			</Extensions>
 		</Application>
 	</Applications>
 
