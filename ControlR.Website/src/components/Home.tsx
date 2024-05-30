@@ -7,7 +7,6 @@ import {
   Typography,
   Tooltip,
   IconButton,
-  Link,
 } from "@mui/material";
 
 import DeployAgentDialog from "./DeployAgentDialog";
