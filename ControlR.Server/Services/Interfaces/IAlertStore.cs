@@ -1,7 +1,4 @@
-﻿using ControlR.Shared.Dtos;
-using ControlR.Shared.Primitives;
-
-namespace ControlR.Server.Services.Interfaces;
+﻿namespace ControlR.Server.Services.Interfaces;
 
 public interface IAlertStore
 {

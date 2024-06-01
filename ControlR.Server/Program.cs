@@ -4,7 +4,6 @@ using ControlR.Server.Middleware;
 using ControlR.Server.Options;
 using ControlR.Server.Services;
 using ControlR.Shared;
-using ControlR.Shared.Services;
 using ControlR.Shared.Services.Buffers;
 using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -12,9 +11,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using System.Net;
-using ControlR.Shared.Extensions;
 using StackExchange.Redis;
-using Microsoft.Extensions.Caching.Distributed;
 using ControlR.Server.Services.InMemory;
 using ControlR.Server.Services.Interfaces;
 using ControlR.Server.Services.Distributed;
@@ -142,7 +139,7 @@ if (appOptions.UseGarnetBackplane)
 
     if (!multiplexer.IsConnected)
     {
-        Log.Error("Failed to connect to Garnet backplane.");
+        Log.Fatal("Failed to connect to Garnet backplane.");
     }
 
     builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
@@ -166,7 +163,6 @@ builder.Services.AddHttpContextAccessor();
 
 if (appOptions.UseGarnetBackplane)
 {
-    // TODO: Distributed implementations.
     builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();

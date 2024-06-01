@@ -8,27 +8,38 @@ public class ConnectionCounterLocal : IConnectionCounter
     private volatile int _agentCount;
 
     private volatile int _viewerCount;
-    public int AgentCount => _agentCount;
 
-    public int ViewerCount => _viewerCount;
-
-    public void DecrementAgentCount()
+    public Task DecrementAgentCount()
     {
         Interlocked.Decrement(ref _agentCount);
+        return Task.CompletedTask;
     }
 
-    public void DecrementViewerCount()
+    public Task DecrementViewerCount()
     {
         Interlocked.Decrement(ref _viewerCount);
+        return Task.CompletedTask;
     }
 
-    public void IncrementAgentCount()
+    public Task<Result<int>> GetAgentConnectionCount()
+    {
+        return Result.Ok(_agentCount).AsTaskResult();
+    }
+
+    public Task<Result<int>> GetViewerConnectionCount()
+    {
+        return Result.Ok(_viewerCount).AsTaskResult();
+    }
+
+    public Task IncrementAgentCount()
     {
         Interlocked.Increment(ref _agentCount);
+        return Task.CompletedTask;
     }
 
-    public void IncrementViewerCount()
+    public Task IncrementViewerCount()
     {
         Interlocked.Increment(ref _viewerCount);
+        return Task.CompletedTask;
     }
 }

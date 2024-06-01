@@ -1,30 +1,85 @@
-﻿using ControlR.Server.Services.Interfaces;
+﻿using ControlR.Server.Services.Distributed.Locking;
+using ControlR.Server.Services.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace ControlR.Server.Services.Distributed;
 
-public class ConnectionCounterDistributed : IConnectionCounter
+public class ConnectionCounterDistributed(
+    IDistributedCache _cache,
+    IDistributedLock _locker,
+    ILogger<ConnectionCounterDistributed> _logger) : IConnectionCounter
 {
-    public int AgentCount => throw new NotImplementedException();
-
-    public int ViewerCount => throw new NotImplementedException();
-
-    public void DecrementAgentCount()
+    public async Task DecrementAgentCount()
     {
-        throw new NotImplementedException();
+        await AdjustCount(LockKeys.AgentCount, -1);
     }
 
-    public void DecrementViewerCount()
+    public async Task DecrementViewerCount()
     {
-        throw new NotImplementedException();
+        await AdjustCount(LockKeys.ViewerCount, -1);
     }
 
-    public void IncrementAgentCount()
+    public async Task<Result<int>> GetAgentConnectionCount()
     {
-        throw new NotImplementedException();
+        return await GetCount(LockKeys.AgentCount);
     }
 
-    public void IncrementViewerCount()
+    public async Task<Result<int>> GetViewerConnectionCount()
     {
-        throw new NotImplementedException();
+        return await GetCount(LockKeys.ViewerCount);
+    }
+
+    public async Task IncrementAgentCount()
+    {
+        await AdjustCount(LockKeys.AgentCount, 1);
+    }
+
+    public async Task IncrementViewerCount()
+    {
+        await AdjustCount(LockKeys.ViewerCount, 1);
+    }
+
+    private async Task AdjustCount(string key, int adjustBy)
+    {
+        try
+        {
+            await using var result = await _locker.TryAcquireLock(key);
+            if (!result.LockAcquired)
+            {
+                return;
+            }
+
+            var current = await _cache.GetAsync(key);
+            if (current is null)
+            {
+                return;
+            }
+
+            var count = BitConverter.ToInt32(current) + adjustBy;
+            await _cache.SetAsync(key, BitConverter.GetBytes(count));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Failed to increment or decrement counter key {KeyName}.", key);
+        }
+    }
+    private async Task<Result<int>> GetCount(string key)
+    {
+        try
+        {
+            var current = await _cache.GetAsync(key);
+            if (current is null)
+            {
+                return Result.Ok(0);
+            }
+
+            var count = BitConverter.ToInt32(current);
+            return Result.Ok(count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Failed to increment or decrement counter key {KeyName}.", key);
+            return Result.Fail<int>(ex);
+        }
     }
 }

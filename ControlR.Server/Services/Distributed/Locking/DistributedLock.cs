@@ -1,5 +1,4 @@
-﻿using ControlR.Shared.Primitives;
-using StackExchange.Redis;
+﻿using StackExchange.Redis;
 
 namespace ControlR.Server.Services.Distributed.Locking;
 
@@ -41,14 +40,13 @@ public class DistributedLock(
             }
             while (await timer.WaitForNextTickAsync(cts.Token));
 
-            _logger.LogError("Failed to acquire distributed lock.  Key: {LockKey}", key);
+            _logger.LogCritical("Failed to acquire distributed lock.  Key: {LockKey}", key);
             return LockToken.Failed(lockKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while trying to acquire distributed lock.  Key: {LockKey}", key);
+            _logger.LogCritical(ex, "Error while trying to acquire distributed lock.  Key: {LockKey}", key);
             return LockToken.Failed(lockKey);
         }
-
     }
 }

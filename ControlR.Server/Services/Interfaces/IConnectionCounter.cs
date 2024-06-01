@@ -2,14 +2,14 @@
 
 public interface IConnectionCounter
 {
-    int AgentCount { get; }
-    int ViewerCount { get; }
+    Task<Result<int>> GetAgentConnectionCount();
+    Task<Result<int>> GetViewerConnectionCount();
 
-    void DecrementAgentCount();
+    Task DecrementAgentCount();
 
-    void DecrementViewerCount();
+    Task DecrementViewerCount();
 
-    void IncrementAgentCount();
+    Task IncrementAgentCount();
 
-    void IncrementViewerCount();
+    Task IncrementViewerCount();
 }

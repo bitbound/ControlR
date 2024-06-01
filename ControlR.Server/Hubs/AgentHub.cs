@@ -1,8 +1,4 @@
 ﻿using ControlR.Server.Services.Interfaces;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Hubs;
-using ControlR.Shared.Interfaces.HubClients;
-using ControlR.Shared.Services;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Server.Hubs;
@@ -32,14 +28,14 @@ public class AgentHub(
 
     public override async Task OnConnectedAsync()
     {
-        _connectionCounter.IncrementAgentCount();
+        await _connectionCounter.IncrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _connectionCounter.DecrementAgentCount();
+        await _connectionCounter.DecrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
 
         if (Device is DeviceDto cachedDevice)
@@ -122,9 +118,25 @@ public class AgentHub(
     {
         try
         {
+            var agentResult = await _connectionCounter.GetAgentConnectionCount();
+            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+
+            if (!agentResult.IsSuccess)
+            {
+                _logger.LogResult(agentResult);
+                return;
+            }
+
+            if (!viewerResult.IsSuccess)
+            {
+                _logger.LogResult(viewerResult);
+                return;
+            }
+
+
             var dto = new ServerStatsDto(
-                _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount);
+                agentResult.Value,
+                viewerResult.Value);
 
             await _viewerHub.Clients
                 .Group(HubGroupNames.ServerAdministrators)

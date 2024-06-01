@@ -1,8 +1,4 @@
 ﻿using ControlR.Server.Services;
-using ControlR.Server.Services.Interfaces;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Interfaces.HubClients;
-using ControlR.Shared.Models;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Server.Hubs;

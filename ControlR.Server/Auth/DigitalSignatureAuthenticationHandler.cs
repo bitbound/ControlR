@@ -1,12 +1,6 @@
-﻿using ControlR.Server.Options;
-using ControlR.Shared;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Services;
-using MessagePack;
+﻿using ControlR.Shared;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
 using System.Text.Encodings.Web;
 
 namespace ControlR.Server.Auth;

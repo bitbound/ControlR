@@ -1,6 +1,4 @@
 ﻿using ControlR.Server.Services.Interfaces;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Primitives;
 using MessagePack;
 using Microsoft.Extensions.Caching.Distributed;
 

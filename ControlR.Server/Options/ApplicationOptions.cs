@@ -1,6 +1,4 @@
-﻿using ControlR.Shared.Models;
-
-namespace ControlR.Server.Options;
+﻿namespace ControlR.Server.Options;
 
 public class ApplicationOptions
 {

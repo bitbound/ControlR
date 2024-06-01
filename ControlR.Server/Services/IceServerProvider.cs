@@ -1,6 +1,5 @@
 ﻿using ControlR.Server.Options;
 using ControlR.Shared.Helpers;
-using ControlR.Shared.Models;
 using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;

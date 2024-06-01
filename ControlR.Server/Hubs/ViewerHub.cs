@@ -3,13 +3,6 @@ using ControlR.Server.Extensions;
 using ControlR.Server.Options;
 using ControlR.Server.Services;
 using ControlR.Server.Services.Interfaces;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Hubs;
-using ControlR.Shared.Interfaces.HubClients;
-using ControlR.Shared.Models;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -114,48 +107,40 @@ public class ViewerHub(
         return await _iceProvider.GetIceServers();
     }
 
-    public Task<Result<ServerStatsDto>> GetServerStats()
+    public async Task<Result<ServerStatsDto>> GetServerStats()
     {
         try
         {
             if (!VerifyIsAdmin())
             {
-                return Result.Fail<ServerStatsDto>("Unauthorized.").AsTaskResult();
+                return Result.Fail<ServerStatsDto>("Unauthorized.");
+            }
+
+            var agentResult = await _connectionCounter.GetAgentConnectionCount();
+            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+
+            if (!agentResult.IsSuccess)
+            {
+                _logger.LogResult(agentResult);
+                return Result.Fail<ServerStatsDto>(agentResult.Reason);
+            }
+
+            if (!viewerResult.IsSuccess)
+            {
+                _logger.LogResult(viewerResult);
+                return Result.Fail<ServerStatsDto>(viewerResult.Reason);
             }
 
             var dto = new ServerStatsDto(
-                _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount);
+                agentResult.Value,
+                viewerResult.Value);
 
-            return Result.Ok(dto).AsTaskResult();
+            return Result.Ok(dto);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting agent count.");
-            return Result.Fail<ServerStatsDto>("Failed to get agent count.").AsTaskResult();
-        }
-    }
-
-    public async Task<Result> RequestStreamingSession(
-        string agentConnectionId, 
-        SignedPayloadDto sessionRequestDto)
-    {
-        try
-        {
-            var sessionSuccess = await _agentHub.Clients
-                   .Client(agentConnectionId)
-                   .CreateStreamingSession(sessionRequestDto);
-
-            if (!sessionSuccess)
-            {
-                return Result.Fail("Failed to request a streaming session from the agent.");
-            }
-
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            return Result.Fail(ex);
+            return Result.Fail<ServerStatsDto>("Failed to get agent count.");
         }
     }
 
@@ -174,7 +159,7 @@ public class ViewerHub(
 
     public override async Task OnConnectedAsync()
     {
-        _connectionCounter.IncrementViewerCount();
+        await _connectionCounter.IncrementViewerCount();
         await SendUpdatedConnectionCountToAdmins();
 
         await base.OnConnectedAsync();
@@ -197,16 +182,22 @@ public class ViewerHub(
         if (IsServerAdmin)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-            var statsDto = new ServerStatsDto(
-                _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount);
-            await Clients.Caller.ReceiveServerStats(statsDto);
+
+            var getResult = await GetServerStats();
+            if (getResult.IsSuccess)
+            {
+                await Clients.Caller.ReceiveServerStats(getResult.Value);
+            }
+            else
+            {
+                getResult.Log(_logger);
+            }
         }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _connectionCounter.DecrementViewerCount();
+        await _connectionCounter.DecrementViewerCount();
         await SendUpdatedConnectionCountToAdmins();
 
         if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
@@ -217,6 +208,28 @@ public class ViewerHub(
         await base.OnDisconnectedAsync(exception);
     }
 
+    public async Task<Result> RequestStreamingSession(
+                    string agentConnectionId, 
+        SignedPayloadDto sessionRequestDto)
+    {
+        try
+        {
+            var sessionSuccess = await _agentHub.Clients
+                   .Client(agentConnectionId)
+                   .CreateStreamingSession(sessionRequestDto);
+
+            if (!sessionSuccess)
+            {
+                return Result.Fail("Failed to request a streaming session from the agent.");
+            }
+
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(ex);
+        }
+    }
     public async Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
     {
         try
@@ -314,13 +327,18 @@ public class ViewerHub(
     {
         try
         {
-            var dto = new ServerStatsDto(
-                _connectionCounter.AgentCount,
-                _connectionCounter.ViewerCount);
+            var getResult = await GetServerStats();
 
-            await Clients
-                .Group(HubGroupNames.ServerAdministrators)
-                .ReceiveServerStats(dto);
+            if (getResult.IsSuccess)
+            {
+                await Clients
+                    .Group(HubGroupNames.ServerAdministrators)
+                    .ReceiveServerStats(getResult.Value);
+            }
+            else
+            {
+                _logger.LogResult(getResult);
+            }
         }
         catch (Exception ex)
         {
@@ -337,7 +355,7 @@ public class ViewerHub(
         if (!IsServerAdmin)
         {
             _logger.LogCritical(
-                "Admin verification failed when invoking membmer {MemberName}. Public Key: {PublicKey}",
+                "Admin verification failed when invoking member {MemberName}. Public Key: {PublicKey}",
                 callerMember,
                 publicKey);
         }
