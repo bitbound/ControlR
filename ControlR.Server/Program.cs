@@ -112,7 +112,11 @@ var signalrBuilder = builder.Services
         options.MaximumReceiveMessageSize = 100_000;
         options.MaximumParallelInvocationsPerClient = 5;
     })
-    .AddMessagePackProtocol();
+    .AddMessagePackProtocol()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
 if (appOptions.UseGarnetBackplane)
 {
@@ -165,14 +169,12 @@ if (appOptions.UseGarnetBackplane)
     // TODO: Distributed implementations.
     builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
-    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheLocal>();
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
 }
 else
 {
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
-    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheLocal>();
 }
 
 builder.Host.UseSystemd();

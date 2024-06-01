@@ -15,7 +15,7 @@ export default function MainLayout() {
 
   useEffect(() => {
     (async () => {
-      const sessionId = await window.mainApi.getSessionId();
+      const sessionId = await window.mainApi.getViewerConnectionId();
       setState({
         sessionId: sessionId,
         initialized: true,

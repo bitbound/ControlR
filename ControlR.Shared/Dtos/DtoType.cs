@@ -24,4 +24,5 @@ public enum DtoType
     InvokeCtrlAltDel = 20,
     ClipboardChanged = 21,
     AgentUpdateTrigger = 22,
+    StreamerInitData = 23,
 }

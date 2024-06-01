@@ -212,7 +212,7 @@ internal class StreamerUpdaterWindows(
                 try
                 {
                     var dto = new StreamerDownloadProgressDto(
-                        request.StreamingSessionId,
+                        request.SessionId,
                         request.ViewerConnectionId,
                         progress,
                         message);

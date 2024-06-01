@@ -84,7 +84,6 @@ public abstract class HubConnectionBase(
                     {
                         optionsConfig(options);
                     })
-                    .AddMessagePackProtocol()
                     .WithStatefulReconnect()
                     .WithAutomaticReconnect(new RetryPolicy())
                     .Build();

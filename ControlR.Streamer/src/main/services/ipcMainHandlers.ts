@@ -23,6 +23,7 @@ type MainIpcHandler = (
 export async function registerIpcHandlers() {
   handleMethod("getServerUri", () => appState.serverUri);
   handleMethod("getSessionId", () => appState.sessionId);
+  handleMethod("getViewerConnectionId", () => appState.viewerConnectionId);
   handleMethod("getNotifyUser", () => appState.notifyUser);
   handleMethod("getViewerName", () => appState.viewerName);
   handleMethod("verifyDto", (_, payload, signature, publicKey, publicKeyPem) =>

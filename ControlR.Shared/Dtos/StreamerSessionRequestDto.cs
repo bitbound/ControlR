@@ -8,7 +8,7 @@ namespace ControlR.Shared.Dtos;
 [method: JsonConstructor]
 [method: SerializationConstructor]
 public class StreamerSessionRequestDto(
-    Guid streamingSessionId, 
+    Guid sessionId, 
     int targetSystemSession, 
     string viewerConnectionId,
     string agentConnectionId,
@@ -20,12 +20,13 @@ public class StreamerSessionRequestDto(
     public string AgentConnectionId { get; init; } = agentConnectionId;
 
     [MsgPackKey]
+    public bool NotifyUserOnSessionStart { get; init; } = notifyUserOnSessionStart;
+
+    [MsgPackKey]
     public bool LowerUacDuringSession { get; init; } = lowerUacDuringSession;
 
     [MsgPackKey]
-    public bool NotifyUserOnSessionStart { get; init; } = notifyUserOnSessionStart;
-    [MsgPackKey]
-    public Guid StreamingSessionId { get; init; } = streamingSessionId;
+    public Guid SessionId { get; init; } = sessionId;
 
 
     [MsgPackKey]

@@ -13,6 +13,7 @@ declare interface MainApi {
   ): Promise<boolean>;
   getServerUri(): Promise<string>;
   getSessionId(): Promise<string>;
+  getViewerConnectionId(): Promise<string>;
   getNotifyUser(): Promise<boolean>;
   getViewerName(): Promise<string>;
   getDisplays(): Promise<DisplayDto[]>;

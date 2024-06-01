@@ -2,10 +2,10 @@
 using System.Diagnostics;
 
 namespace ControlR.Agent.Models;
-internal class StreamingSession(Guid sessionId, bool lowerUacDuringSession) : IDisposable
+internal class StreamingSession(string _viewerConnectionId, bool _lowerUacDuringSession) : IDisposable
 {
-    public bool LowerUacDuringSession { get; } = lowerUacDuringSession;
-    public Guid SessionId { get; } = sessionId;
+    public bool LowerUacDuringSession { get; } = _lowerUacDuringSession;
+    public string ViewerConnectionId { get; } = _viewerConnectionId;
     public Process? StreamerProcess { get; set; }
     public void Dispose()
     {

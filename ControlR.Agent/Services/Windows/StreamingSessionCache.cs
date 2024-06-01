@@ -1,32 +1,37 @@
 ﻿using ControlR.Agent.Models;
+using ControlR.Shared.Helpers;
 using ControlR.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace ControlR.Agent.Services.Windows;
 
 internal interface IStreamingSessionCache
 {
-    IReadOnlyDictionary<Guid, StreamingSession> Sessions { get; }
+    IReadOnlyDictionary<int, StreamingSession> Sessions { get; }
     Task AddOrUpdate(StreamingSession session);
     Task KillAllSessions();
-    Task<Result<StreamingSession>> TryRemove(Guid sessionId);
+    Task<Result<StreamingSession>> TryRemove(int processId);
 }
 internal class StreamingSessionCache(
     IRuntimeSettingsProvider _runtimeSettings,
     IHostApplicationLifetime _appLifetime,
-    IRegistryAccessor _registryAccessor) : IStreamingSessionCache
+    IRegistryAccessor _registryAccessor,
+    ILogger<StreamingSessionCache> _logger) : IStreamingSessionCache
 {
-    private readonly ConcurrentDictionary<Guid, StreamingSession> _sessions = new();
+    private readonly ConcurrentDictionary<int, StreamingSession> _sessions = new();
     private readonly SemaphoreSlim _uacLock = new(1,1);
 
-    public IReadOnlyDictionary<Guid, StreamingSession> Sessions => _sessions;
+    public IReadOnlyDictionary<int, StreamingSession> Sessions => _sessions;
 
     public async Task AddOrUpdate(StreamingSession session)
     {
         await _uacLock.WaitAsync(_appLifetime.ApplicationStopping);
         try
         {
+            Guard.IsNotNull(session.StreamerProcess);
+
             if (session.LowerUacDuringSession && _sessions.IsEmpty)
             {
                 var originalPromptValue = _registryAccessor.GetPromptOnSecureDesktop();
@@ -34,7 +39,11 @@ internal class StreamingSessionCache(
                 _registryAccessor.SetPromptOnSecureDesktop(false);
             }
 
-            _sessions.AddOrUpdate(session.SessionId, session, (_, _) => session);
+            _sessions.AddOrUpdate(session.StreamerProcess.Id, session, (_, _) => session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while adding streaming session to cache.");
         }
         finally
         {
@@ -69,12 +78,12 @@ internal class StreamingSessionCache(
     }
 
 
-    public async Task<Result<StreamingSession>> TryRemove(Guid sessionId)
+    public async Task<Result<StreamingSession>> TryRemove(int processId)
     {
         await _uacLock.WaitAsync(_appLifetime.ApplicationStopping);
         try
         {
-            if (!_sessions.TryRemove(sessionId, out var session))
+            if (!_sessions.TryRemove(processId, out var session))
             {
                 return Result.Fail<StreamingSession>("Session ID not present in cache.");
             }

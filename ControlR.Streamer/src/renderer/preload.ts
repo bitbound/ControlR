@@ -1,13 +1,14 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
-import { contextBridge, ipcRenderer, session } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 import { MainApi } from "./mainApi";
 
 type MainApiMethod = keyof MainApi;
 
 const mainApiIpc: MainApi = {
   getServerUri: () => invokeInMain("getServerUri"),
+  getViewerConnectionId: () => invokeInMain("getViewerConnectionId"),
   getSessionId: () => invokeInMain("getSessionId"),
   getNotifyUser: () => invokeInMain("getNotifyUser"),
   getViewerName: () => invokeInMain("getViewerName"),

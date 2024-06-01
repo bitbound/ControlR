@@ -1,3 +1,5 @@
+import { DisplayDto } from "./sharedDtos";
+
 export type SignalrDtoType =
   | "None"
   | "RtcSessionDescription"
@@ -10,4 +12,10 @@ export interface SignedPayloadDto {
   dtoType: SignalrDtoType;
   publicKey: Uint8Array;
   publicKeyPem: string;
+}
+
+export interface StreamerInitData {
+  sessionId: string,
+  streamerConnectionId: string,
+  displays: DisplayDto[],
 }

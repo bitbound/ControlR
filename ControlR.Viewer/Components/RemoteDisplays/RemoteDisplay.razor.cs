@@ -116,7 +116,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _componentClosing.Cancel();
-        await ViewerHub.CloseStreamingSession(Session.SessionId);
+        await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
         Messenger.UnregisterAll(this);
         await JsModule.InvokeVoidAsync("dispose", _videoId);
         await ClipboardManager.DisposeAsync();
@@ -201,14 +201,14 @@ public partial class RemoteDisplay : IAsyncDisposable
     [JSInvokable]
     public async Task SendIceCandidate(string iceCandidateJson)
     {
-        await ViewerHub.SendIceCandidate(Session.SessionId, iceCandidateJson);
+        await ViewerHub.SendIceCandidate(Session.StreamerConnectionId, iceCandidateJson);
     }
 
     [JSInvokable]
     public async Task SendRtcDescription(RtcSessionDescription sessionDescription)
     {
         await InvokeAsync(StateHasChanged);
-        await ViewerHub.SendRtcSessionDescription(Session.SessionId, sessionDescription);
+        await ViewerHub.SendRtcSessionDescription(Session.StreamerConnectionId, sessionDescription);
     }
 
     [JSInvokable]
@@ -271,6 +271,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         Messenger.Register<IceCandidateMessage>(this, HandleIceCandidateReceived);
         Messenger.Register<RtcSessionDescriptionMessage>(this, HandleRtcSessionDescription);
         Messenger.Register<DesktopChangedMessage>(this, HandleDesktopChanged);
+        Messenger.Register<StreamerInitDataReceivedMessage>(this, HandleStreamerInitDataReceived);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
         return base.OnInitializedAsync();
@@ -309,7 +310,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         await SetStatusMessage("Switching desktops");
 
-        await ViewerHub.CloseStreamingSession(Session.SessionId);
+        await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
 
         Session.CreateNewSessionId();
 
@@ -361,6 +362,27 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    private Task HandleStreamerInitDataReceived(object subscriber, StreamerInitDataReceivedMessage message)
+    {
+        var data = message.StreamerInitData;
+
+        if (data.SessionId != Session.SessionId)
+        {
+            return Task.CompletedTask;
+        }
+
+        Session.StreamerConnectionId = data.StreamerConnectionId;
+
+        _displays = data.Displays ?? [];
+        _selectedDisplay = _displays.FirstOrDefault();
+        if (_selectedDisplay is not null)
+        {
+            _videoWidth = _selectedDisplay.Width;
+            _videoHeight = _selectedDisplay.Height;
+        }
+
+        return Task.CompletedTask;
+    }
 
     private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
     {
@@ -513,7 +535,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             Logger.LogInformation("Creating streaming session.");
-            var streamingSessionResult = await ViewerHub.GetStreamingSession(Session.Device.ConnectionId, Session.SessionId, Session.InitialSystemSession);
+            var streamingSessionResult = await ViewerHub.RequestStreamingSession(
+                Session.Device.ConnectionId, 
+                Session.SessionId, 
+                Session.InitialSystemSession);
 
             _statusProgress = -1;
 
@@ -523,15 +548,6 @@ public partial class RemoteDisplay : IAsyncDisposable
                 await Close();
                 return;
             }
-
-            _displays = streamingSessionResult.Value.Displays ?? [];
-            _selectedDisplay = _displays.FirstOrDefault();
-            if (_selectedDisplay is not null)
-            {
-                _videoWidth = _selectedDisplay.Width;
-                _videoHeight = _selectedDisplay.Height;
-            }
-
             await SetStatusMessage("Connecting");
         }
         catch (Exception ex)

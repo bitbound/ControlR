@@ -2,6 +2,7 @@ import { app } from "electron";
 import { parseBoolean } from "../../shared/helpers";
 
 const sessionId = app.commandLine.getSwitchValue("session-id");
+const viewerConnectionId = app.commandLine.getSwitchValue("viewer-id");
 const authorizedKey = app.commandLine.getSwitchValue("authorized-key");
 const viewerName = app.commandLine.getSwitchValue("viewer-name") ?? "";
 const notifyUser =
@@ -17,6 +18,7 @@ const websocketUri = serverUri.replace("http", "ws");
 interface AppState {
   authorizedKey: string;
   isUnattended: boolean;
+  viewerConnectionId: string;
   isDev: boolean;
   sessionId: string;
   serverUri: string;
@@ -28,8 +30,9 @@ interface AppState {
 export default {
   authorizedKey: authorizedKey,
   isDev: isDev,
-  isUnattended: !!sessionId,
   sessionId: sessionId,
+  isUnattended: !!sessionId,
+  viewerConnectionId: viewerConnectionId,
   serverUri: serverUri,
   websocketUri: websocketUri,
   notifyUser: notifyUser,

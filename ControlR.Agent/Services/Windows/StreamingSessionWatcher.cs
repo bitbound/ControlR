@@ -33,8 +33,8 @@ internal class StreamingSessionWatcher(
 
                     if (session.StreamerProcess?.HasExited == true)
                     {
-                        _logger.LogInformation("Removing streaming session {id}.", session.SessionId);
-                        _ = await _streamerCache.TryRemove(session.SessionId);
+                        _logger.LogInformation("Removing streaming session for process {ProcessId}.", session.StreamerProcess.Id);
+                        _ = await _streamerCache.TryRemove(session.StreamerProcess.Id);
                         session.Dispose();
                     }
                 }

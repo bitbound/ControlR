@@ -13,11 +13,12 @@ public interface IViewerHubClient : IHubClient
 
     Task ReceiveIceCandidate(Guid sessionId, string candidateJson);
 
-    Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
-
     Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription);
 
     Task ReceiveServerStats(ServerStatsDto serverStats);
+
+    Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
+    Task ReceiveStreamerInitData(StreamerInitDataDto streamerInitData);
 
     Task ReceiveTerminalOutput(TerminalOutputDto output);
 }

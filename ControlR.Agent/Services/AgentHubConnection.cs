@@ -72,7 +72,8 @@ internal class AgentHubConnection(
             }
 
             var result = await _remoteControlLauncher.CreateSession(
-                dto.StreamingSessionId,
+                dto.SessionId,
+                dto.ViewerConnectionId,
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.NotifyUserOnSessionStart,

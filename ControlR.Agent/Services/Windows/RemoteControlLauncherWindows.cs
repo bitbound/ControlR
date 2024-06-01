@@ -31,8 +31,10 @@ internal class RemoteControlLauncherWindows(
     ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
+
     public async Task<Result> CreateSession(
         Guid sessionId,
+        string viewerConnectionId,
         byte[] authorizedKey,
         int targetWindowsSession = -1,
         bool notifyViewerOnSessionStart = false,
@@ -56,10 +58,10 @@ internal class RemoteControlLauncherWindows(
 
             var authorizedKeyBase64 = Convert.ToBase64String(authorizedKey);
 
-            var session = new StreamingSession(sessionId, lowerUacDuringSession);
+            var session = new StreamingSession(viewerConnectionId, lowerUacDuringSession);
 
             var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
-            var args = $"--session-id={sessionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64} --notify-user={notifyViewerOnSessionStart}";
+            var args = $"--session-id={sessionId} --viewer-id={viewerConnectionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64} --notify-user={notifyViewerOnSessionStart}";
             if (!string.IsNullOrWhiteSpace(viewerName))
             {
                 args += $" --viewer-name=\"{viewerName}\"";

@@ -18,7 +18,7 @@ public interface IViewerHub
     Task<IceServer[]> GetIceServers();
 
     Task<Result<ServerStatsDto>> GetServerStats();
-    Task<Result> RequestStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
+    Task<Result> RequestStreamingSession(string agentConnectionId, SignedPayloadDto sessionRequestDto);
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
@@ -29,7 +29,7 @@ public interface IViewerHub
 
     Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto);
 
-    Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto);
+    Task SendSignedDtoToStreamer(string streamerConnectionId, SignedPayloadDto signedDto);
     Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);
 
 }

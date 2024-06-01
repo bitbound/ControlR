@@ -4,7 +4,7 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { SignedPayloadDto } from "../../shared/signalrDtos";
+import { SignedPayloadDto, StreamerInitData } from "../../shared/signalrDtos";
 import { receiveDto } from "./signalrDtoHandler";
 import rtcSession from "./rtcSession";
 import { MessagePackHubProtocol } from "@microsoft/signalr-protocol-msgpack";
@@ -13,16 +13,19 @@ import { waitFor } from "../../shared/helpers";
 class StreamerHubConnection {
   connection?: HubConnection;
   serverUri?: string;
+  viewerConnectionId?: string;
   sessionId?: string;
 
   async connect(): Promise<void> {
     try {
       this.serverUri = await window.mainApi.getServerUri();
       this.sessionId = await window.mainApi.getSessionId();
+      this.viewerConnectionId = await window.mainApi.getViewerConnectionId();
 
       window.mainApi.writeLog("Starting SignalR connection.");
       window.mainApi.writeLog("ServerUri: ", "Info", this.serverUri);
       window.mainApi.writeLog("Session ID: ", "Info", this.sessionId);
+      window.mainApi.writeLog("Viewer Connection ID: ", "Info", this.viewerConnectionId);
 
       if (this.connection) {
         await this.connection.stop();
@@ -30,30 +33,36 @@ class StreamerHubConnection {
 
       this.connection = new HubConnectionBuilder()
         .withUrl(`${this.serverUri}/hubs/streamer`)
-        .withHubProtocol(new MessagePackHubProtocol())
         .configureLogging(LogLevel.Information)
+        .withHubProtocol(new MessagePackHubProtocol())
         .build();
 
       this.setHandlers();
 
       window.mainApi.onInputDesktopChanged(async (ev) => {
+        const viewerConnectionId = await window.mainApi.getViewerConnectionId();
         const sessionId = await window.mainApi.getSessionId();
+
         window.mainApi.writeLog(
-          "Notifying viewer of desktop change.  Session ID: ",
+          "Notifying viewer of desktop change.  Viewer Connection ID: ",
           "Info",
-          sessionId,
+          viewerConnectionId,
         );
-        await streamerHubConnection.notifyViewerDesktopChanged(sessionId);
+        await streamerHubConnection.notifyViewerDesktopChanged(viewerConnectionId, sessionId);
       });
 
       await this.connection.start();
 
-      if (this.sessionId) {
-        const screens = await window.mainApi.getDisplays();
+      if (this.viewerConnectionId) {
+        const displays = await window.mainApi.getDisplays();
         await this.connection.invoke(
-          "setSessionDetails",
-          this.sessionId,
-          screens,
+          "sendStreamerInitDataToViewer",
+          this.viewerConnectionId,
+          {
+            displays: displays,
+            streamerConnectionId: this.connection.connectionId,
+            sessionId: this.sessionId,
+          } as StreamerInitData,
         );
         await rtcSession.startRtcSession();
       }
@@ -68,13 +77,13 @@ class StreamerHubConnection {
     // TODO: Broadcast state changes.
   }
 
-  async notifyViewerDesktopChanged(sessionId: string) {
+  async notifyViewerDesktopChanged(viewerConnectionId: string, sessionId: string) {
     if (!(await this.waitForConnection())) {
       return;
     }
 
     try {
-      await this.connection.invoke("notifyViewerDesktopChanged", sessionId);
+      await this.connection.invoke("notifyViewerDesktopChanged", viewerConnectionId, sessionId);
     } catch (err) {
       window.mainApi.writeLog(
         "Error while notifying viewer of desktop change.",
@@ -105,6 +114,7 @@ class StreamerHubConnection {
     try {
       await this.connection.invoke(
         "sendIceCandidate",
+        this.viewerConnectionId,
         this.sessionId,
         candidateJson,
       );
@@ -125,6 +135,7 @@ class StreamerHubConnection {
     try {
       await this.connection.invoke(
         "sendRtcSessionDescription",
+        this.viewerConnectionId,
         this.sessionId,
         sessionDescription,
       );

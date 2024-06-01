@@ -24,8 +24,6 @@ public class ViewerHub(
     IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
-    IStreamerSessionCache _streamerSessionCache,
-    IDelayer _delayer,
     IIceServerProvider _iceProvider,
     IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
@@ -138,13 +136,12 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result> RequestStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
+    public async Task<Result> RequestStreamingSession(
+        string agentConnectionId, 
+        SignedPayloadDto sessionRequestDto)
     {
         try
         {
-            var session = new StreamerHubSession(streamingSessionId, agentConnectionId, Context.ConnectionId);
-            await _streamerSessionCache.AddOrUpdate(streamingSessionId, session);
-
             var sessionSuccess = await _agentHub.Clients
                    .Client(agentConnectionId)
                    .CreateStreamingSession(sessionRequestDto);
@@ -285,26 +282,20 @@ public class ViewerHub(
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
     }
 
-    public async Task SendSignedDtoToStreamer(Guid streamingSessionId, SignedPayloadDto signedDto)
+    public async Task SendSignedDtoToStreamer(string streamerConnectionId, SignedPayloadDto signedDto)
     {
-        using var scope = _logger.BeginMemberScope();
-
-        var getResult = await _streamerSessionCache.TryGetValue(streamingSessionId);
-        if (!getResult.IsSuccess)
+        try
         {
-            _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
-            return;
-        }
+            using var scope = _logger.BeginMemberScope();
 
-        if (string.IsNullOrWhiteSpace(getResult.Value.StreamerConnectionId))
+            await _streamerHub.Clients
+                .Client(streamerConnectionId)
+                .ReceiveDto(signedDto);
+        }
+        catch (Exception ex)
         {
-            _logger.LogError("StreamerConnectionId is empty. Cannot send DTO.");
-            return;
+            _logger.LogError(ex, "Error while sending DTO to streamer.");
         }
-
-        await _streamerHub.Clients
-            .Client(getResult.Value.StreamerConnectionId)
-            .ReceiveDto(signedDto);
     }
     public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)
     {
