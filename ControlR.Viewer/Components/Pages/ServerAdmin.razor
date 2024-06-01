@@ -72,13 +72,6 @@
         }
     </MudSelect>
 
-    <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4">
-        Sticky
-    </MudText>
-    <MudCheckBox 
-        @bind-Value="_alertIsSticky" 
-        Label="Whether the alert should persist through server reboots." />
-
     <div class="d-flex mt-2">
         <MudButton ButtonType="ButtonType.Button" Color="Color.Info" Variant="Variant.Filled" Class="me-3" OnClick="SendBroadcast">
             Send
@@ -94,7 +87,6 @@
     private ServerStatsDto? _serverStats;
     private string _alertMessage = string.Empty;
     private AlertSeverity _alertSeverity = AlertSeverity.Information;
-    private bool _alertIsSticky = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,7 +95,6 @@
         {
             _alertMessage = result.Value.Message;
             _alertSeverity = result.Value.Severity;
-            _alertIsSticky = result.Value.IsSticky;
         }
 
         await base.OnInitializedAsync();
@@ -166,7 +157,7 @@
                 Snackbar.Add("Alert message cannot be empty", Severity.Warning);
                 return;
             }
-            await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity, _alertIsSticky);
+            await ViewerHub.SendAlertBroadcast(_alertMessage, _alertSeverity);
             Snackbar.Add("Alert broadcasted", Severity.Success);
         }
         catch (Exception ex)

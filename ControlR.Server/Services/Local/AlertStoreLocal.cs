@@ -1,18 +1,11 @@
-﻿using ControlR.Shared.Dtos;
-using ControlR.Shared.Enums;
+﻿using ControlR.Server.Services.Interfaces;
+using ControlR.Shared.Dtos;
 using ControlR.Shared.Primitives;
 
-namespace ControlR.Server.Services;
+namespace ControlR.Server.Services.InMemory;
 
-public interface IAlertStore
-{
-    Task<Result> ClearAlert();
-    Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
-    Task<Result> StoreAlert(AlertBroadcastDto alertDto);
-}
-
-public class AlertStore(IAppDataAccessor _appData) : IAlertStore
+public class AlertStoreLocal(IAppDataAccessor _appData) : IAlertStore
 {
     private volatile AlertBroadcastDto? _currentAlert;
 
@@ -37,13 +30,6 @@ public class AlertStore(IAppDataAccessor _appData) : IAlertStore
     {
         _currentAlert = alertDto;
 
-        if (alertDto.IsSticky)
-        {
-            return await _appData.SaveCurrentAlert(alertDto);
-        }
-        else
-        {
-            return await _appData.ClearSavedAlert();
-        }
+        return await _appData.SaveCurrentAlert(alertDto);
     }
 }

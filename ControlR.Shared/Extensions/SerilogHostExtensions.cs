@@ -13,14 +13,10 @@ public static class SerilogHostExtensions
     {
         try
         {
-            var minLogLevel = EnvironmentHelper.Instance.IsDebug ? 
-                Serilog.Events.LogEventLevel.Debug : 
-                Serilog.Events.LogEventLevel.Information;
-
             void ApplySharedLoggerConfig(LoggerConfiguration loggerConfiguration)
             {
                 loggerConfiguration
-                    .MinimumLevel.Is(minLogLevel)
+                    .Destructure.ToMaximumDepth(3)
                     .Enrich.FromLogContext()
                     .Enrich.WithThreadId()
                     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")

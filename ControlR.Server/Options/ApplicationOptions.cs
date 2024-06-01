@@ -21,6 +21,7 @@ public class ApplicationOptions
     public string? TwilioSid { get; init; }
     public bool UseCoTurn { get; init; }
     public bool UseMetered { get; init; }
+    public bool UseGarnetBackplane { get; init; }
     public bool UseStaticIceServers { get; init; }
     public bool UseTwilio { get; init; }
 }

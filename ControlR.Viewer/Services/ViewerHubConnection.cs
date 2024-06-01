@@ -52,7 +52,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task SendAgentUpdateTrigger(DeviceDto device);
 
-    Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky);
+    Task SendAlertBroadcast(string message, AlertSeverity severity);
     Task SendIceCandidate(Guid sessionId, string iceCandidateJson);
 
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
@@ -344,13 +344,13 @@ internal class ViewerHubConnection(
         });
     }
 
-    public async Task SendAlertBroadcast(string message, AlertSeverity severity, bool isSticky)
+    public async Task SendAlertBroadcast(string message, AlertSeverity severity)
     {
         await TryInvoke(
             async () =>
             {
                 await WaitForConnection();
-                var dto = new AlertBroadcastDto(message, severity, isSticky);
+                var dto = new AlertBroadcastDto(message, severity);
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.PrivateKey);
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
             });

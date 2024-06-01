@@ -7,5 +7,4 @@ namespace ControlR.Shared.Dtos;
 [MessagePackObject]
 public record AlertBroadcastDto(
     [property: MsgPackKey] string Message,
-    [property: MsgPackKey] AlertSeverity Severity,
-    [property: MsgPackKey] bool IsSticky);
+    [property: MsgPackKey] AlertSeverity Severity);

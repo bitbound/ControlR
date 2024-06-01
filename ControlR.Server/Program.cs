@@ -13,6 +13,11 @@ using Microsoft.Extensions.FileProviders;
 using Serilog;
 using System.Net;
 using ControlR.Shared.Extensions;
+using StackExchange.Redis;
+using Microsoft.Extensions.Caching.Distributed;
+using ControlR.Server.Services.InMemory;
+using ControlR.Server.Services.Interfaces;
+using ControlR.Server.Services.Distributed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,7 +104,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
-builder.Services
+var signalrBuilder = builder.Services
     .AddSignalR(options =>
     {
         options.EnableDetailedErrors = builder.Environment.IsDevelopment();
@@ -107,6 +112,24 @@ builder.Services
         options.MaximumParallelInvocationsPerClient = 5;
     })
     .AddMessagePackProtocol();
+
+if (appOptions.UseGarnetBackplane)
+{
+    var garnetConnectionString = builder.Configuration.GetConnectionString("Garnet") ??
+        throw new InvalidOperationException("Garnet connection string cannot be empty if UseRedisBackplane is enabled.");
+
+    signalrBuilder.AddStackExchangeRedis(garnetConnectionString, options =>
+    {
+        options.Configuration.ChannelPrefix = RedisChannel.Literal("controlr-signalr");
+    });
+
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = garnetConnectionString;
+        options.InstanceName = "controlr-cache";
+    });
+
+}
 
 builder.Services.AddOutputCache();
 
@@ -116,15 +139,26 @@ builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
-builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
 builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
-builder.Services.AddSingleton<IAlertStore, AlertStore>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
-builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCache>();
 builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
+
+if (appOptions.UseGarnetBackplane)
+{
+    // TODO: Distributed implementations.
+    builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
+    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheDistributed>();
+    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
+}
+else
+{
+    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
+    builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
+    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheLocal>();
+}
 
 builder.Host.UseSystemd();
 

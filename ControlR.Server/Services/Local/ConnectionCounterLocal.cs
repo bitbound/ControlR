@@ -1,20 +1,9 @@
-﻿namespace ControlR.Server.Services;
+﻿using ControlR.Server.Services.Interfaces;
 
-public interface IConnectionCounter
-{
-    int AgentCount { get; }
-    int ViewerCount { get; }
+namespace ControlR.Server.Services.InMemory;
 
-    void DecrementAgentCount();
 
-    void DecrementViewerCount();
-
-    void IncrementAgentCount();
-
-    void IncrementViewerCount();
-}
-
-public class ConnectionCounter : IConnectionCounter
+public class ConnectionCounterLocal : IConnectionCounter
 {
     private volatile int _agentCount;
 

@@ -4,7 +4,7 @@ using ControlR.Shared.Primitives;
 using ControlR.Shared.Services;
 using System.Text.Json;
 
-namespace ControlR.Server.Services;
+namespace ControlR.Server.Services.InMemory;
 
 public interface IAppDataAccessor
 {

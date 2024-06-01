@@ -1,19 +1,11 @@
-﻿using ControlR.Shared.Models;
+﻿using ControlR.Server.Services.Interfaces;
+using ControlR.Shared.Models;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
-namespace ControlR.Server.Services;
+namespace ControlR.Server.Services.InMemory;
 
-public interface IStreamerSessionCache
-{
-    ConcurrentDictionary<Guid, StreamerHubSession> Sessions { get; }
-    void AddOrUpdate(Guid sessionId, StreamerHubSession streamerHubSession);
-
-    bool TryGetValue(Guid sessionId, [NotNullWhen(true)] out StreamerHubSession? session);
-    bool TryRemove(Guid sessionId, [NotNullWhen(true)] out StreamerHubSession? session);
-}
-
-public class StreamerSessionCache : IStreamerSessionCache
+public class StreamerSessionCacheLocal : IStreamerSessionCache
 {
     private static readonly ConcurrentDictionary<Guid, StreamerHubSession> _sessions = new();
 
