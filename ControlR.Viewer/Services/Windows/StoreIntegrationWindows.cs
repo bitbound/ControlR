@@ -67,6 +67,7 @@ internal class StoreIntegrationWindows(
         }
 
         _logger.LogInformation("Attempting silent upgrade.");
+        await _messenger.Send(new ToastMessage("Background update starting (this may take a bit)", Severity.Info));
         var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
         var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
 
