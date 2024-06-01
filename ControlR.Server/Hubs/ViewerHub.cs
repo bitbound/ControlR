@@ -138,36 +138,27 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
+    public async Task<Result> RequestStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto)
     {
         try
         {
+            var session = new StreamerHubSession(streamingSessionId, agentConnectionId, Context.ConnectionId);
+            await _streamerSessionCache.AddOrUpdate(streamingSessionId, session);
+
             var sessionSuccess = await _agentHub.Clients
                    .Client(agentConnectionId)
                    .CreateStreamingSession(sessionRequestDto);
 
             if (!sessionSuccess)
             {
-                return Result.Fail<StreamerHubSession>("Failed to acquire streaming session.");
+                return Result.Fail("Failed to request a streaming session from the agent.");
             }
 
-            // TODO: Change to AsyncManualResetEvent.
-            _ = await _delayer.WaitForAsync(
-                () => _streamerSessionCache.Sessions.ContainsKey(streamingSessionId),
-                TimeSpan.FromSeconds(30));
-
-            if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
-            {
-                return Result.Fail<StreamerHubSession>("Timed out while waiting for streaming to start.");
-            }
-
-            session.AgentConnectionId = agentConnectionId;
-            session.ViewerConnectionId = Context.ConnectionId;
-            return Result.Ok(session);
+            return Result.Ok();
         }
         catch (Exception ex)
         {
-            return Result.Fail<StreamerHubSession>(ex);
+            return Result.Fail(ex);
         }
     }
 
@@ -298,14 +289,21 @@ public class ViewerHub(
     {
         using var scope = _logger.BeginMemberScope();
 
-        if (!_streamerSessionCache.TryGetValue(streamingSessionId, out var session))
+        var getResult = await _streamerSessionCache.TryGetValue(streamingSessionId);
+        if (!getResult.IsSuccess)
         {
             _logger.LogError("Session ID not found: {StreamerSessionId}", streamingSessionId);
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(getResult.Value.StreamerConnectionId))
+        {
+            _logger.LogError("StreamerConnectionId is empty. Cannot send DTO.");
+            return;
+        }
+
         await _streamerHub.Clients
-            .Client(session.StreamerConnectionId)
+            .Client(getResult.Value.StreamerConnectionId)
             .ReceiveDto(signedDto);
     }
     public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)

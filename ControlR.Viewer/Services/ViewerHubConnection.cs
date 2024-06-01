@@ -203,17 +203,28 @@ internal class ViewerHubConnection(
                 sessionId,
                 targetSystemSession,
                 Connection.ConnectionId,
+                agentConnectionId,
                 _settings.NotifyUserSessionStart,
                 _settings.LowerUacDuringSession,
                 _settings.Username);
 
             var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);
 
-            var result = await Connection.InvokeAsync<Result<StreamerHubSession>>(nameof(IViewerHub.GetStreamingSession), agentConnectionId, sessionId, signedDto);
+            var result = await Connection.InvokeAsync<Result>(
+                nameof(IViewerHub.RequestStreamingSession), 
+                agentConnectionId, 
+                sessionId, 
+                signedDto);
+
             if (!result.IsSuccess)
             {
                 _logger.LogResult(result);
+                return Result.Fail<StreamerHubSession>(result.Reason);
             }
+
+            // TODO:
+            // Wait for response here.
+
             return result;
         }
         catch (Exception ex)

@@ -8,20 +8,33 @@ namespace ControlR.Shared.Models;
 [MessagePackObject]
 [method: SerializationConstructor]
 [method: JsonConstructor]
-public class StreamerHubSession(Guid sessionId, DisplayDto[] displays, string streamerConnectionId)
+public class StreamerHubSession
 {
-    [MsgPackKey]
-    public string StreamerConnectionId { get; init; } = streamerConnectionId;
+    public StreamerHubSession(Guid sessionId, DisplayDto[] displays, string streamerConnectionId)
+    {
+        SessionId = sessionId;
+        Displays = displays;
+        StreamerConnectionId = streamerConnectionId;
+    }
 
-    [MsgPackKey]
-    public DisplayDto[] Displays { get; init; } = displays;
+    public StreamerHubSession(Guid sessionId, string agentConnectionId, string viewerConnectionId)
+    {
+        SessionId = sessionId;
+        AgentConnectionId = agentConnectionId;
+        ViewerConnectionId = viewerConnectionId;
+    }
 
     [MsgPackKey]
     public string? AgentConnectionId { get; set; }
 
     [MsgPackKey]
-    public Guid SessionId { get; init; } = sessionId;
+    public DisplayDto[] Displays { get; set; } = [];
 
+    [MsgPackKey]
+    public Guid SessionId { get; set; }
+
+    [MsgPackKey]
+    public string? StreamerConnectionId { get; set; }
     [MsgPackKey]
     public string? ViewerConnectionId { get; set; }
 }

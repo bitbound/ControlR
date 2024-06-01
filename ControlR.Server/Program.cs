@@ -18,6 +18,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using ControlR.Server.Services.InMemory;
 using ControlR.Server.Services.Interfaces;
 using ControlR.Server.Services.Distributed;
+using ControlR.Server.Services.Distributed.Locking;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -129,6 +130,19 @@ if (appOptions.UseGarnetBackplane)
         options.InstanceName = "controlr-cache";
     });
 
+
+    var multiplexer = await ConnectionMultiplexer.ConnectAsync(garnetConnectionString, options =>
+    {
+        options.AllowAdmin = true;
+    });
+
+    if (!multiplexer.IsConnected)
+    {
+        Log.Error("Failed to connect to Garnet backplane.");
+    }
+
+    builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
+
 }
 
 builder.Services.AddOutputCache();
@@ -149,9 +163,10 @@ builder.Services.AddHttpContextAccessor();
 if (appOptions.UseGarnetBackplane)
 {
     // TODO: Distributed implementations.
+    builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
-    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheDistributed>();
-    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
+    builder.Services.AddSingleton<IStreamerSessionCache, StreamerSessionCacheLocal>();
+    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
 }
 else
 {

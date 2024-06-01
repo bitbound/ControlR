@@ -17,6 +17,7 @@ public class StreamerHub(
     {
         var session = new StreamerHubSession(sessionId, displays, Context.ConnectionId);
         _streamerSessionCache.AddOrUpdate(sessionId, session);
+        _viewerHub.Clients.Client(session.ViewerConnectionId)
         return Task.CompletedTask;
     }
 
@@ -29,19 +30,20 @@ public class StreamerHub(
     {
         try
         {
-            if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+            var getResult = await _streamerSessionCache.TryGetValue(sessionId);
+            if (!getResult.IsSuccess)
             {
                 _logger.LogError("Could not find session ID to notify of desktop change: {id}", sessionId);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+            if (string.IsNullOrWhiteSpace(getResult.Value.ViewerConnectionId))
             {
                 _logger.LogError("Viewer connection ID is unexpectedly empty.");
                 return;
             }
 
-            await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveDesktopChanged(sessionId);
+            await _viewerHub.Clients.Client(getResult.Value.ViewerConnectionId).ReceiveDesktopChanged(sessionId);
         }
         catch (Exception ex)
         {
@@ -52,35 +54,39 @@ public class StreamerHub(
 
     public async Task SendIceCandidate(Guid sessionId, string candidateJson)
     {
-        if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+        var getResult = await _streamerSessionCache.TryGetValue(sessionId);
+
+        if (!getResult.IsSuccess)
         {
             _logger.LogError("Could not find session for ID {id}.", sessionId);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+        if (string.IsNullOrWhiteSpace(getResult.Value.ViewerConnectionId))
         {
             _logger.LogError("Viewer's connection ID hasn't been set on the session.");
             return;
         }
 
-        await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveIceCandidate(sessionId, candidateJson);
+        await _viewerHub.Clients.Client(getResult.Value.ViewerConnectionId).ReceiveIceCandidate(sessionId, candidateJson);
     }
 
     public async Task SendRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
     {
-        if (!_streamerSessionCache.TryGetValue(sessionId, out var session))
+        var getResult = await _streamerSessionCache.TryGetValue(sessionId);
+
+        if (!getResult.IsSuccess)
         {
             _logger.LogError("Could not find session for ID {id}.", sessionId);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(session.ViewerConnectionId))
+        if (string.IsNullOrWhiteSpace(getResult.Value.ViewerConnectionId))
         {
             _logger.LogError("Viewer's connection ID hasn't been set on the session.");
             return;
         }
 
-        await _viewerHub.Clients.Client(session.ViewerConnectionId).ReceiveRtcSessionDescription(sessionId, sessionDescription);
+        await _viewerHub.Clients.Client(getResult.Value.ViewerConnectionId).ReceiveRtcSessionDescription(sessionId, sessionDescription);
     }
 }

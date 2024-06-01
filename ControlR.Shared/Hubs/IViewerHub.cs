@@ -18,7 +18,7 @@ public interface IViewerHub
     Task<IceServer[]> GetIceServers();
 
     Task<Result<ServerStatsDto>> GetServerStats();
-    Task<Result<StreamerHubSession>> GetStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
+    Task<Result> RequestStreamingSession(string agentConnectionId, Guid streamingSessionId, SignedPayloadDto sessionRequestDto);
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
