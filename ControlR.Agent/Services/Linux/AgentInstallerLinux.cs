@@ -48,6 +48,8 @@ internal class AgentInstallerLinux(
                 _logger.LogError("Install command must be run with sudo.");
             }
 
+            TryClearDotnetExtractDir();
+
             var installDir = GetInstallDirectory();
 
             var exePath = _environment.StartupExePath;
@@ -197,5 +199,31 @@ internal class AgentInstallerLinux(
     private string GetServiceName()
     {
         return Path.GetFileName(GetServiceFilePath());
+    }
+
+    private void TryClearDotnetExtractDir()
+    {
+        try
+        {
+            if (_fileSystem.DirectoryExists("/root/.net/ControlR.Agent"))
+            {
+                var subdirs = _fileSystem.GetDirectories("/root/.net/ControlR.Agent");
+                foreach (var subdir in subdirs)
+                {
+                    try
+                    {
+                        _fileSystem.DeleteDirectory(subdir, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete directory {SubDir}.", subdir);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while cleaning up .net extraction directory.");
+        }
     }
 }
