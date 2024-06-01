@@ -21,7 +21,7 @@ public interface IFileSystem
     bool DirectoryExists(string directoryPath);
 
     bool FileExists(string path);
-
+    string[] GetDirectories(string path);
     string[] GetFiles(string path);
 
     public string[] GetFiles(string path, string searchPattern);
@@ -101,6 +101,11 @@ public class FileSystem : IFileSystem
     public bool FileExists(string path)
     {
         return File.Exists(path);
+    }
+
+    public string[] GetDirectories(string path)
+    {
+        return Directory.GetDirectories(path);
     }
 
     public string[] GetFiles(string path)
