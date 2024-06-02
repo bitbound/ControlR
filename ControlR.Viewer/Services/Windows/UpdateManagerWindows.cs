@@ -28,14 +28,22 @@ internal class UpdateManagerWindows(
     {
         try
         {
-      
-            // The value hasn't been obtained from the server yet.  Assume false until
-            // we know if we should check the store or not.
-            if (await IsUpdateAvailableInStore())
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+
+            if (integrationResult is not bool integrationEnabled)
             {
-                return Result.Ok(true);
+                return Result.Ok(false);
             }
 
+            // If store integration is enabled, we only want to show available update
+            // if it exists in both the store and the ControlR backend.
+            if (integrationEnabled && _storeIntegration.CanCheckForUpdates)
+            {
+                if (!await _storeIntegration.IsUpdateAvailable())
+                {
+                    return Result.Ok(false);
+                }
+            }
             return await CheckForSelfHostedUpdate();
         }
         catch (Exception ex)
@@ -73,7 +81,14 @@ internal class UpdateManagerWindows(
 
         try
         {
-            if (await IsUpdateAvailableInStore())
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+
+            if (integrationResult is not bool integrationEnabled)
+            {
+                return Result.Fail("Store integration has not yet been checked.");
+            }
+
+            if (integrationEnabled)
             {
                 await _storeIntegration.InstallCurrentVersion();
                 return Result.Ok();
@@ -113,16 +128,6 @@ internal class UpdateManagerWindows(
             timeout: TimeSpan.FromMinutes(1));
 
         return Result.Ok();
-    }
-
-    private async Task<bool> IsUpdateAvailableInStore()
-    {
-        var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
-
-        return integrationResult is bool integrationEnabled &&
-            integrationEnabled &&
-            _storeIntegration.CanCheckForUpdates &&
-            await _storeIntegration.IsUpdateAvailable();
     }
 }
 #endif
