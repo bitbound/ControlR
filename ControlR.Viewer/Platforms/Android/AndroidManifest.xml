@@ -12,8 +12,8 @@
 				<data android:host="*" />
 			</intent-filter>
 		</activity>
-		<activity>
-			<intent-filter android:label="@string/filter_view_controlr">
+		<activity android:name="open.controlr" android:exported="true">
+			<intent-filter android:label="filter_view_controlr">
 				<action android:name="android.intent.action.VIEW" />
 				<category android:name="android.intent.category.DEFAULT" />
 				<category android:name="android.intent.category.BROWSABLE" />
