@@ -12,6 +12,14 @@
 				<data android:host="*" />
 			</intent-filter>
 		</activity>
+		<activity>
+			<intent-filter android:label="@string/filter_view_controlr">
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<category android:name="android.intent.category.BROWSABLE" />
+				<data android:scheme="ctrlr" android:host="*" />
+			</intent-filter>
+		</activity>
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
