@@ -49,7 +49,7 @@
                 "Server (https)",
                 "Agent (Run)",
                 "Viewer (Debug)"
-            ]
+            ],
         }
     ],
 }

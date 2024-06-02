@@ -43,12 +43,6 @@ public partial class Dashboard
     public required IAppState AppState { get; init; }
 
     [Inject]
-    public required IBrowser Browser { get; init; }
-
-    [Inject]
-    public required IClipboard Clipboard { get; init; }
-
-    [Inject]
     public required IDeviceCache DeviceCache { get; init; }
 
     [Inject]
@@ -354,7 +348,7 @@ public partial class Dashboard
                 builder.AddComponentParameter(2, nameof(Terminal.Id), terminalId);
                 builder.CloseComponent();
             }
-            
+
             var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
             WindowStore.Add(contentInstance);
         }

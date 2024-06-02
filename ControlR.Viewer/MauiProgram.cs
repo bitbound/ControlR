@@ -85,6 +85,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IRetryer, Retryer>();
         builder.Services.AddSingleton<INotificationProvider, NotificationProvider>();
         builder.Services.AddSingleton<ISettingsExporter, SettingsExporter>();
+        builder.Services.AddSingleton<IUiThread, UiThread>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

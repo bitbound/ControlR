@@ -63,6 +63,9 @@ public partial class RemoteDisplay : IAsyncDisposable
     [Inject]
     public required IMessenger Messenger { get; init; }
 
+    [Inject]
+    public required IUiThread UiThread { get; init; }
+
     [Parameter, EditorRequired]
     public required RemoteControlSession Session { get; set; }
 
@@ -158,8 +161,13 @@ public partial class RemoteDisplay : IAsyncDisposable
         _isStreamLoaded = true;
         _statusMessage = string.Empty;
         _statusProgress = 0;
-        ClipboardManager.ClipboardChanged -= ClipboardManager_ClipboardChanged;
-        ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
+
+        await UiThread.InvokeAsync(() =>
+        {
+            ClipboardManager.ClipboardChanged -= ClipboardManager_ClipboardChanged;
+            ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
+        });
+
         await ClipboardManager.Start();
         await InvokeAsync(StateHasChanged);
     }
@@ -499,14 +507,14 @@ public partial class RemoteDisplay : IAsyncDisposable
             var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
             var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
 
-            await JsModule.InvokeVoidAsync("scrollTowardPinch", 
-                pinchCenterX, 
-                pinchCenterY, 
+            await JsModule.InvokeVoidAsync("scrollTowardPinch",
+                pinchCenterX,
+                pinchCenterY,
                 _screenArea,
                 _videoRef,
                 newWidth,
                 newHeight,
-                widthChange, 
+                widthChange,
                 heightChange);
         }
         catch (Exception ex)
@@ -536,8 +544,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             Logger.LogInformation("Creating streaming session.");
             var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-                Session.Device.ConnectionId, 
-                Session.SessionId, 
+                Session.Device.ConnectionId,
+                Session.SessionId,
                 Session.InitialSystemSession);
 
             _statusProgress = -1;
