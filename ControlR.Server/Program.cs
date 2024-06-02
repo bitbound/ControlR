@@ -161,13 +161,13 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHostedService<ConnectionCountSynchronizer>();
 
 if (appOptions.UseRedisBackplane)
 {
     builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
+    builder.Services.AddHostedService<ConnectionCountSynchronizer>();
 }
 else
 {
