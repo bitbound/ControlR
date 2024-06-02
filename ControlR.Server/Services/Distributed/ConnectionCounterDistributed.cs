@@ -4,6 +4,10 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace ControlR.Server.Services.Distributed;
 
+// TODO: This needs a different strategy.  If a node goes down,
+// the disconnect events won't fire, and the backplane's count
+// will be incorrect indefinitely.  Nodes might need to track
+// their own totals in memory and sync with the backplane.
 public class ConnectionCounterDistributed(
     IDistributedCache _cache,
     IDistributedLock _locker,
