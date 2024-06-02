@@ -207,12 +207,18 @@ internal class AgentInstallerLinux(
         {
             if (_fileSystem.DirectoryExists("/root/.net/ControlR.Agent"))
             {
-                var subdirs = _fileSystem.GetDirectories("/root/.net/ControlR.Agent");
+                var subdirs = _fileSystem
+                    .GetDirectories("/root/.net/ControlR.Agent")
+                    .Select(x => new DirectoryInfo(x))
+                    .OrderByDescending(x => x.CreationTime)
+                    .Skip(3)
+                    .ToArray();
+
                 foreach (var subdir in subdirs)
                 {
                     try
                     {
-                        _fileSystem.DeleteDirectory(subdir, true);
+                        subdir.Delete(true);
                     }
                     catch (Exception ex)
                     {
