@@ -6,17 +6,20 @@ public interface IDistributedLock
 {
     Task<LockToken> TryAcquireLock(string key);
     Task<LockToken> TryAcquireLock(string key, TimeSpan timeout);
+    Task<LockToken> TryAcquireLock(string key, TimeSpan timeout, TimeSpan lockExpiration);
 }
 
 public class DistributedLock(
     IConnectionMultiplexer _multi,
     ILogger<AlertStoreDistributed> _logger) : IDistributedLock
 {
-    public async Task<LockToken> TryAcquireLock(string key)
-    {
-        return await TryAcquireLock(key, TimeSpan.MaxValue);
-    }
-    public async Task<LockToken> TryAcquireLock(string key, TimeSpan timeout)
+    public Task<LockToken> TryAcquireLock(string key) =>
+        TryAcquireLock(key, TimeSpan.FromSeconds(10));
+
+    public Task<LockToken> TryAcquireLock(string key, TimeSpan timeout) =>
+        TryAcquireLock(key, timeout, timeout);
+
+    public async Task<LockToken> TryAcquireLock(string key, TimeSpan timeout, TimeSpan lockExpiration)
     {
         var lockKey = new RedisKey(key);
         var lockValue = new RedisValue(Guid.NewGuid().ToString());
@@ -30,7 +33,7 @@ public class DistributedLock(
 
             do
             {
-                if (await db.LockTakeAsync(lockKey, lockValue, TimeSpan.MaxValue))
+                if (await db.LockTakeAsync(lockKey, lockValue, lockExpiration))
                 {
                     return LockToken.Succeeded(lockKey, lockValue, _logger, async () =>
                     {
@@ -41,12 +44,15 @@ public class DistributedLock(
             while (await timer.WaitForNextTickAsync(cts.Token));
 
             _logger.LogCritical("Failed to acquire distributed lock.  Key: {LockKey}", key);
-            return LockToken.Failed(lockKey);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogCritical(ex, "Timed out while trying to acquire distributed lock.  Key: {LockKey}", key);
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Error while trying to acquire distributed lock.  Key: {LockKey}", key);
-            return LockToken.Failed(lockKey);
         }
+        return LockToken.Failed(lockKey);
     }
 }

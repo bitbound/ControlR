@@ -52,12 +52,8 @@ public class ConnectionCounterDistributed(
             {
                 return;
             }
-
             var current = await _cache.GetAsync(key);
-            if (current is null)
-            {
-                return;
-            }
+            current ??= BitConverter.GetBytes(0);
 
             var count = BitConverter.ToInt32(current) + adjustBy;
             await _cache.SetAsync(key, BitConverter.GetBytes(count));

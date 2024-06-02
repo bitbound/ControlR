@@ -165,7 +165,7 @@ if (appOptions.UseGarnetBackplane)
 {
     builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
-    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
+    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
 }
 else
 {
