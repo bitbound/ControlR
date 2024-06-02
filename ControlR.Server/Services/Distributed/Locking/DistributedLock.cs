@@ -4,6 +4,7 @@ namespace ControlR.Server.Services.Distributed.Locking;
 
 public interface IDistributedLock
 {
+    Guid NodeId { get; }
     Task<LockToken> TryAcquireLock(string key);
     Task<LockToken> TryAcquireLock(string key, TimeSpan timeout);
     Task<LockToken> TryAcquireLock(string key, TimeSpan timeout, TimeSpan lockExpiration);
@@ -13,6 +14,8 @@ public class DistributedLock(
     IConnectionMultiplexer _multi,
     ILogger<AlertStoreDistributed> _logger) : IDistributedLock
 {
+    public Guid NodeId { get; } = Guid.NewGuid();
+
     public Task<LockToken> TryAcquireLock(string key) =>
         TryAcquireLock(key, TimeSpan.FromSeconds(10));
 

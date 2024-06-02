@@ -115,31 +115,32 @@ var signalrBuilder = builder.Services
         options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
-if (appOptions.UseGarnetBackplane)
+if (appOptions.UseRedisBackplane)
 {
-    var garnetConnectionString = builder.Configuration.GetConnectionString("Garnet") ??
-        throw new InvalidOperationException("Garnet connection string cannot be empty if UseRedisBackplane is enabled.");
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ??
+        throw new InvalidOperationException("Redis connection string cannot be empty if UseRedisBackplane is enabled.");
 
-    signalrBuilder.AddStackExchangeRedis(garnetConnectionString, options =>
+    signalrBuilder.AddStackExchangeRedis(redisConnectionString, options =>
     {
+        options.Configuration.AbortOnConnectFail = false;
         options.Configuration.ChannelPrefix = RedisChannel.Literal("controlr-signalr");
     });
 
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-        options.Configuration = garnetConnectionString;
+        options.Configuration = redisConnectionString;
         options.InstanceName = "controlr-cache";
     });
 
 
-    var multiplexer = await ConnectionMultiplexer.ConnectAsync(garnetConnectionString, options =>
+    var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options =>
     {
         options.AllowAdmin = true;
     });
 
     if (!multiplexer.IsConnected)
     {
-        Log.Fatal("Failed to connect to Garnet backplane.");
+        Log.Fatal("Failed to connect to Redis backplane.");
     }
 
     builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
@@ -160,8 +161,9 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService<ConnectionCountSynchronizer>();
 
-if (appOptions.UseGarnetBackplane)
+if (appOptions.UseRedisBackplane)
 {
     builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();

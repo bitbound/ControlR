@@ -1,5 +1,7 @@
-﻿using ControlR.Server.Services.Distributed.Locking;
+﻿using ControlR.Server.Models;
+using ControlR.Server.Services.Distributed.Locking;
 using ControlR.Server.Services.Interfaces;
+using MessagePack;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace ControlR.Server.Services.Distributed;
@@ -10,17 +12,24 @@ namespace ControlR.Server.Services.Distributed;
 // their own totals in memory and sync with the backplane.
 public class ConnectionCounterDistributed(
     IDistributedCache _cache,
-    IDistributedLock _locker,
     ILogger<ConnectionCounterDistributed> _logger) : IConnectionCounter
 {
-    public async Task DecrementAgentCount()
+    private volatile int _agentCount;
+
+    private volatile int _viewerCount;
+
+    public int AgentConnectionLocalCount => _agentCount;
+
+    public int ViewerConnectionLocalCount => _viewerCount;
+
+    public void DecrementAgentCount()
     {
-        await AdjustCount(LockKeys.AgentCount, -1);
+        Interlocked.Decrement(ref _agentCount);
     }
 
-    public async Task DecrementViewerCount()
+    public void DecrementViewerCount()
     {
-        await AdjustCount(LockKeys.ViewerCount, -1);
+        Interlocked.Decrement(ref _viewerCount);
     }
 
     public async Task<Result<int>> GetAgentConnectionCount()
@@ -33,48 +42,37 @@ public class ConnectionCounterDistributed(
         return await GetCount(LockKeys.ViewerCount);
     }
 
-    public async Task IncrementAgentCount()
+    public void IncrementAgentCount()
     {
-        await AdjustCount(LockKeys.AgentCount, 1);
+        Interlocked.Increment(ref _agentCount);
     }
 
-    public async Task IncrementViewerCount()
+    public void IncrementViewerCount()
     {
-        await AdjustCount(LockKeys.ViewerCount, 1);
+        Interlocked.Increment(ref _viewerCount);
     }
 
-    private async Task AdjustCount(string key, int adjustBy)
-    {
-        try
-        {
-            await using var result = await _locker.TryAcquireLock(key);
-            if (!result.LockAcquired)
-            {
-                return;
-            }
-            var current = await _cache.GetAsync(key);
-            current ??= BitConverter.GetBytes(0);
-
-            var count = BitConverter.ToInt32(current) + adjustBy;
-            await _cache.SetAsync(key, BitConverter.GetBytes(count));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogCritical(ex, "Failed to increment or decrement counter key {KeyName}.", key);
-        }
-    }
     private async Task<Result<int>> GetCount(string key)
     {
         try
         {
-            var current = await _cache.GetAsync(key);
-            if (current is null)
+            var cachedValue = await _cache.GetAsync(key);
+            if (cachedValue is null)
             {
                 return Result.Ok(0);
             }
 
-            var count = BitConverter.ToInt32(current);
-            return Result.Ok(count);
+
+            var deserialized = MessagePackSerializer.Deserialize<Dictionary<Guid, ConnectionCounter>>(cachedValue) ??
+                throw new MessagePackSerializationException("Failed to deserialize cached value.");
+            
+            if (deserialized.Count == 0)
+            {
+                return Result.Ok(0);
+            }
+
+            var sum = deserialized.Values.Sum(x => x.Count);
+            return Result.Ok(sum);
         }
         catch (Exception ex)
         {

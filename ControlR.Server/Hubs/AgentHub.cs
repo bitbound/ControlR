@@ -28,14 +28,14 @@ public class AgentHub(
 
     public override async Task OnConnectedAsync()
     {
-        await _connectionCounter.IncrementAgentCount();
+        _connectionCounter.IncrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await _connectionCounter.DecrementAgentCount();
+        _connectionCounter.DecrementAgentCount();
         await SendUpdatedConnectionCountToAdmins();
 
         if (Device is DeviceDto cachedDevice)

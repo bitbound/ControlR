@@ -159,7 +159,7 @@ public class ViewerHub(
 
     public override async Task OnConnectedAsync()
     {
-        await _connectionCounter.IncrementViewerCount();
+        _connectionCounter.IncrementViewerCount();
         await SendUpdatedConnectionCountToAdmins();
 
         await base.OnConnectedAsync();
@@ -197,7 +197,7 @@ public class ViewerHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await _connectionCounter.DecrementViewerCount();
+        _connectionCounter.DecrementViewerCount();
         await SendUpdatedConnectionCountToAdmins();
 
         if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
