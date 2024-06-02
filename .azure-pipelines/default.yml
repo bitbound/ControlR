@@ -84,20 +84,3 @@ jobs:
     inputs:
       path: docker-compose/docker-compose.yml
       artifactName: DockerCompose
-  - task: PublishPipelineArtifact@1
-    displayName: Publish MSIX
-    inputs:
-      path: ControlR.Server\bin\publish\wwwroot\downloads\ControlR.Viewer.msix
-      artifactName: ViewerMsix
-
-  - task: PublishPipelineArtifact@1
-    displayName: Publish APK
-    inputs:
-      path: ControlR.Server\bin\publish\wwwroot\downloads\ControlR.Viewer.apk
-      artifactName: ViewerApk
-
-  - task: PublishPipelineArtifact@1
-    displayName: Publish AAB
-    inputs:
-      path: ControlR.Server\bin\publish\wwwroot\downloads\ControlR.Viewer.aab
-      artifactName: ViewerAab
