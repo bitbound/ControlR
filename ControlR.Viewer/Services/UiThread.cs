@@ -4,6 +4,7 @@ public interface IUiThread
 {
     Task InvokeAsync(Func<Task> func);
     Task InvokeAsync(Action action);
+    Task<T> InvokeAsync<T>(Func<Task<T>> func);
 }
 
 internal class UiThread : IUiThread
@@ -17,6 +18,18 @@ internal class UiThread : IUiThread
         else
         {
             await MainThread.InvokeOnMainThreadAsync(func);
+        }
+    }
+
+    public async Task<T> InvokeAsync<T>(Func<Task<T>> func)
+    {
+        if (MainThread.IsMainThread)
+        {
+            return await func.Invoke();
+        }
+        else
+        {
+            return await MainThread.InvokeOnMainThreadAsync(func);
         }
     }
 

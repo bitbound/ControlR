@@ -2,7 +2,7 @@
 
 @inject ISettings Settings
 @inject ISnackbar Snackbar
-@inject IClipboard Clipboard
+@inject IClipboardManager Clipboard
 @inject IAppState AppState
 
 <PageTitle>Deploy</PageTitle>
@@ -145,25 +145,25 @@
 
     private async Task CopyMacArm64Script()
     {
-        await Clipboard.SetTextAsync(MacArm64DeployScript);
+        await Clipboard.SetText(MacArm64DeployScript);
         Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyMacX64Script()
     {
-        await Clipboard.SetTextAsync(MacX64DeployScript);
+        await Clipboard.SetText(MacX64DeployScript);
         Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyUbuntuScript()
     {
-        await Clipboard.SetTextAsync(UbuntuDeployScript);
+        await Clipboard.SetText(UbuntuDeployScript);
         Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 
     private async Task CopyWindowsScript()
     {
-        await Clipboard.SetTextAsync(WindowsDeployScript);
+        await Clipboard.SetText(WindowsDeployScript);
         Snackbar.Add("Install script copied to clipboard", Severity.Success);
     }
 

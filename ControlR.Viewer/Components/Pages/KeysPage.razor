@@ -9,7 +9,7 @@
 @inject IMessenger Messenger
 @inject IFileSaver FileSaver
 @inject IKeyProvider KeyProvider
-@inject IClipboard Clipboard
+@inject IClipboardManager Clipboard
 @inject IDeviceCache DeviceCache
 @inject ILogger<KeysPage> Logger
 
@@ -112,13 +112,13 @@
 
     private async Task CopyPrivateKey()
     {
-        await Clipboard.SetTextAsync(_privateKey);
+        await Clipboard.SetText(_privateKey);
         Snackbar.Add("Private key copied to clipboard", Severity.Success);
     }
 
     private async Task CopyPublicKey()
     {
-        await Clipboard.SetTextAsync(_publicKey);
+        await Clipboard.SetText(_publicKey);
         Snackbar.Add("Public key copied to clipboard", Severity.Success);
     }
 

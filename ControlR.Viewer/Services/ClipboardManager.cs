@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace ControlR.Viewer.Services;
 
@@ -6,6 +7,8 @@ public interface IClipboardManager : IAsyncDisposable
 {
     event EventHandler<string?>? ClipboardChanged;
     Task SetText(string text);
+    Task<string?> GetText();
+
     Task Start();
 }
 
@@ -29,6 +32,25 @@ internal class ClipboardManager(
             _cancellationSource.Dispose();
         }
         catch { }
+    }
+
+    public async Task<string?> GetText()
+    {
+        var cancellationToken = _cancellationSource.Token;
+        await _clipboardLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await _uiThread.InvokeAsync(_clipboard.GetTextAsync);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting clipboard text.");
+        }
+        finally
+        {
+            _clipboardLock.Release();
+        }
+        return null;
     }
 
     public async Task SetText(string? text)

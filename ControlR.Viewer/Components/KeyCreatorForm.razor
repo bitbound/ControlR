@@ -8,7 +8,7 @@
 @inject IKeyApi KeyApi
 @inject IMessenger Messenger
 @inject IKeyProvider KeyProvider
-@inject IClipboard Clipboard
+@inject IClipboardManager ClipboardManager
 @inject ILogger<KeyCreatorForm> Logger
 
 @if (_isLoading)
@@ -277,7 +277,7 @@ else
     {
         try
         {
-            var base64 = await Clipboard.GetTextAsync();
+            var base64 = await ClipboardManager.GetText();
             if (string.IsNullOrWhiteSpace(base64))
             {
                 Snackbar.Add("Clipboard is empty.", Severity.Warning);
