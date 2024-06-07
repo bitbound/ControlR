@@ -36,8 +36,6 @@ public class Md5HeaderMiddleware(
             cachedObject is string cachedHash)
         {
             context.Response.Headers.ContentMD5 = cachedHash;
-            // TODO: Remove after next release.
-            context.Response.Headers["MD5"] = cachedHash;
             await _next(context);
             return;
         }
