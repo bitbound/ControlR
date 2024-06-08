@@ -49,6 +49,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 {
     private const uint MAXIMUM_ALLOWED_RIGHTS = 0x2000000;
     private const string SE_SECURITY_NAME = "SeSecurityPrivilege\0";
+    private const uint XBUTTON1 = 0x0001;
+    private const uint XBUTTON2 = 0x0002;
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
 
@@ -359,13 +361,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         return Result.Ok();
     }
-
     public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
     {
         MovePointer(x, y, MovePointerType.Absolute);
 
         var extraInfo = PInvoke.GetMessageExtraInfo();
         MOUSE_EVENT_FLAGS mouseEventFlags = 0;
+        uint mouseData = 0;
 
         switch (button)
         {
@@ -399,12 +401,35 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                     mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_RIGHTUP;
                 }
                 break;
+            case 3:
+                mouseData = XBUTTON1;
+                if (isPressed)
+                {
+                    mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_XDOWN;
+                }
+                else
+                {
+                    mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_XUP;
+                }
+                break;
+            case 4:
+                mouseData = XBUTTON2;
+                if (isPressed)
+                {
+                    mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_XDOWN;
+                }
+                else
+                {
+                    mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_XUP;
+                }
+                break;
             default:
                 return;
         }
 
         var mouseInput = new MOUSEINPUT
         {
+            mouseData = mouseData,
             dwFlags = mouseEventFlags,
             dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
         };

@@ -268,6 +268,8 @@ export async function initialize(componentRef, videoId, iceServers) {
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
+
+        return;
      
         const now = Date.now();
         if (now - state.lastPointerMove < 50) {
