@@ -39,6 +39,10 @@ services:
       # UseTwilio, UseMetered, UseCoTurn, and UseStaticIceServers are mutually exclusive.
       # They will be evaluated in that order.
       - ControlR_ApplicationOptions__UseCoTurn=true
+      # Format: coturn.example.com or 192.3.253.2.  
+      # If left blank, the publicly-accessible hostname of the 
+      # ControlR server will be used.
+      - ControlR_ApplicationOptions__CoTurnHost=
       - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
       - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
       - ControlR_ApplicationOptions__CoTurnPort=3478
