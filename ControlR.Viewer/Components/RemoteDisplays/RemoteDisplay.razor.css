@@ -1,6 +1,7 @@
 ﻿.screen-area {
     overflow: auto;
     position: relative;
+    overscroll-behavior: contain;
 }
 
 .display-grid {
