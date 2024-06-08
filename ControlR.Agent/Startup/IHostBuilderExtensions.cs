@@ -6,13 +6,6 @@ using ControlR.Agent.Services.Fakes;
 using ControlR.Agent.Services.Linux;
 using ControlR.Agent.Services.Mac;
 using ControlR.Agent.Services.Windows;
-using ControlR.Devices.Native.Windows;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Models;
-using ControlR.Shared.Services;
-using ControlR.Shared.Services.Buffers;
-using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +14,13 @@ using Microsoft.Extensions.Options;
 using SimpleIpc;
 using ControlR.Devices.Native.Services;
 using ControlR.Agent.Options;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.DevicesNative.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Agent.Startup;
 

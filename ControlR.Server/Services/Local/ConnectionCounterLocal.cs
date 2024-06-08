@@ -1,6 +1,8 @@
-﻿using ControlR.Server.Services.Interfaces;
+﻿using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
+using ControlR.Server.Services.Interfaces;
 
-namespace ControlR.Server.Services.InMemory;
+namespace ControlR.Server.Services.Local;
 
 
 public class ConnectionCounterLocal : IConnectionCounter

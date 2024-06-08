@@ -1,6 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Services.Fakes;
 internal class StreamerLauncherFake : IStreamerLauncher

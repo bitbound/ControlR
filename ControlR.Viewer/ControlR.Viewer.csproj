@@ -112,16 +112,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
-		<ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.40" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Resources\Images\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 	</ItemGroup>
 
 </Project>

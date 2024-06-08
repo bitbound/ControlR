@@ -1,5 +1,5 @@
 ﻿using ControlR.Devices.Native.Services;
-using ControlR.Shared.Dtos.SidecarDtos;
+using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;

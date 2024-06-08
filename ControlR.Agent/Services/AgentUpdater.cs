@@ -1,15 +1,15 @@
 ﻿using ControlR.Agent.Options;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 
 namespace ControlR.Agent.Services;
 
@@ -110,7 +110,7 @@ internal class AgentUpdater(
 
             switch (_environmentHelper.Platform)
             {
-                case Shared.Enums.SystemPlatform.Windows:
+                case SystemPlatform.Windows:
                     {
                         await _processInvoker
                             .Start(tempPath, installCommand)
@@ -118,7 +118,7 @@ internal class AgentUpdater(
                     }
                     break;
 
-                case Shared.Enums.SystemPlatform.Linux:
+                case SystemPlatform.Linux:
                     {
                         await _processInvoker
                           .Start("sudo", $"chmod +x {tempPath}")
@@ -132,7 +132,7 @@ internal class AgentUpdater(
                     }
                     break;
 
-                case Shared.Enums.SystemPlatform.MacOS:
+                case SystemPlatform.MacOS:
                     {
                         await _processInvoker
                          .Start("sudo", $"chmod +x {tempPath}")

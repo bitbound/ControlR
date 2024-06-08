@@ -1,11 +1,12 @@
-﻿using ControlR.Shared.Dtos;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Helpers;
+﻿using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using IFileIo = ControlR.Devices.Common.Services.IFileSystem;
+using IFileIo = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
+using IFileSystem = Microsoft.Maui.Storage.IFileSystem;
 
 namespace ControlR.Viewer.Services;
 

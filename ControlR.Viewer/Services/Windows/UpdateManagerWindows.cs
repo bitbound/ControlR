@@ -1,13 +1,13 @@
 ﻿#if WINDOWS
 using Bitbound.SimpleMessenger;
-using ControlR.Shared.Services.Http;
-using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ControlR.Devices.Common.Services;
-using IFileSystem = ControlR.Devices.Common.Services.IFileSystem;
-using ControlR.Devices.Common.Extensions;
-using ControlR.Shared;
+using IFileSystem = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
+using ControlR.Libraries.Shared;
+using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.Libraries.DevicesCommon.Messages;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Services.Http;
 
 namespace ControlR.Viewer.Services.Windows;
 

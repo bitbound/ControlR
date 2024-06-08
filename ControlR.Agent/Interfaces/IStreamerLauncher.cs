@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Primitives;
+﻿using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Interfaces;
 internal interface IStreamerLauncher

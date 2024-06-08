@@ -1,9 +1,9 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Models;
-using ControlR.Shared.Services;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Agent.Services.Linux;

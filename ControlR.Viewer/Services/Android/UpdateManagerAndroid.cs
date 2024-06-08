@@ -3,16 +3,14 @@
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using ControlR.Viewer.Platforms.Android;
-using ControlR.Viewer.Services;
 using Bitbound.SimpleMessenger;
-using ControlR.Shared.Services.Http;
-using ControlR.Viewer.Models.Messages;
+using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
-using ControlR.Devices.Common.Extensions;
-using ControlR.Shared.Services;
+using ControlR.Libraries.Shared.Services;
 using ControlR.Viewer.Services.Interfaces;
+using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.Libraries.DevicesCommon.Messages;
 
 namespace ControlR.Viewer.Services.Android;
 

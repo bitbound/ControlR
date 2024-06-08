@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Viewer.Services;
 using ControlR.Viewer.Services.Android;
 using MauiApp = Microsoft.Maui.Controls.Application;

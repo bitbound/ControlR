@@ -1,18 +1,18 @@
 ﻿using ControlR.Agent.Dtos;
 using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
+using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
 using System.Runtime.Versioning;
-using Result = ControlR.Shared.Primitives.Result;
+using Result = ControlR.Libraries.Shared.Primitives.Result;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Services.Windows;
 

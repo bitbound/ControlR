@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Dtos;
+﻿using ControlR.Libraries.Shared.Dtos;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Interfaces;

@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Enums;
+﻿using ControlR.Libraries.Shared.Enums;
 using MudBlazor;
 using System;
 using System.Collections.Generic;

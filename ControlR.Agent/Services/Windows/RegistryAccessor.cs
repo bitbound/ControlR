@@ -1,7 +1,7 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Shared.Helpers;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.Runtime.Versioning;

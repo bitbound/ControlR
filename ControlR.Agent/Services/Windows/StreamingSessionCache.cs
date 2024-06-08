@@ -1,6 +1,6 @@
 ﻿using ControlR.Agent.Models;
-using ControlR.Shared.Helpers;
-using ControlR.Shared.Primitives;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;

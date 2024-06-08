@@ -1,11 +1,11 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Devices.Native.Windows;
 using ControlR.Agent.Services.Base;
-using ControlR.Shared.Models;
-using ControlR.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.DevicesNative.Windows;
 
 namespace ControlR.Agent.Services.Windows;
 

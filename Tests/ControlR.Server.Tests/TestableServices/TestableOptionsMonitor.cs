@@ -1,5 +1,5 @@
-﻿using ControlR.Shared.Collections;
-using ControlR.Shared.Primitives;
+﻿using ControlR.Libraries.Shared.Collections;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Server.Tests.TestableServices;

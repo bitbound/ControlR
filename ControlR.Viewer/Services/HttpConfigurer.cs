@@ -1,6 +1,6 @@
-﻿using ControlR.Shared;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Services;
+﻿using ControlR.Libraries.Shared;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Services;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;

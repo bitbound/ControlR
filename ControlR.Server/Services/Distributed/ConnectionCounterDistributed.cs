@@ -1,4 +1,5 @@
-﻿using ControlR.Server.Models;
+﻿using ControlR.Libraries.Shared.Primitives;
+using ControlR.Server.Models;
 using ControlR.Server.Services.Distributed.Locking;
 using ControlR.Server.Services.Interfaces;
 using MessagePack;
