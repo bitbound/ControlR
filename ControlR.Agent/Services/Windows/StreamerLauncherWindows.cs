@@ -10,16 +10,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleIpc;
 using System.Diagnostics;
-using System.IO.Pipes;
 using System.Runtime.Versioning;
-using System.Security.Principal;
 using Result = ControlR.Shared.Primitives.Result;
 using ControlR.Devices.Native.Services;
 
 namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
-internal class RemoteControlLauncherWindows(
+internal class StreamerLauncherWindows(
     IHostApplicationLifetime _appLifetime,
     IWin32Interop _win32Interop,
     IProcessManager _processes,
@@ -28,7 +26,7 @@ internal class RemoteControlLauncherWindows(
     IStreamingSessionCache _streamingSessionCache,
     ISettingsProvider _settings,
     IFileSystem _fileSystem,
-    ILogger<RemoteControlLauncherWindows> _logger) : IRemoteControlLauncher
+    ILogger<StreamerLauncherWindows> _logger) : IStreamerLauncher
 {
     private readonly SemaphoreSlim _createSessionLock = new(1, 1);
 

@@ -40,7 +40,7 @@ internal class AgentHubConnection(
      ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
-     IRemoteControlLauncher _remoteControlLauncher,
+     IStreamerLauncher _remoteControlLauncher,
      IStreamerUpdater _streamerUpdater,
      IAgentUpdater _agentUpdater,
      IMessenger _messenger,

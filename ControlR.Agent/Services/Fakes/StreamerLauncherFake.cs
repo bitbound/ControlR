@@ -3,7 +3,7 @@ using ControlR.Shared.Extensions;
 using ControlR.Shared.Primitives;
 
 namespace ControlR.Agent.Services.Fakes;
-internal class RemoteControlLauncherFake : IRemoteControlLauncher
+internal class StreamerLauncherFake : IStreamerLauncher
 {
     public Task<Result> CreateSession(
         Guid sessionId, 

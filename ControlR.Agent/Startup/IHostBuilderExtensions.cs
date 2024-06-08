@@ -110,20 +110,20 @@ internal static class IHostBuilderExtensions
 
                 if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
                 {
-                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherWindows>();
+                    services.AddSingleton<IStreamerLauncher, StreamerLauncherWindows>();
                     services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
                     services.AddHostedService<StreamingSessionWatcher>();
                 }
                 else if (OperatingSystem.IsLinux())
                 {
                     services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
+                    services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
 
                 }
                 else if (OperatingSystem.IsMacOS())
                 {
                     services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-                    services.AddSingleton<IRemoteControlLauncher, RemoteControlLauncherFake>();
+                    services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
 
                 }
                 else

@@ -1,7 +1,7 @@
 ﻿using ControlR.Shared.Primitives;
 
 namespace ControlR.Agent.Interfaces;
-internal interface IRemoteControlLauncher
+internal interface IStreamerLauncher
 {
     Task<Result> CreateSession(
         Guid sessionId,
