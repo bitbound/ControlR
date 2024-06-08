@@ -70,8 +70,8 @@ internal class StreamerLauncherWindows(
             if (!_environment.IsDebug)
             {
                 var startupDir = _environment.StartupDirectory;
-                var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
-                var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
+                var streamerDir = Path.Combine(startupDir, "Streamer");
+                var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
 
                 _win32Interop.CreateInteractiveSystemProcess(
                     $"\"{binaryPath}\" {args}",
@@ -83,9 +83,9 @@ internal class StreamerLauncherWindows(
 
                 if (process is null || process.Id == -1)
                 {
-                    var streamerZipPath = Path.Combine(startupDir, AppConstants.RemoteControlZipFileName);
+                    var streamerZipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
                     // Delete streamer files so a clean install will be performed on the next attempt.
-                    _fileSystem.DeleteDirectory(remoteControlDir, true);
+                    _fileSystem.DeleteDirectory(streamerDir, true);
                     _fileSystem.DeleteFile(streamerZipPath);
                     return Result.Fail("Failed to start remote control process.");
                 }

@@ -29,7 +29,7 @@ internal class StreamerUpdaterWindows(
 {
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
     private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
-    private readonly string _remoteControlZipUri = $"{_settings.ServerUri}downloads/{AppConstants.RemoteControlZipFileName}";
+    private readonly string _streamerZipUri = $"{_settings.ServerUri}downloads/{AppConstants.StreamerZipFileName}";
     private readonly SemaphoreSlim _updateLock = new(1, 1);
     private double _previousProgress = 0;
 
@@ -54,9 +54,9 @@ internal class StreamerUpdaterWindows(
         {
 
             var startupDir = _environmentHelper.StartupDirectory;
-            var remoteControlDir = Path.Combine(startupDir, "RemoteControl");
-            var binaryPath = Path.Combine(remoteControlDir, AppConstants.RemoteControlFileName);
-            var zipPath = Path.Combine(startupDir, AppConstants.RemoteControlZipFileName);
+            var streamerDir = Path.Combine(startupDir, "Streamer");
+            var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
+            var zipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
 
             if (_fileSystem.FileExists(zipPath))
             {
@@ -73,7 +73,7 @@ internal class StreamerUpdaterWindows(
                         return true;
                     }
 
-                    var patchResult = await TryPatchCurrentVersion(zipPath, remoteControlDir);
+                    var patchResult = await TryPatchCurrentVersion(zipPath, streamerDir);
                     if (patchResult)
                     {
                         // We may need multiple patches to get to latest version,
@@ -86,22 +86,22 @@ internal class StreamerUpdaterWindows(
 
                 _logger.LogWarning("Patching failed.  Attempting full upgrade.");
 
-                if (_fileSystem.DirectoryExists(remoteControlDir))
+                if (_fileSystem.DirectoryExists(streamerDir))
                 {
-                    _fileSystem.DeleteDirectory(remoteControlDir, true);
+                    _fileSystem.DeleteDirectory(streamerDir, true);
                 }
             }
-            else if (_fileSystem.DirectoryExists(remoteControlDir))
+            else if (_fileSystem.DirectoryExists(streamerDir))
             {
                 // If the archive doesn't exist, clear out any remaining files.
                 // Then future update checks will work normally.
-                _fileSystem.DeleteDirectory(remoteControlDir, true);
+                _fileSystem.DeleteDirectory(streamerDir, true);
             }
 
             if (!_fileSystem.FileExists(binaryPath))
             {
                 _previousProgress = 0;
-                var downloadResult = await DownloadRemoteControl(remoteControlDir);
+                var downloadResult = await DownloadStreamer(streamerDir);
                 if (!downloadResult)
                 {
                     return downloadResult;
@@ -139,12 +139,12 @@ internal class StreamerUpdaterWindows(
         }
     }
 
-    private async Task<bool> DownloadRemoteControl(string remoteControlDir)
+    private async Task<bool> DownloadStreamer(string streamerDir)
     {
         try
         {
-            var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.RemoteControlZipFileName);
-            var result = await _downloadsApi.DownloadRemoteControlZip(targetPath, _remoteControlZipUri, async progress =>
+            var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.StreamerZipFileName);
+            var result = await _downloadsApi.DownloadStreamerZip(targetPath, _streamerZipUri, async progress =>
             {
                 await ReportDownloadProgress(progress, "Downloading streamer on remote device");
             });
@@ -156,7 +156,7 @@ internal class StreamerUpdaterWindows(
 
             await ReportDownloadProgress(-1, "Extracting streamer archive");
 
-            ZipFile.ExtractToDirectory(targetPath, remoteControlDir);
+            ZipFile.ExtractToDirectory(targetPath, streamerDir);
             return true;
         }
         catch (Exception ex)
@@ -229,7 +229,7 @@ internal class StreamerUpdaterWindows(
         }
     }
 
-    private async Task<bool> TryPatchCurrentVersion(string streamerZipPath, string remoteControlDir)
+    private async Task<bool> TryPatchCurrentVersion(string streamerZipPath, string streamerDir)
     {
         try
         {
@@ -267,13 +267,13 @@ internal class StreamerUpdaterWindows(
             _logger.LogInformation("Extracting patched archive.");
             await ReportDownloadProgress(-1, "Extracting patched archive");
 
-            if (_fileSystem.DirectoryExists(remoteControlDir))
+            if (_fileSystem.DirectoryExists(streamerDir))
             {
-                _fileSystem.DeleteDirectory(remoteControlDir, true);
+                _fileSystem.DeleteDirectory(streamerDir, true);
             }
-            _fileSystem.CreateDirectory(remoteControlDir);
+            _fileSystem.CreateDirectory(streamerDir);
             _fileSystem.MoveFile(tempStreamerPath, streamerZipPath, true);
-            ZipFile.ExtractToDirectory(streamerZipPath, remoteControlDir);
+            ZipFile.ExtractToDirectory(streamerZipPath, streamerDir);
 
             _logger.LogInformation("Patching completed.");
             return true;

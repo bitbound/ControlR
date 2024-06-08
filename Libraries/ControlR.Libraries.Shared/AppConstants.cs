@@ -12,7 +12,7 @@ public static partial class AppConstants
 
     public static string ExternalDownloadsUri => "https://controlr.app";
 
-    public static string RemoteControlFileName
+    public static string StreamerFileName
     {
         get
         {
@@ -28,7 +28,7 @@ public static partial class AppConstants
         }
     }
 
-    public static string RemoteControlZipFileName
+    public static string StreamerZipFileName
     {
         get
         {

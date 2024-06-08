@@ -7,7 +7,7 @@ internal interface IDownloadsApi
 {
     Task<Result> DownloadFile(string downloadUri, string destinationPath);
 
-    Task<Result> DownloadRemoteControlZip(string destinationPath, string remoteControlDownloadUri, Func<double, Task>? onDownloadProgress);
+    Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress);
 
 }
 
@@ -34,15 +34,15 @@ internal class DownloadsApi(
         }
     }
 
-    public async Task<Result> DownloadRemoteControlZip(string destinationPath, string remoteControlDownloadUri, Func<double, Task>? onDownloadProgress)
+    public async Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress)
     {
         try
         {
-            using var message = new HttpRequestMessage(HttpMethod.Head, remoteControlDownloadUri);
+            using var message = new HttpRequestMessage(HttpMethod.Head, streamerDownloadUri);
             using var response = await _client.SendAsync(message);
             var totalSize = response.Content.Headers.ContentLength ?? 100_000_000; // rough estimate.
 
-            using var webStream = await _client.GetStreamAsync(remoteControlDownloadUri);
+            using var webStream = await _client.GetStreamAsync(streamerDownloadUri);
             using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
 
             fs.TotalBytesWrittenChanged += async (sender, written) =>

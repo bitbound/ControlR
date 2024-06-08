@@ -39,7 +39,7 @@ internal class AgentHubConnection(
      ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
-     IStreamerLauncher _remoteControlLauncher,
+     IStreamerLauncher _streamerLauncher,
      IStreamerUpdater _streamerUpdater,
      IAgentUpdater _agentUpdater,
      IMessenger _messenger,
@@ -70,7 +70,7 @@ internal class AgentHubConnection(
                 }
             }
 
-            var result = await _remoteControlLauncher.CreateSession(
+            var result = await _streamerLauncher.CreateSession(
                 dto.SessionId,
                 dto.ViewerConnectionId,
                 signedDto.PublicKey,
