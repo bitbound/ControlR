@@ -6,7 +6,9 @@ A zero-trust remote control solution built with .NET 8, MAUI, Blazor WASM, Elect
 
 Website: https://controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
-Feature Requests: https://features.controlr.app/
+Feature Requests: https://features.controlr.app/  
+Discussions: https://github.com/bitbound/ControlR/discussions  
+Discord: https://discord.gg/JWJmMPc72H  
 
 > Note: ControlR is still in alpha and isn't ready for self-hosting yet. When it is, I'll add a quick start section here with Docker instructions.
 
