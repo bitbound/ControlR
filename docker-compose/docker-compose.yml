@@ -87,7 +87,7 @@ services:
    entrypoint: [
     "/bin/sh",
     "-c",
-    "turnadmin -a -u controlr-user -p $TURN_SECRET -r controlr && turnserver --use-auth-secret=true --static-auth-secret=$TURN_SECRET --lt-cred-mech --fingerprint --log-file=stdout --realm controlr --no-cli"]
+    "turnserver --user controlr-user:$TURN_SECRET --use-auth-secret=true --static-auth-secret=$TURN_SECRET --log-file=stdout --realm controlr --no-cli"]
    
 volumes:
   controlr-data:

@@ -215,7 +215,7 @@ public class ViewerHub(
     }
 
     public async Task<Result> RequestStreamingSession(
-                    string agentConnectionId, 
+        string agentConnectionId,
         SignedPayloadDto sessionRequestDto)
     {
         try
