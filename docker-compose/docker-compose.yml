@@ -13,6 +13,7 @@ services:
   controlr:
     image: translucency/controlr:latest
     container_name: controlr
+    restart: unless-stopped
     ports:
       - 5120:8080
     networks:
@@ -76,11 +77,17 @@ services:
    # Docker does not perform well with large port ranges, so coTURN maintainers
    # recommend using host network.  See https://hub.docker.com/r/coturn/coturn.
    network_mode: "host"
+   restart: unless-stopped
+   environment:
+    - DETECT_EXTERNAL_IP=yes
+    - DETECT_RELAY_IP=yes
+    - DETECT_EXTERNAL_IPV6=yes
+    - DETECT_RELAY_IPV6=yes
 
    entrypoint: [
     "/bin/sh",
     "-c",
-    "turnadmin -a -u controlr-user -p ${TURN_SECRET} && turnserver --use-auth-secret=true --static-auth-secret=${TURN_SECRET} --log-file=stdout --external-ip=$(detect-external-ip) --no-cli"]
+    "turnadmin -a -u controlr-user -p $TURN_SECRET -r controlr && turnserver --use-auth-secret=true --static-auth-secret=$TURN_SECRET --lt-cred-mech --fingerprint --log-file=stdout --realm controlr --no-cli"]
    
 volumes:
   controlr-data:
