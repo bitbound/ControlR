@@ -8,11 +8,7 @@ using Android.Content.PM;
 #endif
 
 using Bitbound.SimpleMessenger;
-using ControlR.Devices.Common.Extensions;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Enums;
 using ControlR.Viewer.Models;
-using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -20,9 +16,15 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Components.RemoteDisplays;
+using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.Libraries.DevicesCommon.Messages;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Viewer.Components;
 

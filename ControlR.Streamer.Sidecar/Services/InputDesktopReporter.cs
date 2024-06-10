@@ -1,12 +1,12 @@
-﻿using ControlR.Devices.Common.Services;
-using ControlR.Shared.Dtos.SidecarDtos;
-using ControlR.Shared.Extensions;
+﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Streamer.Sidecar.Options;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.Streamer.Sidecar.Services;
 

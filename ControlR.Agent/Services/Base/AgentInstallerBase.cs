@@ -1,8 +1,8 @@
-﻿using ControlR.Devices.Common.Services;
-using ControlR.Shared;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Helpers;
-using ControlR.Shared.Models;
+﻿using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;

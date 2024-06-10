@@ -1,5 +1,5 @@
-﻿using ControlR.Shared.Models;
-using ControlR.Shared.Services;
+﻿using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;

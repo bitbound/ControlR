@@ -13,6 +13,7 @@ services:
   controlr:
     image: translucency/controlr:latest
     container_name: controlr
+    restart: unless-stopped
     ports:
       - 5120:8080
     networks:
@@ -39,6 +40,10 @@ services:
       # UseTwilio, UseMetered, UseCoTurn, and UseStaticIceServers are mutually exclusive.
       # They will be evaluated in that order.
       - ControlR_ApplicationOptions__UseCoTurn=true
+      # Format: coturn.example.com or 192.3.253.2.  
+      # If left blank, the publicly-accessible hostname of the 
+      # ControlR server will be used.
+      - ControlR_ApplicationOptions__CoTurnHost=
       - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
       - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
       - ControlR_ApplicationOptions__CoTurnPort=3478
@@ -72,11 +77,17 @@ services:
    # Docker does not perform well with large port ranges, so coTURN maintainers
    # recommend using host network.  See https://hub.docker.com/r/coturn/coturn.
    network_mode: "host"
+   restart: unless-stopped
+   environment:
+    - DETECT_EXTERNAL_IP=yes
+    - DETECT_RELAY_IP=yes
+    - DETECT_EXTERNAL_IPV6=yes
+    - DETECT_RELAY_IPV6=yes
 
    entrypoint: [
     "/bin/sh",
     "-c",
-    "turnadmin -a -u controlr-user -p ${TURN_SECRET} && turnserver --use-auth-secret=true --static-auth-secret=${TURN_SECRET} --log-file=stdout --external-ip=$(detect-external-ip) --no-cli"]
+    "turnserver --user controlr-user:$TURN_SECRET --use-auth-secret=true --static-auth-secret=$TURN_SECRET --log-file=stdout --realm controlr --no-cli"]
    
 volumes:
   controlr-data:

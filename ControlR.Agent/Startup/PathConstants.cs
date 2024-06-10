@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Services;
+﻿using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Agent.Startup;
 

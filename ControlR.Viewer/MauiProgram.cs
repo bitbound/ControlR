@@ -1,19 +1,23 @@
 ﻿using Bitbound.SimpleMessenger;
 using CommunityToolkit.Maui;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Services;
-using ControlR.Shared.Services.Http;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
 using FileSystem = Microsoft.Maui.Storage.FileSystem;
-using FileSystemCore = ControlR.Devices.Common.Services.FileSystem;
-using IFileSystemCore = ControlR.Devices.Common.Services.IFileSystem;
-using ControlR.Shared.Services.Buffers;
+using FileSystemCore = ControlR.Libraries.DevicesCommon.Services.FileSystem;
+using IFileSystemCore = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
 using CommunityToolkit.Maui.Storage;
 using ControlR.Viewer.Services.Interfaces;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Libraries.Shared.Services;
+
+
+
+
 #if WINDOWS
 using ControlR.Viewer.Services.Windows;
 #elif ANDROID
@@ -107,7 +111,6 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
-        builder.Logging.AddDebug();
 #endif
         
         return builder.Build();

@@ -1,15 +1,16 @@
-using ControlR.Shared.Services.Testable;
-using ControlR.Shared.Services;
 using ControlR.Server.Auth;
 using Microsoft.Extensions.DependencyInjection;
-using ControlR.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos;
 using MessagePack;
-using ControlR.Shared;
 using ControlR.Server.Options;
 using Microsoft.AspNetCore.Authentication;
 using ControlR.Server.Extensions;
 using Microsoft.Extensions.Options;
 using ControlR.Server.Tests.TestableServices;
+using ControlR.Libraries.Shared;
+using ControlR.Libraries.Shared.Services.Testable;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Server.Tests;
 

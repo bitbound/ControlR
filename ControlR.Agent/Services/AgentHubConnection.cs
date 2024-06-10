@@ -1,17 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using ControlR.Devices.Common.Extensions;
-using ControlR.Devices.Common.Messages;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Enums;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Hubs;
-using ControlR.Shared.Interfaces.HubClients;
-using ControlR.Shared.Models;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
-using ControlR.Viewer.Models.Messages;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -22,6 +10,17 @@ using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.Libraries.DevicesCommon.Messages;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Hubs;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Services;
 
@@ -40,7 +39,7 @@ internal class AgentHubConnection(
      ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
      IKeyProvider _keyProvider,
-     IRemoteControlLauncher _remoteControlLauncher,
+     IStreamerLauncher _streamerLauncher,
      IStreamerUpdater _streamerUpdater,
      IAgentUpdater _agentUpdater,
      IMessenger _messenger,
@@ -71,7 +70,7 @@ internal class AgentHubConnection(
                 }
             }
 
-            var result = await _remoteControlLauncher.CreateSession(
+            var result = await _streamerLauncher.CreateSession(
                 dto.SessionId,
                 dto.ViewerConnectionId,
                 signedDto.PublicKey,

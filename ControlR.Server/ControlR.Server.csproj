@@ -19,11 +19,11 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <PackageReference Include="Twilio" Version="7.1.0" />
+    <PackageReference Include="Twilio" Version="7.1.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
-﻿namespace ControlR.Viewer.Services.Interfaces;
+﻿using ControlR.Libraries.Shared.Primitives;
+
+namespace ControlR.Viewer.Services.Interfaces;
 internal interface IUpdateManager
 {
     Task<Result<bool>> CheckForUpdate();

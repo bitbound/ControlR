@@ -48,9 +48,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ControlR.Devices.Common\ControlR.Devices.Common.csproj" />
-    <ProjectReference Include="..\ControlR.Devices.Native\ControlR.Devices.Native.csproj" />
-    <ProjectReference Include="..\ControlR.Shared\ControlR.Shared.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesNative\ControlR.Libraries.DevicesNative.csproj" />
   </ItemGroup>
 
 </Project>

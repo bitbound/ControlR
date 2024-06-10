@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Serialization;
+﻿using ControlR.Libraries.Shared.Serialization;
 using MessagePack;
 
 namespace ControlR.Agent.Dtos;

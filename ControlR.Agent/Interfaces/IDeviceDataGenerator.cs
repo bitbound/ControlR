@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Models;
+﻿using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Agent.Interfaces;
 

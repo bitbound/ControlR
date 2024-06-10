@@ -1,6 +1,4 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Extensions;
 using ControlR.Streamer.Sidecar;
 using ControlR.Streamer.Sidecar.Options;
 using ControlR.Streamer.Sidecar.Services;
@@ -9,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.DevicesNative.Services;
+using ControlR.Libraries.Shared.Extensions;
 
 var streamerPipeOption = new Option<string>(
     ["-s", "--streamer-pipe"],

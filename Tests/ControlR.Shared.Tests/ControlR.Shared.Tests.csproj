@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ControlR.Shared\ControlR.Shared.csproj" />
+    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

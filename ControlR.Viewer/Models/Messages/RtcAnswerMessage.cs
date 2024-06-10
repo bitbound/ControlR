@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Models;
+﻿using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Viewer.Models.Messages;
 internal class RtcSessionDescriptionMessage(Guid sessionId, RtcSessionDescription sessionDescription)

@@ -1,4 +1,6 @@
-﻿namespace ControlR.Server.Options;
+﻿using ControlR.Libraries.Shared.Models;
+
+namespace ControlR.Server.Options;
 
 public class ApplicationOptions
 {
@@ -6,6 +8,7 @@ public class ApplicationOptions
     public IReadOnlyList<string> AdminPublicKeys { get; init; } = [];
     public IReadOnlyList<string> AuthorizedUserPublicKeys { get; init; } = [];
     public int CoTurnPort { get; init; }
+    public string? CoTurnHost { get; init; }
     public string? CoTurnSecret { get; init; }
     public string? CoTurnUsername { get; init; }
     public string? DockerGatewayIp { get; init; }

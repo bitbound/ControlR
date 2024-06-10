@@ -1,8 +1,8 @@
 ﻿using ControlR.Agent.Options;
 using ControlR.Agent.Startup;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Models;
-using ControlR.Shared.Primitives;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;

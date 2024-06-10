@@ -4,7 +4,7 @@ VisualStudioVersion = 17.0.31611.283
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Viewer", "ControlR.Viewer\ControlR.Viewer.csproj", "{5F12FC43-5558-45FE-B572-1370815F9A83}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Shared", "ControlR.Shared\ControlR.Shared.csproj", "{9DA9DD7F-2B58-46CF-A4BA-5ABFBD04BAF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Shared", "Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj", "{9DA9DD7F-2B58-46CF-A4BA-5ABFBD04BAF5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Server", "ControlR.Server\ControlR.Server.csproj", "{414A0D9A-326C-4595-A579-3F391023D9C1}"
 EndProject
@@ -18,11 +18,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent", "ControlR.Agent\ControlR.Agent.csproj", "{85932781-AB64-48C9-9789-884D3BB32437}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Devices.Common", "ControlR.Devices.Common\ControlR.Devices.Common.csproj", "{F773E361-61EF-4A18-8038-9DB2C8A08391}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.DevicesCommon", "Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj", "{F773E361-61EF-4A18-8038-9DB2C8A08391}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Devices.Common.Tests", "Tests\ControlR.Devices.Common.Tests\ControlR.Devices.Common.Tests.csproj", "{8E0D0D8D-9342-4A55-9547-2AE4FC122DA8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.DevicesCommon.Tests", "Tests\ControlR.Libraries.DevicesCommon.Tests\ControlR.Libraries.DevicesCommon.Tests.csproj", "{8E0D0D8D-9342-4A55-9547-2AE4FC122DA8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent.Tests", "tests\ControlR.Agent.Tests\ControlR.Agent.Tests.csproj", "{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD}"
 EndProject
@@ -41,7 +41,7 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ControlR.Streamer", "Contro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Streamer.Sidecar", "ControlR.Streamer.Sidecar\ControlR.Streamer.Sidecar.csproj", "{AB490A14-3952-4D41-8BB1-AC424E18A6DB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Devices.Native", "ControlR.Devices.Native\ControlR.Devices.Native.csproj", "{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.DevicesNative", "Libraries\ControlR.Libraries.DevicesNative\ControlR.Libraries.DevicesNative.csproj", "{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Shared.Tests", "Tests\ControlR.Shared.Tests\ControlR.Shared.Tests.csproj", "{91599A08-98F0-4DE7-921C-76D8E83BB86A}"
 EndProject
@@ -51,6 +51,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".azure-pipelines", ".azure-
 	ProjectSection(SolutionItems) = preProject
 		.azure-pipelines\default.yml = .azure-pipelines\default.yml
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -385,15 +387,18 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{9DA9DD7F-2B58-46CF-A4BA-5ABFBD04BAF5} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
+		{F773E361-61EF-4A18-8038-9DB2C8A08391} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{8E0D0D8D-9342-4A55-9547-2AE4FC122DA8} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{94B85287-C904-4672-821E-D0B96BBDF89C} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
+		{BDAAE932-DEC8-4DD0-A059-C9E197A7911C} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{91599A08-98F0-4DE7-921C-76D8E83BB86A} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{F6D09A60-CD6A-4BD3-AC76-3A595F23717C} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{E49A955D-AC20-46C0-9DAB-1357B896BB18} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
+		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 	EndGlobalSection
 EndGlobal

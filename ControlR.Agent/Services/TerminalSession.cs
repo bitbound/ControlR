@@ -1,9 +1,9 @@
-﻿using ControlR.Devices.Common.Services;
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Enums;
-using ControlR.Shared.Extensions;
-using ControlR.Shared.Primitives;
-using ControlR.Shared.Services;
+﻿using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Dtos;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;

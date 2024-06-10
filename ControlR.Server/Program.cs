@@ -3,19 +3,19 @@ using ControlR.Server.Hubs;
 using ControlR.Server.Middleware;
 using ControlR.Server.Options;
 using ControlR.Server.Services;
-using ControlR.Shared;
-using ControlR.Shared.Services.Buffers;
-using ControlR.Shared.Services.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using System.Net;
 using StackExchange.Redis;
-using ControlR.Server.Services.InMemory;
 using ControlR.Server.Services.Interfaces;
 using ControlR.Server.Services.Distributed;
 using ControlR.Server.Services.Distributed.Locking;
+using ControlR.Server.Services.Local;
+using ControlR.Libraries.Shared;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared.Services.Buffers;
 
 var builder = WebApplication.CreateBuilder(args);
 

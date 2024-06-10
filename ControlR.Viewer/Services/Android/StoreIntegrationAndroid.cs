@@ -1,4 +1,5 @@
 ﻿#if ANDROID
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Viewer.Services.Interfaces;
 using System;
 using System.Collections.Generic;

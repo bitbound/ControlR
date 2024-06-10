@@ -1,5 +1,5 @@
-﻿using ControlR.Shared.Dtos;
-using ControlR.Shared.Serialization;
+﻿using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Serialization;
 using MessagePack;
 
 namespace ControlR.Viewer.Models;

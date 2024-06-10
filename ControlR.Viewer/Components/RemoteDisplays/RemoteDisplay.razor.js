@@ -185,7 +185,7 @@ export async function initialize(componentRef, videoId, iceServers) {
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-
+        
         if (video.classList.contains("scroll-mode")) {
             ev.preventDefault();
             ev.stopPropagation();
@@ -285,23 +285,26 @@ export async function initialize(componentRef, videoId, iceServers) {
     });
 
     video.addEventListener("mousedown", async ev => {
+        ev.stopPropagation();
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-        
+
         sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, ev.button, state);
     });
 
     video.addEventListener("mouseup", async ev => {
+        ev.stopPropagation();
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
         }
-        
+
         sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, ev.button, state);
     });
 
     video.addEventListener("wheel", ev => {
         ev.preventDefault();
+        ev.stopPropagation();
 
         if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
             return;
@@ -321,6 +324,7 @@ export async function initialize(componentRef, videoId, iceServers) {
 
     video.addEventListener("contextmenu", async ev => {
         ev.preventDefault();
+        ev.stopPropagation();
 
         if (!isDataChannelReady(videoId) ||
             video.classList.contains("minimized") ||
@@ -338,8 +342,8 @@ export async function initialize(componentRef, videoId, iceServers) {
     video.addEventListener("canplay", async () => {
         await invokeDotNet("LogInfo", videoId, "CanPlay event fired.  Playing.");
         await video.play();
+        await invokeDotNet("NotifyStreamLoaded", videoId);
         //video.muted = false;
-        //await invokeDotNet("LogInfo", videoId, "Loaded video metadata.  Playing.");
         //await invokeDotNet("NotifyStreamLoaded", videoId);
     });
 
@@ -705,27 +709,6 @@ function setPeerConnectionHandlers(peerConnection, videoId) {
             readyState: ev.track.readyState
         }
         await invokeDotNet("LogInfo", videoId, "Received track: " + JSON.stringify(trackObj));
-    
-        const playInterval = window.setInterval(async () => {
-            if (!ev.streams[0].active) {
-                await invokeDotNet("LogInfo", videoId, "Stream inactive.  Exiting watch loop.");
-                window.clearInterval(playInterval);
-                return;
-            }
-
-            if (state.videoElement.played.length > 0) {
-                window.clearInterval(playInterval);
-                await state.videoElement.play();
-                //state.videoElement.muted = false;
-                await invokeDotNet("NotifyStreamLoaded", videoId);
-                return;
-            }
-
-            if (state.videoElement.readyState == 4) {
-                await invokeDotNet("NotifyStreamReady", videoId);
-                await state.videoElement.play();
-            }
-        }, 100)
     });
 
     peerConnection.addEventListener("datachannel", async ev => {

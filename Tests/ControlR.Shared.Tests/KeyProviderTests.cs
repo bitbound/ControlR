@@ -1,9 +1,9 @@
-using ControlR.Shared.Dtos;
-using ControlR.Shared.Services;
-using ControlR.Shared.Services.Testable;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Testable;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Shared.Tests;
+namespace ControlR.Libraries.Shared.Tests;
 
 [TestClass]
 public class KeyProviderTests

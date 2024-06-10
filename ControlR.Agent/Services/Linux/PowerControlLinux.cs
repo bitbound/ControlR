@@ -1,6 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Devices.Common.Services;
-using ControlR.Shared.Enums;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Agent.Services.Linux;
 internal class PowerControlLinux(IProcessManager processInvoker) : IPowerControl

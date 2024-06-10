@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Helpers;
+﻿using ControlR.Libraries.Shared.Helpers;
 using System.Diagnostics;
 
 namespace ControlR.Agent.Models;

@@ -1,11 +1,12 @@
 ﻿using ControlR.Server.Options;
-using ControlR.Shared.Helpers;
-using ControlR.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Text;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Server.Services;
 
@@ -77,7 +78,10 @@ public class IceServerProvider(
                     return [];
                 }
 
-                var host = _httpContext.HttpContext.Request.Host.Host;
+                var host = _appOptions.CurrentValue.CoTurnHost is { } coturnHost
+                    ? coturnHost
+                    : _httpContext.HttpContext.Request.Host.Host;
+
                 var iceServer = new IceServer()
                 {
                     Credential = password,

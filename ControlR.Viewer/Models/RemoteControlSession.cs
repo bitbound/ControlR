@@ -1,4 +1,4 @@
-﻿using ControlR.Shared.Dtos;
+﻿using ControlR.Libraries.Shared.Dtos;
 
 namespace ControlR.Viewer.Models;
 public class RemoteControlSession(DeviceDto device, int initialSystemSession)

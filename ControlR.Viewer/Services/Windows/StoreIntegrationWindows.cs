@@ -1,5 +1,6 @@
 ﻿#if WINDOWS
 using Bitbound.SimpleMessenger;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services.Interfaces;
 using Microsoft.Extensions.Logging;

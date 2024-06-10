@@ -1,6 +1,8 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Shared.Collections;
-using ControlR.Shared.Dtos;
+using ControlR.Libraries.Shared.Collections;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Viewer.Models;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services;
@@ -115,8 +117,8 @@ public partial class Terminal : IAsyncDisposable
     {
         return output.OutputKind switch
         {
-            Shared.Enums.TerminalOutputKind.StandardOutput => "",
-            Shared.Enums.TerminalOutputKind.StandardError => "mud-error-text",
+            TerminalOutputKind.StandardOutput => "",
+            TerminalOutputKind.StandardError => "mud-error-text",
             _ => "",
         };
     }
