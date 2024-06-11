@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using ControlR.Server.Tests.TestableServices;
 using ControlR.Libraries.Shared;
 using ControlR.Libraries.Shared.Services.Testable;
-using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Server.Tests;

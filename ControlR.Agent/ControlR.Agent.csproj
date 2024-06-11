@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>appicon.ico</ApplicationIcon>
-    <Platforms>AnyCPU;x86;ARM64;x64</Platforms>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Authors>jaredg</Authors>
     <Configurations>Debug;Release;DebugStore</Configurations>

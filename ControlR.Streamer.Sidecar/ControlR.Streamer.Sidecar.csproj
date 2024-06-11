@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>appicon.ico</ApplicationIcon>
     <Authors>jaredg</Authors>
+    <Configurations>Debug;Release;DebugStore</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

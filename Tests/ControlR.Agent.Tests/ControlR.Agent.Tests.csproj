@@ -7,8 +7,6 @@
 
     <IsPackable>false</IsPackable>
 
-    <Platforms>AnyCPU;x86;ARM64;x64</Platforms>
-
     <Configurations>Debug;Release;DebugStore</Configurations>
   </PropertyGroup>
 
