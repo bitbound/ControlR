@@ -1,6 +1,5 @@
 ﻿#if WINDOWS
 using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -15,9 +14,6 @@ internal class StoreIntegrationWindows(
 {
     private const string AddOnIdProSubscription = "9P0VDWFNRX3K";
 
-    public bool CanCheckForUpdates => true;
-
-    public bool CanInstallUpdates => true;
 
     public Task<Uri> GetStorePageUri()
     {
@@ -40,59 +36,84 @@ internal class StoreIntegrationWindows(
         return ViewerConstants.MicrosoftStoreProtocolUri.AsTaskResult();
     }
 
-    public async Task<bool> IsUpdateAvailable()
+    public async Task<Result<bool>> IsUpdateAvailable()
     {
-        _logger.LogInformation("Checking Microsoft Store for updates.");
-        var store = StoreContext.GetDefault();
-        var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
-        _logger.LogInformation("Found {UpdateCount} update(s).", updates.Count);
-        return updates.Count > 0;
-    }
-
-    public async Task<bool> IsProLicenseActive()
-    {
-        var store = StoreContext.GetDefault();
-        var license = await store.GetAppLicenseAsync();
-        return license.AddOnLicenses.TryGetValue(AddOnIdProSubscription, out var proLicense) && proLicense.IsActive;
-    }
-
-    public async Task InstallCurrentVersion()
-    {
-        _logger.LogInformation("Starting update from Microsoft Store.");
-        var store = StoreContext.GetDefault();
-        if (!store.CanSilentlyDownloadStorePackageUpdates)
+        try
         {
-            _logger.LogInformation("CanSilentlyDownloadStorePackageUpdates is false.");
-            await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
-            return;
+            _logger.LogInformation("Checking Microsoft Store for updates.");
+            var store = StoreContext.GetDefault();
+            var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
+            _logger.LogInformation("Found {UpdateCount} update(s).", updates.Count);
+            var updateAvailable =  updates.Count > 0;
+            return Result.Ok(updateAvailable);
         }
-
-        _logger.LogInformation("Attempting silent upgrade.");
-        await _messenger.Send(new ToastMessage("Background update starting (this may take a bit)", Severity.Info));
-        var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
-        var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
-
-        _logger.LogInformation(
-            "Package update request sent to store.  " +
-            "Overall State: {OverallState}. " +
-            "Total Status Count: {UpdateStatusCount}. " +
-            "Queue Count: {QueueCount}.",
-            results.OverallState,
-            results.StorePackageUpdateStatuses.Count,
-            results.StoreQueueItems.Count);
-
-        switch (results.OverallState)
+        catch (Exception ex)
         {
-            case StorePackageUpdateState.Canceled:
-            case StorePackageUpdateState.ErrorLowBattery:
-            case StorePackageUpdateState.ErrorWiFiRecommended:
-            case StorePackageUpdateState.OtherError:
-                await _messenger.Send(new ToastMessage("Store update error", Severity.Error));
+            return Result.Fail<bool>(ex, "Error while checking store for update.").Log(_logger);
+        }
+    }
+
+    public async Task<Result<bool>> IsProLicenseActive()
+    {
+        try
+        {
+            var store = StoreContext.GetDefault();
+            var license = await store.GetAppLicenseAsync();
+            var hasProLicense = license.AddOnLicenses.TryGetValue(AddOnIdProSubscription, out var proLicense) && proLicense.IsActive;
+            return Result.Ok(hasProLicense);
+
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail<bool>(ex, "Error while checking store for license.").Log(_logger);
+        }
+    }
+
+    public async Task<Result> InstallCurrentVersion()
+    {
+        try
+        {
+            _logger.LogInformation("Starting update from Microsoft Store.");
+            var store = StoreContext.GetDefault();
+            if (!store.CanSilentlyDownloadStorePackageUpdates)
+            {
+                _logger.LogInformation("CanSilentlyDownloadStorePackageUpdates is false.");
                 await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
-                break;
-            default:
-                await _messenger.Send(new ToastMessage("Background update started", Severity.Info));
-                break;
+                return Result.Ok();
+            }
+
+            _logger.LogInformation("Attempting silent upgrade.");
+            await _messenger.Send(new ToastMessage("Background update starting (this may take a bit)", Severity.Info));
+            var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
+            var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
+
+            _logger.LogInformation(
+                "Package update request sent to store.  " +
+                "Overall State: {OverallState}. " +
+                "Total Status Count: {UpdateStatusCount}. " +
+                "Queue Count: {QueueCount}.",
+                results.OverallState,
+                results.StorePackageUpdateStatuses.Count,
+                results.StoreQueueItems.Count);
+
+            switch (results.OverallState)
+            {
+                case StorePackageUpdateState.Canceled:
+                case StorePackageUpdateState.ErrorLowBattery:
+                case StorePackageUpdateState.ErrorWiFiRecommended:
+                case StorePackageUpdateState.OtherError:
+                    await _messenger.Send(new ToastMessage("Store update error", Severity.Error));
+                    await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
+                    break;
+                default:
+                    await _messenger.Send(new ToastMessage("Background update started", Severity.Info));
+                    break;
+            }
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(ex, "Error while installing current version.").Log(_logger);
         }
     }
 }

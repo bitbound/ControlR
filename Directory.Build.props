@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- These API calls take forever. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

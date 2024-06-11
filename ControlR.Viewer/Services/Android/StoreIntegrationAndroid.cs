@@ -1,20 +1,22 @@
 ﻿#if ANDROID
-using ControlR.Libraries.Shared.Extensions;
+using Android.Gms.Extensions;
 using ControlR.Viewer.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Xamarin.Google.Android.Play.Core.AppUpdate;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Install;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
 
 namespace ControlR.Viewer.Services.Android;
-internal class StoreIntegrationAndroid : IStoreIntegration
+internal class StoreIntegrationAndroid(
+    ILogger<StoreIntegrationAndroid> _logger) : IStoreIntegration
 {
+    private const int _updateRequestCode = 89345;
+
     private readonly Uri _storePageUri = new("https://controlr.app");
 
-    public bool CanCheckForUpdates => false;
+    public bool CanCheckForUpdates => true;
 
-    public bool CanInstallUpdates => false;
+    public bool CanInstallUpdates => true;
 
     public Task<Uri> GetStorePageUri()
     {
@@ -26,19 +28,89 @@ internal class StoreIntegrationAndroid : IStoreIntegration
         return _storePageUri.AsTaskResult();
     }
 
-    public Task InstallCurrentVersion()
+   
+    public async Task<Result> InstallCurrentVersion()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var context = Platform.CurrentActivity;
+            if (context is null)
+            {
+                return Result.Fail("CurrentActivity is null when checking for store updates.").Log(_logger);
+            }
+
+            using var updateManager = AppUpdateManagerFactory.Create(context);
+
+            var getResult = await updateManager.GetAppUpdateInfo();
+            if (getResult is not AppUpdateInfo info)
+            {
+                return Result.Fail("Unexpected result when installing current version.").Log(_logger);
+            }
+
+            var startSucceeded = updateManager.StartUpdateFlowForResult(
+                   info,
+                   context,
+                   AppUpdateOptions
+                       .NewBuilder(AppUpdateType.Immediate)
+                       .SetAllowAssetPackDeletion(false)
+                       .Build(),
+                   _updateRequestCode);
+
+            if (!startSucceeded)
+            {
+                return Result.Fail("Failed to start update flow.").Log(_logger);
+            }
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(ex, "Error while installing current version.").Log(_logger);
+        }
     }
 
-    public Task<bool> IsProLicenseActive()
+    public Task<Result<bool>> IsProLicenseActive()
     {
-        return false.AsTaskResult();
+        return Result.Ok(false).AsTaskResult();
     }
 
-    public Task<bool> IsUpdateAvailable()
+    public async Task<Result<bool>> IsUpdateAvailable()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var context = Platform.CurrentActivity;
+            if (context is null)
+            {
+                return Result.Fail<bool>("CurrentActivity is null when checking for store updates.").Log(_logger);
+            }
+
+            using var updateManager = AppUpdateManagerFactory.Create(context);
+  
+            var getResult = await updateManager.GetAppUpdateInfo();
+            if (getResult is not AppUpdateInfo info)
+            {
+                return Result.Fail<bool>("Unexpected result when checking for store updates.").Log(_logger);
+            }
+
+            _logger.LogInformation("Available version code: {VersionCode}", info.AvailableVersionCode());
+
+            var availability = info.UpdateAvailability();
+            var isImmediateUpdatesAllowed = info.IsUpdateTypeAllowed(AppUpdateType.Immediate);
+
+            if (availability == UpdateAvailability.UpdateAvailable && isImmediateUpdatesAllowed)
+            {
+                return Result.Ok(true);
+            }
+
+            return Result.Ok(false);
+        }
+        catch (InstallException ex) when (ex.StatusCode == InstallErrorCode.ErrorAppNotOwned)
+        {
+            return Result.Fail<bool>(ex, "Unable to check for store updates on side-loaded app.").Log(_logger);
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail<bool>(ex, "Error while checking for store updates.").Log(_logger);
+        }
     }
 }
 #endif

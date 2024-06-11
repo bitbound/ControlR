@@ -8,6 +8,7 @@ using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Viewer.Extensions;
 
 namespace ControlR.Viewer.Services.Windows;
 
@@ -28,23 +29,24 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
 
             if (integrationResult is not bool integrationEnabled)
             {
                 return Result.Ok(false);
             }
 
-            // If store integration is enabled, we only want to show available update
-            // if it exists in both the store and the ControlR backend.
-            if (integrationEnabled && _storeIntegration.CanCheckForUpdates)
+            if (!integrationEnabled)
             {
-                if (!await _storeIntegration.IsUpdateAvailable())
-                {
-                    return Result.Ok(false);
-                }
+                return await CheckForSelfHostedUpdate();
             }
-            return await CheckForSelfHostedUpdate();
+
+            var checkResult = await _storeIntegration.IsUpdateAvailable();
+            if (!checkResult.IsSuccess)
+            {
+                await _messenger.SendToast("Failed to check store for updates", MudBlazor.Severity.Error);
+            }
+            return checkResult;
         }
         catch (Exception ex)
         {
@@ -81,20 +83,24 @@ internal class UpdateManagerWindows(
 
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
 
             if (integrationResult is not bool integrationEnabled)
             {
                 return Result.Fail("Store integration has not yet been checked.");
             }
 
-            if (integrationEnabled)
+            if (!integrationEnabled)
             {
-                await _storeIntegration.InstallCurrentVersion();
-                return Result.Ok();
+                return await InstallCurrentVersionSelfHosted();
             }
 
-            return await InstallCurrentVersionSelfHosted();
+            var installResult = await _storeIntegration.InstallCurrentVersion();
+            if (!installResult.IsSuccess)
+            {
+                await _messenger.SendToast("Failed to update from store", MudBlazor.Severity.Error);
+            }
+            return installResult;
         }
         catch (Exception ex)
         {
