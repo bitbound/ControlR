@@ -67,7 +67,6 @@ internal class UpdateManagerWindows(
         var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
         if (result.Value != currentVersion)
         {
-            await _messenger.SendGenericMessage(GenericMessageKind.AppUpdateAvailable);
             return Result.Ok(true);
         }
 

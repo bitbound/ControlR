@@ -1,7 +1,4 @@
-﻿using ControlR.Libraries.Shared;
-using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Services;
-using MessagePack;
+﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;

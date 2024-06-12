@@ -8,9 +8,7 @@ internal enum GenericMessageKind
     KeysStateChanged,
     PendingOperationsChanged,
     DevicesCacheUpdated,
-    HubConnectionStateChanged,
     DeviceContentWindowsChanged,
-    AppUpdateAvailable,
     LocalProxyListenerStopRequested,
     IsServerAdminChanged,
 }

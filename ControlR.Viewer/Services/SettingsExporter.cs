@@ -1,6 +1,4 @@
-﻿using CommunityToolkit.Maui.Core;
-using CommunityToolkit.Maui.Storage;
-using ControlR.Viewer.Models;
+﻿using CommunityToolkit.Maui.Storage;
 using System.Text.Json;
 
 namespace ControlR.Viewer.Services;

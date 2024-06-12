@@ -110,6 +110,7 @@
         Messenger.RegisterGenericMessage(this, HandleGeneric);
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
         Messenger.Register<AlertBroadcastDto>(this, HandleAlertBroadcast);
+        Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
     }
 
     private void CloseAlert()
@@ -138,25 +139,29 @@
             case GenericMessageKind.PendingOperationsChanged:
                 await InvokeAsync(StateHasChanged);
                 break;
-            case GenericMessageKind.HubConnectionStateChanged:
-                if (AppState.IsAuthenticated && ViewerHub.IsConnected)
+            default:
+                return;
+        }
+    }
+
+    private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+    {
+        if (AppState.IsAuthenticated && ViewerHub.IsConnected)
+        {
+            UpdateManager
+                .CheckForUpdate()
+                .ContinueWith(async x =>
                 {
-                    var result = await UpdateManager.CheckForUpdate();
+                    var result = await x;
                     if (result.IsSuccess)
                     {
                         _updateAvailable = result.Value;
                         await InvokeAsync(StateHasChanged);
                     }
-                }
-                await InvokeAsync(StateHasChanged);
-                break;
-            case GenericMessageKind.AppUpdateAvailable:
-                _updateAvailable = true;
-                await InvokeAsync(StateHasChanged);
-                break;
-            default:
-                return;
+                })
+                .Forget();
         }
+        await InvokeAsync(StateHasChanged);
     }
 
     private Task HandleToastMessage(object subscriber, ToastMessage toast)

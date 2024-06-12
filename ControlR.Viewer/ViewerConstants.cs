@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ControlR.Viewer;
+﻿namespace ControlR.Viewer;
 internal static class ViewerConstants
 {
     public static Uri MicrosoftStoreProtocolUri { get; } = new("ms-windows-store://pdp/?productid=9NS914B8GR04");

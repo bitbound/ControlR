@@ -131,7 +131,6 @@ private async Task<Result<bool>> CheckForSelfHostedUpdate()
             var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
             if (result.Value != currentVersion)
             {
-                await _messenger.SendGenericMessage(GenericMessageKind.AppUpdateAvailable);
                 return Result.Ok(true);
             }
 

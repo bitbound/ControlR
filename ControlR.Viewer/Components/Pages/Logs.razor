@@ -1,5 +1,5 @@
 ﻿@page "/logs"
-@inject IFileSystem Files
+@inject Microsoft.Maui.Storage.IFileSystem MauiFiles
 @inject ControlR.Libraries.DevicesCommon.Services.IFileSystem FileIO
 @inject ISnackbar Snackbar
 @inject IDialogService Dialogs
@@ -51,7 +51,7 @@
 </div>
 
 @code {
-    private readonly string _logsDir = Path.Combine(FileSystem.Current.AppDataDirectory, "Logs");
+    private readonly string _logsDir = Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "Logs");
     private FileInfo[] _logFiles = Array.Empty<FileInfo>();
     private MudListItem? _selectedFileItem;
     private object? _selectedFileValue;

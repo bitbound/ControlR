@@ -1,6 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Models.Messages;
-using MudBlazor;
+﻿using MudBlazor;
 
 namespace ControlR.Viewer.Extensions;
 public static class IMessengerExtensions

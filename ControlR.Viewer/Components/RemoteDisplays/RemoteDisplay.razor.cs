@@ -1,15 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Viewer.Enums;
-using ControlR.Viewer.Models;
-using ControlR.Viewer.Models.Messages;
+﻿using ControlR.Viewer.Enums;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -23,20 +12,19 @@ namespace ControlR.Viewer.Components.RemoteDisplays;
 
 public partial class RemoteDisplay : IAsyncDisposable
 {
+    private readonly CancellationTokenSource _componentClosing = new();
     private readonly SemaphoreSlim _typeLock = new(1, 1);
     private readonly string _videoId = $"video-{Guid.NewGuid()}";
-    private readonly CancellationTokenSource _componentClosing = new();
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
     private IceServer[] _iceServers = [];
-    private bool _virtualKeyboardToggled;
     private bool _isMobileActionsMenuOpen;
+    private bool _isScrollModeEnabled;
     private bool _isStreamLoaded;
     private bool _isStreamReady;
     private double _lastPinchDistance = -1;
     private ElementReference _screenArea;
-    private bool _isScrollModeEnabled;
     private DisplayDto? _selectedDisplay;
     private string _statusMessage = "Starting remote control session";
     private double _statusProgress = -1;
@@ -46,9 +34,12 @@ public partial class RemoteDisplay : IAsyncDisposable
     private double _videoWidth;
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
-
+    private bool _virtualKeyboardToggled;
     [Inject]
     public required IAppState AppState { get; init; }
+
+    [Inject]
+    public required IClipboardManager ClipboardManager { get; init; }
 
     [CascadingParameter]
     public required DeviceContentInstance ContentInstance { get; init; }
@@ -65,9 +56,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     [Inject]
     public required IMessenger Messenger { get; init; }
 
-    [Inject]
-    public required IUiThread UiThread { get; init; }
-
     [Parameter, EditorRequired]
     public required RemoteControlSession Session { get; set; }
 
@@ -75,11 +63,9 @@ public partial class RemoteDisplay : IAsyncDisposable
     public required ISnackbar Snackbar { get; init; }
 
     [Inject]
-    public required IViewerHubConnection ViewerHub { get; init; }
-
+    public required IUiThread UiThread { get; init; }
     [Inject]
-    public required IClipboardManager ClipboardManager { get; init; }
-
+    public required IViewerHubConnection ViewerHub { get; init; }
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
 
@@ -124,7 +110,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
         Messenger.UnregisterAll(this);
         await JsModule.InvokeVoidAsync("dispose", _videoId);
-        await ClipboardManager.DisposeAsync();
         GC.SuppressFinalize(this);
     }
 
@@ -164,15 +149,13 @@ public partial class RemoteDisplay : IAsyncDisposable
         _statusMessage = string.Empty;
         _statusProgress = 0;
 
-        await UiThread.InvokeAsync(() =>
-        {
-            ClipboardManager.ClipboardChanged -= ClipboardManager_ClipboardChanged;
-            ClipboardManager.ClipboardChanged += ClipboardManager_ClipboardChanged;
-        });
+        Messenger.Unregister<LocalClipboardChangedMessage>(this);
+        Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
 
         await ClipboardManager.Start();
         await InvokeAsync(StateHasChanged);
     }
+
     [JSInvokable]
     public async Task NotifyStreamReady()
     {
@@ -182,29 +165,6 @@ public partial class RemoteDisplay : IAsyncDisposable
             _statusMessage = "Stream ready";
         }
         _statusProgress = 0;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void ClipboardManager_ClipboardChanged(object? sender, string? e)
-    {
-        Task
-            .Run(async () =>
-            {
-                Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
-                await JsModule.InvokeVoidAsync("sendClipboardText", e, _videoId);
-                await InvokeAsync(StateHasChanged);
-            })
-            .Forget(ex =>
-            {
-                Logger.LogError(ex, "Error while handling clipboard change.");
-                return Task.CompletedTask;
-            });
-    }
-
-    [JSInvokable]
-    public async Task SetCurrentDisplay(DisplayDto display)
-    {
-        _selectedDisplay = display;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -222,6 +182,20 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     [JSInvokable]
+    public async Task SetClipboardText(string text)
+    {
+        Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
+        await ClipboardManager.SetText(text);
+    }
+
+    [JSInvokable]
+    public async Task SetCurrentDisplay(DisplayDto display)
+    {
+        _selectedDisplay = display;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
     public async Task SetDisplays(DisplayDto[] displays)
     {
         _displays = displays;
@@ -233,13 +207,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         _statusMessage = message;
         await InvokeAsync(StateHasChanged);
-    }
-
-    [JSInvokable]
-    public async Task SetClipboardText(string text)
-    {
-        Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
-        await ClipboardManager.SetText(text);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -346,6 +313,33 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
+    private async Task HandleKeyboardToggled()
+    {
+        _virtualKeyboardToggled = !_virtualKeyboardToggled;
+        _isMobileActionsMenuOpen = false;
+        if (_virtualKeyboardToggled)
+        {
+            await _virtualKeyboard.FocusAsync();
+        }
+        else
+        {
+            await _virtualKeyboard.MudBlurAsync();
+        }
+    }
+
+    private async Task HandleLocalClipboardChanged(object subscriber, LocalClipboardChangedMessage message)
+    {
+        try
+        {
+            Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
+            await JsModule.InvokeVoidAsync("sendClipboardText", message.Text, _videoId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while handling clipboard change.");
+        }
+    }
     private async void HandleParameterlessMessage(object sender, GenericMessageKind kind)
     {
         switch (kind)
@@ -357,6 +351,33 @@ public partial class RemoteDisplay : IAsyncDisposable
             default:
                 break;
         }
+    }
+
+    private async Task HandlePlayButtonClicked()
+    {
+        await JsModule.InvokeVoidAsync("playVideo", _videoRef);
+    }
+
+    private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
+    {
+        if (message.SessionId != Session.SessionId)
+        {
+            return;
+        }
+
+        try
+        {
+            await JsModule.InvokeVoidAsync("receiveRtcSessionDescription", message.SessionDescription, _videoId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while invoking JavaScript function: {name}", "receiveRtcSessionDescription");
+        }
+    }
+
+    private void HandleScrollModeToggled(bool isEnabled)
+    {
+        _isScrollModeEnabled = isEnabled;
     }
 
     private async Task HandleStreamerDownloadProgress(object recipient, StreamerDownloadProgressMessage message)
@@ -393,53 +414,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         return Task.CompletedTask;
     }
-
-    private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
-    {
-        if (message.SessionId != Session.SessionId)
-        {
-            return;
-        }
-
-        try
-        {
-            await JsModule.InvokeVoidAsync("receiveRtcSessionDescription", message.SessionDescription, _videoId);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while invoking JavaScript function: {name}", "receiveRtcSessionDescription");
-        }
-    }
-
-    private void HandleScrollModeToggled(bool isEnabled)
-    {
-        _isScrollModeEnabled = isEnabled;
-    }
-
-    private async Task InvokeCtrlAltDel()
-    {
-        await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
-    }
-
-    private async Task HandleKeyboardToggled()
-    {
-        _virtualKeyboardToggled = !_virtualKeyboardToggled;
-        _isMobileActionsMenuOpen = false;
-        if (_virtualKeyboardToggled)
-        {
-            await _virtualKeyboard.FocusAsync();
-        }
-        else
-        {
-            await _virtualKeyboard.MudBlurAsync();
-        }
-    }
-
-    private async Task HandlePlayButtonClicked()
-    {
-        await JsModule.InvokeVoidAsync("playVideo", _videoRef);
-    }
-
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
     {
         if (_virtualKeyboardToggled)
@@ -448,6 +422,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
+    private async Task InvokeCtrlAltDel()
+    {
+        await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
+    }
     private void OnTouchCancel(TouchEventArgs ev)
     {
         _lastPinchDistance = -1;

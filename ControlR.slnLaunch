@@ -58,5 +58,18 @@
         "DebugTarget": "Docker Compose"
       }
     ]
+  },
+  {
+    "Name": "Viewer \u002B Agent",
+    "Projects": [
+      {
+        "Path": "ControlR.Viewer\\ControlR.Viewer.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start"
+      }
+    ]
   }
 ]

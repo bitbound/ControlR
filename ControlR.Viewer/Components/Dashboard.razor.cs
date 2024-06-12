@@ -7,8 +7,6 @@ using Android;
 using Android.Content.PM;
 #endif
 
-using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Models;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -17,14 +15,7 @@ using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;
 using ControlR.Viewer.Components.RemoteDisplays;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Services.Http;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Viewer.Components;
 
@@ -120,6 +111,7 @@ public partial class Dashboard
         await RefreshLatestAgentVersion();
 
         Messenger.RegisterGenericMessage(this, HandleGenericMessage);
+        Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
         await base.OnInitializedAsync();
 
@@ -182,16 +174,6 @@ public partial class Dashboard
                         }
                     }
                     break;
-
-                case GenericMessageKind.HubConnectionStateChanged:
-                    {
-                        if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
-                        {
-                            await RefreshLatestAgentVersion();
-                        }
-                    }
-                    break;
-
                 default:
                     break;
             }
@@ -199,6 +181,14 @@ public partial class Dashboard
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
+        }
+    }
+
+    private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+    {
+        if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+        {
+            await RefreshLatestAgentVersion();
         }
     }
 

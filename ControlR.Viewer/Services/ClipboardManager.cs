@@ -1,11 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Threading;
 
 namespace ControlR.Viewer.Services;
 
-public interface IClipboardManager : IAsyncDisposable
+public interface IClipboardManager
 {
-    event EventHandler<string?>? ClipboardChanged;
     Task SetText(string text);
     Task<string?> GetText();
 
@@ -15,29 +13,16 @@ public interface IClipboardManager : IAsyncDisposable
 internal class ClipboardManager(
     IClipboard _clipboard,
     IUiThread _uiThread,
+    IMessenger _messenger,
     ILogger<ClipboardManager> _logger) : IClipboardManager
 {
-    // This service is transient in DI, but we want all instances to share
-    // a lock for accessing the clipboard.
-    private static readonly SemaphoreSlim _clipboardLock = new(1, 1);
-    private readonly CancellationTokenSource _cancellationSource = new();
+    private readonly SemaphoreSlim _clipboardLock = new(1, 1);
     private string? _lastClipboardText;
 
-    public event EventHandler<string?>? ClipboardChanged;
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await _cancellationSource.CancelAsync();
-            _cancellationSource.Dispose();
-        }
-        catch { }
-    }
 
     public async Task<string?> GetText()
     {
-        var cancellationToken = _cancellationSource.Token;
-        await _clipboardLock.WaitAsync(cancellationToken);
+        await _clipboardLock.WaitAsync();
         try
         {
             return await _uiThread.InvokeAsync(_clipboard.GetTextAsync);
@@ -55,9 +40,7 @@ internal class ClipboardManager(
 
     public async Task SetText(string? text)
     {
-        var cancellationToken = _cancellationSource.Token;
-
-        await _clipboardLock.WaitAsync(cancellationToken);
+        await _clipboardLock.WaitAsync();
         try
         {
             await _uiThread.InvokeAsync(async () =>
@@ -84,7 +67,7 @@ internal class ClipboardManager(
     {
         await _uiThread.InvokeAsync(async () =>
         {
-            await TrySetInitialText(_cancellationSource.Token);
+            await TrySetInitialText();
             _clipboard.ClipboardContentChanged -= HandleClipboardContentChange;
             _clipboard.ClipboardContentChanged += HandleClipboardContentChange;
 
@@ -93,7 +76,7 @@ internal class ClipboardManager(
 
     private async void HandleClipboardContentChange(object? sender, EventArgs e)
     {
-        await _clipboardLock.WaitAsync(_cancellationSource.Token);
+        await _clipboardLock.WaitAsync();
         try
         {
             var clipboardText = await _clipboard.GetTextAsync();
@@ -103,7 +86,7 @@ internal class ClipboardManager(
             }
 
             _lastClipboardText = clipboardText;
-            ClipboardChanged?.Invoke(this, clipboardText);
+            await _messenger.Send(new LocalClipboardChangedMessage(clipboardText));
         }
         catch (OperationCanceledException)
         {
@@ -119,11 +102,11 @@ internal class ClipboardManager(
         }
     }
 
-    private async Task TrySetInitialText(CancellationToken cancellationToken)
+    private async Task TrySetInitialText()
     {
         try
         {
-            await _clipboardLock.WaitAsync(cancellationToken);
+            await _clipboardLock.WaitAsync();
             await _uiThread.InvokeAsync(async () =>
             {
                 _lastClipboardText = await _clipboard.GetTextAsync();

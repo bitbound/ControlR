@@ -1,8 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.Shared.Collections;
-using ControlR.Viewer.Models;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Viewer.Services;
 
@@ -24,7 +20,7 @@ internal class DeviceContentWindowStore: IDeviceContentWindowStore
     {
         _messenger = messenger;
 
-        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
+        _messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     }
 
     public IEnumerable<DeviceContentInstance> Windows => _cache;
@@ -41,12 +37,12 @@ internal class DeviceContentWindowStore: IDeviceContentWindowStore
         _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
     }
 
-    private void HandleGenericMessage(object recipient, GenericMessageKind kind)
+    private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
     {
-        if (kind == GenericMessageKind.HubConnectionStateChanged)
+        if (message.NewState != HubConnectionState.Connected)
         {
             _cache.Clear();
-            _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+            await _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Primitives;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace ControlR.Viewer.Components;

@@ -1,9 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Viewer.Enums;
+﻿using ControlR.Viewer.Enums;
 
 namespace ControlR.Viewer.Services;
 

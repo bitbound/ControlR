@@ -1,18 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared;
-using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Viewer.Models.Messages;
+﻿using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
@@ -480,10 +466,9 @@ internal class ViewerHubConnection(
         options.Headers["Authorization"] = $"{AuthSchemes.DigitalSignature} {signature}";
     }
 
-    private Task Connection_Closed(Exception? arg)
+    private async Task Connection_Closed(Exception? arg)
     {
-        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
-        return Task.CompletedTask;
+        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
     }
 
     private async Task Connection_Reconnected(string? arg)
@@ -491,10 +476,9 @@ internal class ViewerHubConnection(
         await PerformAfterConnectInit();
     }
 
-    private Task Connection_Reconnecting(Exception? arg)
+    private async Task Connection_Reconnecting(Exception? arg)
     {
-        _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
-        return Task.CompletedTask;
+        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
     }
 
     private async Task HandleAuthStateChanged()
@@ -529,10 +513,9 @@ internal class ViewerHubConnection(
         await Reconnect(_appState.AppExiting);
     }
 
-    private Task OnConnectFailure(string reason)
+    private async Task OnConnectFailure(string reason)
     {
-        _messenger.Send(new ToastMessage(reason, Severity.Error));
-        return Task.CompletedTask;
+        await _messenger.Send(new ToastMessage(reason, Severity.Error));
     }
 
     private async Task PerformAfterConnectInit()
@@ -542,7 +525,7 @@ internal class ViewerHubConnection(
         await GetCurrentAlertFromServer();
         await _devicesCache.SetAllOffline();
         await RequestDeviceUpdates();
-        await _messenger.SendGenericMessage(GenericMessageKind.HubConnectionStateChanged);
+        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
     }
     private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")
     {

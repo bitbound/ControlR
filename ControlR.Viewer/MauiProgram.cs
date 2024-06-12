@@ -1,5 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using CommunityToolkit.Maui;
+﻿using CommunityToolkit.Maui;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
@@ -10,10 +9,8 @@ using FileSystemCore = ControlR.Libraries.DevicesCommon.Services.FileSystem;
 using IFileSystemCore = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
 using CommunityToolkit.Maui.Storage;
 using ControlR.Viewer.Services.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Libraries.Shared.Services;
 
 
 
@@ -90,12 +87,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationProvider, NotificationProvider>();
         builder.Services.AddSingleton<ISettingsExporter, SettingsExporter>();
         builder.Services.AddSingleton<IUiThread, UiThread>();
+        builder.Services.AddSingleton<IClipboardManager, ClipboardManager>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureAnonymousHttpClient);
 
-        builder.Services.AddTransient<IClipboardManager, ClipboardManager>();
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 
 #if WINDOWS
