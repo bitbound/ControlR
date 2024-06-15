@@ -14,10 +14,6 @@ internal class StoreIntegrationAndroid(
 
     private readonly Uri _storePageUri = new("https://controlr.app");
 
-    public bool CanCheckForUpdates => true;
-
-    public bool CanInstallUpdates => true;
-
     public Task<Uri> GetStorePageUri()
     {
         return _storePageUri.AsTaskResult();

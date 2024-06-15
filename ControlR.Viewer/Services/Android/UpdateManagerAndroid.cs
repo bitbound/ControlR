@@ -19,16 +19,11 @@ internal class UpdateManagerAndroid(
     IVersionApi _versionApi,
     IAppState _appState,
     IStoreIntegration _storeIntegration,
-    IHttpClientFactory _clientFactory,
-    IDelayer _delayer,
-    INotificationProvider _notify,
-    IMessenger _messenger,
+    IBrowser _browser,
     ISettings _settings,
+    IMessenger _messenger,
     ILogger<UpdateManagerAndroid> _logger) : IUpdateManager
 {
-    public const string PackageInstalledAction =
-                     "com.example.android.apis.content.SESSION_API_PACKAGE_INSTALLED";
-
     private readonly SemaphoreSlim _installLock = new(1, 1);
 
     public async Task<Result<bool>> CheckForUpdate()
@@ -92,18 +87,9 @@ internal class UpdateManagerAndroid(
                 return result;
             }
 
-            if (OperatingSystem.IsAndroidVersionAtLeast(31))
+            if (!await _browser.OpenAsync(_settings.ViewerDownloadUri))
             {
-                return await InstallCurrentVersionAndroid();
-            }
-            else
-            {
-                await _notify.DisplayAlert(
-                    "Android 12 Required",
-                    "Android 12 or higher is required for in-app updates.  " +
-                    "Please download and install the update manually from the About page.",
-                    "OK");
-                return Result.Fail("Android 12 required.");
+                await _messenger.SendToast("Failed to launch update URL", MudBlazor.Severity.Error);
             }
         }
         catch (Exception ex)
@@ -141,87 +127,6 @@ private async Task<Result<bool>> CheckForSelfHostedUpdate()
             _logger.LogError(ex, "Error while checking for new versions.");
             return Result.Fail<bool>("An error occurred.");
         }
-    }
-    [SupportedOSPlatform("android31.0")]
-    private async Task<Result> InstallCurrentVersionAndroid()
-    {
-        var context = Platform.CurrentActivity;
-        if (context is null)
-        {
-            return Result.Fail("CurrentActivity is unavailable.");
-        }
-
-        if (context.PackageManager is null)
-        {
-            return Result.Fail("PackageManager is unavailable.");
-        }
-
-        if (context.ContentResolver is null)
-        {
-            return Result.Fail("ContentResolver is unavailable.");
-        }
-        var updateManager = Xamarin.Google.Android.Play.Core.AppUpdate.AppUpdateManagerFactory.Create(context);
-        var packageManager = context.PackageManager;
-        if (!packageManager.CanRequestPackageInstalls())
-        {
-            await _notify.DisplayAlert(
-                "Permission Required",
-                "ControlR requires permission to install apps from external sources.  " +
-                "Press OK to open settings and enable the permission.",
-                "OK");
-
-            context.StartActivity(new Intent(
-                global::Android.Provider.Settings.ActionManageUnknownAppSources,
-                global::Android.Net.Uri.Parse("package:" + global::Android.App.Application.Context.PackageName)));
-
-            await _delayer.WaitForAsync(
-                packageManager.CanRequestPackageInstalls,
-                TimeSpan.MaxValue,
-                1_000);
-        }
-
-        var packageName = context.PackageName;
-        if (packageName is null)
-        {
-            return Result.Fail("Unable to determine package name.");
-        }
-
-        var packageInstaller = packageManager.PackageInstaller;
-        var sessionParams = new PackageInstaller.SessionParams(PackageInstallMode.FullInstall);
-        sessionParams.SetAppPackageName(packageName);
-        var sessionId = packageInstaller.CreateSession(sessionParams);
-        var installerSession = packageInstaller.OpenSession(sessionId);
-
-        var httpClient = _clientFactory.CreateClient();
-        var apkStream = await httpClient.GetStreamAsync(_settings.ViewerDownloadUri);
-        if (apkStream is null)
-        {
-            return Result.Fail("Failed to open APK file.");
-        }
-        var installerPackageStream = installerSession.OpenWrite(packageName, 0, -1);
-
-        try
-        {
-            await apkStream.CopyToAsync(installerPackageStream);
-            installerSession.Fsync(installerPackageStream);
-        }
-        finally
-        {
-            installerPackageStream.Close();
-            apkStream.Close();
-        }
-
-        var intent = new Intent(context, context.Class);
-        intent.SetAction(PackageInstalledAction);
-
-        var receiver = PendingIntent.GetActivity(
-            context,
-            0,
-            intent,
-            PendingIntentFlags.Mutable);
-
-        installerSession.Commit(receiver!.IntentSender);
-        return Result.Ok();
     }
 }
 #endif
