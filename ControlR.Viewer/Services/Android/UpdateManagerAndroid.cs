@@ -91,6 +91,7 @@ internal class UpdateManagerAndroid(
             {
                 await _messenger.SendToast("Failed to launch update URL", MudBlazor.Severity.Error);
             }
+            return Result.Ok();
         }
         catch (Exception ex)
         {

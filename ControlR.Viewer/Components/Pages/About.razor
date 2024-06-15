@@ -32,12 +32,8 @@
 
         @if (_updateAvailable)
         {
-            <MudLink Href="@_downloadLink" Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info">
+            <MudLink Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info" OnClick="DownloadUpdate">
                 Download Update
-            </MudLink>
-
-            <MudLink Target="_blank" Typo="Typo.caption" Class="ms-3" Color="Color.Info" OnClick="InstallUpdate">
-                Install Update
             </MudLink>
         }
 
@@ -139,7 +135,6 @@
 @code {
     private bool _updateAvailable;
     private Uri? _storePageUri;
-    private string _downloadLink = "";
     private string _storePageLinkText = "Open External";
 
 
@@ -155,21 +150,12 @@
             _storePageLinkText = "Play Store";
         }
 
-        await SetUris();
+        await Init();
 
         await base.OnInitializedAsync();
-
-        var checkResult = await UpdateManager.CheckForUpdate();
-        if (!checkResult.IsSuccess)
-        {
-            Snackbar.Add("Failed to check for new versions", Severity.Error);
-            return;
-        }
-
-        _updateAvailable = checkResult.Value;
     }
 
-    private async Task InstallUpdate()
+    private async Task DownloadUpdate()
     {
         try
         {
@@ -187,28 +173,19 @@
         }
     }
 
-    private async Task SetUris()
+    private async Task Init()
     {
         try
         {
             _storePageUri = await StoreIntegration.GetStorePageUri();
-
-            var integrationResult = await AppState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(3));
-
-            if (integrationResult is not bool integrationEnabled)
+            var checkResult = await UpdateManager.CheckForUpdate();
+            if (!checkResult.IsSuccess)
             {
+                Snackbar.Add("Failed to check for new versions", Severity.Error);
                 return;
             }
 
-            if (integrationEnabled)
-            {
-                var storeProtocolUri = await StoreIntegration.GetStoreProtocolUri();
-                _downloadLink = storeProtocolUri.ToString();
-            }
-            else
-            {
-                _downloadLink = Settings.ViewerDownloadUri;
-            }
+            _updateAvailable = checkResult.Value;
         }
         catch (Exception ex)
         {
