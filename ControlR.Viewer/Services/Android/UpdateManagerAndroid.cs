@@ -87,7 +87,7 @@ internal class UpdateManagerAndroid(
                 return result;
             }
 
-            if (!await _browser.OpenAsync(_settings.ViewerDownloadUri))
+            if (!await _browser.OpenAsync(_settings.ViewerDownloadUri, BrowserLaunchMode.External))
             {
                 await _messenger.SendToast("Failed to launch update URL", MudBlazor.Severity.Error);
             }
