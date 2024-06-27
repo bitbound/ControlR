@@ -124,20 +124,11 @@ if ($BuildViewer) {
 
 
 if ($BuildStreamer) {
-    dotnet publish --configuration Release -p:PublishProfile=Artifacts -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Streamer.Sidecar\"
-    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$Root\ControlR.Streamer\.artifacts\ControlR.Streamer.Sidecar.exe"
+    dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
+    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
     Check-LastExitCode
 
-    [string]$PackageJson = Get-Content -Path "$Root\ControlR.Streamer\package.json"
-    $Package = $PackageJson | ConvertFrom-Json
-    $Package.version = $CurrentVersion.Split(".", [System.StringSplitOptions]::RemoveEmptyEntries) | Select-Object -First 3 | Join-String -Separator "."
-    [string]$PackageJson = $Package | ConvertTo-Json
-    [System.IO.File]::WriteAllText("$Root\ControlR.Streamer\package.json", $PackageJson)
-    Push-Location "$Root\ControlR.Streamer"
-    npm install
-    npm run make-pwsh
-    Pop-Location
-    
+    Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Server\"

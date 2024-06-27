@@ -1,5 +1,5 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

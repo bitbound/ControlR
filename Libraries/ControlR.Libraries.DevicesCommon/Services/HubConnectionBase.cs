@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -18,13 +19,15 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
-    IServiceScopeFactory _scopeFactory,
+    IServiceProvider _services,
     IMessenger _messenger,
     IDelayer _delayer,
     ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
+    protected readonly IServiceProvider _services = _services;
     protected readonly IDelayer _delayer = _delayer;
     protected readonly IMessenger _messenger = _messenger;
+    private bool _useReconnect;
     private CancellationToken _cancellationToken;
     private HubConnection? _connection;
     private Func<string, Task> _onConnectFailure = reason => Task.CompletedTask;
@@ -36,7 +39,7 @@ public abstract class HubConnectionBase(
 
     public Task ReceiveDto(SignedPayloadDto dto)
     {
-        _messenger.Send(new SignedDtoReceivedMessage(dto));
+        _messenger.Send(new SignedDtoReceivedMessage(dto)).Forget();
         return Task.CompletedTask;
     }
 
@@ -44,9 +47,10 @@ public abstract class HubConnectionBase(
         Func<string> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
+        bool useReconnect,
         CancellationToken cancellationToken)
     {
-        return Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, cancellationToken);
+        return Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, useReconnect, cancellationToken);
     }
 
     protected async Task Connect(
@@ -54,6 +58,7 @@ public abstract class HubConnectionBase(
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         Func<string, Task> onConnectFailure,
+        bool useReconnect,
         CancellationToken cancellationToken)
     {
         if (_connection is not null &&
@@ -62,6 +67,7 @@ public abstract class HubConnectionBase(
             return;
         }
 
+        _useReconnect = useReconnect;
         _cancellationToken = cancellationToken;
         _onConnectFailure = onConnectFailure;
 
@@ -69,7 +75,7 @@ public abstract class HubConnectionBase(
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
+                using var scope = _services.CreateScope();
                 var builder = scope.ServiceProvider.GetRequiredService<IHubConnectionBuilder>();
 
                 if (_connection is not null)
@@ -79,15 +85,20 @@ public abstract class HubConnectionBase(
 
                 var hubUrl = hubUrlFactory();
 
-                _connection = builder
+                builder = builder
                     .WithUrl(hubUrl, options =>
                     {
                         optionsConfig(options);
                     })
-                    .AddMessagePackProtocol()
-                    .WithStatefulReconnect()
-                    .WithAutomaticReconnect(new RetryPolicy())
-                    .Build();
+                    .AddMessagePackProtocol();
+
+                if (useReconnect)
+                {
+                    builder
+                        .WithStatefulReconnect()
+                        .WithAutomaticReconnect(new RetryPolicy());
+                }
+                _connection = builder.Build();
 
                 _connection.On<SignedPayloadDto>(nameof(ReceiveDto), ReceiveDto);
                 _connection.Reconnecting += HubConnection_Reconnecting;
@@ -128,7 +139,7 @@ public abstract class HubConnectionBase(
             await _connection.StopAsync();
         }
 
-        await Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, _cancellationToken);
+        await Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, _useReconnect, _cancellationToken);
     }
 
     protected async Task StopConnection(CancellationToken cancellationToken)

@@ -109,7 +109,7 @@
         base.OnInitialized();
         Messenger.RegisterGenericMessage(this, HandleGeneric);
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
-        Messenger.Register<AlertBroadcastDto>(this, HandleAlertBroadcast);
+        Messenger.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
     }
 
@@ -123,10 +123,10 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    private async Task HandleAlertBroadcast(object subscriber, AlertBroadcastDto alert)
+    private async Task HandleAlertBroadcastReceived(object subscriber, DtoReceivedMessage<AlertBroadcastDto> message)
     {
-        _alertMessage = alert.Message;
-        _alertSeverity = alert.Severity;
+        _alertMessage = message.Dto.Message;
+        _alertSeverity = message.Dto.Severity;
         _showAlert = true;
         await InvokeAsync(StateHasChanged);
     }

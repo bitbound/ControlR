@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
@@ -7,12 +6,12 @@ public interface ISettings
 {
     bool AppendInstanceIdToAgentInstall { get; set; }
     bool HideOfflineDevices { get; set; }
-    bool LowerUacDuringSession { get; set; }
     bool NotifyUserSessionStart { get; set; }
+    string PublicKeyLabel { get; set; }
     string ServerUri { get; set; }
     string Username { get; set; }
-
     string ViewerDownloadUri { get; }
+    Uri WebsocketEndpoint { get; }
 
     Task<Result<byte[]>> GetSecurePrivateKey();
 
@@ -30,15 +29,15 @@ internal class Settings(
 {
     private const string PrivateKeyStorageKey = "SecurePrivateKey";
 
-    public bool HideOfflineDevices
+    public bool AppendInstanceIdToAgentInstall
     {
-        get => GetPref(true);
+        get => GetPref(false);
         set => SetPref(value);
     }
 
-    public bool LowerUacDuringSession
+    public bool HideOfflineDevices
     {
-        get => GetPref(false);
+        get => GetPref(true);
         set => SetPref(value);
     }
 
@@ -47,6 +46,13 @@ internal class Settings(
         get => GetPref(false);
         set => SetPref(value);
     }
+
+    public string PublicKeyLabel
+    {
+        get => GetPref(Username ?? "");
+        set => SetPref(value);
+    }
+
     public string ServerUri
     {
         get => GetPref(AppConstants.ServerUri).TrimEnd('/');
@@ -70,12 +76,13 @@ internal class Settings(
         }
     }
 
-    public bool AppendInstanceIdToAgentInstall
+    public Uri WebsocketEndpoint
     {
-        get => GetPref(false);
-        set => SetPref(value);
+        get
+        {
+            return new Uri($"{ServerUri}/viewer-ws-endpoint").ToWebsocketUri();
+        }
     }
-
     public async Task<Result<byte[]>> GetSecurePrivateKey()
     {
         try

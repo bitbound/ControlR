@@ -38,67 +38,76 @@ internal class DtoHandler(
 
     private async Task HandleSignedDtoReceivedMessage(object subscriber, SignedDtoReceivedMessage message)
     {
-        using var logScope = _logger.BeginMemberScope();
-        var dto = message.SignedDto;
-
-        if (!_keyProvider.Verify(dto))
+        try
         {
-            _logger.LogCritical("Key verification failed for public key: {key}", dto.PublicKeyBase64);
-            return;
-        }
+            using var logScope = _logger.BeginMemberScope();
+            var wrapper = message.SignedDto;
 
-        if (!_settings.AuthorizedKeys.Contains(dto.PublicKeyBase64))
-        {
-            _logger.LogCritical("Public key does not exist in authorized keys: {key}", dto.PublicKeyBase64);
-            return;
-        }
+            if (!_keyProvider.Verify(wrapper))
+            {
+                _logger.LogCritical("Key verification failed for public key: {key}", wrapper.PublicKeyBase64);
+                return;
+            }
 
-        switch (dto.DtoType)
-        {
-            case DtoType.DeviceUpdateRequest:
-                {
-                    await _agentHub.SendDeviceHeartbeat();
-                    break;
-                }
+            if (!_settings.AuthorizedKeys2.Any(x => x.PublicKey == wrapper.PublicKeyBase64))
+            {
+                _logger.LogCritical("Public key does not exist in authorized keys: {key}", wrapper.PublicKeyBase64);
+                return;
+            }
 
-            case DtoType.PowerStateChange:
-                {
-                    var powerDto = MessagePackSerializer.Deserialize<PowerStateChangeDto>(dto.Payload);
-                    await _powerControl.ChangeState(powerDto.Type);
-                    break;
-                }
-
-            case DtoType.CloseTerminalRequest:
-                {
-                    var closeSessionRequest = MessagePackSerializer.Deserialize<CloseTerminalRequestDto>(dto.Payload);
-                    // Underyling process is killed/disposed upon eviction from the MemoryCache.
-                    _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
-                    break;
-                }
-
-            case DtoType.WakeDevice:
-                {
-                    var wakeDto = MessagePackSerializer.Deserialize<WakeDeviceDto>(dto.Payload);
-                    await _wakeOnLan.WakeDevices(wakeDto.MacAddresses);
-                    break;
-                }
-
-            case DtoType.InvokeCtrlAltDel:
-                {
-                    if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+            switch (wrapper.DtoType)
+            {
+                case DtoType.DeviceUpdateRequest:
                     {
-                        _win32Interop.InvokeCtrlAltDel();
+                        var dto = wrapper.GetPayload<DeviceUpdateRequestDto>();
+                        await _settings.UpdatePublicKeyLabel(wrapper.PublicKeyBase64, dto.PublicKeyLabel);
+                        await _agentHub.SendDeviceHeartbeat();
+                        break;
                     }
+
+                case DtoType.PowerStateChange:
+                    {
+                        var powerDto = wrapper.GetPayload<PowerStateChangeDto>();
+                        await _powerControl.ChangeState(powerDto.Type);
+                        break;
+                    }
+
+                case DtoType.CloseTerminalRequest:
+                    {
+                        var closeSessionRequest = wrapper.GetPayload<CloseTerminalRequestDto>();
+                        // Underyling process is killed/disposed upon eviction from the MemoryCache.
+                        _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
+                        break;
+                    }
+
+                case DtoType.WakeDevice:
+                    {
+                        var wakeDto = wrapper.GetPayload<WakeDeviceDto>();
+                        await _wakeOnLan.WakeDevices(wakeDto.MacAddresses);
+                        break;
+                    }
+
+                case DtoType.InvokeCtrlAltDel:
+                    {
+                        if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+                        {
+                            _win32Interop.InvokeCtrlAltDel();
+                        }
+                        break;
+                    }
+                case DtoType.AgentUpdateTrigger:
+                    {
+                        await _agentUpdater.CheckForUpdate();
+                        break;
+                    }
+                default:
+                    _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
                     break;
-                }
-            case DtoType.AgentUpdateTrigger:
-                {
-                    await _agentUpdater.CheckForUpdate();
-                    break;
-                }
-            default:
-                _logger.LogWarning("Unhandled DTO type: {type}", dto.DtoType);
-                break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while handling signed DTO.");
         }
     }
 }

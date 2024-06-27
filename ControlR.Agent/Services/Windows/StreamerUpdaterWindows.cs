@@ -1,7 +1,6 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Collections;
-using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
@@ -14,6 +13,7 @@ using Octodiff.Core;
 using Octodiff.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 namespace ControlR.Agent.Services.Windows;
 
@@ -29,7 +29,7 @@ internal class StreamerUpdaterWindows(
 {
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
     private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
-    private readonly string _streamerZipUri = $"{_settings.ServerUri}downloads/{AppConstants.StreamerZipFileName}";
+    private readonly string _streamerZipUri = $"{_settings.ServerUri}downloads/win-x86/{AppConstants.StreamerZipFileName}";
     private readonly SemaphoreSlim _updateLock = new(1, 1);
     private double _previousProgress = 0;
 

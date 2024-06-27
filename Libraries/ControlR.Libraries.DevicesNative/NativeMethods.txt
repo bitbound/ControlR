@@ -30,6 +30,11 @@ GetTokenInformation
 GetMessage
 DispatchMessage
 TranslateMessage
-GetMessage
 DispatchMessage
 TranslateMessage
+PostQuitMessage
+SetClipboardData
+GetClipboardData
+OpenClipboard
+CloseClipboard
+EmptyClipboard

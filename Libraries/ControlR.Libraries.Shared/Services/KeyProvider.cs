@@ -1,6 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Models;
-using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 

@@ -3,11 +3,10 @@ using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Enums;
 using System.Diagnostics;
 
 namespace ControlR.Libraries.DevicesNative.Services;
-internal class Win32InteropFake : IWin32Interop
+public class Win32InteropFake : IWin32Interop
 {
     public bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool forceConsoleSession, string desktopName, bool hiddenWindow, out Process? startedProcess)
     {
@@ -20,6 +19,11 @@ internal class Win32InteropFake : IWin32Interop
     }
 
     public IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
+    {
+        throw new NotImplementedException();
+    }
+
+    public string? GetClipboardText()
     {
         throw new NotImplementedException();
     }
@@ -80,6 +84,11 @@ internal class Win32InteropFake : IWin32Interop
     }
 
     public void ResetKeyboardState()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SetClipboardText(string? text)
     {
         throw new NotImplementedException();
     }

@@ -6,6 +6,7 @@ using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.DevicesNative.Windows;
+using ControlR.Libraries.Shared.Dtos;
 
 namespace ControlR.Agent.Services.Windows;
 
@@ -17,7 +18,7 @@ internal class DeviceDataGeneratorWin(
 {
     private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-    public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<string> authorizedKeys, string deviceId)
+    public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
         var device = GetDeviceBase(authorizedKeys, deviceId);
 

@@ -1,8 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Services;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Server.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
@@ -48,9 +44,13 @@ public class AgentHub(
             cachedDevice.IsOnline = false;
             cachedDevice.LastSeen = _systemTime.Now;
 
-            await _viewerHub.Clients.Groups(cachedDevice.AuthorizedKeys).ReceiveDeviceUpdate(cachedDevice);
+            var publicKeys = cachedDevice.AuthorizedKeys
+                .Select(x => x.PublicKey)
+                .ToArray();
 
-            foreach (var key in Device.AuthorizedKeys)
+            await _viewerHub.Clients.Groups(publicKeys).ReceiveDeviceUpdate(cachedDevice);
+
+            foreach (var key in publicKeys)
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, key);
             }
@@ -88,30 +88,41 @@ public class AgentHub(
 
             await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
 
+            var newPubKeys = device.AuthorizedKeys.Select(x => x.PublicKey).ToArray();
+
             if (Device is DeviceDto cachedDevice)
             {
-                var oldKeys = cachedDevice.AuthorizedKeys.Except(device.AuthorizedKeys);
+                var oldKeys = cachedDevice.AuthorizedKeys
+                    .ExceptBy(newPubKeys, x => x.PublicKey)
+                    .Select(x => x.PublicKey)
+                    .ToArray();
+
                 foreach (var oldKey in oldKeys)
                 {
                     await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldKey);
                 }
 
-                var newKeys = device.AuthorizedKeys.Except(cachedDevice.AuthorizedKeys);
-                foreach (var newKey in newKeys)
+                var oldPubKeys = cachedDevice.AuthorizedKeys.Select(x => x.PublicKey).ToArray();
+                var newKeys = device.AuthorizedKeys
+                    .ExceptBy(oldPubKeys, x => x.PublicKey)
+                    .Select(x => x.PublicKey)
+                    .ToArray();
+
+                foreach (var newKey in newPubKeys)
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, newKey);
                 }
             }
             else
             {
-                foreach (var key in device.AuthorizedKeys)
+                foreach (var key in newPubKeys)
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, key);
                 }
             }
 
             Device = device;
-            await _viewerHub.Clients.Groups(device.AuthorizedKeys).ReceiveDeviceUpdate(device);
+            await _viewerHub.Clients.Groups(newPubKeys).ReceiveDeviceUpdate(device);
         }
         catch (Exception ex)
         {
@@ -125,6 +136,7 @@ public class AgentHub(
         {
             var agentResult = await _connectionCounter.GetAgentConnectionCount();
             var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+            var streamerResult = await _connectionCounter.GetStreamerConnectionCount();
 
             if (!agentResult.IsSuccess)
             {
@@ -138,10 +150,17 @@ public class AgentHub(
                 return;
             }
 
+            if (!streamerResult.IsSuccess)
+            {
+                _logger.LogResult(streamerResult);
+                return;
+            }
+
 
             var dto = new ServerStatsDto(
                 agentResult.Value,
-                viewerResult.Value);
+                viewerResult.Value,
+                streamerResult.Value);
 
             await _viewerHub.Clients
                 .Group(HubGroupNames.ServerAdministrators)

@@ -1,7 +1,4 @@
-﻿using ControlR.Libraries.Shared.Serialization;
-using MessagePack;
-
-namespace ControlR.Libraries.Shared.Dtos;
+﻿namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
 public class DisplayDto
@@ -17,13 +14,7 @@ public class DisplayDto
     public bool IsPrimary { get; init; }
 
     [MsgPackKey]
-    public string Label { get; init; } = string.Empty;
-
-    [MsgPackKey]
     public double Left { get; init; }
-
-    [MsgPackKey]
-    public string MediaId { get; init; } = string.Empty;
 
     [MsgPackKey]
     public string Name { get; init; } = string.Empty;

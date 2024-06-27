@@ -1,5 +1,4 @@
 ﻿using MessagePack;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 

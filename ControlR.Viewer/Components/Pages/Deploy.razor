@@ -1,0 +1,179 @@
+﻿@page "/deploy"
+
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+@inject IClipboardManager Clipboard
+@inject IAppState AppState
+
+<PageTitle>Deploy</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Deploy Scripts
+</MudText>
+
+<MudText Typo="Typo.subtitle1" GutterBottom>
+    Run these scripts on a remote device to install the agent.
+    It will be configured with your public key, allowing you to access the device.
+</MudText>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Windows (PowerShell)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to install agent"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyWindowsScript"
+                  Adornment="Adornment.End"
+                  Value="WindowsDeployScript"
+                  Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Ubuntu (Bash)
+    </MudText>
+
+    <MudTextField T="string"
+                  Label="Copy and paste to install agent"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyUbuntuScript"
+                  Adornment="Adornment.End"
+                  Value="UbuntuDeployScript"
+                  Class="mb-5" />
+
+    @*     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Mac x64 (zsh)
+    </MudText>
+
+    <MudTextField T="string"
+    Label="Copy and paste to install agent"
+    Variant="Variant.Filled"
+    AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+    OnAdornmentClick="CopyMacX64Script"
+    Adornment="Adornment.End"
+    Value="MacX64DeployScript"
+    Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Mac Arm64 (zsh)
+    </MudText>
+
+    <MudTextField T="string"
+    Label="Copy and paste to install agent"
+    Variant="Variant.Filled"
+    AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+    OnAdornmentClick="CopyMacArm64Script"
+    Adornment="Adornment.End"
+    Value="MacArm64DeployScript"
+    Class="mb-5" /> *@
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Options
+    </MudText>
+
+    <div>
+        <MudText Typo="Typo.subtitle2" Color="Color.Info">
+            Append Instance ID
+        </MudText>
+        <MudText Typo="Typo.body1" GutterBottom>
+            If enabled, the server's hostname will be used as an identifier for the agent installation.
+            This allows for having multiple agent installations on the same machine, with each agent
+            targeting a different server.
+        </MudText>
+        <MudText Typo="Typo.body1">
+            This is an advanced function, primarily used for testing.  If unsure, you can leave this
+            option disable.
+        </MudText>
+        <MudCheckBox @bind-Value="Settings.AppendInstanceIdToAgentInstall" Class="mb-3" />
+    </div>
+
+</div>
+
+
+@code {
+
+    private string MacArm64DeployScript
+    {
+        get
+        {
+            return
+              $"sudo rm -f /tmp/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-arm64/ControlR.Agent && " +
+              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+              $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+        }
+    }
+
+    private string MacX64DeployScript
+    {
+        get
+        {
+            return
+              $"sudo rm -f /tmp/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-x64/ControlR.Agent && " +
+              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+              $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+        }
+    }
+
+    private string UbuntuDeployScript
+    {
+        get
+        {
+
+            return
+                $"sudo rm -f /tmp/ControlR.Agent && " +
+                $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/linux-x64/ControlR.Agent && " +
+                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
+                $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+        }
+    }
+
+    private string WindowsDeployScript
+    {
+        get
+        {
+            return "$ProgressPreference = \"SilentlyContinue\"; " +
+                $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/win-x86/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+                $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
+                $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}\" -Verb RunAs;";
+        }
+    }
+
+    private async Task CopyMacArm64Script()
+    {
+        await Clipboard.SetText(MacArm64DeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
+    }
+
+    private async Task CopyMacX64Script()
+    {
+        await Clipboard.SetText(MacX64DeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
+    }
+
+    private async Task CopyUbuntuScript()
+    {
+        await Clipboard.SetText(UbuntuDeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
+    }
+
+    private async Task CopyWindowsScript()
+    {
+        await Clipboard.SetText(WindowsDeployScript);
+        Snackbar.Add("Install script copied to clipboard", Severity.Success);
+    }
+
+    private string GetInstanceIdArg()
+    {
+        if (Settings.AppendInstanceIdToAgentInstall &&
+            Uri.TryCreate(Settings.ServerUri, UriKind.Absolute, out var serverUri))
+        {
+            return $" -i {serverUri.Authority}";
+        }
+        return string.Empty;
+    }
+}

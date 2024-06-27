@@ -2,4 +2,4 @@
 
 [assembly: InternalsVisibleTo("ControlR.Viewer")]
 [assembly: InternalsVisibleTo("ControlR.Agent")]
-[assembly: InternalsVisibleTo("ControlR.Streamer.Sidecar")]
+[assembly: InternalsVisibleTo("ControlR.Streamer")]

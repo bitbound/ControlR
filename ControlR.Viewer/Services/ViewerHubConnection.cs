@@ -1,7 +1,8 @@
-﻿using ControlR.Libraries.Shared.Interfaces.HubClients;
+﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Runtime.CompilerServices;
 
@@ -21,13 +22,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
 
-    Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId);
-
-    Task<Result<IceServer[]>> GetIceServers();
-
     Task<Result<ServerStatsDto>> GetServerStats();
-
-    Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession);
 
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
@@ -37,27 +32,29 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task RequestDeviceUpdates();
 
+    Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession);
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
     Task SendAgentUpdateTrigger(DeviceDto device);
 
     Task SendAlertBroadcast(string message, AlertSeverity severity);
-    Task SendIceCandidate(string streamerConnectionId, string iceCandidateJson);
-
+    Task SendChangeDisplaysRequest(string streamerConnectionId, string displayId);
+    Task SendClipboardText(string streamerConnectionId, string text, Guid sessionId);
+    Task SendKeyboardStateReset(string streamerConnectionId);
+    Task SendKeyEvent(string streamerConnectionId, string key, bool isPressed);
+    Task SendMouseButtonEvent(string streamerConnectionId, int button, bool isPressed, double percentX, double percentY);
+    Task SendPointerMove(string streamerConnectionId, double percentX, double percentY);
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
-
-    Task SendRtcSessionDescription(string streamerConnectionId, RtcSessionDescription sessionDescription);
-
+    Task SendReadySignalToStreamer(string streamerConnectionId);
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
-
+    Task SendTypeText(string streamerConnectionId, string text);
     Task SendWakeDevice(string[] macAddresses);
-
+    Task SendWheelScroll(string streamerConnectionId, double percentX, double percentY, double scrollY, double scrollX);
     Task Start(CancellationToken cancellationToken);
-
 }
 
 internal class ViewerHubConnection(
-    IServiceScopeFactory _serviceScopeFactory,
+    IServiceProvider _services,
     IHttpConfigurer _httpConfigurer,
     IAppState _appState,
     IDeviceCache _devicesCache,
@@ -65,7 +62,7 @@ internal class ViewerHubConnection(
     ISettings _settings,
     IDelayer _delayer,
     IMessenger _messenger,
-    ILogger<ViewerHubConnection> _logger) : HubConnectionBase(_serviceScopeFactory, _messenger, _delayer, _logger), IViewerHubConnection, IViewerHubClient
+    ILogger<ViewerHubConnection> _logger) : HubConnectionBase(_services, _messenger, _delayer, _logger), IViewerHubConnection, IViewerHubClient
 {
 
     public async Task ClearAlert()
@@ -133,7 +130,7 @@ internal class ViewerHubConnection(
                 var alertResult = await Connection.InvokeAsync<Result<AlertBroadcastDto>>(nameof(IViewerHub.GetCurrentAlert));
                 if (alertResult.IsSuccess)
                 {
-                    await _messenger.Send(alertResult.Value);
+                    await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
                 }
                 else if (alertResult.HadException)
                 {
@@ -144,24 +141,7 @@ internal class ViewerHubConnection(
             () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
     }
 
-    public Task<Result<DisplayDto[]>> GetDisplays(string desktopConnectionId)
-    {
-        return Result.Fail<DisplayDto[]>("Not implemented.").AsTaskResult();
-    }
 
-    public async Task<Result<IceServer[]>> GetIceServers()
-    {
-        try
-        {
-            var iceServers = await Connection.InvokeAsync<IceServer[]>(nameof(IViewerHub.GetIceServers));
-            return Result.Ok(iceServers);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting ICE servers..");
-            return Result.Fail<IceServer[]>(ex);
-        }
-    }
 
     public async Task<Result<ServerStatsDto>> GetServerStats()
     {
@@ -178,41 +158,6 @@ internal class ViewerHubConnection(
             },
             () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
-
-    public async Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession)
-    {
-        try
-        {
-            if (Connection.ConnectionId is null)
-            {
-                return Result.Fail("Connection has closed.");
-            }
-
-            var streamingSessionRequest = new StreamerSessionRequestDto(
-                sessionId,
-                targetSystemSession,
-                Connection.ConnectionId,
-                agentConnectionId,
-                _settings.NotifyUserSessionStart,
-                _settings.LowerUacDuringSession,
-                _settings.Username);
-
-            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);
-
-            var result = await Connection.InvokeAsync<Result>(
-                nameof(IViewerHub.RequestStreamingSession), 
-                agentConnectionId, 
-                signedDto);
-
-            return result.Log(_logger);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting remote streaming session.");
-            return Result.Fail(ex);
-        }
-    }
-
 
     public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
     {
@@ -240,14 +185,15 @@ internal class ViewerHubConnection(
 
     public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
     {
-        await _messenger.Send(alert);
+        await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alert));
     }
 
-    public Task ReceiveDesktopChanged(Guid sessionId)
+    public async Task ReceiveClipboardChanged(ClipboardChangeDto clipboardChangeDto)
     {
-        _messenger.Send(new DesktopChangedMessage(sessionId));
-        return Task.CompletedTask;
+        await _messenger.Send(new DtoReceivedMessage<ClipboardChangeDto>(clipboardChangeDto));
     }
+
+
     public Task ReceiveDeviceUpdate(DeviceDto device)
     {
         _devicesCache.AddOrUpdate(device);
@@ -255,22 +201,15 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveIceCandidate(Guid sessionId, string candidateJson)
-    {
-        _messenger.Send(new IceCandidateMessage(sessionId, candidateJson));
-        return Task.CompletedTask;
-    }
-
-    public Task ReceiveRtcSessionDescription(Guid sessionId, RtcSessionDescription sessionDescription)
-    {
-        _messenger.Send(new RtcSessionDescriptionMessage(sessionId, sessionDescription));
-        return Task.CompletedTask;
-    }
-
     public async Task ReceiveServerStats(ServerStatsDto serverStats)
     {
         var message = new ServerStatsUpdateMessage(serverStats);
         await _messenger.Send(message);
+    }
+
+    public async Task ReceiveStreamerDisconnected(Guid sessionId)
+    {
+        await _messenger.Send(new StreamerDisconnectedMessage(sessionId));
     }
 
     public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
@@ -316,11 +255,44 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             await WaitForConnection();
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.DeviceUpdateRequest, _appState.PrivateKey);
+            var dto = new DeviceUpdateRequestDto(_settings.PublicKeyLabel);
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.DeviceUpdateRequest, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
         });
     }
 
+    public async Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession)
+    {
+        try
+        {
+            if (Connection.ConnectionId is null)
+            {
+                return Result.Fail("Connection has closed.");
+            }
+
+            var streamingSessionRequest = new StreamerSessionRequestDto(
+                sessionId,
+                targetSystemSession,
+                Connection.ConnectionId,
+                agentConnectionId,
+                _settings.NotifyUserSessionStart,
+                _settings.Username);
+
+            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);
+
+            var result = await Connection.InvokeAsync<Result>(
+                nameof(IViewerHub.RequestStreamingSession),
+                agentConnectionId,
+                signedDto);
+
+            return result.Log(_logger);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting remote streaming session.");
+            return Result.Fail(ex);
+        }
+    }
     public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings)
     {
         return await TryInvoke(
@@ -353,13 +325,76 @@ internal class ViewerHubConnection(
                 await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
             });
     }
-    public async Task SendIceCandidate(string streamerConnectionId, string iceCandidateJson)
+
+    public async Task SendChangeDisplaysRequest(string streamerConnectionId, string displayId)
     {
-        await TryInvoke(async () =>
-        {
-            var signedDto = _keyProvider.CreateSignedDto(iceCandidateJson, DtoType.RtcIceCandidate, _appState.PrivateKey);
-            await Connection.InvokeAsync("SendSignedDtoToStreamer", streamerConnectionId, signedDto);
-        });
+        await TryInvoke(
+            async () =>
+            {
+                await WaitForConnection();
+                var dto = new ChangeDisplaysDto(displayId);
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ChangeDisplays, _appState.PrivateKey);
+                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+            });
+    }
+
+    public async Task SendClipboardText(string streamerConnectionId, string text, Guid sessionId)
+    {
+        await TryInvoke(
+             async () =>
+             {
+                 await WaitForConnection();
+                 var dto = new ClipboardChangeDto(text, sessionId);
+                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ClipboardChanged, _appState.PrivateKey);
+                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+             });
+    }
+
+    public async Task SendKeyboardStateReset(string streamerConnectionId)
+    {
+        await TryInvoke(
+              async () =>
+              {
+                  await WaitForConnection();
+                  var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ResetKeyboardState, _appState.PrivateKey);
+                  await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+              });
+    }
+
+    public async Task SendKeyEvent(string streamerConnectionId, string key, bool isPressed)
+    {
+        await TryInvoke(
+              async () =>
+              {
+                  await WaitForConnection();
+                  var dto = new KeyEventDto(key, isPressed);
+                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.KeyEvent, _appState.PrivateKey);
+                  await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+              });
+    }
+
+    public async Task SendMouseButtonEvent(string streamerConnectionId, int button, bool isPressed, double percentX, double percentY)
+    {
+        await TryInvoke(
+                   async () =>
+                   {
+                       await WaitForConnection();
+                       var dto = new MouseButtonEventDto(button, isPressed, percentX, percentY);
+                       var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseButtonEvent, _appState.PrivateKey);
+                       await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+                   });
+    }
+
+    public async Task SendPointerMove(string streamerConnectionId, double percentX, double percentY)
+    {
+        await TryInvoke(
+                  async () =>
+                  {
+                      await WaitForConnection();
+                      var dto = new MovePointerDto(percentX, percentY);
+                      var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MovePointer, _appState.PrivateKey);
+                      await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+                  });
     }
 
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
@@ -372,11 +407,12 @@ internal class ViewerHubConnection(
         });
     }
 
-    public async Task SendRtcSessionDescription(string streamerConnectionId, RtcSessionDescription sessionDescription)
+    public async Task SendReadySignalToStreamer(string streamerConnectionId)
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateSignedDto(sessionDescription, DtoType.RtcSessionDescription, _appState.PrivateKey);
+            var powerDto = new ViewerReadyForStreamDto();
+            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.ViewerReadyForStream, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
         });
     }
@@ -393,6 +429,18 @@ internal class ViewerHubConnection(
             () => Result.Fail("Failed to send terminal input"));
     }
 
+    public async Task SendTypeText(string streamerConnectionId, string text)
+    {
+        await TryInvoke(
+             async () =>
+             {
+                 await WaitForConnection();
+                 var dto = new TypeTextDto(text);
+                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TypeText, _appState.PrivateKey);
+                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
+             });
+    }
+
     public async Task SendWakeDevice(string[] macAddresses)
     {
         await TryInvoke(
@@ -401,6 +449,17 @@ internal class ViewerHubConnection(
                 var request = new WakeDeviceDto(macAddresses);
                 var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.PrivateKey);
                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
+            });
+    }
+
+    public async Task SendWheelScroll(string streamerConnectionId, double percentX, double percentY, double scrollY, double scrollX)
+    {
+        await TryInvoke(
+            async () =>
+            {
+                var dto = new WheelScrollDto(percentX, percentY, scrollY, scrollX);
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.WheelScroll, _appState.PrivateKey);
+                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
             });
     }
 
@@ -417,6 +476,7 @@ internal class ViewerHubConnection(
             ConfigureConnection,
             ConfigureHttpOptions,
             OnConnectFailure,
+            useReconnect: true,
             cancellationToken);
 
         _messenger.RegisterGenericMessage(this, HandleGenericMessage);
@@ -453,11 +513,10 @@ internal class ViewerHubConnection(
         connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
         connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
         connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
-        connection.On<Guid, string>(nameof(ReceiveIceCandidate), ReceiveIceCandidate);
-        connection.On<Guid, RtcSessionDescription>(nameof(ReceiveRtcSessionDescription), ReceiveRtcSessionDescription);
         connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress), ReceiveStreamerDownloadProgress);
         connection.On<StreamerInitDataDto>(nameof(ReceiveStreamerInitData), ReceiveStreamerInitData);
-        connection.On<Guid>(nameof(ReceiveDesktopChanged), ReceiveDesktopChanged);
+        connection.On<ClipboardChangeDto>(nameof(ReceiveClipboardChanged), ReceiveClipboardChanged);
+        connection.On<Guid>(nameof(ReceiveStreamerDisconnected), ReceiveStreamerDisconnected);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

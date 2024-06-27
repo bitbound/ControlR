@@ -5,10 +5,10 @@
             <MudText Color="@(display == SelectedDisplay ? Color.Success : Color.Default)">
                 @(display.Name)
             </MudText>
-            @if (!string.IsNullOrWhiteSpace(display.Label))
+            @if (!string.IsNullOrWhiteSpace(display.DisplayId))
             {
                 <MudText Color="Color.Secondary">
-                    (@(display.Label))
+                    (@(display.DisplayId))
                 </MudText>
             }
         </MudMenuItem>

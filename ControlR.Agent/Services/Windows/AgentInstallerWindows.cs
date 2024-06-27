@@ -39,7 +39,7 @@ internal class AgentInstallerWindows(
     private readonly ILogger<AgentInstallerWindows> _logger = _logger;
     private readonly IProcessManager _processes = _processes;
 
-    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, string? label = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -92,7 +92,7 @@ internal class AgentInstallerWindows(
                 return;
             }
 
-            await UpdateAppSettings(serverUri, authorizedPublicKey);
+            await UpdateAppSettings(serverUri, authorizedPublicKey, label);
 
             var serviceName = GetServiceName();
 

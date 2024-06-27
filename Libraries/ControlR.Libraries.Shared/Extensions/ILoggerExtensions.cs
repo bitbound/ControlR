@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Shared.Helpers;
 using System.Runtime.CompilerServices;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Libraries.Shared.Extensions;
 

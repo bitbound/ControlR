@@ -1,13 +1,6 @@
-﻿using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
-using ControlR.Server.Auth;
+﻿using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
 using ControlR.Server.Options;
-using ControlR.Server.Services;
 using ControlR.Server.Services.Interfaces;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
@@ -23,30 +16,12 @@ public class ViewerHub(
     IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
-    IIceServerProvider _iceProvider,
     IOptionsMonitor<ApplicationOptions> _appOptions,
-    ILogger<ViewerHub> _logger) : Hub<IViewerHubClient>, IViewerHub
+    ILogger<ViewerHub> _logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
-    private bool IsServerAdmin
-    {
-        get
-        {
-            if (Context.Items.TryGetValue(nameof(IsServerAdmin), out var cachedItem) &&
-                bool.TryParse($"{cachedItem}", out var isAdmin))
-            {
-                return isAdmin;
-            }
-            return false;
-        }
-        set
-        {
-            Context.Items[nameof(IsServerAdmin)] = value;
-        }
-    }
-
     public Task<bool> CheckIfServerAdministrator()
     {
-        return IsServerAdmin.AsTaskResult();
+        return IsServerAdmin().AsTaskResult();
     }
 
     public Task<bool> CheckIfStoreIntegrationEnabled()
@@ -108,11 +83,6 @@ public class ViewerHub(
         }
     }
 
-    public async Task<IceServer[]> GetIceServers()
-    {
-        return await _iceProvider.GetIceServers();
-    }
-
     public async Task<Result<ServerStatsDto>> GetServerStats()
     {
         try
@@ -124,6 +94,7 @@ public class ViewerHub(
 
             var agentResult = await _connectionCounter.GetAgentConnectionCount();
             var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+            var streamerResult = await _connectionCounter.GetStreamerConnectionCount();
 
             if (!agentResult.IsSuccess)
             {
@@ -137,9 +108,16 @@ public class ViewerHub(
                 return Result.Fail<ServerStatsDto>(viewerResult.Reason);
             }
 
+            if (!streamerResult.IsSuccess)
+            {
+                _logger.LogResult(streamerResult);
+                return Result.Fail<ServerStatsDto>(streamerResult.Reason);
+            }
+
             var dto = new ServerStatsDto(
                 agentResult.Value,
-                viewerResult.Value);
+                viewerResult.Value,
+                streamerResult.Value);
 
             return Result.Ok(dto);
         }
@@ -184,8 +162,7 @@ public class ViewerHub(
 
         await Groups.AddToGroupAsync(Context.ConnectionId, publicKey);
 
-        IsServerAdmin = Context.User?.IsAdministrator() ?? false;
-        if (IsServerAdmin)
+        if (IsServerAdmin())
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
 
@@ -236,6 +213,7 @@ public class ViewerHub(
             return Result.Fail(ex);
         }
     }
+
     public async Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
     {
         try
@@ -316,6 +294,7 @@ public class ViewerHub(
             _logger.LogError(ex, "Error while sending DTO to streamer.");
         }
     }
+
     public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)
     {
         try
@@ -329,6 +308,10 @@ public class ViewerHub(
         }
     }
 
+    private bool IsServerAdmin()
+    {
+        return Context.User?.IsAdministrator() ?? false;
+    }
     private async Task SendUpdatedConnectionCountToAdmins()
     {
         try
@@ -354,17 +337,20 @@ public class ViewerHub(
 
     private bool VerifyIsAdmin([CallerMemberName] string callerMember = "")
     {
-        var publicKey = Context.User?.TryGetPublicKey(out var userPubKey) == true
-            ? userPubKey
-            : "Unknown";
-
-        if (!IsServerAdmin)
+        if (IsServerAdmin())
         {
-            _logger.LogCritical(
-                "Admin verification failed when invoking member {MemberName}. Public Key: {PublicKey}",
-                callerMember,
-                publicKey);
+            return true;
         }
-        return IsServerAdmin;
+
+        var publicKey = Context.User?.TryGetPublicKey(out var userPubKey) == true
+             ? userPubKey
+             : "Unknown";
+
+        _logger.LogCritical(
+            "Admin verification failed when invoking member {MemberName}. Public Key: {PublicKey}",
+            callerMember,
+            publicKey);
+
+        return false;
     }
 }

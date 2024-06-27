@@ -1,12 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace ControlR.Viewer.Services;
+﻿namespace ControlR.Viewer.Services;
 
 public interface IClipboardManager
 {
     Task SetText(string text);
     Task<string?> GetText();
-
     Task Start();
 }
 

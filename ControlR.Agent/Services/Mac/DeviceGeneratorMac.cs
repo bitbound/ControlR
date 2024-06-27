@@ -1,6 +1,7 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
@@ -16,7 +17,7 @@ internal class DeviceDataGeneratorMac(
     private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
     private readonly IProcessManager _processService = processInvoker;
 
-    public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<string> authorizedKeys, string deviceId)
+    public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
         var device = GetDeviceBase(authorizedKeys, deviceId);
 

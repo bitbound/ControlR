@@ -1,4 +1,5 @@
 using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Testable;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ public class KeyProviderTests
     {
         var viewer = _keyProvider!.GenerateKeys();
 
-        var dto = new ClipboardChangeDto("some text");
+        var dto = new ClipboardChangeDto("some text", Guid.Empty);
 
         var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ClipboardChanged, viewer.PrivateKey);
 

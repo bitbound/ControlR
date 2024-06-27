@@ -37,31 +37,6 @@ services:
       #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
       #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
 
-      # UseTwilio, UseMetered, UseCoTurn, and UseStaticIceServers are mutually exclusive.
-      # They will be evaluated in that order.
-      - ControlR_ApplicationOptions__UseCoTurn=true
-      # Format: coturn.example.com or 192.3.253.2.  
-      # If left blank, the publicly-accessible hostname of the 
-      # ControlR server will be used.
-      - ControlR_ApplicationOptions__CoTurnHost=
-      - ControlR_ApplicationOptions__CoTurnSecret=${TURN_SECRET}
-      - ControlR_ApplicationOptions__CoTurnUsername=controlr-user
-      - ControlR_ApplicationOptions__CoTurnPort=3478
-      - ControlR_ApplicationOptions__UseStaticIceServers=false
-      - ControlR_ApplicationOptions__IceServers__0__Urls=stun:stun.l.google.com:19302
-      - ControlR_ApplicationOptions__IceServers__0__CredentialType=password
-      - ControlR_ApplicationOptions__IceServers__0__Username=
-      - ControlR_ApplicationOptions__IceServers__0__Credential=
-      - ControlR_ApplicationOptions__IceServers__1__Urls=stun:stun3.l.google.com:19302
-      - ControlR_ApplicationOptions__IceServers__1__CredentialType=password
-      - ControlR_ApplicationOptions__IceServers__1__Username=
-      - ControlR_ApplicationOptions__IceServers__1__Credential=
-      - ControlR_ApplicationOptions__UseMetered=false
-      - ControlR_ApplicationOptions__MeteredApiKey=
-      - ControlR_ApplicationOptions__UseTwilio=false
-      - ControlR_ApplicationOptions__TwilioSid=
-      - ControlR_ApplicationOptions__TwilioSecret=
-
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
       # forwarded headers are not in the correct format.
@@ -69,26 +44,6 @@ services:
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #- ControlR_ApplicationOptions__KnownProxies__0=
 
-  coturn:
-   image: coturn/coturn
-   container_name: coturn
-   # By default, coTURN uses ports 3478 TCP/UDP, 5349 TCP/UDP, and 49152-65535 UDP.
-   # It requires such a large port range for media relay.  It's been reported that
-   # Docker does not perform well with large port ranges, so coTURN maintainers
-   # recommend using host network.  See https://hub.docker.com/r/coturn/coturn.
-   network_mode: "host"
-   restart: unless-stopped
-   environment:
-    - DETECT_EXTERNAL_IP=yes
-    - DETECT_RELAY_IP=yes
-    - DETECT_EXTERNAL_IPV6=yes
-    - DETECT_RELAY_IPV6=yes
-
-   entrypoint: [
-    "/bin/sh",
-    "-c",
-    "turnserver --user controlr-user:$TURN_SECRET --use-auth-secret=true --static-auth-secret=$TURN_SECRET --log-file=stdout --realm controlr --no-cli"]
-   
 volumes:
   controlr-data:
     name: "controlr-data"

@@ -1,54 +1,125 @@
-﻿using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Models;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Server.Models;
 using ControlR.Server.Services;
+using ControlR.Server.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Server.Hubs;
 
+
 public class StreamerHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
-    IIceServerProvider _iceProvider,
-    ILogger<StreamerHub> _logger) : Hub<IStreamerHubClient>
+    IStreamingSessionStore _streamStore,
+    IConnectionCounter _connectionCounter,
+    ILogger<StreamerHub> _logger) : HubWithItems<IStreamerHubClient>, IStreamerHub
 {
+
+    private Guid SessionId
+    {
+        get => GetItem(Guid.Empty);
+        set => SetItem(value);
+    }
+
+    private string ViewerConnectionId
+    {
+        get => GetItem(string.Empty);
+        set => SetItem(value);
+    }
+    public override async Task OnConnectedAsync()
+    {
+        _connectionCounter.IncrementStreamerCount();
+        await SendUpdatedConnectionCountToAdmins();
+        await base.OnConnectedAsync();
+    }
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        try
+        {
+            _connectionCounter.DecrementStreamerCount();
+            await SendUpdatedConnectionCountToAdmins();
+
+            if (!string.IsNullOrEmpty(ViewerConnectionId))
+            {
+                await _viewerHub.Clients
+                    .Client(ViewerConnectionId)
+                    .ReceiveStreamerDisconnected(SessionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending streamer disconnect notification.");
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    public async Task SendClipboardChangeToViewer(string viewerConnectionId, ClipboardChangeDto clipboardChangeDto)
+    {
+        try
+        {
+            await _viewerHub.Clients.Client(viewerConnectionId).ReceiveClipboardChanged(clipboardChangeDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while sending clipboard change to viewer.");
+        }
+    }
+
     public async Task SendStreamerInitDataToViewer(
-        string viewerConnectionId, 
+        string viewerConnectionId,
         StreamerInitDataDto streamerInit)
     {
+        ViewerConnectionId = viewerConnectionId;
+        SessionId = streamerInit.SessionId;
+
+        var signaler = new StreamSignaler(SessionId);
+
+        _streamStore.AddOrUpdate(SessionId, signaler, (_, _) => signaler);
+
         await _viewerHub.Clients
             .Client(viewerConnectionId)
             .ReceiveStreamerInitData(streamerInit);
     }
 
-    public async Task<IceServer[]> GetIceServers()
-    {
-        return await _iceProvider.GetIceServers();
-    }
-
-    public async Task NotifyViewerDesktopChanged(string viewerConnectionId, Guid sessionId)
+    private async Task SendUpdatedConnectionCountToAdmins()
     {
         try
         {
-            await _viewerHub.Clients.Client(viewerConnectionId).ReceiveDesktopChanged(sessionId);
+            var agentResult = await _connectionCounter.GetAgentConnectionCount();
+            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+            var streamerResult = await _connectionCounter.GetStreamerConnectionCount();
+
+            if (!agentResult.IsSuccess)
+            {
+                _logger.LogResult(agentResult);
+                return;
+            }
+
+            if (!viewerResult.IsSuccess)
+            {
+                _logger.LogResult(viewerResult);
+                return;
+            }
+
+            if (!streamerResult.IsSuccess)
+            {
+                _logger.LogResult(streamerResult);
+                return;
+            }
+
+
+            var dto = new ServerStatsDto(
+                agentResult.Value,
+                viewerResult.Value,
+                streamerResult.Value);
+
+            await _viewerHub.Clients
+                .Group(HubGroupNames.ServerAdministrators)
+                .ReceiveServerStats(dto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while notifying viewer of desktop change.");
+            _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
         }
-    }
-
-
-    public async Task SendIceCandidate(string viewerConnectionId, Guid sessionId, string candidateJson)
-    {
-        await _viewerHub.Clients
-        .Client(viewerConnectionId)
-        .ReceiveIceCandidate(sessionId, candidateJson);
-    }
-
-    public async Task SendRtcSessionDescription(string viewerConnectionId, Guid sessionId, RtcSessionDescription sessionDescription)
-    {
-        await _viewerHub.Clients
-            .Client(viewerConnectionId)
-            .ReceiveRtcSessionDescription(sessionId, sessionDescription);
     }
 }

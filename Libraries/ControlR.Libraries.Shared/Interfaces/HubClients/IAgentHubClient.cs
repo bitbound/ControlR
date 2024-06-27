@@ -1,6 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 

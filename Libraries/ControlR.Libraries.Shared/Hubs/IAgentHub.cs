@@ -1,5 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 namespace ControlR.Libraries.Shared.Hubs;
 public interface IAgentHub

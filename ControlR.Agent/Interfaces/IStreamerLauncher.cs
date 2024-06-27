@@ -9,6 +9,5 @@ internal interface IStreamerLauncher
         byte[] authorizedKey,
         int targetWindowsSession = -1,
         bool notifyUserOnSessionStart = false,
-        bool lowerUacDuringSession = false,
         string? viewerName = null);
 }

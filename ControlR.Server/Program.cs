@@ -14,7 +14,6 @@ using ControlR.Server.Services.Distributed;
 using ControlR.Server.Services.Distributed.Locking;
 using ControlR.Server.Services.Local;
 using ControlR.Libraries.Shared;
-using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Buffers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -106,7 +105,8 @@ var signalrBuilder = builder.Services
     .AddSignalR(options =>
     {
         options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        options.MaximumReceiveMessageSize = 100_000;
+        //options.MaximumReceiveMessageSize = 100_000;
+        options.MaximumReceiveMessageSize = null;
         options.MaximumParallelInvocationsPerClient = 5;
     })
     .AddMessagePackProtocol()
@@ -149,8 +149,6 @@ if (appOptions.UseRedisBackplane)
 
 builder.Services.AddOutputCache();
 
-builder.Services.AddHttpClient<IMeteredApi, MeteredApi>();
-
 builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
@@ -158,7 +156,6 @@ builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
-builder.Services.AddSingleton<IIceServerProvider, IceServerProvider>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
 
@@ -173,6 +170,7 @@ else
 {
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
+    builder.Services.AddSingleton<IStreamingSessionStore, ProxyStreamStoreLocal>();
 }
 
 builder.Host.UseSystemd();
@@ -212,6 +210,22 @@ else
 app.UseMiddleware<Md5HeaderMiddleware>();
 
 ConfigureStaticFiles(app);
+
+app.UseWhen(
+    x => x.Request.Path.StartsWithSegments("/viewer-ws-endpoint"),
+    builder =>
+    {
+        builder.UseWebSockets();
+        builder.UseMiddleware<ViewerProxyMiddleware>();
+    });
+
+app.UseWhen(
+    x => x.Request.Path.StartsWithSegments("/streamer-ws-endpoint"),
+    builder =>
+    {
+        builder.UseWebSockets();
+        builder.UseMiddleware<StreamerProxyMiddleware>();
+    });
 
 app.UseAuthentication();
 app.UseAuthorization();

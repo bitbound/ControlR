@@ -5,8 +5,10 @@ namespace ControlR.Viewer.Components;
 public class JsInteropableComponent : ComponentBase
 {
     private IJSObjectReference? _jsModule;
+
     [Inject]
     public required IJSRuntime JsRuntime { get; init; }
+
     protected IJSObjectReference JsModule => _jsModule ?? throw new InvalidOperationException("JS module is not initialized");
     protected ManualResetEventAsync JsModuleReady { get; } = new();
 

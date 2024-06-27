@@ -1,6 +1,5 @@
-﻿using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Serialization;
-using MessagePack;
+﻿using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
@@ -22,7 +21,7 @@ public class Device
 
     [MsgPackKey]
     [Display(Name = "Authorized Keys")]
-    public IEnumerable<string> AuthorizedKeys { get; set; } = Array.Empty<string>();
+    public IEnumerable<AuthorizedKeyDto> AuthorizedKeys { get; set; } = [];
 
     [MsgPackKey]
     [Display(Name = "CPU Utilization")]

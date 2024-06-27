@@ -1,0 +1,194 @@
+﻿@page "/keys"
+
+@inject NavigationManager NavManager
+@inject ISettings Settings
+@inject ISnackbar Snackbar
+@inject IDialogService Dialogs
+@inject IHttpConfigurer HttpConfigurer
+@inject IAppState AppState
+@inject IMessenger Messenger
+@inject IFileSaver FileSaver
+@inject IKeyProvider KeyProvider
+@inject IClipboardManager Clipboard
+@inject IDeviceCache DeviceCache
+@inject ILogger<Keys> Logger
+
+<PageTitle>Key Management</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Key Management
+</MudText>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Public Key
+    </MudText>
+    <MudTextField T="string"
+                  Label="Your Public Key"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyPublicKey"
+                  Adornment="Adornment.End"
+                  Value="_publicKey" />
+</div>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Private Key
+    </MudText>
+    <MudText GutterBottom Color="Color.Warning">
+        Caution: This value will be copied to your clipboard in clear text.  Remember to clear your clipboard afterward.
+    </MudText>
+    <MudTextField T="string"
+                  Label="Your Private Key"
+                  ReadOnly="true"
+                  Variant="Variant.Filled"
+                  InputType="InputType.Password"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                  OnAdornmentClick="CopyPrivateKey"
+                  AdornmentColor="Color.Error"
+                  Adornment="Adornment.End"
+                  Value="_privateKey" />
+</div>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Export Private Key
+    </MudText>
+    <MudText GutterBottom>
+        Export your private key to an encrypted file, which can
+        be imported on other devices.
+    </MudText>
+    <MudText GutterBottom>
+        Your private key is encrypted using the given passphrase.
+        If you store this file long-term, it's recommended that you
+        put it in a secure location, such as a password vault.
+    </MudText>
+    <MudTextField T="string"
+                  @bind-Value="_passphrase"
+                  @ref="_passphraseField"
+                  Label="Encryption Passphrase"
+                  HelperText="Enter a passphrase to encrypt the exported private key."
+                  Immediate="true"
+                  InputType="InputType.Password"
+                  OnKeyDown="HandleExportPassphraseKeyDown"
+                  Required
+                  Validation="(string e) => ValidatePassphrase(e)" />
+    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ExportPrivateKey" Class="mt-2">
+        Export
+    </MudButton>
+</div>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Remove
+    </MudText>
+    <MudText GutterBottom>
+        This will remove your keypair and settings, essentially
+        resetting to the app.  Export your keys first if you want
+        to keep them, or they will be lost permanently.
+    </MudText>
+    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair" Class="mt-2">
+        Remove Keypair
+    </MudButton>
+</div>
+
+@code {
+    private string _publicKey = string.Empty;
+    private string _privateKey = string.Empty;
+    private string _passphrase = string.Empty;
+    private MudTextField<string>? _passphraseField;
+
+    protected override void OnInitialized()
+    {
+        _publicKey = AppState.PublicKeyBase64;
+        _privateKey = AppState.PrivateKeyBase64;
+
+        base.OnInitialized();
+    }
+
+    private async Task CopyPrivateKey()
+    {
+        await Clipboard.SetText(_privateKey);
+        Snackbar.Add("Private key copied to clipboard", Severity.Success);
+    }
+
+    private async Task CopyPublicKey()
+    {
+        await Clipboard.SetText(_publicKey);
+        Snackbar.Add("Public key copied to clipboard", Severity.Success);
+    }
+
+    private async Task ExportPrivateKey()
+    {
+        try
+        {
+            Guard.IsNotNull(_passphraseField);
+
+            if (_passphraseField.ValidationErrors.Count > 0)
+            {
+                return;
+            }
+            var encryptedKey = KeyProvider.EncryptPrivateKey(_passphrase, AppState.PrivateKey);
+            using var ms = new MemoryStream();
+            await ms.WriteAsync(encryptedKey);
+            ms.Seek(0, SeekOrigin.Begin);
+            var fileName = $"ControlR_Key_Export_{DateTime.Now:yyyyMMdd-HHmmss}.crkeys";
+            var saveResult = await FileSaver.SaveAsync(fileName, ms);
+            if (!saveResult.IsSuccessful)
+            {
+                throw saveResult.Exception ?? new FileSaveException("Unknown save failure.");
+            }
+            Snackbar.Add("Exported private key successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while exporting private key.");
+            Snackbar.Add("Failed to export (see logs)", Severity.Error);
+        }
+    }
+
+    private async Task HandleExportPassphraseKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await ExportPrivateKey();
+        }
+    }
+
+    private async Task RemoveKeypair()
+    {
+        var result = await Dialogs.ShowMessageBox(
+            "Confirm Removal",
+            "Are you sure you want to remove your keys?  This cannot be undone.",
+            yesText: "Yes",
+            noText: "No"
+        );
+
+        if (result != true)
+        {
+            return;
+        }
+
+        await Settings.Reset();
+        DeviceCache.Clear();
+        NavManager.NavigateTo(string.Empty, false);
+    }
+
+    private string? ValidatePassphrase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Passphrase is required.";
+        }
+
+        if (input is null || input.Length < 8)
+        {
+            return "Passphrase must be at least 8 characters.";
+        }
+        return null;
+    }
+}

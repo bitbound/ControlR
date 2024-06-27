@@ -32,7 +32,7 @@ internal class AgentInstallerMac(
     private readonly ILogger<AgentInstallerMac> _logger = _logger;
     private readonly IProcessManager _processInvoker = _processInvoker;
 
-    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null)
+    public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, string? label = null)
     {
         if (!await _installLock.WaitAsync(0))
         {
@@ -73,7 +73,7 @@ internal class AgentInstallerMac(
 
             _logger.LogInformation("Writing service file.");
             await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
-            await UpdateAppSettings(serverUri, authorizedPublicKey);
+            await UpdateAppSettings(serverUri, authorizedPublicKey, label);
 
             var psi = new ProcessStartInfo()
             {

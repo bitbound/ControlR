@@ -32,11 +32,33 @@
     </MudText>
     <MudTextField T="string"
                   @bind-Value="Username"
+                  MaxLength="25"
                   Validation="(string e) => ValidateUsername(e)"
                   Label="Shown to partners when connecting">
 
     </MudTextField>
 </div>
+
+
+<div class="mt-10">
+    <MudText Typo="Typo.subtitle2" Color="Color.Info">
+        Public Key Label
+    </MudText>
+    <MudText Typo="Typo.body1" GutterBottom>
+        When deploying an agent to a remote computer, this value will be added to
+        the agent's appsettings file to identify this public key.
+    </MudText>
+    <MudText Typo="Typo.body1" GutterBottom>
+        Defaults to your Username (if set).
+    </MudText>
+
+    <MudTextField T="string"
+                  MaxLength="25"
+                  @bind-Value="PublicKeyLabel"
+                  Validation="(string e) => ValidateLabel(e)"
+                  Label="Label for your public key" />
+</div>
+
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -46,17 +68,6 @@
                  Label="Notify users when a remote control session starts" />
 </div>
 
-<div class="mt-10">
-    <MudText Typo="Typo.h6" Color="Color.Primary">
-        Lower UAC Level During Session
-    </MudText>
-    <MudText GutterBottom>
-        During a remote control session, lower the UAC prompt elevation to reduce desktop switching.
-        UAC prompts will appear on the interactive desktop instead of the secure desktop.
-    </MudText>
-    <MudCheckBox @bind-Value="LowerUacDuringSession"
-                 Label="Show UAC prompts on the interactive desktop" />
-</div>
 
 <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -83,13 +94,6 @@
         get => SettingsStore.NotifyUserSessionStart;
         set => SettingsStore.NotifyUserSessionStart = value;
     }
-
-    private bool LowerUacDuringSession
-    {
-        get => SettingsStore.LowerUacDuringSession;
-        set => SettingsStore.LowerUacDuringSession = value;
-    }
-
 
     private string Server
     {
@@ -118,6 +122,16 @@
         {
             SettingsStore.Username = value;
             Snackbar.Add("Username updated", Severity.Success);
+        }
+    }
+
+    private string PublicKeyLabel
+    {
+        get => SettingsStore.PublicKeyLabel;
+        set
+        {
+            SettingsStore.PublicKeyLabel = value;
+            Snackbar.Add("PublicKeyLabel updated", Severity.Success);
         }
     }
 
@@ -185,9 +199,34 @@
             return null;
         }
 
+        if (input.Length > 25)
+        {
+            return "Username must be 25 characters or less.";
+        }
+
         if (AppConstants.UsernameValidator().IsMatch(input))
         {
             return "Username can only contain letters, numbers, underscores, and hyphens.";
+        }
+
+        return null;
+    }
+
+    private string? ValidateLabel(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return null;
+        }
+
+        if (input.Length > 25)
+        {
+            return "PublicKeyLabel must be 25 characters or less.";
+        }
+
+        if (AppConstants.PublicKeyLabelValidator().IsMatch(input))
+        {
+            return "PublicKeyLabel can only contain letters, numbers, underscores, hyphens, and at sign (@).";
         }
 
         return null;

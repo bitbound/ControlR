@@ -1,7 +1,4 @@
-﻿using ControlR.Libraries.Shared.Serialization;
-using MessagePack;
-
-namespace ControlR.Libraries.Shared.Models;
+﻿namespace ControlR.Libraries.Shared.Models;
 
 public enum WindowsSessionType
 {

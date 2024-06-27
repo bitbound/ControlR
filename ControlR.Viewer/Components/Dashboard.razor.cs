@@ -9,7 +9,6 @@ using Android.Content.PM;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Text.Json;
 using ControlR.Viewer.Components.Dialogs;

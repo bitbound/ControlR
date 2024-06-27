@@ -1,10 +1,8 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
-using ControlR.Agent.Options;
 using ControlR.Agent.Services.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
@@ -16,6 +14,8 @@ internal class CommandProvider
     private static readonly string[] _instanceIdAlias = ["-i", "--instance-id"];
     private static readonly string[] _pipeNameAlias = ["-p", "--pipe-name"];
     private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
+    private static readonly string[] _labelAlias = ["-l", "--label"];
+
     internal static Command GetEchoDesktopCommand(string[] args)
     {
         var pipeNameOption = new Option<string>(
@@ -45,31 +45,37 @@ internal class CommandProvider
         var serverUriOption = new Option<Uri?>(
              _serverUriAlias,
              "The fully-qualified server URI to which the agent will connect " +
-             "(e.g. 'https://my.example.com' or 'http://my.example.com:8080'). ");
+             "(e.g. 'https://my.example.com' or 'http://my.example.com:8080').");
 
-        var authorizedKeyOption = new Option<string>(
+        var authorizedKeyOption = new Option<string?>(
             _authorizedKeyAlias,
             "An optional public key to preconfigure with authorization to this device.");
 
+        var labelOption = new Option<string?>(
+            _labelAlias,
+            "An optional label to add to the public key (e.g. username), which can make it easier " +
+            "to identify key owners when managing access.");
+
         var instanceIdOption = new Option<string?>(
             _instanceIdAlias,
-            "The instance ID of the agent, which can be used for multiple agent installations.");
+            "An optional instance ID of the agent, which can be used for multiple agent installations.");
         instanceIdOption.AddValidator(ValidateInstanceId);
 
         var installCommand = new Command("install", "Install the ControlR service.")
         {
             authorizedKeyOption,
             serverUriOption,
-            instanceIdOption
+            instanceIdOption,
+            labelOption
         };
 
-        installCommand.SetHandler(async (serverUri, authorizedKey, instanceId) =>
+        installCommand.SetHandler(async (serverUri, authorizedKey, label, instanceId) =>
         {
             using var host = CreateHost(StartupMode.Install, args, instanceId);
             var installer = host.Services.GetRequiredService<IAgentInstaller>();
-            await installer.Install(serverUri, authorizedKey);
+            await installer.Install(serverUri, authorizedKey, label);
             await host.RunAsync();
-        }, serverUriOption, authorizedKeyOption, instanceIdOption);
+        }, serverUriOption, authorizedKeyOption, labelOption, instanceIdOption);
 
         return installCommand;
     }

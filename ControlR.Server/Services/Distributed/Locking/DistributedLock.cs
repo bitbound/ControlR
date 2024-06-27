@@ -30,7 +30,6 @@ public class DistributedLock(
         try
         {
             var db = _multi.GetDatabase();
-
             using var cts = new CancellationTokenSource(timeout);
             using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
 

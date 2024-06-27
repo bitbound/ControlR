@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Services;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace ControlR.Libraries.Shared.Extensions;
@@ -9,7 +8,8 @@ public static class SerilogHostExtensions
     public static IHostBuilder BootstrapSerilog(
         this IHostBuilder hostBuilder,
         string logFilePath,
-        TimeSpan logRetention)
+        TimeSpan logRetention,
+        Action<LoggerConfiguration>? extraLoggerConfig = null)
     {
         try
         {
@@ -25,6 +25,8 @@ public static class SerilogHostExtensions
                         retainedFileTimeLimit: logRetention,
                         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}",
                         shared: true);
+
+                extraLoggerConfig?.Invoke(loggerConfiguration);
             }
 
             // https://github.com/serilog/serilog-aspnetcore#two-stage-initialization

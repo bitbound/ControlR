@@ -2,6 +2,7 @@
 @using ControlR.Libraries.DevicesCommon.Messages
 @implements IDisposable
 @inject IDeviceContentWindowStore WindowStore
+@inject IDeviceDisplay Display
 @inject IMessenger Messenger
 
 <div class="device-content-window-harness">
@@ -30,6 +31,7 @@
 
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind messageKind)
     {
+        Display.KeepScreenOn = WindowStore.Windows.Count > 0;
         if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
         {
             await InvokeAsync(StateHasChanged);

@@ -10,6 +10,7 @@ using ControlR.Server.Tests.TestableServices;
 using ControlR.Libraries.Shared;
 using ControlR.Libraries.Shared.Services.Testable;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 namespace ControlR.Server.Tests;
 
@@ -71,7 +72,7 @@ public class DigitalSignatureAuthenticatorTests
     {
         var viewer = _keyProvider.GenerateKeys();
 
-        var dto = new ClipboardChangeDto("some text");
+        var dto = new ClipboardChangeDto("some text", Guid.Empty);
 
         var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.IdentityAttestation, viewer.PrivateKey);
         var base64Dto = Convert.ToBase64String(MessagePackSerializer.Serialize(signedDto));

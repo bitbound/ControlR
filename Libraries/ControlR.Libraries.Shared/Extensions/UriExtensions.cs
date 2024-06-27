@@ -6,4 +6,15 @@ public static class UriExtensions
     {
         return $"{uri.Scheme}://{uri.Authority}";
     }
+
+    public static Uri ToWebsocketUri(this Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new ArgumentException("Only http and https schemes are supported.");
+        }
+
+        var scheme = uri.Scheme.StartsWith("https", StringComparison.CurrentCulture) ? "wss" : "ws";
+        return new Uri($"{scheme}://{uri.Authority}{uri.PathAndQuery}");
+    }
 }

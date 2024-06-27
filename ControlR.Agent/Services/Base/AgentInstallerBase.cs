@@ -6,6 +6,7 @@ using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using ControlR.Libraries.Shared.Dtos;
 
 namespace ControlR.Agent.Services.Base;
 
@@ -17,7 +18,7 @@ internal abstract class AgentInstallerBase(
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    protected async Task UpdateAppSettings(Uri? serverUri, string? authorizedKey)
+    protected async Task UpdateAppSettings(Uri? serverUri, string? authorizedKey, string? label)
     {
         using var _ = _logger.BeginMemberScope();
 
@@ -31,22 +32,32 @@ internal abstract class AgentInstallerBase(
         _logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
         appOptions.ServerUri = updatedServerUri;
 
+        var authorizedKeys = appOptions.AuthorizedKeys2 ?? [];
 
-        if (!string.IsNullOrWhiteSpace(authorizedKey) &&
-            !appOptions.AuthorizedKeys.Contains(authorizedKey))
+        var obsoleteKeys = appOptions.AuthorizedKeys
+            .ExceptBy(authorizedKeys.Select(x => x.PublicKey), x => x)
+            .Select(x => new AuthorizedKeyDto("", x));
+
+        authorizedKeys.AddRange(obsoleteKeys);
+
+        _logger.LogInformation("Updating authorized keys.  Initial count: {KeyCount}", authorizedKeys.Count);
+
+        if (!string.IsNullOrWhiteSpace(authorizedKey))
         {
-            _logger.LogInformation("Adding key passed in from arguments.");
-            appOptions.AuthorizedKeys.Add(authorizedKey);
-            _logger.LogInformation("Key Count: {num}", appOptions.AuthorizedKeys.Count);
+            var currentKeyIndex = authorizedKeys.FindIndex(x => x.PublicKey == authorizedKey);
+            if (currentKeyIndex == -1)
+            {
+                authorizedKeys.Add(new AuthorizedKeyDto(label ?? "", authorizedKey));
+            }
+            else
+            {
+                var currentKey = authorizedKeys[currentKeyIndex];
+                var newLabel = currentKey.Label ?? label ?? "";
+                authorizedKeys[currentKeyIndex] = currentKey with { Label = newLabel };
+            }
         }
 
-        _logger.LogInformation("Removing duplicates.");
-        appOptions.AuthorizedKeys.RemoveDuplicates();
-        _logger.LogInformation("Key Count: {num}", appOptions.AuthorizedKeys.Count);
-
-        _logger.LogInformation("Removing empties.");
-        appOptions.AuthorizedKeys.RemoveAll(string.IsNullOrWhiteSpace);
-        _logger.LogInformation("Key Count: {num}", appOptions.AuthorizedKeys.Count);
+        appOptions.AuthorizedKeys2 = authorizedKeys;
 
         if (string.IsNullOrWhiteSpace(appOptions.DeviceId))
         {

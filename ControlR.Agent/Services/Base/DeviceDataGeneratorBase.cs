@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Models;
+﻿using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.NetworkInformation;
@@ -47,7 +48,7 @@ internal class DeviceDataGeneratorBase(
         }
     }
 
-    public Device GetDeviceBase(IEnumerable<string> authorizedKeys, string deviceId)
+    public Device GetDeviceBase(IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
         return new Device()
         {
@@ -59,7 +60,7 @@ internal class DeviceDataGeneratorBase(
             OsArchitecture = RuntimeInformation.OSArchitecture,
             OsDescription = RuntimeInformation.OSDescription,
             Is64Bit = Environment.Is64BitOperatingSystem,
-            MacAddresses = GetMacAddresses().ToArray(),
+            MacAddresses = [.. GetMacAddresses()],
             IsOnline = true
         };
     }
@@ -103,7 +104,7 @@ internal class DeviceDataGeneratorBase(
         return (0, 0);
     }
 
-    private IEnumerable<string> GetMacAddresses()
+    private List<string> GetMacAddresses()
     {
         var macAddress = new List<string>();
 
@@ -111,7 +112,7 @@ internal class DeviceDataGeneratorBase(
         {
             var nics = NetworkInterface.GetAllNetworkInterfaces();
 
-            if (!nics.Any())
+            if (nics.Length == 0)
             {
                 return macAddress;
             }

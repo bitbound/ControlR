@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Models;
-
-namespace ControlR.Server.Options;
+﻿namespace ControlR.Server.Options;
 
 public class ApplicationOptions
 {
@@ -14,7 +12,6 @@ public class ApplicationOptions
     public string? DockerGatewayIp { get; init; }
     public bool EnableRestrictedUserAccess { get; init; }
     public bool EnableStoreIntegration { get; init; }
-    public IReadOnlyList<IceServer> IceServers { get; init; } = [];
     public string[] KnownProxies { get; init; } = [];
     public int LogRetentionDays { get; } = 7;
     public string? MeteredApiKey { get; init; }

@@ -79,12 +79,12 @@
          @ontouchcancel="OnTouchCancel"
          @ontouchend="OnTouchEnd">
 
-        <video id="@_videoId"
-               @ref="_videoRef"
-               autoplay
-               muted
-               class="@($"remote-screen {VideoClasses}")"
-               style="@(VideoStyle)" />
+        <canvas id="@_canvasId"
+               @ref="_canvasRef"
+               width="@(_selectedDisplay?.Width ?? 0)"
+               height="@(_selectedDisplay?.Height ?? 0)"
+               class='@($"remote-screen {CanvasClasses}")'
+               style="@(CanvasStyle)" />
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
@@ -100,11 +100,6 @@
                 else if (_statusProgress < 0)
                 {
                     <MudProgressCircular Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
-                }
-
-                @if (_isStreamReady && !_isStreamLoaded)
-                {
-                    <MudIconButton Icon="@(Icons.Material.Outlined.PlayCircle)" Size="Size.Large" OnClick="HandlePlayButtonClicked" />
                 }
             </div>
         }

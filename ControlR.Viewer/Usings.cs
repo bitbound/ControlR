@@ -12,5 +12,4 @@ global using ControlR.Libraries.Shared.Helpers;
 global using ControlR.Libraries.Shared.Models;
 global using ControlR.Libraries.Shared.Hubs;
 global using ControlR.Libraries.Shared.Services;
-global using MauiFiles = Microsoft.Maui.Storage.IFileSystem;
-global using FileIO = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
+global using Microsoft.Extensions.Logging;

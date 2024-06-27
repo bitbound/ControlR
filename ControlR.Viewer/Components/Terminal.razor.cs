@@ -1,7 +1,6 @@
 ﻿using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
 using System.Collections.Concurrent;

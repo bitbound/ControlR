@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Primitives;
-using ControlR.Server.Models;
+﻿using ControlR.Server.Models;
 using ControlR.Server.Services.Distributed.Locking;
 using ControlR.Server.Services.Interfaces;
 using MessagePack;
@@ -17,9 +16,11 @@ public class ConnectionCounterDistributed(
 {
     private volatile int _agentCount;
 
+    private volatile int _streamerCount;
     private volatile int _viewerCount;
-
     public int AgentConnectionLocalCount => _agentCount;
+
+    public int StreamerConnectionLocalCount => _streamerCount;
 
     public int ViewerConnectionLocalCount => _viewerCount;
 
@@ -33,19 +34,33 @@ public class ConnectionCounterDistributed(
         Interlocked.Decrement(ref _viewerCount);
     }
 
+    public void DecrementStreamerCount()
+    {
+        Interlocked.Decrement(ref _streamerCount);
+    }
+
     public async Task<Result<int>> GetAgentConnectionCount()
     {
         return await GetCount(LockKeys.AgentCount);
+    }
+
+    public async Task<Result<int>> GetStreamerConnectionCount()
+    {
+        return await GetCount(LockKeys.StreamerCount);
     }
 
     public async Task<Result<int>> GetViewerConnectionCount()
     {
         return await GetCount(LockKeys.ViewerCount);
     }
-
     public void IncrementAgentCount()
     {
         Interlocked.Increment(ref _agentCount);
+    }
+
+    public void IncrementStreamerCount()
+    {
+        Interlocked.Increment(ref _streamerCount);
     }
 
     public void IncrementViewerCount()

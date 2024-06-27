@@ -1,5 +1,4 @@
 ﻿using ControlR.Agent.Startup;
-using Microsoft.AspNetCore.SignalR.Client;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 

@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
 using FileSystem = Microsoft.Maui.Storage.FileSystem;
@@ -66,6 +65,8 @@ public static class MauiProgram
         builder.Services.AddSingleton(VersionTracking.Default);
         builder.Services.AddSingleton(FolderPicker.Default);
         builder.Services.AddSingleton(FileSaver.Default);
+        builder.Services.AddSingleton(DeviceInfo.Current);
+        builder.Services.AddSingleton(DeviceDisplay.Current);
 
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
         builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
@@ -75,7 +76,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
         builder.Services.AddSingleton<IViewerHubConnection, ViewerHubConnection>();
         builder.Services.AddSingleton<IDeviceCache, DeviceCache>();
-        builder.Services.AddTransient<IJsInterop, JsInterop>();
         builder.Services.AddSingleton<IFileSystemCore, FileSystemCore>();
         builder.Services.AddSingleton<ISystemTime, SystemTime>();
         builder.Services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
@@ -88,6 +88,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISettingsExporter, SettingsExporter>();
         builder.Services.AddSingleton<IUiThread, UiThread>();
         builder.Services.AddSingleton<IClipboardManager, ClipboardManager>();
+        builder.Services.AddTransient<IJsInterop, JsInterop>();
 
         builder.Services.AddHttpClient<IKeyApi, KeyApi>(ConfigureHttpClient);
         builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);

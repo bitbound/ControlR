@@ -1,6 +1,8 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+RUN apt update
+RUN apt -y install curl
 RUN mkdir -p /app/AppData
 RUN chown app:app -R /app/AppData
 USER app
@@ -26,3 +28,6 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ControlR.Server.dll"]
+
+HEALTHCHECK \
+  CMD curl -f http://localhost:8080/api/status || exit 1

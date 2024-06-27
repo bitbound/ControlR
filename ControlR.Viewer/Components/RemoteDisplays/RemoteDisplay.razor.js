@@ -13,9 +13,6 @@
     /** @type {string} */
     currentPointerType;
 
-    /** @type {RTCDataChannel} */
-    dataChannel;
-
     /** @type {boolean} */
     isDragging;
 
@@ -37,9 +34,6 @@
     /** @type {number} */
     mouseMoveTimeout;
 
-    /** @type {RTCPeerConnection} */
-    peerConnection;
-
     /** @type {PointerEvent} */
     pointerDownEvent;
 
@@ -50,13 +44,26 @@
     touchList;
 
     /** @type {string} */
-    videoId;
+    canvasId;
 
-    /** @type {HTMLVideoElement} */
-    videoElement;
+    /** @type {HTMLCanvasElement} */
+    canvasElement;
+
+    /** @type {CanvasRenderingContext2D} */
+    canvas2dContext;
 
     /** @type {WindowEventHandler[]} */
     windowEventHandlers;
+
+
+    /**
+     * @param {string} methodName
+     * @param {...any} args
+     * @returns {Promise<any>}
+     */
+    invokeDotNet(methodName, ...args) {
+        return this.componentRef.invokeMethodAsync(methodName, ...args);
+    }
 }
 
 class WindowEventHandler {
@@ -77,148 +84,107 @@ class WindowEventHandler {
     handler;
 }
 
-/**
- * 
- * @param {string} videoId
- * @param {string} mediaId
- * @param {string} name
- */
-export async function changeDisplays(videoId, mediaId, name) {
-    const state = getState(videoId);
-    const dto = {
-        dtoType: "changeDisplay",
-        mediaId: mediaId,
-        name: name
-    }
-    
-    state.dataChannel.send(JSON.stringify(dto));
-}
 
 /**
  * 
- * @param {string} videoId
+ * @param {string} canvasId
  */
-export async function dispose(videoId) {
-    const state = getState(videoId);
-
-    try {
-        if (state.peerConnection) {
-            state.peerConnection.close();
-        }
-    }
-    catch { }
-
-    try {
-        if (state.dataChannel) {
-            state.dataChannel.close();
-        }
-    }
-    catch { }
+export async function dispose(canvasId) {
+    const state = getState(canvasId);
 
     state.windowEventHandlers.forEach(x => {
         console.log("Removing event handler: ", x);
         window.removeEventListener(x.type, x.handler);
     })
 
-    delete window[videoId];
+    delete window[canvasId];
 }
 
 /**
- * Retains a reference to the video element ID and registers
- * event handlers for the video element.
+ * Draws the encoded image onto the canvas at the specified region.
+ * @param {string} canvasId
+ * @param {Number} x
+ * @param {Number} y
+ * @param {Number} width
+ * @param {Number} height
+ * @param {Uint8Array} encodedRegion
+ */
+export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
+    const state = getState(canvasId);
+    const imageBlob = new Blob([encodedRegion]);
+    const bitmap = await createImageBitmap(imageBlob);
+    state.canvas2dContext.drawImage(bitmap, x, y, width, height);
+    bitmap.close();
+}
+
+/**
+ * Retains a reference to the canvas element ID and registers
+ * event handlers for the canvas element.
  * @param {any} componentRef
- * @param {string} videoId
+ * @param {string} canvasId
  * @param {RTCIceServer[]} iceServers
  */
-export async function initialize(componentRef, videoId, iceServers) {
-    const state = getState(videoId);
+export async function initialize(componentRef, canvasId) {
+    const state = getState(canvasId);
     console.log("Initializing with state: ", state);
 
-    /** @type {HTMLVideoElement} */
-    const video = document.getElementById(videoId);
+    /** @type {HTMLcanvasElement} */
+    const canvas = document.getElementById(canvasId);
 
     state.componentRef = componentRef;
-    state.videoId = videoId;
-    state.videoElement = video;
+    state.canvasId = canvasId;
+    state.canvasElement = canvas;
+    state.canvas2dContext = canvas.getContext("2d");
 
-    video.muted = true;
-    video.defaultMuted = true;
-
-    console.log("Creating peer connection with ICE servers: ", iceServers);
-    invokeDotNet("LogInfo", videoId, "Creating peer connection with ICE servers: " + JSON.stringify(iceServers));
-    state.peerConnection = new RTCPeerConnection({
-        iceServers: iceServers
-    });
-
-    setPeerConnectionHandlers(state.peerConnection, videoId);
-
-    video.addEventListener("pointerup", ev => {
-        if (video.classList.contains("scroll-mode")) {
+    canvas.addEventListener("pointerup", async ev => {
+        if (canvas.classList.contains("scroll-mode")) {
             ev.preventDefault();
             ev.stopPropagation();
             return;
         }
 
         if (state.longPressStarted && !state.isDragging) {
-            sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, 2, state);
-            sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 2, state);
+            await sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, 2, state);
+            await sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 2, state);
         }
 
         if (state.longPressStarted && state.isDragging) {
-            sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 0, state);
+            await sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, 0, state);
         }
 
         resetTouchState(state);
     });
 
-    video.addEventListener("pointercancel", ev => {
+    canvas.addEventListener("pointercancel", ev => {
         resetTouchState(state);
     });
-    video.addEventListener("pointerout", ev => {
+    canvas.addEventListener("pointerout", ev => {
         resetTouchState(state);
     });
-    video.addEventListener("pointerleave", ev => {
+    canvas.addEventListener("pointerleave", ev => {
         resetTouchState(state);
     });
-    
-    video.addEventListener("pointermove", ev => {
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+
+    canvas.addEventListener("pointermove", async ev => {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
-        
-        if (video.classList.contains("scroll-mode")) {
+
+        if (canvas.classList.contains("scroll-mode")) {
             ev.preventDefault();
             ev.stopPropagation();
 
-            sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
+            await sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
 
-            let wheelScrollDto = {};
-            const percentX = ev.offsetX / state.videoElement.clientWidth;
-            const percentY = ev.offsetY / state.videoElement.clientHeight;
+            const percentX = ev.offsetX / state.canvasElement.clientWidth;
+            const percentY = ev.offsetY / state.canvasElement.clientHeight;
 
             if (Math.abs(ev.movementY) > Math.abs(ev.movementX)) {
-                wheelScrollDto = {
-                    dtoType: "wheelScrollEvent",
-                    percentX: percentX,
-                    percentY: percentY,
-                    scrollY: ev.movementY * 4,
-                    scrollX: 0
-                };
+                await state.invokeDotNet("SendWheelScroll", percentX, percentY, ev.MovementY * 3, 0);
             }
             else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
-                wheelScrollDto = {
-                    dtoType: "wheelScrollEvent",
-                    percentX: percentX,
-                    percentY: percentY,
-                    scrollY: 0,
-                    scrollX: ev.movementX * -4,
-                };
+                await state.invokeDotNet("SendWheelScroll", percentX, percentY, 0, ev.movementX * -3);
             }
-            else {
-                return;
-            }
-            
-            state.dataChannel.send(JSON.stringify(wheelScrollDto));
             return;
         }
 
@@ -232,10 +198,10 @@ export async function initialize(componentRef, videoId, iceServers) {
                 ev.offsetX,
                 ev.offsetY);
 
-            if (moveDistance > 10) { 
+            if (moveDistance > 10) {
                 state.isDragging = true;
-                sendPointerMove(state.longPressStartOffsetX, state.longPressStartOffsetY, state);
-                sendMouseButtonEvent(state.longPressStartOffsetX, state.longPressStartOffsetY, true, 0, state);
+                await sendPointerMove(state.longPressStartOffsetX, state.longPressStartOffsetY, state);
+                await sendMouseButtonEvent(state.longPressStartOffsetX, state.longPressStartOffsetY, true, 0, state);
             }
 
             return;
@@ -244,94 +210,87 @@ export async function initialize(componentRef, videoId, iceServers) {
         if (state.isDragging) {
             ev.preventDefault();
             ev.stopPropagation();
-            sendPointerMove(ev.offsetX, ev.offsetY, state);
+            await sendPointerMove(ev.offsetX, ev.offsetY, state);
         }
     })
 
-    
-    video.addEventListener("pointerdown", ev => {
+
+    canvas.addEventListener("pointerdown", ev => {
         state.currentPointerType = ev.pointerType;
         state.pointerDownEvent = ev;
     });
 
-    video.addEventListener("pointerenter", ev => {
+    canvas.addEventListener("pointerenter", ev => {
         state.currentPointerType = ev.pointerType;
     });
 
-    video.addEventListener("touchmove", ev => {
-        if (state.longPressStarted || state.isDragging || video.classList.contains("scroll-mode")) {
+    canvas.addEventListener("touchmove", ev => {
+        if (state.longPressStarted || state.isDragging || canvas.classList.contains("scroll-mode")) {
             ev.preventDefault();
         }
     });
 
-    video.addEventListener("mousemove", async ev => {
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+    canvas.addEventListener("mousemove", async ev => {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
-     
+
         const now = Date.now();
         if (now - state.lastPointerMove < 50) {
             if (state.mouseMoveTimeout > -1) {
                 window.clearTimeout(state.mouseMoveTimeout);
             }
-            state.mouseMoveTimeout = window.setTimeout(() => {
-                sendPointerMove(ev.offsetX, ev.offsetY, state);
+            state.mouseMoveTimeout = window.setTimeout(async () => {
+                await sendPointerMove(ev.offsetX, ev.offsetY, state);
             }, 60);
             return;
         }
-
         state.lastPointerMove = now;
-        sendPointerMove(ev.offsetX, ev.offsetY, state);
+
+        await sendPointerMove(ev.offsetX, ev.offsetY, state);
     });
 
-    video.addEventListener("mousedown", async ev => {
+    canvas.addEventListener("mousedown", async ev => {
         ev.stopPropagation();
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
 
-        sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, ev.button, state);
+        await sendMouseButtonEvent(ev.offsetX, ev.offsetY, true, ev.button, state);
     });
 
-    video.addEventListener("mouseup", async ev => {
+    canvas.addEventListener("mouseup", async ev => {
         ev.stopPropagation();
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
 
-        sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, ev.button, state);
+        await sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, ev.button, state);
     });
 
-    video.addEventListener("wheel", ev => {
+    canvas.addEventListener("wheel", async ev => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
-        
-        const percentX = ev.offsetX / state.videoElement.clientWidth;
-        const percentY = ev.offsetY / state.videoElement.clientHeight;
-        
-        const wheelScrollDto = {
-            dtoType: "wheelScrollEvent",
-            percentX: percentX,
-            percentY: percentY,
-            scrollY: -ev.deltaY
-        };
-        state.dataChannel.send(JSON.stringify(wheelScrollDto));
+
+        const percentX = ev.offsetX / state.canvasElement.clientWidth;
+        const percentY = ev.offsetY / state.canvasElement.clientHeight;
+
+        await state.invokeDotNet("SendWheelScroll", percentX, percentY, -ev.deltaY, 0);
     });
 
-    video.addEventListener("contextmenu", async ev => {
+    canvas.addEventListener("contextmenu", async ev => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        if (!isDataChannelReady(videoId) ||
-            video.classList.contains("minimized") ||
-            video.classList.contains("scroll-mode")) {
+        if (canvas.classList.contains("minimized") ||
+            canvas.classList.contains("scroll-mode")) {
             return;
         }
-     
+
         if (state.currentPointerType == "touch") {
             state.longPressStarted = true;
             state.longPressStartOffsetX = ev.offsetX;
@@ -339,21 +298,14 @@ export async function initialize(componentRef, videoId, iceServers) {
         }
     });
 
-    video.addEventListener("canplay", async () => {
-        await invokeDotNet("LogInfo", videoId, "CanPlay event fired.  Playing.");
-        await video.play();
-        await invokeDotNet("NotifyStreamLoaded", videoId);
-        //video.muted = false;
-        //await invokeDotNet("NotifyStreamLoaded", videoId);
-    });
 
     /** @param {KeyboardEvent} ev */
-    const onKeyDown = (ev) => {
+    const onKeyDown = async (ev) => {
         if (document.querySelector("input:focus") || document.querySelector("textarea:focus")) {
             return;
         }
 
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
 
@@ -361,12 +313,7 @@ export async function initialize(componentRef, videoId, iceServers) {
             ev.preventDefault();
         }
 
-        const keyPressDto = {
-            dtoType: "keyEvent",
-            isPressed: true,
-            key: ev.key
-        };
-        state.dataChannel.send(JSON.stringify(keyPressDto));
+        await state.invokeDotNet("SendKeyEvent", ev.key, true);
     };
     window.addEventListener("keydown", onKeyDown);
     state.windowEventHandlers.push(new WindowEventHandler("keydown", onKeyDown));
@@ -377,7 +324,7 @@ export async function initialize(componentRef, videoId, iceServers) {
             return;
         }
 
-        if (!isDataChannelReady(videoId) || video.classList.contains("minimized")) {
+        if (canvas.classList.contains("minimized")) {
             return;
         }
         ev.preventDefault();
@@ -386,125 +333,38 @@ export async function initialize(componentRef, videoId, iceServers) {
             isPressed: false,
             key: ev.key
         };
-        state.dataChannel.send(JSON.stringify(keyPressDto));
+
+        state.invokeDotNet("SendKeyEvent", ev.key, false);
     }
     window.addEventListener("keyup", onKeyUp);
     state.windowEventHandlers.push(new WindowEventHandler("keyup", onKeyUp));
 
-    const onBlur = () => {
-        if (!isDataChannelReady(videoId)) {
-            return;
-        }
-        const resetKeysDto = {
-            dtoType: "resetKeyboardState"
-        };
-        state.dataChannel.send(JSON.stringify(resetKeysDto));
+    const onBlur = async () => {
+        await state.invokeDotNet("SendKeyboardStateReset");
     }
     window.addEventListener("blur", onBlur);
     state.windowEventHandlers.push("blur", onBlur);
 }
 
-/**
- * 
- * @param {HTMLVideoElement} videoElement
- */
-export async function playVideo(videoElement) {
-    videoElement.muted = false;
-    await videoElement.play();
-}
-
-/**
- * 
- * @param {string} candidateJson
- * @param {string} videoId
- */
-export async function receiveIceCandidate(candidateJson, videoId) {
-    try {
-        const state = getState(videoId);
-
-        if (!candidateJson) {
-            console.log("Received null (terminating) ICE candidate.");
-            invokeDotNet("LogInfo", videoId, "Received null (terminating) ICE candidate");
-            await this.peerConnection.addIceCandidate(null);
-            return;
-        }
-
-        invokeDotNet("LogInfo", videoId, "Adding ICE candidate: " + candidateJson);
-        const candidate = JSON.parse(candidateJson);
-        console.log("Adding ICE candidate: ", candidate);
-        state.peerConnection.addIceCandidate(candidate);
-    }
-    catch (ex) {
-        console.error(ex);
-        invokeDotNet("LogError", videoId, "Error while receiving ICE candidate: " + JSON.stringify(ex));
-    }
-}
-
-/**
- * 
- * @param {RTCSessionDescription} sessionDescription
- * @param {string} videoId
- */
-export async function receiveRtcSessionDescription(sessionDescription, videoId) {
-    try {
-        const state = getState(videoId);
-
-        console.log("Setting remote description: ", sessionDescription);
-        invokeDotNet("LogInfo", videoId, "Setting remote description: " + JSON.stringify(sessionDescription));
-
-        await state.peerConnection.setRemoteDescription(sessionDescription);
-
-        if (sessionDescription.type == "offer") {
-            console.log("Creating RTC answer.");
-            invokeDotNet("LogInfo", videoId, "Creating RTC answer.");
-            await state.peerConnection.setLocalDescription();
-            console.log("Sending RTC answer.", state.peerConnection.localDescription);
-            invokeDotNet("LogInfo", videoId, "Sending RTC answer: " + JSON.stringify(state.peerConnection.localDescription));
-            await invokeDotNet("SendRtcDescription", videoId, state.peerConnection.localDescription);
-        }
-    }
-    catch (ex) {
-        console.error(ex);
-        invokeDotNet("LogError", videoId, "Error while receiving session description: " + JSON.stringify(ex));
-    }
-}
-
-/**
- * 
- * @param {RTCIceServer[]} iceServers
- * @param {string} videoId
- */
-export async function resetPeerConnection(iceServers, videoId) {
-    const state = getState(videoId);
-
-    if (state.peerConnection) {
-        state.peerConnection.close();
-    }
-
-    state.peerConnection = new RTCPeerConnection({
-        iceServers: iceServers,
-    });
-    setPeerConnectionHandlers(state.peerConnection, videoId);
-}
 
 /**
  * 
  * @param {number} pinchCenterX
  * @param {number} pinchCenterY
  * @param {HTMLDivElement} contentDiv
- * @param {HTMLVideoElement} videoRef
- * @param {number} videoCssWidth
- * @param {number} videoCssHeight
+ * @param {HTMLcanvasElement} canvasRef
+ * @param {number} canvasCssWidth
+ * @param {number} canvasCssHeight
  * @param {number} widthChange
  * @param {number} heightChange
  */
-export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, videoRef, videoCssWidth, videoCssHeight, widthChange, heightChange) {
-    videoRef.style.width = `${videoCssWidth}px`;
-    videoRef.style.height = `${videoCssHeight}px`;
+export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange) {
+    canvasRef.style.width = `${canvasCssWidth}px`;
+    canvasRef.style.height = `${canvasCssHeight}px`;
 
     var clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
     var clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
-    
+
     var pinchAdjustX = pinchCenterX / window.innerWidth - .5;
     var pinchAdjustY = pinchCenterY / window.innerHeight - .5;
 
@@ -514,51 +374,28 @@ export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, 
     contentDiv.scrollBy(scrollByX, scrollByY);
 }
 
-/**
- * 
- * @param {string} text
- * @param {string} videoId
- */
-export async function sendClipboardText(text, videoId) {
-    const state = getState(videoId);
-
-    const typeDto = {
-        dtoType: "clipboardChanged",
-        text: text
-    };
-    state.dataChannel.send(JSON.stringify(typeDto));
-}
 
 /**
  * 
  * @param {string} key
- * @param {string} videoId
+ * @param {string} canvasId
  */
-export async function sendKeyPress(key, videoId) {
-    const state = getState(videoId);
+export async function sendKeyPress(key, canvasId) {
+    const state = getState(canvasId);
 
-    const keyPressDto = {
-        dtoType: "keyEvent",
-        isPressed: true,
-        shouldRelease: true,
-        key: key,
-    };
-    state.dataChannel.send(JSON.stringify(keyPressDto));
+    await state.invokeDotNet("SendKeyEvent", key, true);
+    await state.invokeDotNet("SendKeyEvent", key, false);
 }
 
 /**
  * 
  * @param {string} text
- * @param {string} videoId
+ * @param {string} canvasId
  */
-export async function typeText(text, videoId) {
-    const state = getState(videoId);
+export async function typeText(text, canvasId) {
+    const state = getState(canvasId);
 
-    const typeDto = {
-        dtoType: "typeText",
-        text: text
-    };
-    state.dataChannel.send(JSON.stringify(typeDto));
+    await state.invokeDotNet("SendTypeText", text);
 }
 
 /**
@@ -574,30 +411,16 @@ function getDistanceBetween(point1X, point1Y, point2X, point2Y) {
 
 /**
  * 
- * @param {string} videoId
+ * @param {string} canvasId
  * @returns {State}
  */
-function getState(videoId) {
-    if (!window[`state-${videoId}`]) {
-        window[`state-${videoId}`] = new State();
+function getState(canvasId) {
+    if (!window[`state-${canvasId}`]) {
+        window[`state-${canvasId}`] = new State();
     }
-    return window[`state-${videoId}`];
+    return window[`state-${canvasId}`];
 }
 
-
-/**
- * 
- * @param {string} videoId
- * @returns
- */
-function isDataChannelReady(videoId) {
-    const state = getState(videoId);
-    if (!state.dataChannel || state.dataChannel.readyState != "open") {
-        return false;
-    }
-
-    return true;
-}
 
 /**
  * 
@@ -606,7 +429,7 @@ function isDataChannelReady(videoId) {
 function resetTouchState(state) {
     state.longPressStarted = false;
     state.isDragging = false;
-    state.videoElement.parentElement.style.touchAction = "";
+    state.canvasElement.parentElement.style.touchAction = "";
 }
 
 /**
@@ -615,14 +438,10 @@ function resetTouchState(state) {
  * @param {number} offsetY
  * @param {State} state
  */
-function sendPointerMove(offsetX, offsetY, state) {
-    const pointerMoveDto = {
-        dtoType: "pointerMove",
-        percentX: offsetX / state.videoElement.clientWidth,
-        percentY: offsetY / state.videoElement.clientHeight
-    };
-
-    state.dataChannel.send(JSON.stringify(pointerMoveDto));
+async function sendPointerMove(offsetX, offsetY, state) {
+    const percentX = offsetX / state.canvasElement.clientWidth;
+    const percentY = offsetY / state.canvasElement.clientHeight;
+    await state.invokeDotNet("SendPointerMove", percentX, percentY);
 }
 
 /**
@@ -633,169 +452,9 @@ function sendPointerMove(offsetX, offsetY, state) {
  * @param {number} button
  * @param {State} state
  */
-function sendMouseButtonEvent(offsetX, offsetY, isPressed, button, state) {
-    const mouseButtonDto = {
-        dtoType: "mouseButtonEvent",
-        percentX: offsetX / state.videoElement.clientWidth,
-        percentY: offsetY / state.videoElement.clientHeight,
-        isPressed: isPressed,
-        button: button
-    };
-
-    state.dataChannel.send(JSON.stringify(mouseButtonDto));
+async function sendMouseButtonEvent(offsetX, offsetY, isPressed, button, state) {
+    const percentX = offsetX / state.canvasElement.clientWidth;
+    const percentY = offsetY / state.canvasElement.clientHeight;
+    await state.invokeDotNet("SendMouseButtonEvent", button, isPressed, percentX, percentY);
 }
 
-
-/**
- * 
- * @param {RTCPeerConnection} peerConnection
- * @param {string} videoId
- */
-function setPeerConnectionHandlers(peerConnection, videoId) {
-    const state = getState(videoId);
-
-    peerConnection.addEventListener("connectionstatechange", ev => {
-        console.log("Connection state changed: ", peerConnection.connectionState);
-        invokeDotNet("LogInfo", videoId, "Connection state changed: " + peerConnection.connectionState);
-        switch (peerConnection.connectionState) {
-            case "closed":
-            case "disconnected":
-                peerConnection.restartIce();
-                invokeDotNet("SetStatusMessage", videoId, "Reconnecting");
-                invokeDotNet("NotifyConnectionLost", videoId, false);
-                break;
-            case "failed":
-                invokeDotNet("SetStatusMessage", videoId, "Connection failed");
-                invokeDotNet("NotifyConnectionLost", videoId, true);
-                break;
-            case "connected":
-                break;
-            default:
-                break;
-        }
-    });
-
-    peerConnection.addEventListener("iceconnectionstatechange", ev => {
-        console.log("ICE connection state changed: ", peerConnection.iceConnectionState);
-        invokeDotNet("LogInfo", videoId, "ICE connection state changed: " + peerConnection.iceConnectionState);
-    });
-
-    peerConnection.addEventListener("icecandidateerror", ev => {
-        const err = {
-            errorCode: ev.errorCode,
-            errorText: ev.errorText,
-            port: ev.port,
-            url: ev.url,
-            address: ev.address
-        }
-        console.log("ICE candidate error: ", ev);
-        invokeDotNet("LogInfo", videoId, "ICE candidate error: " + JSON.stringify(err));
-    });
-
-    peerConnection.addEventListener("signalingstatechange", ev => {
-        console.log("Signaling state changed: ", peerConnection.signalingState);
-        invokeDotNet("LogInfo", videoId, "Signaling state changed: " + peerConnection.signalingState);
-    });
-
-    peerConnection.addEventListener("track", async ev => {
-        console.log("Received track: ", ev.track);
-
-        state.videoElement.srcObject = ev.streams[0];
-
-        const trackObj = {
-            kind: ev.track.kind,
-            id: ev.track.id,
-            label: ev.track.label,
-            readyState: ev.track.readyState
-        }
-        await invokeDotNet("LogInfo", videoId, "Received track: " + JSON.stringify(trackObj));
-    });
-
-    peerConnection.addEventListener("datachannel", async ev => {
-        console.log("Received data channel: ", ev);
-        await invokeDotNet("LogInfo", videoId, "Received data channel: " + JSON.stringify(ev.channel));
-        state.dataChannel = ev.channel;
-        setDataChannelHandlers(state.dataChannel, videoId);
-    })
-
-    peerConnection.addEventListener("negotiationneeded", async () => {
-        try {
-            state.isMakingOffer = true;
-            console.log("Negotiation needed.");
-            await invokeDotNet("LogInfo", videoId, "Negotiation needed.");
-            await peerConnection.setLocalDescription();
-            await invokeDotNet("LogInfo", videoId, "Sending RTC offer: " + JSON.stringify(peerConnection.localDescription));
-            await invokeDotNet("SendRtcDescription", videoId, peerConnection.localDescription);
-        }
-        catch (ex) {
-            console.error(ex);
-            await invokeDotNet("LogError", videoId, "Error occurred: " + JSON.stringify(ex));
-        }
-        finally {
-            state.isMakingOffer = false;
-        }
-    });
-
-    peerConnection.addEventListener("icecandidate", async ev => {
-        if (!ev.candidate) {
-            console.log("End of ICE candidates.");
-            invokeDotNet("LogInfo", videoId, "End of ICE candidates.");
-            return;
-        }
-
-        console.log("Sending ICE candidate: ", ev.candidate);
-        invokeDotNet("LogInfo", videoId, "Sending ICE candidate: " + JSON.stringify(ev.candidate));
-        await invokeDotNet("SendIceCandidate", videoId, JSON.stringify(ev.candidate));
-    });
-}
-
-/**
- * 
- * @param {RTCDataChannel} dataChannel
- * @param {string} videoId
- */
-function setDataChannelHandlers(dataChannel, videoId) {
-    dataChannel.addEventListener("close", () => {
-        console.log("DataChannel closed.");
-        invokeDotNet("LogInfo", videoId, "DataChannel closed.");
-    });
-
-    dataChannel.addEventListener("error", () => {
-        console.log("DataChannel error.");
-        invokeDotNet("LogInfo", videoId, "DataChannel error.");
-    });
-
-    dataChannel.addEventListener("open", async () => {
-        console.log("DataChannel opened");
-        invokeDotNet("LogInfo", videoId, "DataChannel opened.");
-    });
-
-    dataChannel.addEventListener("message", async ev => {
-        console.log("Got DataChannel message: ", ev.data);
-        await invokeDotNet("LogInfo", videoId, "Got DataChannel message: " + ev.data);
-        const dto = JSON.parse(ev.data);
-        switch (dto.dtoType) {
-            case "clipboardChanged":
-                await invokeDotNet("SetClipboardText", videoId, dto.text)
-                break;
-            case "displaysChanged":
-                await invokeDotNet("SetDisplays", videoId, dto.allDisplays);
-                await invokeDotNet("SetCurrentDisplay", videoId, dto.currentDisplay);
-                break;
-            default:
-                console.log("Unrecogized DTO type: ", dto);
-                await invokeDotNet("LogError", videoId, `Unrecognized DTO type: ${ev.data}`);
-                break;
-        }
-    });
-}
-
-/**
- * @param {string} methodName
- * @param {string} videoId
- * @returns {Promise<any>}
- */
-function invokeDotNet(methodName, videoId, args) {
-    const state = getState(videoId);
-    return state.componentRef.invokeMethodAsync(methodName, args);
-}

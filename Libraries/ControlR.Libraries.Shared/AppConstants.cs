@@ -18,9 +18,9 @@ public static partial class AppConstants
         {
             return EnvironmentHelper.Instance.Platform switch
             {
-                SystemPlatform.Windows => "controlr-streamer.exe",
-                SystemPlatform.Android => "controlr-streamer.exe",
-                SystemPlatform.Linux => "controlr-streamer",
+                SystemPlatform.Windows => "ControlR.Streamer.exe",
+                SystemPlatform.Linux => "ControlR.Streamer",
+                SystemPlatform.Android => throw new PlatformNotSupportedException(),
                 SystemPlatform.MacOS => throw new PlatformNotSupportedException(),
                 SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
                 _ => throw new PlatformNotSupportedException(),
@@ -34,7 +34,7 @@ public static partial class AppConstants
         {
             return EnvironmentHelper.Instance.Platform switch
             {
-                SystemPlatform.Windows => "controlr-streamer-win.zip",
+                SystemPlatform.Windows => "ControlR.Streamer.zip",
                 _ => throw new PlatformNotSupportedException(),
             };
         }
@@ -93,11 +93,14 @@ public static partial class AppConstants
     {
         return runtime switch
         {
-            RuntimeId.WinX64 or RuntimeId.WinX86 => "/downloads/controlr-streamer-win.zip",
+            RuntimeId.WinX64 or RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Streamer.zip",
             _ => throw new PlatformNotSupportedException()
         };
     }
 
     [GeneratedRegex("[^A-Za-z0-9_-]")]
     public static partial Regex UsernameValidator();
+
+    [GeneratedRegex("[^A-Za-z0-9_@-]")]
+    public static partial Regex PublicKeyLabelValidator();
 }

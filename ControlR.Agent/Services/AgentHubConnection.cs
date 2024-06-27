@@ -3,7 +3,6 @@ using ControlR.Agent.Interfaces;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,6 +20,7 @@ using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 namespace ControlR.Agent.Services;
 
@@ -33,7 +33,7 @@ internal interface IAgentHubConnection : IHubConnectionBase, IHostedService
 
 internal class AgentHubConnection(
      IHostApplicationLifetime _appLifetime,
-     IServiceScopeFactory _scopeFactory,
+     IServiceProvider _services,
      IDeviceDataGenerator _deviceCreator,
      IEnvironmentHelper _environmentHelper,
      ISettingsProvider _settings,
@@ -46,9 +46,9 @@ internal class AgentHubConnection(
      ITerminalStore _terminalStore,
      IDelayer _delayer,
      IWin32Interop _win32Interop,
-     IOptionsMonitor<AgentAppOptions> _agentOptions,
+     IOptionsMonitor<AgentAppOptions> _appOptions,
      ILogger<AgentHubConnection> _logger)
-        : HubConnectionBase(_scopeFactory, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
+        : HubConnectionBase(_services, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
 {
     public async Task<bool> CreateStreamingSession(SignedPayloadDto signedDto)
     {
@@ -76,7 +76,6 @@ internal class AgentHubConnection(
                 signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.NotifyUserOnSessionStart,
-                dto.LowerUacDuringSession,
                 dto.ViewerName)
                 .ConfigureAwait(false);
 
@@ -121,7 +120,7 @@ internal class AgentHubConnection(
                 return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
             }
 
-            var agentOptions = _agentOptions.CurrentValue;
+            var agentOptions = _appOptions.CurrentValue;
             var settings = new AgentAppSettings()
             {
                 AppOptions = agentOptions
@@ -208,7 +207,7 @@ internal class AgentHubConnection(
                 return;
             }
 
-            if (_settings.AuthorizedKeys.Count == 0)
+            if (_settings.AuthorizedKeys2.Count == 0)
             {
                 _logger.LogWarning("There are no authorized keys in appsettings. Aborting heartbeat.");
                 return;
@@ -216,7 +215,7 @@ internal class AgentHubConnection(
 
             var device = await _deviceCreator.CreateDevice(
                 _cpuSampler.CurrentUtilization,
-                _settings.AuthorizedKeys,
+                _settings.AuthorizedKeys2,
                 _settings.DeviceId);
 
             var result = device.TryCloneAs<Device, DeviceDto>();
@@ -260,6 +259,7 @@ internal class AgentHubConnection(
               () => $"{_settings.ServerUri}hubs/agent",
               ConfigureConnection,
               ConfigureHttpOptions,
+              useReconnect: true,
                _appLifetime.ApplicationStopping);
 
         await SendDeviceHeartbeat();
@@ -314,7 +314,7 @@ internal class AgentHubConnection(
             return false;
         }
 
-        if (!_settings.AuthorizedKeys.Contains(signedDto.PublicKeyBase64))
+        if (!_settings.AuthorizedKeys2.Any(x => x.PublicKey == signedDto.PublicKeyBase64))
         {
             _logger.LogCritical("Public key does not exist in authorized keys list: {key}", signedDto.PublicKey);
             return false;

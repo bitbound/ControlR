@@ -10,17 +10,19 @@ using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using ControlR.Libraries.Shared.Dtos;
 
 namespace ControlR.Agent.Services;
 
 internal interface ISettingsProvider
 {
+    [Obsolete("AuthorizedKeys is deprecated. Use AuthorizedKeys2 instead.")]
     IReadOnlyList<string> AuthorizedKeys { get; }
+    IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2 { get; }
     string DeviceId { get; }
     Uri ServerUri { get; }
-
     string GetAppSettingsPath();
-
+    Task UpdatePublicKeyLabel(string publicKeyBase64, string publicKeyLabel);
     Task UpdateSettings(AgentAppSettings settings);
 }
 
@@ -33,12 +35,29 @@ internal class SettingsProvider(
     ILogger<SettingsProvider> _logger) : ISettingsProvider
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+    private readonly SemaphoreSlim _updateLock = new(1, 1);
 
 
     public IReadOnlyList<string> AuthorizedKeys
     {
         get => _appOptions.CurrentValue.AuthorizedKeys ?? [];
     }
+
+    public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2
+    {
+        get
+        {
+            var keys = _appOptions.CurrentValue.AuthorizedKeys2 ?? [];
+            var oldKeys = AuthorizedKeys
+                .ExceptBy(keys.Select(x => x.PublicKey), x => x)
+                .Select(x => new AuthorizedKeyDto("", x))
+                .ToArray();
+
+            keys.AddRange(oldKeys);
+            return keys;
+        }
+    }
+       
 
     public string DeviceId
     {
@@ -68,8 +87,37 @@ internal class SettingsProvider(
         return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
     }
 
+    public async Task UpdatePublicKeyLabel(string publicKeyBase64, string publicKeyLabel)
+    {
+        await _updateLock.WaitAsync();
+        try
+        {
+            var authorizedKeys = AuthorizedKeys2.ToList();
+
+            var index = authorizedKeys.FindIndex(x => x.PublicKey == publicKeyBase64);
+            if (index == -1)
+            {
+                _logger.LogWarning("Unable to update public key label.  Public key {PublicKey} not found.", publicKeyBase64);
+                return;
+            }
+
+            authorizedKeys[index] = authorizedKeys[index] with { Label = publicKeyLabel };
+            _appOptions.CurrentValue.AuthorizedKeys2 = [.. authorizedKeys];
+            await WriteToDisk(_appOptions.CurrentValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update public key label.");
+        }
+        finally
+        {
+            _updateLock.Release();
+        }
+    }
+
     public async Task UpdateSettings(AgentAppSettings settings)
     {
+        await _updateLock.WaitAsync();
         try
         {
             if (!Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri))
@@ -80,8 +128,7 @@ internal class SettingsProvider(
 
             var serverUriChanged = newServerUri != ServerUri;
 
-            var content = JsonSerializer.Serialize(settings, _jsonOptions);
-            await _fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
+            await WriteToDisk(settings);
 
             if (serverUriChanged)
             {
@@ -104,5 +151,20 @@ internal class SettingsProvider(
         {
             _logger.LogError(ex, "Failed to update settings.");
         }
+        finally
+        {
+            _updateLock.Release();
+        }
+    }
+
+    private async Task WriteToDisk(AgentAppOptions options)
+    {
+        await WriteToDisk(new AgentAppSettings() { AppOptions = options });
+    }
+
+    private async Task WriteToDisk(AgentAppSettings settings)
+    {
+        var content = JsonSerializer.Serialize(settings, _jsonOptions);
+        await _fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
     }
 }

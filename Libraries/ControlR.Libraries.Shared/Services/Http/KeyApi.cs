@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Net.Sockets;
 
 namespace ControlR.Libraries.Shared.Services.Http;
 

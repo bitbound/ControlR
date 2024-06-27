@@ -4,7 +4,7 @@ namespace ControlR.Viewer.Services;
 
 public interface IDeviceContentWindowStore
 {
-    IEnumerable<DeviceContentInstance> Windows { get; }
+    IReadOnlyList<DeviceContentInstance> Windows { get; }
 
     void Add(DeviceContentInstance instance);
 
@@ -23,7 +23,7 @@ internal class DeviceContentWindowStore: IDeviceContentWindowStore
         _messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     }
 
-    public IEnumerable<DeviceContentInstance> Windows => _cache;
+    public IReadOnlyList<DeviceContentInstance> Windows => _cache;
 
     public void Add(DeviceContentInstance instance)
     {

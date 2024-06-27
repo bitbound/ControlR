@@ -21,6 +21,8 @@ public class SignedPayloadDto
     public string PublicKeyBase64 => Convert.ToBase64String(PublicKey ?? []);
 
     [MsgPackKey]
+    public string PublicKeyLabel { get; init; } = string.Empty;
+    [MsgPackKey]
     public required string PublicKeyPem { get; init; }
 
     [MsgPackKey]
@@ -31,4 +33,9 @@ public class SignedPayloadDto
 
     [MsgPackKey]
     public required byte[] TimestampSignature { get; init; }
+
+    public T GetPayload<T>()
+    {
+        return MessagePackSerializer.Deserialize<T>(Payload);
+    }
 }

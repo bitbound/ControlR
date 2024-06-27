@@ -36,7 +36,6 @@ internal class StreamerLauncherWindows(
         byte[] authorizedKey,
         int targetWindowsSession = -1,
         bool notifyViewerOnSessionStart = false,
-        bool lowerUacDuringSession = false,
         string? viewerName = null)
     {
         await _createSessionLock.WaitAsync();
@@ -56,10 +55,10 @@ internal class StreamerLauncherWindows(
 
             var authorizedKeyBase64 = Convert.ToBase64String(authorizedKey);
 
-            var session = new StreamingSession(viewerConnectionId, lowerUacDuringSession);
+            var session = new StreamingSession(viewerConnectionId);
 
             var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
-            var args = $"--session-id={sessionId} --viewer-id={viewerConnectionId} --server-uri={serverUri} --authorized-key={authorizedKeyBase64} --notify-user={notifyViewerOnSessionStart}";
+            var args = $"--session-id {sessionId} --viewer-id {viewerConnectionId} --origin {serverUri} --authorized-key {authorizedKeyBase64} --notify-user {notifyViewerOnSessionStart}";
             if (!string.IsNullOrWhiteSpace(viewerName))
             {
                 args += $" --viewer-name=\"{viewerName}\"";
@@ -78,7 +77,7 @@ internal class StreamerLauncherWindows(
                     targetSessionId: targetWindowsSession,
                     forceConsoleSession: false,
                     desktopName: targetDesktop,
-                    hiddenWindow: false,
+                    hiddenWindow: true,
                     out var process);
 
                 if (process is null || process.Id == -1)
@@ -94,23 +93,39 @@ internal class StreamerLauncherWindows(
             }
             else
             {
-                if (_environment.IsDebug)
-                {
-                    args += " --dev";
-                }
-
                 var solutionDirReult = GetSolutionDir(Environment.CurrentDirectory);
 
                 if (solutionDirReult.IsSuccess)
                 {
-                    var desktopDir = Path.Combine(solutionDirReult.Value, "ControlR.Streamer");
+                    var streamerBin = Path.Combine(
+                        solutionDirReult.Value,
+                        "ControlR.Streamer",
+                        "bin",
+                        "Debug");
+
+                    var streamerPath = _fileSystem
+                        .GetFiles(streamerBin, AppConstants.StreamerFileName, SearchOption.AllDirectories)
+                        .FirstOrDefault();
+
+                    if (string.IsNullOrWhiteSpace(streamerPath))
+                    {
+                        throw new FileNotFoundException("Streamer binary not found.", streamerPath);
+                    }
+
                     var psi = new ProcessStartInfo()
                     {
-                        FileName = "cmd.exe",
-                        Arguments = $"/k npm run start -- -- {args}",
-                        WorkingDirectory = desktopDir,
+                        FileName = streamerPath,
+                        Arguments = args,
+                        WorkingDirectory = Path.GetDirectoryName(streamerPath),
                         UseShellExecute = true
                     };
+                    //var psi = new ProcessStartInfo()
+                    //{
+                    //    FileName = "cmd.exe",
+                    //    Arguments = $"/k {streamerPath} {args}",
+                    //    WorkingDirectory = Path.GetDirectoryName(streamerPath),
+                    //    UseShellExecute = true
+                    //};
                     session.StreamerProcess = _processes.Start(psi);
                 }
 

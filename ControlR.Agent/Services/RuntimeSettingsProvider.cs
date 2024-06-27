@@ -2,7 +2,6 @@
 using ControlR.Agent.Startup;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;

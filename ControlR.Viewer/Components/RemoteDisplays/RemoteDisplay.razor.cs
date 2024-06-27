@@ -1,10 +1,12 @@
-﻿using ControlR.Viewer.Enums;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Viewer.Enums;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using System.Net.WebSockets;
 using FocusEventArgs = Microsoft.AspNetCore.Components.Web.FocusEventArgs;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
@@ -12,29 +14,29 @@ namespace ControlR.Viewer.Components.RemoteDisplays;
 
 public partial class RemoteDisplay : IAsyncDisposable
 {
+    private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
     private readonly CancellationTokenSource _componentClosing = new();
+    private readonly SemaphoreSlim _streamLock = new(1, 1);
     private readonly SemaphoreSlim _typeLock = new(1, 1);
-    private readonly string _videoId = $"video-{Guid.NewGuid()}";
+    private double _canvasHeight;
+    private ElementReference _canvasRef;
+    private double _canvasScale = 1;
+    private double _canvasWidth;
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
-    private IceServer[] _iceServers = [];
     private bool _isMobileActionsMenuOpen;
     private bool _isScrollModeEnabled;
-    private bool _isStreamLoaded;
-    private bool _isStreamReady;
     private double _lastPinchDistance = -1;
     private ElementReference _screenArea;
     private DisplayDto? _selectedDisplay;
     private string _statusMessage = "Starting remote control session";
     private double _statusProgress = -1;
-    private double _videoHeight;
-    private ElementReference _videoRef;
-    private double _videoScale = 1;
-    private double _videoWidth;
+    private bool _streamStarted;
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
     private bool _virtualKeyboardToggled;
+
     [Inject]
     public required IAppState AppState { get; init; }
 
@@ -54,10 +56,16 @@ public partial class RemoteDisplay : IAsyncDisposable
     public required ILogger<RemoteDisplay> Logger { get; init; }
 
     [Inject]
+    public required IMemoryProvider MemoryProvider { get; init; }
+
+    [Inject]
     public required IMessenger Messenger { get; init; }
 
     [Parameter, EditorRequired]
     public required RemoteControlSession Session { get; set; }
+
+    [Inject]
+    public required ISettings Settings { get; init; }
 
     [Inject]
     public required ISnackbar Snackbar { get; init; }
@@ -69,7 +77,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
 
-    private string VideoClasses
+    private string CanvasClasses
     {
         get
         {
@@ -81,11 +89,11 @@ public partial class RemoteDisplay : IAsyncDisposable
             return classNames.ToLower();
         }
     }
-    private string VideoStyle
+    private string CanvasStyle
     {
         get
         {
-            return _isStreamLoaded ?
+            return _streamStarted ?
                 "display: unset;" :
                 "display: none;";
         }
@@ -109,7 +117,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         _componentClosing.Cancel();
         await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
         Messenger.UnregisterAll(this);
-        await JsModule.InvokeVoidAsync("dispose", _videoId);
+        await JsModule.InvokeVoidAsync("dispose", _canvasId);
         GC.SuppressFinalize(this);
     }
 
@@ -128,65 +136,40 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     [JSInvokable]
-    public async Task NotifyConnectionLost(bool shouldReconnect)
+    public async Task SendKeyboardStateReset()
     {
-        _isStreamReady = false;
-        _isStreamLoaded = false;
-        _statusProgress = -1;
-        if (shouldReconnect)
-        {
-            await SetStatusMessage("Creating new streaming session");
-            Session.CreateNewSessionId();
-            await RequestStreamingSessionFromAgent();
-        }
-        await InvokeAsync(StateHasChanged);
+        await ViewerHub.SendKeyboardStateReset(Session.StreamerConnectionId);
     }
 
     [JSInvokable]
-    public async Task NotifyStreamLoaded()
+    public async Task SendKeyEvent(string key, bool isPressed)
     {
-        _isStreamLoaded = true;
-        _statusMessage = string.Empty;
-        _statusProgress = 0;
-
-        Messenger.Unregister<LocalClipboardChangedMessage>(this);
-        Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
-
-        await ClipboardManager.Start();
-        await InvokeAsync(StateHasChanged);
+        await ViewerHub.SendKeyEvent(Session.StreamerConnectionId, key, isPressed);
+    }
+    [JSInvokable]
+    public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
+    {
+        await ViewerHub.SendMouseButtonEvent(Session.StreamerConnectionId, button, isPressed, percentX, percentY);
     }
 
     [JSInvokable]
-    public async Task NotifyStreamReady()
+    public async Task SendPointerMove(double percentX, double percentY)
     {
-        _isStreamReady = true;
-        if (!_isStreamLoaded)
-        {
-            _statusMessage = "Stream ready";
-        }
-        _statusProgress = 0;
-        await InvokeAsync(StateHasChanged);
+        await ViewerHub.SendPointerMove(Session.StreamerConnectionId, percentX, percentY);
     }
 
     [JSInvokable]
-    public async Task SendIceCandidate(string iceCandidateJson)
+    public async Task SendTypeText(string text)
     {
-        await ViewerHub.SendIceCandidate(Session.StreamerConnectionId, iceCandidateJson);
+        await ViewerHub.SendTypeText(Session.StreamerConnectionId, text);
     }
 
     [JSInvokable]
-    public async Task SendRtcDescription(RtcSessionDescription sessionDescription)
+    public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
     {
-        await InvokeAsync(StateHasChanged);
-        await ViewerHub.SendRtcSessionDescription(Session.StreamerConnectionId, sessionDescription);
+        await ViewerHub.SendWheelScroll(Session.StreamerConnectionId, percentX, percentY, scrollY, scrollX);
     }
 
-    [JSInvokable]
-    public async Task SetClipboardText(string text)
-    {
-        Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
-        await ClipboardManager.SetText(text);
-    }
 
     [JSInvokable]
     public async Task SetCurrentDisplay(DisplayDto display)
@@ -216,20 +199,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         if (firstRender)
         {
             _componentRef = DotNetObjectReference.Create(this);
-            Logger.LogInformation("Getting ICE servers.");
-            await SetStatusMessage("Getting ICE servers");
 
-            var iceServersResult = await ViewerHub.GetIceServers();
-
-            if (!iceServersResult.IsSuccess || iceServersResult.Value.Length == 0)
-            {
-                Snackbar.Add("Failed to get ICE servers", Severity.Error);
-                await Close();
-                return;
-            }
-
-            _iceServers = iceServersResult.Value;
-            await JsModule.InvokeVoidAsync("initialize", _componentRef, _videoId, _iceServers);
+            await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
 
             await SetStatusMessage("Creating streaming session");
             await RequestStreamingSessionFromAgent();
@@ -245,10 +216,9 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
 
         Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
-        Messenger.Register<IceCandidateMessage>(this, HandleIceCandidateReceived);
-        Messenger.Register<RtcSessionDescriptionMessage>(this, HandleRtcSessionDescription);
-        Messenger.Register<DesktopChangedMessage>(this, HandleDesktopChanged);
         Messenger.Register<StreamerInitDataReceivedMessage>(this, HandleStreamerInitDataReceived);
+        Messenger.Register<StreamerDisconnectedMessage>(this, HandleStreamerDisconnected);
+        Messenger.Register<DtoReceivedMessage<ClipboardChangeDto>>(this, HandleClipboardChangeReceived);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
         return base.OnInitializedAsync();
@@ -259,7 +229,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             _selectedDisplay = display;
-            await JsModule.InvokeVoidAsync("changeDisplays", _videoId, display.MediaId, display.Name);
+            await ViewerHub.SendChangeDisplaysRequest(Session.StreamerConnectionId, _selectedDisplay.DisplayId);
         }
         catch (Exception ex)
         {
@@ -274,44 +244,43 @@ public partial class RemoteDisplay : IAsyncDisposable
         await DisposeAsync();
     }
 
-    private async Task HandleDesktopChanged(object recipient, DesktopChangedMessage message)
+    private async Task DrawRegion(StreamingFrameHeader header, byte[] encodedRegion)
     {
-        if (message.SessionId != Session.SessionId)
-        {
-            return;
-        }
-
-        _isStreamReady = false;
-        _isStreamLoaded = false;
-        _statusProgress = -1;
-
-        await SetStatusMessage("Switching desktops");
-
-        await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
-
-        Session.CreateNewSessionId();
-
-        await JsModule.InvokeVoidAsync("resetPeerConnection", _iceServers, _videoId);
-
-        await RequestStreamingSessionFromAgent();
-    }
-
-    private async Task HandleIceCandidateReceived(object recipient, IceCandidateMessage message)
-    {
-        if (message.SessionId != Session.SessionId)
-        {
-            return;
-        }
-
         try
         {
-            await JsModule.InvokeVoidAsync("receiveIceCandidate", message.CandidateJson, _videoId);
+            await JsModule.InvokeVoidAsync(
+                "drawFrame",
+                _canvasId,
+                header.X,
+                header.Y,
+                header.Width,
+                header.Height,
+                encodedRegion);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while invoking JavaScript function: {name}", "receiveIceCandidate");
+            Logger.LogError(ex, "Error while drawing frame.");
         }
     }
+
+    private async Task HandleClipboardChangeReceived(object subscriber, DtoReceivedMessage<ClipboardChangeDto> message)
+    {
+        try
+        {
+            if (message.Dto.SessionId != Session.SessionId)
+            {
+                return;
+            }
+            Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
+            await ClipboardManager.SetText(message.Dto.Text ?? string.Empty);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while handling remote clipboard change.");
+        }
+    }
+
 
     private async Task HandleKeyboardToggled()
     {
@@ -332,14 +301,14 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
-            await JsModule.InvokeVoidAsync("sendClipboardText", message.Text, _videoId);
-            await InvokeAsync(StateHasChanged);
+            await ViewerHub.SendClipboardText(Session.StreamerConnectionId, message.Text, Session.SessionId);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while handling clipboard change.");
         }
     }
+
     private async void HandleParameterlessMessage(object sender, GenericMessageKind kind)
     {
         switch (kind)
@@ -353,33 +322,25 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-    private async Task HandlePlayButtonClicked()
+    private void HandleScrollModeToggled(bool isEnabled)
     {
-        await JsModule.InvokeVoidAsync("playVideo", _videoRef);
+        _isScrollModeEnabled = isEnabled;
     }
 
-    private async Task HandleRtcSessionDescription(object recipient, RtcSessionDescriptionMessage message)
+    private async Task HandleStreamerDisconnected(object subscriber, StreamerDisconnectedMessage message)
     {
         if (message.SessionId != Session.SessionId)
         {
             return;
         }
 
-        try
-        {
-            await JsModule.InvokeVoidAsync("receiveRtcSessionDescription", message.SessionDescription, _videoId);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while invoking JavaScript function: {name}", "receiveRtcSessionDescription");
-        }
+        _streamStarted = false;
+        _statusProgress = -1;
+        await SetStatusMessage("Creating new streaming session");
+        Session.CreateNewSessionId();
+        await RequestStreamingSessionFromAgent();
+        await InvokeAsync(StateHasChanged);
     }
-
-    private void HandleScrollModeToggled(bool isEnabled)
-    {
-        _isScrollModeEnabled = isEnabled;
-    }
-
     private async Task HandleStreamerDownloadProgress(object recipient, StreamerDownloadProgressMessage message)
     {
         if (message.StreamingSessionId != Session.SessionId)
@@ -393,27 +354,42 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task HandleStreamerInitDataReceived(object subscriber, StreamerInitDataReceivedMessage message)
+    private async Task HandleStreamerInitDataReceived(object subscriber, StreamerInitDataReceivedMessage message)
     {
         var data = message.StreamerInitData;
 
         if (data.SessionId != Session.SessionId)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         Session.StreamerConnectionId = data.StreamerConnectionId;
 
-        _displays = data.Displays ?? [];
-        _selectedDisplay = _displays.FirstOrDefault();
-        if (_selectedDisplay is not null)
-        {
-            _videoWidth = _selectedDisplay.Width;
-            _videoHeight = _selectedDisplay.Height;
-        }
+        Messenger.Unregister<LocalClipboardChangedMessage>(this);
+        Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
+        await ClipboardManager.Start();
 
-        return Task.CompletedTask;
+        _displays = data.Displays ?? [];
+
+        if (_displays.Length == 0)
+        {
+            Snackbar.Add("No displays received", Severity.Error);
+            await Close();
+            return;
+        }
+        _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
+
+        _canvasWidth = _selectedDisplay.Width;
+        _canvasHeight = _selectedDisplay.Height;
+
+        StartWebsocketStreaming().Forget();
+
+        _streamStarted = true;
+        _statusMessage = string.Empty;
+        _statusProgress = -1;
+        await InvokeAsync(StateHasChanged);
     }
+
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
     {
         if (_virtualKeyboardToggled)
@@ -426,6 +402,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
     }
+
     private void OnTouchCancel(TouchEventArgs ev)
     {
         _lastPinchDistance = -1;
@@ -471,15 +448,15 @@ public partial class RemoteDisplay : IAsyncDisposable
 
             _viewMode = ViewMode.Original;
 
-            _videoScale = Math.Max(.25, Math.Min(_videoScale + pinchChange / 100, 3));
+            _canvasScale = Math.Max(.25, Math.Min(_canvasScale + pinchChange / 100, 3));
 
-            var newWidth = _selectedDisplay.Width * _videoScale;
-            var widthChange = newWidth - _videoWidth;
-            _videoWidth = newWidth;
+            var newWidth = _selectedDisplay.Width * _canvasScale;
+            var widthChange = newWidth - _canvasWidth;
+            _canvasWidth = newWidth;
 
-            var newHeight = _selectedDisplay.Height * _videoScale;
-            var heightChange = newHeight - _videoHeight;
-            _videoHeight = newHeight;
+            var newHeight = _selectedDisplay.Height * _canvasScale;
+            var heightChange = newHeight - _canvasHeight;
+            _canvasHeight = newHeight;
 
             _lastPinchDistance = pinchDistance;
             await InvokeAsync(StateHasChanged);
@@ -491,7 +468,7 @@ public partial class RemoteDisplay : IAsyncDisposable
                 pinchCenterX,
                 pinchCenterY,
                 _screenArea,
-                _videoRef,
+                _canvasRef,
                 newWidth,
                 newHeight,
                 widthChange,
@@ -514,7 +491,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         if (args.Key == "Enter" || args.Key == "Backspace")
         {
-            await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _videoId);
+            await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
         }
     }
 
@@ -544,12 +521,106 @@ public partial class RemoteDisplay : IAsyncDisposable
             Snackbar.Add("An error occurred while requesting streaming session", Severity.Error);
         }
     }
+
+    private async Task StartWebsocketStreaming()
+    {
+        if (!await _streamLock.WaitAsync(0, _componentClosing.Token))
+        {
+            return;
+        }
+
+        try
+        {
+            var endpoint = new Uri($"{Settings.WebsocketEndpoint}/{Session.SessionId}");
+            var ws = new ClientWebSocket();
+            await ws.ConnectAsync(endpoint, _componentClosing.Token);
+            await ViewerHub.SendReadySignalToStreamer(Session.StreamerConnectionId);
+
+            StreamFromWebsocket(ws).Forget();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while starting websocket stream.");
+            Snackbar.Add("An error occurred while starting the stream", Severity.Error);
+        }
+        finally
+        {
+            _streamLock.Release();
+        }
+      
+    }
+
+    private async Task StreamFromWebsocket(ClientWebSocket ws)
+    {
+        using (ws)
+        {
+            var headerBuffer = new byte[StreamingFrameHeader.Size];
+            var imageBuffer = new byte[ushort.MaxValue];
+
+
+            while (!_componentClosing.IsCancellationRequested && ws.State == WebSocketState.Open)
+            {
+                try
+                {
+                    if (_selectedDisplay is null)
+                    {
+                        await Task.Delay(100);
+                        continue;
+                    }
+
+                    var result = await ws.ReceiveAsync(headerBuffer, _componentClosing.Token);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        Logger.LogInformation("Websocket close message received.");
+                        break;
+                    }
+
+                    var bytesRead = result.Count;
+
+                    if (bytesRead < StreamingFrameHeader.Size)
+                    {
+                        Logger.LogError("The frame header is incomplete.");
+                        Snackbar.Add("Frame header is incomplete", Severity.Error);
+                        break;
+                    }
+
+                    var header = new StreamingFrameHeader(headerBuffer);
+
+                    using var imageStream = MemoryProvider.GetRecyclableStream();
+
+                    while (imageStream.Position < header.ImageSize)
+                    {
+                        result = await ws.ReceiveAsync(imageBuffer, _componentClosing.Token);
+
+                        if (result.MessageType == WebSocketMessageType.Close ||
+                            result.Count == 0)
+                        {
+                            Logger.LogWarning("Stream ended before image was complete.");
+                            Snackbar.Add("Stream ended before image was complete", Severity.Warning);
+                            break;
+                        }
+
+                        await imageStream.WriteAsync(imageBuffer.AsMemory(0, result.Count));
+                    }
+
+                    await DrawRegion(header, imageStream.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error while pulling from frame source.");
+                }
+            }
+
+        }
+    }
+
     private async Task TypeText(string text)
     {
         await _typeLock.WaitAsync();
         try
         {
-            await JsModule.InvokeVoidAsync("typeText", text, _videoId);
+            await JsModule.InvokeVoidAsync("typeText", text, _canvasId);
         }
         catch (Exception ex)
         {
