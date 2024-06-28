@@ -41,9 +41,9 @@ public class ConnectionCountSynchronizer(
 
     private async Task SynchronizeConnectionCounts(string key, int currentCount, CancellationToken cancellationToken)
     {
+        await using var lockResult = await _locker.TryAcquireLock(key);
         try
         {
-            var lockResult = await _locker.TryAcquireLock(key);
             if (!lockResult.LockAcquired)
             {
                 return;
