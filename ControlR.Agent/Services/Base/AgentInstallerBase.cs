@@ -34,12 +34,6 @@ internal abstract class AgentInstallerBase(
 
         var authorizedKeys = appOptions.AuthorizedKeys2 ?? [];
 
-        var obsoleteKeys = appOptions.AuthorizedKeys
-            .ExceptBy(authorizedKeys.Select(x => x.PublicKey), x => x)
-            .Select(x => new AuthorizedKeyDto("", x));
-
-        authorizedKeys.AddRange(obsoleteKeys);
-
         _logger.LogInformation("Updating authorized keys.  Initial count: {KeyCount}", authorizedKeys.Count);
 
         if (!string.IsNullOrWhiteSpace(authorizedKey))
@@ -58,6 +52,7 @@ internal abstract class AgentInstallerBase(
         }
 
         appOptions.AuthorizedKeys2 = authorizedKeys;
+        appOptions.AuthorizedKeys = authorizedKeys;
 
         if (string.IsNullOrWhiteSpace(appOptions.DeviceId))
         {

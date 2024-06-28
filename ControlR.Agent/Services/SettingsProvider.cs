@@ -17,7 +17,7 @@ namespace ControlR.Agent.Services;
 internal interface ISettingsProvider
 {
     [Obsolete("AuthorizedKeys is deprecated. Use AuthorizedKeys2 instead.")]
-    IReadOnlyList<string> AuthorizedKeys { get; }
+    IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys { get; }
     IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2 { get; }
     string DeviceId { get; }
     Uri ServerUri { get; }
@@ -38,24 +38,14 @@ internal class SettingsProvider(
     private readonly SemaphoreSlim _updateLock = new(1, 1);
 
 
-    public IReadOnlyList<string> AuthorizedKeys
+    public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys
     {
-        get => _appOptions.CurrentValue.AuthorizedKeys ?? [];
+        get => _appOptions.CurrentValue.AuthorizedKeys2;
     }
 
     public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2
     {
-        get
-        {
-            var keys = _appOptions.CurrentValue.AuthorizedKeys2 ?? [];
-            var oldKeys = AuthorizedKeys
-                .ExceptBy(keys.Select(x => x.PublicKey), x => x)
-                .Select(x => new AuthorizedKeyDto("", x))
-                .ToArray();
-
-            keys.AddRange(oldKeys);
-            return keys;
-        }
+        get => _appOptions.CurrentValue.AuthorizedKeys2 ?? [];
     }
        
 

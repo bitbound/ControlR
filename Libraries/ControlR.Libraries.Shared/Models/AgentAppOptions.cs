@@ -8,9 +8,8 @@ public class AgentAppOptions
 {
     public const string SectionKey = "AppOptions";
 
-    [Obsolete("Use AuthorizedKeys2 instead.")]
     [MsgPackKey]
-    public ConcurrentList<string> AuthorizedKeys { get; set; } = [];
+    public ConcurrentList<AuthorizedKeyDto> AuthorizedKeys { get; set; } = [];
 
     [MsgPackKey]
     public ConcurrentList<AuthorizedKeyDto> AuthorizedKeys2 { get; set; } = [];
