@@ -6,10 +6,6 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace ControlR.Server.Services.Distributed;
 
-// TODO: This needs a different strategy.  If a node goes down,
-// the disconnect events won't fire, and the backplane's count
-// will be incorrect indefinitely.  Nodes might need to track
-// their own totals in memory and sync with the backplane.
 public class ConnectionCounterDistributed(
     IDistributedCache _cache,
     ILogger<ConnectionCounterDistributed> _logger) : IConnectionCounter
@@ -79,7 +75,7 @@ public class ConnectionCounterDistributed(
             }
 
 
-            var deserialized = MessagePackSerializer.Deserialize<Dictionary<Guid, ConnectionCounter>>(cachedValue) ??
+            var deserialized = MessagePackSerializer.Deserialize<Dictionary<Guid, CounterToken>>(cachedValue) ??
                 throw new MessagePackSerializationException("Failed to deserialize cached value.");
             
             if (deserialized.Count == 0)

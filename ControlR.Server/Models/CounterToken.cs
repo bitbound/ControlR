@@ -4,7 +4,7 @@ using MessagePack;
 namespace ControlR.Server.Models;
 
 [MessagePackObject]
-public class ConnectionCounter
+public class CounterToken
 {
     [MsgPackKey]
     public int Count { get; set; }

@@ -49,7 +49,7 @@ public class ConnectionCountSynchronizer(
                 return;
             }
 
-            var getResult = await _cache.GetOrCreate<Dictionary<Guid, ConnectionCounter>>(key, cancellationToken);
+            var getResult = await _cache.GetOrCreate<Dictionary<Guid, CounterToken>>(key, cancellationToken);
 
             if (!getResult.IsSuccess)
             {
@@ -58,7 +58,7 @@ public class ConnectionCountSynchronizer(
                 // If the data is invalid, all we can do is overwrite it.
                 if (getResult.HadException && getResult.Exception is MessagePackSerializationException)
                 {
-                    await _cache.SetNewValue<Dictionary<Guid, ConnectionCounter>>(key, cancellationToken);
+                    await _cache.SetNewValue<Dictionary<Guid, CounterToken>>(key, cancellationToken);
                 }
                 return;
             }
