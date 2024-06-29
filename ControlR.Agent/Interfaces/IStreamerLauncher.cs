@@ -5,6 +5,7 @@ internal interface IStreamerLauncher
 {
     Task<Result> CreateSession(
         Guid sessionId,
+        Uri websocketUri,
         string viewerConnectionId,
         byte[] authorizedKey,
         int targetWindowsSession = -1,

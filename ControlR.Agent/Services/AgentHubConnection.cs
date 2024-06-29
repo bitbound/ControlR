@@ -72,6 +72,7 @@ internal class AgentHubConnection(
 
             var result = await _streamerLauncher.CreateSession(
                 dto.SessionId,
+                dto.WebsocketUri,
                 dto.ViewerConnectionId,
                 signedDto.PublicKey,
                 dto.TargetSystemSession,

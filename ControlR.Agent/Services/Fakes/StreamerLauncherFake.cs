@@ -7,6 +7,7 @@ internal class StreamerLauncherFake : IStreamerLauncher
 {
     public Task<Result> CreateSession(
         Guid sessionId, 
+        Uri websocketUri,
         string viewerConnectionId,
         byte[] authorizedKey, 
         int targetWindowsSession = -1, 
