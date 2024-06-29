@@ -77,7 +77,7 @@ internal class StreamerHubConnection(
             .ToString()
             .TrimEnd('/');
 
-        var wsEndpoint = $"{origin}/streamer-ws-endpoint/{_startupOptions.Value.SessionId}";
+        var wsEndpoint = $"{origin}/websocket-bridge/{_startupOptions.Value.SessionId}";
         await ws.ConnectAsync(new Uri(wsEndpoint), _appLifetime.ApplicationStopping);
 
         while (ws.State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)

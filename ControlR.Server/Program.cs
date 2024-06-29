@@ -170,7 +170,7 @@ else
 {
     builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
     builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
-    builder.Services.AddSingleton<IStreamingSessionStore, ProxyStreamStoreLocal>();
+    builder.Services.AddSingleton<ISessionStore, SessionStore>();
 }
 
 builder.Host.UseSystemd();
@@ -212,19 +212,11 @@ app.UseMiddleware<Md5HeaderMiddleware>();
 ConfigureStaticFiles(app);
 
 app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/viewer-ws-endpoint"),
+    x => x.Request.Path.StartsWithSegments("/websocket-bridge"),
     builder =>
     {
         builder.UseWebSockets();
-        builder.UseMiddleware<ViewerProxyMiddleware>();
-    });
-
-app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/streamer-ws-endpoint"),
-    builder =>
-    {
-        builder.UseWebSockets();
-        builder.UseMiddleware<StreamerProxyMiddleware>();
+        builder.UseMiddleware<WebsocketBridgeMiddleware>();
     });
 
 app.UseAuthentication();

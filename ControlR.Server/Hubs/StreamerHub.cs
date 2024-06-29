@@ -9,7 +9,6 @@ namespace ControlR.Server.Hubs;
 
 public class StreamerHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
-    IStreamingSessionStore _streamStore,
     IConnectionCounter _connectionCounter,
     ILogger<StreamerHub> _logger) : HubWithItems<IStreamerHubClient>, IStreamerHub
 {
@@ -71,10 +70,6 @@ public class StreamerHub(
     {
         ViewerConnectionId = viewerConnectionId;
         SessionId = streamerInit.SessionId;
-
-        var signaler = new StreamSignaler(SessionId);
-
-        _streamStore.AddOrUpdate(SessionId, signaler, (_, _) => signaler);
 
         await _viewerHub.Clients
             .Client(viewerConnectionId)
