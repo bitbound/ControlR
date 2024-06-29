@@ -1,14 +1,17 @@
 # ControlR
 
-A zero-trust remote control solution built with .NET 8, MAUI, Blazor WASM, Electron, and WebRTC.
+A zero-trust remote control solution built with .NET 8, MAUI, and Blazor WASM.
 
 [![Build Status](https://dev.azure.com/translucency/ControlR/_apis/build/status%2FControlR?branchName=dev)](https://dev.azure.com/translucency/ControlR/_build/latest?definitionId=35&branchName=dev)
+
+[![](https://dcbadge.limes.pink/api/server/https://discord.gg/JWJmMPc72H)](https://discord.gg/https://discord.gg/JWJmMPc72H)
+
 
 Website: https://controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
 Feature Requests: https://features.controlr.app/  
 Discussions: https://github.com/bitbound/ControlR/discussions  
-Discord: https://discord.gg/JWJmMPc72H  
+
 
 > Note: ControlR is still in alpha and isn't ready for self-hosting yet. When it is, I'll add a quick start section here with Docker instructions.
 
