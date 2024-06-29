@@ -1,7 +1,6 @@
 ﻿class State {
     constructor() {
         this.windowEventHandlers = [];
-        this.lastPointerMove = Date.now();
         this.touchList = { length: 0 };
         this.previousPinchDistance = -1;
         this.mouseMoveTimeout = -1;
@@ -18,9 +17,6 @@
 
     /** @type {boolean} */
     isMakingOffer;
-
-    /** @type {number} */
-    lastPointerMove;
 
     /** @type {boolean} */
     longPressStarted;
@@ -234,18 +230,6 @@ export async function initialize(componentRef, canvasId) {
         if (canvas.classList.contains("minimized")) {
             return;
         }
-
-        const now = Date.now();
-        if (now - state.lastPointerMove < 50) {
-            if (state.mouseMoveTimeout > -1) {
-                window.clearTimeout(state.mouseMoveTimeout);
-            }
-            state.mouseMoveTimeout = window.setTimeout(async () => {
-                await sendPointerMove(ev.offsetX, ev.offsetY, state);
-            }, 60);
-            return;
-        }
-        state.lastPointerMove = now;
 
         await sendPointerMove(ev.offsetX, ev.offsetY, state);
     });
