@@ -77,7 +77,7 @@ internal class StreamerHubConnection(
             .ToString()
             .TrimEnd('/');
 
-        var wsEndpoint = $"{origin}/websocket-bridge/{_startupOptions.Value.SessionId}";
+        var wsEndpoint = $"{origin}/bridge/{_startupOptions.Value.SessionId}";
         await ws.ConnectAsync(new Uri(wsEndpoint), _appLifetime.ApplicationStopping);
 
         while (ws.State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
@@ -155,6 +155,7 @@ internal class StreamerHubConnection(
             var displays = _displayManager.GetDisplays().ToArray();
             var dto = new StreamerInitDataDto(
                 _startupOptions.Value.SessionId,
+                _startupOptions.Value.WebSocketUri,
                 Connection.ConnectionId ?? "",
                 displays);
 

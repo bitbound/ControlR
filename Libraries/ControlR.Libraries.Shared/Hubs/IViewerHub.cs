@@ -6,6 +6,7 @@ namespace ControlR.Libraries.Shared.Hubs;
 public interface IViewerHub
 {
     Task<bool> CheckIfServerAdministrator();
+
     Task<bool> CheckIfStoreIntegrationEnabled();
 
     Task<Result> ClearAlert(SignedPayloadDto signedDto);
@@ -17,6 +18,8 @@ public interface IViewerHub
     Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
     Task<Result<ServerStatsDto>> GetServerStats();
+
+    Task<Uri?> GetWebSocketBridgeUri(Guid sessionId);
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> RequestStreamingSession(string agentConnectionId, SignedPayloadDto sessionRequestDto);

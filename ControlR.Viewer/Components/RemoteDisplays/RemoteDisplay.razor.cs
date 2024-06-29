@@ -382,7 +382,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         _canvasWidth = _selectedDisplay.Width;
         _canvasHeight = _selectedDisplay.Height;
 
-        StartWebsocketStreaming().Forget();
+        StartWebsocketStreaming(message.StreamerInitData.WebSocketUri).Forget();
 
         _streamStarted = true;
         _statusMessage = string.Empty;
@@ -500,9 +500,15 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             Logger.LogInformation("Creating streaming session.");
+
+            var websocketUri =
+                await ViewerHub.GetWebsocketBridgeUri(Session.SessionId) ??
+                new Uri($"{Settings.WebsocketEndpoint}/{Session.SessionId}");
+
             var streamingSessionResult = await ViewerHub.RequestStreamingSession(
                 Session.Device.ConnectionId,
                 Session.SessionId,
+                websocketUri,
                 Session.InitialSystemSession);
 
             _statusProgress = -1;
@@ -522,7 +528,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-    private async Task StartWebsocketStreaming()
+    private async Task StartWebsocketStreaming(Uri websocketUri)
     {
         if (!await _streamLock.WaitAsync(0, _componentClosing.Token))
         {
@@ -531,9 +537,8 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         try
         {
-            var endpoint = new Uri($"{Settings.WebsocketEndpoint}/{Session.SessionId}");
             var ws = new ClientWebSocket();
-            await ws.ConnectAsync(endpoint, _componentClosing.Token);
+            await ws.ConnectAsync(websocketUri, _componentClosing.Token);
             await ViewerHub.SendReadySignalToStreamer(Session.StreamerConnectionId);
 
             StreamFromWebsocket(ws).Forget();

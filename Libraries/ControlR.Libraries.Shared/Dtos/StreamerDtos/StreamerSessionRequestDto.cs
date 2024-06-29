@@ -7,6 +7,7 @@ namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 [method: SerializationConstructor]
 public class StreamerSessionRequestDto(
     Guid sessionId,
+    Uri websocketUri,
     int targetSystemSession,
     string viewerConnectionId,
     string agentConnectionId,
@@ -32,4 +33,7 @@ public class StreamerSessionRequestDto(
 
     [MsgPackKey]
     public string? ViewerName { get; init; } = viewerName;
+
+    [MsgPackKey]
+    public Uri WebsocketUri { get; init; } = websocketUri;
 }

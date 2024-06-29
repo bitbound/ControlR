@@ -24,7 +24,15 @@ var sessionIdOption = new Option<Guid>(
 
 var originUriOption = new Option<Uri>(
     ["-o", "--origin"],
-    "The origin URI (including scheme and port) that the streamer should use (e.g. https://my.example.com[:8080]). " +
+    "The origin URI (including scheme and port) that the streamer should use for data (e.g. https://my.example.com[:8080]). " +
+    "The port can be ommitted for 80 (http) and 443 (https).")
+{
+    IsRequired = true
+};
+
+var websocketUriOption = new Option<Uri>(
+    ["-w", "--websocket-uri"],
+    "The websocket URI (including scheme and port) that the streamer should use for video (e.g. wss://my.example.com[:8080]). " +
     "The port can be ommitted for 80 (http) and 443 (https).")
 {
     IsRequired = true
@@ -49,13 +57,14 @@ var rootCommand = new RootCommand("The remote control desktop streamer and input
 {
     authorizedKeyOption,
     originUriOption,
+    websocketUriOption,
     viewerIdOption,
     notifyUserOption,
     sessionIdOption,
     viewerNameOption,
 };
 
-rootCommand.SetHandler(async (authorizedKey, originUri, viewerConnectionId, notifyUser, sessionId, viewerName) =>
+rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConnectionId, notifyUser, sessionId, viewerName) =>
 {
     var host = Host.CreateDefaultBuilder(args)
         .UseConsoleLifetime()
@@ -65,6 +74,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, viewerConnectionId, noti
             {
                 options.AuthorizedKey = authorizedKey;
                 options.ServerOrigin = originUri;
+                options.WebSocketUri = websocketUri;
                 options.NotifyUser = notifyUser;
                 options.ViewerConnectionId = viewerConnectionId;
                 options.ViewerName = viewerName;
@@ -110,7 +120,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, viewerConnectionId, noti
 
     await host.RunAsync();
 
-}, authorizedKeyOption, originUriOption, viewerIdOption, notifyUserOption, sessionIdOption, viewerNameOption);
+}, authorizedKeyOption, originUriOption, websocketUriOption, viewerIdOption, notifyUserOption, sessionIdOption, viewerNameOption);
 
 var exitCode = await rootCommand.InvokeAsync(args);
 Environment.Exit(exitCode);

@@ -19,8 +19,21 @@
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
         Server
     </MudText>
+    <MudRadioGroup @bind-Value="ServerUriType">
+        <MudRadio Value="ServerUriType.Default" Color="Color.Info">
+            Default (@(AppConstants.ServerUri))
+        </MudRadio>
+        <MudRadio Value="ServerUriType.Custom">
+            Custom
+        </MudRadio>
+    </MudRadioGroup>
+
     <MudTextField T="string"
-                  @bind-Value="Server"
+                  @ref="_serverUriInput"
+                  @bind-Value:get="Server"
+                  @bind-Value:set="SetServerUri"
+                  Disabled="ServerUriType != ServerUriType.Custom"
+                  Validation="(string e) => ValidateServerUri(e)"
                   Label="The server URI to which the viewer connects (e.g. 'https://my.example.com')">
 
     </MudTextField>
@@ -89,6 +102,19 @@
 
 
 @code {
+    private ServerUriType _serverUriType;
+    private MudTextField<string>? _serverUriInput;
+
+    protected override Task OnInitializedAsync()
+    {
+        if (SettingsStore.ServerUri.TrimEnd('/') != AppConstants.ServerUri.TrimEnd('/'))
+        {
+            _serverUriType = ServerUriType.Custom;
+        }
+
+        return base.OnInitializedAsync();
+    }
+
     private bool NotifyUser
     {
         get => SettingsStore.NotifyUserSessionStart;
@@ -98,22 +124,21 @@
     private string Server
     {
         get => SettingsStore.ServerUri;
+    }
+
+    private ServerUriType ServerUriType
+    {
+        get => _serverUriType;
         set
         {
-            if (!Uri.TryCreate(value, UriKind.Absolute, out var serverUri))
+            if (value == ServerUriType.Default)
             {
-                Snackbar.Add("Invalid URI", Severity.Error);
-                return;
+                SettingsStore.ServerUri = AppConstants.ServerUri;
             }
-            SettingsStore.ServerUri = serverUri.ToString();
-            Snackbar.Add("Server updated", Severity.Success);
-            DeviceCache.SetAllOffline();
-            Dialogs.ShowMessageBox(
-                "Restart Recommended",
-                "Please restart the application soon for changes to fully take effect.")
-                .AndForget(true);
+            _serverUriType = value;
         }
     }
+
 
     private string Username
     {
@@ -212,6 +237,40 @@
         return null;
     }
 
+    private async Task SetServerUri(string value)
+    {
+        if (_serverUriInput is null)
+        {
+            return;
+        }
+
+        await _serverUriInput.Validate();
+
+        if (_serverUriInput.ValidationErrors.Count > 0)
+        {
+            return;
+        }
+
+        if (SettingsStore.ServerUri.TrimEnd('/') == value.TrimEnd('/'))
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var serverUri))
+        {
+            Snackbar.Add("Invalid URI", Severity.Error);
+            return;
+        }
+
+        SettingsStore.ServerUri = serverUri.ToString();
+        Snackbar.Add("Server updated", Severity.Success);
+        await DeviceCache.SetAllOffline();
+        Dialogs.ShowMessageBox(
+            "Restart Recommended",
+            "Please restart the application soon for changes to fully take effect.")
+            .AndForget(true);
+    }
+
     private string? ValidateLabel(string input)
     {
         if (string.IsNullOrEmpty(input))
@@ -229,6 +288,16 @@
             return "PublicKeyLabel can only contain letters, numbers, underscores, hyphens, and at sign (@).";
         }
 
+        return null;
+    }
+
+    private string? ValidateServerUri(string uri)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var serverUri) ||
+            !serverUri.IsHttp())
+        {
+            return "Invalid server URI.";
+        }
         return null;
     }
 }

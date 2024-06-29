@@ -4,11 +4,11 @@ using System.Net.WebSockets;
 
 namespace ControlR.Server.Middleware;
 
-public class WebsocketBridgeMiddleware(
+public class WebSocketBridgeMiddleware(
     RequestDelegate _next,
     IHostApplicationLifetime _appLifetime,
     ISessionStore _sessionStore,
-    ILogger<WebsocketBridgeMiddleware> _logger)
+    ILogger<WebSocketBridgeMiddleware> _logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {

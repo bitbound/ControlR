@@ -23,7 +23,7 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
 
     Task<Result<ServerStatsDto>> GetServerStats();
-
+    Task<Uri?> GetWebsocketBridgeUri(Guid sessionId);
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
     Task InvokeCtrlAltDel(string deviceId);
@@ -32,7 +32,11 @@ public interface IViewerHubConnection : IHubConnectionBase
 
     Task RequestDeviceUpdates();
 
-    Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession);
+    Task<Result> RequestStreamingSession(
+        string agentConnectionId, 
+        Guid sessionId, 
+        Uri websocketUri, 
+        int targetSystemSession);
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
     Task SendAgentUpdateTrigger(DeviceDto device);
@@ -159,6 +163,17 @@ internal class ViewerHubConnection(
             () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
 
+    public async Task<Uri?> GetWebsocketBridgeUri(Guid sessionId)
+    {
+        return await TryInvoke(async () =>
+        {
+            return await Connection.InvokeAsync<Uri?>(
+                nameof(IViewerHub.GetWebSocketBridgeUri),
+                sessionId);
+        }, 
+        () => null);
+    }
+
     public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
     {
         try
@@ -261,7 +276,11 @@ internal class ViewerHubConnection(
         });
     }
 
-    public async Task<Result> RequestStreamingSession(string agentConnectionId, Guid sessionId, int targetSystemSession)
+    public async Task<Result> RequestStreamingSession(
+        string agentConnectionId, 
+        Guid sessionId, 
+        Uri websocketUri,
+        int targetSystemSession)
     {
         try
         {
@@ -272,6 +291,7 @@ internal class ViewerHubConnection(
 
             var streamingSessionRequest = new StreamerSessionRequestDto(
                 sessionId,
+                websocketUri,
                 targetSystemSession,
                 Connection.ConnectionId,
                 agentConnectionId,

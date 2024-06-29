@@ -13,3 +13,4 @@ global using ControlR.Libraries.Shared.Models;
 global using ControlR.Libraries.Shared.Hubs;
 global using ControlR.Libraries.Shared.Services;
 global using Microsoft.Extensions.Logging;
+global using ControlR.Viewer.Enums;

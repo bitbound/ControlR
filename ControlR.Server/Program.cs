@@ -15,6 +15,7 @@ using ControlR.Server.Services.Distributed.Locking;
 using ControlR.Server.Services.Local;
 using ControlR.Libraries.Shared;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Libraries.Shared.Services.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -158,6 +159,7 @@ builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<IIpApi, IpApi>();
 
 if (appOptions.UseRedisBackplane)
 {
@@ -212,11 +214,11 @@ app.UseMiddleware<Md5HeaderMiddleware>();
 ConfigureStaticFiles(app);
 
 app.UseWhen(
-    x => x.Request.Path.StartsWithSegments("/websocket-bridge"),
+    x => x.Request.Path.StartsWithSegments("/bridge"),
     builder =>
     {
         builder.UseWebSockets();
-        builder.UseMiddleware<WebsocketBridgeMiddleware>();
+        builder.UseMiddleware<WebSocketBridgeMiddleware>();
     });
 
 app.UseAuthentication();

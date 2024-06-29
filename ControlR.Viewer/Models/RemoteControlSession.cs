@@ -5,6 +5,7 @@ public class RemoteControlSession(DeviceDto device, int initialSystemSession)
     public int InitialSystemSession { get; } = initialSystemSession;
     public Guid SessionId { get; private set; } = Guid.NewGuid();
     public string StreamerConnectionId { get; internal set; } = string.Empty;
+    public Uri? WebSocketUri { get; internal set; }
 
     public void CreateNewSessionId()
     {

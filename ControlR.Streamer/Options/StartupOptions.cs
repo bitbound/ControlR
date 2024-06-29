@@ -3,6 +3,8 @@
 public class StartupOptions
 {
     private Uri? _serverOrigin;
+    private Uri? _webSocketUri;
+
     public string AuthorizedKey { get; set; } = string.Empty;
     public bool NotifyUser { get; set; }
 
@@ -13,7 +15,14 @@ public class StartupOptions
     }
 
     public Guid SessionId { get; set; }
+
     public string ViewerConnectionId { get; set; } = string.Empty;
 
     public string? ViewerName { get; set; }
+
+    public Uri WebSocketUri
+    {
+        get => _webSocketUri ?? throw new InvalidOperationException("WebSocketUri hasn't been set yet.");
+        set => _webSocketUri = value;
+    }
 }

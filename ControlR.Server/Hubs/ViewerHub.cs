@@ -1,5 +1,8 @@
-﻿using ControlR.Server.Auth;
+﻿using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
+using ControlR.Server.Models;
 using ControlR.Server.Options;
 using ControlR.Server.Services.Interfaces;
 using MessagePack;
@@ -16,6 +19,7 @@ public class ViewerHub(
     IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
+    IIpApi _ipApi,
     IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<ViewerHub> _logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
@@ -125,6 +129,48 @@ public class ViewerHub(
         {
             _logger.LogError(ex, "Error while getting agent count.");
             return Result.Fail<ServerStatsDto>("Failed to get agent count.");
+        }
+    }
+
+    public async Task<Uri?> GetWebSocketBridgeUri(Guid sessionId)
+    {
+        try
+        {
+            if (!_appOptions.CurrentValue.UseExternalWebSocketBridge || 
+                 _appOptions.CurrentValue.ExternalWebSocketHosts.Count == 0)
+            {
+                return null;
+            }
+
+            var ipAddress = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString();
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return null;
+            }
+
+            var result = await _ipApi.GetIpInfo(ipAddress);
+            if (!result.IsSuccess)
+            {
+                return null;
+            }
+
+
+            var ipInfo = result.Value;
+
+            if (ipInfo.Status == IpApiResponseStatus.Fail)
+            {
+                _logger.LogError("IpApi returned a failed status message.  Message: {IpMessage}", ipInfo.Message);
+                return null;
+            }
+
+            var location = new Coordinate(ipInfo.Lat, ipInfo.Lon);
+            var closest = CoordinateHelper.FindClosestCoordinate(location, _appOptions.CurrentValue.ExternalWebSocketHosts);
+            return closest.Origin;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting WebSocket bridge URI.");
+            return null;
         }
     }
 

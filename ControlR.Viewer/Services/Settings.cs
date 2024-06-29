@@ -80,7 +80,7 @@ internal class Settings(
     {
         get
         {
-            return new Uri($"{ServerUri}/websocket-bridge").ToWebsocketUri();
+            return new Uri($"{ServerUri}/bridge").ToWebsocketUri();
         }
     }
     public async Task<Result<byte[]>> GetSecurePrivateKey()

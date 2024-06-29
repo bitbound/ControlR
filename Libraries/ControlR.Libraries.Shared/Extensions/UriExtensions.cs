@@ -7,6 +7,11 @@ public static class UriExtensions
         return $"{uri.Scheme}://{uri.Authority}";
     }
 
+    public static bool IsHttp(this Uri uri)
+    {
+        return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+    }
+
     public static Uri ToWebsocketUri(this Uri uri)
     {
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
