@@ -72,13 +72,7 @@ internal class StreamerHubConnection(
     private async Task StreamScreenToViewer()
     {
         using var ws = new ClientWebSocket();
-        var origin = _startupOptions.Value.ServerOrigin
-            .ToWebsocketUri()
-            .ToString()
-            .TrimEnd('/');
-
-        var wsEndpoint = $"{origin}/bridge/{_startupOptions.Value.SessionId}";
-        await ws.ConnectAsync(new Uri(wsEndpoint), _appLifetime.ApplicationStopping);
+        await ws.ConnectAsync(_startupOptions.Value.WebSocketUri, _appLifetime.ApplicationStopping);
 
         while (ws.State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
         {
