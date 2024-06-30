@@ -19,7 +19,7 @@ public interface IViewerHub
 
     Task<Result<ServerStatsDto>> GetServerStats();
 
-    Task<Uri?> GetWebSocketBridgeUri(Guid sessionId);
+    Task<Uri?> GetWebSocketBridgeOrigin();
     Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> RequestStreamingSession(string agentConnectionId, SignedPayloadDto sessionRequestDto);

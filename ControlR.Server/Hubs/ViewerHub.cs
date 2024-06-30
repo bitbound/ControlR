@@ -132,7 +132,7 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Uri?> GetWebSocketBridgeUri(Guid sessionId)
+    public async Task<Uri?> GetWebSocketBridgeOrigin()
     {
         try
         {

@@ -11,7 +11,6 @@ public interface ISettings
     string ServerUri { get; set; }
     string Username { get; set; }
     string ViewerDownloadUri { get; }
-    Uri WebsocketEndpoint { get; }
 
     Task<Result<byte[]>> GetSecurePrivateKey();
 
@@ -76,13 +75,6 @@ internal class Settings(
         }
     }
 
-    public Uri WebsocketEndpoint
-    {
-        get
-        {
-            return new Uri($"{ServerUri}/bridge").ToWebsocketUri();
-        }
-    }
     public async Task<Result<byte[]>> GetSecurePrivateKey()
     {
         try

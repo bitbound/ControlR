@@ -23,7 +23,7 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
 
     Task<Result<ServerStatsDto>> GetServerStats();
-    Task<Uri?> GetWebsocketBridgeUri(Guid sessionId);
+    Task<Uri?> GetWebsocketBridgeOrigin();
     Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
     Task InvokeCtrlAltDel(string deviceId);
@@ -37,6 +37,7 @@ public interface IViewerHubConnection : IHubConnectionBase
         Guid sessionId, 
         Uri websocketUri, 
         int targetSystemSession);
+
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
     Task SendAgentUpdateTrigger(DeviceDto device);
@@ -163,13 +164,11 @@ internal class ViewerHubConnection(
             () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
     }
 
-    public async Task<Uri?> GetWebsocketBridgeUri(Guid sessionId)
+    public async Task<Uri?> GetWebsocketBridgeOrigin()
     {
         return await TryInvoke(async () =>
         {
-            return await Connection.InvokeAsync<Uri?>(
-                nameof(IViewerHub.GetWebSocketBridgeUri),
-                sessionId);
+            return await Connection.InvokeAsync<Uri?>(nameof(IViewerHub.GetWebSocketBridgeOrigin));
         }, 
         () => null);
     }

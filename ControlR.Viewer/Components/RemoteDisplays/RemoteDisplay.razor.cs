@@ -501,10 +501,12 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             Logger.LogInformation("Creating streaming session.");
 
-            var websocketUri =
-                await ViewerHub.GetWebsocketBridgeUri(Session.SessionId) ??
-                new Uri($"{Settings.WebsocketEndpoint}/{Session.SessionId}");
+            var bridgeOrigin = await ViewerHub.GetWebsocketBridgeOrigin();
 
+            var websocketUri = bridgeOrigin is not null ?
+                new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}") :
+                new Uri($"{Settings.ServerUri}/bridge/{Session.SessionId}").ToWebsocketUri();
+            
             var streamingSessionResult = await ViewerHub.RequestStreamingSession(
                 Session.Device.ConnectionId,
                 Session.SessionId,
