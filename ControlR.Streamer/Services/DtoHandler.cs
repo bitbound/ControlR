@@ -68,7 +68,6 @@ internal class DtoHandler(
                     {
                         var payload = wrapper.GetPayload<WheelScrollDto>();
                         var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
-                        _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
                         _inputSimulator.ScrollWheel(point.X, point.Y, (int)payload.ScrollY, (int)payload.ScrollX);
                         break;
                     }

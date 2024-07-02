@@ -613,9 +613,14 @@ public partial class RemoteDisplay : IAsyncDisposable
 
                     await DrawRegion(header, imageStream.ToArray());
                 }
+                catch (OperationCanceledException)
+                {
+                    Logger.LogInformation("Streaming cancelled.");
+                    break;
+                }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error while pulling from frame source.");
+                    Logger.LogError(ex, "Error while streaming from websocket.");
                 }
             }
 

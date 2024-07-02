@@ -335,12 +335,12 @@ internal class DisplayManager : IDisplayManager
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Screen frame pulls cancelled.");
+                _logger.LogInformation("Screen streaming cancelled.");
                 break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while pulling frames.");
+                _logger.LogError(ex, "Error encoding screen captures.");
             }
             finally
             {

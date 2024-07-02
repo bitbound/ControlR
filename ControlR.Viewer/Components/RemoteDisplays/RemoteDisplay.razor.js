@@ -16,9 +16,6 @@
     isDragging;
 
     /** @type {boolean} */
-    isMakingOffer;
-
-    /** @type {boolean} */
     longPressStarted;
 
     /** @type {number} */
@@ -171,12 +168,12 @@ export async function initialize(componentRef, canvasId) {
             ev.stopPropagation();
 
             await sendPointerMove(state.pointerDownEvent.offsetX, state.pointerDownEvent.offsetY, state);
-
+            
             const percentX = ev.offsetX / state.canvasElement.clientWidth;
             const percentY = ev.offsetY / state.canvasElement.clientHeight;
 
             if (Math.abs(ev.movementY) > Math.abs(ev.movementX)) {
-                await state.invokeDotNet("SendWheelScroll", percentX, percentY, ev.MovementY * 3, 0);
+                await state.invokeDotNet("SendWheelScroll", percentX, percentY, ev.movementY * 3, 0);
             }
             else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
                 await state.invokeDotNet("SendWheelScroll", percentX, percentY, 0, ev.movementX * -3);
