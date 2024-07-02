@@ -27,10 +27,8 @@
 
     <div class="content-grid">
         <div>
-            <MudList Clickable="true"
-                     @bind-SelectedItem="_selectedFileItem"
-                     SelectedValue="_selectedFileValue"
-                     SelectedValueChanged="OnSelectedValueChanged">
+            <MudList @bind-SelectedValue:get="_selectedFileValue"
+                     @bind-SelectedValue:set="SetSelectedValue">
                 <MudListSubheader>
                     Select Log File:
                 </MudListSubheader>
@@ -53,8 +51,7 @@
 @code {
     private readonly string _logsDir = Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "Logs");
     private FileInfo[] _logFiles = Array.Empty<FileInfo>();
-    private MudListItem? _selectedFileItem;
-    private object? _selectedFileValue;
+    private FileInfo? _selectedFileValue;
     private string _logContent = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -119,7 +116,7 @@
             _logContent = await FileIO.ReadAllTextAsync(fileInfo.FullName);
         }
     }
-    private async Task OnSelectedValueChanged(object item)
+    private async Task SetSelectedValue(FileInfo? item)
     {
         _selectedFileValue = item;
         await LoadSelectedFile();

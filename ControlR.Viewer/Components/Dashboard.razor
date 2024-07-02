@@ -64,20 +64,17 @@
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => RemoteControlClicked(context.Item))"
-                                         OnTouch="@(() => RemoteControlClicked(context.Item))">
+                                         OnClick="@(() => RemoteControlClicked(context.Item))">
                                 Remote Control
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => StartTerminal(context.Item))"
-                                         OnTouch="@(() => StartTerminal(context.Item))">
+                                         OnClick="@(() => StartTerminal(context.Item))">
                                 Terminal
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Settings)"
                                          IconColor="Color.Info"
-                                         OnClick="@(() => ConfigureDeviceSettings(context.Item))"
-                                         OnTouch="@(() => ConfigureDeviceSettings(context.Item))">
+                                         OnClick="@(() => ConfigureDeviceSettings(context.Item))">
                                 Configure
                             </MudMenuItem>
 
@@ -85,22 +82,19 @@
                             {
                                 <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
                                              IconColor="Color.Warning"
-                                             OnClick="@(() => UpdateDevice(context.Item))"
-                                             OnTouch="@(() => UpdateDevice(context.Item))">
+                                             OnClick="@(() => UpdateDevice(context.Item))">
                                     Update
                                 </MudMenuItem>
                             }
 
                             <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
                                          IconColor="Color.Error"
-                                         OnClick="@(() => ShutdownDevice(context.Item))"
-                                         OnTouch="@(() => ShutdownDevice(context.Item))">
+                                         OnClick="@(() => ShutdownDevice(context.Item))">
                                 Shutdown
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
                                          IconColor="Color.Error"
-                                         OnClick="@(() => RestartDevice(context.Item))"
-                                         OnTouch="@(() => RestartDevice(context.Item))">
+                                         OnClick="@(() => RestartDevice(context.Item))">
                                 Restart
                             </MudMenuItem>
                         }
@@ -108,14 +102,12 @@
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)"
                                          IconColor="Color.Success"
-                                         OnClick="@(() => WakeDevice(context.Item))"
-                                         OnTouch="@(() => WakeDevice(context.Item))">
+                                         OnClick="@(() => WakeDevice(context.Item))">
                                 Wake
                             </MudMenuItem>
                             <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
                                          IconColor="Color.Error"
-                                         OnClick="@(() => RemoveDevice(context.Item))"
-                                         OnTouch="@(() => RemoveDevice(context.Item))">
+                                         OnClick="@(() => RemoveDevice(context.Item))">
                                 Remove
                             </MudMenuItem>
                         }
@@ -140,7 +132,6 @@
         </TemplateColumn>
 
         <TemplateColumn T="DeviceDto"
-                        Field="@(nameof(DeviceDto.IsOnline))"
                         Title="Online">
             <CellTemplate>
                 @if (context.Item.IsOnline)

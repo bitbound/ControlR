@@ -129,7 +129,7 @@ public partial class Dashboard
 
             var dialogOptions = new DialogOptions()
             {
-                DisableBackdropClick = true,
+                BackdropClick = false,
                 FullWidth = true,
                 MaxWidth = MaxWidth.Medium
             };
@@ -299,7 +299,7 @@ public partial class Dashboard
                 var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
                 var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
                 var result = await dialogRef.Result;
-                if (result.Canceled)
+                if (result is null || result.Canceled)
                 {
                     return;
                 }

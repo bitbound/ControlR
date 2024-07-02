@@ -38,25 +38,25 @@
 
             @if (_controlMode == ControlMode.Touch)
             {
-                <MudToggleIconButton Title="Virtual Keyboard Off"
-                                     Variant="Variant.Outlined"
-                                     Icon="@(Icons.Material.Filled.Keyboard)"
-                                     ToggledTitle="Virtual Keyboard On"
-                                     ToggledColor="Color.Success"
-                                     ToggledIcon="@(Icons.Material.Filled.Keyboard)"
-                                     ToggledChanged="HandleKeyboardToggled" />
+                <MudTooltip Text="Virtual Keyboard">
+                    <MudToggleIconButton Variant="Variant.Outlined"
+                                         Icon="@(Icons.Material.Filled.Keyboard)"
+                                         ToggledColor="Color.Success"
+                                         ToggledIcon="@(Icons.Material.Filled.Keyboard)"
+                                         ToggledChanged="HandleKeyboardToggled" />
+                </MudTooltip>
 
-                <MudToggleIconButton Title="Scroll Mode Off"
-                                     Variant="Variant.Outlined"
-                                     Icon="@(Icons.Material.Filled.UnfoldMoreDouble)"
-                                     ToggledTitle="Scroll Mode On"
-                                     ToggledColor="Color.Success"
-                                     ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
-                                     ToggledChanged="HandleScrollModeToggled" />
+                <MudTooltip Text="Scroll Mode">
+                    <MudToggleIconButton Variant="Variant.Outlined"
+                                         Icon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                                         ToggledColor="Color.Success"
+                                         ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                                         ToggledChanged="HandleScrollModeToggled" />
+                </MudTooltip>
             }
 
             <MudPopover Open="_isMobileActionsMenuOpen" Class="z9001" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
-                <MudList>
+                <MudList T="ViewMode">
                     <MudListItem>
                         <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
                     </MudListItem>

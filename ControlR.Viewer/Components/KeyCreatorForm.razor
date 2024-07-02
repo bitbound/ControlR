@@ -247,7 +247,7 @@ else
 
             var dialogRef = await Dialogs.ShowAsync<PassphrasePromptDialog>("Decrypt Private Key", parameters);
             var dialogResult = await dialogRef.Result;
-            if (dialogResult.Canceled || dialogResult.Data is not string passphrase)
+            if (dialogResult is null || dialogResult.Canceled || dialogResult.Data is not string passphrase)
             {
                 return;
             }
