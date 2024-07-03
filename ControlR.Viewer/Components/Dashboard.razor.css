@@ -3,3 +3,7 @@
     grid-template-columns: min-content auto;
     column-gap: 20px;
 }
+
+.child-content-grid > div:nth-child(odd) {
+    white-space: nowrap;
+}

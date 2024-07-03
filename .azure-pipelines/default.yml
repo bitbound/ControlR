@@ -3,9 +3,8 @@ trigger:
   branches:
     include:
       - refs/heads/main
-      - refs/heads/dev
   batch: True
-name: 0.$(MinorBuild).$(Rev:r).0
+name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
   - job: Windows_Build
     displayName: Build
@@ -18,35 +17,41 @@ jobs:
       - checkout: self
         clean: true
         fetchDepth: 1
-      - task: DownloadSecureFile@1
-        name: pfxCertificate
-        displayName: Download PFX
-        inputs:
-          secureFile: CodeSigningCert.pfx
-      - task: PowerShell@2
-        displayName: Import PFX
-        inputs:
-          targetType: inline
-          script: >-
-            $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
 
-            Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
-          pwsh: true
+      #- task: DownloadSecureFile@1
+      #  name: pfxCertificate
+      #  displayName: Download PFX
+      #  inputs:
+      #    secureFile: CodeSigningCert.pfx
+      #
+      #- task: PowerShell@2
+      #  displayName: Import PFX
+      #  inputs:
+      #    targetType: inline
+      #    script: >-
+      #      $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
+      #
+      #      Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
+      #    pwsh: true
+
       - task: DownloadSecureFile@1
         name: keystore
         displayName: Download Keystore
         inputs:
           secureFile: 73f2c586-c865-4602-9e2b-5dc7e56bb496
+
       - task: DownloadSecureFile@1
         name: signtool
         displayName: Download Signtool
         inputs:
           secureFile: 2adac7a0-914f-40fe-bd05-6fcce65f4450
+
       - task: DotNetCoreCLI@2
         displayName: Run Tests
         inputs:
           command: test
           projects: "**/Tests/**/*.csproj"
+
       - task: PowerShell@2
         displayName: Viewer workload restore
         enabled: False
@@ -58,27 +63,32 @@ jobs:
             dotnet workload restore
 
             Pop-Location
+
       - task: PowerShell@2
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificatePath "$(pfxCertificate.secureFilePath)" -CertificatePassword "$(CertificatePassword)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -AndroidVersionCode "$(AndroidVersionCode)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
+          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -AndroidVersionCode "$(AndroidVersionCode)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
           pwsh: true
+
       - task: PublishPipelineArtifact@1
         displayName: Publish Server
         inputs:
           path: ControlR.Server\bin\publish
           artifactName: Server
+
       - task: PublishPipelineArtifact@1
         displayName: Publish Website
         inputs:
           path: ControlR.Website\dist
           artifactName: Website
+
       - task: PublishPipelineArtifact@1
         displayName: Publish CreateDelta.ps1
         inputs:
           path: .build/CreateDelta.ps1
           artifactName: CreateDelta
+
       - task: PublishPipelineArtifact@1
         displayName: Publish docker-compose.yml
         inputs:

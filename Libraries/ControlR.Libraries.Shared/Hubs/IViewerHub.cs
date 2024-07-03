@@ -7,8 +7,6 @@ public interface IViewerHub
 {
     Task<bool> CheckIfServerAdministrator();
 
-    Task<bool> CheckIfStoreIntegrationEnabled();
-
     Task<Result> ClearAlert(SignedPayloadDto signedDto);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto);

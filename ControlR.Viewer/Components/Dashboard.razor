@@ -118,6 +118,8 @@
 
         <TemplateColumn T="DeviceDto"
                         StickyLeft="true"
+                        Sortable="true"
+                        Filterable="true"
                         Title="Name">
             <CellTemplate>
                 @if (string.IsNullOrWhiteSpace(context.Item.Alias))
@@ -132,6 +134,8 @@
         </TemplateColumn>
 
         <TemplateColumn T="DeviceDto"
+                        Sortable="true"
+                        Filterable="true"
                         Title="Online">
             <CellTemplate>
                 @if (context.Item.IsOnline)
@@ -158,21 +162,33 @@
             </CellTemplate>
         </TemplateColumn>
 
-        <PropertyColumn Property="x => x!.CurrentUser" Title="Current User" />
+        <PropertyColumn Property="x => x!.CurrentUser" 
+                        Title="Current User" 
+                        Sortable="true"
+                        Filterable="true" />
 
-        <TemplateColumn T="DeviceDto" Title="CPU">
+        <TemplateColumn T="DeviceDto" 
+                        Title="CPU"
+                        Sortable="true"
+                        Filterable="true">
             <CellTemplate>
                 @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn T="DeviceDto" Title="Memory">
+        <TemplateColumn T="DeviceDto" 
+                        Title="Memory"
+                        Sortable="true"
+                        Filterable="true">
             <CellTemplate>
                 @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn T="DeviceDto" Title="Storage">
+        <TemplateColumn T="DeviceDto" 
+                        Title="Storage"
+                        Sortable="true"
+                        Filterable="true">
             <CellTemplate>
                 @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
             </CellTemplate>

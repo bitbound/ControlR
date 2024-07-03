@@ -1,12 +1,6 @@
 ﻿#if WINDOWS
-using Bitbound.SimpleMessenger;
 using ControlR.Viewer.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using IFileSystem = ControlR.Libraries.DevicesCommon.Services.IFileSystem;
-using ControlR.Libraries.Shared;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Viewer.Extensions;
 
@@ -29,24 +23,21 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is not bool integrationEnabled)
+            if (ViewerConstants.IsStoreBuild)
             {
-                return Result.Ok(false);
+                var checkResult = await _storeIntegration.IsUpdateAvailable();
+
+                if (!checkResult.IsSuccess)
+                {
+                    await _messenger.SendToast("Failed to check store for updates", MudBlazor.Severity.Error);
+                }
+                else if (checkResult.Value)
+                {
+                    return checkResult;
+                }
             }
 
-            if (!integrationEnabled)
-            {
-                return await CheckForSelfHostedUpdate();
-            }
-
-            var checkResult = await _storeIntegration.IsUpdateAvailable();
-            if (!checkResult.IsSuccess)
-            {
-                await _messenger.SendToast("Failed to check store for updates", MudBlazor.Severity.Error);
-            }
-            return checkResult;
+            return await CheckForSelfHostedUpdate();
         }
         catch (Exception ex)
         {
@@ -82,24 +73,21 @@ internal class UpdateManagerWindows(
 
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is not bool integrationEnabled)
+            if (ViewerConstants.IsStoreBuild)
             {
-                return Result.Fail("Store integration has not yet been checked.");
+                var checkResult = await _storeIntegration.IsUpdateAvailable();
+                if (checkResult.IsSuccess && checkResult.Value)
+                {
+                    var installResult = await _storeIntegration.InstallCurrentVersion();
+                    if (installResult.IsSuccess)
+                    {
+                        return installResult;
+                    }
+                    await _messenger.SendToast("Failed to update from store", MudBlazor.Severity.Error);
+                }
             }
 
-            if (!integrationEnabled)
-            {
-                return await InstallCurrentVersionSelfHosted();
-            }
-
-            var installResult = await _storeIntegration.InstallCurrentVersion();
-            if (!installResult.IsSuccess)
-            {
-                await _messenger.SendToast("Failed to update from store", MudBlazor.Severity.Error);
-            }
-            return installResult;
+            return await InstallCurrentVersionSelfHosted();
         }
         catch (Exception ex)
         {

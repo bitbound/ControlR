@@ -1,9 +1,6 @@
 param (
     [Parameter(Mandatory = $true)]
-    [string]$CertificatePath,
-
-    [Parameter(Mandatory = $true)]
-    [string]$CertificatePassword,
+    [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $true)]
     [string]$SignToolPath,
@@ -49,8 +46,8 @@ if (!$CurrentVersion) {
     Write-Error "CurrentVersion is required."
 }
 
-if (!(Test-Path $CertificatePath)) {
-    Write-Error "Certificate not found."
+if (!$CertificateThumbprint) {
+    Write-Error "CertificateThumbprint cannot be empty."
     return
 }
 
@@ -58,7 +55,6 @@ if (!(Test-Path $SignToolPath)) {
     Write-Error "SignTool not found."
     return
 }
-
 
 Set-Location $Root
 
@@ -84,7 +80,7 @@ if ($BuildAgent) {
     #Check-LastExitCode
 
     Start-Sleep -Seconds 1
-    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
+    &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
     Check-LastExitCode
 
     Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
@@ -106,7 +102,7 @@ if ($BuildViewer) {
     $Manifest.Node.Package.Identity.Version = $CurrentVersion.ToString()
     Set-Content -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest" -Value $Manifest.Node.OuterXml.Trim()
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
-    dotnet publish -p:PublishProfile=msix --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
+    dotnet publish -p:PublishProfile=sideload --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
     Check-LastExitCode
 
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.msix" -Force
@@ -125,7 +121,7 @@ if ($BuildViewer) {
 
 if ($BuildStreamer) {
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
-    &"$SignToolPath" sign /fd SHA256 /f "$CertificatePath" /p $CertificatePassword /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
+    &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
     Check-LastExitCode
 
     Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force

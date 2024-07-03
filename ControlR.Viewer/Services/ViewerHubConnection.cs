@@ -513,16 +513,6 @@ internal class ViewerHubConnection(
             });
     }
 
-    private async Task CheckIfStoreIntegrationEnabled()
-    {
-        await TryInvoke(
-            async () =>
-            {
-                var isStoreEnabled = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfStoreIntegrationEnabled));
-                _appState.SetStoreIntegrationEnabled(isStoreEnabled);
-            });
-    }
-
     private void ConfigureConnection(HubConnection connection)
     {
         connection.Closed += Connection_Closed;
@@ -599,7 +589,6 @@ internal class ViewerHubConnection(
     private async Task PerformAfterConnectInit()
     {
         await CheckIfServerAdministrator();
-        await CheckIfStoreIntegrationEnabled();
         await GetCurrentAlertFromServer();
         await _devicesCache.SetAllOffline();
         await RequestDeviceUpdates();

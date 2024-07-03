@@ -1,7 +1,6 @@
 ﻿#if ANDROID
 using Android.Gms.Extensions;
 using ControlR.Viewer.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
@@ -62,11 +61,6 @@ internal class StoreIntegrationAndroid(
         {
             return Result.Fail(ex, "Error while installing current version.").Log(_logger);
         }
-    }
-
-    public Task<Result<bool>> IsProLicenseActive()
-    {
-        return Result.Ok(false).AsTaskResult();
     }
 
     public async Task<Result<bool>> IsUpdateAvailable()
