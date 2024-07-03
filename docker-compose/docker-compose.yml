@@ -21,6 +21,7 @@ services:
     volumes:
       - controlr-data:/app/AppData
     environment:
+      # ASPNETCORE variables should *not* be changed.
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1

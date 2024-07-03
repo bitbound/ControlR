@@ -7,7 +7,5 @@ internal interface IStoreIntegration
 
     Task<Result> InstallCurrentVersion();
 
-    Task<Result<bool>> IsProLicenseActive();
-
     Task<Result<bool>> IsUpdateAvailable();
 }

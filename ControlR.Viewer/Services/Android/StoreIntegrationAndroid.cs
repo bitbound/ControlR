@@ -63,11 +63,6 @@ internal class StoreIntegrationAndroid(
         }
     }
 
-    public Task<Result<bool>> IsProLicenseActive()
-    {
-        return Result.Ok(false).AsTaskResult();
-    }
-
     public async Task<Result<bool>> IsUpdateAvailable()
     {
         try

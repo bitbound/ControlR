@@ -53,22 +53,6 @@ internal class StoreIntegrationWindows(
         }
     }
 
-    public async Task<Result<bool>> IsProLicenseActive()
-    {
-        try
-        {
-            var store = StoreContext.GetDefault();
-            var license = await store.GetAppLicenseAsync();
-            var hasProLicense = license.AddOnLicenses.TryGetValue(AddOnIdProSubscription, out var proLicense) && proLicense.IsActive;
-            return Result.Ok(hasProLicense);
-
-        }
-        catch (Exception ex)
-        {
-            return Result.Fail<bool>(ex, "Error while checking store for license.").Log(_logger);
-        }
-    }
-
     public async Task<Result> InstallCurrentVersion()
     {
         try
