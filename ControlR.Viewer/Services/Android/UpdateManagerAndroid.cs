@@ -30,7 +30,14 @@ internal class UpdateManagerAndroid(
     {
         try
         {
-            if (ViewerConstants.IsStoreBuild)
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
+
+            if (integrationResult is not bool integrationEnabled)
+            {
+                return await CheckForSelfHostedUpdate();
+            }
+
+            if (integrationEnabled)
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
 
@@ -62,7 +69,14 @@ internal class UpdateManagerAndroid(
 
         try
         {
-            if (ViewerConstants.IsStoreBuild)
+            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
+
+            if (integrationResult is not bool integrationEnabled)
+            {
+                return Result.Fail("Store integration has not yet been checked.");
+            }
+
+            if (integrationEnabled)
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
                 if (checkResult.IsSuccess && checkResult.Value)

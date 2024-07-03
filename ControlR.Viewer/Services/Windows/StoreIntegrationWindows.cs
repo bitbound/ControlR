@@ -1,5 +1,8 @@
 ﻿#if WINDOWS
+using Bitbound.SimpleMessenger;
+using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using Windows.Services.Store;
 
@@ -9,6 +12,8 @@ internal class StoreIntegrationWindows(
     ILauncher _launcher,
     ILogger<StoreIntegrationWindows> _logger) : IStoreIntegration
 {
+    private const string AddOnIdProSubscription = "9P0VDWFNRX3K";
+
 
     public Task<Uri> GetStorePageUri()
     {
@@ -45,6 +50,22 @@ internal class StoreIntegrationWindows(
         catch (Exception ex)
         {
             return Result.Fail<bool>(ex, "Error while checking store for update.").Log(_logger);
+        }
+    }
+
+    public async Task<Result<bool>> IsProLicenseActive()
+    {
+        try
+        {
+            var store = StoreContext.GetDefault();
+            var license = await store.GetAppLicenseAsync();
+            var hasProLicense = license.AddOnLicenses.TryGetValue(AddOnIdProSubscription, out var proLicense) && proLicense.IsActive;
+            return Result.Ok(hasProLicense);
+
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail<bool>(ex, "Error while checking store for license.").Log(_logger);
         }
     }
 

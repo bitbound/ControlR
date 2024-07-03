@@ -28,6 +28,11 @@ public class ViewerHub(
         return IsServerAdmin().AsTaskResult();
     }
 
+    public Task<bool> CheckIfStoreIntegrationEnabled()
+    {
+        return _appOptions.CurrentValue.EnableStoreIntegration.AsTaskResult();
+    }
+
     public async Task<Result> ClearAlert(SignedPayloadDto signedDto)
     {
         using var scope = _logger.BeginMemberScope();

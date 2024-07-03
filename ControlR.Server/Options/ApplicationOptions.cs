@@ -9,6 +9,7 @@ public class ApplicationOptions
     public IReadOnlyList<string> AuthorizedUserPublicKeys { get; init; } = [];
     public string? DockerGatewayIp { get; init; }
     public bool EnableRestrictedUserAccess { get; init; }
+    public bool EnableStoreIntegration { get; init; }
     public IReadOnlyList<ExternalWebSocketHost> ExternalWebSocketHosts { get; init; } = [];
     public string[] KnownProxies { get; init; } = [];
     public int LogRetentionDays { get; } = 7;

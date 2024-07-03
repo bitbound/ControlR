@@ -30,15 +30,18 @@ public interface IAppState
     UserKeyPair UserKeys { get; }
     bool UserKeysPresent { get; }
     Task ClearKeys();
+    Task<bool?> GetStoreIntegrationEnabled(TimeSpan timeout);
     IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
+    void SetStoreIntegrationEnabled(bool isEnabled);
     Task UpdateKeypair(UserKeyPair keypair);
 }
 
-internal class AppState(IMessenger _messenger) : IAppState
+internal class AppState(IMessenger _messenger, IDelayer _delayer) : IAppState
 {
     private static readonly CancellationTokenSource _appExitingCts = new();
     private readonly CancellationToken _appExiting = _appExitingCts.Token;
     private volatile int _busyCounter;
+    private bool? _isStoreIntegrationEnabled;
     private byte[] _privateKey = [];
     private byte[] _publicKey = [];
     private UserKeyPair? _userKeys;
@@ -126,6 +129,20 @@ internal class AppState(IMessenger _messenger) : IAppState
         await _messenger.SendGenericMessage(GenericMessageKind.KeysStateChanged);
     }
 
+    public async Task<bool?> GetStoreIntegrationEnabled(TimeSpan timeout) 
+    {
+        _ = await _delayer.WaitForAsync(
+            () => _isStoreIntegrationEnabled is bool,
+            timeout
+        );
+
+        if (_isStoreIntegrationEnabled is bool isEnabled)
+        {
+            return isEnabled;
+        }
+        return null;
+    }
+
     public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
     {
         Interlocked.Increment(ref _busyCounter);
@@ -139,6 +156,11 @@ internal class AppState(IMessenger _messenger) : IAppState
 
             additionalDisposedAction?.Invoke();
         });
+    }
+
+    public void SetStoreIntegrationEnabled(bool isEnabled)
+    {
+        _isStoreIntegrationEnabled = isEnabled;
     }
 
     public async Task UpdateKeypair(UserKeyPair keypair)
