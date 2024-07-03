@@ -30,4 +30,4 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ControlR.Server.dll"]
 
 HEALTHCHECK \
-  CMD curl -f http://localhost:8080/api/status || exit 1
+  CMD curl -f http://localhost:8080/api/health || exit 1

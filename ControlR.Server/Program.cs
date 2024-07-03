@@ -102,6 +102,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
+builder.Services.AddHealthChecks();
 var signalrBuilder = builder.Services
     .AddSignalR(options =>
     {
@@ -227,6 +228,7 @@ app.UseAuthorization();
 app.UseOutputCache();
 
 app.MapControllers();
+app.MapHealthChecks("/api/health");
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
