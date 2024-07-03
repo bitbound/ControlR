@@ -208,7 +208,7 @@ internal class AgentHubConnection(
                 return;
             }
 
-            if (_settings.AuthorizedKeys2.Count == 0)
+            if (_settings.AuthorizedKeys.Count == 0)
             {
                 _logger.LogWarning("There are no authorized keys in appsettings. Aborting heartbeat.");
                 return;
@@ -216,7 +216,7 @@ internal class AgentHubConnection(
 
             var device = await _deviceCreator.CreateDevice(
                 _cpuSampler.CurrentUtilization,
-                _settings.AuthorizedKeys2,
+                _settings.AuthorizedKeys,
                 _settings.DeviceId);
 
             var result = device.TryCloneAs<Device, DeviceDto>();
@@ -315,7 +315,7 @@ internal class AgentHubConnection(
             return false;
         }
 
-        if (!_settings.AuthorizedKeys2.Any(x => x.PublicKey == signedDto.PublicKeyBase64))
+        if (!_settings.AuthorizedKeys.Any(x => x.PublicKey == signedDto.PublicKeyBase64))
         {
             _logger.LogCritical("Public key does not exist in authorized keys list: {key}", signedDto.PublicKey);
             return false;

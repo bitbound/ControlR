@@ -11,8 +11,6 @@ public class AgentAppOptions
     [MsgPackKey]
     public ConcurrentList<AuthorizedKeyDto> AuthorizedKeys { get; set; } = [];
 
-    [MsgPackKey]
-    public ConcurrentList<AuthorizedKeyDto> AuthorizedKeys2 { get; set; } = [];
 
     [MsgPackKey]
     public string DeviceId { get; set; } = string.Empty;

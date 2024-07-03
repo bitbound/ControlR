@@ -32,7 +32,7 @@ internal abstract class AgentInstallerBase(
         _logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
         appOptions.ServerUri = updatedServerUri;
 
-        var authorizedKeys = appOptions.AuthorizedKeys2 ?? [];
+        var authorizedKeys = appOptions.AuthorizedKeys ?? [];
 
         _logger.LogInformation("Updating authorized keys.  Initial count: {KeyCount}", authorizedKeys.Count);
 
@@ -46,12 +46,11 @@ internal abstract class AgentInstallerBase(
             else
             {
                 var currentKey = authorizedKeys[currentKeyIndex];
-                var newLabel = currentKey.Label ?? label ?? "";
+                var newLabel = label ?? currentKey.Label ?? "";
                 authorizedKeys[currentKeyIndex] = currentKey with { Label = newLabel };
             }
         }
 
-        appOptions.AuthorizedKeys2 = authorizedKeys;
         appOptions.AuthorizedKeys = authorizedKeys;
 
         if (string.IsNullOrWhiteSpace(appOptions.DeviceId))

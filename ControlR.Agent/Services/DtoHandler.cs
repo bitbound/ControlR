@@ -49,7 +49,7 @@ internal class DtoHandler(
                 return;
             }
 
-            if (!_settings.AuthorizedKeys2.Any(x => x.PublicKey == wrapper.PublicKeyBase64))
+            if (!_settings.AuthorizedKeys.Any(x => x.PublicKey == wrapper.PublicKeyBase64))
             {
                 _logger.LogCritical("Public key does not exist in authorized keys: {key}", wrapper.PublicKeyBase64);
                 return;

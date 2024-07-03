@@ -16,9 +16,7 @@ namespace ControlR.Agent.Services;
 
 internal interface ISettingsProvider
 {
-    [Obsolete("AuthorizedKeys is deprecated. Use AuthorizedKeys2 instead.")]
     IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys { get; }
-    IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2 { get; }
     string DeviceId { get; }
     Uri ServerUri { get; }
     string GetAppSettingsPath();
@@ -40,14 +38,9 @@ internal class SettingsProvider(
 
     public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys
     {
-        get => _appOptions.CurrentValue.AuthorizedKeys2;
+        get => _appOptions.CurrentValue.AuthorizedKeys;
     }
 
-    public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys2
-    {
-        get => _appOptions.CurrentValue.AuthorizedKeys2 ?? [];
-    }
-       
 
     public string DeviceId
     {
@@ -82,7 +75,7 @@ internal class SettingsProvider(
         await _updateLock.WaitAsync();
         try
         {
-            var authorizedKeys = AuthorizedKeys2.ToList();
+            var authorizedKeys = AuthorizedKeys.ToList();
 
             var index = authorizedKeys.FindIndex(x => x.PublicKey == publicKeyBase64);
             if (index == -1)
@@ -92,7 +85,7 @@ internal class SettingsProvider(
             }
 
             authorizedKeys[index] = authorizedKeys[index] with { Label = publicKeyLabel };
-            _appOptions.CurrentValue.AuthorizedKeys2 = [.. authorizedKeys];
+            _appOptions.CurrentValue.AuthorizedKeys = [.. authorizedKeys];
             await WriteToDisk(_appOptions.CurrentValue);
         }
         catch (Exception ex)
