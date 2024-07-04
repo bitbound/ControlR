@@ -7,7 +7,7 @@ param (
     [string]$OctodiffPath
 )
 
-$ArtifactsDir = Join-Path -Path ($env:ArtifactsShare, $Environment.ToLower())
+$ArtifactsDir = Join-Path -Path $env:ArtifactsShare -ChildPath ($Environment.ToLower())
 $WorkDir = $env:SYSTEM_DEFAULTWORKINGDIRECTORY
 
 New-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\deltas" -ItemType Directory -Force | Out-Null
