@@ -4,7 +4,7 @@
 		<TargetFramework>net8.0-windows10.0.20348.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<Configurations>Debug;Release;Store</Configurations>
+		<Configurations>Debug;Release</Configurations>
 	</PropertyGroup>
 	
 	<ItemGroup>

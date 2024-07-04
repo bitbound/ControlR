@@ -34,11 +34,7 @@ internal class UpdateManagerWindows(
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
 
-                if (!checkResult.IsSuccess)
-                {
-                    await _messenger.SendToast("Failed to check store for updates", MudBlazor.Severity.Error);
-                }
-                else if (checkResult.Value)
+                if (checkResult.IsSuccess && checkResult.Value)
                 {
                     return checkResult;
                 }
@@ -97,7 +93,6 @@ internal class UpdateManagerWindows(
                     {
                         return installResult;
                     }
-                    await _messenger.SendToast("Failed to update from store", MudBlazor.Severity.Error);
                 }
             }
 

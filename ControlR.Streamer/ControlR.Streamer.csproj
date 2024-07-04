@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>appicon.ico</ApplicationIcon>
-	<Configurations>Debug;Release;Store</Configurations>
+	<Configurations>Debug;Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

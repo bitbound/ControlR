@@ -1,8 +1,5 @@
 ﻿#if WINDOWS
-using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Models.Messages;
 using ControlR.Viewer.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 using Windows.Services.Store;
 
@@ -12,10 +9,7 @@ internal class StoreIntegrationWindows(
     ILauncher _launcher,
     ILogger<StoreIntegrationWindows> _logger) : IStoreIntegration
 {
-    private const string AddOnIdProSubscription = "9P0VDWFNRX3K";
-
-
-    public Task<Uri> GetStorePageUri()
+     public Task<Uri> GetStorePageUri()
     {
         //try
         //{

@@ -1,16 +1,6 @@
 ﻿#if ANDROID
-
-using Android.App;
-using Android.Content;
-using Android.Content.PM;
-using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Shared.Services.Http;
-using Microsoft.Extensions.Logging;
-using System.Runtime.Versioning;
-using ControlR.Libraries.Shared.Services;
 using ControlR.Viewer.Services.Interfaces;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Viewer.Extensions;
 
 namespace ControlR.Viewer.Services.Android;
@@ -41,11 +31,7 @@ internal class UpdateManagerAndroid(
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
 
-                if (!checkResult.IsSuccess)
-                {
-                    await _messenger.SendToast("Failed to check store for updates", MudBlazor.Severity.Error);
-                }
-                else if (checkResult.Value)
+                if (checkResult.IsSuccess && checkResult.Value)
                 {
                     return checkResult;
                 }
@@ -71,12 +57,7 @@ internal class UpdateManagerAndroid(
         {
             var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
 
-            if (integrationResult is not bool integrationEnabled)
-            {
-                return Result.Fail("Store integration has not yet been checked.");
-            }
-
-            if (integrationEnabled)
+            if (integrationResult is bool integrationEnabled && integrationEnabled)
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
                 if (checkResult.IsSuccess && checkResult.Value)
@@ -86,13 +67,12 @@ internal class UpdateManagerAndroid(
                     {
                         return installResult;
                     }
-                    await _messenger.SendToast("Failed to update from store", MudBlazor.Severity.Error);
                 }
             }
 
             if (!await _browser.OpenAsync(_settings.ViewerDownloadUri, BrowserLaunchMode.External))
             {
-                await _messenger.SendToast("Failed to launch update URL", MudBlazor.Severity.Error);
+                await _messenger.SendToast("Failed to launch download URL", MudBlazor.Severity.Error);
             }
             return Result.Ok();
         }

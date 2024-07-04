@@ -109,7 +109,7 @@ if ($BuildViewer) {
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\" -Recurse -Include "ControlR*.cer" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.cer" -Force
 
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
-    dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword -o "$Root\ControlR.Viewer\bin\publish\"
+    dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword /p:PackageCertificateThumbprint="$CertificateThumbprint" -o "$Root\ControlR.Viewer\bin\publish\"
     Check-LastExitCode
 
     Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
