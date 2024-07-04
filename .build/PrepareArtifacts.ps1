@@ -10,8 +10,8 @@ param (
 $ArtifactsDir = Join-Path -Path $env:ArtifactsShare -ChildPath ($Environment.ToLower())
 $WorkDir = $env:SYSTEM_DEFAULTWORKINGDIRECTORY
 
-New-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\deltas" -ItemType Directory -Force | Out-Null
-New-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\signatures" -ItemType Directory -Force | Out-Null
+[System.IO.Directory]::CreateDirectory("$ArtifactsDir\Server\wwwroot\downloads\deltas") | Out-Null
+[System.IO.Directory]::CreateDirectory("$ArtifactsDir\Server\wwwroot\downloads\signatures") | Out-Null
 Copy-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\deltas\*" -Destination "$WorkDir\_ControlR\Server\wwwroot\downloads\deltas" -Recurse -Force
 Copy-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\signatures\*" -Destination "$WorkDir\_ControlR\Server\wwwroot\downloads\signatures" -Recurse -Force
 
