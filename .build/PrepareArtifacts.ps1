@@ -17,6 +17,6 @@ Copy-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\signatures\*" -Destinati
 
 &"$WorkDir\_ControlR\CreateDelta\CreateDelta.ps1" -DownloadsFolder "$WorkDir/_ControlR/Server/wwwroot/downloads" -OldFilePath "$ArtifactsDir\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -NewFilePath "$WorkDir\_ControlR\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -BaseDeltaName "windows-streamer" -OctodiffPath $OctodiffPath
 
-Compress-Archive -Path "$WorkDir\_ControlR\Server" -DestinationPath "$WorkDir\Server-Linux-x64.zip" -Force
+Compress-Archive -Path "$WorkDir\_ControlR\Server" -DestinationPath "$ArtifactsDir\Server-Linux-x64.zip" -Force
 
 Copy-Item -Path "$WorKDir\_ControlR\*" -Destination "$ArtifactsDir" -Recurse -Force
