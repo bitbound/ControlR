@@ -506,7 +506,9 @@ public partial class RemoteDisplay : IAsyncDisposable
             var websocketUri = bridgeOrigin is not null ?
                 new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}") :
                 new Uri($"{Settings.ServerUri}/bridge/{Session.SessionId}").ToWebsocketUri();
-            
+
+            Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
+
             var streamingSessionResult = await ViewerHub.RequestStreamingSession(
                 Session.Device.ConnectionId,
                 Session.SessionId,
