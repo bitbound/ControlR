@@ -11,7 +11,6 @@ internal class UpdateManagerWindows(
     IDownloadsApi _downloadsApi,
     IFileSystem _fileSystem,
     IProcessManager _processManager,
-    IMessenger _messenger,
     ISettings _settings,
     IStoreIntegration _storeIntegration,
     IAppState _appState,
