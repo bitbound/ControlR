@@ -33,6 +33,10 @@ function Create-Delta($SignaturePath) {
   Check-LastExitCode
 }
 
+if (!(Test-Path -Path $OldFilePath)) {
+  Write-Warning -Message "File $OldFilePath not found.  Skipping."
+  return 0
+}
 
 $WinSigPath = Create-Signature -OldFilePath $OldFilePath
 Create-Delta -SignaturePath $WinSigPath
