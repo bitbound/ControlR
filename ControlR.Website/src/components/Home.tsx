@@ -104,13 +104,4 @@ const AgentHelpButton = styled(IconButton)({
   transform: "translateX(5px)",
 });
 
-const CertificateInfoWrapper = styled("div")({
-  marginBottom: "1rem",
-});
-
-const CertificateHelpButton = styled(IconButton)({
-  position: "absolute",
-  transform: "translate(5px, -25%)",
-});
-
 export default Home;
