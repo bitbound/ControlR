@@ -90,6 +90,12 @@ jobs:
           artifactName: CreateDelta
 
       - task: PublishPipelineArtifact@1
+        displayName: Publish PrepareArtifacts.ps1
+        inputs:
+          path: .build/PrepareArtifacts.ps1
+          artifactName: PrepareArtifacts
+
+      - task: PublishPipelineArtifact@1
         displayName: Publish docker-compose.yml
         inputs:
           path: docker-compose/docker-compose.yml
