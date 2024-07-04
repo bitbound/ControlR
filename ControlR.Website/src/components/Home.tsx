@@ -1,17 +1,10 @@
 import * as React from "react";
 import { styled } from "@mui/material/styles";
 import { HelpOutline } from "@mui/icons-material";
-import {
-  Button,
-  Stack,
-  Typography,
-  Tooltip,
-  IconButton,
-} from "@mui/material";
+import { Button, Stack, Typography, Tooltip, IconButton } from "@mui/material";
 
 import DeployAgentDialog from "./DeployAgentDialog";
 import MsStoreBadge from "./MsStoreBadge";
-import CertificateInstructionsDialog from "./CertificateInstructionsDialog";
 
 function Home() {
   const [isAgentDialogOpen, setAgentDialogOpen] = React.useState(false);
@@ -19,16 +12,7 @@ function Home() {
   const openAgentDialog = () => {
     setAgentDialogOpen(true);
   };
-  const [isCertificateDialogOpen, setCertificateDialogOpen] =
-    React.useState(false);
 
-  const openCertificateDialog = () => {
-    setCertificateDialogOpen(true);
-  };
-
-  const closeCertificateDialog = () => {
-    setCertificateDialogOpen(false);
-  };
   const closeAgentDialog = () => {
     setAgentDialogOpen(false);
   };
@@ -52,28 +36,18 @@ function Home() {
 
       <Typography variant="h6">Windows 10/11</Typography>
       <ButtonWrapper>
-        <CertificateInfoWrapper>
-          <Button
-            variant="outlined"
-            href="/downloads/ControlR.Viewer.msix"
-            target="_blank"
-          >
-            MSIX
-          </Button>
-          <Tooltip title="Certificate Instructions">
-            <CertificateHelpButton onClick={openCertificateDialog}>
-              <HelpOutline />
-            </CertificateHelpButton>
-          </Tooltip>
-
-          <CertificateInstructionsDialog
-            isOpen={isCertificateDialogOpen}
-            onClose={closeCertificateDialog}
-          />
-        </CertificateInfoWrapper>
+        <Button
+          variant="outlined"
+          href="/downloads/ControlR.Viewer.msix"
+          target="_blank"
+        >
+          MSIX
+        </Button>
       </ButtonWrapper>
 
-      <Typography variant="h6" className="mt-10">Android</Typography>
+      <Typography variant="h6" className="mt-10">
+        Android
+      </Typography>
       <ButtonWrapper>
         <Button
           variant="outlined"

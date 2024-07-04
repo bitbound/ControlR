@@ -36,16 +36,6 @@
                 "$msCompile"
             ],
             "label": "maui: Build"
-        },
-        {
-            "type": "maui",
-            "targetFramework": "net8.0-windows10.0.19041.0",
-            "configuration": "DebugStore",
-            "project": "C:\\Repos\\ControlR\\ControlR.Viewer\\ControlR.Viewer.csproj",
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "label": "maui: BuildStore"
         }
     ]
 }
