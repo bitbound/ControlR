@@ -48,7 +48,15 @@ internal class Settings(
 
     public string PublicKeyLabel
     {
-        get => GetPref(Username ?? "");
+        get
+        {
+            var pref = GetPref("");
+            if (!string.IsNullOrWhiteSpace(pref))
+            {
+                return pref;
+            }
+            return Username;
+        }
         set => SetPref(value);
     }
 
