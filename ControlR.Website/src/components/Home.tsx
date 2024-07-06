@@ -1,7 +1,7 @@
 import * as React from "react";
 import { styled } from "@mui/material/styles";
 import { HelpOutline } from "@mui/icons-material";
-import { Button, Stack, Typography, Tooltip, IconButton } from "@mui/material";
+import { Button, Stack, Typography, Tooltip, IconButton, Link } from "@mui/material";
 
 import DeployAgentDialog from "./DeployAgentDialog";
 import MsStoreBadge from "./MsStoreBadge";
@@ -32,6 +32,20 @@ function Home() {
           language="en-us"
           animation="on"
         ></MsStoreBadge>
+      </ButtonWrapper>
+
+      <ButtonWrapper>
+        <div>
+          <a href="https://play.google.com/store/apps/details?id=dev.jaredg.controlr.viewer" target="_blank">
+            <PlayStoreImg src="/assets/GetItOnGooglePlay.png" />
+          </a>
+
+        </div>
+        <div>
+          <Link href="https://play.google.com/apps/testing/dev.jaredg.controlr.viewer" target="_blank">
+            Join the Beta
+          </Link>
+        </div>
       </ButtonWrapper>
 
       <Typography variant="h6">Windows 10/11</Typography>
@@ -103,5 +117,10 @@ const AgentHelpButton = styled(IconButton)({
   position: "absolute",
   transform: "translateX(5px)",
 });
+
+const PlayStoreImg = styled("img")({
+  width: "200px",
+  height: "auto",
+})
 
 export default Home;
