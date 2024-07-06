@@ -18,21 +18,21 @@ jobs:
         clean: true
         fetchDepth: 1
 
-      #- task: DownloadSecureFile@1
-      #  name: pfxCertificate
-      #  displayName: Download PFX
-      #  inputs:
-      #    secureFile: CodeSigningCert.pfx
-      #
-      #- task: PowerShell@2
-      #  displayName: Import PFX
-      #  inputs:
-      #    targetType: inline
-      #    script: >-
-      #      $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
-      #
-      #      Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
-      #    pwsh: true
+      - task: DownloadSecureFile@1
+        name: pfxCertificate
+        displayName: Download PFX
+        inputs:
+          secureFile: CodeSigningCert.pfx
+
+      - task: PowerShell@2
+        displayName: Import PFX
+        inputs:
+          targetType: inline
+          script: >-
+            $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
+
+            Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
+          pwsh: true
 
       - task: DownloadSecureFile@1
         name: keystore
