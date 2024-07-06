@@ -114,9 +114,10 @@ internal class Settings(
     {
         try
         {
-            _secureStorage.RemoveAll();
             _preferences.Clear();
             await _appState.ClearKeys();
+            _secureStorage.Remove(PrivateKeyStorageKey);
+            _secureStorage.RemoveAll();
         }
         catch (Exception ex)
         {
@@ -126,7 +127,15 @@ internal class Settings(
 
     public async Task StoreSecurePrivateKey(byte[] privateKey)
     {
-        await _secureStorage.SetAsync(PrivateKeyStorageKey, Convert.ToBase64String(privateKey));
+        try
+        {
+            await _secureStorage.SetAsync(PrivateKeyStorageKey, Convert.ToBase64String(privateKey));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting private key from secure storage.");
+            _secureStorage.Remove(PrivateKeyStorageKey);
+        }
     }
 
     private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
