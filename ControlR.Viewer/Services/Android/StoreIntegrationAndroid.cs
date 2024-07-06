@@ -11,7 +11,7 @@ internal class StoreIntegrationAndroid(
 {
     private const int _updateRequestCode = 89345;
 
-    private readonly Uri _storePageUri = new("https://controlr.app");
+    private readonly Uri _storePageUri = new("https://play.google.com/store/apps/details?id=dev.jaredg.controlr.viewer");
 
     public Task<Uri> GetStorePageUri()
     {
