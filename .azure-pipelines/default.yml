@@ -98,7 +98,7 @@ jobs:
       - task: PublishPipelineArtifact@1
         displayName: Publish docker-compose.yml
         inputs:
-          path: docker-compose/docker-compose.yml
+          path: docker-compose\docker-compose.yml
           publishLocation: filepath
           fileSharePath: $(ArtifactsShare)\build
           artifactName: DockerCompose
