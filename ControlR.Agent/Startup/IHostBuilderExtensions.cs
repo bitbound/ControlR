@@ -175,9 +175,6 @@ internal static class IHostBuilderExtensions
     private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
     {
         var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
-        if (Uri.TryCreate(options.CurrentValue.ServerUri, UriKind.Absolute, out var serverUri))
-        {
-            client.BaseAddress = serverUri;
-        }
+        client.BaseAddress = options.CurrentValue.ServerUri;
     }
 }

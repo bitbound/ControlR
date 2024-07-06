@@ -25,8 +25,8 @@ internal abstract class AgentInstallerBase(
         var appOptions = _appOptions.CurrentValue;
 
         var updatedServerUri =
-            serverUri?.ToString().TrimEnd('/') ??
-            appOptions.ServerUri?.TrimEnd('/') ??
+            serverUri ??
+            appOptions.ServerUri ??
             AppConstants.ServerUri;
 
         _logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);

@@ -16,5 +16,5 @@ public class AgentAppOptions
     public string DeviceId { get; set; } = string.Empty;
 
     [MsgPackKey]
-    public string? ServerUri { get; set; }
+    public Uri? ServerUri { get; set; }
 }

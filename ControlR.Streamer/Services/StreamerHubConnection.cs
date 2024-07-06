@@ -31,7 +31,7 @@ internal class StreamerHubConnection(
         try
         {
             await Connect(
-                () => $"{_startupOptions.Value.ServerOrigin}hubs/streamer",
+                () => new Uri(_startupOptions.Value.ServerOrigin, "/hubs/streamer"),
                 ConfigureConnection,
                 ConfigureHttpOptions,
                 false,

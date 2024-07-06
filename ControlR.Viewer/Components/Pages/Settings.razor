@@ -107,7 +107,7 @@
 
     protected override Task OnInitializedAsync()
     {
-        if (SettingsStore.ServerUri.TrimEnd('/') != AppConstants.ServerUri.TrimEnd('/'))
+        if (SettingsStore.ServerUri != AppConstants.ServerUri)
         {
             _serverUriType = ServerUriType.Custom;
         }
@@ -123,7 +123,7 @@
 
     private string Server
     {
-        get => SettingsStore.ServerUri;
+        get => $"{SettingsStore.ServerUri}";
     }
 
     private ServerUriType ServerUriType
@@ -251,18 +251,18 @@
             return;
         }
 
-        if (SettingsStore.ServerUri.TrimEnd('/') == value.TrimEnd('/'))
-        {
-            return;
-        }
-
         if (!Uri.TryCreate(value, UriKind.Absolute, out var serverUri))
         {
             Snackbar.Add("Invalid URI", Severity.Error);
             return;
         }
 
-        SettingsStore.ServerUri = serverUri.ToString();
+        if (SettingsStore.ServerUri == serverUri)
+        {
+            return;
+        }
+
+        SettingsStore.ServerUri = serverUri;
         Snackbar.Add("Server updated", Severity.Success);
         await DeviceCache.SetAllOffline();
         Dialogs.ShowMessageBox(

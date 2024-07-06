@@ -257,7 +257,7 @@ internal class AgentHubConnection(
         _messenger.Unregister<GenericMessage<GenericMessageKind>>(this);
         _messenger.RegisterGenericMessage(this, HandleGenericMessage);
         await Connect(
-              () => $"{_settings.ServerUri}hubs/agent",
+              () => new Uri(_settings.ServerUri, "/hubs/agent"),
               ConfigureConnection,
               ConfigureHttpOptions,
               useReconnect: true,

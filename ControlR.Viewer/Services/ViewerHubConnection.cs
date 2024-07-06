@@ -491,7 +491,7 @@ internal class ViewerHubConnection(
         using var _ = _appState.IncrementBusyCounter();
 
         await Connect(
-            () => $"{_settings.ServerUri}/hubs/viewer",
+            () => new Uri(_settings.ServerUri, "/hubs/viewer"),
             ConfigureConnection,
             ConfigureHttpOptions,
             OnConnectFailure,

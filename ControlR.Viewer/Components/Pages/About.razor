@@ -72,16 +72,6 @@
         </MudLink>
     </div>
 
-    <div>
-        <MudText Color="Color.Primary">
-            Install Source:
-        </MudText>
-    </div>
-    <div>
-        <MudText>
-            @_installSource
-        </MudText>
-    </div>
 
     @if (_storePageUri is not null)
     {
@@ -96,6 +86,17 @@
             </MudLink>
         </div>
     }
+
+    <div>
+        <MudText Color="Color.Primary">
+            Install Source:
+        </MudText>
+    </div>
+    <div>
+        <MudText>
+            @_installSource
+        </MudText>
+    </div>
 
     <div>
         <MudText Color="Color.Primary">
@@ -137,7 +138,7 @@
             ControlR is free, open-source, self-hostable, and powered by donations.
         </MudText>
         <MudText>
-             Sponsor the work here:
+            Sponsor the work here:
             <MudLink Color="Color.Info" Href="https://github.com/sponsors/bitbound">GitHub Sponsors</MudLink>
         </MudText>
     </div>

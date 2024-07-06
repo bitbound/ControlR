@@ -117,10 +117,7 @@ public static class MauiProgram
     private static void ConfigureAnonymousHttpClient(IServiceProvider services, HttpClient client)
     {
         var settings = services.GetRequiredService<ISettings>();
-        if (Uri.TryCreate(settings.ServerUri, UriKind.Absolute, out var serverUri))
-        {
-            client.BaseAddress = serverUri;
-        }
+        client.BaseAddress = settings.ServerUri;
     }
     private static void ConfigureHttpClient(IServiceProvider services, HttpClient client)
     {

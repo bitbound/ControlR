@@ -169,10 +169,9 @@
 
     private string GetInstanceIdArg()
     {
-        if (Settings.AppendInstanceIdToAgentInstall &&
-            Uri.TryCreate(Settings.ServerUri, UriKind.Absolute, out var serverUri))
+        if (Settings.AppendInstanceIdToAgentInstall)
         {
-            return $" -i {serverUri.Authority}";
+            return $" -i {Settings.ServerUri.Authority}";
         }
         return string.Empty;
     }

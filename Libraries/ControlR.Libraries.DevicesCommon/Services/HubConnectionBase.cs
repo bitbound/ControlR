@@ -44,7 +44,7 @@ public abstract class HubConnectionBase(
     }
 
     protected Task Connect(
-        Func<string> hubUrlFactory,
+        Func<Uri> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         bool useReconnect,
@@ -54,7 +54,7 @@ public abstract class HubConnectionBase(
     }
 
     protected async Task Connect(
-        Func<string> hubUrlFactory,
+        Func<Uri> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig,
         Func<string, Task> onConnectFailure,
@@ -130,7 +130,7 @@ public abstract class HubConnectionBase(
     }
 
     protected async Task Reconnect(
-        Func<string> hubUrlFactory,
+        Func<Uri> hubUrlFactory,
         Action<HubConnection> connectionConfig,
         Action<HttpConnectionOptions> optionsConfig)
     {

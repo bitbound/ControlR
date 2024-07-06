@@ -8,7 +8,7 @@ public interface ISettings
     bool HideOfflineDevices { get; set; }
     bool NotifyUserSessionStart { get; set; }
     string PublicKeyLabel { get; set; }
-    string ServerUri { get; set; }
+    Uri ServerUri { get; set; }
     string Username { get; set; }
     string ViewerDownloadUri { get; }
 
@@ -60,12 +60,19 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public string ServerUri
+    public Uri ServerUri
     {
-        get => GetPref(AppConstants.ServerUri).TrimEnd('/');
+        get
+        {
+            if (Uri.TryCreate(GetPref(""), UriKind.Absolute, out var uri))
+            {
+                return uri;
+            }
+            return AppConstants.ServerUri;
+        }
         set
         {
-            SetPref(value.TrimEnd('/'));
+            SetPref($"{value}".TrimEnd('/'));
             _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
         }
     }
@@ -124,7 +131,15 @@ internal class Settings(
 
     private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
     {
-        return _preferences.Get<T>(callerMemberName, defaultValue);
+        try
+        {
+            return _preferences.Get(callerMemberName, defaultValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting preference for {MemberName}.", callerMemberName);
+            return defaultValue;
+        }
     }
 
     private void SetPref<T>(T newValue, [CallerMemberName] string callerMemmberName = "")

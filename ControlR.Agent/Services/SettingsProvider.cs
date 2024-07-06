@@ -51,17 +51,10 @@ internal class SettingsProvider(
     {
         get
         {
-            if (Uri.TryCreate(_appOptions.CurrentValue.ServerUri, UriKind.Absolute, out var serverUri))
-            {
-                return serverUri;
-            }
-
-            if (Uri.TryCreate(AppConstants.ServerUri, UriKind.Absolute, out serverUri))
-            {
-                return serverUri;
-            }
-
-            throw new InvalidOperationException("Server URI is not configured correctly.");
+            return 
+                _appOptions.CurrentValue.ServerUri ??
+                AppConstants.ServerUri ??
+                throw new InvalidOperationException("Server URI is not configured correctly.");
         }
     }
 
@@ -103,11 +96,7 @@ internal class SettingsProvider(
         await _updateLock.WaitAsync();
         try
         {
-            if (!Uri.TryCreate(settings.AppOptions.ServerUri, UriKind.Absolute, out var newServerUri))
-            {
-                _logger.LogWarning("ServerUri was invalid while attempting to update app settings.");
-                return;
-            }
+            var newServerUri = settings.AppOptions.ServerUri;
 
             var serverUriChanged = newServerUri != ServerUri;
 

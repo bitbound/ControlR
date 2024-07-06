@@ -17,7 +17,7 @@ public class SettingsExport
 
 
     [MsgPackKey]
-    public required string ServerUri { get; init; }
+    public required Uri ServerUri { get; init; }
 
     [MsgPackKey]
     public required string Username { get; init; }

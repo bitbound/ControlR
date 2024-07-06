@@ -21,21 +21,13 @@ internal class HttpConfigurer(
     IHttpClientFactory _clientFactory,
     ISettings _settings,
     IKeyProvider _keyProvider,
-    IAppState _appState,
-    ILogger<HttpConfigurer> _logger) : IHttpConfigurer
+    IAppState _appState) : IHttpConfigurer
 {
     private static readonly ConcurrentBag<HttpClient> _clients = [];
 
     public void ConfigureClient(HttpClient client)
     {
-        if (Uri.TryCreate(_settings.ServerUri, UriKind.Absolute, out var serverUri))
-        {
-            client.BaseAddress = serverUri;
-        }
-        else
-        {
-            _logger.LogError("Server URI in settings is invalid: {ServerUri}", _settings.ServerUri);
-        }
+        client.BaseAddress = _settings.ServerUri;
 
         if (_appState.IsAuthenticated)
         {

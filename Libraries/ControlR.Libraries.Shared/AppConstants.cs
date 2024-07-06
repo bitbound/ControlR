@@ -7,8 +7,8 @@ namespace ControlR.Libraries.Shared;
 
 public static partial class AppConstants
 {
-    private const string DevServerUri = "http://localhost:5120";
-    private const string ProdServerUri = "https://app.controlr.app";
+    private static Uri DevServerUri { get; } = new Uri("http://localhost:5120");
+    private static Uri ProdServerUri { get; } = new Uri("https://app.controlr.app");
 
     public static string ExternalDownloadsUri => "https://controlr.app";
 
@@ -40,7 +40,7 @@ public static partial class AppConstants
         }
     }
 
-    public static string ServerUri
+    public static Uri ServerUri
     {
         get
         {
