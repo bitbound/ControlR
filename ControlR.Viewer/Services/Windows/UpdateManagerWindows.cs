@@ -22,24 +22,12 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is not bool integrationEnabled)
+            if (_appState.IsStoreBuild)
             {
-                return await CheckForSelfHostedUpdate();
+                return await _storeIntegration.IsUpdateAvailable();
             }
 
-            if (integrationEnabled)
-            {
-                var checkResult = await _storeIntegration.IsUpdateAvailable();
-
-                if (checkResult.IsSuccess && checkResult.Value)
-                {
-                    return checkResult;
-                }
-            }
-
-            return await CheckForSelfHostedUpdate();
+            return await CheckForSideloadedUpdate();
         }
         catch (Exception ex)
         {
@@ -48,7 +36,7 @@ internal class UpdateManagerWindows(
         }
     }
 
-    private async Task<Result<bool>> CheckForSelfHostedUpdate()
+    private async Task<Result<bool>> CheckForSideloadedUpdate()
     {
         var result = await _versionApi.GetCurrentViewerVersion();
         if (!result.IsSuccess)
@@ -75,24 +63,15 @@ internal class UpdateManagerWindows(
 
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is not bool integrationEnabled)
-            {
-                return Result.Fail("Store integration has not yet been checked.");
-            }
-
-            if (integrationEnabled)
+            if (_appState.IsStoreBuild)
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
-                if (checkResult.IsSuccess && checkResult.Value)
+                if (!checkResult.IsSuccess)
                 {
-                    var installResult = await _storeIntegration.InstallCurrentVersion();
-                    if (installResult.IsSuccess)
-                    {
-                        return installResult;
-                    }
+                    return checkResult.ToResult();
                 }
+
+                return await _storeIntegration.InstallCurrentVersion();
             }
 
             return await InstallCurrentVersionSelfHosted();

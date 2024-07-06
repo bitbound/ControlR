@@ -103,23 +103,31 @@ if ($BuildViewer) {
     Set-Content -Path "$Root\ControlR.Viewer\Platforms\Windows\Package.appxmanifest" -Value $Manifest.Node.OuterXml.Trim()
     Remove-Item -Path "$Root\ControlR.Viewer\bin\publish\" -Force -Recurse -ErrorAction SilentlyContinue
 
-    # Windows Publish
+    # Windows Publish (Sideload)
     dotnet publish -p:PublishProfile=sideload --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
     Check-LastExitCode
-
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\windows\sideload\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.msix" -Force
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\windows\sideload\" -Recurse -Include "ControlR*.cer" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.cer" -Force
 
-    # Android Publish
-    dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword /p:PackageCertificateThumbprint="$CertificateThumbprint" -o "$Root\ControlR.Viewer\bin\publish\android"
+    # Windows Publish (Store)
+    dotnet publish -p:PublishProfile=store --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
     Check-LastExitCode
+    Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\windows\store\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$env:ArtifactsShare\store\ControlR.Viewer.msix" -Force
 
-    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
-    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\dev.jaredg.controlr.viewer-Signed.aab" -Destination "$DownloadsFolder\ControlR.Viewer.aab" -Force
+    # Android Publish (Sideload)
+    dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword -o "$Root\ControlR.Viewer\bin\publish\android\sideload"
+    Check-LastExitCode
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\sideload\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$DownloadsFolder\ControlR.Viewer.apk" -Force
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\sideload\dev.jaredg.controlr.viewer-Signed.aab" -Destination "$DownloadsFolder\ControlR.Viewer.aab" -Force
+
+    # Android Publish (Store)
+    dotnet publish "$Root\ControlR.Viewer\" -f:net8.0-android -c:Release /p:IsStoreBuild=True /p:AndroidKeyStore=True /p:AndroidSigningKeyAlias=controlr /p:AndroidSigningKeyStore="$KeystorePath" /p:AndroidSigningKeyPass=$KeystorePassword /p:AndroidSigningStorePass=$KeystorePassword -o "$Root\ControlR.Viewer\bin\publish\android\store"
+    Check-LastExitCode
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\store\dev.jaredg.controlr.viewer-Signed.apk" -Destination "$env:ArtifactsShare\store\ControlR.Viewer.apk" -Force
+    Copy-Item -Path "$Root\ControlR.Viewer\bin\publish\android\store\dev.jaredg.controlr.viewer-Signed.aab" -Destination "$env:ArtifactsShare\store\ControlR.Viewer.aab" -Force
 
     Set-Content -Path "$DownloadsFolder\ViewerVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
-
 
 if ($BuildStreamer) {
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"

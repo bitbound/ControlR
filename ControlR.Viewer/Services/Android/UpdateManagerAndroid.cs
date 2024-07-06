@@ -20,24 +20,12 @@ internal class UpdateManagerAndroid(
     {
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is not bool integrationEnabled)
+            if (_appState.IsStoreBuild)
             {
-                return await CheckForSelfHostedUpdate();
+                return await _storeIntegration.IsUpdateAvailable();
             }
 
-            if (integrationEnabled)
-            {
-                var checkResult = await _storeIntegration.IsUpdateAvailable();
-
-                if (checkResult.IsSuccess && checkResult.Value)
-                {
-                    return checkResult;
-                }
-            }
-
-            return await CheckForSelfHostedUpdate();
+            return await CheckForSideloadedUpdate();
         }
         catch (Exception ex)
         {
@@ -55,19 +43,15 @@ internal class UpdateManagerAndroid(
 
         try
         {
-            var integrationResult = await _appState.GetStoreIntegrationEnabled(TimeSpan.FromSeconds(5));
-
-            if (integrationResult is bool integrationEnabled && integrationEnabled)
+            if (_appState.IsStoreBuild)
             {
                 var checkResult = await _storeIntegration.IsUpdateAvailable();
-                if (checkResult.IsSuccess && checkResult.Value)
+                if (!checkResult.IsSuccess)
                 {
-                    var installResult = await _storeIntegration.InstallCurrentVersion();
-                    if (installResult.IsSuccess)
-                    {
-                        return installResult;
-                    }
+                    return checkResult.ToResult();
                 }
+
+                return await _storeIntegration.InstallCurrentVersion();
             }
 
             if (!await _browser.OpenAsync(_settings.ViewerDownloadUri, BrowserLaunchMode.External))
@@ -87,7 +71,7 @@ internal class UpdateManagerAndroid(
         return Result.Fail("Installation failed.");
     }
 
-private async Task<Result<bool>> CheckForSelfHostedUpdate()
+private async Task<Result<bool>> CheckForSideloadedUpdate()
     {
         try
         {

@@ -75,28 +75,30 @@ jobs:
         displayName: Publish Server
         inputs:
           path: ControlR.Server\bin\publish
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
           artifactName: Server
 
       - task: PublishPipelineArtifact@1
         displayName: Publish Website
         inputs:
           path: ControlR.Website\dist
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
           artifactName: Website
 
       - task: PublishPipelineArtifact@1
-        displayName: Publish CreateDelta.ps1
+        displayName: Publish Build Scripts
         inputs:
-          path: .build/CreateDelta.ps1
-          artifactName: CreateDelta
-
-      - task: PublishPipelineArtifact@1
-        displayName: Publish PrepareArtifacts.ps1
-        inputs:
-          path: .build/PrepareArtifacts.ps1
-          artifactName: PrepareArtifacts
+          path: .build\
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
+          artifactName: BuildScripts
 
       - task: PublishPipelineArtifact@1
         displayName: Publish docker-compose.yml
         inputs:
           path: docker-compose/docker-compose.yml
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
           artifactName: DockerCompose

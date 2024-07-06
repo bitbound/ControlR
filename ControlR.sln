@@ -36,6 +36,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B852
 		.build\Build.ps1 = .build\Build.ps1
 		.build\CreateDelta.ps1 = .build\CreateDelta.ps1
 		.build\CreateKeystore.cmd = .build\CreateKeystore.cmd
+		.build\PrepareArtifacts.ps1 = .build\PrepareArtifacts.ps1
 	EndProjectSection
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose\docker-compose.dcproj", "{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}"
@@ -95,10 +96,10 @@ Global
 		{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEEABDBB-6362-40FE-8F20-8F2C6E3761FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14BABACA-6831-47FD-B1E1-71201BA669AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9BEF28CB-4D1A-4973-BBAE-26BDCCF8FB88}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDAAE932-DEC8-4DD0-A059-C9E197A7911C}.Release|Any CPU.ActiveCfg = Release|Any CPU

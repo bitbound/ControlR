@@ -15,7 +15,7 @@ $WorkDir = $env:SYSTEM_DEFAULTWORKINGDIRECTORY
 Copy-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\deltas\" -Destination "$WorkDir\_ControlR\Server\wwwroot\downloads\deltas\" -Recurse -Force
 Copy-Item -Path "$ArtifactsDir\Server\wwwroot\downloads\signatures\" -Destination "$WorkDir\_ControlR\Server\wwwroot\downloads\signatures\" -Recurse -Force
 
-&"$WorkDir\_ControlR\CreateDelta\CreateDelta.ps1" -DownloadsFolder "$WorkDir/_ControlR/Server/wwwroot/downloads" -OldFilePath "$ArtifactsDir\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -NewFilePath "$WorkDir\_ControlR\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -BaseDeltaName "windows-streamer" -OctodiffPath $OctodiffPath
+&"$WorkDir\_ControlR\BuildScripts\CreateDelta.ps1" -DownloadsFolder "$WorkDir/_ControlR/Server/wwwroot/downloads" -OldFilePath "$ArtifactsDir\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -NewFilePath "$WorkDir\_ControlR\Server\wwwroot\downloads\win-x86\ControlR.Streamer.zip" -BaseDeltaName "windows-streamer" -OctodiffPath $OctodiffPath
 
 Compress-Archive -Path "$WorkDir\_ControlR\Server" -DestinationPath "$ArtifactsDir\Server-Linux-x64.zip" -Force
 

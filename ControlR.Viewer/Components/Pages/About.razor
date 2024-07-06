@@ -72,6 +72,17 @@
         </MudLink>
     </div>
 
+    <div>
+        <MudText Color="Color.Primary">
+            Install Source:
+        </MudText>
+    </div>
+    <div>
+        <MudText>
+            @_installSource
+        </MudText>
+    </div>
+
     @if (_storePageUri is not null)
     {
         <div>
@@ -136,6 +147,7 @@
     private bool _updateAvailable;
     private Uri? _storePageUri;
     private string _storePageLinkText = "Open External";
+    private string _installSource = "Sideload";
 
 
     protected override async Task OnInitializedAsync()
@@ -148,6 +160,11 @@
         if (OperatingSystem.IsAndroid())
         {
             _storePageLinkText = "Play Store";
+        }
+
+        if (ViewerConstants.IsStoreBuild)
+        {
+            _installSource = "Store";
         }
 
         await Init();
