@@ -3,6 +3,11 @@ trigger:
   branches:
     include:
       - refs/heads/main
+  paths:
+    exclude:
+      - .*
+      - ControlR.Website/*
+      - README.md
   batch: True
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
