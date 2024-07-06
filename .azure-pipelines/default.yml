@@ -18,22 +18,6 @@ jobs:
         clean: true
         fetchDepth: 1
 
-      - task: PublishPipelineArtifact@1
-        displayName: Publish Build Scripts
-        inputs:
-          path: .build\
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: BuildScripts
-
-      - task: PublishPipelineArtifact@1
-        displayName: Publish docker-compose.yml
-        inputs:
-          path: docker-compose\
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: DockerCompose
-
       - task: DownloadSecureFile@1
         name: pfxCertificate
         displayName: Download PFX
@@ -103,3 +87,18 @@ jobs:
           fileSharePath: $(ArtifactsShare)\build
           artifactName: Website
 
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Build Scripts
+        inputs:
+          path: .build\
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
+          artifactName: BuildScripts
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish docker-compose.yml
+        inputs:
+          path: docker-compose\
+          publishLocation: filepath
+          fileSharePath: $(ArtifactsShare)\build
+          artifactName: DockerCompose
