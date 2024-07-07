@@ -121,6 +121,9 @@ internal class AgentHubConnection(
                 return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
             }
 
+            var payload = signedDto.GetPayload<GetAgentAppSettingsDto>();
+            payload.VerifyType(DtoType.GetAgentAppSettings);
+
             var agentOptions = _appOptions.CurrentValue;
             var settings = new AgentAppSettings()
             {
@@ -141,6 +144,9 @@ internal class AgentHubConnection(
         {
             return Array.Empty<WindowsSession>().AsTaskResult();
         }
+
+        var payload = signedDto.GetPayload<GetWindowsSessionsDto>();
+        payload.VerifyType(DtoType.GetWindowsSessions);
 
         if (_environmentHelper.Platform != SystemPlatform.Windows)
         {

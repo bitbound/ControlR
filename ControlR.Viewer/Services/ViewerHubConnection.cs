@@ -76,8 +76,7 @@ internal class ViewerHubConnection(
             async () =>
             {
                 await WaitForConnection();
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ClearAlerts, _appState.PrivateKey);
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert), signedDto);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert));
             });
     }
 
@@ -86,7 +85,10 @@ internal class ViewerHubConnection(
         await TryInvoke(
             async () =>
             {
-                var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.CloseStreamingSession, _appState.PrivateKey);
+                await WaitForConnection();
+                var dto = new CloseStreamingSessionRequestDto();
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.CloseStreamingSession, _appState.PrivateKey);
+
                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
             });
     }
@@ -120,8 +122,8 @@ internal class ViewerHubConnection(
         return await TryInvoke(
             async () =>
             {
-                var request = _keyProvider.CreateRandomSignedDto(DtoType.GetAgentAppSettings, _appState.PrivateKey);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.PrivateKey);
+                var dto = new GetAgentAppSettingsDto();
+                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetAgentAppSettings, _appState.PrivateKey);
                 return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, signedDto);
             },
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
@@ -177,7 +179,8 @@ internal class ViewerHubConnection(
     {
         try
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.WindowsSessions, _appState.PrivateKey);
+            var dto = new GetWindowsSessionsDto();
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetWindowsSessions, _appState.PrivateKey);
             var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, signedDto);
             return Result.Ok(sessions);
         }
@@ -192,7 +195,8 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.InvokeCtrlAltDel, _appState.PrivateKey);
+            var dto = new InvokeCtrlAltDelRequestDto();
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.InvokeCtrlAltDel, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
         });
     }
@@ -328,7 +332,8 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.AgentUpdateTrigger, _appState.PrivateKey);
+            var dto = new TriggerAgentUpdateDto();
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TriggerAgentUpdate, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
         });
     }
@@ -375,7 +380,8 @@ internal class ViewerHubConnection(
               async () =>
               {
                   await WaitForConnection();
-                  var signedDto = _keyProvider.CreateRandomSignedDto(DtoType.ResetKeyboardState, _appState.PrivateKey);
+                  var dto = new ResetKeyboardStateDto();
+                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ResetKeyboardState, _appState.PrivateKey);
                   await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
               });
     }

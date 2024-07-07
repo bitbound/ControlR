@@ -7,7 +7,7 @@ public interface IViewerHub
 {
     Task<bool> CheckIfServerAdministrator();
 
-    Task<Result> ClearAlert(SignedPayloadDto signedDto);
+    Task<Result> ClearAlert();
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto);
 

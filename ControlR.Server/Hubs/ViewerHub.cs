@@ -28,7 +28,7 @@ public class ViewerHub(
         return IsServerAdmin().AsTaskResult();
     }
 
-    public async Task<Result> ClearAlert(SignedPayloadDto signedDto)
+    public async Task<Result> ClearAlert()
     {
         using var scope = _logger.BeginMemberScope();
 

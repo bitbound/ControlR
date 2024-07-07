@@ -1,6 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Viewer.Enums;
 using ControlR.Viewer.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -505,7 +504,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
             var websocketUri = bridgeOrigin is not null ?
                 new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}") :
-                new Uri($"{Settings.ServerUri}/bridge/{Session.SessionId}").ToWebsocketUri();
+                new Uri(Settings.ServerUri, $"/bridge/{Session.SessionId}").ToWebsocketUri();
 
             Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 

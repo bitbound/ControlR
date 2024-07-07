@@ -7,7 +7,6 @@ namespace ControlR.Libraries.Shared.Services;
 
 public interface IKeyProvider
 {
-    SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey);
     SignedPayloadDto CreateSignedDto<T>(T payload, DtoType dtoType, byte[] privateKey);
     byte[] EncryptPrivateKey(string password, byte[] privateKey);
     UserKeyPair GenerateKeys();
@@ -23,14 +22,6 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
     private readonly PbeParameters _pbeParameters = new(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA512, 10_000);
     private readonly RSASignaturePadding _signaturePadding = RSASignaturePadding.Pkcs1;
     private readonly ISystemTime _systemTime = systemTime;
-
-    public SignedPayloadDto CreateRandomSignedDto(DtoType dtoType, byte[] privateKey)
-    {
-        using var rsa = RSA.Create();
-        rsa.ImportRSAPrivateKey(privateKey, out _);
-        var payload = RandomNumberGenerator.GetBytes(256);
-        return CreateSignedDtoImpl(rsa, payload, dtoType);
-    }
 
     public SignedPayloadDto CreateSignedDto<T>(T payload, DtoType dtoType, byte[] privateKey)
     {

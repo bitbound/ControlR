@@ -89,14 +89,20 @@ internal class DtoHandler(
 
                 case DtoType.InvokeCtrlAltDel:
                     {
+                        var payload = wrapper.GetPayload<InvokeCtrlAltDelRequestDto>();
+                        payload.VerifyType(DtoType.InvokeCtrlAltDel);
+
                         if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
                         {
                             _win32Interop.InvokeCtrlAltDel();
                         }
                         break;
                     }
-                case DtoType.AgentUpdateTrigger:
+                case DtoType.TriggerAgentUpdate:
                     {
+                        var payload = wrapper.GetPayload<TriggerAgentUpdateDto>();
+                        payload.VerifyType(DtoType.TriggerAgentUpdate);
+
                         await _agentUpdater.CheckForUpdate();
                         break;
                     }
