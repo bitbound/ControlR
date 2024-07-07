@@ -56,9 +56,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        LoadFileNames();
-        _selectedFileValue = _logFiles.FirstOrDefault();
-        await LoadSelectedFile();
+        try
+        {
+            _ = FileIO.CreateDirectory(_logsDir);
+            LoadFileNames();
+            _selectedFileValue = _logFiles.FirstOrDefault();
+            await LoadSelectedFile();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while initializing logs.");
+            Snackbar.Add("Failed to initialize logs", Severity.Error);
+        }
 
         await base.OnInitializedAsync();
     }
