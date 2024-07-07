@@ -6,6 +6,7 @@ namespace ControlR.Libraries.Shared.Services.Http;
 internal interface IDownloadsApi
 {
     Task<Result> DownloadFile(string downloadUri, string destinationPath);
+    Task<Result> DownloadFile(Uri downloadUri, string destinationPath);
 
     Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress);
 
@@ -32,6 +33,11 @@ internal class DownloadsApi(
             _logger.LogError(ex, "Error while downloading file {DownloadUri}.", downloadUri);
             return Result.Fail(ex);
         }
+    }
+
+    public Task<Result> DownloadFile(Uri downloadUri, string destinationPath)
+    {
+        return DownloadFile($"{downloadUri}", destinationPath);
     }
 
     public async Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress)

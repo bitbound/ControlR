@@ -177,7 +177,6 @@
     {
         try
         {
-            Snackbar.Add("Downloading update", Severity.Info);
             var installResult = await UpdateManager.InstallCurrentVersion();
             if (!installResult.IsSuccess)
             {

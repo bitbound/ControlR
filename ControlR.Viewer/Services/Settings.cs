@@ -10,7 +10,7 @@ public interface ISettings
     string PublicKeyLabel { get; set; }
     Uri ServerUri { get; set; }
     string Username { get; set; }
-    string ViewerDownloadUri { get; }
+    Uri ViewerDownloadUri { get; }
 
     Task<Result<byte[]>> GetSecurePrivateKey();
 
@@ -82,11 +82,11 @@ internal class Settings(
         set => SetPref(value);
     }
 
-    public string ViewerDownloadUri
+    public Uri ViewerDownloadUri
     {
         get
         {
-            return $"{ServerUri}/downloads/{AppConstants.ViewerFileName}";
+            return new Uri(ServerUri , $"/downloads/{AppConstants.ViewerFileName}");
         }
     }
 

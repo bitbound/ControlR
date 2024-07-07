@@ -23,8 +23,14 @@
 
     <MudLayout>
         <MudAppBar Elevation="0">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+            <MudIconButton 
+                Icon="@Icons.Material.Filled.Menu" 
+                Color="Color.Inherit" 
+                Edge="Edge.Start"
                 OnClick="@((e) => DrawerToggle())" />
+
+            <MudBadge Content='"Beta"' Color="Color.Tertiary" Class="ms-3" />
+
             <MudSpacer />
 
             @if (_updateAvailable)
