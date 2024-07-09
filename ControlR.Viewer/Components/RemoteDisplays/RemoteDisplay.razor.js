@@ -121,7 +121,7 @@ export async function initialize(componentRef, canvasId) {
     const state = getState(canvasId);
     console.log("Initializing with state: ", state);
 
-    /** @type {HTMLcanvasElement} */
+    /** @type {HTMLCanvasElement} */
     const canvas = document.getElementById(canvasId);
 
     state.componentRef = componentRef;
@@ -233,6 +233,10 @@ export async function initialize(componentRef, canvasId) {
 
     canvas.addEventListener("mousedown", async ev => {
         ev.stopPropagation();
+        if (ev.button == 3 || ev.button == 4) {
+            ev.preventDefault();
+        }
+
         if (canvas.classList.contains("minimized")) {
             return;
         }
@@ -242,6 +246,10 @@ export async function initialize(componentRef, canvasId) {
 
     canvas.addEventListener("mouseup", async ev => {
         ev.stopPropagation();
+        if (ev.button == 3 || ev.button == 4) {
+            ev.preventDefault();
+        }
+
         if (canvas.classList.contains("minimized")) {
             return;
         }
