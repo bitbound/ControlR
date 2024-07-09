@@ -112,7 +112,7 @@ if ($BuildViewer) {
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\windows\sideload\" -Recurse -Include "ControlR*.cer" | Select-Object -First 1 | Copy-Item -Destination "$DownloadsFolder\ControlR.Viewer.cer" -Force
 
     # Windows Publish (Store)
-    dotnet publish -p:PublishProfile=store --configuration Release --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
+    dotnet publish -p:PublishProfile=store --configuration Release /p:IsStoreBuild=True --framework net8.0-windows10.0.19041.0 "$Root\ControlR.Viewer\"
     Check-LastExitCode
     Get-ChildItem -Path "$Root\ControlR.Viewer\bin\publish\windows\store\" -Recurse -Include "ControlR*.msix" | Select-Object -First 1 | Copy-Item -Destination "$env:ArtifactsShare\store\ControlR.Viewer.msix" -Force
 
