@@ -44,6 +44,15 @@ services:
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #- ControlR_ApplicationOptions__KnownProxies__0=
 
+      # If enabled, ControlR will attempt to use geolocation APIs to determine
+      # the closest relay server to the viewer when starting a remote control
+      # session.  Otherwise, the local server will be used.
+      - ControlR_ApplicationOptions__UseExternalWebSocketBridge=false
+      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Label=
+      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Origin=
+      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Latitude=
+      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Longitude=
+
 volumes:
   controlr-data:
     name: "controlr-data"
