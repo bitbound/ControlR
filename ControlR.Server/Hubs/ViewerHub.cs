@@ -20,6 +20,7 @@ public class ViewerHub(
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     IIpApi _ipApi,
+    IWsBridgeApi _wsBridgeApi,
     IOptionsMonitor<ApplicationOptions> _appOptions,
     ILogger<ViewerHub> _logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
@@ -160,6 +161,10 @@ public class ViewerHub(
 
             var location = new Coordinate(ipInfo.Lat, ipInfo.Lon);
             var closest = CoordinateHelper.FindClosestCoordinate(location, _appOptions.CurrentValue.ExternalWebSocketHosts);
+            if (closest.Origin is null || !await _wsBridgeApi.IsHealthy(closest.Origin))
+            {
+                return null;
+            }
             return closest.Origin;
         }
         catch (Exception ex)

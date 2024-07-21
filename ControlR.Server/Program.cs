@@ -107,8 +107,7 @@ var signalrBuilder = builder.Services
     .AddSignalR(options =>
     {
         options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        //options.MaximumReceiveMessageSize = 100_000;
-        options.MaximumReceiveMessageSize = null;
+        options.MaximumReceiveMessageSize = 100_000;
         options.MaximumParallelInvocationsPerClient = 5;
     })
     .AddMessagePackProtocol()
@@ -161,6 +160,7 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();
+builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 
 if (appOptions.UseRedisBackplane)
 {
