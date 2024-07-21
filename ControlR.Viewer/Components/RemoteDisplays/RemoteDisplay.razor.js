@@ -9,7 +9,7 @@
     /** @type {any} */
     componentRef;
 
-    /** @type {string} */
+    /** @type {"touch" | "mouse"} */
     currentPointerType;
 
     /** @type {boolean} */
@@ -130,6 +130,10 @@ export async function initialize(componentRef, canvasId) {
     state.canvas2dContext = canvas.getContext("2d");
 
     canvas.addEventListener("pointerup", async ev => {
+        if (state.currentPointerType != "touch") {
+            return;
+        }
+
         if (canvas.classList.contains("scroll-mode")) {
             ev.preventDefault();
             ev.stopPropagation();
