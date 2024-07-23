@@ -25,7 +25,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.10.154.0</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
 
 		<ApplicationVersion>1</ApplicationVersion>
 
@@ -77,8 +77,8 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
-		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.9.0.3" />
-		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.4.0.4" />
+		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.9.0.4" />
+		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.4.0.5" />
 		<PackageReference Include="Xamarin.Google.Android.Play.App.Update.Ktx" Version="2.1.0.8" />
 		<ProguardConfiguration Include="Platforms\Android\proguard.cfg" />
 	</ItemGroup>
@@ -107,19 +107,19 @@
 
 	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.2.1" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.1" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.2" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.7" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-		<PackageReference Include="MudBlazor" Version="7.0.0" />
+		<PackageReference Include="MudBlazor" Version="7.3.0" />
 
-		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.61" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.70" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.61" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.70" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.61" />
+		<PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.70" />
 	</ItemGroup>
 
 	<ItemGroup>

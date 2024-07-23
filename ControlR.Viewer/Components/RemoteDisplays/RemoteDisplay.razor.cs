@@ -540,11 +540,11 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         try
         {
-            var ws = new ClientWebSocket();
+            using var ws = new ClientWebSocket();
             await ws.ConnectAsync(websocketUri, _componentClosing.Token);
             await ViewerHub.SendReadySignalToStreamer(Session.StreamerConnectionId);
 
-            StreamFromWebsocket(ws).Forget();
+            await StreamFromWebsocket(ws);
         }
         catch (Exception ex)
         {

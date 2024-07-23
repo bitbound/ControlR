@@ -436,8 +436,8 @@ internal class ViewerHubConnection(
     {
         await TryInvoke(async () =>
         {
-            var powerDto = new ViewerReadyForStreamDto();
-            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.ViewerReadyForStream, _appState.PrivateKey);
+            var dto = new ViewerReadyForStreamDto();
+            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ViewerReadyForStream, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
         });
     }
