@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bitbound.WebSocketBridge.Common" Version="1.0.1" />
+    <PackageReference Include="Bitbound.WebSocketBridge.Common" Version="1.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="8.0.7" />
