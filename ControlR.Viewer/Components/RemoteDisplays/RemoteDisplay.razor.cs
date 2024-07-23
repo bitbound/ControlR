@@ -551,6 +551,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             Logger.LogError(ex, "Error while starting websocket stream.");
             Snackbar.Add("An error occurred while starting the stream", Severity.Error);
+            await Close();
         }
         finally
         {
