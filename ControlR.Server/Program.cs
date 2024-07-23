@@ -215,6 +215,7 @@ app.UseMiddleware<Md5HeaderMiddleware>();
 
 ConfigureStaticFiles(app);
 
+app.MapWebSocketBridge("/bridge");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -224,7 +225,6 @@ app.UseOutputCache();
 app.MapControllers();
 app.MapHealthChecks("/api/health");
 
-app.MapWebSocketBridge("/bridge");
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
 app.MapHub<StreamerHub>("/hubs/streamer");

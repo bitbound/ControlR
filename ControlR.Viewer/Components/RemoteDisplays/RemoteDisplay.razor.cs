@@ -501,10 +501,11 @@ public partial class RemoteDisplay : IAsyncDisposable
             Logger.LogInformation("Creating streaming session.");
 
             var bridgeOrigin = await ViewerHub.GetWebsocketBridgeOrigin();
+            var accessKey = RandomGenerator.CreateAccessToken();
 
             var websocketUri = bridgeOrigin is not null ?
-                new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}") :
-                new Uri(Settings.ServerUri, $"/bridge/{Session.SessionId}").ToWebsocketUri();
+                new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}/{accessKey}") :
+                new Uri(Settings.ServerUri, $"/bridge/{Session.SessionId}/{accessKey}").ToWebsocketUri();
 
             Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 

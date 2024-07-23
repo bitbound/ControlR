@@ -6,11 +6,15 @@ public class RandomGenerator
 {
     private const string AllowableCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ0123456789";
 
+    public static string CreateAccessToken()
+    {
+        return GenerateString(64);
+    }
+
     public static string CreateDeviceToken()
     {
         return GenerateString(128);
     }
-
     public static string GenerateString(int length)
     {
         var bytes = RandomNumberGenerator.GetBytes(length);
