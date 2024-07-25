@@ -11,9 +11,6 @@ namespace ControlR.Viewer.Services;
 public interface IViewerHubConnection : IHubConnectionBase
 {
     Task ClearAlert();
-
-    Task CloseStreamingSession(string streamerConnectionId);
-
     Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
     Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
@@ -43,18 +40,10 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task SendAgentUpdateTrigger(DeviceDto device);
 
     Task SendAlertBroadcast(string message, AlertSeverity severity);
-    Task SendChangeDisplaysRequest(string streamerConnectionId, string displayId);
-    Task SendClipboardText(string streamerConnectionId, string text, Guid sessionId);
-    Task SendKeyboardStateReset(string streamerConnectionId);
-    Task SendKeyEvent(string streamerConnectionId, string key, bool isPressed);
-    Task SendMouseButtonEvent(string streamerConnectionId, int button, bool isPressed, double percentX, double percentY);
-    Task SendPointerMove(string streamerConnectionId, double percentX, double percentY);
+
     Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
-    Task SendReadySignalToStreamer(string streamerConnectionId);
     Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
-    Task SendTypeText(string streamerConnectionId, string text);
     Task SendWakeDevice(string[] macAddresses);
-    Task SendWheelScroll(string streamerConnectionId, double percentX, double percentY, double scrollY, double scrollX);
     Task Start(CancellationToken cancellationToken);
 }
 
@@ -80,18 +69,7 @@ internal class ViewerHubConnection(
             });
     }
 
-    public async Task CloseStreamingSession(string streamerConnectionId)
-    {
-        await TryInvoke(
-            async () =>
-            {
-                await WaitForConnection();
-                var dto = new CloseStreamingSessionRequestDto();
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.CloseStreamingSession, _appState.PrivateKey);
 
-                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-            });
-    }
 
     public async Task CloseTerminalSession(string deviceId, Guid terminalId)
     {
@@ -206,12 +184,6 @@ internal class ViewerHubConnection(
         await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alert));
     }
 
-    public async Task ReceiveClipboardChanged(ClipboardChangeDto clipboardChangeDto)
-    {
-        await _messenger.Send(new DtoReceivedMessage<ClipboardChangeDto>(clipboardChangeDto));
-    }
-
-
     public Task ReceiveDeviceUpdate(DeviceDto device)
     {
         _devicesCache.AddOrUpdate(device);
@@ -225,10 +197,6 @@ internal class ViewerHubConnection(
         await _messenger.Send(message);
     }
 
-    public async Task ReceiveStreamerDisconnected(Guid sessionId)
-    {
-        await _messenger.Send(new StreamerDisconnectedMessage(sessionId));
-    }
 
     public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
     {
@@ -236,11 +204,6 @@ internal class ViewerHubConnection(
         return Task.CompletedTask;
     }
 
-    public Task ReceiveStreamerInitData(StreamerInitDataDto streamerInitData)
-    {
-        _messenger.Send(new StreamerInitDataReceivedMessage(streamerInitData));
-        return Task.CompletedTask;
-    }
 
     public Task ReceiveTerminalOutput(TerminalOutputDto output)
     {
@@ -350,77 +313,6 @@ internal class ViewerHubConnection(
             });
     }
 
-    public async Task SendChangeDisplaysRequest(string streamerConnectionId, string displayId)
-    {
-        await TryInvoke(
-            async () =>
-            {
-                await WaitForConnection();
-                var dto = new ChangeDisplaysDto(displayId);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ChangeDisplays, _appState.PrivateKey);
-                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-            });
-    }
-
-    public async Task SendClipboardText(string streamerConnectionId, string text, Guid sessionId)
-    {
-        await TryInvoke(
-             async () =>
-             {
-                 await WaitForConnection();
-                 var dto = new ClipboardChangeDto(text, sessionId);
-                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ClipboardChanged, _appState.PrivateKey);
-                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-             });
-    }
-
-    public async Task SendKeyboardStateReset(string streamerConnectionId)
-    {
-        await TryInvoke(
-              async () =>
-              {
-                  await WaitForConnection();
-                  var dto = new ResetKeyboardStateDto();
-                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ResetKeyboardState, _appState.PrivateKey);
-                  await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-              });
-    }
-
-    public async Task SendKeyEvent(string streamerConnectionId, string key, bool isPressed)
-    {
-        await TryInvoke(
-              async () =>
-              {
-                  await WaitForConnection();
-                  var dto = new KeyEventDto(key, isPressed);
-                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.KeyEvent, _appState.PrivateKey);
-                  await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-              });
-    }
-
-    public async Task SendMouseButtonEvent(string streamerConnectionId, int button, bool isPressed, double percentX, double percentY)
-    {
-        await TryInvoke(
-                   async () =>
-                   {
-                       await WaitForConnection();
-                       var dto = new MouseButtonEventDto(button, isPressed, percentX, percentY);
-                       var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseButtonEvent, _appState.PrivateKey);
-                       await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-                   });
-    }
-
-    public async Task SendPointerMove(string streamerConnectionId, double percentX, double percentY)
-    {
-        await TryInvoke(
-                  async () =>
-                  {
-                      await WaitForConnection();
-                      var dto = new MovePointerDto(percentX, percentY);
-                      var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MovePointer, _appState.PrivateKey);
-                      await Connection.SendAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-                  });
-    }
 
     public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
     {
@@ -429,16 +321,6 @@ internal class ViewerHubConnection(
             var powerDto = new PowerStateChangeDto(powerStateType);
             var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.PrivateKey);
             await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
-        });
-    }
-
-    public async Task SendReadySignalToStreamer(string streamerConnectionId)
-    {
-        await TryInvoke(async () =>
-        {
-            var dto = new ViewerReadyForStreamDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ViewerReadyForStream, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
         });
     }
 
@@ -454,18 +336,6 @@ internal class ViewerHubConnection(
             () => Result.Fail("Failed to send terminal input"));
     }
 
-    public async Task SendTypeText(string streamerConnectionId, string text)
-    {
-        await TryInvoke(
-             async () =>
-             {
-                 await WaitForConnection();
-                 var dto = new TypeTextDto(text);
-                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TypeText, _appState.PrivateKey);
-                 await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-             });
-    }
-
     public async Task SendWakeDevice(string[] macAddresses)
     {
         await TryInvoke(
@@ -477,16 +347,6 @@ internal class ViewerHubConnection(
             });
     }
 
-    public async Task SendWheelScroll(string streamerConnectionId, double percentX, double percentY, double scrollY, double scrollX)
-    {
-        await TryInvoke(
-            async () =>
-            {
-                var dto = new WheelScrollDto(percentX, percentY, scrollY, scrollX);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.WheelScroll, _appState.PrivateKey);
-                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToStreamer), streamerConnectionId, signedDto);
-            });
-    }
 
     public async Task Start(CancellationToken cancellationToken)
     {
@@ -530,9 +390,6 @@ internal class ViewerHubConnection(
         connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
         connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
         connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress), ReceiveStreamerDownloadProgress);
-        connection.On<StreamerInitDataDto>(nameof(ReceiveStreamerInitData), ReceiveStreamerInitData);
-        connection.On<ClipboardChangeDto>(nameof(ReceiveClipboardChanged), ReceiveClipboardChanged);
-        connection.On<Guid>(nameof(ReceiveStreamerDisconnected), ReceiveStreamerDisconnected);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)

@@ -39,7 +39,7 @@ public abstract class HubConnectionBase(
 
     public Task ReceiveDto(SignedPayloadDto dto)
     {
-        _messenger.Send(new SignedDtoReceivedMessage(dto)).Forget();
+        _messenger.Send(new DtoReceivedMessage<SignedPayloadDto>(dto)).Forget();
         return Task.CompletedTask;
     }
 

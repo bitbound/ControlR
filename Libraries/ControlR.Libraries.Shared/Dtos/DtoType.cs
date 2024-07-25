@@ -23,7 +23,7 @@ public enum DtoType
     InvokeCtrlAltDel = 20,
     ClipboardChanged = 21,
     TriggerAgentUpdate = 22,
-    StreamerInitData = 23,
+    DisplayData = 23,
     DesktopChanged = 24,
     DesktopRequest = 25,
     MovePointer = 26,
@@ -32,5 +32,5 @@ public enum DtoType
     TypeText = 29,
     ResetKeyboardState = 30,
     WheelScroll = 31,
-    ViewerReadyForStream = 32
+    ScreenRegion = 32
 }

@@ -21,22 +21,22 @@ internal class DtoHandler(
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _messenger.Register<SignedDtoReceivedMessage>(this, HandleSignedDtoReceivedMessage);
+        _messenger.Register<DtoReceivedMessage<SignedPayloadDto>>(this, HandleSignedDtoReceivedMessage);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _messenger.Unregister<SignedDtoReceivedMessage>(this);
+        _messenger.Unregister<DtoReceivedMessage<SignedPayloadDto>>(this);
         return Task.CompletedTask;
     }
 
-    private async Task HandleSignedDtoReceivedMessage(object subscriber, SignedDtoReceivedMessage message)
+    private async Task HandleSignedDtoReceivedMessage(object subscriber, DtoReceivedMessage<SignedPayloadDto> message)
     {
         try
         {
             using var logScope = _logger.BeginMemberScope();
-            var wrapper = message.SignedDto;
+            var wrapper = message.Dto;
 
             if (!_keyProvider.Verify(wrapper))
             {
@@ -111,12 +111,6 @@ internal class DtoHandler(
                         var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
                         _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
                         _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, payload.IsPressed);
-                        break;
-                    }
-                case DtoType.ViewerReadyForStream:
-                    {
-                        var payload = wrapper.GetPayload<ViewerReadyForStreamDto>();
-                        await _displayManager.StartCapturingChanges(payload);
                         break;
                     }
                 default:

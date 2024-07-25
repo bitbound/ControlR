@@ -16,7 +16,6 @@ namespace ControlR.Server.Hubs;
 [Authorize]
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
-    IHubContext<StreamerHub, IStreamerHubClient> _streamerHub,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     IIpApi _ipApi,
@@ -323,22 +322,6 @@ public class ViewerHub(
         }
 
         await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
-    }
-
-    public async Task SendSignedDtoToStreamer(string streamerConnectionId, SignedPayloadDto signedDto)
-    {
-        try
-        {
-            using var scope = _logger.BeginMemberScope();
-
-            await _streamerHub.Clients
-                .Client(streamerConnectionId)
-                .ReceiveDto(signedDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while sending DTO to streamer.");
-        }
     }
 
     public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)

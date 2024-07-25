@@ -28,8 +28,6 @@ public interface IViewerHub
     Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto);
 
     Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto);
-
-    Task SendSignedDtoToStreamer(string streamerConnectionId, SignedPayloadDto signedDto);
     Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);
 
 }

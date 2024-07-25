@@ -4,6 +4,7 @@
         this.touchList = { length: 0 };
         this.previousPinchDistance = -1;
         this.mouseMoveTimeout = -1;
+        this.lastMouseMove = Date.now();
     }
 
     /** @type {any} */
@@ -14,6 +15,9 @@
 
     /** @type {boolean} */
     isDragging;
+
+    /** @type {number} */
+    lastMouseMove;
 
     /** @type {boolean} */
     longPressStarted;
@@ -207,7 +211,7 @@ export async function initialize(componentRef, canvasId) {
         if (state.isDragging) {
             ev.preventDefault();
             ev.stopPropagation();
-            await sendPointerMove(ev.offsetX, ev.offsetY, state);
+            await sendPointerMove(ev.offsetX, ev.offsetY, state, true);
         }
     })
 
@@ -232,7 +236,7 @@ export async function initialize(componentRef, canvasId) {
             return;
         }
 
-        await sendPointerMove(ev.offsetX, ev.offsetY, state);
+        await sendPointerMove(ev.offsetX, ev.offsetY, state, true);
     });
 
     canvas.addEventListener("mousedown", async ev => {
@@ -430,11 +434,29 @@ function resetTouchState(state) {
  * @param {number} offsetX
  * @param {number} offsetY
  * @param {State} state
+ * @param {boolean} throttle
  */
-async function sendPointerMove(offsetX, offsetY, state) {
+async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
     const percentX = offsetX / state.canvasElement.clientWidth;
     const percentY = offsetY / state.canvasElement.clientHeight;
-    await state.invokeDotNet("SendPointerMove", percentX, percentY);
+
+    if (!throttle) {
+        await state.invokeDotNet("SendPointerMove", percentX, percentY);
+        return
+    }
+
+    window.clearTimeout(state.mouseMoveTimeout);
+
+    const now = Date.now();
+    if (now - state.lastMouseMove > 50) {
+        await state.invokeDotNet("SendPointerMove", percentX, percentY);
+        state.lastMouseMove = now;
+        return;
+    }
+
+    state.mouseMoveTimeout = window.setTimeout(async () => {
+        await state.invokeDotNet("SendPointerMove", percentX, percentY);
+    }, 50);
 }
 
 /**

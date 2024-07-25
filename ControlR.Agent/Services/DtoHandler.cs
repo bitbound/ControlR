@@ -26,22 +26,22 @@ internal class DtoHandler(
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _messenger.Register<SignedDtoReceivedMessage>(this, HandleSignedDtoReceivedMessage);
+        _messenger.Register<DtoReceivedMessage<SignedPayloadDto>>(this, HandleSignedDtoReceivedMessage);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _messenger.Unregister<SignedDtoReceivedMessage>(this);
+        _messenger.Unregister<DtoReceivedMessage<SignedPayloadDto>>(this);
         return Task.CompletedTask;
     }
 
-    private async Task HandleSignedDtoReceivedMessage(object subscriber, SignedDtoReceivedMessage message)
+    private async Task HandleSignedDtoReceivedMessage(object subscriber, DtoReceivedMessage<SignedPayloadDto> message)
     {
         try
         {
             using var logScope = _logger.BeginMemberScope();
-            var wrapper = message.SignedDto;
+            var wrapper = message.Dto;
 
             if (!_keyProvider.Verify(wrapper))
             {

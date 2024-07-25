@@ -3,7 +3,9 @@ using Bitbound.SimpleMessenger;
 using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Messages;
+using MessagePack;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
@@ -15,12 +17,12 @@ internal interface IDisplayManager
     Task ChangeDisplays(string displayId);
     Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY);
 
-    IAsyncEnumerable<byte[]> GetChangedRegions();
+    IAsyncEnumerable<ScreenRegionDto> GetChangedRegions();
     IEnumerable<DisplayDto> GetDisplays();
 
     void ResetDisplays();
 
-    Task StartCapturingChanges(ViewerReadyForStreamDto viewerReadyDto);
+    Task StartCapturingChanges();
 }
 
 
@@ -32,8 +34,9 @@ internal class DisplayManager : IDisplayManager
     private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
     private readonly IHostApplicationLifetime _appLifetime;
     private readonly IBitmapUtility _bitmapUtility;
-    private readonly ConcurrentQueue<byte[]> _changedRegions = new();
+    private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
     private readonly IDelayer _delayer;
+    private readonly IOptions<StartupOptions> _startupOptions;
     private readonly AutoResetEventAsync _frameReadySignal = new();
     private readonly AutoResetEventAsync _frameRequestedSignal = new();
     private readonly ILogger<DisplayManager> _logger;
@@ -69,6 +72,7 @@ internal class DisplayManager : IDisplayManager
         ISystemTime systemTime,
         IDelayer delayer,
         IHostApplicationLifetime appLifetime,
+        IOptions<StartupOptions> startupOptions,
         ILogger<DisplayManager> logger)
     {
         _messenger = messenger;
@@ -78,6 +82,7 @@ internal class DisplayManager : IDisplayManager
         _win32Interop = win32Interop;
         _systemTime = systemTime;
         _delayer = delayer;
+        _startupOptions = startupOptions;
         _appLifetime = appLifetime;
         _logger = logger;
         _displays = _screenCapturer.GetDisplays().ToArray();
@@ -129,7 +134,7 @@ internal class DisplayManager : IDisplayManager
 
     }
 
-    public async IAsyncEnumerable<byte[]> GetChangedRegions()
+    public async IAsyncEnumerable<ScreenRegionDto> GetChangedRegions()
     {
         try
         {
@@ -179,7 +184,7 @@ internal class DisplayManager : IDisplayManager
         }
     }
 
-    public Task StartCapturingChanges(ViewerReadyForStreamDto viewerReadyDto)
+    public Task StartCapturingChanges()
     {
         EncodeScreenCaptures(_appLifetime.ApplicationStopping).Forget();
         return Task.CompletedTask;
@@ -253,19 +258,20 @@ internal class DisplayManager : IDisplayManager
 
             cropped = _bitmapUtility.CropBitmap(bitmap, region);
             var imageData = _bitmapUtility.EncodeJpeg(cropped, quality);
-            writer.Write(region.X);
-            writer.Write(region.Y);
-            writer.Write(region.Width);
-            writer.Write(region.Height);
-            writer.Write(imageData.Length);
-            writer.Write(imageData);
 
-            var regionData = ms.ToArray();
-            _changedRegions.Enqueue(regionData);
+            var dto = new ScreenRegionDto(
+                _startupOptions.Value.SessionId,
+                region.X,
+                region.Y,
+                region.Width,
+                region.Height,
+                imageData);
+
+            _changedRegions.Enqueue(dto);
 
             if (!isKeyFrame)
             {
-                _sentRegions.Enqueue(new SentFrame(regionData.Length, _systemTime.Now));
+                _sentRegions.Enqueue(new SentFrame(imageData.Length, _systemTime.Now));
             }
         }
         finally

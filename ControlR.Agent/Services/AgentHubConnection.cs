@@ -21,6 +21,7 @@ using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using Microsoft.AspNetCore.Http.Connections;
 
 namespace ControlR.Agent.Services;
 
@@ -295,6 +296,8 @@ internal class AgentHubConnection(
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
     {
+        options.SkipNegotiation = true;
+        options.Transports = HttpTransportType.WebSockets;
     }
 
     private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)

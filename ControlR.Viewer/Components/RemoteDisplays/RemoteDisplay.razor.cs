@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using MudBlazor;
-using System.Net.WebSockets;
 using FocusEventArgs = Microsoft.AspNetCore.Components.Web.FocusEventArgs;
 using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
@@ -35,6 +34,8 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
     private bool _virtualKeyboardToggled;
+    private IDisposable? _clientOnCloseRegistration;
+    private bool _isDisposed;
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -73,8 +74,15 @@ public partial class RemoteDisplay : IAsyncDisposable
     public required IUiThread UiThread { get; init; }
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
+
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
+
+    [Inject]
+    public required IServiceProvider ServiceProvider { get; init; }
+
+    [Inject]
+    public required IViewerStreamingClient StreamingClient { get; init; }
 
     private string CanvasClasses
     {
@@ -113,10 +121,11 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _componentClosing.Cancel();
-        await ViewerHub.CloseStreamingSession(Session.StreamerConnectionId);
+        _isDisposed = true;
+        await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
         Messenger.UnregisterAll(this);
         await JsModule.InvokeVoidAsync("dispose", _canvasId);
+        _componentClosing.Cancel();
         GC.SuppressFinalize(this);
     }
 
@@ -137,36 +146,36 @@ public partial class RemoteDisplay : IAsyncDisposable
     [JSInvokable]
     public async Task SendKeyboardStateReset()
     {
-        await ViewerHub.SendKeyboardStateReset(Session.StreamerConnectionId);
+        await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
     }
 
     [JSInvokable]
     public async Task SendKeyEvent(string key, bool isPressed)
     {
-        await ViewerHub.SendKeyEvent(Session.StreamerConnectionId, key, isPressed);
+        await StreamingClient.SendKeyEvent(key, isPressed, _componentClosing.Token);
     }
     [JSInvokable]
     public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
     {
-        await ViewerHub.SendMouseButtonEvent(Session.StreamerConnectionId, button, isPressed, percentX, percentY);
+        await StreamingClient.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
     }
 
     [JSInvokable]
     public async Task SendPointerMove(double percentX, double percentY)
     {
-        await ViewerHub.SendPointerMove(Session.StreamerConnectionId, percentX, percentY);
+        await StreamingClient.SendPointerMove(percentX, percentY, _componentClosing.Token);
     }
 
     [JSInvokable]
     public async Task SendTypeText(string text)
     {
-        await ViewerHub.SendTypeText(Session.StreamerConnectionId, text);
+        await StreamingClient.SendTypeText(text, _componentClosing.Token);
     }
 
     [JSInvokable]
     public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
     {
-        await ViewerHub.SendWheelScroll(Session.StreamerConnectionId, percentX, percentY, scrollY, scrollX);
+        await StreamingClient.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
     }
 
 
@@ -215,9 +224,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
 
         Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
-        Messenger.Register<StreamerInitDataReceivedMessage>(this, HandleStreamerInitDataReceived);
-        Messenger.Register<StreamerDisconnectedMessage>(this, HandleStreamerDisconnected);
         Messenger.Register<DtoReceivedMessage<ClipboardChangeDto>>(this, HandleClipboardChangeReceived);
+        Messenger.Register<DtoReceivedMessage<UnsignedPayloadDto>>(this, HandleUnsignedDtoReceived);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
         return base.OnInitializedAsync();
@@ -228,7 +236,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             _selectedDisplay = display;
-            await ViewerHub.SendChangeDisplaysRequest(Session.StreamerConnectionId, _selectedDisplay.DisplayId);
+            await StreamingClient.SendChangeDisplaysRequest(_selectedDisplay.DisplayId, _componentClosing.Token);
         }
         catch (Exception ex)
         {
@@ -243,18 +251,18 @@ public partial class RemoteDisplay : IAsyncDisposable
         await DisposeAsync();
     }
 
-    private async Task DrawRegion(StreamingFrameHeader header, byte[] encodedRegion)
+    private async Task DrawRegion(ScreenRegionDto dto)
     {
         try
         {
             await JsModule.InvokeVoidAsync(
                 "drawFrame",
                 _canvasId,
-                header.X,
-                header.Y,
-                header.Width,
-                header.Height,
-                encodedRegion);
+                dto.X,
+                dto.Y,
+                dto.Width,
+                dto.Height,
+                dto.EncodedImage);
         }
         catch (Exception ex)
         {
@@ -280,7 +288,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-
     private async Task HandleKeyboardToggled()
     {
         _virtualKeyboardToggled = !_virtualKeyboardToggled;
@@ -300,7 +307,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         try
         {
             Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
-            await ViewerHub.SendClipboardText(Session.StreamerConnectionId, message.Text, Session.SessionId);
+            await StreamingClient.SendClipboardText(message.Text, Session.SessionId, _componentClosing.Token);
         }
         catch (Exception ex)
         {
@@ -326,9 +333,9 @@ public partial class RemoteDisplay : IAsyncDisposable
         _isScrollModeEnabled = isEnabled;
     }
 
-    private async Task HandleStreamerDisconnected(object subscriber, StreamerDisconnectedMessage message)
+    private async Task HandleStreamerDisconnected()
     {
-        if (message.SessionId != Session.SessionId)
+        if (_isDisposed)
         {
             return;
         }
@@ -353,22 +360,18 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleStreamerInitDataReceived(object subscriber, StreamerInitDataReceivedMessage message)
+    private async Task HandleDisplayDataReceived(DisplayDataDto dto)
     {
-        var data = message.StreamerInitData;
-
-        if (data.SessionId != Session.SessionId)
+        if (dto.SessionId != Session.SessionId)
         {
             return;
         }
-
-        Session.StreamerConnectionId = data.StreamerConnectionId;
 
         Messenger.Unregister<LocalClipboardChangedMessage>(this);
         Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
         await ClipboardManager.Start();
 
-        _displays = data.Displays ?? [];
+        _displays = dto.Displays ?? [];
 
         if (_displays.Length == 0)
         {
@@ -381,11 +384,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         _canvasWidth = _selectedDisplay.Width;
         _canvasHeight = _selectedDisplay.Height;
 
-        StartWebsocketStreaming(message.StreamerInitData.WebSocketUri).Forget();
-
         _streamStarted = true;
         _statusMessage = string.Empty;
         _statusProgress = -1;
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -494,6 +496,41 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
+    private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<UnsignedPayloadDto> message)
+    {
+        var wrapper = message.Dto;
+
+        try
+        {
+            switch (wrapper.DtoType)
+            {
+                case DtoType.DisplayData:
+                    {
+                        var dto = wrapper.GetPayload<DisplayDataDto>();
+                        await HandleDisplayDataReceived(dto);
+                        break;
+                    }
+                case DtoType.ScreenRegion:
+                    {
+                        var dto = wrapper.GetPayload<ScreenRegionDto>();
+                        if (dto.SessionId != Session.SessionId)
+                        {
+                            return;
+                        }
+
+                        await DrawRegion(dto);
+                        break;
+                    }
+                default:
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while handling unsigned payload. Type: {DtoType}", wrapper.DtoType);
+        }
+    }
+
     private async Task RequestStreamingSessionFromAgent()
     {
         try
@@ -524,6 +561,8 @@ public partial class RemoteDisplay : IAsyncDisposable
                 return;
             }
             await SetStatusMessage("Connecting");
+
+            StartWebsocketStreaming(websocketUri).Forget();
         }
         catch (Exception ex)
         {
@@ -541,92 +580,19 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         try
         {
-            using var ws = new ClientWebSocket();
-            await ws.ConnectAsync(websocketUri, _componentClosing.Token);
-            await ViewerHub.SendReadySignalToStreamer(Session.StreamerConnectionId);
-
-            await StreamFromWebsocket(ws);
+            await StreamingClient.Connect(websocketUri, _componentClosing.Token);
+            _clientOnCloseRegistration?.Dispose();
+            _clientOnCloseRegistration = StreamingClient.OnClose(HandleStreamerDisconnected);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while starting websocket stream.");
-            Snackbar.Add("An error occurred while starting the stream", Severity.Error);
+            Logger.LogError(ex, "Error while connecting to websocket endpoint.");
+            Snackbar.Add("An error occurred while connecting to streamer", Severity.Error);
             await Close();
         }
         finally
         {
             _streamLock.Release();
-        }
-      
-    }
-
-    private async Task StreamFromWebsocket(ClientWebSocket ws)
-    {
-        using (ws)
-        {
-            var headerBuffer = new byte[StreamingFrameHeader.Size];
-            var imageBuffer = new byte[ushort.MaxValue];
-
-
-            while (!_componentClosing.IsCancellationRequested && ws.State == WebSocketState.Open)
-            {
-                try
-                {
-                    if (_selectedDisplay is null)
-                    {
-                        await Task.Delay(100);
-                        continue;
-                    }
-
-                    var result = await ws.ReceiveAsync(headerBuffer, _componentClosing.Token);
-
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        Logger.LogInformation("Websocket close message received.");
-                        break;
-                    }
-
-                    var bytesRead = result.Count;
-
-                    if (bytesRead < StreamingFrameHeader.Size)
-                    {
-                        Logger.LogError("The frame header is incomplete.");
-                        Snackbar.Add("Frame header is incomplete", Severity.Error);
-                        break;
-                    }
-
-                    var header = new StreamingFrameHeader(headerBuffer);
-
-                    using var imageStream = MemoryProvider.GetRecyclableStream();
-
-                    while (imageStream.Position < header.ImageSize)
-                    {
-                        result = await ws.ReceiveAsync(imageBuffer, _componentClosing.Token);
-
-                        if (result.MessageType == WebSocketMessageType.Close ||
-                            result.Count == 0)
-                        {
-                            Logger.LogWarning("Stream ended before image was complete.");
-                            Snackbar.Add("Stream ended before image was complete", Severity.Warning);
-                            break;
-                        }
-
-                        await imageStream.WriteAsync(imageBuffer.AsMemory(0, result.Count));
-                    }
-
-                    await DrawRegion(header, imageStream.ToArray());
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.LogInformation("Streaming cancelled.");
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error while streaming from websocket.");
-                }
-            }
-
         }
     }
 
