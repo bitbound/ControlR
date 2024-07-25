@@ -12,6 +12,17 @@ public static class UriExtensions
         return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
     }
 
+    public static Uri ToHttpUri(this Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeWs && uri.Scheme != Uri.UriSchemeWss)
+        {
+            throw new ArgumentException("Only ws and wss schemes are supported.");
+        }
+
+        var scheme = uri.Scheme.StartsWith("wss", StringComparison.CurrentCulture) ? "https" : "http";
+        return new Uri($"{scheme}://{uri.Authority}{uri.PathAndQuery}");
+    }
+
     public static Uri ToWebsocketUri(this Uri uri)
     {
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)

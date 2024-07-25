@@ -15,7 +15,7 @@ internal class WsBridgeApi(
     {
         try
         {
-            var healthUri = new Uri(origin, "/api/health");
+            var healthUri = new Uri(origin.ToHttpUri(), "/api/health");
             using var response = await _client.GetAsync(healthUri);
             response.EnsureSuccessStatusCode();
             return true;
