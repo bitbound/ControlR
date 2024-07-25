@@ -260,6 +260,7 @@ public partial class Dashboard
         }
 
         await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Restart);
+        Snackbar.Add("Restart command sent", Severity.Success);
     }
 
     private async Task ShutdownDevice(DeviceDto device)
@@ -276,6 +277,7 @@ public partial class Dashboard
         }
 
         await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
+        Snackbar.Add("Shutdown command sent", Severity.Success);
     }
 
     private async Task UpdateDevice(DeviceDto device)
