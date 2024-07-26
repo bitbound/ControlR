@@ -99,9 +99,10 @@
     {
         get
         {
+            var downloadUri = new Uri(Settings.ServerUri, "/downloads/osx-arm64/ControlR.Agent");
             return
               $"sudo rm -f /tmp/ControlR.Agent && " +
-              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-arm64/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
               $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
         }
@@ -111,9 +112,10 @@
     {
         get
         {
+            var downloadUri = new Uri(Settings.ServerUri, "/downloads/osx-x64/ControlR.Agent");
             return
               $"sudo rm -f /tmp/ControlR.Agent && " +
-              $"sudo curl -o /tmp/ControlR.Agent {Settings.ServerUri}/downloads/osx-x64/ControlR.Agent && " +
+              $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
               $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
               $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
         }
@@ -123,10 +125,10 @@
     {
         get
         {
-
+            var downloadUri = new Uri(Settings.ServerUri, "/downloads/linux-x64/ControlR.Agent");
             return
                 $"sudo rm -f /tmp/ControlR.Agent && " +
-                $"sudo wget -q -O /tmp/ControlR.Agent {Settings.ServerUri}/downloads/linux-x64/ControlR.Agent && " +
+                    $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
                 $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
                 $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
         }
@@ -136,8 +138,9 @@
     {
         get
         {
+            var downloadUri = new Uri(Settings.ServerUri, "/downloads/win-x86/ControlR.Agent.exe");
             return "$ProgressPreference = \"SilentlyContinue\"; " +
-                $"Invoke-WebRequest -Uri \"{Settings.ServerUri}/downloads/win-x86/ControlR.Agent.exe\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+                $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
                 $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
                 $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}\" -Verb RunAs;";
         }

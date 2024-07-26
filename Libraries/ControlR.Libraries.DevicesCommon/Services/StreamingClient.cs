@@ -4,9 +4,9 @@ using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
-using Serilog.Core;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 
 namespace ControlR.Libraries.DevicesCommon.Services;
 
@@ -28,6 +28,7 @@ public sealed class StreamingClient(
 {
     private readonly ClientWebSocket _client = new();
     private readonly CancellationTokenSource _clientDisposingCts = new();
+    private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
     private readonly ConcurrentDictionary<Guid, Func<Task>> _onCloseCallbacks = new();
     private readonly SemaphoreSlim _sendLock = new(1);
     private bool _isDisposed;
@@ -73,7 +74,7 @@ public sealed class StreamingClient(
 
     public async Task Send(SignedPayloadDto dto, CancellationToken cancellationToken)
     {
-       await SendImpl(dto, true, cancellationToken);
+        await SendImpl(dto, true, cancellationToken);
     }
 
     public async Task Send(UnsignedPayloadDto dto, CancellationToken cancellationToken)
@@ -86,16 +87,33 @@ public sealed class StreamingClient(
         await _clientDisposingCts.Token.WhenCancelled(cancellationToken);
     }
 
+    private static MessageHeader GetHeader(byte[] buffer)
+    {
+        return new MessageHeader(
+            new Guid(buffer[..16]),
+            Convert.ToBoolean(buffer[16]),
+            BitConverter.ToInt32(buffer.AsSpan()[17..21]));
+    }
+
+    private static byte[] GetHeaderBytes(MessageHeader header)
+    {
+        return [
+            .. header.Delimiter.ToByteArray(),
+            Convert.ToByte(header.IsSigned),
+            .. BitConverter.GetBytes(header.DtoSize)
+        ];
+    }
+
     private async Task ReadFromStream()
     {
-        var sizeBuffer = new byte[5];
+        var headerBuffer = new byte[MessageHeader.Size];
         var dtoBuffer = new byte[ushort.MaxValue];
 
         while (_client.State == WebSocketState.Open && !_clientDisposingCts.IsCancellationRequested)
         {
             try
             {
-                var result = await _client.ReceiveAsync(sizeBuffer, _clientDisposingCts.Token);
+                var result = await _client.ReceiveAsync(headerBuffer, _clientDisposingCts.Token);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -105,17 +123,23 @@ public sealed class StreamingClient(
 
                 var bytesRead = result.Count;
 
-                if (bytesRead < 5)
+                if (bytesRead < MessageHeader.Size)
                 {
                     _logger.LogError("Failed to get DTO header.");
                     break;
                 }
 
-                var isSigned = Convert.ToBoolean(sizeBuffer[0]);
-                var size = BitConverter.ToInt32(sizeBuffer, 1);
+                var header = GetHeader(headerBuffer);
+
+                if (header.Delimiter != _messageDelimiter)
+                {
+                    _logger.LogCritical("Message header delimiter was incorrect.  Value: {Delimiter}", header.Delimiter);
+                    break;
+                }
+
                 using var dtoStream = _memoryProvider.GetRecyclableStream();
 
-                while (dtoStream.Position < size)
+                while (dtoStream.Position < header.DtoSize)
                 {
                     result = await _client.ReceiveAsync(dtoBuffer, _clientDisposingCts.Token);
 
@@ -131,7 +155,7 @@ public sealed class StreamingClient(
 
                 dtoStream.Seek(0, SeekOrigin.Begin);
 
-                if (isSigned)
+                if (header.IsSigned)
                 {
                     var dto = await MessagePackSerializer.DeserializeAsync<SignedPayloadDto>(dtoStream, cancellationToken: _clientDisposingCts.Token);
                     if (!_keyProvider.Verify(dto))
@@ -170,11 +194,11 @@ public sealed class StreamingClient(
         try
         {
             var payload = MessagePackSerializer.Serialize(dto, cancellationToken: cancellationToken);
-            var size = BitConverter.GetBytes(payload.Length);
-            byte[] header = [ Convert.ToByte(isSigned), .. size ];
+            var header = new MessageHeader(_messageDelimiter, isSigned, payload.Length);
+
 
             await _client.SendAsync(
-               header,
+               GetHeaderBytes(header),
                WebSocketMessageType.Binary,
                false,
                cancellationToken);
@@ -189,5 +213,20 @@ public sealed class StreamingClient(
         {
             _sendLock.Release();
         }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct MessageHeader(Guid _delimiter, bool _isSigned, int _messageSize)
+    {
+        public static int Size = 21;
+
+        [FieldOffset(0)]
+        public readonly Guid Delimiter = _delimiter;
+
+        [FieldOffset(16)]
+        public readonly bool IsSigned = _isSigned;
+
+        [FieldOffset(17)]
+        public readonly int DtoSize = _messageSize;
     }
 }
