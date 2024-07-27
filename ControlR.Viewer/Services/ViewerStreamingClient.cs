@@ -18,6 +18,7 @@ public interface IViewerStreamingClient : IClosable
     Task SendKeyboardStateReset(CancellationToken cancellationToken);
     Task SendKeyEvent(string key, bool isPressed, CancellationToken cancellationToken);
     Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY, CancellationToken cancellationToken);
+    Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY, CancellationToken cancellationToken);
     Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken);
     Task SendTypeText(string text, CancellationToken cancellationToken);
     Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX, CancellationToken cancellationToken);
@@ -134,6 +135,17 @@ public sealed class ViewerStreamingClient(
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseButtonEvent, _appState.PrivateKey);
                 await Client.Send(signedDto, cancellationToken);
             });
+    }
+
+    public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY, CancellationToken cancellationToken)
+    {
+        await TrySend(
+             async () =>
+             {
+                 var dto = new MouseClickDto(button, isDoubleClick, percentX, percentY);
+                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseClick, _appState.PrivateKey);
+                 await Client.Send(signedDto, cancellationToken);
+             });
     }
 
     public async Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken)

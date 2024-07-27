@@ -12,21 +12,22 @@ using System.Net.WebSockets;
 
 namespace ControlR.Streamer.Services;
 
-public interface IStreamingClientManager : IHostedService
+public interface IStreamerStreamingClient : IHostedService
 {
 }
-internal class StreamingClientManager(
+internal class StreamerStreamingClient(
     IServiceProvider _services,
     IMessenger _messenger,
     IHostApplicationLifetime _appLifetime,
     IToaster _toaster,
     IDisplayManager _displayManager,
     IOptions<StartupOptions> _startupOptions,
-    ILogger<StreamingClientManager> _logger)
-    : IStreamingClientManager
+    ILogger<StreamerStreamingClient> _logger)
+    : IStreamerStreamingClient
 {
     private IStreamingClient? _client;
     private IStreamingClient Client => _client ?? throw new InvalidOperationException("Streaming client is not initialized.");
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try

@@ -113,6 +113,21 @@ internal class DtoHandler(
                         _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, payload.IsPressed);
                         break;
                     }
+                case DtoType.MouseClick:
+                    {
+                        var payload = wrapper.GetPayload<MouseClickDto>();
+                        var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+                        _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
+                        _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, true);
+                        _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, false);
+
+                        if (payload.IsDoubleClick)
+                        {
+                            _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, true);
+                            _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, false);
+                        }
+                        break;
+                    }
                 default:
                     _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
                     break;

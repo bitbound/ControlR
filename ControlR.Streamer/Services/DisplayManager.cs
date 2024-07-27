@@ -38,7 +38,7 @@ internal class DisplayManager : IDisplayManager
     private readonly IDelayer _delayer;
     private readonly IOptions<StartupOptions> _startupOptions;
     private readonly AutoResetEventAsync _frameReadySignal = new();
-    private readonly AutoResetEventAsync _frameRequestedSignal = new();
+    private readonly AutoResetEventAsync _frameRequestedSignal = new(isSet: true);
     private readonly ILogger<DisplayManager> _logger;
     private readonly IMemoryProvider _memoryProvider;
     private readonly IMessenger _messenger;
@@ -138,10 +138,10 @@ internal class DisplayManager : IDisplayManager
     {
         try
         {
+            await _frameReadySignal.Wait(_appLifetime.ApplicationStopping);
             while (_changedRegions.TryDequeue(out var region))
             {
                 yield return region;
-                await Task.Yield();
             }
         }
         finally
@@ -282,8 +282,6 @@ internal class DisplayManager : IDisplayManager
 
     private async Task EncodeScreenCaptures(CancellationToken stoppingToken)
     {
-        _frameRequestedSignal.Set();
-
         while (!stoppingToken.IsCancellationRequested)
         {
             await _selectedDisplayLock.WaitAsync(stoppingToken);
@@ -359,7 +357,6 @@ internal class DisplayManager : IDisplayManager
                     _frameRequestedSignal.Set();
                 }
                 _selectedDisplayLock.Release();
-                await Task.Yield();
             }
         }
     }

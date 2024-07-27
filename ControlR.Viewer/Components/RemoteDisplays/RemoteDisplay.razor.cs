@@ -154,10 +154,17 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         await StreamingClient.SendKeyEvent(key, isPressed, _componentClosing.Token);
     }
+
     [JSInvokable]
     public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
     {
         await StreamingClient.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
+    }
+
+    [JSInvokable]
+    public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
+    {
+        await StreamingClient.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
     }
 
     [JSInvokable]

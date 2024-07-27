@@ -4,8 +4,18 @@
         this.touchList = { length: 0 };
         this.previousPinchDistance = -1;
         this.mouseMoveTimeout = -1;
+        this.touchClickTimeout = -1;
         this.lastMouseMove = Date.now();
     }
+
+    /** @type {CanvasRenderingContext2D} */
+    canvas2dContext;
+
+    /** @type {HTMLCanvasElement} */
+    canvasElement;
+
+    /** @type {string} */
+    canvasId;
 
     /** @type {any} */
     componentRef;
@@ -37,17 +47,11 @@
     /** @type {number} */
     previousPinchDistance;
 
+    /** @type {number} */
+    touchClickTimeout;
+
     /** @type {TouchList} */
     touchList;
-
-    /** @type {string} */
-    canvasId;
-
-    /** @type {HTMLCanvasElement} */
-    canvasElement;
-
-    /** @type {CanvasRenderingContext2D} */
-    canvas2dContext;
 
     /** @type {WindowEventHandler[]} */
     windowEventHandlers;
@@ -241,6 +245,11 @@ export async function initialize(componentRef, canvasId) {
 
     canvas.addEventListener("mousedown", async ev => {
         ev.stopPropagation();
+
+        if (state.currentPointerType == "touch") {
+            return;
+        }
+
         if (ev.button == 3 || ev.button == 4) {
             ev.preventDefault();
         }
@@ -254,6 +263,11 @@ export async function initialize(componentRef, canvasId) {
 
     canvas.addEventListener("mouseup", async ev => {
         ev.stopPropagation();
+
+        if (state.currentPointerType == "touch") {
+            return;
+        }
+
         if (ev.button == 3 || ev.button == 4) {
             ev.preventDefault();
         }
@@ -263,6 +277,32 @@ export async function initialize(componentRef, canvasId) {
         }
 
         await sendMouseButtonEvent(ev.offsetX, ev.offsetY, false, ev.button, state);
+    });
+
+    canvas.addEventListener("click", async ev => {
+        ev.stopPropagation();
+
+        if (state.currentPointerType == "mouse") {
+            return;
+        }
+
+        window.clearTimeout(state.touchClickTimeout);
+        state.touchClickTimeout = window.setTimeout(
+            async () => {
+                await sendMouseClick(ev.offsetX, ev.offsetY, ev.button, false, state);
+            },
+            500);
+    });
+
+    canvas.addEventListener("dblclick", async ev => {
+        ev.stopPropagation();
+
+        if (state.currentPointerType == "mouse") {
+            return;
+        }
+
+        window.clearTimeout(state.touchClickTimeout);
+        await sendMouseClick(ev.offsetX, ev.offsetY, ev.button, true, state);
     });
 
     canvas.addEventListener("wheel", async ev => {
@@ -473,3 +513,17 @@ async function sendMouseButtonEvent(offsetX, offsetY, isPressed, button, state) 
     await state.invokeDotNet("SendMouseButtonEvent", button, isPressed, percentX, percentY);
 }
 
+
+/**
+ * 
+ * @param {number} offsetX
+ * @param {number} offsetY
+ * @param {number} button
+ * @param {boolean} isDoubleClick
+ * @param {State} state
+ */
+async function sendMouseClick(offsetX, offsetY, button, isDoubleClick, state) {
+    const percentX = offsetX / state.canvasElement.clientWidth;
+    const percentY = offsetY / state.canvasElement.clientHeight;
+    await state.invokeDotNet("SendMouseClick", button, isDoubleClick, percentX, percentY);
+}

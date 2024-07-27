@@ -82,7 +82,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
             });
 
             services.AddSingleton<IProcessManager, ProcessManager>();
-            services.AddSingleton<IStreamingClientManager, StreamingClientManager>();
+            services.AddSingleton<IStreamerStreamingClient, StreamerStreamingClient>();
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<IWin32Interop, Win32Interop>();
             services.AddSingleton<IToaster, Toaster>();
@@ -100,7 +100,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
             services.AddHostedService<HostLifetimeEventResponder>();
             services.AddHostedService<InputDesktopReporter>();
             services.AddHostedService<DtoHandler>();
-            services.AddHostedService(x => x.GetRequiredService<IStreamingClientManager>());
+            services.AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>());
             services.AddHostedService(x => x.GetRequiredService<IClipboardManager>());
         })
         .BootstrapSerilog(

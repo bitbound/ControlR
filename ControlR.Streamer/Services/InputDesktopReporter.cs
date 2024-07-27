@@ -68,6 +68,10 @@ internal class InputDesktopReporter(
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Desktop watch cancelled.  Application shutting down.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while reporting input desktop.");
