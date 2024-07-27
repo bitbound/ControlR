@@ -231,7 +231,6 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
 
         Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
-        Messenger.Register<DtoReceivedMessage<ClipboardChangeDto>>(this, HandleClipboardChangeReceived);
         Messenger.Register<DtoReceivedMessage<UnsignedPayloadDto>>(this, HandleUnsignedDtoReceived);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
@@ -262,6 +261,11 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         try
         {
+            if (dto.SessionId != Session.SessionId)
+            {
+                return;
+            }
+
             await JsModule.InvokeVoidAsync(
                 "drawFrame",
                 _canvasId,
@@ -277,16 +281,16 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
-    private async Task HandleClipboardChangeReceived(object subscriber, DtoReceivedMessage<ClipboardChangeDto> message)
+    private async Task HandleClipboardChangeReceived(ClipboardChangeDto dto)
     {
         try
         {
-            if (message.Dto.SessionId != Session.SessionId)
+            if (dto.SessionId != Session.SessionId)
             {
                 return;
             }
             Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
-            await ClipboardManager.SetText(message.Dto.Text ?? string.Empty);
+            await ClipboardManager.SetText(dto.Text ?? string.Empty);
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
@@ -520,12 +524,13 @@ public partial class RemoteDisplay : IAsyncDisposable
                 case DtoType.ScreenRegion:
                     {
                         var dto = wrapper.GetPayload<ScreenRegionDto>();
-                        if (dto.SessionId != Session.SessionId)
-                        {
-                            return;
-                        }
-
                         await DrawRegion(dto);
+                        break;
+                    }
+                case DtoType.ClipboardChanged:
+                    {
+                        var dto = wrapper.GetPayload<ClipboardChangeDto>();
+                        await HandleClipboardChangeReceived(dto);
                         break;
                     }
                 default:
