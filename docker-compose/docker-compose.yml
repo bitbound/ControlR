@@ -24,6 +24,9 @@ services:
       # ASPNETCORE variables should *not* be changed.
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
+      
+      - ControlR_AzureMonitor__ConnectionString=""
+      - ControlR_OTLP_ENDPOINT_URL=""
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
       - ControlR_ApplicationOptions__LogRetentionDays=7
 

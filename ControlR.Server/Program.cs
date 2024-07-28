@@ -17,6 +17,7 @@ using ControlR.Libraries.Shared;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using Bitbound.WebSocketBridge.Common.Extensions;
+using ControlR.Server.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,9 +30,10 @@ var appOptions = builder.Configuration
     .GetSection(ApplicationOptions.SectionKey)
     .Get<ApplicationOptions>() ?? new();
 
-ConfigureSerilog(appOptions);
 
+ConfigureSerilog(appOptions);
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.AddTelemetry();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -98,12 +100,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
 builder.Services.AddHealthChecks();
+
 var signalrBuilder = builder.Services
     .AddSignalR(options =>
     {
@@ -227,6 +229,8 @@ app.MapHealthChecks("/api/health");
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
+app.MapPrometheusScrapingEndpoint();
+
 app.MapGet("/", x =>
 {
     x.Response.Redirect("https://controlr.app");
