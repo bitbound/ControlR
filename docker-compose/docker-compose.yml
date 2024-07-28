@@ -25,9 +25,15 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       
+      # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       - ControlR_AzureMonitor__ConnectionString=""
+      # Add an OTLP endpoint URL to enable exporting of OpenTelemetry data to an OTLP endpoint.
       - ControlR_OTLP_ENDPOINT_URL=""
+
+      # The Gateway IP here must match the IP address in the above controlr-network gateway.
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
+
+      # How long to keep logs on the file system before deleting them.
       - ControlR_ApplicationOptions__LogRetentionDays=7
 
       # Uncomment these variables to control access to your server.
