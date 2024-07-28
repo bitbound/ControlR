@@ -54,8 +54,7 @@ public static class TelemetryExtensions
                 meterProvider
                     .AddAspNetCoreInstrumentation()
                     .AddMeter("Microsoft.AspNetCore.Hosting")
-                    .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
-                    .AddPrometheusExporter();
+                    .AddMeter("Microsoft.AspNetCore.Server.Kestrel");
 
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {

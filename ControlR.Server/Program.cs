@@ -229,7 +229,6 @@ app.MapHealthChecks("/api/health");
 
 app.MapHub<AgentHub>("/hubs/agent");
 app.MapHub<ViewerHub>("/hubs/viewer");
-app.MapPrometheusScrapingEndpoint();
 
 app.MapGet("/", x =>
 {
