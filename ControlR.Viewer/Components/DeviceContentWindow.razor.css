@@ -17,6 +17,7 @@
     display: grid;
     grid-template-rows: auto 1fr;
     background-color: rgb(40,40,40);
+    pointer-events: auto;
 }
 
     .device-content.restored {

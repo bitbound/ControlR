@@ -2,7 +2,7 @@
 using Microsoft.JSInterop;
 
 namespace ControlR.Viewer.Components;
-public class JsInteropableComponent : ComponentBase
+public class JsInteropableComponent : ViewportAwareComponent
 {
     private IJSObjectReference? _jsModule;
 

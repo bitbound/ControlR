@@ -1,20 +1,33 @@
-﻿<MudMenu Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.FitScreen)" Label="View" PopoverClass="z9001">
-    <MudMenuItem Icon="@(Icons.Material.Filled.FitScreen)"
-                 IconColor="@(ViewMode == ViewMode.Fit ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Fit))">
-        Fit
-    </MudMenuItem>
-    <MudMenuItem Icon="@(Icons.Material.Filled.OpenInFull)"
-                 IconColor="@(ViewMode == ViewMode.Stretch ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Stretch))">
-        Stretch
-    </MudMenuItem>
-    <MudMenuItem Icon="@(Icons.Material.Filled.Fullscreen)"
-                 IconColor="@(ViewMode == ViewMode.Original ? Color.Success : Color.Default)"
-                 OnClick="@(() => SelectViewMode(ViewMode.Original))">
-        Original
-    </MudMenuItem>
-</MudMenu>
+﻿@inherits ViewportAwareComponent
+@inject ISnackbar Snackbar
+
+<MudTooltip Text="View Mode" Class="z9002" Placement="Placement.Right">
+    <MudMenu Variant="Variant.Outlined"
+             StartIcon="@GetStartIcon()"
+             Icon="@GetIcon()"
+             Label="@GetLabel()"
+             PopoverClass="z9002">
+
+        <MudMenuItem Icon="@(Icons.Material.Filled.FitScreen)"
+                     IconColor="@(ViewMode == ViewMode.Fit ? Color.Success : Color.Default)"
+                     OnClick="@(() => SelectViewMode(ViewMode.Fit))"
+                     @ontouchend="() => SelectViewMode(ViewMode.Fit)">
+            Fit
+        </MudMenuItem>
+        <MudMenuItem Icon="@(Icons.Material.Filled.OpenInFull)"
+                     IconColor="@(ViewMode == ViewMode.Stretch ? Color.Success : Color.Default)"
+                     OnClick="@(() => SelectViewMode(ViewMode.Stretch))"
+                     @ontouchend="() => SelectViewMode(ViewMode.Stretch)">
+            Stretch
+        </MudMenuItem>
+        <MudMenuItem Icon="@(Icons.Material.Filled.Fullscreen)"
+                     IconColor="@(ViewMode == ViewMode.Original ? Color.Success : Color.Default)"
+                     OnClick="@(() => SelectViewMode(ViewMode.Original))"
+                     @ontouchend="() => SelectViewMode(ViewMode.Original)">
+            Original
+        </MudMenuItem>
+    </MudMenu>
+</MudTooltip>
 
 @code {
     [Parameter]
@@ -23,6 +36,20 @@
     [Parameter]
     public EventCallback<ViewMode> OnViewModeSelected { get; set; }
 
+    private string GetLabel()
+    {
+        return CurrentBreakpoint >= Breakpoint.Sm ? "View" : string.Empty;
+    }
+
+    private string GetStartIcon()
+    {
+        return CurrentBreakpoint >= Breakpoint.Sm ? Icons.Material.Filled.FitScreen : string.Empty;
+    }
+
+    private string GetIcon()
+    {
+        return CurrentBreakpoint < Breakpoint.Sm ? Icons.Material.Filled.FitScreen : string.Empty;
+    }
 
     private async Task SelectViewMode(ViewMode viewMode)
     {

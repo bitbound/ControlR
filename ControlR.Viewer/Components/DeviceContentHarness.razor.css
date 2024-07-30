@@ -8,4 +8,5 @@
     overflow-x: auto;
     gap: 10px;
     z-index: 9000;
+    pointer-events: none;
 }
