@@ -110,6 +110,8 @@
             commonArgs.Append($" -i {Settings.ServerUri.Authority}");
         }
 
+        commonArgs.Append($" -a {AppState.PublicKeyBase64}");
+
         return commonArgs.ToString();
     }
 
