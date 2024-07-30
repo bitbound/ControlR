@@ -1,4 +1,5 @@
 ﻿@page "/deploy"
+@using System.Text
 
 @inject ISettings Settings
 @inject ISnackbar Snackbar
@@ -95,6 +96,23 @@
 
 @code {
 
+    private string GetInstallArgs()
+    {
+        var commonArgs = new StringBuilder($"-s {Settings.ServerUri}");
+
+        if (!string.IsNullOrEmpty(Settings.PublicKeyLabel))
+        {
+            commonArgs.Append($" -l {Settings.PublicKeyLabel}");
+        }
+
+        if (Settings.AppendInstanceIdToAgentInstall)
+        {
+            commonArgs.Append($" -i {Settings.ServerUri.Authority}");
+        }
+
+        return commonArgs.ToString();
+    }
+
     private string MacArm64DeployScript
     {
         get
@@ -103,10 +121,11 @@
             return
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
-              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+              $"sudo chmod +x /tmp/ControlR.Agent && " + 
+              $"sudo /tmp/ControlR.Agent install {GetInstallArgs()}";
         }
     }
+
 
     private string MacX64DeployScript
     {
@@ -116,8 +135,8 @@
             return
               $"sudo rm -f /tmp/ControlR.Agent && " +
               $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
-              $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-              $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+              $"sudo chmod +x /tmp/ControlR.Agent && " + 
+              $"sudo /tmp/ControlR.Agent install {GetInstallArgs()}";
         }
     }
 
@@ -128,9 +147,9 @@
             var downloadUri = new Uri(Settings.ServerUri, "/downloads/linux-x64/ControlR.Agent");
             return
                 $"sudo rm -f /tmp/ControlR.Agent && " +
-                    $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
-                $"sudo chmod +x /tmp/ControlR.Agent && sudo /tmp/ControlR.Agent install " +
-                $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}";
+                $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
+                $"sudo chmod +x /tmp/ControlR.Agent && " + 
+                $"sudo /tmp/ControlR.Agent install {GetInstallArgs()}";
         }
     }
 
@@ -141,8 +160,7 @@
             var downloadUri = new Uri(Settings.ServerUri, "/downloads/win-x86/ControlR.Agent.exe");
             return "$ProgressPreference = \"SilentlyContinue\"; " +
                 $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
-                $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install " +
-                $"-s {Settings.ServerUri} -l {Settings.PublicKeyLabel} -a {AppState.PublicKeyBase64}{GetInstanceIdArg()}\" -Verb RunAs;";
+                $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetInstallArgs()}\" -Verb RunAs;";
         }
     }
 
@@ -168,14 +186,5 @@
     {
         await Clipboard.SetText(WindowsDeployScript);
         Snackbar.Add("Install script copied to clipboard", Severity.Success);
-    }
-
-    private string GetInstanceIdArg()
-    {
-        if (Settings.AppendInstanceIdToAgentInstall)
-        {
-            return $" -i {Settings.ServerUri.Authority}";
-        }
-        return string.Empty;
     }
 }
