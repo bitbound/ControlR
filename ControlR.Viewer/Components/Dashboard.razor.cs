@@ -315,7 +315,7 @@ public partial class Dashboard
                         builder.AddComponentParameter(1, nameof(RemoteDisplay.Session), remoteControlSession);
                         builder.CloseComponent();
                     }
-                    var contentInstance = new DeviceContentInstance(device, RenderRemoteDisplay, "Remote");
+                    var contentInstance = new DeviceContentInstance(device, RenderRemoteDisplay, DeviceContentInstanceType.RemoteControl);
                     WindowStore.Add(contentInstance);
                 }
                 break;
@@ -341,7 +341,7 @@ public partial class Dashboard
                 builder.CloseComponent();
             }
 
-            var contentInstance = new DeviceContentInstance(device, RenderTerminal, "Terminal");
+            var contentInstance = new DeviceContentInstance(device, RenderTerminal, DeviceContentInstanceType.Terminal);
             WindowStore.Add(contentInstance);
         }
         catch (Exception ex)

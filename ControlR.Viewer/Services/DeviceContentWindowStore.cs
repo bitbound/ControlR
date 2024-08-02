@@ -41,7 +41,7 @@ internal class DeviceContentWindowStore: IDeviceContentWindowStore
     {
         if (message.NewState != HubConnectionState.Connected)
         {
-            _cache.Clear();
+            _cache.RemoveAll(x => x.ContentType != DeviceContentInstanceType.RemoteControl);
             await _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
         }
     }

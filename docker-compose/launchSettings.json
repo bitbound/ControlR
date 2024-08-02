@@ -3,6 +3,9 @@
     "Docker Compose": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "controlr",
+      "composeLaunchUrl": "http://localhost:5120/api/health",
       "serviceActions": {
         "controlr": "StartDebugging"
       }
