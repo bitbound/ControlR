@@ -92,9 +92,9 @@ public static class TelemetryExtensions
                 if (!string.IsNullOrWhiteSpace(azureConnectionString))
                 {
                     tracing
-                        .AddAzureMonitorTraceExporter(azureMonitorOptions =>
+                        .AddAzureMonitorTraceExporter(azureTracingOptions =>
                         {
-                            azureMonitorOptions.ConnectionString = azureConnectionString;
+                            azureTracingOptions.ConnectionString = azureConnectionString;
                         });
                 }
             });

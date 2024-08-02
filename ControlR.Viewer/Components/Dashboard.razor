@@ -42,7 +42,7 @@
             Class="mt-0"></MudTextField>
 
         <MudTooltip Text="Refresh">
-            <MudIconButton Variant="Variant.Filled"
+            <MudIconButton Variant="Variant.Outlined"
                            Color="Color.Info"
                            Class="ml-4"
                            Icon="@(Icons.Material.Filled.Refresh)"
@@ -59,7 +59,7 @@
 
             <CellTemplate>
                 <MudTooltip Text="Actions">
-                    <MudMenu Variant="Variant.Filled" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
+                    <MudMenu Variant="Variant.Outlined" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
                         @if (context.Item.IsOnline)
                         {
                             <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"

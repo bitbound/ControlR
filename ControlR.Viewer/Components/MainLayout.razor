@@ -16,20 +16,19 @@
 
 <!-- This div has to be here in order for ::deep selector to work on child components. -->
 <div>
-    <MudThemeProvider IsDarkMode />
+    <MudThemeProvider IsDarkMode Theme="CustomTheme" />
     <MudDialogProvider />
     <MudSnackbarProvider />
     <MudPopoverProvider />
 
     <MudLayout>
         <MudAppBar Elevation="0">
-            <MudIconButton 
-                Icon="@Icons.Material.Filled.Menu" 
-                Color="Color.Inherit" 
-                Edge="Edge.Start"
-                OnClick="@((e) => DrawerToggle())" />
+            <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                           Color="Color.Inherit"
+                           Edge="Edge.Start"
+                           OnClick="@((e) => DrawerToggle())" />
 
-            <MudChip T="string" Text='Beta'  Color="Color.Info" Class="ms-3" />
+            <MudChip T="string" Text='Beta' Color="Color.Info" Class="ms-3" />
 
             <MudSpacer />
 
@@ -38,7 +37,7 @@
                 <MudTooltip Text="Update Available">
                     <MudBadge Content='"!"' Color="Color.Warning" Overlap="true" Bordered="true" BadgeClass="update-badge">
                         <MudIconButton Color="Color.Info" Icon="@(Icons.Material.Filled.SystemUpdateAlt)"
-                            OnClick="InstallUpdate" />
+                                       OnClick="InstallUpdate" />
                     </MudBadge>
 
                 </MudTooltip>
@@ -47,7 +46,7 @@
             {
                 <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
                     <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
-                        Class="mx-3 mt-1" />
+                                         Class="mx-3 mt-1" />
                 </MudTooltip>
             }
             else
@@ -62,7 +61,7 @@
                     case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
                         <MudTooltip Text="Reconnecting">
                             <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
-                                Class="mx-3 mt-1" />
+                                                 Class="mx-3 mt-1" />
                         </MudTooltip>
                         break;
                     case HubConnectionState.Disconnected:
@@ -76,7 +75,7 @@
             }
             <MudTooltip Text="GitHub">
                 <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-                    Href="https://github.com/bitbound/controlr/" Target="_blank" />
+                               Href="https://github.com/bitbound/controlr/" Target="_blank" />
             </MudTooltip>
         </MudAppBar>
         <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
@@ -110,6 +109,23 @@
     private AlertSeverity _alertSeverity = AlertSeverity.Information;
     private string _alertMessage = string.Empty;
     private bool _updateAvailable;
+    private MudTheme? _customTheme;
+
+    private MudTheme CustomTheme
+    {
+        get
+        {
+            return _customTheme ??= new MudTheme()
+                {
+                    PaletteDark = new PaletteDark()
+                    {
+                        Primary = "#46AA46",
+                        Background = Colors.Gray.Darken4,
+                        Surface = "rgb(45, 45, 45)",
+                    }
+                };
+        }
+    }
 
     protected override void OnInitialized()
     {

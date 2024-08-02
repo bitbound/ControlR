@@ -185,16 +185,6 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
-app.UseCors(builder =>
-{
-    // This is Electron's origin.
-    builder
-        .WithOrigins("http://localhost:3000")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
-});
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

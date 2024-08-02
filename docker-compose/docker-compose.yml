@@ -30,6 +30,9 @@ services:
       # Add an OTLP endpoint URL to enable exporting of OpenTelemetry data to an OTLP endpoint.
       - ControlR_OTLP_ENDPOINT_URL=""
 
+      # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
+      - ControlR_Logging__LogLevel__Default=Information
+
       # The Gateway IP here must match the IP address in the above controlr-network gateway.
       - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
 
