@@ -3,4 +3,4 @@
 [MessagePackObject]
 public record KeyEventDto(
     [property: MsgPackKey] string Key, 
-    [property: MsgPackKey] bool IsPressed);
+    [property: MsgPackKey] bool IsPressed) : DtoRecordBase;

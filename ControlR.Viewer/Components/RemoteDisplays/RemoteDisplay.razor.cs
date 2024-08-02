@@ -23,7 +23,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
-    private bool _isMobileActionsMenuOpen;
     private bool _isScrollModeEnabled;
     private double _lastPinchDistance = -1;
     private ElementReference _screenArea;
@@ -302,7 +301,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private async Task HandleKeyboardToggled()
     {
         _virtualKeyboardToggled = !_virtualKeyboardToggled;
-        _isMobileActionsMenuOpen = false;
         if (_virtualKeyboardToggled)
         {
             await _virtualKeyboard.FocusAsync();

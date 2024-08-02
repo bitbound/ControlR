@@ -17,7 +17,7 @@ internal class DeviceDataGeneratorLinux(
     private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
     private readonly IProcessManager _processInvoker = processInvoker;
 
-    public async Task<Device> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
+    public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
         var device = GetDeviceBase(authorizedKeys, deviceId);
 

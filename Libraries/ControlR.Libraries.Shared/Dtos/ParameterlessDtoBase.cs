@@ -3,7 +3,7 @@
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public record ParameterlessDtoBase([property: MsgPackKey] DtoType DtoType)
+public record ParameterlessDtoBase([property: MsgPackKey] DtoType DtoType) : DtoRecordBase
 {
     public void VerifyType(DtoType expectedType)
     {

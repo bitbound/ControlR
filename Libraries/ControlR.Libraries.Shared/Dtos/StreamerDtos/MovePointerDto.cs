@@ -5,7 +5,7 @@ namespace ControlR.Libraries.Shared.Dtos.SidecarDtos;
 [MessagePackObject]
 public record MovePointerDto(
     [property: MsgPackKey] double PercentX,
-    [property: MsgPackKey] double PercentY);
+    [property: MsgPackKey] double PercentY) : DtoRecordBase;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MovePointerType

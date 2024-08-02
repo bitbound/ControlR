@@ -3,4 +3,4 @@
 [MessagePackObject]
 public record DisplayDataDto(
     [property: MsgPackKey] Guid SessionId,
-    [property: MsgPackKey] DisplayDto[] Displays);
+    [property: MsgPackKey] DisplayDto[] Displays) : DtoRecordBase;

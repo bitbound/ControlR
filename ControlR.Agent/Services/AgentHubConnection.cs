@@ -221,20 +221,12 @@ internal class AgentHubConnection(
                 return;
             }
 
-            var device = await _deviceCreator.CreateDevice(
+            var deviceDto = await _deviceCreator.CreateDevice(
                 _cpuSampler.CurrentUtilization,
                 _settings.AuthorizedKeys,
                 _settings.DeviceId);
 
-            var result = device.TryCloneAs<Device, DeviceDto>();
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogResult(result);
-                return;
-            }
-
-            await Connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), result.Value);
+            await Connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto);
         }
         catch (Exception ex)
         {

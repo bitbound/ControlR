@@ -9,4 +9,4 @@ public record ScreenRegionDto(
     [property: MsgPackKey] int Y,
     [property: MsgPackKey] int Width,
     [property: MsgPackKey] int Height,
-    [property: MsgPackKey] byte[] EncodedImage);
+    [property: MsgPackKey] byte[] EncodedImage) : DtoRecordBase;

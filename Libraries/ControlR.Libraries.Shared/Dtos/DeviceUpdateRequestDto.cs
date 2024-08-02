@@ -2,4 +2,4 @@
 
 [MessagePackObject]
 public record DeviceUpdateRequestDto(
-    [property: MsgPackKey] string PublicKeyLabel);
+    [property: MsgPackKey] string PublicKeyLabel) : DtoRecordBase;

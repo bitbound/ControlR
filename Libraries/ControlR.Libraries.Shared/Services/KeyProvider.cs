@@ -65,8 +65,14 @@ public class KeyProvider(ISystemTime systemTime, ILogger<KeyProvider> logger) : 
 
     public bool Verify(SignedPayloadDto signedDto)
     {
+        if (signedDto.Payload.Length < 16)
+        {
+            _logger.LogWarning("DTO payload size is less than 16 bytes for type {DtoType}.", signedDto.DtoType);
+        }
+
         using var rsa = RSA.Create();
         rsa.ImportRSAPublicKey(signedDto.PublicKey, out _);
+
 
         if (!Verify(rsa, signedDto.Payload, signedDto.Signature))
         {

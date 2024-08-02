@@ -48,9 +48,9 @@ internal class DeviceDataGeneratorBase(
         }
     }
 
-    public Device GetDeviceBase(IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
+    public DeviceDto GetDeviceBase(IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
-        return new Device()
+        return new DeviceDto()
         {
             Id = deviceId,
             AuthorizedKeys = authorizedKeys,
