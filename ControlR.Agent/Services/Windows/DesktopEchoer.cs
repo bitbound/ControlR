@@ -1,4 +1,4 @@
-﻿using ControlR.Agent.Dtos;
+﻿using ControlR.Agent.IpcDtos;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;

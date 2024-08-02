@@ -1,5 +1,5 @@
 ﻿using MessagePack;
-namespace ControlR.Agent.Dtos;
+namespace ControlR.Agent.IpcDtos;
 
 [MessagePackObject]
 public record DesktopRequestDto();

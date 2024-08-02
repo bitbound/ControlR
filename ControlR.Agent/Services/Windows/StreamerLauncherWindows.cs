@@ -1,5 +1,4 @@
-﻿using ControlR.Agent.Dtos;
-using ControlR.Agent.Interfaces;
+﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Models;
 using ControlR.Libraries.Shared;
 using Microsoft.Extensions.Hosting;
@@ -13,6 +12,7 @@ using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Agent.IpcDtos;
 
 namespace ControlR.Agent.Services.Windows;
 
