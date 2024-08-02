@@ -4,8 +4,7 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "controlr": "StartDebugging",
-        "coturn": "StartWithoutDebugging"
+        "controlr": "StartDebugging"
       }
     }
   }
