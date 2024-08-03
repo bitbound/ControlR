@@ -76,7 +76,7 @@
                   OnKeyDown="HandleExportPassphraseKeyDown"
                   Required
                   Validation="(string e) => ValidatePassphrase(e)" />
-    <MudButton Color="Color.Default" Variant="Variant.Filled" OnClick="ExportPrivateKey" Class="mt-2">
+    <MudButton Color="Color.Default" Variant="Variant.Outlined" OnClick="ExportPrivateKey" Class="mt-2">
         Export
     </MudButton>
 </div>
@@ -91,7 +91,7 @@
         resetting to the app.  Export your keys first if you want
         to keep them, or they will be lost permanently.
     </MudText>
-    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="RemoveKeypair" Class="mt-2">
+    <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="RemoveKeypair" Class="mt-2">
         Remove Keypair
     </MudButton>
 </div>

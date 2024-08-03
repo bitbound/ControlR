@@ -9,12 +9,12 @@
         @foreach (var display in Displays)
         {
             <MudMenuItem @key=(display) OnClick="@(() => SelectDisplay(display))" @ontouchend="@(() => SelectDisplay(display))">
-                <MudText Color="@(display == SelectedDisplay ? Color.Success : Color.Default)">
+                <MudText Color="@(display == SelectedDisplay ? Color.Primary : Color.Default)">
                     @(display.Name)
                 </MudText>
                 @if (!string.IsNullOrWhiteSpace(display.DisplayId))
                 {
-                    <MudText Color="Color.Secondary">
+                    <MudText Color="Color.Tertiary">
                         (@(display.DisplayId))
                     </MudText>
                 }
