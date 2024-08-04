@@ -31,11 +31,6 @@ public class ConnectionCountSynchronizer(
                 LockKeys.ViewerCount,
                 _connectionCounter.ViewerConnectionLocalCount,
                 stoppingToken);
-
-            await SynchronizeConnectionCounts(
-                LockKeys.StreamerCount,
-                _connectionCounter.StreamerConnectionLocalCount,
-                stoppingToken);
         }
     }
 

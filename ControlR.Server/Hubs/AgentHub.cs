@@ -136,7 +136,6 @@ public class AgentHub(
         {
             var agentResult = await _connectionCounter.GetAgentConnectionCount();
             var viewerResult = await _connectionCounter.GetViewerConnectionCount();
-            var streamerResult = await _connectionCounter.GetStreamerConnectionCount();
 
             if (!agentResult.IsSuccess)
             {
@@ -150,17 +149,9 @@ public class AgentHub(
                 return;
             }
 
-            if (!streamerResult.IsSuccess)
-            {
-                _logger.LogResult(streamerResult);
-                return;
-            }
-
-
             var dto = new ServerStatsDto(
                 agentResult.Value,
-                viewerResult.Value,
-                streamerResult.Value);
+                viewerResult.Value);
 
             await _viewerHub.Clients
                 .Group(HubGroupNames.ServerAdministrators)

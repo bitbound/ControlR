@@ -3,5 +3,4 @@
 [MessagePackObject]
 public record ServerStatsDto(
     [property: MsgPackKey] int AgentCount,
-    [property: MsgPackKey] int ViewerCount,
-    [property: MsgPackKey] int StreamerCount) : DtoRecordBase;
+    [property: MsgPackKey] int ViewerCount) : DtoRecordBase;

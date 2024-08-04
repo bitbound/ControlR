@@ -115,7 +115,7 @@
     {
         get
         {
-            return _customTheme ?? new MudTheme()
+            return _customTheme ??= new MudTheme()
                 {
                     PaletteDark = new PaletteDark()
                     {

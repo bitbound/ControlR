@@ -93,7 +93,6 @@ public class ViewerHub(
 
             var agentResult = await _connectionCounter.GetAgentConnectionCount();
             var viewerResult = await _connectionCounter.GetViewerConnectionCount();
-            var streamerResult = await _connectionCounter.GetStreamerConnectionCount();
 
             if (!agentResult.IsSuccess)
             {
@@ -107,16 +106,9 @@ public class ViewerHub(
                 return Result.Fail<ServerStatsDto>(viewerResult.Reason);
             }
 
-            if (!streamerResult.IsSuccess)
-            {
-                _logger.LogResult(streamerResult);
-                return Result.Fail<ServerStatsDto>(streamerResult.Reason);
-            }
-
             var dto = new ServerStatsDto(
                 agentResult.Value,
-                viewerResult.Value,
-                streamerResult.Value);
+                viewerResult.Value);
 
             return Result.Ok(dto);
         }
