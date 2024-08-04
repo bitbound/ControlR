@@ -3,7 +3,6 @@
 A zero-trust remote control solution built with .NET 8, MAUI, and SignalR.
 
 [![Build Status](https://dev.azure.com/translucency/ControlR/_apis/build/status%2FControlR?branchName=main)](https://dev.azure.com/translucency/ControlR/_build/latest?definitionId=35&branchName=main)
-
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
 Website: https://controlr.app  
@@ -11,13 +10,24 @@ Docker: https://hub.docker.com/r/translucency/controlr
 Feature Requests: https://features.controlr.app/  
 Discussions: https://github.com/bitbound/ControlR/discussions
 
+Microsoft Store: https://www.microsoft.com/store/productId/9NS914B8GR04  
+Play Store: https://play.google.com/apps/testing/dev.jaredg.controlr.viewer
+
 ## Testers Needed:
 
 Please join the [Android Beta Test](https://play.google.com/apps/testing/dev.jaredg.controlr.viewer) if you can. I need at least 20 users to stay in the program for at least 14 days before I can publish the app to the Play Store.
 
 ## Quick Start:
 
-Steps:
+Public Server:
+
+- Install the Viewer through the Microsoft Store or Play Store.
+- In the Viewer app, create a new keypair by clicking the Create button.
+- Install the agent on a computer by copying and pasting one of the scripts on the Deploy page.
+- You should now see the computer in the devices list and be able to remote control it.
+  - Note: Remote control is only supported for agents running on Windows.
+
+Self-Hosted:
 
 - Run Docker with the example compose file (see below).
 - Download and install the viewer from `http[s]://{host_name}/downloads/ControlR.Viewer.{msix/apk}`.
@@ -56,6 +66,12 @@ It's recommended that you only use one or the other to avoid conflicts. If you'r
 If you're using the public server at app.controlr.app, you can use either installation method.
 
 You can see which method the app is currently using on the `About` page, next to `Install Source`.
+
+## Screenshots
+
+![Windows Sessions on Desktop](.assets/screenshots/desktop_windows-sessions.png)
+
+![Windows Sessions on Android](.assets/screenshots/mobile_windows-sessions.jpg)
 
 ## How the Zero-Trust Works
 
