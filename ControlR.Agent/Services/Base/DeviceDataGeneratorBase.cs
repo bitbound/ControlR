@@ -52,12 +52,30 @@ internal class DeviceDataGeneratorBase(
         }
     }
 
-    public DeviceDto GetDeviceBase(IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
+    public DeviceDto GetDeviceBase(
+        IEnumerable<AuthorizedKeyDto> authorizedKeys, 
+        string deviceId, 
+        string currentUser, 
+        List<Drive> drives, 
+        double usedStorage, 
+        double totalStorage, 
+        double usedMemory, 
+        double totalMemory, 
+        double cpuUtilization, 
+        string agentVersion)
     {
         return new DeviceDto()
         {
             Id = deviceId,
             AuthorizedKeys = authorizedKeys,
+            CurrentUser = currentUser,
+            CpuUtilization = cpuUtilization,
+            Drives = drives,
+            AgentVersion = agentVersion,
+            UsedStorage = usedStorage,
+            TotalStorage = totalStorage,
+            UsedMemory = usedMemory,
+            TotalMemory = totalMemory,
             Name = Environment.MachineName,
             Platform = _environmentHelper.Platform,
             ProcessorCount = Environment.ProcessorCount,

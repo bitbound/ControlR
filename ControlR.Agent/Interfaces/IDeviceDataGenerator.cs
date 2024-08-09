@@ -11,7 +11,17 @@ public interface IDeviceDataGenerator
 
     List<Drive> GetAllDrives();
 
-    DeviceDto GetDeviceBase(IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId);
+    DeviceDto GetDeviceBase(
+       IEnumerable<AuthorizedKeyDto> authorizedKeys,
+       string deviceId,
+       string currentUser,
+       List<Drive> drives,
+       double usedStorage,
+       double totalStorage,
+       double usedMemory,
+       double totalMemory,
+       double cpuUtilization,
+       string agentVersion);
 
     Task<(double usedGB, double totalGB)> GetMemoryInGB();
 

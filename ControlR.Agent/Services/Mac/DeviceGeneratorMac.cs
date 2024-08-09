@@ -19,28 +19,32 @@ internal class DeviceDataGeneratorMac(
 
     public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
     {
-        var device = GetDeviceBase(authorizedKeys, deviceId);
-
         try
         {
             var (usedStorage, totalStorage) = GetSystemDriveInfo();
             var (usedMemory, totalMemory) = await GetMemoryInGB();
 
-            device.CurrentUser = await GetCurrentUser();
-            device.Drives = GetAllDrives();
-            device.UsedStorage = usedStorage;
-            device.TotalStorage = totalStorage;
-            device.UsedMemory = usedMemory;
-            device.TotalMemory = totalMemory;
-            device.CpuUtilization = await GetCpuUtilization();
-            device.AgentVersion = GetAgentVersion();
+            var currentUser = await GetCurrentUser();
+            var drives = GetAllDrives();
+            var agentVersion = GetAgentVersion();
+
+            return GetDeviceBase(
+                authorizedKeys,
+                deviceId,
+                currentUser,
+                drives,
+                usedStorage,
+                totalStorage,
+                usedMemory,
+                totalMemory,
+                cpuUtilization,
+                agentVersion);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting device info.");
+            throw;
         }
-
-        return device;
     }
 
     public async Task<(double usedGB, double totalGB)> GetMemoryInGB()
