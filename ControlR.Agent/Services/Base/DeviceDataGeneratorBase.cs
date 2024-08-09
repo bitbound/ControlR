@@ -30,16 +30,20 @@ internal class DeviceDataGeneratorBase(
     {
         try
         {
-            return DriveInfo.GetDrives().Where(x => x.IsReady).Select(x => new Drive()
-            {
-                DriveFormat = x.DriveFormat,
-                DriveType = x.DriveType,
-                Name = x.Name,
-                RootDirectory = x.RootDirectory.FullName,
-                FreeSpace = x.TotalFreeSpace > 0 ? Math.Round((double)(x.TotalFreeSpace / 1024 / 1024 / 1024), 2) : 0,
-                TotalSize = x.TotalSize > 0 ? Math.Round((double)(x.TotalSize / 1024 / 1024 / 1024), 2) : 0,
-                VolumeLabel = x.VolumeLabel
-            }).ToList();
+            return DriveInfo.GetDrives()
+                .Where(x => x.IsReady)
+                .Where(x => x.DriveType == DriveType.Fixed)
+                .Where(x => x.TotalSize > 0)
+                .Select(x => new Drive()
+                {
+                    DriveFormat = x.DriveFormat,
+                    DriveType = x.DriveType,
+                    Name = x.Name,
+                    RootDirectory = x.RootDirectory.FullName,
+                    FreeSpace = x.TotalFreeSpace > 0 ? Math.Round((double)(x.TotalFreeSpace / 1024 / 1024 / 1024), 2) : 0,
+                    TotalSize = x.TotalSize > 0 ? Math.Round((double)(x.TotalSize / 1024 / 1024 / 1024), 2) : 0,
+                    VolumeLabel = x.VolumeLabel
+                }).ToList();
         }
         catch (Exception ex)
         {
