@@ -9,10 +9,11 @@ namespace ControlR.Viewer.Services;
 public interface IDeviceCache
 {
     IEnumerable<DeviceDto> Devices { get; }
-
     Task AddOrUpdate(DeviceDto device);
+
     void Clear();
 
+    Task Initialize();
     Task Remove(DeviceDto device);
 
     Task SetAllOffline();
@@ -33,8 +34,6 @@ internal class DeviceCache : IDeviceCache
         _fileIo = fileIo;
         _deviceCachePath = Path.Combine(fileSystem.AppDataDirectory, "DeviceCache.json");
         _logger = logger;
-
-        Task.Run(TryLoadCache).Forget();
     }
 
     public IEnumerable<DeviceDto> Devices => _cache.Values;
@@ -50,29 +49,7 @@ internal class DeviceCache : IDeviceCache
         _cache.Clear();
     }
 
-    public async Task Remove(DeviceDto device)
-    {
-        if (_cache.Remove(device.Id, out _))
-        {
-            await TrySaveCache();
-        }
-    }
-
-    public async Task SetAllOffline()
-    {
-        foreach (var device in _cache.Values)
-        {
-            device.IsOnline = false;
-        }
-        await TrySaveCache();
-    }
-
-    public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
-    {
-        return _cache.TryGetValue(deviceId, out device);
-    }
-
-    private async Task TryLoadCache()
+    public async Task Initialize()
     {
         await _fileLock.WaitAsync();
         try
@@ -112,6 +89,28 @@ internal class DeviceCache : IDeviceCache
         {
             _fileLock.Release();
         }
+    }
+
+    public async Task Remove(DeviceDto device)
+    {
+        if (_cache.Remove(device.Id, out _))
+        {
+            await TrySaveCache();
+        }
+    }
+
+    public async Task SetAllOffline()
+    {
+        foreach (var device in _cache.Values)
+        {
+            device.IsOnline = false;
+        }
+        await TrySaveCache();
+    }
+
+    public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
+    {
+        return _cache.TryGetValue(deviceId, out device);
     }
 
     private Task TrySaveCache()
