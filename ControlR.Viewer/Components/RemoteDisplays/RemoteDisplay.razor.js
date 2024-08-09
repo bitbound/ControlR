@@ -123,7 +123,6 @@ export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
  * event handlers for the canvas element.
  * @param {any} componentRef
  * @param {string} canvasId
- * @param {RTCIceServer[]} iceServers
  */
 export async function initialize(componentRef, canvasId) {
     const state = getState(canvasId);
@@ -488,7 +487,7 @@ async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
     window.clearTimeout(state.mouseMoveTimeout);
 
     const now = Date.now();
-    if (now - state.lastMouseMove > 50) {
+    if (now - state.lastMouseMove > 10) {
         await state.invokeDotNet("SendPointerMove", percentX, percentY);
         state.lastMouseMove = now;
         return;
