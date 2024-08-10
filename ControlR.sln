@@ -34,7 +34,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B85287-C904-4672-821E-D0B96BBDF89C}"
 	ProjectSection(SolutionItems) = preProject
 		.build\Build.ps1 = .build\Build.ps1
-		.build\CreateDelta.ps1 = .build\CreateDelta.ps1
 		.build\CreateKeystore.cmd = .build\CreateKeystore.cmd
 		.build\PrepareArtifacts.ps1 = .build\PrepareArtifacts.ps1
 	EndProjectSection
@@ -144,7 +143,7 @@ Global
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal
