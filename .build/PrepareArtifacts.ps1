@@ -9,7 +9,7 @@ $ArtifactsDir = Join-Path -Path $env:ArtifactsShare -ChildPath ($Environment.ToL
 $WorkDir = $env:SYSTEM_DEFAULTWORKINGDIRECTORY
 
 function Create-ReleaseFile($FilePath) {
-    $Hash = (Get-FileHash -Path $FilePath -Algorithm MD5).Hash
+    $Hash = (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash
     New-Item -Path "$ArtifactsDir\Releases" -Name $Hash -ItemType File -Force | Out-Null
 }
 

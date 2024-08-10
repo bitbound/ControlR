@@ -203,7 +203,7 @@ else
     app.UseHttpsRedirection();
 }
 
-app.UseMiddleware<Md5HeaderMiddleware>();
+app.UseMiddleware<ContentHashHeaderMiddleware>();
 
 ConfigureStaticFiles(app);
 

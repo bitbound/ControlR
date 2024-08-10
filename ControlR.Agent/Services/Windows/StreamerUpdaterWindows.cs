@@ -150,8 +150,8 @@ internal class StreamerUpdaterWindows(
 
         _logger.LogInformation(
             "Comparing local streamer archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
-            Convert.ToBase64String(localHash),
-            Convert.ToBase64String(streamerHashResult.Value));
+            Convert.ToHexString(localHash),
+            Convert.ToHexString(streamerHashResult.Value));
 
         if (streamerHashResult.Value.SequenceEqual(localHash))
         {

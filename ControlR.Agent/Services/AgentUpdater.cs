@@ -75,8 +75,8 @@ internal class AgentUpdater(
 
             _logger.LogInformation(
                 "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
-                Convert.ToBase64String(exeHash),
-                Convert.ToBase64String(remoteHash));
+                Convert.ToHexString(exeHash),
+                Convert.ToHexString(remoteHash));
 
             if (remoteHash.SequenceEqual(exeHash))
             {

@@ -4,11 +4,11 @@ using System.Security.Cryptography;
 
 namespace ControlR.Server.Middleware;
 
-public class Md5HeaderMiddleware(
+public class ContentHashHeaderMiddleware(
     RequestDelegate _next,
     IFileProvider fileProvider,
     IHostApplicationLifetime _appLifetime,
-    ILogger<Md5HeaderMiddleware> _logger)
+    ILogger<ContentHashHeaderMiddleware> _logger)
 {
     private static readonly MemoryCache _memoryCache = new(new MemoryCacheOptions());
 
@@ -35,18 +35,22 @@ public class Md5HeaderMiddleware(
         if (_memoryCache.TryGetValue(filePath, out var cachedObject) &&
             cachedObject is string cachedHash)
         {
-            context.Response.Headers.ContentMD5 = cachedHash;
+            context.Response.Headers["Content-Hash"] = cachedHash;
             await _next(context);
             return;
         }
 
         using var fs = new FileStream(fileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var hash = await MD5.HashDataAsync(fs, _appLifetime.ApplicationStopping);
-        var base64Hash = Convert.ToBase64String(hash);
-        _memoryCache.Set(filePath, base64Hash, TimeSpan.FromMinutes(10));
+        var sha256Hash = await SHA256.HashDataAsync(fs, _appLifetime.ApplicationStopping);
+        var hexHash = Convert.ToHexString(sha256Hash);
+        context.Response.Headers["Content-Hash"] = hexHash;
+        // TODO: Re-enable when MD5 is removed.
+        //_memoryCache.Set(filePath, hexHash, TimeSpan.FromMinutes(10));
+
+        // TODO: Remove next release.
+        var md5Hash = await MD5.HashDataAsync(fs, _appLifetime.ApplicationStopping);
+        var base64Hash = Convert.ToBase64String(md5Hash);
         context.Response.Headers.ContentMD5 = base64Hash;
-        // TODO: Remove after next release.
-        context.Response.Headers["MD5"] = base64Hash;
 
         await _next(context);
     }

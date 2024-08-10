@@ -31,9 +31,11 @@ internal class VersionApi(
             using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            if (response.Content.Headers.ContentMD5 is byte[] contentMd5)
+            if (response.Headers.TryGetValues("Content-Hash", out var values) &&
+                values.FirstOrDefault() is string hashString)
             {
-                return Result.Ok(contentMd5);
+                var fileHash = Convert.FromHexString(hashString);
+                return Result.Ok(fileHash);
             }
 
             return Result.Fail<byte[]>("Failed to get agent file hash.");
@@ -73,9 +75,11 @@ internal class VersionApi(
             using var response = await _client.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            if (response.Content.Headers.ContentMD5 is byte[] contentMd5)
+            if (response.Headers.TryGetValues("Content-Hash", out var values) &&
+                  values.FirstOrDefault() is string hashString)
             {
-                return Result.Ok(contentMd5);
+                var fileHash = Convert.FromHexString(hashString);
+                return Result.Ok(fileHash);
             }
 
             return Result.Fail<byte[]>("Failed to get streamer file hash.");
