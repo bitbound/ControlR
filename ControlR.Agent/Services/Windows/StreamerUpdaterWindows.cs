@@ -137,7 +137,7 @@ internal class StreamerUpdaterWindows(
 
         using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            localHash = await MD5.HashDataAsync(zipFs);
+            localHash = await SHA256.HashDataAsync(zipFs);
         }
 
         _logger.LogInformation("Checking streamer remote archive hash.");

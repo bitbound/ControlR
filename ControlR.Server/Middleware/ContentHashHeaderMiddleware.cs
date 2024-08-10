@@ -44,13 +44,8 @@ public class ContentHashHeaderMiddleware(
         var sha256Hash = await SHA256.HashDataAsync(fs, _appLifetime.ApplicationStopping);
         var hexHash = Convert.ToHexString(sha256Hash);
         context.Response.Headers["Content-Hash"] = hexHash;
-        // TODO: Re-enable when MD5 is removed.
-        //_memoryCache.Set(filePath, hexHash, TimeSpan.FromMinutes(10));
 
-        // TODO: Remove next release.
-        var md5Hash = await MD5.HashDataAsync(fs, _appLifetime.ApplicationStopping);
-        var base64Hash = Convert.ToBase64String(md5Hash);
-        context.Response.Headers.ContentMD5 = base64Hash;
+        _memoryCache.Set(filePath, hexHash, TimeSpan.FromMinutes(10));
 
         await _next(context);
     }

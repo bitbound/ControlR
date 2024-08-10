@@ -71,7 +71,7 @@ internal class AgentUpdater(
             var downloadUrl = $"{serverOrigin}{downloadPath}";
 
             using var fs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var exeHash = await MD5.HashDataAsync(fs, linkedCts.Token);
+            var exeHash = await SHA256.HashDataAsync(fs, linkedCts.Token);
 
             _logger.LogInformation(
                 "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
