@@ -9,8 +9,6 @@ using ControlR.Libraries.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Octodiff.Core;
-using Octodiff.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
@@ -28,7 +26,6 @@ internal class StreamerUpdaterWindows(
     ILogger<StreamerUpdaterWindows> _logger) : BackgroundService, IStreamerUpdater
 {
     private readonly ConcurrentList<StreamerSessionRequestDto> _pendingRequests = [];
-    private readonly IProgressReporter _progressReporter = new ConsoleProgressReporter();
     private readonly string _streamerZipUri = $"{_settings.ServerUri}downloads/win-x86/{AppConstants.StreamerZipFileName}";
     private readonly SemaphoreSlim _updateLock = new(1, 1);
     private double _previousProgress = 0;
@@ -58,57 +55,24 @@ internal class StreamerUpdaterWindows(
             var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
             var zipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
 
-            if (_fileSystem.FileExists(zipPath))
+            if (_fileSystem.FileExists(zipPath) &&
+                _fileSystem.FileExists(binaryPath))
             {
-                while (true)
+                var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
+                
+                // Version is current.
+                if (archiveCheckResult.IsSuccess && !archiveCheckResult.Value)
                 {
-                    var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
-                    if (!archiveCheckResult.IsSuccess)
-                    {
-                        return false;
-                    }
-
-                    if (!archiveCheckResult.Value && _fileSystem.FileExists(binaryPath))
-                    {
-                        return true;
-                    }
-
-                    var patchResult = await TryPatchCurrentVersion(zipPath, streamerDir);
-                    if (patchResult)
-                    {
-                        // We may need multiple patches to get to latest version,
-                        // so we'll iterate until the current zip hash matches the remote.
-                        continue;
-                    }
-                    // Else, we'll break and continue with full upgrade.
-                    break;
-                }
-
-                _logger.LogWarning("Patching failed.  Attempting full upgrade.");
-
-                if (_fileSystem.DirectoryExists(streamerDir))
-                {
-                    _fileSystem.DeleteDirectory(streamerDir, true);
+                    return true;
                 }
             }
-            else if (_fileSystem.DirectoryExists(streamerDir))
+
+            if (_fileSystem.DirectoryExists(streamerDir))
             {
-                // If the archive doesn't exist, clear out any remaining files.
-                // Then future update checks will work normally.
                 _fileSystem.DeleteDirectory(streamerDir, true);
             }
 
-            if (!_fileSystem.FileExists(binaryPath))
-            {
-                _previousProgress = 0;
-                var downloadResult = await DownloadStreamer(streamerDir);
-                if (!downloadResult)
-                {
-                    return downloadResult;
-                }
-            }
-
-            return true;
+            return await DownloadStreamer(streamerDir);
         }
         catch (Exception ex)
         {
@@ -129,13 +93,13 @@ internal class StreamerUpdaterWindows(
             return;
         }
 
-        await EnsureLatestVersion(stoppingToken);
+        _ = await EnsureLatestVersion(stoppingToken);
 
         using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            await EnsureLatestVersion(stoppingToken);
+            _ = await EnsureLatestVersion(stoppingToken);
         }
     }
 
@@ -143,6 +107,7 @@ internal class StreamerUpdaterWindows(
     {
         try
         {
+            _previousProgress = 0;
             var targetPath = Path.Combine(_environmentHelper.StartupDirectory, AppConstants.StreamerZipFileName);
             var result = await _downloadsApi.DownloadStreamerZip(targetPath, _streamerZipUri, async progress =>
             {
@@ -226,62 +191,6 @@ internal class StreamerUpdaterWindows(
                     _logger.LogError(ex, "Error while sending remote control download progress.");
                 }
             }
-        }
-    }
-
-    private async Task<bool> TryPatchCurrentVersion(string streamerZipPath, string streamerDir)
-    {
-        try
-        {
-            _logger.LogInformation("Checking for differential patch for current version.");
-            await ReportDownloadProgress(-1, "Attempting to patch current version");
-
-            var tempStreamerPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(streamerZipPath));
-
-            using (var basisStream = _fileSystem.OpenFileStream(streamerZipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                var hash = await MD5.HashDataAsync(basisStream);
-                var hexValue = Convert.ToHexString(hash);
-                var deltaFileName = $"windows-streamer-{hexValue}.octodelta";
-                var deltaPath = Path.Combine(Path.GetTempPath(), deltaFileName);
-                var downloadUri = $"{_settings.ServerUri}downloads/deltas/{deltaFileName}";
-                var downloadResult = await _downloadsApi.DownloadFile(downloadUri, deltaPath);
-
-                if (!downloadResult.IsSuccess)
-                {
-                    return false;
-                }
-
-                _logger.LogInformation("Downloaded patch.  Applying.");
-                var deltaApplier = new DeltaApplier { SkipHashCheck = false };
-
-                basisStream.Seek(0, SeekOrigin.Begin);
-
-           
-                using var deltaStream = _fileSystem.OpenFileStream(deltaPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                using var newFileStream = _fileSystem.OpenFileStream(tempStreamerPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
-                deltaApplier.Apply(basisStream, new BinaryDeltaReader(deltaStream, _progressReporter), newFileStream);
-                _logger.LogInformation("Patch applied.");
-            }
-
-            _logger.LogInformation("Extracting patched archive.");
-            await ReportDownloadProgress(-1, "Extracting patched archive");
-
-            if (_fileSystem.DirectoryExists(streamerDir))
-            {
-                _fileSystem.DeleteDirectory(streamerDir, true);
-            }
-            _fileSystem.CreateDirectory(streamerDir);
-            _fileSystem.MoveFile(tempStreamerPath, streamerZipPath, true);
-            ZipFile.ExtractToDirectory(streamerZipPath, streamerDir);
-
-            _logger.LogInformation("Patching completed.");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while attempting to patch streamer.");
-            return false;
         }
     }
 }

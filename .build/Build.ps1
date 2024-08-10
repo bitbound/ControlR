@@ -42,6 +42,12 @@ function Check-LastExitCode {
     }
 }
 
+function Wait-ForFileToExist([string]$FilePath) {
+    while (!(Test-Path -Path $FilePath)) {
+        Start-Sleep -Seconds 1
+    }
+}
+
 if (!$CurrentVersion) {
     Write-Error "CurrentVersion is required."
 }
@@ -79,7 +85,7 @@ if ($BuildAgent) {
     #dotnet publish --configuration Release -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
     #Check-LastExitCode
 
-    Start-Sleep -Seconds 1
+    Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
     &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
     Check-LastExitCode
 
@@ -133,6 +139,8 @@ if ($BuildViewer) {
 
 if ($BuildStreamer) {
     dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
+
+    Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
     &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
     Check-LastExitCode
 

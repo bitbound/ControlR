@@ -25,23 +25,6 @@ public sealed class CaptureResult : IDisposable
         Bitmap?.Dispose();
     }
 
-    internal static CaptureResult AcquireNextFrame(HRESULT result)
-    {
-
-        if (result == HRESULT.DXGI_ERROR_WAIT_TIMEOUT)
-        {
-            return new CaptureResult()
-            {
-                FailureReason = "Timed out while waiting for the next frame.",
-                DxTimedOut = true
-            };
-        }
-        return new CaptureResult()
-        {
-            FailureReason = "TryAcquireFrame returned failure.",
-        };
-    }
-
     internal static CaptureResult Fail(string failureReason)
     {
         return new CaptureResult()
