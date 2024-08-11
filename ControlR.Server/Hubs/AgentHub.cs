@@ -41,11 +41,8 @@ public class AgentHub(
 
         if (Device is DeviceDto cachedDevice)
         {
-            Device = cachedDevice with
-            {
-                IsOnline = false,
-                LastSeen = _systemTime.Now
-            };
+            cachedDevice.IsOnline = false;
+            cachedDevice.LastSeen = _systemTime.Now;
 
             var publicKeys = cachedDevice.AuthorizedKeys
                 .Select(x => x.PublicKey)
@@ -85,6 +82,10 @@ public class AgentHub(
     {
         try
         {
+            device.ConnectionId = Context.ConnectionId;
+            device.IsOnline = true;
+            device.LastSeen = _systemTime.Now;
+
             await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
 
             var newPubKeys = device.AuthorizedKeys.Select(x => x.PublicKey).ToArray();
@@ -120,21 +121,8 @@ public class AgentHub(
                 }
             }
 
-            Device = device with
-            {
-                ConnectionId = Context.ConnectionId,
-                IsOnline = true,
-                LastSeen = _systemTime.Now
-            };
-
-            var dtoForViewer = Device with
-            {
-                AuthorizedKeys = [],
-            };
-
-            await _viewerHub.Clients
-                .Groups(newPubKeys)
-                .ReceiveDeviceUpdate(dtoForViewer);
+            Device = device;
+            await _viewerHub.Clients.Groups(newPubKeys).ReceiveDeviceUpdate(device);
         }
         catch (Exception ex)
         {

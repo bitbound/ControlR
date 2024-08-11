@@ -23,6 +23,7 @@ internal interface IAgentUpdater : IHostedService
 internal class AgentUpdater(
     IVersionApi _versionApi,
     IDownloadsApi _downloadsApi,
+    IReleasesApi _releasesApi,
     IFileSystem _fileSystem,
     IProcessManager _processInvoker,
     IEnvironmentHelper _environmentHelper,
@@ -70,15 +71,15 @@ internal class AgentUpdater(
             var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
             var downloadUrl = $"{serverOrigin}{downloadPath}";
 
-            using var fs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var exeHash = await SHA256.HashDataAsync(fs, linkedCts.Token);
+            using var startupExeFs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var startupExeHash = await SHA256.HashDataAsync(startupExeFs, linkedCts.Token);
 
             _logger.LogInformation(
                 "Comparing local file hash {LocalFileHash} to latest file hash {ServerFileHash}",
-                Convert.ToHexString(exeHash),
+                Convert.ToHexString(startupExeHash),
                 Convert.ToHexString(remoteHash));
 
-            if (remoteHash.SequenceEqual(exeHash))
+            if (remoteHash.SequenceEqual(startupExeHash))
             {
                 _logger.LogInformation("Version is current.");
                 return;
@@ -86,8 +87,12 @@ internal class AgentUpdater(
 
             _logger.LogInformation("Update found. Downloading update.");
 
-            var tempDir = _fileSystem.CreateDirectory(Path.Combine(Path.GetTempPath(), "ControlR_Update"));
-            var tempPath = Path.Combine(tempDir.FullName, AppConstants.GetAgentFileName(_environmentHelper.Platform));
+            var tempDirPath = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId) ?
+                Path.Combine(Path.GetTempPath(), "ControlR_Update") :
+                Path.Combine(Path.GetTempPath(), "ControlR_Update", _instanceOptions.Value.InstanceId);
+
+            _ = _fileSystem.CreateDirectory(tempDirPath);
+            var tempPath = Path.Combine(tempDirPath, AppConstants.GetAgentFileName(_environmentHelper.Platform));
 
             if (_fileSystem.FileExists(tempPath))
             {
@@ -99,6 +104,19 @@ internal class AgentUpdater(
             {
                 _logger.LogCritical("Download failed.  Aborting update.");
                 return;
+            }
+
+            using (var tempFs = _fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                var updateHash = await SHA256.HashDataAsync(tempFs, linkedCts.Token);
+                var updateHexHash = Convert.ToHexString(updateHash);
+
+                if (_settings.IsConnectedToPublicServer &&
+                    !await _releasesApi.DoesReleaseHashExist(updateHexHash))
+                {
+                    _logger.LogCritical("A new agent version is available, but the hash does not exist in the public releases data.");
+                    return;
+                }
             }
 
             _logger.LogInformation("Launching installer.");

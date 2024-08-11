@@ -18,6 +18,7 @@ internal interface ISettingsProvider
 {
     IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys { get; }
     string DeviceId { get; }
+    bool IsConnectedToPublicServer { get; }
     Uri ServerUri { get; }
     string GetAppSettingsPath();
     Task UpdatePublicKeyLabel(string publicKeyBase64, string publicKeyLabel);
@@ -57,6 +58,9 @@ internal class SettingsProvider(
                 throw new InvalidOperationException("Server URI is not configured correctly.");
         }
     }
+
+    public bool IsConnectedToPublicServer => 
+        _appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
 
     public string GetAppSettingsPath()
     {

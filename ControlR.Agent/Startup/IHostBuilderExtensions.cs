@@ -75,6 +75,7 @@ internal static class IHostBuilderExtensions
 
             services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
             services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
+            services.AddHttpClient<IReleasesApi, ReleasesApi>();
 
             services.AddSingleton<ISettingsProvider, SettingsProvider>();
             services.AddSingleton<IRuntimeSettingsProvider, RuntimeSettingsProvider>();

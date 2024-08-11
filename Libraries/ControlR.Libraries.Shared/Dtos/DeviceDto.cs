@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public record DeviceDto : DtoRecordBase
+public class DeviceDto : DtoBase
 {
     [MsgPackKey]
     [Display(Name = "Agent Version")]
@@ -24,7 +24,7 @@ public record DeviceDto : DtoRecordBase
     public IEnumerable<AuthorizedKeyDto> AuthorizedKeys { get; init; } = [];
 
     [MsgPackKey]
-    public string ConnectionId { get; init; } = string.Empty;
+    public string ConnectionId { get; set; } = string.Empty;
 
     [MsgPackKey]
     [Display(Name = "CPU Utilization")]
@@ -52,7 +52,7 @@ public record DeviceDto : DtoRecordBase
 
     [MsgPackKey]
     [Display(Name = "Last Seen")]
-    public DateTimeOffset LastSeen { get; init; }
+    public DateTimeOffset LastSeen { get; set; }
 
     [MsgPackKey]
     [Display(Name = "MAC Addresses")]

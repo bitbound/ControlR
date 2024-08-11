@@ -21,6 +21,7 @@ internal class StreamerUpdaterWindows(
     IDownloadsApi _downloadsApi,
     IEnvironmentHelper _environmentHelper,
     IVersionApi _versionApi,
+    IReleasesApi _releasesApi,
     ISettingsProvider _settings,
     IAgentUpdater _agentUpdater,
     ILogger<StreamerUpdaterWindows> _logger) : BackgroundService, IStreamerUpdater
@@ -119,6 +120,18 @@ internal class StreamerUpdaterWindows(
                 return false;
             }
 
+            using (var tempFs = _fileSystem.OpenFileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                var updateHash = await SHA256.HashDataAsync(tempFs);
+                var updateHexHash = Convert.ToHexString(updateHash);
+
+                if (_settings.IsConnectedToPublicServer &&
+                    !await _releasesApi.DoesReleaseHashExist(updateHexHash))
+                {
+                    _logger.LogCritical("A new streamer version is available, but the hash does not exist in the public releases data.");
+                }
+            }
+
             await ReportDownloadProgress(-1, "Extracting streamer archive");
 
             ZipFile.ExtractToDirectory(targetPath, streamerDir);
@@ -164,6 +177,7 @@ internal class StreamerUpdaterWindows(
             return Result.Ok(true);
         }
     }
+
     private async Task ReportDownloadProgress(double progress, string message)
     {
         var connection = _serviceProvider.GetRequiredService<IAgentHubConnection>();

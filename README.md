@@ -67,6 +67,18 @@ If you're using the public server at app.controlr.app, you can use either instal
 
 You can see which method the app is currently using on the `About` page, next to `Install Source`.
 
+## Relay Servers
+
+On the public server (https://app.controlr.app), when you start a remote control session, the main server will attempt to transfer the session to the relay server that's closest to you. These relay servers use another of my projects ([WebSocketBridge](https://github.com/bitbound/WebSocketBridge)) to stream the remote control data.
+
+Currently, there are servers deployed in the following locations:
+
+- Phoenix, Arizona, United States
+- St. Louis, Missouri, United States
+- Boydton, Virginia, United States
+
+I may add or remove servers in the future, depending on sponsorships/donations.
+
 ## Screenshots
 
 ![Windows Sessions on Desktop](.assets/screenshots/desktop_windows-sessions.png)
