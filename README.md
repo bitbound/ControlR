@@ -102,3 +102,11 @@ When viewers try to connect or issue commands, every message is signed with the 
 This means that the agent doesn't implicitly trust anything coming from the server. It's able to independently verify all commands issued to it.
 
 No user or device data is persisted on the server. There is no database. All state and identity information is maintained on local devices. When you uninstall the viewer and agent, it's like they were never connected.
+
+## Agent Auto-Updates
+
+Installed agents will automatically update themselves when new versions are released. To increase security, the agent will verify that the SHA256 hash of the new version's binary/archive exists in a separate data store (currently hosted by Cloudflare R2). If not, the update is aborted, and a critical-level log entry is written.
+
+The hashes are uploaded to Cloudflare with each build, from a different location and server than where ControlR is hosted. Write access to R2 is limited to a single IP address.
+
+This separation ensures that, even if the ControlR server is compromised, they wouldn't be able to get agents to auto-update with malicious binaries.
