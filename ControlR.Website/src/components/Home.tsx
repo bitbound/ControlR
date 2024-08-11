@@ -2,9 +2,7 @@ import * as React from "react";
 import { styled } from "@mui/material/styles";
 import { HelpOutline } from "@mui/icons-material";
 import { Button, Stack, Typography, Tooltip, IconButton, Link } from "@mui/material";
-
 import DeployAgentDialog from "./DeployAgentDialog";
-import MsStoreBadge from "./MsStoreBadge";
 
 function Home() {
   const [isAgentDialogOpen, setAgentDialogOpen] = React.useState(false);
@@ -25,19 +23,17 @@ function Home() {
 
       <Typography variant="h6">Store Links</Typography>
       <ButtonWrapper>
-        <MsStoreBadge
-          productid="9NS914B8GR04"
-          window-mode="full"
-          theme="dark"
-          language="en-us"
-          animation="on"
-        ></MsStoreBadge>
+        <div>
+          <a href="https://www.microsoft.com/store/productId/9NS914B8GR04" target="_blank">
+            <StoreImg src="/assets/microsoft-store.png" />
+          </a>
+        </div>
       </ButtonWrapper>
 
       <ButtonWrapper>
         <div>
           <a href="https://play.google.com/store/apps/details?id=dev.jaredg.controlr.viewer" target="_blank">
-            <PlayStoreImg src="/assets/GetItOnGooglePlay.png" />
+            <StoreImg src="/assets/GetItOnGooglePlay.png" />
           </a>
 
         </div>
@@ -118,7 +114,7 @@ const AgentHelpButton = styled(IconButton)({
   transform: "translateX(5px)",
 });
 
-const PlayStoreImg = styled("img")({
+const StoreImg = styled("img")({
   width: "200px",
   height: "auto",
 })
