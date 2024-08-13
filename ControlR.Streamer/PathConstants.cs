@@ -10,7 +10,8 @@ internal static class PathConstants
 
     public static string GetLogsPath(Uri originUri)
     {
-        return Path.Combine(GetSettingsDirectory(originUri), "Logs", $"LogFile.log");
+        var settingsDir = GetSettingsDirectory(originUri);
+        return Path.Combine(settingsDir, "Logs", "ControlR.Streamer", $"LogFile.log");
     }
 
     private static string GetSettingsDirectory(Uri originUri)

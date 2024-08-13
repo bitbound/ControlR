@@ -14,7 +14,7 @@ internal static class PathConstants
     public static string GetLogsPath(string? instanceId)
     {
         var settingsDir = GetSettingsDirectory(instanceId);
-        return Path.Combine(settingsDir, "Logs", "LogFile.log");
+        return Path.Combine(settingsDir, "Logs", "ControlR.Agent", "LogFile.log");
     }
     public static string GetRuntimeSettingsFilePath(string? instanceId)
     {
@@ -38,8 +38,6 @@ internal static class PathConstants
             {
                 settingsDir = Path.Combine(settingsDir, instanceId);
             }
-
-            settingsDir = Path.Combine(settingsDir, "ControlR.Agent");
 
             return Directory.CreateDirectory(settingsDir).FullName;
         }
