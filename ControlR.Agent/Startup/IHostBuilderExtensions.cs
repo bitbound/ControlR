@@ -46,8 +46,6 @@ internal static class IHostBuilderExtensions
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            var startupDir = EnvironmentHelper.Instance.StartupDirectory;
-
             if (!EnvironmentHelper.Instance.IsDebug)
             {
                 config.Sources.Clear();

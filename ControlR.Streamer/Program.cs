@@ -7,6 +7,7 @@ using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 
 var authorizedKeyOption = new Option<string>(
     ["-a", "--authorized-key"],
@@ -68,6 +69,14 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
 {
     var host = Host.CreateDefaultBuilder(args)
         .UseConsoleLifetime()
+        .ConfigureAppConfiguration(builder =>
+        {
+            var appsettingsFile = EnvironmentHelper.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
+            builder
+                .AddJsonFile(PathConstants.GetAppSettingsPath(originUri), true, true)
+                .AddJsonFile(appsettingsFile, true, true)
+                .AddEnvironmentVariables();
+        })
         .ConfigureServices(services =>
         {
             services.Configure<StartupOptions>(options =>
@@ -104,19 +113,8 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
             services.AddHostedService(x => x.GetRequiredService<IClipboardManager>());
         })
         .BootstrapSerilog(
-            PathConstants.GetLogsPath(originUri), 
-            TimeSpan.FromDays(7),
-            config =>
-            {
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    config.MinimumLevel.Debug();
-                }
-                else
-                {
-                    config.MinimumLevel.Information();
-                }
-            })
+            logFilePath: PathConstants.GetLogsPath(originUri), 
+            logRetention: TimeSpan.FromDays(7))
         .Build();
 
     await host.RunAsync();

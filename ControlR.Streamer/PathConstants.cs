@@ -2,39 +2,30 @@
 
 internal static class PathConstants
 {
-    private static string LogsFolderPath
+    public static string GetAppSettingsPath(Uri originUri)
     {
-        get
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                var logsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "ControlR",
-                    "Logs");
-
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    logsPath += "_Debug";
-                }
-                return logsPath;
-            }
-
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-            {
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    return "/var/log/ControlR_debug";
-                }
-                return "/var/log/ControlR";
-            }
-
-            throw new PlatformNotSupportedException();
-        }
+        var dir = GetSettingsDirectory(originUri);
+        return Path.Combine(dir, "appsettings.json");
     }
 
     public static string GetLogsPath(Uri originUri)
     {
-        return Path.Combine(LogsFolderPath, "ControlR.Streamer", originUri.Authority, $"LogFile.log");
+        return Path.Combine(GetSettingsDirectory(originUri), "Logs", $"LogFile.log");
+    }
+
+    private static string GetSettingsDirectory(Uri originUri)
+    {
+        var settingsDir = Path.Combine(
+              Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+              "ControlR");
+
+        if (EnvironmentHelper.Instance.IsDebug)
+        {
+            settingsDir = Path.Combine(settingsDir, "Debug");
+        }
+
+        settingsDir = Path.Combine(settingsDir, originUri.Host, "ControlR.Streamer");
+
+        return Directory.CreateDirectory(settingsDir).FullName;
     }
 }

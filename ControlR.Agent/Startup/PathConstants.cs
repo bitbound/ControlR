@@ -4,37 +4,7 @@ namespace ControlR.Agent.Startup;
 
 internal static class PathConstants
 {
-    private static string LogsFolderPath
-    {
-        get
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                var logsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "ControlR",
-                    "Logs");
-
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    logsPath += "_Debug";
-                }
-                return logsPath;
-            }
-
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-            {
-                if (EnvironmentHelper.Instance.IsDebug)
-                {
-                    return "/var/log/ControlR_debug";
-                }
-                return "/var/log/ControlR";
-            }
-
-            throw new PlatformNotSupportedException();
-        }
-    }
-
+    
     public static string GetAppSettingsPath(string? instanceId)
     {
         var dir = GetSettingsDirectory(instanceId);
@@ -43,12 +13,8 @@ internal static class PathConstants
 
     public static string GetLogsPath(string? instanceId)
     {
-        if (string.IsNullOrWhiteSpace(instanceId))
-        {
-            return Path.Combine(LogsFolderPath, "ControlR.Agent", "LogFile.log");
-        }
-
-        return Path.Combine(LogsFolderPath, "ControlR.Agent", instanceId, $"LogFile.log");
+        var settingsDir = GetSettingsDirectory(instanceId);
+        return Path.Combine(settingsDir, "Logs", "LogFile.log");
     }
     public static string GetRuntimeSettingsFilePath(string? instanceId)
     {
@@ -56,7 +22,7 @@ internal static class PathConstants
         return Path.Combine(dir, "runtime-settings.json");
     }
 
-    public static string GetSettingsDirectory(string? instanceId)
+    private static string GetSettingsDirectory(string? instanceId)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -72,6 +38,9 @@ internal static class PathConstants
             {
                 settingsDir = Path.Combine(settingsDir, instanceId);
             }
+
+            settingsDir = Path.Combine(settingsDir, "ControlR.Agent");
+
             return Directory.CreateDirectory(settingsDir).FullName;
         }
 

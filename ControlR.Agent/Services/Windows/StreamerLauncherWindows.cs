@@ -113,20 +113,20 @@ internal class StreamerLauncherWindows(
                         throw new FileNotFoundException("Streamer binary not found.", streamerPath);
                     }
 
-                    var psi = new ProcessStartInfo()
-                    {
-                        FileName = streamerPath,
-                        Arguments = args,
-                        WorkingDirectory = Path.GetDirectoryName(streamerPath),
-                        UseShellExecute = true
-                    };
                     //var psi = new ProcessStartInfo()
                     //{
-                    //    FileName = "cmd.exe",
-                    //    Arguments = $"/k {streamerPath} {args}",
+                    //    FileName = streamerPath,
+                    //    Arguments = args,
                     //    WorkingDirectory = Path.GetDirectoryName(streamerPath),
                     //    UseShellExecute = true
                     //};
+                    var psi = new ProcessStartInfo()
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = $"/k {streamerPath} {args}",
+                        WorkingDirectory = Path.GetDirectoryName(streamerPath),
+                        UseShellExecute = true
+                    };
                     session.StreamerProcess = _processes.Start(psi);
                 }
 

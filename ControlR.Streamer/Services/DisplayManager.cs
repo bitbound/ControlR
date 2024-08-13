@@ -300,7 +300,7 @@ internal class DisplayManager : IDisplayManager
 
                 _win32Interop.SwitchToInputDesktop();
 
-                using var captureResult = _screenCapturer.Capture(_selectedDisplay, directXTimeout: 200);
+                using var captureResult = _screenCapturer.Capture(_selectedDisplay, directXTimeout: 200, captureCursor: false);
 
                 if (captureResult.DxTimedOut)
                 {
