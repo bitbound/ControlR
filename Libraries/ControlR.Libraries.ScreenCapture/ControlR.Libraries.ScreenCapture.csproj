@@ -20,4 +20,8 @@
 	<ItemGroup>
 	  <Folder Include="Properties\PublishProfiles\" />
 	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+	</ItemGroup>
 </Project>

@@ -6,12 +6,14 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Drawing;
 using ControlR.Libraries.ScreenCapture.Helpers;
 using Microsoft.Extensions.Logging;
+using ControlR.Libraries.Shared.Services.Testable;
 
 namespace ControlR.Libraries.ScreenCapture.Benchmarks;
 public sealed class CaptureTests
 {
     private readonly LoggerFactory _loggerFactory;
     private readonly BitmapUtility _bitmapUtility;
+    private readonly TestableSystemTime _systemTime;
     private readonly DxOutputGenerator _dxGenerator;
     private readonly ScreenCapturer _capturer;
     private readonly IEnumerable<DisplayInfo> _displays;
@@ -20,8 +22,9 @@ public sealed class CaptureTests
     {
         _loggerFactory = new LoggerFactory();
         _bitmapUtility = new BitmapUtility();
+        _systemTime = new TestableSystemTime();
         _dxGenerator = new DxOutputGenerator(_loggerFactory.CreateLogger<DxOutputGenerator>());
-        _capturer = new ScreenCapturer(_bitmapUtility, _dxGenerator, _loggerFactory.CreateLogger<ScreenCapturer>());
+        _capturer = new ScreenCapturer(_bitmapUtility, _dxGenerator, _systemTime, _loggerFactory.CreateLogger<ScreenCapturer>());
         _displays = _capturer.GetDisplays();
     }
 

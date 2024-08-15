@@ -1,6 +1,7 @@
 ﻿using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.ScreenCapture.Helpers;
 using ControlR.Libraries.ScreenCapture.Models;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -67,6 +68,7 @@ public interface IScreenCapturer
 internal sealed class ScreenCapturer(
     IBitmapUtility _bitmapUtility,
     IDxOutputGenerator _dxOutputGenerator,
+    ISystemTime _systemTime,
     ILogger<ScreenCapturer> _logger) : IScreenCapturer
 {
     public CaptureResult Capture(
@@ -91,6 +93,11 @@ internal sealed class ScreenCapturer(
             }
 
             var result = GetDirectXCapture(display);
+
+            if (result.HadNoChanges)
+            {
+                return result;
+            }
 
             if (result.DxTimedOut && allowFallbackToBitBlt)
             {
@@ -212,6 +219,11 @@ internal sealed class ScreenCapturer(
                     outputDuplication.ReleaseFrame();
                 }
                 catch { }
+
+                if (IsDxOutputHealthy(dxOutput))
+                {
+                    return CaptureResult.NoChanges();
+                }
                 return CaptureResult.NoAccumulatedFrames();
             }
 
@@ -274,10 +286,16 @@ internal sealed class ScreenCapturer(
                 default:
                     break;
             }
+
+            dxOutput.LastSuccessfulCapture = DateTimeOffset.Now;
             return CaptureResult.Ok(bitmap, true, dirtyRects);
         }
         catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
         {
+            if (IsDxOutputHealthy(dxOutput))
+            {
+                return CaptureResult.NoChanges();
+            }
             return CaptureResult.TimedOut();
         }
         catch (COMException ex)
@@ -300,6 +318,11 @@ internal sealed class ScreenCapturer(
             }
             catch { }
         }
+    }
+
+    private bool IsDxOutputHealthy(DxOutput dxOutput)
+    {
+        return _systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
     }
 
     private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)

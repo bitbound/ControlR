@@ -37,6 +37,8 @@ internal sealed class DxOutput : IDisposable
 
     public bool IsDisposed => _isDisposed;
 
+    public DateTimeOffset LastSuccessfulCapture { get; set; }
+
     public void Dispose()
     {
         if (_isDisposed)
