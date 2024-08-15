@@ -100,7 +100,7 @@
     {
         var commonArgs = new StringBuilder($"-s {Settings.ServerUri}");
 
-        if (!string.IsNullOrEmpty(Settings.PublicKeyLabel))
+        if (!string.IsNullOrWhiteSpace(Settings.PublicKeyLabel))
         {
             commonArgs.Append($" -l {Settings.PublicKeyLabel}");
         }
@@ -111,7 +111,7 @@
         }
 
         commonArgs.Append($" -a {AppState.PublicKeyBase64}");
-
+        
         return commonArgs.ToString();
     }
 
