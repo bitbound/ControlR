@@ -64,7 +64,7 @@ internal class ClipboardManager(
     {
         _clipboardText = _win32Interop.GetClipboardText();
 
-       while (!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             await _clipboardLock.WaitAsync(stoppingToken);
             try

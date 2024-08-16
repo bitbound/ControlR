@@ -33,5 +33,6 @@ public enum DtoType
     ResetKeyboardState = 30,
     WheelScroll = 31,
     ScreenRegion = 32,
-    MouseClick = 33
+    MouseClick = 33,
+    CursorChanged = 34
 }

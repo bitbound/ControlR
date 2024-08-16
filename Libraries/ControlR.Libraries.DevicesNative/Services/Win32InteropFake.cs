@@ -1,6 +1,7 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
+using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
 using System.Diagnostics;
@@ -24,6 +25,11 @@ public class Win32InteropFake : IWin32Interop
     }
 
     public string? GetClipboardText()
+    {
+        throw new NotImplementedException();
+    }
+
+    public WindowsCursor GetCurrentCursor()
     {
         throw new NotImplementedException();
     }

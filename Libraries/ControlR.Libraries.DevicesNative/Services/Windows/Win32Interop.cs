@@ -1,5 +1,6 @@
 ﻿using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
+using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,8 @@ public interface IWin32Interop
     IEnumerable<WindowsSession> GetActiveSessions();
     IEnumerable<WindowsSession> GetActiveSessionsCsWin32();
     string? GetClipboardText();
+    WindowsCursor GetCurrentCursor();
+
     bool GetCurrentThreadDesktop(out string desktopName);
     bool GetInputDesktop(out string desktopName);
     bool GetThreadDesktop(uint threadId, out string desktopName);
@@ -55,6 +58,18 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private const string SE_SECURITY_NAME = "SeSecurityPrivilege\0";
     private const uint XBUTTON1 = 0x0001;
     private const uint XBUTTON2 = 0x0002;
+    private readonly Dictionary<string, WindowsCursor> _cursorMap = new()
+    {
+        ["IDC_ARROW"] = WindowsCursor.NormalArrow,
+        ["IDC_IBEAM"] = WindowsCursor.Ibeam,
+        ["IDC_WAIT"] = WindowsCursor.Wait,
+        ["IDC_SIZENWSE"] = WindowsCursor.SizeNwse,
+        ["IDC_SIZENESW"] = WindowsCursor.SizeNesw,
+        ["IDC_SIZEWE"] = WindowsCursor.SizeWe,
+        ["IDC_SIZENS"] = WindowsCursor.SizeNs,
+        ["IDC_HAND"] = WindowsCursor.Hand
+    };
+
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
 
@@ -69,7 +84,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         Reserved1 = 1 << 4,
         Reserved2 = 1 << 5,
     }
-
     public bool CreateInteractiveSystemProcess(
         string commandLine,
         int targetSessionId,
@@ -317,6 +331,35 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
         }
     }
 
+    public WindowsCursor GetCurrentCursor()
+    {
+        var cursorInfo = new CURSORINFO
+        {
+            cbSize = (uint)sizeof(CURSORINFO)
+        };
+
+        if (!PInvoke.GetCursorInfo(ref cursorInfo))
+        {
+            return WindowsCursor.Unknown;
+        }
+
+        if (cursorInfo.hCursor == default ||
+            !cursorInfo.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+        {
+            return WindowsCursor.Unknown;
+        }
+
+        foreach (var kvp in _cursorMap)
+        {
+            using var cursor = PInvoke.LoadCursor(null, kvp.Key);
+            if (cursorInfo.hCursor.Value == cursor.DangerousGetHandle())
+            {
+                return kvp.Value;
+            }
+        }
+
+        return WindowsCursor.Unknown;
+    }
     public bool GetCurrentThreadDesktop(out string desktopName)
     {
         var threadId = PInvoke.GetCurrentThreadId();

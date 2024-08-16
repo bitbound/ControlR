@@ -38,3 +38,6 @@ GetClipboardData
 OpenClipboard
 CloseClipboard
 EmptyClipboard
+GetCursorInfo
+GetIconInfo
+LoadCursor

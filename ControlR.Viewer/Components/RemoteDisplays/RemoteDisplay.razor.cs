@@ -20,9 +20,11 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ElementReference _canvasRef;
     private double _canvasScale = 1;
     private double _canvasWidth;
+    private IDisposable? _clientOnCloseRegistration;
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
     private DisplayDto[] _displays = [];
+    private bool _isDisposed;
     private bool _isScrollModeEnabled;
     private double _lastPinchDistance = -1;
     private ElementReference _screenArea;
@@ -33,8 +35,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
     private bool _virtualKeyboardToggled;
-    private IDisposable? _clientOnCloseRegistration;
-    private bool _isDisposed;
+    private string _canvasCssCursor = "default";
 
     [Inject]
     public required IAppState AppState { get; init; }
@@ -60,6 +61,9 @@ public partial class RemoteDisplay : IAsyncDisposable
     [Inject]
     public required IMessenger Messenger { get; init; }
 
+    [Inject]
+    public required IServiceProvider ServiceProvider { get; init; }
+
     [Parameter, EditorRequired]
     public required RemoteControlSession Session { get; set; }
 
@@ -70,19 +74,15 @@ public partial class RemoteDisplay : IAsyncDisposable
     public required ISnackbar Snackbar { get; init; }
 
     [Inject]
+    public required IViewerStreamingClient StreamingClient { get; init; }
+
+    [Inject]
     public required IUiThread UiThread { get; init; }
     [Inject]
     public required IViewerHubConnection ViewerHub { get; init; }
 
     [Inject]
     public required IDeviceContentWindowStore WindowStore { get; init; }
-
-    [Inject]
-    public required IServiceProvider ServiceProvider { get; init; }
-
-    [Inject]
-    public required IViewerStreamingClient StreamingClient { get; init; }
-
     private string CanvasClasses
     {
         get
@@ -99,9 +99,11 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
         get
         {
-            return _streamStarted ?
+            var display = _streamStarted ?
                 "display: unset;" :
                 "display: none;";
+
+            return $"{display} cursor: {_canvasCssCursor};";
         }
     }
 
@@ -298,6 +300,67 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
     }
 
+    private async Task HandleCursorChanged(CursorChangedDto dto)
+    {
+        try
+        {
+            if (dto.SessionId != Session.SessionId)
+            {
+                return;
+            }
+            
+            _canvasCssCursor = dto.Cursor switch
+            {
+                WindowsCursor.Hand => "pointer",
+                WindowsCursor.Ibeam => "text",
+                WindowsCursor.NormalArrow => "default",
+                WindowsCursor.SizeNesw => "nesw-resize",
+                WindowsCursor.SizeNwse => "nwse-resize",
+                WindowsCursor.SizeWe => "ew-resize",
+                WindowsCursor.SizeNs => "ns-resize",
+                WindowsCursor.Wait => "wait",
+                _ => "default"
+            };
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while handling cursor change.");
+        }
+    }
+
+    private async Task HandleDisplayDataReceived(DisplayDataDto dto)
+    {
+        if (dto.SessionId != Session.SessionId)
+        {
+            return;
+        }
+
+        Messenger.Unregister<LocalClipboardChangedMessage>(this);
+        Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
+        await ClipboardManager.Start();
+
+        _displays = dto.Displays ?? [];
+
+        if (_displays.Length == 0)
+        {
+            Snackbar.Add("No displays received", Severity.Error);
+            await Close();
+            return;
+        }
+        _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
+
+        _canvasWidth = _selectedDisplay.Width;
+        _canvasHeight = _selectedDisplay.Height;
+
+        _streamStarted = true;
+        _statusMessage = string.Empty;
+        _statusProgress = -1;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task HandleKeyboardToggled()
     {
         _virtualKeyboardToggled = !_virtualKeyboardToggled;
@@ -368,36 +431,46 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         await InvokeAsync(StateHasChanged);
     }
-
-    private async Task HandleDisplayDataReceived(DisplayDataDto dto)
+    private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<UnsignedPayloadDto> message)
     {
-        if (dto.SessionId != Session.SessionId)
+        var wrapper = message.Dto;
+
+        try
         {
-            return;
+            switch (wrapper.DtoType)
+            {
+                case DtoType.DisplayData:
+                    {
+                        var dto = wrapper.GetPayload<DisplayDataDto>();
+                        await HandleDisplayDataReceived(dto);
+                        break;
+                    }
+                case DtoType.ScreenRegion:
+                    {
+                        var dto = wrapper.GetPayload<ScreenRegionDto>();
+                        await DrawRegion(dto);
+                        break;
+                    }
+                case DtoType.ClipboardChanged:
+                    {
+                        var dto = wrapper.GetPayload<ClipboardChangeDto>();
+                        await HandleClipboardChangeReceived(dto);
+                        break;
+                    }
+                case DtoType.CursorChanged:
+                    {
+                        var dto = wrapper.GetPayload<CursorChangedDto>();
+                        await HandleCursorChanged(dto);
+                        break;
+                    }
+                default:
+                    break;
+            }
         }
-
-        Messenger.Unregister<LocalClipboardChangedMessage>(this);
-        Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
-        await ClipboardManager.Start();
-
-        _displays = dto.Displays ?? [];
-
-        if (_displays.Length == 0)
+        catch (Exception ex)
         {
-            Snackbar.Add("No displays received", Severity.Error);
-            await Close();
-            return;
+            Logger.LogError(ex, "Error while handling unsigned payload. Type: {DtoType}", wrapper.DtoType);
         }
-        _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
-
-        _canvasWidth = _selectedDisplay.Width;
-        _canvasHeight = _selectedDisplay.Height;
-
-        _streamStarted = true;
-        _statusMessage = string.Empty;
-        _statusProgress = -1;
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
@@ -504,43 +577,6 @@ public partial class RemoteDisplay : IAsyncDisposable
             await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
         }
     }
-
-    private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<UnsignedPayloadDto> message)
-    {
-        var wrapper = message.Dto;
-
-        try
-        {
-            switch (wrapper.DtoType)
-            {
-                case DtoType.DisplayData:
-                    {
-                        var dto = wrapper.GetPayload<DisplayDataDto>();
-                        await HandleDisplayDataReceived(dto);
-                        break;
-                    }
-                case DtoType.ScreenRegion:
-                    {
-                        var dto = wrapper.GetPayload<ScreenRegionDto>();
-                        await DrawRegion(dto);
-                        break;
-                    }
-                case DtoType.ClipboardChanged:
-                    {
-                        var dto = wrapper.GetPayload<ClipboardChangeDto>();
-                        await HandleClipboardChangeReceived(dto);
-                        break;
-                    }
-                default:
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while handling unsigned payload. Type: {DtoType}", wrapper.DtoType);
-        }
-    }
-
     private async Task RequestStreamingSessionFromAgent()
     {
         try

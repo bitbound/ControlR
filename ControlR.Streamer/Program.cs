@@ -108,6 +108,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
             services.AddHostedService<SystemEventHandler>();
             services.AddHostedService<HostLifetimeEventResponder>();
             services.AddHostedService<InputDesktopReporter>();
+            services.AddHostedService<CursorWatcher>();
             services.AddHostedService<DtoHandler>();
             services.AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>());
             services.AddHostedService(x => x.GetRequiredService<IClipboardManager>());

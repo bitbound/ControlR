@@ -38,6 +38,7 @@ internal class StreamerStreamingClient(
 
             _messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
             _messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
+            _messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
 
             await SendDisplayData();
 
@@ -59,6 +60,20 @@ internal class StreamerStreamingClient(
                 "Error while initializing streaming session. " +
                 "Streaming cannot start.  Shutting down.");
             _appLifetime.StopApplication();
+        }
+    }
+
+    private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
+    {
+        try
+        {
+            var dto = new CursorChangedDto(message.Cursor, _startupOptions.Value.SessionId);
+            var wrapper = UnsignedPayloadDto.Create(dto, DtoType.CursorChanged);
+            await Client.Send(wrapper, _appLifetime.ApplicationStopping);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while handling cursor change.");
         }
     }
 
