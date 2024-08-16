@@ -34,7 +34,7 @@ internal class CursorWatcher(
                 _logger.LogError(ex, "Error while getting mouse cursor.");
             }
 
-            await _delayer.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
+            await _delayer.Delay(TimeSpan.FromMilliseconds(100), stoppingToken);
         }
     }
 }

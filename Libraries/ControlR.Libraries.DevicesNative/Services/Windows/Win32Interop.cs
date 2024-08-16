@@ -58,17 +58,19 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private const string SE_SECURITY_NAME = "SeSecurityPrivilege\0";
     private const uint XBUTTON1 = 0x0001;
     private const uint XBUTTON2 = 0x0002;
-    private readonly Dictionary<string, WindowsCursor> _cursorMap = new()
-    {
-        ["IDC_ARROW"] = WindowsCursor.NormalArrow,
-        ["IDC_IBEAM"] = WindowsCursor.Ibeam,
-        ["IDC_WAIT"] = WindowsCursor.Wait,
-        ["IDC_SIZENWSE"] = WindowsCursor.SizeNwse,
-        ["IDC_SIZENESW"] = WindowsCursor.SizeNesw,
-        ["IDC_SIZEWE"] = WindowsCursor.SizeWe,
-        ["IDC_SIZENS"] = WindowsCursor.SizeNs,
-        ["IDC_HAND"] = WindowsCursor.Hand
-    };
+
+    private readonly FrozenDictionary<string, WindowsCursor> _cursorMap = 
+        new Dictionary<string, WindowsCursor>
+        {
+            ["IDC_ARROW"] = WindowsCursor.NormalArrow,
+            ["IDC_IBEAM"] = WindowsCursor.Ibeam,
+            ["IDC_WAIT"] = WindowsCursor.Wait,
+            ["IDC_SIZENWSE"] = WindowsCursor.SizeNwse,
+            ["IDC_SIZENESW"] = WindowsCursor.SizeNesw,
+            ["IDC_SIZEWE"] = WindowsCursor.SizeWe,
+            ["IDC_SIZENS"] = WindowsCursor.SizeNs,
+            ["IDC_HAND"] = WindowsCursor.Hand
+        }.ToFrozenDictionary();
 
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
@@ -351,10 +353,19 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
         foreach (var kvp in _cursorMap)
         {
-            using var cursor = PInvoke.LoadCursor(null, kvp.Key);
-            if (cursorInfo.hCursor.Value == cursor.DangerousGetHandle())
+            var globalMem = Marshal.StringToHGlobalAuto(kvp.Key);
+            try
             {
-                return kvp.Value;
+                using var cursor = PInvoke.LoadCursor(null, kvp.Key);
+                var cursorHandle = cursor.DangerousGetHandle();
+                if (cursorInfo.hCursor.Value == cursorHandle)
+                {
+                    return kvp.Value;
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(globalMem);
             }
         }
 
