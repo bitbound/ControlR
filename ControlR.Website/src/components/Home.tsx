@@ -38,7 +38,7 @@ function Home() {
 
         </div>
         <div>
-          <Link href="https://play.google.com/apps/testing/dev.jaredg.controlr.viewer" target="_blank">
+          <Link href="https://github.com/bitbound/ControlR?tab=readme-ov-file#testers-needed" target="_blank">
             Join the Beta
           </Link>
         </div>
