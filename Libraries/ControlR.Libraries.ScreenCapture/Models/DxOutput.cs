@@ -32,13 +32,11 @@ internal sealed class DxOutput : IDisposable
     public ID3D11Device Device { get; }
     public ID3D11DeviceContext DeviceContext { get; }
     public string DeviceName { get; }
+    public bool IsDisposed => _isDisposed;
+    public Rectangle LastCursorArea { get; set; }
+    public DateTimeOffset LastSuccessfulCapture { get; set; }
     public IDXGIOutputDuplication OutputDuplication { get; }
     public DXGI_MODE_ROTATION Rotation { get; }
-
-    public bool IsDisposed => _isDisposed;
-
-    public DateTimeOffset LastSuccessfulCapture { get; set; }
-
     public void Dispose()
     {
         if (_isDisposed)

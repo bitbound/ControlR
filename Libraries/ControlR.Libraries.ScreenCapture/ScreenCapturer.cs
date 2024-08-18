@@ -92,7 +92,7 @@ internal sealed class ScreenCapturer(
                 return GetBitBltCapture(display.MonitorArea, captureCursor);
             }
 
-            var result = GetDirectXCapture(display);
+            var result = GetDirectXCapture(display, captureCursor);
 
             if (result.HadNoChanges)
             {
@@ -163,22 +163,9 @@ internal sealed class ScreenCapturer(
                 return CaptureResult.Fail("BitBlt function failed.");
             }
 
-
             if (captureCursor)
             {
-                // Get cursor information to draw on the screenshot.
-                var ci = new CURSORINFO();
-                ci.cbSize = (uint)Marshal.SizeOf(ci);
-                PInvoke.GetCursorInfo(ref ci);
-                if (ci.flags == CURSORINFO_FLAGS.CURSOR_SHOWING)
-                {
-                    using var icon = Icon.FromHandle(ci.hCursor);
-                    var virtualScreen = GetVirtualScreenBounds();
-                    graphics.DrawIcon(
-                        icon,
-                        ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left,
-                        ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top);
-                }
+                _ = TryDrawCursor(graphics, captureArea);
             }
 
             return CaptureResult.Ok(bitmap, false);
@@ -194,7 +181,7 @@ internal sealed class ScreenCapturer(
         }
     }
 
-    internal CaptureResult GetDirectXCapture(DisplayInfo display)
+    internal CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
     {
         var dxOutput = _dxOutputGenerator.GetDxOutput(display.DeviceName);
 
@@ -288,6 +275,28 @@ internal sealed class ScreenCapturer(
             }
 
             dxOutput.LastSuccessfulCapture = DateTimeOffset.Now;
+
+            if (captureCursor)
+            {
+                if (!dxOutput.LastCursorArea.IsEmpty)
+                {
+                    dirtyRects = [..dirtyRects, dxOutput.LastCursorArea];
+                }
+
+                using var graphics = Graphics.FromImage(bitmap);
+
+                var iconArea = TryDrawCursor(graphics, display.MonitorArea);
+                if (!iconArea.IsEmpty)
+                {
+                    dirtyRects = [..dirtyRects, iconArea];
+                    dxOutput.LastCursorArea = iconArea;
+                }
+                else
+                {
+                    dxOutput.LastCursorArea = Rectangle.Empty;
+                }
+            }
+
             return CaptureResult.Ok(bitmap, true, dirtyRects);
         }
         catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
@@ -320,11 +329,6 @@ internal sealed class ScreenCapturer(
         }
     }
 
-    private bool IsDxOutputHealthy(DxOutput dxOutput)
-    {
-        return _systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
-    }
-
     private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
     {
         var rectSize = (uint)sizeof(RECT);
@@ -353,5 +357,31 @@ internal sealed class ScreenCapturer(
         }
 
         return dirtyRects;
+    }
+
+    private bool IsDxOutputHealthy(DxOutput dxOutput)
+    {
+        return _systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
+    }
+
+    private Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+    {
+        // Get cursor information to draw on the screenshot.
+        var ci = new CURSORINFO();
+        ci.cbSize = (uint)Marshal.SizeOf(ci);
+        PInvoke.GetCursorInfo(ref ci);
+
+        if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+        {
+            return Rectangle.Empty;
+        }
+
+        using var icon = Icon.FromHandle(ci.hCursor);
+        var virtualScreen = GetVirtualScreenBounds();
+        var x = ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left;
+        var y = ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top;
+        graphics.DrawIcon(icon, x, y);
+
+        return new Rectangle(x, y, icon.Width, icon.Height);
     }
 }
