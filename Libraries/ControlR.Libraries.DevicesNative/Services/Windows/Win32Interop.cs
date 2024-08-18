@@ -59,18 +59,22 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
     private const uint XBUTTON1 = 0x0001;
     private const uint XBUTTON2 = 0x0002;
 
-    private readonly FrozenDictionary<string, WindowsCursor> _cursorMap = 
-        new Dictionary<string, WindowsCursor>
+    private FrozenDictionary<HCURSOR, WindowsCursor>? _cursorMap;
+
+    private FrozenDictionary<HCURSOR, WindowsCursor> GetCursorMap()
+    {
+        return _cursorMap ??= new Dictionary<HCURSOR, WindowsCursor>()
         {
-            ["IDC_ARROW"] = WindowsCursor.NormalArrow,
-            ["IDC_IBEAM"] = WindowsCursor.Ibeam,
-            ["IDC_WAIT"] = WindowsCursor.Wait,
-            ["IDC_SIZENWSE"] = WindowsCursor.SizeNwse,
-            ["IDC_SIZENESW"] = WindowsCursor.SizeNesw,
-            ["IDC_SIZEWE"] = WindowsCursor.SizeWe,
-            ["IDC_SIZENS"] = WindowsCursor.SizeNs,
-            ["IDC_HAND"] = WindowsCursor.Hand
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = WindowsCursor.NormalArrow,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = WindowsCursor.Ibeam,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = WindowsCursor.Wait,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = WindowsCursor.SizeNwse,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = WindowsCursor.SizeNesw,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = WindowsCursor.SizeWe,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = WindowsCursor.SizeNs,
+            [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = WindowsCursor.Hand,
         }.ToFrozenDictionary();
+    }
 
     private FrozenDictionary<string, ushort>? _keyMap;
     private HDESK _lastInputDesktop;
@@ -335,40 +339,30 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
 
     public WindowsCursor GetCurrentCursor()
     {
-        var cursorInfo = new CURSORINFO
+        try
         {
-            cbSize = (uint)sizeof(CURSORINFO)
-        };
-
-        if (!PInvoke.GetCursorInfo(ref cursorInfo))
-        {
-            return WindowsCursor.Unknown;
-        }
-
-        if (cursorInfo.hCursor == default ||
-            !cursorInfo.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
-        {
-            return WindowsCursor.Unknown;
-        }
-
-        foreach (var kvp in _cursorMap)
-        {
-            var globalMem = Marshal.StringToHGlobalAuto(kvp.Key);
-            try
+            var cursorInfo = new CURSORINFO
             {
-                using var cursor = PInvoke.LoadCursor(null, kvp.Key);
-                var cursorHandle = cursor.DangerousGetHandle();
-                if (cursorInfo.hCursor.Value == cursorHandle)
-                {
-                    return kvp.Value;
-                }
+                cbSize = (uint)sizeof(CURSORINFO)
+            };
+
+            if (!PInvoke.GetCursorInfo(ref cursorInfo) || cursorInfo.hCursor == default)
+            {
+                _logger.LogError("Failed to get cursor info.  Last pinvoke error: {LastError}", Marshal.GetLastPInvokeErrorMessage());
+                return WindowsCursor.Unknown;
             }
-            finally
+
+            if (GetCursorMap().TryGetValue(cursorInfo.hCursor, out var cursor))
             {
-                Marshal.FreeHGlobal(globalMem);
+                return cursor;
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while getting current cursor.");
+        }
 
+        _logger.LogWarning("Failed to get current cursor.  Returning unknown.");
         return WindowsCursor.Unknown;
     }
     public bool GetCurrentThreadDesktop(out string desktopName)

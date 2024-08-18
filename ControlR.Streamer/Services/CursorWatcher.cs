@@ -26,15 +26,13 @@ internal class CursorWatcher(
                     currentCursor = nextCursor;
                     await _messenger.Send(new CursorChangedMessage(currentCursor));
                 }
-
-                await _delayer.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while getting mouse cursor.");
             }
 
-            await _delayer.Delay(TimeSpan.FromMilliseconds(100), stoppingToken);
+            await _delayer.Delay(TimeSpan.FromMilliseconds(50), stoppingToken);
         }
     }
 }

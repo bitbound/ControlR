@@ -11,7 +11,7 @@ internal static class PathConstants
     public static string GetLogsPath(Uri originUri)
     {
         var settingsDir = GetSettingsDirectory(originUri);
-        return Path.Combine(settingsDir, "Logs", "ControlR.Streamer", $"LogFile.log");
+        return Path.Combine(settingsDir, "Logs", "ControlR.Streamer", "LogFile.log");
     }
 
     private static string GetSettingsDirectory(Uri originUri)
@@ -25,7 +25,7 @@ internal static class PathConstants
             settingsDir = Path.Combine(settingsDir, "Debug");
         }
 
-        settingsDir = Path.Combine(settingsDir, originUri.Host, "ControlR.Streamer");
+        settingsDir = Path.Combine(settingsDir, originUri.Host);
 
         return Directory.CreateDirectory(settingsDir).FullName;
     }
