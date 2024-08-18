@@ -15,7 +15,12 @@ Play Store: https://play.google.com/apps/testing/dev.jaredg.controlr.viewer
 
 ## Testers Needed:
 
-Please join the [Android Beta Test](https://play.google.com/apps/testing/dev.jaredg.controlr.viewer) if you can. I need at least 20 users to stay in the program for at least 14 days before I can publish the app to the Play Store.
+If you'd like to help to get ControlR on the Play Store, please join the beta test. It needs at least 20 users to stay in the program for at least 14 days before I can publish the app to the Play Store.
+
+Accessing the beta is a two-step process:
+
+- Join the [ControlR Testers](https://groups.google.com/g/controlr-testers/about) Google Group.
+- Install [ControlR (Early Access)](https://play.google.com/store/apps/details?id=dev.jaredg.controlr.viewer) from the Play Store.
 
 ## Quick Start:
 
