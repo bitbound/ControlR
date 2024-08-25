@@ -362,7 +362,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
             _logger.LogError(ex, "Error while getting current cursor.");
         }
 
-        _logger.LogWarning("Failed to get current cursor.  Returning unknown.");
         return WindowsCursor.Unknown;
     }
     public bool GetCurrentThreadDesktop(out string desktopName)
