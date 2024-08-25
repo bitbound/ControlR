@@ -16,10 +16,10 @@ public partial class RemoteDisplay : IAsyncDisposable
     private readonly CancellationTokenSource _componentClosing = new();
     private readonly SemaphoreSlim _streamLock = new(1, 1);
     private readonly SemaphoreSlim _typeLock = new(1, 1);
-    private double _canvasHeight;
+    private double _canvasCssHeight;
     private ElementReference _canvasRef;
     private double _canvasScale = 1;
-    private double _canvasWidth;
+    private double _canvasCssWidth;
     private IDisposable? _clientOnCloseRegistration;
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
@@ -103,7 +103,11 @@ public partial class RemoteDisplay : IAsyncDisposable
                 "display: unset;" :
                 "display: none;";
 
-            return $"{display} cursor: {_canvasCssCursor};";
+            return 
+                $"{display} " +
+                $"cursor: {_canvasCssCursor}; " +
+                $"width: {_canvasCssWidth}px; " +
+                $"height: {_canvasCssHeight}px;";
         }
     }
 
@@ -351,8 +355,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
         _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
 
-        _canvasWidth = _selectedDisplay.Width;
-        _canvasHeight = _selectedDisplay.Height;
+        _canvasCssWidth = _selectedDisplay.Width;
+        _canvasCssHeight = _selectedDisplay.Height;
 
         _streamStarted = true;
         _statusMessage = string.Empty;
@@ -534,12 +538,12 @@ public partial class RemoteDisplay : IAsyncDisposable
             _canvasScale = Math.Max(.25, Math.Min(_canvasScale + pinchChange / 100, 3));
 
             var newWidth = _selectedDisplay.Width * _canvasScale;
-            var widthChange = newWidth - _canvasWidth;
-            _canvasWidth = newWidth;
+            var widthChange = newWidth - _canvasCssWidth;
+            _canvasCssWidth = newWidth;
 
             var newHeight = _selectedDisplay.Height * _canvasScale;
-            var heightChange = newHeight - _canvasHeight;
-            _canvasHeight = newHeight;
+            var heightChange = newHeight - _canvasCssHeight;
+            _canvasCssHeight = newHeight;
 
             _lastPinchDistance = pinchDistance;
             await InvokeAsync(StateHasChanged);
@@ -552,8 +556,6 @@ public partial class RemoteDisplay : IAsyncDisposable
                 pinchCenterY,
                 _screenArea,
                 _canvasRef,
-                newWidth,
-                newHeight,
                 widthChange,
                 heightChange);
         }

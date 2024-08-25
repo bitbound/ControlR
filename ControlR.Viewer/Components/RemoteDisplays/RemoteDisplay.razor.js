@@ -394,10 +394,7 @@ export async function initialize(componentRef, canvasId) {
  * @param {number} widthChange
  * @param {number} heightChange
  */
-export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange) {
-    canvasRef.style.width = `${canvasCssWidth}px`;
-    canvasRef.style.height = `${canvasCssHeight}px`;
-
+export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, widthChange, heightChange) {
     var clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
     var clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
 
