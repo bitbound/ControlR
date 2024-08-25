@@ -239,6 +239,10 @@ internal class DisplayManager : IDisplayManager
 
         foreach (var region in captureResult.DirtyRects)
         {
+            if (region.IsEmpty)
+            {
+                continue;
+            }
             EncodeRegion(captureResult.Bitmap, region);
         }
 
