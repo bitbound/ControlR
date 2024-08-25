@@ -237,10 +237,17 @@ internal class DisplayManager : IDisplayManager
             return;
         }
 
+        var bitmapArea = captureResult.Bitmap.ToRectangle();
         foreach (var region in captureResult.DirtyRects)
         {
             if (region.IsEmpty)
             {
+                _logger.LogDebug("Skipping empty region.");
+                continue;
+            }
+            if (!bitmapArea.Contains(region))
+            {
+                _logger.LogDebug("Skipping region that is outside the bitmap area.");
                 continue;
             }
             EncodeRegion(captureResult.Bitmap, region);

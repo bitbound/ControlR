@@ -12,3 +12,4 @@ GetCursorInfo
 ReleaseDC
 GetSystemMetrics
 EnumDisplaySettings
+GetIconInfo

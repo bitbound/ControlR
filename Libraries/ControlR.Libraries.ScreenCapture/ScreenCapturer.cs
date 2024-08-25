@@ -364,24 +364,43 @@ internal sealed class ScreenCapturer(
         return _systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
     }
 
-    private Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+    private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
     {
-        // Get cursor information to draw on the screenshot.
-        var ci = new CURSORINFO();
-        ci.cbSize = (uint)Marshal.SizeOf(ci);
-        PInvoke.GetCursorInfo(ref ci);
-
-        if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+        try
         {
+            // Get cursor information to draw on the screenshot.
+            var ci = new CURSORINFO();
+            ci.cbSize = (uint)Marshal.SizeOf(ci);
+            PInvoke.GetCursorInfo(ref ci);
+
+            if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+            {
+                return Rectangle.Empty;
+            }
+            using var icon = Icon.FromHandle(ci.hCursor);
+
+            uint hotspotX = 0;
+            uint hotspotY = 0;
+            var hicon = new HICON(icon.Handle);
+            ICONINFO* iconInfoPtr = stackalloc ICONINFO[1];
+            if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
+            {
+                hotspotX = iconInfoPtr->xHotspot;
+                hotspotY = iconInfoPtr->yHotspot;
+                PInvoke.DestroyIcon(hicon);
+            }
+
+            var virtualScreen = GetVirtualScreenBounds();
+            var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
+            var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
+            graphics.DrawIcon(icon, x, y);
+
+            return new Rectangle(x, y, icon.Width, icon.Height);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while drawing cursor.");
             return Rectangle.Empty;
         }
-
-        using var icon = Icon.FromHandle(ci.hCursor);
-        var virtualScreen = GetVirtualScreenBounds();
-        var x = ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left;
-        var y = ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top;
-        graphics.DrawIcon(icon, x, y);
-
-        return new Rectangle(x, y, icon.Width, icon.Height);
     }
 }
