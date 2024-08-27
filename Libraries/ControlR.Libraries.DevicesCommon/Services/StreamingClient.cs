@@ -29,7 +29,6 @@ public sealed class StreamingClient(
     private readonly ClientWebSocket _client = new();
     private readonly CancellationTokenSource _clientDisposingCts = new();
     private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
-    private readonly ConcurrentDictionary<Guid, Func<Task>> _onCloseCallbacks = new();
     private readonly SemaphoreSlim _sendLock = new(1);
     private bool _isDisposed;
 
