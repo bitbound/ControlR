@@ -29,34 +29,48 @@ public class AgentHub(
 
     public override async Task OnConnectedAsync()
     {
-        _connectionCounter.IncrementAgentCount();
-        await SendUpdatedConnectionCountToAdmins();
-        await base.OnConnectedAsync();
+        try
+        {
+            _connectionCounter.IncrementAgentCount();
+            await SendUpdatedConnectionCountToAdmins();
+            await base.OnConnectedAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during device connect.");
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _connectionCounter.DecrementAgentCount();
-        await SendUpdatedConnectionCountToAdmins();
-
-        if (Device is DeviceDto cachedDevice)
+        try
         {
-            cachedDevice.IsOnline = false;
-            cachedDevice.LastSeen = _systemTime.Now;
+            _connectionCounter.DecrementAgentCount();
+            await SendUpdatedConnectionCountToAdmins();
 
-            var publicKeys = cachedDevice.AuthorizedKeys
-                .Select(x => x.PublicKey)
-                .ToArray();
-
-            await _viewerHub.Clients.Groups(publicKeys).ReceiveDeviceUpdate(cachedDevice);
-
-            foreach (var key in publicKeys)
+            if (Device is DeviceDto cachedDevice)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, key);
-            }
-        }
+                cachedDevice.IsOnline = false;
+                cachedDevice.LastSeen = _systemTime.Now;
 
-        await base.OnDisconnectedAsync(exception);
+                var publicKeys = cachedDevice.AuthorizedKeys
+                    .Select(x => x.PublicKey)
+                    .ToArray();
+
+                await _viewerHub.Clients.Groups(publicKeys).ReceiveDeviceUpdate(cachedDevice);
+
+                foreach (var key in publicKeys)
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, key);
+                }
+            }
+
+            await base.OnDisconnectedAsync(exception);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during device disconnect.");
+        }
     }
 
     public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
