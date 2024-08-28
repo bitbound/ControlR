@@ -9,33 +9,30 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Net.WebSockets;
+using ControlR.Libraries.Shared.Services.Buffers;
 
 namespace ControlR.Streamer.Services;
 
 public interface IStreamerStreamingClient : IHostedService
 {
 }
-internal class StreamerStreamingClient(
-    IServiceProvider _services,
-    IMessenger _messenger,
+
+internal sealed class StreamerStreamingClient(
+    IMessenger messenger,
     IHostApplicationLifetime _appLifetime,
     IToaster _toaster,
     IDisplayManager _displayManager,
+    IKeyProvider _keyProvider,
+    IMemoryProvider _memoryProvider,
     IOptions<StartupOptions> _startupOptions,
     ILogger<StreamerStreamingClient> _logger)
-    : IStreamerStreamingClient
+    : StreamingClient(_keyProvider, messenger, _memoryProvider, _logger), IStreamerStreamingClient
 {
-    private IStreamingClient? _client;
-    private IStreamingClient Client => _client ?? throw new InvalidOperationException("Streaming client is not initialized.");
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _client = _services.GetRequiredService<IStreamingClient>();
-
-            await _client.Connect(_startupOptions.Value.WebSocketUri, _appLifetime.ApplicationStopping);
-
+            await Connect(_startupOptions.Value.WebSocketUri, _appLifetime.ApplicationStopping);
             _messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
             _messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
             _messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
@@ -63,25 +60,24 @@ internal class StreamerStreamingClient(
         }
     }
 
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await DisposeAsync();
+    }
+
     private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
     {
         try
         {
             var dto = new CursorChangedDto(message.Cursor, _startupOptions.Value.SessionId);
             var wrapper = UnsignedPayloadDto.Create(dto, DtoType.CursorChanged);
-            await Client.Send(wrapper, _appLifetime.ApplicationStopping);
+            await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while handling cursor change.");
         }
     }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await Client.DisposeAsync();
-    }
-
     private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
     {
         _displayManager.ResetDisplays();
@@ -94,7 +90,7 @@ internal class StreamerStreamingClient(
         {
             var dto = new ClipboardChangeDto(message.Text, _startupOptions.Value.SessionId);
             var wrapper = UnsignedPayloadDto.Create(dto, DtoType.ClipboardChanged);
-            await Client.Send(wrapper, _appLifetime.ApplicationStopping);
+            await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {
@@ -112,7 +108,7 @@ internal class StreamerStreamingClient(
                 displays);
 
             var wrapper = UnsignedPayloadDto.Create(dto, DtoType.DisplayData);
-            await Client.Send(wrapper, _appLifetime.ApplicationStopping);
+            await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {
@@ -128,14 +124,14 @@ internal class StreamerStreamingClient(
     {
         await _displayManager.StartCapturingChanges();
 
-        while (Client.State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
+        while (State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
         {
             try
             {
                 await foreach (var region in _displayManager.GetChangedRegions())
                 {
                     var wrapper = UnsignedPayloadDto.Create(region, DtoType.ScreenRegion);
-                    await Client.Send(wrapper, _appLifetime.ApplicationStopping);
+                    await Send(wrapper, _appLifetime.ApplicationStopping);
                 }
             }
             catch (OperationCanceledException)

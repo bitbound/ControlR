@@ -14,50 +14,10 @@ public interface IInputSimulator
     void TypeText(string text);
 }
 
-internal class InputSimulatorWindows : IInputSimulator
+internal class InputSimulatorWindows(
+    IWin32Interop _win32Interop,
+    ILogger<InputSimulatorWindows> _logger) : IInputSimulator
 {
-    private readonly ConcurrentQueue<Action> _actionQueue = new();
-    private readonly AutoResetEvent _queueSignal = new(false);
-    private readonly IWin32Interop _win32Interop;
-    private readonly IHostApplicationLifetime _appLifetime;
-    private readonly ILogger<InputSimulatorWindows> _logger;
-    private readonly Thread _processorThread;
-
-    public InputSimulatorWindows(
-        IWin32Interop win32Interop,
-        IHostApplicationLifetime appLifetime,
-        ILogger<InputSimulatorWindows> logger)
-    {
-        _win32Interop = win32Interop;
-        _appLifetime = appLifetime;
-        _logger = logger;
-        _processorThread = new Thread(() =>
-        {
-            _logger.LogInformation("Input simulator processor thread started.");
-            ProcessActions();
-        });
-        _processorThread.Start();
-    }
-
-    private void ProcessActions()
-    {
-        while (!_appLifetime.ApplicationStopping.IsCancellationRequested)
-        {
-            _queueSignal.WaitOne();
-            while (_actionQueue.TryDequeue(out var action))
-            {
-                try
-                {
-                    action.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing input simulator action.");
-                }
-            }
-        }
-    }
-
     public void InvokeKeyEvent(string key, bool isPressed)
     {
         if (string.IsNullOrEmpty(key))
@@ -66,65 +26,66 @@ internal class InputSimulatorWindows : IInputSimulator
             return;
         }
 
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             var result = _win32Interop.InvokeKeyEvent(key, isPressed);
             if (!result.IsSuccess)
             {
                 _logger.LogWarning("Failed to invoke key event. Key: {Key}, IsPressed: {IsPressed}, Reason: {Reason}", key, isPressed, result.Reason);
             }
         });
-        _queueSignal.Set();
     }
 
     public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
     {
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             _win32Interop.InvokeMouseButtonEvent(x, y, button, isPressed);
         });
-        _queueSignal.Set();
     }
 
     public void MovePointer(int x, int y, MovePointerType moveType)
     {
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             _win32Interop.MovePointer(x, y, moveType);
         });
-        _queueSignal.Set();
     }
 
     public void ResetKeyboardState()
     {
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             _win32Interop.ResetKeyboardState();
         });
-        _queueSignal.Set();
     }
 
     public void ScrollWheel(int x, int y, int scrollY, int scrollX)
     {
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             _win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX);
         });
-        _queueSignal.Set();
     }
 
     public void TypeText(string text)
     {
-        _actionQueue.Enqueue(() =>
+        TryOnInputDesktop(() =>
         {
-            _win32Interop.SwitchToInputDesktop();
             _win32Interop.TypeText(text);
         });
-        _queueSignal.Set();
+    }
+
+    private void TryOnInputDesktop(Action action)
+    {
+        try
+        {
+            _win32Interop.SwitchToInputDesktop();
+            action.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing input simulator action.");
+        }
     }
 }

@@ -91,26 +91,7 @@ public class ViewerHub(
                 return Result.Fail<ServerStatsDto>("Unauthorized.");
             }
 
-            var agentResult = await _connectionCounter.GetAgentConnectionCount();
-            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
-
-            if (!agentResult.IsSuccess)
-            {
-                _logger.LogResult(agentResult);
-                return Result.Fail<ServerStatsDto>(agentResult.Reason);
-            }
-
-            if (!viewerResult.IsSuccess)
-            {
-                _logger.LogResult(viewerResult);
-                return Result.Fail<ServerStatsDto>(viewerResult.Reason);
-            }
-
-            var dto = new ServerStatsDto(
-                agentResult.Value,
-                viewerResult.Value);
-
-            return Result.Ok(dto);
+            return await GetServerStatsImpl();
         }
         catch (Exception ex)
         {
@@ -123,7 +104,7 @@ public class ViewerHub(
     {
         try
         {
-            if (!_appOptions.CurrentValue.UseExternalWebSocketBridge || 
+            if (!_appOptions.CurrentValue.UseExternalWebSocketBridge ||
                  _appOptions.CurrentValue.ExternalWebSocketHosts.Count == 0)
             {
                 return null;
@@ -180,52 +161,66 @@ public class ViewerHub(
 
     public override async Task OnConnectedAsync()
     {
-        _connectionCounter.IncrementViewerCount();
-        await SendUpdatedConnectionCountToAdmins();
-
-        await base.OnConnectedAsync();
-
-        if (Context.User is null)
+        try
         {
-            _logger.LogWarning("User is null.  Authorize tag should have prevented this.");
-            return;
-        }
+            _connectionCounter.IncrementViewerCount();
+            await SendUpdatedConnectionCountToAdmins();
 
-        if (!Context.User.TryGetPublicKey(out var publicKey))
-        {
-            _logger.LogWarning("Failed to get public key from viewer user.");
-            return;
-        }
+            await base.OnConnectedAsync();
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, publicKey);
-
-        if (IsServerAdmin())
-        {
-            await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-
-            var getResult = await GetServerStats();
-            if (getResult.IsSuccess)
+            if (Context.User is null)
             {
-                await Clients.Caller.ReceiveServerStats(getResult.Value);
+                _logger.LogWarning("User is null.  Authorize tag should have prevented this.");
+                return;
             }
-            else
+
+            if (!Context.User.TryGetPublicKey(out var publicKey))
             {
-                getResult.Log(_logger);
+                _logger.LogWarning("Failed to get public key from viewer user.");
+                return;
             }
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, publicKey);
+
+            if (IsServerAdmin())
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+
+                var getResult = await GetServerStatsImpl();
+                if (getResult.IsSuccess)
+                {
+                    await Clients.Caller.ReceiveServerStats(getResult.Value);
+                }
+                else
+                {
+                    getResult.Log(_logger);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during viewer connect.");
         }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _connectionCounter.DecrementViewerCount();
-        await SendUpdatedConnectionCountToAdmins();
-
-        if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
+        try
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, publicKey);
-        }
+            _connectionCounter.DecrementViewerCount();
+            await SendUpdatedConnectionCountToAdmins();
 
-        await base.OnDisconnectedAsync(exception);
+            if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, publicKey);
+            }
+
+            await base.OnDisconnectedAsync(exception);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during viewer disconnect.");
+        }
     }
 
     public async Task<Result> RequestStreamingSession(
@@ -329,6 +324,29 @@ public class ViewerHub(
         }
     }
 
+    private async Task<Result<ServerStatsDto>> GetServerStatsImpl()
+    {
+        var agentResult = await _connectionCounter.GetAgentConnectionCount();
+        var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+
+        if (!agentResult.IsSuccess)
+        {
+            _logger.LogResult(agentResult);
+            return Result.Fail<ServerStatsDto>(agentResult.Reason);
+        }
+
+        if (!viewerResult.IsSuccess)
+        {
+            _logger.LogResult(viewerResult);
+            return Result.Fail<ServerStatsDto>(viewerResult.Reason);
+        }
+
+        var dto = new ServerStatsDto(
+            agentResult.Value,
+            viewerResult.Value);
+
+        return Result.Ok(dto);
+    }
     private bool IsServerAdmin()
     {
         return Context.User?.IsAdministrator() ?? false;
@@ -337,7 +355,7 @@ public class ViewerHub(
     {
         try
         {
-            var getResult = await GetServerStats();
+            var getResult = await GetServerStatsImpl();
 
             if (getResult.IsSuccess)
             {

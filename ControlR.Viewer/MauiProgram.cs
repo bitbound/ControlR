@@ -12,9 +12,6 @@ using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Buffers;
 
 
-
-
-
 #if WINDOWS
 using ControlR.Viewer.Services.Windows;
 #elif ANDROID
@@ -96,7 +93,6 @@ public static class MauiProgram
         builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureAnonymousHttpClient);
 
         builder.Services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-        builder.Services.AddTransient<IStreamingClient, StreamingClient>();
         builder.Services.AddTransient<IViewerStreamingClient, ViewerStreamingClient>();
 
 #if WINDOWS

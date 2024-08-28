@@ -674,7 +674,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> _logger) : IWin32
                 return false;
             }
 
-            var result = PInvoke.SetThreadDesktop(inputDesktop) && PInvoke.SwitchDesktop(inputDesktop);
+            var result = PInvoke.SetThreadDesktop(inputDesktop);
             _lastInputDesktop = inputDesktop;
             return result;
         }

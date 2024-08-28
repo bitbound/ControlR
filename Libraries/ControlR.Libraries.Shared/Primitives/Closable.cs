@@ -9,15 +9,15 @@ namespace ControlR.Libraries.Shared.Primitives;
 
 public interface IClosable
 {
-    Task Close();
-    IDisposable OnClose(Func<Task> callback);
+    Task InvokeOnClosed();
+    IDisposable OnClosed(Func<Task> callback);
 }
 
 public class Closable(ILogger<Closable> _logger) : IClosable
 {
     private readonly ConcurrentDictionary<Guid, Func<Task>> _onCloseCallbacks = new();
 
-    public IDisposable OnClose(Func<Task> callback)
+    public IDisposable OnClosed(Func<Task> callback)
     {
         var id = Guid.NewGuid();
         _onCloseCallbacks.TryAdd(id, callback);
@@ -27,7 +27,7 @@ public class Closable(ILogger<Closable> _logger) : IClosable
         });
     }
 
-    public async Task Close()
+    public async Task InvokeOnClosed()
     {
         foreach (var callback in _onCloseCallbacks.Values)
         {

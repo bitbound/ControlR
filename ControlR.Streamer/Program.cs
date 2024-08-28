@@ -104,7 +104,6 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
             services.AddSingleton<IDelayer, Delayer>();
             services.AddScreenCapturer();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-            services.AddTransient<IStreamingClient, StreamingClient>();
             services.AddHostedService<SystemEventHandler>();
             services.AddHostedService<HostLifetimeEventResponder>();
             services.AddHostedService<InputDesktopReporter>();
