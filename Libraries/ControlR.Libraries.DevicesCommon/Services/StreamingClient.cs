@@ -4,7 +4,6 @@ using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 
@@ -20,23 +19,30 @@ public interface IStreamingClient : IAsyncDisposable, IClosable
     Task WaitForClose(CancellationToken cancellationToken);
 }
 
-public sealed class StreamingClient(
-    IMessenger _messenger,
-    IKeyProvider _keyProvider,
+public abstract class StreamingClient(
+    IKeyProvider keyProvider,
+    IMessenger messenger,
     IMemoryProvider _memoryProvider,
     ILogger<StreamingClient> _logger) : Closable(_logger), IStreamingClient
 {
-    private readonly ClientWebSocket _client = new();
+    protected readonly IKeyProvider _keyProvider = keyProvider;
+    protected readonly IMessenger _messenger = messenger;
+
     private readonly CancellationTokenSource _clientDisposingCts = new();
     private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
-    private readonly ConcurrentDictionary<Guid, Func<Task>> _onCloseCallbacks = new();
     private readonly SemaphoreSlim _sendLock = new(1);
+    private ClientWebSocket? _client;
     private bool _isDisposed;
 
-    public WebSocketState State => _client.State;
+    public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+
+    protected ClientWebSocket Client => _client ?? throw new Exception("Client not initialized.");
+    protected bool IsDisposed => _isDisposed;
 
     public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
     {
+        _client?.Dispose();
+        _client = new();
         await _client.ConnectAsync(websocketUri, cancellationToken);
         ReadFromStream().Forget();
     }
@@ -54,11 +60,13 @@ public sealed class StreamingClient(
 
             _clientDisposingCts.Cancel();
 
-            if (_client.State == WebSocketState.Open)
+            if (State == WebSocketState.Open)
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                await _client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection disposed.", cts.Token);
+                await Client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection disposed.", cts.Token);
             }
+
+            GC.SuppressFinalize(this);
         }
         catch (Exception ex)
         {
@@ -66,10 +74,8 @@ public sealed class StreamingClient(
         }
         finally
         {
-            _client.Dispose();
+            Client.Dispose();
         }
-
-        await Close();
     }
 
     public async Task Send(SignedPayloadDto dto, CancellationToken cancellationToken)
@@ -109,11 +115,11 @@ public sealed class StreamingClient(
         var headerBuffer = new byte[MessageHeader.Size];
         var dtoBuffer = new byte[ushort.MaxValue];
 
-        while (_client.State == WebSocketState.Open && !_clientDisposingCts.IsCancellationRequested)
+        while (Client.State == WebSocketState.Open && !_clientDisposingCts.IsCancellationRequested)
         {
             try
             {
-                var result = await _client.ReceiveAsync(headerBuffer, _clientDisposingCts.Token);
+                var result = await Client.ReceiveAsync(headerBuffer, _clientDisposingCts.Token);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -141,7 +147,7 @@ public sealed class StreamingClient(
 
                 while (dtoStream.Position < header.DtoSize)
                 {
-                    result = await _client.ReceiveAsync(dtoBuffer, _clientDisposingCts.Token);
+                    result = await Client.ReceiveAsync(dtoBuffer, _clientDisposingCts.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close ||
                         result.Count == 0)
@@ -164,13 +170,13 @@ public sealed class StreamingClient(
                     }
 
                     var message = new DtoReceivedMessage<SignedPayloadDto>(dto);
-                    _messenger.Send(message).Forget();
+                    await _messenger.Send(message);
                 }
                 else
                 {
                     var dto = await MessagePackSerializer.DeserializeAsync<UnsignedPayloadDto>(dtoStream, cancellationToken: _clientDisposingCts.Token);
                     var message = new DtoReceivedMessage<UnsignedPayloadDto>(dto);
-                    _messenger.Send(message).Forget();
+                    await _messenger.Send(message);
                 }
             }
             catch (OperationCanceledException)
@@ -185,7 +191,7 @@ public sealed class StreamingClient(
             }
         }
 
-        await DisposeAsync();
+        await InvokeOnClosed();
     }
 
     private async Task SendImpl<T>(T dto, bool isSigned, CancellationToken cancellationToken)
@@ -197,13 +203,13 @@ public sealed class StreamingClient(
             var header = new MessageHeader(_messageDelimiter, isSigned, payload.Length);
 
 
-            await _client.SendAsync(
+            await Client.SendAsync(
                GetHeaderBytes(header),
                WebSocketMessageType.Binary,
                false,
                cancellationToken);
 
-            await _client.SendAsync(
+            await Client.SendAsync(
                 payload,
                 WebSocketMessageType.Binary,
                 true,

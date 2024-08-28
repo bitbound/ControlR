@@ -1,16 +1,13 @@
 ﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Services.Buffers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
-public interface IViewerStreamingClient : IClosable
+public interface IViewerStreamingClient : IStreamingClient, IClosable
 {
-    Task Connect(Uri websocketUri, CancellationToken cancellationToken);
-
-    ValueTask DisposeAsync();
-
     Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
     Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
 
@@ -24,49 +21,15 @@ public interface IViewerStreamingClient : IClosable
     Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX, CancellationToken cancellationToken);
 }
 
-public sealed class ViewerStreamingClient(
-    IServiceProvider _serviceProvider,
-    IKeyProvider _keyProvider,
+public class ViewerStreamingClient(
+    IKeyProvider keyProvider,
+    IMessenger messenger,
+    IMemoryProvider _memoryProvider,
     IAppState _appState,
     IDelayer _delayer,
-    ILogger<ViewerStreamingClient> _logger) : Closable(_logger), IAsyncDisposable, IViewerStreamingClient
+    ILogger<ViewerStreamingClient> _logger,
+    ILogger<StreamingClient> _baseLogger) : StreamingClient(keyProvider, messenger, _memoryProvider, _baseLogger), IViewerStreamingClient
 {
-    private bool _isDisposed;
-    private IDisposable? _clientOnCloseRegistration;
-    private IStreamingClient? _client;
-    private IStreamingClient Client => _client ?? throw new InvalidOperationException("Client has not been initialized.");
-
-    public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
-    {
-        _clientOnCloseRegistration?.Dispose();
-
-        if (_client is not null)
-        {
-            await _client.DisposeAsync();
-        }
-
-        _client = _serviceProvider.GetRequiredService<IStreamingClient>();
-        await _client.Connect(websocketUri, cancellationToken);
-        _clientOnCloseRegistration =  _client.OnClose(Close);
-    }
-
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_isDisposed)
-        {
-            return;
-        }
-
-        _isDisposed = true;
-        // We don't need to invoke the callback if we're disposing.
-        _clientOnCloseRegistration?.Dispose();
-        if (_client is not null)
-        {
-            await _client.DisposeAsync();
-        }
-    }
-
     public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
     {
         await TrySend(
@@ -74,7 +37,7 @@ public sealed class ViewerStreamingClient(
             {
                 var dto = new ChangeDisplaysDto(displayId);
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ChangeDisplays, _appState.PrivateKey);
-                await Client.Send(signedDto, cancellationToken);
+                await Send(signedDto, cancellationToken);
             });
     }
 
@@ -85,7 +48,7 @@ public sealed class ViewerStreamingClient(
              {
                  var dto = new ClipboardChangeDto(text, sessionId);
                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ClipboardChanged, _appState.PrivateKey);
-                 await Client.Send(signedDto, cancellationToken);
+                 await Send(signedDto, cancellationToken);
              });
     }
 
@@ -96,7 +59,7 @@ public sealed class ViewerStreamingClient(
             {
                 var dto = new CloseStreamingSessionRequestDto();
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.CloseStreamingSession, _appState.PrivateKey);
-                await Client.Send(signedDto, cancellationToken);
+                await Send(signedDto, cancellationToken);
             });
     }
     public async Task SendKeyboardStateReset(CancellationToken cancellationToken)
@@ -106,7 +69,7 @@ public sealed class ViewerStreamingClient(
               {
                   var dto = new ResetKeyboardStateDto();
                   var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ResetKeyboardState, _appState.PrivateKey);
-                  await Client.Send(signedDto, cancellationToken);
+                  await Send(signedDto, cancellationToken);
               });
     }
 
@@ -117,7 +80,7 @@ public sealed class ViewerStreamingClient(
               {
                   var dto = new KeyEventDto(key, isPressed);
                   var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.KeyEvent, _appState.PrivateKey);
-                  await Client.Send(signedDto, cancellationToken);
+                  await Send(signedDto, cancellationToken);
               });
     }
 
@@ -133,7 +96,7 @@ public sealed class ViewerStreamingClient(
             {
                 var dto = new MouseButtonEventDto(button, isPressed, percentX, percentY);
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseButtonEvent, _appState.PrivateKey);
-                await Client.Send(signedDto, cancellationToken);
+                await Send(signedDto, cancellationToken);
             });
     }
 
@@ -144,7 +107,7 @@ public sealed class ViewerStreamingClient(
              {
                  var dto = new MouseClickDto(button, isDoubleClick, percentX, percentY);
                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseClick, _appState.PrivateKey);
-                 await Client.Send(signedDto, cancellationToken);
+                 await Send(signedDto, cancellationToken);
              });
     }
 
@@ -155,7 +118,7 @@ public sealed class ViewerStreamingClient(
             {
                 var dto = new MovePointerDto(percentX, percentY);
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MovePointer, _appState.PrivateKey);
-                await Client.Send(signedDto, cancellationToken);
+                await Send(signedDto, cancellationToken);
             });
     }
 
@@ -166,7 +129,7 @@ public sealed class ViewerStreamingClient(
              {
                  var dto = new TypeTextDto(text);
                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TypeText, _appState.PrivateKey);
-                 await Client.Send(signedDto, cancellationToken);
+                 await Send(signedDto, cancellationToken);
              });
     }
     public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX, CancellationToken cancellationToken)
@@ -176,7 +139,7 @@ public sealed class ViewerStreamingClient(
             {
                 var dto = new WheelScrollDto(percentX, percentY, scrollY, scrollX);
                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.WheelScroll, _appState.PrivateKey);
-                await Client.Send(signedDto, cancellationToken);
+                await Send(signedDto, cancellationToken);
             });
     }
 
@@ -202,7 +165,7 @@ public sealed class ViewerStreamingClient(
         }
 
         await _delayer.WaitForAsync(
-            () => Client.State == WebSocketState.Open || _isDisposed,
+            () => Client.State == WebSocketState.Open || IsDisposed,
             TimeSpan.FromSeconds(30),
             pollingMs: 100);
     }

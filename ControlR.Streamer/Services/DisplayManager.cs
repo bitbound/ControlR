@@ -44,7 +44,6 @@ internal class DisplayManager : IDisplayManager
     private readonly IMessenger _messenger;
     private readonly Stopwatch _metricsBroadcastTimer = Stopwatch.StartNew();
     private readonly IScreenCapturer _screenCapturer;
-    private readonly SemaphoreSlim _selectedDisplayLock = new(1, 1);
     private readonly ConcurrentQueue<SentFrame> _sentRegions = new();
     private readonly ISystemTime _systemTime;
     private readonly IWin32Interop _win32Interop;
@@ -91,46 +90,31 @@ internal class DisplayManager : IDisplayManager
             _displays.FirstOrDefault();
     }
 
-    public async Task ChangeDisplays(string displayId)
+    public Task ChangeDisplays(string displayId)
     {
         if (_displays.FirstOrDefault(x => x.DeviceName == displayId) is not { } newDisplay)
         {
             _logger.LogWarning("Could not find display with ID {DisplayId} when changing displays.", displayId);
-            return;
+            return Task.CompletedTask;
         }
 
-        await _selectedDisplayLock.WaitAsync();
-        try
-        {
-            _lastCpuBitmap?.Dispose();
-            _lastCpuBitmap = null;
-            _selectedDisplay = newDisplay;
-        }
-        finally
-        {
-            _selectedDisplayLock.Release();
-        }
+        _lastCpuBitmap?.Dispose();
+        _lastCpuBitmap = null;
+        _selectedDisplay = newDisplay;
+
+        return Task.CompletedTask;
     }
 
-    public async Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
+    public Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
     {
-        await _selectedDisplayLock.WaitAsync();
-        try
+        if (_selectedDisplay?.MonitorArea is not { } bounds)
         {
-            if (_selectedDisplay is null)
-            {
-                return Point.Empty;
-            }
+            return Point.Empty.AsTaskResult();
+        }
 
-            var bounds = _selectedDisplay.MonitorArea;
-            var absoluteX = bounds.Width * percentX + bounds.Left;
-            var absoluteY = bounds.Height * percentY + bounds.Top;
-            return new Point((int)absoluteX, (int)absoluteY);
-        }
-        finally
-        {
-            _selectedDisplayLock.Release();
-        }
+        var absoluteX = bounds.Width * percentX + bounds.Left;
+        var absoluteY = bounds.Height * percentY + bounds.Top;
+        return new Point((int)absoluteX, (int)absoluteY).AsTaskResult();
 
     }
 
@@ -165,23 +149,15 @@ internal class DisplayManager : IDisplayManager
             });
     }
 
-    public async void ResetDisplays()
+    public void ResetDisplays()
     {
         _displays = _screenCapturer.GetDisplays().ToArray();
-        await _selectedDisplayLock.WaitAsync();
-        try
-        {
-            _selectedDisplay =
-                _displays.FirstOrDefault(x => x.IsPrimary) ??
-                _displays.FirstOrDefault();
-            _lastCpuBitmap?.Dispose();
-            _lastCpuBitmap = null;
-            _forceKeyFrame = true;
-        }
-        finally
-        {
-            _selectedDisplayLock.Release();
-        }
+        _selectedDisplay =
+             _displays.FirstOrDefault(x => x.IsPrimary) ??
+             _displays.FirstOrDefault();
+        _lastCpuBitmap?.Dispose();
+        _lastCpuBitmap = null;
+        _forceKeyFrame = true;
     }
 
     public Task StartCapturingChanges()
@@ -295,7 +271,6 @@ internal class DisplayManager : IDisplayManager
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await _selectedDisplayLock.WaitAsync(stoppingToken);
             try
             {
                 await _frameRequestedSignal.Wait(stoppingToken);
@@ -311,7 +286,7 @@ internal class DisplayManager : IDisplayManager
 
                 _win32Interop.SwitchToInputDesktop();
 
-                using var captureResult = _screenCapturer.Capture(_selectedDisplay);
+                using var captureResult = _screenCapturer.Capture(selectedDisplay);
 
                 if (captureResult.HadNoChanges)
                 {
@@ -339,8 +314,8 @@ internal class DisplayManager : IDisplayManager
                     _needsKeyFrame = false;
                     _lastCpuBitmap?.Dispose();
                     _lastCpuBitmap = null;
-                    _lastDisplayId = _selectedDisplay?.DeviceName;
-                    _lastMonitorArea = _selectedDisplay?.MonitorArea;
+                    _lastDisplayId = selectedDisplay.DeviceName;
+                    _lastMonitorArea = selectedDisplay.MonitorArea;
                     continue;
                 }
 
@@ -374,7 +349,6 @@ internal class DisplayManager : IDisplayManager
                 {
                     _frameRequestedSignal.Set();
                 }
-                _selectedDisplayLock.Release();
             }
         }
     }

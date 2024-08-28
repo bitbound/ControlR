@@ -394,7 +394,10 @@ export async function initialize(componentRef, canvasId) {
  * @param {number} widthChange
  * @param {number} heightChange
  */
-export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, widthChange, heightChange) {
+export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange) {
+    canvasRef.style.width = `${canvasCssWidth}px`;
+    canvasRef.style.height = `${canvasCssHeight}px`;
+
     var clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
     var clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
 
@@ -475,6 +478,7 @@ function resetTouchState(state) {
 async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
     const percentX = offsetX / state.canvasElement.clientWidth;
     const percentY = offsetY / state.canvasElement.clientHeight;
+    const throttleTimeout = 50;
 
     if (!throttle) {
         await state.invokeDotNet("SendPointerMove", percentX, percentY);
@@ -484,7 +488,7 @@ async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
     window.clearTimeout(state.mouseMoveTimeout);
 
     const now = Date.now();
-    if (now - state.lastMouseMove > 10) {
+    if (now - state.lastMouseMove > throttleTimeout) {
         await state.invokeDotNet("SendPointerMove", percentX, percentY);
         state.lastMouseMove = now;
         return;
@@ -492,7 +496,7 @@ async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
 
     state.mouseMoveTimeout = window.setTimeout(async () => {
         await state.invokeDotNet("SendPointerMove", percentX, percentY);
-    }, 50);
+    }, throttleTimeout);
 }
 
 /**

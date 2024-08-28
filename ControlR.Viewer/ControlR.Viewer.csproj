@@ -25,7 +25,7 @@
 		<ApplicationIdGuid Condition="'$(Configuration)'=='Debug'">CE6694A0-520A-48B3-8390-246A267C3B85</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.10.327.0</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>0.10.364.0</ApplicationDisplayVersion>
 
 		<ApplicationVersion>1</ApplicationVersion>
 
@@ -85,7 +85,7 @@
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx">
 		  <Version>2.8.4</Version>
 		</PackageReference>
-		<PackageReference Include="Xamarin.Google.Android.Play.App.Update.Ktx" Version="2.1.0.9" />
+		<PackageReference Include="Xamarin.Google.Android.Play.App.Update.Ktx" Version="2.1.0.10" />
 		<ProguardConfiguration Include="Platforms\Android\proguard.cfg" />
 	</ItemGroup>
 
@@ -113,8 +113,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.2.1" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.2" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.7" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.3" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="MudBlazor" Version="7.6.0" />

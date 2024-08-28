@@ -16,10 +16,11 @@ public partial class RemoteDisplay : IAsyncDisposable
     private readonly CancellationTokenSource _componentClosing = new();
     private readonly SemaphoreSlim _streamLock = new(1, 1);
     private readonly SemaphoreSlim _typeLock = new(1, 1);
+    private string _canvasCssCursor = "default";
     private double _canvasCssHeight;
+    private double _canvasCssWidth;
     private ElementReference _canvasRef;
     private double _canvasScale = 1;
-    private double _canvasCssWidth;
     private IDisposable? _clientOnCloseRegistration;
     private DotNetObjectReference<RemoteDisplay>? _componentRef;
     private ControlMode _controlMode = ControlMode.Mouse;
@@ -35,8 +36,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     private ViewMode _viewMode = ViewMode.Stretch;
     private ElementReference _virtualKeyboard;
     private bool _virtualKeyboardToggled;
-    private string _canvasCssCursor = "default";
-
     [Inject]
     public required IAppState AppState { get; init; }
 
@@ -126,6 +125,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _clientOnCloseRegistration?.Dispose();
         _isDisposed = true;
         await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
         Messenger.UnregisterAll(this);
@@ -312,7 +312,7 @@ public partial class RemoteDisplay : IAsyncDisposable
             {
                 return;
             }
-            
+
             _canvasCssCursor = dto.Cursor switch
             {
                 WindowsCursor.Hand => "pointer",
@@ -423,6 +423,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         await RequestStreamingSessionFromAgent();
         await InvokeAsync(StateHasChanged);
     }
+
     private async Task HandleStreamerDownloadProgress(object recipient, StreamerDownloadProgressMessage message)
     {
         if (message.StreamingSessionId != Session.SessionId)
@@ -435,10 +436,10 @@ public partial class RemoteDisplay : IAsyncDisposable
 
         await InvokeAsync(StateHasChanged);
     }
+
     private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<UnsignedPayloadDto> message)
     {
         var wrapper = message.Dto;
-
         try
         {
             switch (wrapper.DtoType)
@@ -473,10 +474,9 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while handling unsigned payload. Type: {DtoType}", wrapper.DtoType);
+            Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", wrapper.DtoType);
         }
     }
-
     private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
     {
         if (_virtualKeyboardToggled)
@@ -556,6 +556,8 @@ public partial class RemoteDisplay : IAsyncDisposable
                 pinchCenterY,
                 _screenArea,
                 _canvasRef,
+                _canvasCssWidth,
+                _canvasCssHeight,
                 widthChange,
                 heightChange);
         }
@@ -630,7 +632,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         {
             await StreamingClient.Connect(websocketUri, _componentClosing.Token);
             _clientOnCloseRegistration?.Dispose();
-            _clientOnCloseRegistration = StreamingClient.OnClose(HandleStreamerDisconnected);
+            _clientOnCloseRegistration = StreamingClient.OnClosed(HandleStreamerDisconnected);
         }
         catch (Exception ex)
         {

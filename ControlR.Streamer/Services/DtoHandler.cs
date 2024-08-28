@@ -1,11 +1,8 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
-using Windows.ApplicationModel.DataTransfer;
 
 namespace ControlR.Streamer.Services;
 internal class DtoHandler(
@@ -18,7 +15,6 @@ internal class DtoHandler(
     IOptions<StartupOptions> _startupOptions,
     ILogger<DtoHandler> _logger) : IHostedService
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _messenger.Register<DtoReceivedMessage<SignedPayloadDto>>(this, HandleSignedDtoReceivedMessage);
@@ -40,13 +36,13 @@ internal class DtoHandler(
 
             if (!_keyProvider.Verify(wrapper))
             {
-                _logger.LogCritical("Key verification failed for public key: {key}", wrapper.PublicKeyBase64);
+                _logger.LogCritical("Key verification failed for public key: {PublicKey}", wrapper.PublicKeyBase64);
                 return;
             }
 
             if (_startupOptions.Value.AuthorizedKey != wrapper.PublicKeyBase64)
             {
-                _logger.LogCritical("Public key does not exist in authorized keys: {key}", wrapper.PublicKeyBase64);
+                _logger.LogCritical("Public key does not exist in authorized keys: {PublicKey}", wrapper.PublicKeyBase64);
                 return;
             }
 
