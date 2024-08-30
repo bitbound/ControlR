@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Server.Services;
 using ControlR.Server.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
@@ -7,6 +8,7 @@ namespace ControlR.Server.Hubs;
 public class AgentHub(
     IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
     ISystemTime _systemTime,
+    IServerStatsProvider _serverStatsProvider,
     IConnectionCounter _connectionCounter,
     ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
@@ -148,28 +150,13 @@ public class AgentHub(
     {
         try
         {
-            var agentResult = await _connectionCounter.GetAgentConnectionCount();
-            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
-
-            if (!agentResult.IsSuccess)
+            var statsResult = await _serverStatsProvider.GetServerStats();
+            if (statsResult.IsSuccess)
             {
-                _logger.LogResult(agentResult);
-                return;
+                await _viewerHub.Clients
+                    .Group(HubGroupNames.ServerAdministrators)
+                    .ReceiveServerStats(statsResult.Value);
             }
-
-            if (!viewerResult.IsSuccess)
-            {
-                _logger.LogResult(viewerResult);
-                return;
-            }
-
-            var dto = new ServerStatsDto(
-                agentResult.Value,
-                viewerResult.Value);
-
-            await _viewerHub.Clients
-                .Group(HubGroupNames.ServerAdministrators)
-                .ReceiveServerStats(dto);
         }
         catch (Exception ex)
         {

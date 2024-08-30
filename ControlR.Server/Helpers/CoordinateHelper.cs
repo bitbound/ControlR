@@ -1,5 +1,4 @@
 ﻿using ControlR.Server.Interfaces;
-using ControlR.Server.Models;
 
 namespace ControlR.Libraries.Shared.Helpers;
 

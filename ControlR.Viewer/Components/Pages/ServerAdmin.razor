@@ -80,7 +80,23 @@
             Clear
         </MudButton>
     </div>
+</div>
 
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Server Version
+    </MudText>
+
+    <MudText Typo="Typo.body1">
+        The current version of the ControlR server.
+    </MudText>
+
+    <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4">
+        Version
+    </MudText>
+    <MudText Typo="Typo.body1">
+        @(_serverStats?.ServerVersion)
+    </MudText>
 </div>
 
 @code {

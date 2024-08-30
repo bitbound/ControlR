@@ -4,6 +4,7 @@ using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
 using ControlR.Server.Models;
 using ControlR.Server.Options;
+using ControlR.Server.Services;
 using ControlR.Server.Services.Interfaces;
 using MessagePack;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ namespace ControlR.Server.Hubs;
 [Authorize]
 public class ViewerHub(
     IHubContext<AgentHub, IAgentHubClient> _agentHub,
+    IServerStatsProvider _serverStatsProvider,
     IConnectionCounter _connectionCounter,
     IAlertStore _alertStore,
     IIpApi _ipApi,
@@ -91,7 +93,7 @@ public class ViewerHub(
                 return Result.Fail<ServerStatsDto>("Unauthorized.");
             }
 
-            return await GetServerStatsImpl();
+            return await _serverStatsProvider.GetServerStats();
         }
         catch (Exception ex)
         {
@@ -186,14 +188,10 @@ public class ViewerHub(
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
 
-                var getResult = await GetServerStatsImpl();
+                var getResult = await _serverStatsProvider.GetServerStats();
                 if (getResult.IsSuccess)
                 {
                     await Clients.Caller.ReceiveServerStats(getResult.Value);
-                }
-                else
-                {
-                    getResult.Log(_logger);
                 }
             }
         }
@@ -324,48 +322,22 @@ public class ViewerHub(
         }
     }
 
-    private async Task<Result<ServerStatsDto>> GetServerStatsImpl()
-    {
-        var agentResult = await _connectionCounter.GetAgentConnectionCount();
-        var viewerResult = await _connectionCounter.GetViewerConnectionCount();
-
-        if (!agentResult.IsSuccess)
-        {
-            _logger.LogResult(agentResult);
-            return Result.Fail<ServerStatsDto>(agentResult.Reason);
-        }
-
-        if (!viewerResult.IsSuccess)
-        {
-            _logger.LogResult(viewerResult);
-            return Result.Fail<ServerStatsDto>(viewerResult.Reason);
-        }
-
-        var dto = new ServerStatsDto(
-            agentResult.Value,
-            viewerResult.Value);
-
-        return Result.Ok(dto);
-    }
     private bool IsServerAdmin()
     {
         return Context.User?.IsAdministrator() ?? false;
     }
+
     private async Task SendUpdatedConnectionCountToAdmins()
     {
         try
         {
-            var getResult = await GetServerStatsImpl();
+            var getResult = await _serverStatsProvider.GetServerStats();
 
             if (getResult.IsSuccess)
             {
                 await Clients
                     .Group(HubGroupNames.ServerAdministrators)
                     .ReceiveServerStats(getResult.Value);
-            }
-            else
-            {
-                _logger.LogResult(getResult);
             }
         }
         catch (Exception ex)

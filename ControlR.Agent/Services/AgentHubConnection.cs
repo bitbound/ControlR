@@ -86,6 +86,10 @@ internal class AgentHubConnection(
                 _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
             }
 
+            _logger.LogInformation(
+                "Streaming session started.  Requester Public Key: {PublicKey}",
+                signedDto.PublicKeyBase64);
+
             return result.IsSuccess;
         }
         catch (Exception ex)
@@ -103,6 +107,10 @@ internal class AgentHubConnection(
             {
                 return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
             }
+
+            _logger.LogInformation(
+                "Terminal session started.  Requester Public Key: {PublicKey}",
+                requestDto.PublicKeyBase64);
 
             return await _terminalStore.CreateSession(payload.TerminalId, payload.ViewerConnectionId);
         }

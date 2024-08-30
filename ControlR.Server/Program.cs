@@ -2,7 +2,6 @@ using ControlR.Server.Auth;
 using ControlR.Server.Hubs;
 using ControlR.Server.Middleware;
 using ControlR.Server.Options;
-using ControlR.Server.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
@@ -18,6 +17,7 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Server.Extensions;
+using ControlR.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -160,6 +160,7 @@ builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
+builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IDigitalSignatureAuthenticator, DigitalSignatureAuthenticator>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();

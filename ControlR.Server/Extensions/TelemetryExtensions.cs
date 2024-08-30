@@ -1,9 +1,9 @@
-﻿using OpenTelemetry.Logs;
-using OpenTelemetry.Resources;
-using Azure.Monitor.OpenTelemetry.Exporter;
+﻿using OpenTelemetry.Resources;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 
 namespace ControlR.Server.Extensions;
 
@@ -23,24 +23,6 @@ public static class TelemetryExtensions
                     .AddService(_serviceName);
 
                 options.SetResourceBuilder(resources);
-
-                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-                {
-                    options
-                        .AddOtlpExporter(otlpOptions =>
-                        {
-                            otlpOptions.Endpoint = new Uri(otlpEndpoint);
-                        });
-                }
-
-                if (!string.IsNullOrWhiteSpace(azureConnectionString))
-                {
-                    options
-                        .AddAzureMonitorLogExporter(azureMonitorOptions =>
-                        {
-                            azureMonitorOptions.ConnectionString = azureConnectionString;
-                        });
-                }
             });
 
         builder.Services
@@ -55,50 +37,27 @@ public static class TelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddMeter("Microsoft.AspNetCore.Hosting")
                     .AddMeter("Microsoft.AspNetCore.Server.Kestrel");
-
-                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-                {
-                    meterProvider
-                        .AddOtlpExporter(otlpOptions =>
-                        {
-                            otlpOptions.Endpoint = new Uri(otlpEndpoint);
-                        });
-                }
-
-                if (!string.IsNullOrWhiteSpace(azureConnectionString))
-                {
-                    meterProvider
-                        .AddAzureMonitorMetricExporter(azureMonitorOptions =>
-                        {
-                            azureMonitorOptions.ConnectionString = azureConnectionString;
-                        });
-                }
             })
             .WithTracing(tracing =>
             {
                 tracing
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
-
-                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-                {
-                    tracing
-                        .AddOtlpExporter(otlpOptions =>
-                        {
-                            otlpOptions.Endpoint = new Uri(otlpEndpoint);
-                        });
-                }
-
-                if (!string.IsNullOrWhiteSpace(azureConnectionString))
-                {
-                    tracing
-                        .AddAzureMonitorTraceExporter(azureTracingOptions =>
-                        {
-                            azureTracingOptions.ConnectionString = azureConnectionString;
-                        });
-                }
             });
 
+        if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpEndpointUri))
+        {
+            builder.Services
+                .AddOpenTelemetry()
+                .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpEndpointUri);
+        }
+        if (!string.IsNullOrWhiteSpace(azureConnectionString))
+        {
+            // This will add exporters for logging, metrics, and tracing.
+            builder.Services
+                .AddOpenTelemetry()
+                .UseAzureMonitor();
+        }
         return builder;
     }
 }
