@@ -59,6 +59,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.ScreenCa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.ScreenCapture.Benchmarks", "Tests\ControlR.Libraries.ScreenCapture.Benchmarks\ControlR.Libraries.ScreenCapture.Benchmarks.csproj", "{95B98845-4F9C-4B6B-88F7-9194A2A824CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Web", "ControlR.Web\ControlR.Web\ControlR.Web.csproj", "{DBF3FC17-FCA8-4B24-8315-A123BD20824A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Web.Client", "ControlR.Web\ControlR.Web.Client\ControlR.Web.Client.csproj", "{36009437-70AC-4E0D-8634-08EE0A5A252F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +129,14 @@ Global
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBF3FC17-FCA8-4B24-8315-A123BD20824A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBF3FC17-FCA8-4B24-8315-A123BD20824A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBF3FC17-FCA8-4B24-8315-A123BD20824A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBF3FC17-FCA8-4B24-8315-A123BD20824A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36009437-70AC-4E0D-8634-08EE0A5A252F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36009437-70AC-4E0D-8634-08EE0A5A252F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36009437-70AC-4E0D-8634-08EE0A5A252F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36009437-70AC-4E0D-8634-08EE0A5A252F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -143,7 +155,7 @@ Global
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
+		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
 	EndGlobalSection
 EndGlobal
