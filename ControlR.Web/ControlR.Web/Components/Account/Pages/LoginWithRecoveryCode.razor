@@ -4,8 +4,8 @@
 @using Microsoft.AspNetCore.Identity
 @using ControlR.Web.Data
 
-@inject SignInManager<ApplicationUser> SignInManager
-@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWithRecoveryCode> Logger
 
@@ -35,7 +35,7 @@
 
 @code {
     private string? message;
-    private ApplicationUser user = default!;
+    private AppUser user = default!;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();

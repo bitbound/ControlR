@@ -53,7 +53,7 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     {
         // Get the user manager from a new scope to ensure it fetches fresh data
         await using var scope = _scopeFactory.CreateAsyncScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
         return await ValidateSecurityStampAsync(userManager, authenticationState.User);
     }
 
@@ -88,7 +88,7 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
         }
     }
 
-    private async Task<bool> ValidateSecurityStampAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal principal)
+    private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)
     {
         var user = await userManager.GetUserAsync(principal);
         if (user is null)

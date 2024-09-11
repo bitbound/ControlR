@@ -1,10 +1,12 @@
 using ControlR.Web.Components;
 using ControlR.Web.Components.Account;
 using ControlR.Web.Data;
+using ControlR.Web.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,21 +34,21 @@ builder.Services
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("PostgreSQL")
+    ?? throw new InvalidOperationException("Connection string 'PostgreSQL' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<AppDb>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services
-    .AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddIdentityCore<AppUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<AppDb>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 
@@ -75,5 +77,7 @@ app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(typeof(ControlR.Web.Client._Imports).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
+
+await app.ApplyMigrations<AppDb>();
 
 app.Run();
