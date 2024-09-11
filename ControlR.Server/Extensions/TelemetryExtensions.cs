@@ -35,8 +35,7 @@ public static class TelemetryExtensions
             {
                 meterProvider
                     .AddAspNetCoreInstrumentation()
-                    .AddMeter("Microsoft.AspNetCore.Hosting")
-                    .AddMeter("Microsoft.AspNetCore.Server.Kestrel");
+                    .AddHttpClientInstrumentation();
             })
             .WithTracing(tracing =>
             {
