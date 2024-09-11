@@ -77,13 +77,13 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
-		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.9.1" />
-		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.4.2" />
+		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.9.2" />
+		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.4.3" />
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData">
-		  <Version>2.8.4</Version>
+		  <Version>2.8.5</Version>
 		</PackageReference>
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx">
-		  <Version>2.8.4</Version>
+		  <Version>2.8.5</Version>
 		</PackageReference>
 		<PackageReference Include="Xamarin.Google.Android.Play.App.Update.Ktx" Version="2.1.0.10" />
 		<ProguardConfiguration Include="Platforms\Android\proguard.cfg" />
@@ -112,21 +112,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.2.1" />
+		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.12" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.3" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-		<PackageReference Include="MudBlazor" Version="7.6.0" />
+		<PackageReference Include="MudBlazor" Version="7.8.0" />
 
 
-		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.80" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.82" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.80" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.82" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.80" />
+		<PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.82" />
 	</ItemGroup>
 
 	<ItemGroup>
