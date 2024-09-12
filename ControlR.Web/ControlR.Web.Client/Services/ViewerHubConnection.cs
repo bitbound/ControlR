@@ -1,8 +1,6 @@
 ﻿using ControlR.Libraries.Clients.Services;
-using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Primitives;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor;
@@ -51,8 +49,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
 internal class ViewerHubConnection(
     IServiceProvider _services,
-    IHttpConfigurer _httpConfigurer,
-    IAppState _appState,
+    IBusyCounter _busyCounter,
     IDeviceCache _devicesCache,
     IKeyProvider _keyProvider,
     ISettings _settings,
@@ -78,8 +75,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var request = new CloseTerminalRequestDto(terminalId);
-            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
+            var wrapper = DtoWrapper.Create(request, DtoType.CloseTerminalRequest);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), deviceId, wrapper);
         });
     }
 
@@ -91,8 +88,8 @@ internal class ViewerHubConnection(
                 Guard.IsNotNull(Connection.ConnectionId);
 
                 var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.TerminalSessionRequest, _busyCounter.PrivateKey);
+                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, dtoWrapper);
             },
             () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
     }
@@ -103,8 +100,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var dto = new GetAgentAppSettingsDto();
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetAgentAppSettings, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.GetAgentAppSettings, _busyCounter.PrivateKey);
+                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, dtoWrapper);
             },
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
     }
@@ -160,8 +157,8 @@ internal class ViewerHubConnection(
         try
         {
             var dto = new GetWindowsSessionsDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetWindowsSessions, _appState.PrivateKey);
-            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, signedDto);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.GetWindowsSessions, _busyCounter.PrivateKey);
+            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, dtoWrapper);
             return Result.Ok(sessions);
         }
         catch (Exception ex)
@@ -176,8 +173,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var dto = new InvokeCtrlAltDelRequestDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.InvokeCtrlAltDel, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.InvokeCtrlAltDel, _busyCounter.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, dtoWrapper);
         });
     }
 
@@ -239,8 +236,8 @@ internal class ViewerHubConnection(
         {
             await WaitForConnection();
             var dto = new DeviceUpdateRequestDto(_settings.PublicKeyLabel);
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.DeviceUpdateRequest, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.DeviceUpdateRequest, _busyCounter.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToPublicKeyGroup), dtoWrapper);
         });
     }
 
@@ -266,12 +263,12 @@ internal class ViewerHubConnection(
                 _settings.NotifyUserSessionStart,
                 _settings.Username);
 
-            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(streamingSessionRequest, DtoType.StreamingSessionRequest, _busyCounter.PrivateKey);
 
             var result = await Connection.InvokeAsync<Result>(
                 nameof(IViewerHub.RequestStreamingSession),
                 agentConnectionId,
-                signedDto);
+                dtoWrapper);
 
             return result.Log(_logger);
         }
@@ -287,8 +284,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 await WaitForConnection();
-                var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(agentAppSettings, DtoType.SendAppSettings, _busyCounter.PrivateKey);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, dtoWrapper);
             },
             () => Result.Fail("Failed to send app settings"));
     }
@@ -298,8 +295,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var dto = new TriggerAgentUpdateDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TriggerAgentUpdate, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.TriggerAgentUpdate, _busyCounter.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToAgent), device.Id, dtoWrapper);
         });
     }
 
@@ -310,8 +307,8 @@ internal class ViewerHubConnection(
             {
                 await WaitForConnection();
                 var dto = new AlertBroadcastDto(message, severity);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.PrivateKey);
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.SendAlertBroadcast, _busyCounter.PrivateKey);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), dtoWrapper);
             });
     }
 
@@ -321,8 +318,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
-            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+            var dtoWrapper = _keyProvider.CreatedtoWrapper(powerDto, DtoType.PowerStateChange, _busyCounter.PrivateKey);
+            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToAgent), device.Id, dtoWrapper);
         });
     }
 
@@ -332,8 +329,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new TerminalInputDto(terminalId, input);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.TerminalInput, _busyCounter.PrivateKey);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, dtoWrapper);
             },
             () => Result.Fail("Failed to send terminal input"));
     }
@@ -344,8 +341,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new WakeDeviceDto(macAddresses);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.PrivateKey);
-                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
+                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.WakeDevice, _busyCounter.PrivateKey);
+                await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToPublicKeyGroup), dtoWrapper);
             });
     }
 
@@ -354,9 +351,9 @@ internal class ViewerHubConnection(
     {
         _messenger.UnregisterAll(this);
 
-        await _delayer.WaitForAsync(() => _appState.IsAuthenticated, TimeSpan.MaxValue);
+        await _delayer.WaitForAsync(() => _busyCounter.IsAuthenticated, TimeSpan.MaxValue);
 
-        using var _ = _appState.IncrementBusyCounter();
+        using var _ = _busyCounter.IncrementBusyCounter();
 
         await Connect(
             () => new Uri(_settings.ServerUri, "/hubs/viewer"),
@@ -376,7 +373,7 @@ internal class ViewerHubConnection(
         await TryInvoke(
             async () =>
             {
-                _appState.IsServerAdministrator = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
+                _busyCounter.IsServerAdministrator = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
                 await _messenger.SendGenericMessage(GenericMessageKind.IsServerAdminChanged);
             });
     }
@@ -417,11 +414,11 @@ internal class ViewerHubConnection(
 
     private async Task HandleAuthStateChanged()
     {
-        await StopConnection(_appState.AppExiting);
+        await StopConnection(_busyCounter.AppExiting);
 
-        if (_appState.IsAuthenticated)
+        if (_busyCounter.IsAuthenticated)
         {
-            await Start(_appState.AppExiting);
+            await Start(_busyCounter.AppExiting);
         }
     }
 
@@ -444,7 +441,7 @@ internal class ViewerHubConnection(
 
     private async Task HandleServerUriChanged()
     {
-        await Reconnect(_appState.AppExiting);
+        await Reconnect(_busyCounter.AppExiting);
     }
 
     private async Task OnConnectFailure(string reason)

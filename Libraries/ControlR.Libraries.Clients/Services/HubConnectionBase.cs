@@ -1,5 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Messages;
+using ControlR.Libraries.Clients.Messages;
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;

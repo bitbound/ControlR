@@ -24,8 +24,7 @@ public interface IViewerHub
     Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
 
     Task<Result> SendAlertBroadcast(SignedPayloadDto signedDto);
-
-    Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto);
+    Task SendDtoToAgent(string deviceId, DtoWrapper wrapper);
 
     Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto);
     Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);

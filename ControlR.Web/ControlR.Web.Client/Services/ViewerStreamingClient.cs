@@ -4,7 +4,7 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 
-namespace ControlR.Viewer.Services;
+namespace ControlR.Web.Client.Services;
 
 public interface IViewerStreamingClient : IStreamingClient, IClosable
 {

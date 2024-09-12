@@ -288,6 +288,13 @@ public class ViewerHub(
         }
     }
 
+    public async Task SendDtoToAgent(string deviceId, DtoWrapper wrapper)
+    {
+        using var scope = _logger.BeginMemberScope();
+
+        await _agentHub.Clients.Group(deviceId).ReceiveDto(wrapper);
+    }
+
     public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
     {
         using var scope = _logger.BeginMemberScope();
