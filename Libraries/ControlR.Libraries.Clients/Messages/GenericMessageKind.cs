@@ -1,6 +1,6 @@
-﻿namespace ControlR.Libraries.DevicesCommon.Messages;
+﻿namespace ControlR.Libraries.Clients.Messages;
 
-internal enum GenericMessageKind
+public enum GenericMessageKind
 {
     PrivateKeyChanged,
     ServerUriChanged,

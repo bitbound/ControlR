@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Clients.Services;
 
 public interface IStreamingClient : IAsyncDisposable, IClosable
 {

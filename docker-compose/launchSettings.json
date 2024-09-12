@@ -5,7 +5,7 @@
       "commandVersion": "1.0",
       "composeLaunchAction": "LaunchBrowser",
       "composeLaunchServiceName": "controlr",
-      "composeLaunchUrl": "http://localhost:5120/api/health",
+      "composeLaunchUrl": "http://localhost:5120/",
       "serviceActions": {
         "controlr": "StartDebugging"
       }

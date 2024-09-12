@@ -24,6 +24,7 @@
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="2.*" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
 

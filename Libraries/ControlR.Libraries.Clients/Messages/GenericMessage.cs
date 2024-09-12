@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.DevicesCommon.Messages;
+﻿namespace ControlR.Libraries.Clients.Messages;
 
 public class GenericMessage<T>(T value)
     where T : notnull

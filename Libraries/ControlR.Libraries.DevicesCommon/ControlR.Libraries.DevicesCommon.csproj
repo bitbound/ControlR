@@ -18,9 +18,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.12" />
-		<PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="8.0.8" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.8" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,9 +1,9 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Messages;
+using ControlR.Libraries.Clients.Messages;
 
-namespace ControlR.Libraries.DevicesCommon.Extensions;
+namespace ControlR.Libraries.Clients.Extensions;
 
-internal static class IMessengerExtensions
+public static class IMessengerExtensions
 {
     public static IDisposable RegisterGenericMessage(
         this IMessenger messenger,

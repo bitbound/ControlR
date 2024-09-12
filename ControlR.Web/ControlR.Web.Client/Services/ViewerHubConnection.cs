@@ -2,12 +2,13 @@
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor;
 using System.Runtime.CompilerServices;
 
-namespace ControlR.Viewer.Services;
+namespace ControlR.Web.Client.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
@@ -31,9 +32,9 @@ public interface IViewerHubConnection : IHubConnectionBase
     Task RequestDeviceUpdates();
 
     Task<Result> RequestStreamingSession(
-        string agentConnectionId, 
-        Guid sessionId, 
-        Uri websocketUri, 
+        string agentConnectionId,
+        Guid sessionId,
+        Uri websocketUri,
         int targetSystemSession);
 
     Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
@@ -150,7 +151,7 @@ internal class ViewerHubConnection(
         return await TryInvoke(async () =>
         {
             return await Connection.InvokeAsync<Uri?>(nameof(IViewerHub.GetWebSocketBridgeOrigin));
-        }, 
+        },
         () => null);
     }
 
@@ -244,8 +245,8 @@ internal class ViewerHubConnection(
     }
 
     public async Task<Result> RequestStreamingSession(
-        string agentConnectionId, 
-        Guid sessionId, 
+        string agentConnectionId,
+        Guid sessionId,
         Uri websocketUri,
         int targetSystemSession)
     {

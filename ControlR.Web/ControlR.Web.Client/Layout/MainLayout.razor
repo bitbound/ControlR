@@ -1,24 +1,72 @@
 ﻿@inherits LayoutComponentBase
+@inject IMessenger Messenger
+@inject IBusyCounter AppState
+@inject IViewerHubConnection ViewerHub
+@inject ISnackbar Snackbar
+@inject ILogger<MainLayout> Logger
+@inject NavigationManager NavManager
 
-<MudThemeProvider />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<div>
+  <MudThemeProvider IsDarkMode Theme="CustomTheme" />
+  <MudPopoverProvider />
+  <MudDialogProvider />
+  <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-    </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
-    </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
-        @Body
-    </MudMainContent>
-</MudLayout>
+  <MudLayout>
+      <MudAppBar Elevation="1">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                           Color="Color.Inherit"
+                           Edge="Edge.Start"
+                           OnClick="@((e) => DrawerToggle())" />
+
+            <MudChip T="string" Text='Beta' Color="Color.Info" Class="ms-3" />
+
+            <MudSpacer />
+
+            @if (AppState.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
+            {
+                <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
+                    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
+                                         Class="mx-3 mt-1" />
+                </MudTooltip>
+            }
+            else
+            {
+                switch (ViewerHub.ConnectionState)
+                {
+                    case HubConnectionState.Connected:
+                        <MudTooltip Text="Connected">
+                            <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+                        </MudTooltip>
+                        break;
+                    case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+                        <MudTooltip Text="Reconnecting">
+                            <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
+                                                 Class="mx-3 mt-1" />
+                        </MudTooltip>
+                        break;
+                    case HubConnectionState.Disconnected:
+                        <MudTooltip Text="Disconnected">
+                            <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+                        </MudTooltip>
+                        break;
+                    default:
+                        break;
+                }
+            }
+            <MudTooltip Text="GitHub">
+                <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+                               Href="https://github.com/bitbound/controlr/" Target="_blank" />
+            </MudTooltip>
+      </MudAppBar>
+      <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+          <NavMenu />
+      </MudDrawer>
+      <MudMainContent Class="mt-16 pa-4">
+          @Body
+      </MudMainContent>
+  </MudLayout>
+</div>
 
 
 <div id="blazor-error-ui">
@@ -29,12 +77,32 @@
 
 @code {
     private bool _drawerOpen = true;
+    private MudTheme? _customTheme;
+
+    private MudTheme CustomTheme
+    {
+        get
+        {
+            return _customTheme ??= new MudTheme()
+                {
+                    PaletteDark = new PaletteDark()
+                    {
+                        Primary = "#46AA46",
+                        Secondary = "#BE6E46",
+                        Tertiary = "#F082D2",
+                        Info = "#42A5F5",
+                        TextPrimary = "rgb(215, 215, 215)",
+                        AppbarText = "rgb(215, 215, 215)",
+                        Background = Colors.Gray.Darken4,
+                        Surface = "rgb(45, 45, 45)",
+                    }
+                };
+        }
+    }
+
 
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
-
 }
-
-

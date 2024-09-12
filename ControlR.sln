@@ -59,13 +59,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.ScreenCa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.ScreenCapture.Benchmarks", "Tests\ControlR.Libraries.ScreenCapture.Benchmarks\ControlR.Libraries.ScreenCapture.Benchmarks.csproj", "{95B98845-4F9C-4B6B-88F7-9194A2A824CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Web", "ControlR.Web\ControlR.Web\ControlR.Web.csproj", "{DBF3FC17-FCA8-4B24-8315-A123BD20824A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Web", "ControlR.Web\ControlR.Web\ControlR.Web.csproj", "{DBF3FC17-FCA8-4B24-8315-A123BD20824A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Web.Client", "ControlR.Web\ControlR.Web.Client\ControlR.Web.Client.csproj", "{36009437-70AC-4E0D-8634-08EE0A5A252F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Web.Client", "ControlR.Web\ControlR.Web.Client\ControlR.Web.Client.csproj", "{36009437-70AC-4E0D-8634-08EE0A5A252F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Web.AppHost", "ControlR.Web.AppHost\ControlR.Web.AppHost.csproj", "{6EB6C06A-627F-4E08-8E47-760321209079}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Web.AppHost", "ControlR.Web.AppHost\ControlR.Web.AppHost.csproj", "{6EB6C06A-627F-4E08-8E47-760321209079}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Web.ServiceDefaults", "ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj", "{B9F8747E-4FA6-4739-A818-061BDCCF18C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Libraries.Clients", "Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj", "{E36620C7-2D12-4956-BF31-A82258A7C656}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -149,6 +151,10 @@ Global
 		{B9F8747E-4FA6-4739-A818-061BDCCF18C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9F8747E-4FA6-4739-A818-061BDCCF18C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9F8747E-4FA6-4739-A818-061BDCCF18C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E36620C7-2D12-4956-BF31-A82258A7C656}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E36620C7-2D12-4956-BF31-A82258A7C656}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E36620C7-2D12-4956-BF31-A82258A7C656}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E36620C7-2D12-4956-BF31-A82258A7C656}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -165,9 +171,10 @@ Global
 		{E49A955D-AC20-46C0-9DAB-1357B896BB18} = {BFF05A82-6635-4DBD-BA89-3D26B2C7AEC7}
 		{1D8E803F-D7C4-40FE-9122-A5DF2D8B5FC2} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
+		{E36620C7-2D12-4956-BF31-A82258A7C656} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
 	EndGlobalSection
 EndGlobal

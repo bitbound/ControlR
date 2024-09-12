@@ -3,11 +3,6 @@ version: '3.4'
 x-postgres-user: &pgUser postgres
 x-postgres-password: &pgPassword password
 
-secrets:
-  postgres_user:
-    environment: "POSTGRES_USER"
-  postgres_password:
-    environment: "POSTGRES_PASSWORD"
 
 networks:
   controlr:
@@ -24,11 +19,11 @@ services:
     container_name: postgres
     restart: unless-stopped
     ports:
-      - 127.0.0.1:5432:5432
+      - 5432:5432
     networks:
       - controlr
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - controlr-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -41,7 +36,7 @@ services:
     depends_on:
       - postgres
     ports:
-      - 127.0.0.1:5120:8080
+      - 5120:8080
     networks:
       - controlr
     volumes:
@@ -51,7 +46,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
 
-      ConnectionStrings__PostgreSQL: "Host=localhost;Port=5432;Database=controlr;Username=postgres;Password=password;Ssl Mode=Require;Trust Server Certificate=true;"
+      ConnectionStrings__PostgreSQL: "Host=postgres;Port=5432;Database=controlr;Username=postgres;Password=password;"
 
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:

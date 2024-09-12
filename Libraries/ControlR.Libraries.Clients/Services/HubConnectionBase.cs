@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Clients.Services;
 
 public interface IHubConnectionBase
 {

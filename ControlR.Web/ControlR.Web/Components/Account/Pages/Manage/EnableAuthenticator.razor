@@ -6,6 +6,8 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using ControlR.Web.Data
+@using QRCoder;
+@using QRCoder.Extensions;
 
 @inject UserManager<AppUser> UserManager
 @inject IdentityUserAccessor UserAccessor
@@ -45,9 +47,16 @@ else
 
             <MudAlert Variant="Variant.Text" Severity="Severity.Info" Icon="@Icons.Material.Filled.Key">@sharedKey</MudAlert>
 
-            <MudText Typo="Typo.body2">
-                Learn how to <MudLink Target="_blank" Href="https://go.microsoft.com/fwlink/?Linkid=852423">enable QR code generation</MudLink>.
-            </MudText>
+            @if (!string.IsNullOrWhiteSpace(_qrCodeDataUri))
+            {
+                <MudImage Fluid Src="@_qrCodeDataUri" />
+            }
+            else
+            {
+                <MudAlert Variant="Variant.Text" Severity="Severity.Warning" Icon="@Icons.Material.Filled.Warning">
+                    Failed to generate QR code.
+                </MudAlert>
+            }
 
             <div data-url="@authenticatorUri"></div>
         </li>
@@ -76,6 +85,7 @@ else
     private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
 
     private string? message;
+    private string? _qrCodeDataUri;
     private AppUser user = default!;
     private string? sharedKey;
     private string? authenticatorUri;
@@ -138,6 +148,7 @@ else
 
         var email = await UserManager.GetEmailAsync(user);
         authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+        _qrCodeDataUri = GetQrCodeDataUri(authenticatorUri);
     }
 
     private string FormatKey(string unformattedKey)
@@ -167,6 +178,20 @@ else
             unformattedKey);
     }
 
+    private string? GetQrCodeDataUri(string authenticatorUri)
+    {
+        try
+        {
+            var qrCodeBytes = PngByteQRCodeHelper.GetQRCode(authenticatorUri, QRCodeGenerator.ECCLevel.Q, 5);
+            var base64QrCode = Convert.ToBase64String(qrCodeBytes);
+            return $"data:image/png;base64,{base64QrCode}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error generating QR code");
+            return null;
+        }
+    }
     private sealed class InputModel
     {
         [Required]
