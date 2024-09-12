@@ -3,4 +3,4 @@
 [MessagePackObject]
 public record TerminalSessionRequest(
     [property: MsgPackKey] Guid TerminalId,
-    [property: MsgPackKey] string ViewerConnectionId) : DtoRecordBase;
+    [property: MsgPackKey] string ViewerConnectionId);

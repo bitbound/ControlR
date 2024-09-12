@@ -1,17 +1,12 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
-using MessagePack;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Dtos;
@@ -22,6 +17,9 @@ using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Http.Connections;
+using ControlR.Libraries.Clients.Services;
+using ControlR.Libraries.Clients.Messages;
+using ControlR.Libraries.Clients.Extensions;
 
 namespace ControlR.Agent.Services;
 
@@ -39,7 +37,6 @@ internal class AgentHubConnection(
      IEnvironmentHelper _environmentHelper,
      ISettingsProvider _settings,
      ICpuUtilizationSampler _cpuSampler,
-     IKeyProvider _keyProvider,
      IStreamerLauncher _streamerLauncher,
      IStreamerUpdater _streamerUpdater,
      IAgentUpdater _agentUpdater,
@@ -51,17 +48,10 @@ internal class AgentHubConnection(
      ILogger<AgentHubConnection> _logger)
         : HubConnectionBase(_services, _messenger, _delayer, _logger), IAgentHubConnection, IAgentHubClient
 {
-    public async Task<bool> CreateStreamingSession(SignedPayloadDto signedDto)
+    public async Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto)
     {
         try
         {
-            if (!VerifySignedDto(signedDto))
-            {
-                return false;
-            }
-
-            var dto = MessagePackSerializer.Deserialize<StreamerSessionRequestDto>(signedDto.Payload);
-
             if (!_environmentHelper.IsDebug)
             {
                 var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
@@ -75,7 +65,6 @@ internal class AgentHubConnection(
                 dto.SessionId,
                 dto.WebsocketUri,
                 dto.ViewerConnectionId,
-                signedDto.PublicKey,
                 dto.TargetSystemSession,
                 dto.NotifyUserOnSessionStart,
                 dto.ViewerName)
@@ -86,9 +75,7 @@ internal class AgentHubConnection(
                 _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
             }
 
-            _logger.LogInformation(
-                "Streaming session started.  Requester Public Key: {PublicKey}",
-                signedDto.PublicKeyBase64);
+            _logger.LogInformation("Streaming session started.");
 
             return result.IsSuccess;
         }
@@ -99,20 +86,13 @@ internal class AgentHubConnection(
         }
     }
 
-    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(SignedPayloadDto requestDto)
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto)
     {
         try
         {
-            if (!VerifySignedDto<TerminalSessionRequest>(requestDto, out var payload))
-            {
-                return Result.Fail<TerminalSessionRequestResult>("Signature verification failed.");
-            }
+            _logger.LogInformation("Terminal session started.  Viewer Connection ID: {ConnectionId}", requestDto.ViewerConnectionId);
 
-            _logger.LogInformation(
-                "Terminal session started.  Requester Public Key: {PublicKey}",
-                requestDto.PublicKeyBase64);
-
-            return await _terminalStore.CreateSession(payload.TerminalId, payload.ViewerConnectionId);
+            return await _terminalStore.CreateSession(requestDto.TerminalId, requestDto.ViewerConnectionId);
         }
         catch (Exception ex)
         {
@@ -121,18 +101,10 @@ internal class AgentHubConnection(
         }
     }
 
-    public Task<Result<AgentAppSettings>> GetAgentAppSettings(SignedPayloadDto signedDto)
+    public Task<Result<AgentAppSettings>> GetAgentAppSettings()
     {
         try
         {
-            if (!VerifySignedDto(signedDto))
-            {
-                return Result.Fail<AgentAppSettings>("Signature verification failed.").AsTaskResult();
-            }
-
-            var payload = signedDto.GetPayload<GetAgentAppSettingsDto>();
-            payload.VerifyType(DtoType.GetAgentAppSettings);
-
             var agentOptions = _appOptions.CurrentValue;
             var settings = new AgentAppSettings()
             {
@@ -147,16 +119,8 @@ internal class AgentHubConnection(
         }
     }
     [SupportedOSPlatform("windows6.0.6000")]
-    public Task<WindowsSession[]> GetWindowsSessions(SignedPayloadDto signedDto)
+    public Task<WindowsSession[]> GetWindowsSessions()
     {
-        if (!VerifySignedDto(signedDto))
-        {
-            return Array.Empty<WindowsSession>().AsTaskResult();
-        }
-
-        var payload = signedDto.GetPayload<GetWindowsSessionsDto>();
-        payload.VerifyType(DtoType.GetWindowsSessions);
-
         if (_environmentHelper.Platform != SystemPlatform.Windows)
         {
             return Array.Empty<WindowsSession>().AsTaskResult();
@@ -165,21 +129,16 @@ internal class AgentHubConnection(
         return _win32Interop.GetActiveSessions().ToArray().AsTaskResult();
     }
 
-    public Task<Result> ReceiveAgentAppSettings(SignedPayloadDto signedDto)
+    public Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings)
     {
         try
         {
-            if (!VerifySignedDto<AgentAppSettings>(signedDto, out var payload))
-            {
-                return Result.Fail("Signature verification failed.").AsTaskResult();
-            }
-
             // Perform the update in a background thread after a short delay,
             // allowing the RPC call to complete okay.
             Task.Run(async () =>
             {
                 await _delayer.Delay(TimeSpan.FromSeconds(1), _appLifetime.ApplicationStopping);
-                await _settings.UpdateSettings(payload);
+                await _settings.UpdateSettings(appSettings);
                 // Device heartbeat will sync authorized keys with current ones.
                 await SendDeviceHeartbeat();
             }).Forget();
@@ -193,16 +152,11 @@ internal class AgentHubConnection(
         }
     }
 
-    public async Task<Result> ReceiveTerminalInput(SignedPayloadDto dto)
+    public async Task<Result> ReceiveTerminalInput(TerminalInputDto dto)
     {
         try
         {
-            if (!VerifySignedDto<TerminalInputDto>(dto, out var payload))
-            {
-                return Result.Fail("Signature verification failed.");
-            }
-
-            return await _terminalStore.WriteInput(payload.TerminalId, payload.Input);
+            return await _terminalStore.WriteInput(dto.TerminalId, dto.Input);
         }
         catch (Exception ex)
         {
@@ -284,14 +238,14 @@ internal class AgentHubConnection(
 
         if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
         {
-            hubConnection.On<SignedPayloadDto, WindowsSession[]>(nameof(GetWindowsSessions), GetWindowsSessions);
+            hubConnection.On(nameof(GetWindowsSessions), GetWindowsSessions);
         }
 
-        hubConnection.On<SignedPayloadDto, bool>(nameof(CreateStreamingSession), CreateStreamingSession);
-        hubConnection.On<SignedPayloadDto, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
-        hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
-        hubConnection.On<SignedPayloadDto, Result<AgentAppSettings>>(nameof(GetAgentAppSettings), GetAgentAppSettings);
-        hubConnection.On<SignedPayloadDto, Result>(nameof(ReceiveAgentAppSettings), ReceiveAgentAppSettings);
+        hubConnection.On<StreamerSessionRequestDto, bool>(nameof(CreateStreamingSession), CreateStreamingSession);
+        hubConnection.On<TerminalSessionRequest, Result<TerminalSessionRequestResult>>(nameof(CreateTerminalSession), CreateTerminalSession);
+        hubConnection.On<TerminalInputDto, Result>(nameof(ReceiveTerminalInput), ReceiveTerminalInput);
+        hubConnection.On(nameof(GetAgentAppSettings), GetAgentAppSettings);
+        hubConnection.On<AgentAppSettings, Result>(nameof(ReceiveAgentAppSettings), ReceiveAgentAppSettings);
     }
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
@@ -316,36 +270,6 @@ internal class AgentHubConnection(
         await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
     }
 
-    private bool VerifySignedDto(SignedPayloadDto signedDto)
-    {
-        if (!_keyProvider.Verify(signedDto))
-        {
-            _logger.LogCritical("Verification failed for payload with public key: {key}", signedDto.PublicKey);
-            return false;
-        }
-
-        if (!_settings.AuthorizedKeys.Any(x => x.PublicKey == signedDto.PublicKeyBase64))
-        {
-            _logger.LogCritical("Public key does not exist in authorized keys list: {key}", signedDto.PublicKey);
-            return false;
-        }
-        return true;
-    }
-
-    private bool VerifySignedDto<TPayload>(
-      SignedPayloadDto signedDto,
-      [NotNullWhen(true)] out TPayload? payload)
-    {
-        payload = default;
-
-        if (!VerifySignedDto(signedDto))
-        {
-            return false;
-        }
-
-        payload = MessagePackSerializer.Deserialize<TPayload>(signedDto.Payload);
-        return payload is not null;
-    }
     private class RetryPolicy : IRetryPolicy
     {
         public TimeSpan? NextRetryDelay(RetryContext retryContext)

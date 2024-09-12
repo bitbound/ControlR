@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
-namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 [MessagePackObject]
 public record ScreenRegionDto(
@@ -9,4 +7,4 @@ public record ScreenRegionDto(
     [property: MsgPackKey] int Y,
     [property: MsgPackKey] int Width,
     [property: MsgPackKey] int Height,
-    [property: MsgPackKey] byte[] EncodedImage) : DtoRecordBase;
+    [property: MsgPackKey] byte[] EncodedImage);

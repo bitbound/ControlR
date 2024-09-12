@@ -1,8 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Options;
 using ControlR.Agent.Startup;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;

@@ -34,7 +34,6 @@ internal class StreamerLauncherWindows(
         Guid sessionId,
         Uri websocketUri,
         string viewerConnectionId,
-        byte[] authorizedKey,
         int targetWindowsSession = -1,
         bool notifyViewerOnSessionStart = false,
         string? viewerName = null)
@@ -54,12 +53,10 @@ internal class StreamerLauncherWindows(
             var targetDesktop = echoResult.Value.Trim();
             _logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
 
-            var authorizedKeyBase64 = Convert.ToBase64String(authorizedKey);
-
             var session = new StreamingSession(viewerConnectionId);
 
             var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
-            var args = $"--session-id {sessionId} --viewer-id {viewerConnectionId} --origin {serverUri} --websocket-uri {websocketUri} --authorized-key {authorizedKeyBase64} --notify-user {notifyViewerOnSessionStart}";
+            var args = $"--session-id {sessionId} --viewer-id {viewerConnectionId} --origin {serverUri} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
             if (!string.IsNullOrWhiteSpace(viewerName))
             {
                 args += $" --viewer-name=\"{viewerName}\"";

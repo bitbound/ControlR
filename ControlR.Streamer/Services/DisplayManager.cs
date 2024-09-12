@@ -3,7 +3,6 @@ using Bitbound.SimpleMessenger;
 using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Messages;
-using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;

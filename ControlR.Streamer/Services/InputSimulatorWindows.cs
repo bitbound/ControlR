@@ -1,6 +1,4 @@
 ﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
-using Microsoft.Extensions.Hosting;
-using System.Collections.Concurrent;
 
 namespace ControlR.Streamer.Services;
 

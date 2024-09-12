@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Enums;
-using MudBlazor;
+﻿using MudBlazor;
 
 namespace ControlR.Web.Client.Extensions;
 public static class AlertSeverityExtensions

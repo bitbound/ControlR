@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Clients.Services;
-using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Http.Connections.Client;

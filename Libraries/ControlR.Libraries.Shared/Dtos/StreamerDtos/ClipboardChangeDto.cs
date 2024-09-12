@@ -3,4 +3,4 @@
 [MessagePackObject]
 public record ClipboardChangeDto(
     [property: MsgPackKey] string? Text,
-    [property: MsgPackKey] Guid SessionId) : DtoRecordBase;
+    [property: MsgPackKey] Guid SessionId);

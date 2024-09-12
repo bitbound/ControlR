@@ -6,15 +6,8 @@ using ControlR.Streamer;
 using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
-
-var authorizedKeyOption = new Option<string>(
-    ["-a", "--authorized-key"],
-    "The public key of the viewer who's authorized to join this session.")
-{
-    IsRequired = true,
-};
+using Microsoft.AspNetCore.SignalR.Client;
 
 var sessionIdOption = new Option<Guid>(
     ["-s", "--session-id"],
@@ -56,7 +49,6 @@ var viewerNameOption = new Option<string?>(
 
 var rootCommand = new RootCommand("The remote control desktop streamer and input simulator for ControlR.")
 {
-    authorizedKeyOption,
     originUriOption,
     websocketUriOption,
     viewerIdOption,
@@ -65,7 +57,7 @@ var rootCommand = new RootCommand("The remote control desktop streamer and input
     viewerNameOption,
 };
 
-rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConnectionId, notifyUser, sessionId, viewerName) =>
+rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notifyUser, sessionId, viewerName) =>
 {
     var host = Host.CreateDefaultBuilder(args)
         .UseConsoleLifetime()
@@ -81,7 +73,6 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
         {
             services.Configure<StartupOptions>(options =>
             {
-                options.AuthorizedKey = authorizedKey;
                 options.ServerOrigin = originUri;
                 options.WebSocketUri = websocketUri;
                 options.NotifyUser = notifyUser;
@@ -119,7 +110,7 @@ rootCommand.SetHandler(async (authorizedKey, originUri, websocketUri, viewerConn
 
     await host.RunAsync();
 
-}, authorizedKeyOption, originUriOption, websocketUriOption, viewerIdOption, notifyUserOption, sessionIdOption, viewerNameOption);
+}, originUriOption, websocketUriOption, viewerIdOption, notifyUserOption, sessionIdOption, viewerNameOption);
 
 var exitCode = await rootCommand.InvokeAsync(args);
 Environment.Exit(exitCode);

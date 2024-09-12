@@ -1,12 +1,10 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Agent.Interfaces;
 using ControlR.Devices.Native.Services;
-using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
-using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

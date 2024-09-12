@@ -1,5 +1,4 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -15,7 +14,7 @@ public interface IStreamingClient : IAsyncDisposable, IClosable
     Task Connect(Uri websocketUri, CancellationToken cancellationToken);
 
     Task Send(SignedPayloadDto dto, CancellationToken cancellationToken);
-    Task Send(UnsignedPayloadDto dto, CancellationToken cancellationToken);
+    Task Send(DtoWrapper dto, CancellationToken cancellationToken);
     Task WaitForClose(CancellationToken cancellationToken);
 }
 
@@ -83,7 +82,7 @@ public abstract class StreamingClient(
         await SendImpl(dto, true, cancellationToken);
     }
 
-    public async Task Send(UnsignedPayloadDto dto, CancellationToken cancellationToken)
+    public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
     {
         await SendImpl(dto, false, cancellationToken);
     }
@@ -174,8 +173,8 @@ public abstract class StreamingClient(
                 }
                 else
                 {
-                    var dto = await MessagePackSerializer.DeserializeAsync<UnsignedPayloadDto>(dtoStream, cancellationToken: _clientDisposingCts.Token);
-                    var message = new DtoReceivedMessage<UnsignedPayloadDto>(dto);
+                    var dto = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(dtoStream, cancellationToken: _clientDisposingCts.Token);
+                    var message = new DtoReceivedMessage<DtoWrapper>(dto);
                     await _messenger.Send(message);
                 }
             }

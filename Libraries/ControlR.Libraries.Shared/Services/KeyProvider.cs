@@ -1,6 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Models;
-using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 
 namespace ControlR.Libraries.Shared.Services;

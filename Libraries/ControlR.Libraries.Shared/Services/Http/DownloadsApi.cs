@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Shared.IO;
-using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.Shared.Services.Http;
 

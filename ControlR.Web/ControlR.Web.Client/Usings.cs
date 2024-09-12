@@ -15,3 +15,4 @@ global using ControlR.Web.Client.Services;
 global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Clients.Extensions;
 global using ControlR.Libraries.Clients.Messages;
+global using ControlR.Libraries.Shared.Extensions;

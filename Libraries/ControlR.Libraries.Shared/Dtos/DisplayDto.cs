@@ -1,7 +1,7 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public class DisplayDto : DtoBase
+public class DisplayDto
 {
 
     [MsgPackKey]

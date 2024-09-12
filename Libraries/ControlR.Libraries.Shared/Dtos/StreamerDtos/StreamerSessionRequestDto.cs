@@ -12,7 +12,7 @@ public class StreamerSessionRequestDto(
     string viewerConnectionId,
     string agentConnectionId,
     bool notifyUserOnSessionStart,
-    string? viewerName) : DtoBase
+    string? viewerName)
 {
     [MsgPackKey]
     public string AgentConnectionId { get; init; } = agentConnectionId;

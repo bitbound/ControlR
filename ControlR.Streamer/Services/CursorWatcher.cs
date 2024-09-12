@@ -1,6 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Streamer.Messages;
-using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Streamer.Services;

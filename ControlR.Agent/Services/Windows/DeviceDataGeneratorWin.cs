@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos;
 

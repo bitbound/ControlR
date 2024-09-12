@@ -1,5 +1,4 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.DevicesCommon.Messages;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;

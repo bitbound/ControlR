@@ -5,4 +5,4 @@ public record StreamerDownloadProgressDto(
     [property: MsgPackKey] Guid StreamingSessionId,
     [property: MsgPackKey] string ViewerConnectionId,
     [property: MsgPackKey] double Progress,
-    [property: MsgPackKey] string Message) : DtoRecordBase;
+    [property: MsgPackKey] string Message);

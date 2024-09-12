@@ -3,7 +3,6 @@ using ControlR.Agent.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 

@@ -1,11 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
-using Microsoft.Extensions.DependencyInjection;
 using ControlR.Streamer.Messages;
-using ControlR.Viewer.Models.Messages;
-using Microsoft.AspNetCore.Http.Connections.Client;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Net.WebSockets;
@@ -70,7 +64,7 @@ internal sealed class StreamerStreamingClient(
         try
         {
             var dto = new CursorChangedDto(message.Cursor, _startupOptions.Value.SessionId);
-            var wrapper = UnsignedPayloadDto.Create(dto, DtoType.CursorChanged);
+            var wrapper = DtoWrapper.Create(dto, DtoType.CursorChanged);
             await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
@@ -89,7 +83,7 @@ internal sealed class StreamerStreamingClient(
         try
         {
             var dto = new ClipboardChangeDto(message.Text, _startupOptions.Value.SessionId);
-            var wrapper = UnsignedPayloadDto.Create(dto, DtoType.ClipboardChanged);
+            var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardChanged);
             await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
@@ -107,7 +101,7 @@ internal sealed class StreamerStreamingClient(
                 _startupOptions.Value.SessionId,
                 displays);
 
-            var wrapper = UnsignedPayloadDto.Create(dto, DtoType.DisplayData);
+            var wrapper = DtoWrapper.Create(dto, DtoType.DisplayData);
             await Send(wrapper, _appLifetime.ApplicationStopping);
         }
         catch (Exception ex)
@@ -130,7 +124,7 @@ internal sealed class StreamerStreamingClient(
             {
                 await foreach (var region in _displayManager.GetChangedRegions())
                 {
-                    var wrapper = UnsignedPayloadDto.Create(region, DtoType.ScreenRegion);
+                    var wrapper = DtoWrapper.Create(region, DtoType.ScreenRegion);
                     await Send(wrapper, _appLifetime.ApplicationStopping);
                 }
             }

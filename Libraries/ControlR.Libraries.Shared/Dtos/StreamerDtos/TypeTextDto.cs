@@ -1,4 +1,4 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.SidecarDtos;
 
 [MessagePackObject]
-public record TypeTextDto([property: MsgPackKey] string Text) : DtoRecordBase;
+public record TypeTextDto([property: MsgPackKey] string Text);

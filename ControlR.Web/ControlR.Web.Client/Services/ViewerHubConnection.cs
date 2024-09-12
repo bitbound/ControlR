@@ -88,8 +88,7 @@ internal class ViewerHubConnection(
                 Guard.IsNotNull(Connection.ConnectionId);
 
                 var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.TerminalSessionRequest, _busyCounter.PrivateKey);
-                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, dtoWrapper);
+                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, request);
             },
             () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
     }
@@ -99,9 +98,7 @@ internal class ViewerHubConnection(
         return await TryInvoke(
             async () =>
             {
-                var dto = new GetAgentAppSettingsDto();
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.GetAgentAppSettings, _busyCounter.PrivateKey);
-                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, dtoWrapper);
+                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId);
             },
             () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
     }
@@ -156,9 +153,7 @@ internal class ViewerHubConnection(
     {
         try
         {
-            var dto = new GetWindowsSessionsDto();
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.GetWindowsSessions, _busyCounter.PrivateKey);
-            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, dtoWrapper);
+            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId);
             return Result.Ok(sessions);
         }
         catch (Exception ex)
@@ -173,8 +168,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var dto = new InvokeCtrlAltDelRequestDto();
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.InvokeCtrlAltDel, _busyCounter.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, dtoWrapper);
+            var dtoWrapper = DtoWrapper.Create(dto, DtoType.InvokeCtrlAltDel);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), deviceId, dtoWrapper);
         });
     }
 
@@ -236,8 +231,8 @@ internal class ViewerHubConnection(
         {
             await WaitForConnection();
             var dto = new DeviceUpdateRequestDto(_settings.PublicKeyLabel);
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.DeviceUpdateRequest, _busyCounter.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToPublicKeyGroup), dtoWrapper);
+            var wrapper = DtoWrapper.Create(dto, DtoType.DeviceUpdateRequest);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), dtoWrapper);
         });
     }
 

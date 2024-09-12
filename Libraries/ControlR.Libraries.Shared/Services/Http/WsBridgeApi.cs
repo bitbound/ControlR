@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace ControlR.Libraries.Shared.Services.Http;
+﻿namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IWsBridgeApi
 {

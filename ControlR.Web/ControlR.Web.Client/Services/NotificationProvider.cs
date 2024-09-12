@@ -1,7 +1,4 @@
-﻿using CommunityToolkit.Maui.Alerts;
-using CommunityToolkit.Maui.Core;
-
-namespace ControlR.Web.Client.Services;
+﻿namespace ControlR.Web.Client.Services;
 
 internal interface INotificationProvider
 {

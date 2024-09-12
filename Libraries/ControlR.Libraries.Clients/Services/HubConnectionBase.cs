@@ -15,7 +15,7 @@ public interface IHubConnectionBase
     HubConnectionState ConnectionState { get; }
     bool IsConnected { get; }
 
-    Task ReceiveDto(SignedPayloadDto dto);
+    Task ReceiveDto(DtoWrapper dtoWrapper);
 }
 
 public abstract class HubConnectionBase(
@@ -37,9 +37,9 @@ public abstract class HubConnectionBase(
 
     protected HubConnection Connection => _connection ?? throw new Exception("You must start the connection first.");
 
-    public Task ReceiveDto(SignedPayloadDto dto)
+    public Task ReceiveDto(DtoWrapper dto)
     {
-        _messenger.Send(new DtoReceivedMessage<SignedPayloadDto>(dto)).Forget();
+        _messenger.Send(new DtoReceivedMessage<DtoWrapper>(dto)).Forget();
         return Task.CompletedTask;
     }
 
@@ -100,7 +100,7 @@ public abstract class HubConnectionBase(
                 }
                 _connection = builder.Build();
 
-                _connection.On<SignedPayloadDto>(nameof(ReceiveDto), ReceiveDto);
+                _connection.On<DtoWrapper>(nameof(ReceiveDto), ReceiveDto);
                 _connection.Reconnecting += HubConnection_Reconnecting;
                 _connection.Reconnected += HubConnection_Reconnected;
                 _connection.Closed += HubConnection_Closed;

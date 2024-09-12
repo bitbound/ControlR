@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public class DeviceDto : DtoBase
+public class DeviceDto
 {
     [MsgPackKey]
     [Display(Name = "Agent Version")]

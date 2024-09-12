@@ -1,10 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Viewer.Models.Messages;
 using Microsoft.Extensions.Hosting;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using Windows.Win32;
-using Windows.Win32.Foundation;
 
 namespace ControlR.Streamer.Services;
 public interface IClipboardManager : IHostedService

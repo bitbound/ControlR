@@ -1,6 +1,4 @@
-﻿using ControlR.Viewer.Enums;
-
-namespace ControlR.Viewer.Services;
+﻿namespace ControlR.Viewer.Services;
 
 public interface IAppState
 {

@@ -236,7 +236,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         }
 
         Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
-        Messenger.Register<DtoReceivedMessage<UnsignedPayloadDto>>(this, HandleUnsignedDtoReceived);
+        Messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleUnsignedDtoReceived);
         Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
         return base.OnInitializedAsync();
@@ -437,7 +437,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<UnsignedPayloadDto> message)
+    private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<DtoWrapper> message)
     {
         var wrapper = message.Dto;
         try

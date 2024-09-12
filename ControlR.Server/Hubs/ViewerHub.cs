@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Helpers;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Server.Auth;
 using ControlR.Server.Extensions;
@@ -42,7 +43,7 @@ public class ViewerHub(
         return await _alertStore.ClearAlert();
     }
 
-    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto)
+    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, TerminalSessionRequest requestDto)
     {
         try
         {
@@ -57,11 +58,11 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
+    public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
     {
         try
         {
-            return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings(signedDto);
+            return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings();
         }
         catch (Exception ex)
         {
@@ -148,11 +149,11 @@ public class ViewerHub(
         }
     }
 
-    public async Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto)
+    public async Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId)
     {
         try
         {
-            return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions(signedDto);
+            return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions();
         }
         catch (Exception ex)
         {
@@ -223,7 +224,7 @@ public class ViewerHub(
 
     public async Task<Result> RequestStreamingSession(
         string agentConnectionId,
-        SignedPayloadDto sessionRequestDto)
+        StreamerSessionRequestDto sessionRequestDto)
     {
         try
         {
@@ -244,11 +245,11 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto)
+    public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings appSettings)
     {
         try
         {
-            return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(signedDto);
+            return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(appSettings);
         }
         catch (Exception ex)
         {
@@ -257,27 +258,19 @@ public class ViewerHub(
         }
     }
 
-    public async Task<Result> SendAlertBroadcast(SignedPayloadDto signedDto)
+    public async Task<Result> SendAlertBroadcast(AlertBroadcastDto alertDto)
     {
         try
         {
             using var scope = _logger.BeginMemberScope();
 
-            var alert = MessagePackSerializer.Deserialize<AlertBroadcastDto>(signedDto.Payload);
-            if (alert is null)
-            {
-                return Result
-                    .Fail("Failed to deserialize alert payload.")
-                    .Log(_logger);
-            }
-
-            var storeResult = await _alertStore.StoreAlert(alert);
+            var storeResult = await _alertStore.StoreAlert(alertDto);
             if (!storeResult.IsSuccess)
             {
                 return storeResult;
             }
 
-            await Clients.All.ReceiveAlertBroadcast(alert);
+            await Clients.All.ReceiveAlertBroadcast(alertDto);
             return Result.Ok();
         }
         catch (Exception ex)
@@ -295,28 +288,7 @@ public class ViewerHub(
         await _agentHub.Clients.Group(deviceId).ReceiveDto(wrapper);
     }
 
-    public async Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto)
-    {
-        using var scope = _logger.BeginMemberScope();
-
-        await _agentHub.Clients.Group(deviceId).ReceiveDto(signedDto);
-    }
-
-    public async Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto)
-    {
-        using var _ = _logger.BeginMemberScope();
-
-        if (Context.User is null ||
-            !Context.User.TryGetPublicKey(out var publicKey))
-        {
-            _logger.LogCritical("Failed to get public key from principal.");
-            return;
-        }
-
-        await _agentHub.Clients.Group(publicKey).ReceiveDto(signedDto);
-    }
-
-    public async Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto)
+    public async Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto)
     {
         try
         {

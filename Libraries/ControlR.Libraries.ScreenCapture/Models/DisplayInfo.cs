@@ -1,6 +1,5 @@
 ﻿using System.Drawing;
 using System.Numerics;
-using Windows.Win32;
 
 namespace ControlR.Libraries.ScreenCapture.Models;
 

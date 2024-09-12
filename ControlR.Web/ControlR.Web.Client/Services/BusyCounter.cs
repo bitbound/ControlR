@@ -1,6 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-
-namespace ControlR.Web.Client.Services;
+﻿namespace ControlR.Web.Client.Services;
 
 public interface IBusyCounter
 {

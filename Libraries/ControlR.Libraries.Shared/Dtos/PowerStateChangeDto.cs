@@ -6,7 +6,7 @@ namespace ControlR.Libraries.Shared.Dtos;
 [MessagePackObject]
 [method: SerializationConstructor]
 [method: JsonConstructor]
-public class PowerStateChangeDto(PowerStateChangeType type) : DtoBase
+public class PowerStateChangeDto(PowerStateChangeType type)
 {
     [MsgPackKey]
     public PowerStateChangeType Type { get; init; } = type;
