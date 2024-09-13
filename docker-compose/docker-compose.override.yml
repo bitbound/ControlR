@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   controlr:
-    image: ${DOCKER_REGISTRY-}controlrweb
+    image: ${DOCKER_REGISTRY-}controlrwebserver
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: 8080

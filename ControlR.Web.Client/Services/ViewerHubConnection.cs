@@ -258,11 +258,10 @@ internal class ViewerHubConnection(
                 agentConnectionId,
                 _settings.NotifyUserSessionStart);
 
-            var wrapper = DtoWrapper.Create(requestDto, DtoType.StreamingSessionRequest);
             var result = await Connection.InvokeAsync<Result>(
                 nameof(IViewerHub.RequestStreamingSession),
                 agentConnectionId,
-                wrapper);
+                requestDto);
 
             return result.Log(_logger);
         }

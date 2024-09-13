@@ -1,6 +1,6 @@
-using ControlR.Web.Components.Account.Pages;
-using ControlR.Web.Components.Account.Pages.Manage;
-using ControlR.Web.Data;
+using ControlR.Web.Server.Components.Account.Pages;
+using ControlR.Web.Server.Components.Account.Pages.Manage;
+using ControlR.Web.Server.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Json;
 
-namespace Microsoft.AspNetCore.Routing;
+namespace ControlR.Web.Server.Components.Account;
 internal static class IdentityComponentsEndpointRouteBuilderExtensions
 {
     // These endpoints are required by the Identity Razor components defined in the /Components/Account/Pages directory of this project.
@@ -19,6 +19,10 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
 
         var accountGroup = endpoints.MapGroup("/Account");
+        var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
+
+        var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var downloadLogger = loggerFactory.CreateLogger("DownloadPersonalData");
 
         accountGroup.MapPost("/PerformExternalLogin", (
             HttpContext context,
@@ -48,8 +52,6 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             return TypedResults.LocalRedirect($"~/{returnUrl}");
         });
 
-        var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
-
         manageGroup.MapPost("/LinkExternalLogin", async (
             HttpContext context,
             [FromServices] SignInManager<AppUser> signInManager,
@@ -66,9 +68,6 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, signInManager.UserManager.GetUserId(context.User));
             return TypedResults.Challenge(properties, [provider]);
         });
-
-        var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
-        var downloadLogger = loggerFactory.CreateLogger("DownloadPersonalData");
 
         manageGroup.MapPost("/DownloadPersonalData", async (
             HttpContext context,

@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject IMessenger Messenger
-@inject IBusyCounter AppState
+@inject IBusyCounter BusyCounter
 @inject IViewerHubConnection ViewerHub
 @inject ISnackbar Snackbar
 @inject ILogger<MainLayout> Logger
@@ -23,9 +23,9 @@
 
             <MudSpacer />
 
-            @if (AppState.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
+            @if (BusyCounter.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
             {
-                <MudTooltip Text="@($"{AppState.PendingOperations} operation(s) pending")">
+                <MudTooltip Text="@($"{BusyCounter.PendingOperations} operation(s) pending")">
                     <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
                                          Class="mx-3 mt-1" />
                 </MudTooltip>

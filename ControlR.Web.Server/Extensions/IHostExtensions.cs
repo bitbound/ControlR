@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace ControlR.Web.Extensions;
+namespace ControlR.Web.Server.Extensions;
 
 public static class IHostExtensions
 {
-    public static async Task ApplyMigrations<TDbContext>(this IHost host) 
+    public static async Task ApplyMigrations<TDbContext>(this IHost host)
         where TDbContext : DbContext
     {
         await using var scope = host.Services.CreateAsyncScope();

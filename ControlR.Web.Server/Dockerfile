@@ -1,34 +1,38 @@
 # See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
+# This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-RUN apt update
-RUN apt -y install curl
-RUN mkdir -p /app/AppData
-RUN chown app:app -R /app/AppData
 USER app
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
 
+# This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ControlR.Web/ControlR.Web/ControlR.Web.csproj", "ControlR.Web/ControlR.Web/"]
-COPY ["ControlR.Web/ControlR.Web.Client/ControlR.Web.Client.csproj", "ControlR.Web/ControlR.Web.Client/"]
-RUN dotnet restore "./ControlR.Web/ControlR.Web/ControlR.Web.csproj"
+COPY ["Directory.Build.props", "."]
+COPY ["ControlR.Web.Server/ControlR.Web.Server.csproj", "ControlR.Web.Server/"]
+COPY ["ControlR.Web.ServiceDefaults/ControlR.Web.ServiceDefaults.csproj", "ControlR.Web.ServiceDefaults/"]
+COPY ["ControlR.Web.Client/ControlR.Web.Client.csproj", "ControlR.Web.Client/"]
+COPY ["Libraries/ControlR.Libraries.Clients/ControlR.Libraries.Clients.csproj", "Libraries/ControlR.Libraries.Clients/"]
+COPY ["Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj", "Libraries/ControlR.Libraries.Shared/"]
+RUN dotnet restore "./ControlR.Web.Server/ControlR.Web.Server.csproj"
 COPY . .
-WORKDIR "/src/ControlR.Web/ControlR.Web"
-RUN dotnet build "./ControlR.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/ControlR.Web.Server"
+RUN dotnet build "./ControlR.Web.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+# This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ControlR.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./ControlR.Web.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ControlR.Web.dll"]
+ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
 
 HEALTHCHECK \
-  CMD curl -f http://localhost:8080/api/health || exit 1
+  CMD curl -f http://localhost:8080/health || exit 1

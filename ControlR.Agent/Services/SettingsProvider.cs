@@ -1,14 +1,7 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Agent.Options;
+﻿using ControlR.Agent.Options;
 using ControlR.Agent.Startup;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.Shared;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-using ControlR.Libraries.Shared.Dtos;
 
 namespace ControlR.Agent.Services;
 
@@ -25,8 +18,6 @@ internal interface ISettingsProvider
 
 internal class SettingsProvider(
     IOptionsMonitor<AgentAppOptions> _appOptions,
-    IMessenger _messenger,
-    IDelayer _delayer,
     IFileSystem _fileSystem,
     IOptions<InstanceOptions> _instanceOptions,
     ILogger<SettingsProvider> _logger) : ISettingsProvider
@@ -98,28 +89,7 @@ internal class SettingsProvider(
         await _updateLock.WaitAsync();
         try
         {
-            var newServerUri = settings.AppOptions.ServerUri;
-
-            var serverUriChanged = newServerUri != ServerUri;
-
             await WriteToDisk(settings);
-
-            if (serverUriChanged)
-            {
-                var waitResult = await _delayer.WaitForAsync(
-                    () => ServerUri == newServerUri,
-                    TimeSpan.FromSeconds(5));
-
-                if (!waitResult)
-                {
-                    _logger.LogError(
-                        "ServerUri changed in appsettings, but timed out while waiting " +
-                        "for value to change in the options monitor.");
-                    return;
-                }
-
-                await _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged);
-            }
         }
         catch (Exception ex)
         {

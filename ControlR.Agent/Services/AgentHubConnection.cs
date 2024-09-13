@@ -215,8 +215,6 @@ internal class AgentHubConnection(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _messenger.Unregister<GenericMessage<GenericMessageKind>>(this);
-        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
         await Connect(
               () => new Uri(_settings.ServerUri, "/hubs/agent"),
               ConfigureConnection,
@@ -252,15 +250,6 @@ internal class AgentHubConnection(
     {
         options.SkipNegotiation = true;
         options.Transports = HttpTransportType.WebSockets;
-    }
-
-    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
-    {
-        if (kind == GenericMessageKind.ServerUriChanged)
-        {
-            await StopAsync(_appLifetime.ApplicationStopping);
-            await StartAsync(_appLifetime.ApplicationStopping);
-        }
     }
 
     private async Task HubConnection_Reconnected(string? arg)

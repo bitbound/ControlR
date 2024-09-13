@@ -1,5 +1,5 @@
 using ControlR.Web.Client;
-using ControlR.Web.Data;
+using ControlR.Web.Server.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Security.Claims;
 
-namespace ControlR.Web.Components.Account;
+namespace ControlR.Web.Server.Components.Account;
 
 // This is a server-side AuthenticationStateProvider that revalidates the security stamp for the connected user
 // every 30 minutes an interactive circuit is connected. It also uses PersistentComponentState to flow the
@@ -48,7 +48,7 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     }
 
     protected override async Task<bool> ValidateAuthenticationStateAsync(
-        AuthenticationState authenticationState, 
+        AuthenticationState authenticationState,
         CancellationToken cancellationToken)
     {
         // Get the user manager from a new scope to ensure it fetches fresh data

@@ -1,7 +1,7 @@
-using ControlR.Web.Data;
+using ControlR.Web.Server.Data;
 using Microsoft.AspNetCore.Identity;
 
-namespace ControlR.Web.Components.Account;
+namespace ControlR.Web.Server.Components.Account;
 internal sealed class IdentityUserAccessor(UserManager<AppUser> userManager, IdentityRedirectManager redirectManager)
 {
     public async Task<AppUser> GetRequiredUserAsync(HttpContext context)

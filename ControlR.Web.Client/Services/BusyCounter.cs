@@ -32,12 +32,4 @@ internal class BusyCounter(IMessenger _messenger) : IBusyCounter
             additionalDisposedAction?.Invoke();
         });
     }
-
-    public async Task UpdateKeypair(UserKeyPair keypair)
-    {
-        _userKeys = keypair;
-        PublicKey = keypair.PublicKey;
-        PrivateKey = keypair.PrivateKey;
-        await _messenger.SendGenericMessage(GenericMessageKind.KeysStateChanged);
-    }
 }

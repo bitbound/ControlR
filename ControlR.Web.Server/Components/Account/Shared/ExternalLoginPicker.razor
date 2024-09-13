@@ -1,10 +1,4 @@
-﻿@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
-@using MudBlazor
-@using ControlR.Web.Data
-@using MudBlazor.StaticInput
-
-@inject SignInManager<AppUser> SignInManager
+﻿@inject SignInManager<AppUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
 @if (externalLogins.Length == 0)

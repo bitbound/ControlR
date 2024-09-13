@@ -81,7 +81,6 @@ internal static class IHostBuilderExtensions
             services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-            services.AddSingleton<IKeyProvider, KeyProvider>();
             services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
             services.AddSingleton(WeakReferenceMessenger.Default);
             services.AddSingleton<ISystemTime, SystemTime>();
