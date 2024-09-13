@@ -9,7 +9,6 @@ internal class StreamerLauncherFake : IStreamerLauncher
         Guid sessionId, 
         Uri websocketUri,
         string viewerConnectionId,
-        byte[] authorizedKey, 
         int targetWindowsSession = -1, 
         bool notifyUserOnSessionStart = false,
         string? viewerName = null)

@@ -11,8 +11,7 @@ public class StreamerSessionRequestDto(
     int targetSystemSession,
     string viewerConnectionId,
     string agentConnectionId,
-    bool notifyUserOnSessionStart,
-    string? viewerName)
+    bool notifyUserOnSessionStart)
 {
     [MsgPackKey]
     public string AgentConnectionId { get; init; } = agentConnectionId;
@@ -30,9 +29,6 @@ public class StreamerSessionRequestDto(
 
     [MsgPackKey]
     public string ViewerConnectionId { get; init; } = viewerConnectionId;
-
-    [MsgPackKey]
-    public string? ViewerName { get; init; } = viewerName;
 
     [MsgPackKey]
     public Uri WebsocketUri { get; init; } = websocketUri;

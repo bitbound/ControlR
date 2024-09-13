@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Net.WebSockets;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Libraries.Clients.Services;
+using ControlR.Libraries.Clients.Messages;
 
 namespace ControlR.Streamer.Services;
 
@@ -16,11 +18,10 @@ internal sealed class StreamerStreamingClient(
     IHostApplicationLifetime _appLifetime,
     IToaster _toaster,
     IDisplayManager _displayManager,
-    IKeyProvider _keyProvider,
     IMemoryProvider _memoryProvider,
     IOptions<StartupOptions> _startupOptions,
     ILogger<StreamerStreamingClient> _logger)
-    : StreamingClient(_keyProvider, messenger, _memoryProvider, _logger), IStreamerStreamingClient
+    : StreamingClient(messenger, _memoryProvider, _logger), IStreamerStreamingClient
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {

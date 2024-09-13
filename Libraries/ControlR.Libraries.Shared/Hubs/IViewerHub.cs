@@ -26,7 +26,6 @@ public interface IViewerHub
 
     Task<Result> SendAlertBroadcast(AlertBroadcastDto signedDto);
     Task SendDtoToAgent(string deviceId, DtoWrapper wrapper);
-
+    Task SendDtoToUserGroups(DtoWrapper wrapper);
     Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto);
-
 }

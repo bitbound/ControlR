@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
+﻿using ControlR.Libraries.Clients.Services;
+using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using System.Net.WebSockets;
@@ -22,13 +23,11 @@ public interface IViewerStreamingClient : IStreamingClient, IClosable
 }
 
 public class ViewerStreamingClient(
-    IKeyProvider keyProvider,
     IMessenger messenger,
     IMemoryProvider _memoryProvider,
-    IAppState _appState,
     IDelayer _delayer,
     ILogger<ViewerStreamingClient> _logger,
-    ILogger<StreamingClient> _baseLogger) : StreamingClient(keyProvider, messenger, _memoryProvider, _baseLogger), IViewerStreamingClient
+    ILogger<StreamingClient> _baseLogger) : StreamingClient(messenger, _memoryProvider, _baseLogger), IViewerStreamingClient
 {
     public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
     {
@@ -36,8 +35,8 @@ public class ViewerStreamingClient(
             async () =>
             {
                 var dto = new ChangeDisplaysDto(displayId);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ChangeDisplays, _appState.PrivateKey);
-                await Send(signedDto, cancellationToken);
+                var wrapper = DtoWrapper.Create(dto, DtoType.ChangeDisplays);
+                await Send(wrapper, cancellationToken);
             });
     }
 
@@ -47,8 +46,8 @@ public class ViewerStreamingClient(
              async () =>
              {
                  var dto = new ClipboardChangeDto(text, sessionId);
-                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ClipboardChanged, _appState.PrivateKey);
-                 await Send(signedDto, cancellationToken);
+                 var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardChanged);
+                 await Send(wrapper, cancellationToken);
              });
     }
 
@@ -58,8 +57,8 @@ public class ViewerStreamingClient(
             async () =>
             {
                 var dto = new CloseStreamingSessionRequestDto();
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.CloseStreamingSession, _appState.PrivateKey);
-                await Send(signedDto, cancellationToken);
+                var wrapper = DtoWrapper.Create(dto, DtoType.CloseStreamingSession);
+                await Send(wrapper, cancellationToken);
             });
     }
     public async Task SendKeyboardStateReset(CancellationToken cancellationToken)
@@ -68,8 +67,8 @@ public class ViewerStreamingClient(
               async () =>
               {
                   var dto = new ResetKeyboardStateDto();
-                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.ResetKeyboardState, _appState.PrivateKey);
-                  await Send(signedDto, cancellationToken);
+                  var wrapper = DtoWrapper.Create(dto, DtoType.ResetKeyboardState);
+                  await Send(wrapper, cancellationToken);
               });
     }
 
@@ -79,8 +78,8 @@ public class ViewerStreamingClient(
               async () =>
               {
                   var dto = new KeyEventDto(key, isPressed);
-                  var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.KeyEvent, _appState.PrivateKey);
-                  await Send(signedDto, cancellationToken);
+                  var wrapper = DtoWrapper.Create(dto, DtoType.KeyEvent);
+                  await Send(wrapper, cancellationToken);
               });
     }
 
@@ -95,8 +94,8 @@ public class ViewerStreamingClient(
             async () =>
             {
                 var dto = new MouseButtonEventDto(button, isPressed, percentX, percentY);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseButtonEvent, _appState.PrivateKey);
-                await Send(signedDto, cancellationToken);
+                var wrapper = DtoWrapper.Create(dto, DtoType.MouseButtonEvent);
+                await Send(wrapper, cancellationToken);
             });
     }
 
@@ -106,8 +105,8 @@ public class ViewerStreamingClient(
              async () =>
              {
                  var dto = new MouseClickDto(button, isDoubleClick, percentX, percentY);
-                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MouseClick, _appState.PrivateKey);
-                 await Send(signedDto, cancellationToken);
+                 var wrapper = DtoWrapper.Create(dto, DtoType.MouseClick);
+                 await Send(wrapper, cancellationToken);
              });
     }
 
@@ -117,8 +116,8 @@ public class ViewerStreamingClient(
             async () =>
             {
                 var dto = new MovePointerDto(percentX, percentY);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.MovePointer, _appState.PrivateKey);
-                await Send(signedDto, cancellationToken);
+                var wrapper = DtoWrapper.Create(dto, DtoType.MovePointer);
+                await Send(wrapper, cancellationToken);
             });
     }
 
@@ -128,8 +127,8 @@ public class ViewerStreamingClient(
              async () =>
              {
                  var dto = new TypeTextDto(text);
-                 var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TypeText, _appState.PrivateKey);
-                 await Send(signedDto, cancellationToken);
+                 var wrapper = DtoWrapper.Create(dto, DtoType.TypeText);
+                 await Send(wrapper, cancellationToken);
              });
     }
     public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX, CancellationToken cancellationToken)
@@ -138,8 +137,8 @@ public class ViewerStreamingClient(
             async () =>
             {
                 var dto = new WheelScrollDto(percentX, percentY, scrollY, scrollX);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.WheelScroll, _appState.PrivateKey);
-                await Send(signedDto, cancellationToken);
+                var wrapper = DtoWrapper.Create(dto, DtoType.WheelScroll);
+                await Send(wrapper, cancellationToken);
             });
     }
 

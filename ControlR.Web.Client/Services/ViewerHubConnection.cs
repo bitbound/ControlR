@@ -1,6 +1,7 @@
 ﻿using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor;
@@ -48,10 +49,10 @@ public interface IViewerHubConnection : IHubConnectionBase
 }
 
 internal class ViewerHubConnection(
+    NavigationManager _navMan,
     IServiceProvider _services,
     IBusyCounter _busyCounter,
     IDeviceCache _devicesCache,
-    IKeyProvider _keyProvider,
     ISettings _settings,
     IDelayer _delayer,
     IMessenger _messenger,
@@ -230,9 +231,9 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             await WaitForConnection();
-            var dto = new DeviceUpdateRequestDto(_settings.PublicKeyLabel);
+            var dto = new DeviceUpdateRequestDto();
             var wrapper = DtoWrapper.Create(dto, DtoType.DeviceUpdateRequest);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), dtoWrapper);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToUserGroups), wrapper);
         });
     }
 
@@ -249,21 +250,19 @@ internal class ViewerHubConnection(
                 return Result.Fail("Connection has closed.");
             }
 
-            var streamingSessionRequest = new StreamerSessionRequestDto(
+            var requestDto = new StreamerSessionRequestDto(
                 sessionId,
                 websocketUri,
                 targetSystemSession,
                 Connection.ConnectionId,
                 agentConnectionId,
-                _settings.NotifyUserSessionStart,
-                _settings.Username);
+                _settings.NotifyUserSessionStart);
 
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(streamingSessionRequest, DtoType.StreamingSessionRequest, _busyCounter.PrivateKey);
-
+            var wrapper = DtoWrapper.Create(requestDto, DtoType.StreamingSessionRequest);
             var result = await Connection.InvokeAsync<Result>(
                 nameof(IViewerHub.RequestStreamingSession),
                 agentConnectionId,
-                dtoWrapper);
+                wrapper);
 
             return result.Log(_logger);
         }
@@ -279,8 +278,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 await WaitForConnection();
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(agentAppSettings, DtoType.SendAppSettings, _busyCounter.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, dtoWrapper);
+                var wrapper = DtoWrapper.Create(agentAppSettings, DtoType.SendAppSettings);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, wrapper);
             },
             () => Result.Fail("Failed to send app settings"));
     }
@@ -290,8 +289,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var dto = new TriggerAgentUpdateDto();
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.TriggerAgentUpdate, _busyCounter.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToAgent), device.Id, dtoWrapper);
+            var wrapper = DtoWrapper.Create(dto, DtoType.TriggerAgentUpdate);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), device.Id, wrapper);
         });
     }
 
@@ -302,8 +301,8 @@ internal class ViewerHubConnection(
             {
                 await WaitForConnection();
                 var dto = new AlertBroadcastDto(message, severity);
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(dto, DtoType.SendAlertBroadcast, _busyCounter.PrivateKey);
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), dtoWrapper);
+                var wrapper = DtoWrapper.Create(dto, DtoType.SendAlertBroadcast);
+                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), wrapper);
             });
     }
 
@@ -313,8 +312,8 @@ internal class ViewerHubConnection(
         await TryInvoke(async () =>
         {
             var powerDto = new PowerStateChangeDto(powerStateType);
-            var dtoWrapper = _keyProvider.CreatedtoWrapper(powerDto, DtoType.PowerStateChange, _busyCounter.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToAgent), device.Id, dtoWrapper);
+            var wrapper = DtoWrapper.Create(powerDto, DtoType.PowerStateChange);
+            await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), device.Id, wrapper);
         });
     }
 
@@ -324,8 +323,8 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new TerminalInputDto(terminalId, input);
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.TerminalInput, _busyCounter.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, dtoWrapper);
+                var wrapper = DtoWrapper.Create(request, DtoType.TerminalInput);
+                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, wrapper);
             },
             () => Result.Fail("Failed to send terminal input"));
     }
@@ -336,41 +335,25 @@ internal class ViewerHubConnection(
             async () =>
             {
                 var request = new WakeDeviceDto(macAddresses);
-                var dtoWrapper = _keyProvider.CreatedtoWrapper(request, DtoType.WakeDevice, _busyCounter.PrivateKey);
-                await Connection.InvokeAsync(nameof(IViewerHub.SenddtoWrapperToPublicKeyGroup), dtoWrapper);
+                var wrapper = DtoWrapper.Create(request, DtoType.WakeDevice);
+                await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToUserGroups), wrapper);
             });
     }
 
 
     public async Task Start(CancellationToken cancellationToken)
     {
-        _messenger.UnregisterAll(this);
-
-        await _delayer.WaitForAsync(() => _busyCounter.IsAuthenticated, TimeSpan.MaxValue);
-
         using var _ = _busyCounter.IncrementBusyCounter();
 
         await Connect(
-            () => new Uri(_settings.ServerUri, "/hubs/viewer"),
+            () => new Uri($"{_navMan.BaseUri}hubs/viewer"),
             ConfigureConnection,
             ConfigureHttpOptions,
             OnConnectFailure,
             useReconnect: true,
             cancellationToken);
 
-        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
-
         await PerformAfterConnectInit();
-    }
-
-    private async Task CheckIfServerAdministrator()
-    {
-        await TryInvoke(
-            async () =>
-            {
-                _busyCounter.IsServerAdministrator = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
-                await _messenger.SendGenericMessage(GenericMessageKind.IsServerAdminChanged);
-            });
     }
 
 
@@ -388,8 +371,6 @@ internal class ViewerHubConnection(
 
     private void ConfigureHttpOptions(HttpConnectionOptions options)
     {
-        var signature = _httpConfigurer.GetDigitalSignature();
-        options.Headers["Authorization"] = $"{AuthSchemes.DigitalSignature} {signature}";
     }
 
     private async Task Connection_Closed(Exception? arg)
@@ -407,38 +388,6 @@ internal class ViewerHubConnection(
         await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
     }
 
-    private async Task HandleAuthStateChanged()
-    {
-        await StopConnection(_busyCounter.AppExiting);
-
-        if (_busyCounter.IsAuthenticated)
-        {
-            await Start(_busyCounter.AppExiting);
-        }
-    }
-
-    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
-    {
-        switch (kind)
-        {
-            case GenericMessageKind.ServerUriChanged:
-                await HandleServerUriChanged();
-                break;
-
-            case GenericMessageKind.KeysStateChanged:
-                await HandleAuthStateChanged();
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    private async Task HandleServerUriChanged()
-    {
-        await Reconnect(_busyCounter.AppExiting);
-    }
-
     private async Task OnConnectFailure(string reason)
     {
         await _messenger.Send(new ToastMessage(reason, Severity.Error));
@@ -446,7 +395,6 @@ internal class ViewerHubConnection(
 
     private async Task PerformAfterConnectInit()
     {
-        await CheckIfServerAdministrator();
         await GetCurrentAlertFromServer();
         await _devicesCache.SetAllOffline();
         await RequestDeviceUpdates();

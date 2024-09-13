@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ControlR.Web\ControlR.Web\ControlR.Web.csproj" />
+    <ProjectReference Include="..\ControlR.Web.Server\ControlR.Web.Server.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,7 +3,6 @@
 public enum DtoType
 {
     None = 0,
-    IdentityAttestation = 1,
     StreamingSessionRequest = 2,
     GetWindowsSessions = 3,
     DeviceUpdateRequest = 4,

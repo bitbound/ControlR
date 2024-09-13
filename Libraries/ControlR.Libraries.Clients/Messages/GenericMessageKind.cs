@@ -2,13 +2,8 @@
 
 public enum GenericMessageKind
 {
-    PrivateKeyChanged,
-    ServerUriChanged,
     ShuttingDown,
-    KeysStateChanged,
     PendingOperationsChanged,
     DevicesCacheUpdated,
     DeviceContentWindowsChanged,
-    LocalProxyListenerStopRequested,
-    IsServerAdminChanged,
 }

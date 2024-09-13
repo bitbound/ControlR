@@ -1,9 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.Shared.Services.Buffers;
-using Microsoft.Extensions.Logging;
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 
 namespace ControlR.Libraries.Clients.Services;
@@ -12,19 +7,15 @@ public interface IStreamingClient : IAsyncDisposable, IClosable
 {
     WebSocketState State { get; }
     Task Connect(Uri websocketUri, CancellationToken cancellationToken);
-
-    Task Send(SignedPayloadDto dto, CancellationToken cancellationToken);
     Task Send(DtoWrapper dto, CancellationToken cancellationToken);
     Task WaitForClose(CancellationToken cancellationToken);
 }
 
 public abstract class StreamingClient(
-    IKeyProvider keyProvider,
     IMessenger messenger,
     IMemoryProvider _memoryProvider,
     ILogger<StreamingClient> _logger) : Closable(_logger), IStreamingClient
 {
-    protected readonly IKeyProvider _keyProvider = keyProvider;
     protected readonly IMessenger _messenger = messenger;
 
     private readonly CancellationTokenSource _clientDisposingCts = new();
@@ -77,14 +68,9 @@ public abstract class StreamingClient(
         }
     }
 
-    public async Task Send(SignedPayloadDto dto, CancellationToken cancellationToken)
-    {
-        await SendImpl(dto, true, cancellationToken);
-    }
-
     public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
     {
-        await SendImpl(dto, false, cancellationToken);
+        await SendImpl(dto, cancellationToken);
     }
 
     public async Task WaitForClose(CancellationToken cancellationToken)
@@ -96,15 +82,13 @@ public abstract class StreamingClient(
     {
         return new MessageHeader(
             new Guid(buffer[..16]),
-            Convert.ToBoolean(buffer[16]),
-            BitConverter.ToInt32(buffer.AsSpan()[17..21]));
+            BitConverter.ToInt32(buffer.AsSpan()[16..20]));
     }
 
     private static byte[] GetHeaderBytes(MessageHeader header)
     {
         return [
             .. header.Delimiter.ToByteArray(),
-            Convert.ToByte(header.IsSigned),
             .. BitConverter.GetBytes(header.DtoSize)
         ];
     }
@@ -160,23 +144,9 @@ public abstract class StreamingClient(
 
                 dtoStream.Seek(0, SeekOrigin.Begin);
 
-                if (header.IsSigned)
-                {
-                    var dto = await MessagePackSerializer.DeserializeAsync<SignedPayloadDto>(dtoStream, cancellationToken: _clientDisposingCts.Token);
-                    if (!_keyProvider.Verify(dto))
-                    {
-                        return;
-                    }
-
-                    var message = new DtoReceivedMessage<SignedPayloadDto>(dto);
-                    await _messenger.Send(message);
-                }
-                else
-                {
-                    var dto = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(dtoStream, cancellationToken: _clientDisposingCts.Token);
-                    var message = new DtoReceivedMessage<DtoWrapper>(dto);
-                    await _messenger.Send(message);
-                }
+                var dto = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(dtoStream, cancellationToken: _clientDisposingCts.Token);
+                var message = new DtoReceivedMessage<DtoWrapper>(dto);
+                await _messenger.Send(message);
             }
             catch (OperationCanceledException)
             {
@@ -193,13 +163,13 @@ public abstract class StreamingClient(
         await InvokeOnClosed();
     }
 
-    private async Task SendImpl<T>(T dto, bool isSigned, CancellationToken cancellationToken)
+    private async Task SendImpl<T>(T dto, CancellationToken cancellationToken)
     {
         await _sendLock.WaitAsync(cancellationToken);
         try
         {
             var payload = MessagePackSerializer.Serialize(dto, cancellationToken: cancellationToken);
-            var header = new MessageHeader(_messageDelimiter, isSigned, payload.Length);
+            var header = new MessageHeader(_messageDelimiter, payload.Length);
 
 
             await Client.SendAsync(
@@ -221,17 +191,14 @@ public abstract class StreamingClient(
     }
 
     [StructLayout(LayoutKind.Explicit)]
-    private struct MessageHeader(Guid _delimiter, bool _isSigned, int _messageSize)
+    private struct MessageHeader(Guid _delimiter, int _messageSize)
     {
-        public static int Size = 21;
+        public static int Size = 20;
 
         [FieldOffset(0)]
         public readonly Guid Delimiter = _delimiter;
 
         [FieldOffset(16)]
-        public readonly bool IsSigned = _isSigned;
-
-        [FieldOffset(17)]
         public readonly int DtoSize = _messageSize;
     }
 }

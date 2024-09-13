@@ -14,7 +14,7 @@ var postgres = builder
     .WithDataVolume("controlr-data");
 
 builder
-    .AddProject<Projects.ControlR_Web>("controlr-web")
+    .AddProject<Projects.ControlR_Web_Server>("controlr-web")
     .WithReference(postgres);
 
 builder.Build().Run();

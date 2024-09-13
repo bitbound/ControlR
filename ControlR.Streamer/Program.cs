@@ -89,7 +89,6 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
             services.AddSingleton<IDisplayManager, DisplayManager>();
             services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
             services.AddSingleton<IMemoryProvider, MemoryProvider>();
-            services.AddSingleton<IKeyProvider, KeyProvider>();
             services.AddSingleton<ISystemTime, SystemTime>();
             services.AddSingleton<IClipboardManager, ClipboardManager>();
             services.AddSingleton<IDelayer, Delayer>();

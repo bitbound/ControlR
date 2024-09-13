@@ -1,49 +1,36 @@
 ﻿using Bitbound.SimpleMessenger;
+using ControlR.Libraries.Clients.Messages;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Streamer.Services;
 internal class DtoHandler(
-    IKeyProvider _keyProvider,
     IDisplayManager _displayManager,
     IClipboardManager _clipboardManager,
     IInputSimulator _inputSimulator,
     IHostApplicationLifetime _appLifetime,
     IMessenger _messenger,
-    IOptions<StartupOptions> _startupOptions,
     ILogger<DtoHandler> _logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _messenger.Register<DtoReceivedMessage<SignedPayloadDto>>(this, HandleSignedDtoReceivedMessage);
+        _messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleDtoReceivedMessage);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _messenger.Unregister<DtoReceivedMessage<SignedPayloadDto>>(this);
+        _messenger.Unregister<DtoReceivedMessage<DtoWrapper>>(this);
         return Task.CompletedTask;
     }
 
-    private async Task HandleSignedDtoReceivedMessage(object subscriber, DtoReceivedMessage<SignedPayloadDto> message)
+    private async Task HandleDtoReceivedMessage(object subscriber, DtoReceivedMessage<DtoWrapper> message)
     {
         try
         {
             using var logScope = _logger.BeginMemberScope();
             var wrapper = message.Dto;
-
-            if (!_keyProvider.Verify(wrapper))
-            {
-                _logger.LogCritical("Key verification failed for public key: {PublicKey}", wrapper.PublicKeyBase64);
-                return;
-            }
-
-            if (_startupOptions.Value.AuthorizedKey != wrapper.PublicKeyBase64)
-            {
-                _logger.LogCritical("Public key does not exist in authorized keys: {PublicKey}", wrapper.PublicKeyBase64);
-                return;
-            }
 
             switch (wrapper.DtoType)
             {

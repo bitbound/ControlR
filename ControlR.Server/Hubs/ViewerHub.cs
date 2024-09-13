@@ -208,12 +208,7 @@ public class ViewerHub(
         {
             _connectionCounter.DecrementViewerCount();
             await SendUpdatedConnectionCountToAdmins();
-
-            if (Context.User?.TryGetClaim(ClaimNames.PublicKey, out var publicKey) == true)
-            {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, publicKey);
-            }
-
+            // TODO: Remove from groups.
             await base.OnDisconnectedAsync(exception);
         }
         catch (Exception ex)
@@ -286,6 +281,12 @@ public class ViewerHub(
         using var scope = _logger.BeginMemberScope();
 
         await _agentHub.Clients.Group(deviceId).ReceiveDto(wrapper);
+    }
+
+    public Task SendDtoToUserGroups(DtoWrapper wrapper)
+    {
+        // TODO: Implement this.
+        throw new NotImplementedException();
     }
 
     public async Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto)
