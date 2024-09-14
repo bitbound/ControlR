@@ -67,7 +67,6 @@ public static class MauiProgram
         builder.Services.AddSingleton(DeviceDisplay.Current);
 
         builder.Services.AddSingleton<IHttpConfigurer, HttpConfigurer>();
-        builder.Services.AddSingleton<IKeyProvider, KeyProvider>();
         builder.Services.AddSingleton(WeakReferenceMessenger.Default);
         builder.Services.AddSingleton<ISettings, Settings>();
         builder.Services.AddSingleton<IAppState, AppState>();

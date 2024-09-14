@@ -1,23 +1,17 @@
 
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Web.Server.Auth;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Extensions;
-using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services.Distributed.Locking;
 using ControlR.Web.Server.Services.Distributed;
-using ControlR.Web.Server.Services.Interfaces;
 using ControlR.Web.Server.Services.Local;
-using ControlR.Web.Server.Services;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
@@ -26,7 +20,7 @@ using StackExchange.Redis;
 using System.Net;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Hubs;
-using ControlR.Web.ServiceDefaults.Samplers;
+using ControlR.Web.Client.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
