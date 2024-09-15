@@ -116,6 +116,9 @@ ConfigureForwardedHeaders();
 // Configure Redis, if scaled out.
 await ConfigureRedis();
 
+// Add proxies for client services to be used during prerendering.
+builder.Services.AddControlrWebClient();
+
 // Add other services.
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 

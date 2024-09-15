@@ -1,3 +1,4 @@
+using Bitbound.Blazor.ServiceProxyGenerator.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -8,7 +9,7 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddControlrWebClient(this IServiceCollection services)
     {
-        services.AddSingleton(WeakReferenceMessenger.Default);
+        services.AddContextAwareSingleton(RenderContext.Browser, WeakReferenceMessenger.Default);
         services.AddSingleton<ISettings, Settings>();
         services.AddSingleton<IBusyCounter, BusyCounter>();
         services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
@@ -20,7 +21,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IDelayer, Delayer>();
         services.AddSingleton<IRetryer, Retryer>();
         services.AddSingleton<IClipboardManager, ClipboardManager>();
-        services.AddTransient<IJsInterop, JsInterop>();
+        services.AddContextAwareTransient<IJsInterop, JsInterop>(RenderContext.Browser);
         
         services.AddHttpClient<IKeyApi, KeyApi>();
         services.AddHttpClient<IDownloadsApi, DownloadsApi>();

@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.12" />
+		<PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
 	</ItemGroup>
 
 	<ItemGroup>
