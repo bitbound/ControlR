@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -68,23 +69,27 @@ public static class Extensions
         return builder;
     }
 
-    private static IHostApplicationBuilder AddOpenTelemetryExporters(this IHostApplicationBuilder builder)
+    private static IHostApplicationBuilder AddOpenTelemetryExporters(
+        this IHostApplicationBuilder builder)
     {
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        var otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
+        var azureMonitorConnectionString = builder.Configuration["AzureMonitor:ConnectionString"];
 
-        if (useOtlpExporter)
+        if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))
         {
             builder.Services
                 .AddOpenTelemetry()
-                .UseOtlpExporter();
+                .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpUri);
         }
 
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
-        if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+        if (!string.IsNullOrWhiteSpace(azureMonitorConnectionString))
         {
             builder.Services
                 .AddOpenTelemetry()
-                .UseAzureMonitor();
+                .UseAzureMonitor(options =>
+                {
+                    options.ConnectionString = azureMonitorConnectionString;
+                });
         }
 
         return builder;

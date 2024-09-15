@@ -1,4 +1,3 @@
-using Bitbound.Blazor.ServiceProxyGenerator.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -9,19 +8,19 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddControlrWebClient(this IServiceCollection services)
     {
-        services.AddContextAwareSingleton(RenderContext.Browser, WeakReferenceMessenger.Default);
-        services.AddSingleton<ISettings, Settings>();
-        services.AddSingleton<IBusyCounter, BusyCounter>();
-        services.AddSingleton<IEnvironmentHelper>(EnvironmentHelper.Instance);
-        services.AddSingleton<IViewerHubConnection, ViewerHubConnection>();
-        services.AddSingleton<IDeviceCache, DeviceCache>();
-        services.AddSingleton<ISystemTime, SystemTime>();
-        services.AddSingleton<IDeviceContentWindowStore, DeviceContentWindowStore>();
-        services.AddSingleton<IMemoryProvider, MemoryProvider>();
-        services.AddSingleton<IDelayer, Delayer>();
-        services.AddSingleton<IRetryer, Retryer>();
-        services.AddSingleton<IClipboardManager, ClipboardManager>();
-        services.AddContextAwareTransient<IJsInterop, JsInterop>(RenderContext.Browser);
+        services.AddScoped<IMessenger, WeakReferenceMessenger>();
+        services.AddScoped<ISettings, Settings>();
+        services.AddScoped<IBusyCounter, BusyCounter>();
+        services.AddScoped<IEnvironmentHelper, EnvironmentHelper>();
+        services.AddScoped<IViewerHubConnection, ViewerHubConnection>();
+        services.AddScoped<IDeviceCache, DeviceCache>();
+        services.AddScoped<ISystemTime, SystemTime>();
+        services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
+        services.AddScoped<IMemoryProvider, MemoryProvider>();
+        services.AddScoped<IDelayer, Delayer>();
+        services.AddScoped<IRetryer, Retryer>();
+        services.AddScoped<IClipboardManager, ClipboardManager>();
+        services.AddTransient<IJsInterop, JsInterop>();
         
         services.AddHttpClient<IKeyApi, KeyApi>();
         services.AddHttpClient<IDownloadsApi, DownloadsApi>();

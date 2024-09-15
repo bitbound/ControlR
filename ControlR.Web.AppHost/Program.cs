@@ -1,20 +1,16 @@
+using ControlR.Web.ServiceDefaults;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
-//var postgres = builder.AddContainer("postgres", "postgres:latest")
-//    .WithEnvironment("POSTGRES_DB", "controlr")
-//    .WithEnvironment("POSTGRES_USER", "postgres")
-//    .WithEnvironment("POSTGRES_PASSWORD", "password")
-//    .WithEndpoint(name: "postgresql", port: 5432)
-//    .WithBindMount("postgres-data", "/var/lib/postgresql/data");
-
-//var pgEndpoint = postgres.GetEndpoint("postgres");
+var pgUser = builder.AddParameter("PgUser", true);
+var pgPassword = builder.AddParameter("PgPassword", true);
 
 var postgres = builder
-    .AddPostgres("PostgreSQL")
+    .AddPostgres(ServiceNames.Postgres, pgUser, pgPassword)
     .WithDataVolume("controlr-data");
 
 builder
-    .AddProject<Projects.ControlR_Web_Server>("controlr-web")
+    .AddProject<Projects.ControlR_Web_Server>(ServiceNames.Controlr)
     .WithReference(postgres);
 
 builder.Build().Run();

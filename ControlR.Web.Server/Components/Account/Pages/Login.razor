@@ -10,107 +10,107 @@
 <MudText Typo="Typo.h3" GutterBottom="true">Log in</MudText>
 
 <MudGrid>
-    <MudItem md="6">
-        <StatusMessage Message="@errorMessage" />
-        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-            <DataAnnotationsValidator />
+  <MudItem md="6">
+    <StatusMessage Message="@errorMessage" />
+    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+      <DataAnnotationsValidator />
 
-            <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
+      <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
 
-            <MudGrid>
-                <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" 
-                        Label="Email" Placeholder="name@example.com" 
-                        UserAttributes="@(new() { { "autocomplete", "true" }, { "aria-required", "true" } } )" />
-                </MudItem>
-                <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" 
-                        Label="Password" InputType="InputType.Password" Placeholder="password" 
-                        UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
-                </MudItem>
-                <MudItem md="12">
-                    <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
-                </MudItem>
-                <MudItem md="12">
-                    <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Log in</MudStaticButton>
-                </MudItem>
-            </MudGrid>
-        </EditForm>
+      <MudGrid>
+        <MudItem xs="12">
+          <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
+                              Label="Email" Placeholder="name@example.com"
+                              UserAttributes="@(new() { { "autocomplete", "true" }, { "aria-required", "true" } } )" />
+        </MudItem>
+        <MudItem xs="12">
+          <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
+                              Label="Password" InputType="InputType.Password" Placeholder="password"
+                              UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
+        </MudItem>
+        <MudItem xs="12">
+          <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
+        </MudItem>
+        <MudItem xs="12">
+          <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Log in</MudStaticButton>
+        </MudItem>
+      </MudGrid>
+    </EditForm>
 
-        <MudGrid Class="mt-4">
-            <MudItem md="12">
-                <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
-                <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br />
-                <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
-            </MudItem>
-        </MudGrid>
-    </MudItem>
-    <MudItem md="6">
-        <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
+    <MudGrid Class="mt-4">
+      <MudItem md="12">
+        <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
+        <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br />
+        <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
+      </MudItem>
+    </MudGrid>
+  </MudItem>
+  <MudItem md="6">
+    <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
 
-        <ExternalLoginPicker />
-    </MudItem>
+    <ExternalLoginPicker />
+  </MudItem>
 </MudGrid>
 
 @code {
-    private string? errorMessage;
+  private string? errorMessage;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
+  {
+    if (HttpMethods.IsGet(HttpContext.Request.Method))
     {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-        }
+      // Clear the existing external cookie to ensure a clean login process
+      await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
     }
+  }
 
-    public async Task LoginUser()
+  public async Task LoginUser()
+  {
+    // This doesn't count login failures towards account lockout
+    // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+    var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+    if (result.Succeeded)
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-        if (result.Succeeded)
-        {
-            Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else if (result.RequiresTwoFactor)
-        {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
-        }
-        else if (result.IsLockedOut)
-        {
-            Logger.LogWarning("User account locked out.");
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            errorMessage = "Error: Invalid login attempt.";
-        }
+      Logger.LogInformation("User logged in.");
+      RedirectManager.RedirectTo(ReturnUrl);
     }
-
-    private sealed class InputModel
+    else if (result.RequiresTwoFactor)
     {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = "";
-
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = "";
-
-        [Display(Name = "Remember me?")]
-        public bool RememberMe { get; set; }
+      RedirectManager.RedirectTo(
+          "Account/LoginWith2fa",
+          new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
     }
+    else if (result.IsLockedOut)
+    {
+      Logger.LogWarning("User account locked out.");
+      RedirectManager.RedirectTo("Account/Lockout");
+    }
+    else
+    {
+      errorMessage = "Error: Invalid login attempt.";
+    }
+  }
+
+  private sealed class InputModel
+  {
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = "";
+
+    [Required]
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = "";
+
+    [Display(Name = "Remember me?")]
+    public bool RememberMe { get; set; }
+  }
 }

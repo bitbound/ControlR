@@ -13,96 +13,145 @@
   <MudSnackbarProvider />
 
   <MudLayout>
-      <MudAppBar Elevation="1">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                           Color="Color.Inherit"
-                           Edge="Edge.Start"
-                           OnClick="@((e) => DrawerToggle())" />
+    <MudAppBar Elevation="1">
+      <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                     Color="Color.Inherit"
+                     Edge="Edge.Start"
+                     OnClick="@((e) => DrawerToggle())" />
 
-            <MudChip T="string" Text='Beta' Color="Color.Info" Class="ms-3" />
+      <MudChip T="string" Text='Beta' Color="Color.Info" Class="ms-3" />
 
-            <MudSpacer />
+      <MudSpacer />
 
-            @if (BusyCounter.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
-            {
-                <MudTooltip Text="@($"{BusyCounter.PendingOperations} operation(s) pending")">
-                    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
-                                         Class="mx-3 mt-1" />
-                </MudTooltip>
-            }
-            else
-            {
-                switch (ViewerHub.ConnectionState)
-                {
-                    case HubConnectionState.Connected:
-                        <MudTooltip Text="Connected">
-                            <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
-                        </MudTooltip>
-                        break;
-                    case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
-                        <MudTooltip Text="Reconnecting">
-                            <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
-                                                 Class="mx-3 mt-1" />
-                        </MudTooltip>
-                        break;
-                    case HubConnectionState.Disconnected:
-                        <MudTooltip Text="Disconnected">
-                            <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
-                        </MudTooltip>
-                        break;
-                    default:
-                        break;
-                }
-            }
-            <MudTooltip Text="GitHub">
-                <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-                               Href="https://github.com/bitbound/controlr/" Target="_blank" />
+      @if (BusyCounter.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
+      {
+        <MudTooltip Text="@($"{BusyCounter.PendingOperations} operation(s) pending")">
+          <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
+                               Class="mx-3 mt-1" />
+        </MudTooltip>
+      }
+      else
+      {
+        switch (ViewerHub.ConnectionState)
+        {
+          case HubConnectionState.Connected:
+            <MudTooltip Text="Connected">
+              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
             </MudTooltip>
-      </MudAppBar>
-      <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-          <NavMenu />
-      </MudDrawer>
-      <MudMainContent Class="mt-16 pa-4">
-          @Body
-      </MudMainContent>
+            break;
+          case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+            <MudTooltip Text="Reconnecting">
+              <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
+                                   Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          case HubConnectionState.Disconnected:
+            <MudTooltip Text="Disconnected">
+              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          default:
+            break;
+        }
+      }
+      <MudTooltip Text="GitHub">
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+                       Href="https://github.com/bitbound/controlr/" Target="_blank" />
+      </MudTooltip>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+      <NavMenu />
+    </MudDrawer>
+    <MudMainContent Class="mt-16 pa-4">
+      @Body
+    </MudMainContent>
   </MudLayout>
 </div>
 
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+  An unhandled error has occurred.
+  <a href="" class="reload">Reload</a>
+  <a class="dismiss">🗙</a>
 </div>
 
 @code {
-    private bool _drawerOpen = true;
-    private MudTheme? _customTheme;
+  private bool _drawerOpen = true;
+  private bool _showAlert = false;
+  private AlertSeverity _alertSeverity = AlertSeverity.Information;
+  private string _alertMessage = string.Empty;
+  private bool _updateAvailable;
+  private MudTheme? _customTheme;
 
-    private MudTheme CustomTheme
+  private MudTheme CustomTheme
+  {
+    get
     {
-        get
+      return _customTheme ??= new MudTheme()
         {
-            return _customTheme ??= new MudTheme()
-                {
-                    PaletteDark = new PaletteDark()
-                    {
-                        Primary = "#46AA46",
-                        Secondary = "#BE6E46",
-                        Tertiary = "#F082D2",
-                        Info = "#42A5F5",
-                        TextPrimary = "rgb(215, 215, 215)",
-                        AppbarText = "rgb(215, 215, 215)",
-                        Background = Colors.Gray.Darken4,
-                        Surface = "rgb(45, 45, 45)",
-                    }
-                };
-        }
+          PaletteDark = new PaletteDark()
+          {
+            Primary = "#46AA46",
+            Secondary = "#BE6E46",
+            Tertiary = "#F082D2",
+            Info = "#42A5F5",
+            TextPrimary = "rgb(215, 215, 215)",
+            AppbarText = "rgb(215, 215, 215)",
+            Background = Colors.Gray.Darken4,
+            Surface = "rgb(45, 45, 45)",
+          }
+        };
     }
+  }
 
 
-    private void DrawerToggle()
+  protected override void OnInitialized()
+  {
+    base.OnInitialized();
+    Messenger.RegisterGenericMessage(this, HandleGeneric);
+    Messenger.Register<ToastMessage>(this, HandleToastMessage);
+    Messenger.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
+    Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+  }
+
+  private void CloseAlert()
+  {
+    _showAlert = false;
+  }
+
+  private void DrawerToggle()
+  {
+    _drawerOpen = !_drawerOpen;
+  }
+
+  private async Task HandleAlertBroadcastReceived(object subscriber, DtoReceivedMessage<AlertBroadcastDto> message)
+  {
+    _alertMessage = message.Dto.Message;
+    _alertSeverity = message.Dto.Severity;
+    _showAlert = true;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task HandleGeneric(object subscriber, GenericMessageKind kind)
+  {
+    switch (kind)
     {
-        _drawerOpen = !_drawerOpen;
+      case GenericMessageKind.PendingOperationsChanged:
+        await InvokeAsync(StateHasChanged);
+        break;
+      default:
+        return;
     }
+  }
+
+  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private Task HandleToastMessage(object subscriber, ToastMessage toast)
+  {
+    Snackbar.Add(toast.Message, toast.Severity);
+    return Task.CompletedTask;
+  }
 }

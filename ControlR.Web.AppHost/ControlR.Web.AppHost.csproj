@@ -18,4 +18,8 @@
     <ProjectReference Include="..\ControlR.Web.Server\ControlR.Web.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
 </Project>

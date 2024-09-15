@@ -46,7 +46,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
 
-      ConnectionStrings__PostgreSQL: "Host=postgres;Port=5432;Database=controlr;Username=postgres;Password=password;"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=controlr;Username=postgres;Password=password;"
 
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:

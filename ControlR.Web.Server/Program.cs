@@ -1,4 +1,3 @@
-
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Auth;
@@ -8,7 +7,6 @@ using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.Distributed.Locking;
 using ControlR.Web.Server.Services.Distributed;
 using ControlR.Web.Server.Services.Local;
-using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -21,11 +19,9 @@ using System.Net;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.AddServiceDefaults();
-
 
 // Configure IOptions.
 builder.Configuration.AddEnvironmentVariables("ControlR_");
@@ -41,8 +37,13 @@ var appOptions = builder.Configuration
 ConfigureSerilog(appOptions);
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
+// Add telemetry.
+builder.AddServiceDefaults();
+
+builder.Services.AddLazyDi();
+
 // Add DB services.
-var connectionString = builder.Configuration.GetConnectionString("PostgreSQL")
+var connectionString = builder.Configuration.GetConnectionString(ServiceNames.Postgres)
     ?? throw new InvalidOperationException("Connection string 'PostgreSQL' not found.");
 
 builder.Services.AddDbContext<AppDb>(options =>
@@ -154,7 +155,6 @@ builder.Host.UseSystemd();
 var app = builder.Build();
 
 app.UseForwardedHeaders();
-
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
@@ -192,7 +192,6 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.MapControllers();
-app.MapHealthChecks("/api/health");
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
