@@ -1,6 +1,5 @@
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Server.Auth;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data;
@@ -20,6 +19,7 @@ using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Web.Client.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,7 +79,7 @@ builder.Services
 
 builder.Services
   .AddAuthorizationBuilder()
-  .AddPolicy(PolicyNames.RequireAdministratorPolicy, policyBuilder =>
+  .AddPolicy(PolicyNames.RequireAdministrator, policyBuilder =>
   {
     policyBuilder.RequireAuthenticatedUser();
     policyBuilder.RequireClaim(ClaimNames.IsAdministrator, "true");

@@ -1,0 +1,56 @@
+﻿@inherits ViewportAwareComponent
+
+<MudTooltip Text="Displays" Class="z9002" Placement="Placement.Right">
+    <MudMenu Variant="Variant.Outlined"
+             StartIcon="@GetStartIcon()"
+             Icon="@GetIcon()"
+             Label="@GetLabel()"
+             PopoverClass="z9002">
+        @foreach (var display in Displays)
+        {
+            <MudMenuItem @key=(display) OnClick="@(() => SelectDisplay(display))" @ontouchend="@(() => SelectDisplay(display))">
+                <MudText Color="@(display == SelectedDisplay ? Color.Primary : Color.Default)">
+                    @(display.Name)
+                </MudText>
+                @if (!string.IsNullOrWhiteSpace(display.DisplayId))
+                {
+                    <MudText Color="Color.Tertiary">
+                        (@(display.DisplayId))
+                    </MudText>
+                }
+            </MudMenuItem>
+        }
+    </MudMenu>
+</MudTooltip>
+
+@code {
+
+    [Parameter]
+    public DisplayDto[] Displays { get; set; } = Array.Empty<DisplayDto>();
+
+    [Parameter]
+    public DisplayDto? SelectedDisplay { get; set; }
+
+    [Parameter]
+    public EventCallback<DisplayDto> OnDisplaySelected { get; set; }
+
+    private string GetLabel()
+    {
+        return CurrentBreakpoint >= Breakpoint.Sm ? "Displays" : string.Empty;
+    }
+
+    private string GetStartIcon()
+    {
+        return CurrentBreakpoint >= Breakpoint.Sm ? Icons.Material.Filled.ScreenshotMonitor : string.Empty;
+    }
+
+    private string GetIcon()
+    {
+        return CurrentBreakpoint < Breakpoint.Sm ? Icons.Material.Filled.ScreenshotMonitor : string.Empty;
+    }
+
+    private async Task SelectDisplay(DisplayDto display)
+    {
+        await OnDisplaySelected.InvokeAsync(display);
+    }
+}

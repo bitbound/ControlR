@@ -1,0 +1,46 @@
+﻿@if (_loading)
+{
+    <div class="text-center mt-4">
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+         Loading
+     </MudText>
+     <MudProgressCircular Indeterminate="true"
+                          Size="Size.Large"
+                          Color="Color.Info" />
+ </div>
+}
+else
+{
+    <div class="terminal-grid">
+        <div @ref="_terminalOutputContainer" class="terminal-output-container">
+
+            @foreach (var line in Output)
+            {
+                <div @key=(line) class="@(GetOutputColor(line))">
+                    @(line.Output)
+                </div>
+            }
+        </div>
+        <div>
+            <MudTextField T="string"
+                          @ref="@(_inputElement)"
+                          @bind-Value="@_inputText"
+                          @bind-Text="@_inputText"
+                          Label="Enter a command"
+                          HelperText="Type a command and press Enter to send"
+                          TextUpdateSuppression="false"
+                          Lines="@InputLineCount"
+                          HelperTextOnFocus="true"
+                          AutoFocus="true"
+                          Immediate="true"
+                          UserAttributes="_inputAttributes"
+                          OnKeyUp="@OnInputKeyDown"
+                          Class="mt-2" />
+        </div>
+        <div>
+            <MudSwitch @bind-Value="_enableMultiline"
+                       Color="Color.Success"
+                       Label="Multiline Input" />
+        </div>
+    </div>
+}

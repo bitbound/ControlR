@@ -17,3 +17,8 @@ global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Clients.Extensions;
 global using ControlR.Libraries.Clients.Messages;
 global using ControlR.Libraries.Shared.Extensions;
+global using System.Text.Json;
+global using ControlR.Libraries.Shared.Services.Http;
+global using ControlR.Web.Client.Components.RemoteDisplays;
+global using ControlR.Web.Client.Components.Dialogs;
+global using ControlR.Web.Client.Auth;

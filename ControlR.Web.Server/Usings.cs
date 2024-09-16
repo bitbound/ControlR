@@ -13,3 +13,4 @@ global using ControlR.Web.Server.Models;
 global using ControlR.Web.Server.Options;
 global using ControlR.Web.Server.Services;
 global using ControlR.Web.Server.Services.Interfaces;
+global using ControlR.Web.Client.Auth;

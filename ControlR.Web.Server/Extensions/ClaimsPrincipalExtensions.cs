@@ -1,4 +1,4 @@
-﻿using ControlR.Web.Server.Auth;
+﻿using ControlR.Web.Client.Auth;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 

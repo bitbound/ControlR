@@ -1,0 +1,6 @@
+.about-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 15px;
+    row-gap: 20px;
+}

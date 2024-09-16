@@ -1,0 +1,20 @@
+.terminal-grid {
+    position: relative;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    row-gap: 10px;
+    overflow: hidden;
+    height: calc(100% - .5rem);
+    border-radius: 10px;
+    margin: .25rem;
+    padding: .75rem;
+    background-color: rgb(12,12,12);
+}
+
+.terminal-output-container {
+    overflow: auto;
+    height: 100%;
+    unicode-bidi: embed;
+    font-family: monospace;
+    white-space: pre;
+}

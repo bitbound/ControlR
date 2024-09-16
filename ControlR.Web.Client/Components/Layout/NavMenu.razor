@@ -1,18 +1,39 @@
 ﻿@implements IDisposable
 
-@inject NavigationManager NavigationManager
+@inject ILazyDi<NavigationManager> NavMan
+@inject ILazyDi<PersistentAuthenticationStateProvider> AuthState
+@inject ILogger<NavMenu> Logger
 
 <MudNavMenu>
-  <MudNavLink Disabled="@IsDisabled" Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-  <MudNavLink Disabled="@IsDisabled" Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
-  <MudNavLink Disabled="@IsDisabled" Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
-  <MudNavLink Disabled="@IsDisabled" Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">Auth Required</MudNavLink>
+  <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+    Home
+  </MudNavLink>
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
+    Deploy
+  </MudNavLink>
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+    Settings
+  </MudNavLink>
+
+  @if (_isServerAdmin)
+  {
+    <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+      Server Admin
+    </MudNavLink>
+  }
+
+  <MudNavLink Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
+    About
+  </MudNavLink>
+
   <AuthorizeView>
     <Authorized>
-      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person" Class="mt-5">
+        Account
+      </MudNavLink>
       <form action="Account/Logout" method="post">
         <AntiforgeryToken />
-        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+        <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
         <button type="submit" class="mud-nav-link mud-ripple">
           <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
         </button>
@@ -27,27 +48,61 @@
 
 
 @code {
-  private string? currentUrl;
+  private string? _currentUrl;
+  private bool _isServerAdmin;
+  private bool _isAuthenticated;
 
   [Parameter]
   public bool IsDisabled { get; set; }
 
-  protected override void OnInitialized()
+  
+  public void Dispose()
   {
-    currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-    NavigationManager.LocationChanged += OnLocationChanged;
+    if (NavMan.Exists)
+    {
+      NavMan.Value.LocationChanged -= OnLocationChanged;
+    }
+    if (AuthState.Exists)
+    {
+      AuthState.Value.AuthenticationStateChanged -= HandleAuthStateChanged;
+    }
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (AuthState.Exists)
+    {
+      AuthState.Value.AuthenticationStateChanged += HandleAuthStateChanged;
+    }
+    if (NavMan.Exists)
+    {
+      _currentUrl = NavMan.Value.ToBaseRelativePath(NavMan.Value.Uri);
+      NavMan.Value.LocationChanged += OnLocationChanged;
+    }
+  }
+
+  private async void HandleAuthStateChanged(Task<AuthenticationState> stateTask)
+  {
+    try
+    {
+      var state = await stateTask;
+      _isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+      await InvokeAsync(StateHasChanged);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while handling auth state change.");
+    }
   }
 
   private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
   {
-    currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+    _currentUrl = NavMan.Value.ToBaseRelativePath(e.Location);
     StateHasChanged();
   }
 
-  public void Dispose()
-  {
-    NavigationManager.LocationChanged -= OnLocationChanged;
-  }
 }
 
 

@@ -1,0 +1,131 @@
+﻿@attribute [Route(RouteNames.About)]
+@inject ILogger<About> Logger
+@inject ISnackbar Snackbar
+
+<PageTitle>About</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  About
+</MudText>
+
+
+<div class="about-grid">
+  <div>
+    <MudText Color="Color.Primary">
+      Version:
+    </MudText>
+  </div>
+  <div class="d-flex align-start">
+    <MudText>
+      @(_currentVersion)
+    </MudText>
+  </div>
+
+  <div>
+    <MudText Color="Color.Primary">
+      License:
+    </MudText>
+  </div>
+  <div>
+    <MudLink Color="Color.Info" Href="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" Target="_blank">
+      GNU General Public License v3.0
+    </MudLink>
+  </div>
+
+  <div>
+    <MudText Color="Color.Primary">
+      Project:
+    </MudText>
+  </div>
+  <div>
+    <MudLink Color="Color.Info" Href="https://github.com/bitbound/controlr" Target="_blank">
+      https://github.com/bitbound/controlr
+    </MudLink>
+  </div>
+
+  <div>
+    <MudText Color="Color.Primary">
+      Website:
+    </MudText>
+  </div>
+  <div>
+    <MudLink Color="Color.Info" Href="https://controlr.app" Target="_blank">
+      https://controlr.app
+    </MudLink>
+  </div>
+
+
+  <div>
+    <MudText Color="Color.Primary">
+      Licenses:
+    </MudText>
+  </div>
+
+  <div>
+    <div class="mb-4">
+      <MudText GutterBottom>
+        ControlR uses the following open-source software and libraries.
+      </MudText>
+    </div>
+
+    <MudText Class="mb-2">
+      MudBlazor
+      <MudLink Color="Color.Info" Href="https://github.com/MudBlazor/MudBlazor" Class="ms-4 me-2">source</MudLink>
+      <MudLink Color="Color.Info" Href="https://github.com/MudBlazor/MudBlazor/blob/dev/LICENSE">license</MudLink>
+    </MudText>
+    <MudText Class="mb-2">
+      Serilog
+      <MudLink Color="Color.Info" Href="https://github.com/serilog/serilog" Class="ms-4 me-2">source</MudLink>
+      <MudLink Color="Color.Info" Href="https://github.com/serilog/serilog/blob/dev/LICENSE">license</MudLink>
+    </MudText>
+    <MudText Class="mb-2">
+      OpenTelemetry
+      <MudLink Color="Color.Info" Href="https://github.com/open-telemetry/opentelemetry-dotnet" Class="ms-4 me-2">source</MudLink>
+      <MudLink Color="Color.Info" Href="https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/LICENSE.TXT">license</MudLink>
+    </MudText>
+    <MudText Class="mb-2">
+      Microsoft Libraries
+      <MudLink Color="Color.Info" Href="https://github.com/microsoft" Class="ms-4 me-2">source</MudLink>
+    </MudText>
+  </div>
+
+  <div>
+    <MudText Color="Color.Primary">
+      Donate:
+    </MudText>
+  </div>
+  <div>
+    <MudText Class="mb-2">
+      ControlR is free, open-source, self-hostable, and powered by donations.
+    </MudText>
+    <MudText>
+      Sponsor the work here:
+      <MudLink Color="Color.Info" Href="https://github.com/sponsors/bitbound">GitHub Sponsors</MudLink>
+    </MudText>
+  </div>
+</div>
+
+@code {
+  private Version? _currentVersion = null;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await Init();
+
+    await base.OnInitializedAsync();
+  }
+
+  private Task Init()
+  {
+    try
+    {
+      _currentVersion = typeof(About).Assembly.GetName().Version ?? new(1, 0);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while getting store page URI.");
+      Snackbar.Add("Failed to get store page URI.", Severity.Error);
+    }
+    return Task.CompletedTask;
+  }
+}

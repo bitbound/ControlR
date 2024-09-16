@@ -1,0 +1,62 @@
+﻿@attribute [Route(RouteNames.Settings)]
+@attribute [Authorize]
+
+@inject ISettings SettingsStore
+@inject ISnackbar Snackbar
+@inject IMessenger Messenger
+@inject IViewerHubConnection HubConnection
+@inject IDeviceCache DeviceCache
+@inject IBusyCounter AppState
+@inject IDialogService Dialogs
+@inject ILogger<Settings> Logger
+
+<PageTitle>Settings</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Settings
+</MudText>
+
+<div class="mt-10">
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+        Show Notification to User
+    </MudText>
+    <MudCheckBox @bind-Value="NotifyUser"
+                 Label="Notify users when a remote control session starts" />
+</div>
+
+
+@code {
+    private MudTextField<string>? _serverUriInput;
+
+    protected override Task OnInitializedAsync()
+    {
+        return base.OnInitializedAsync();
+    }
+
+    private bool NotifyUser
+    {
+        get => SettingsStore.NotifyUserSessionStart;
+        set => SettingsStore.NotifyUserSessionStart = value;
+    }
+
+
+    private string? ValidateUsername(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return null;
+        }
+
+        if (input.Length > 25)
+        {
+            return "Username must be 25 characters or less.";
+        }
+
+        if (AppConstants.UsernameValidator().IsMatch(input))
+        {
+            return "Username can only contain letters, numbers, underscores, and hyphens.";
+        }
+
+        return null;
+    }
+}

@@ -1,0 +1,133 @@
+﻿<div>
+  <MudDialog>
+    <TitleContent>
+      <MudText Typo="Typo.h5" Color="Color.Primary">
+        Agent App Settings
+      </MudText>
+    </TitleContent>
+    <DialogContent>
+      <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
+        <MudCard>
+          <MudCardContent>
+            <MudTextField T="string"
+                          @bind-Value="_appSettingsJson"
+                          @bind-Text="_appSettingsJson"
+                          Label="Agent Appsettings File"
+                          Lines="15"
+                          HelperText="Edit the appsettings.json file on the agent."
+                          InputType="InputType.Text"
+                          Required="true"
+                          ErrorText="Invalid JSON."
+                          Class="no-wrap"
+                          Immediate="true"
+                          DebounceInterval="500"
+                          UserAttributes="_editorAttributes"
+                          Validation="@((string val) => ValidateJson(val))" />
+
+          </MudCardContent>
+          <MudCardActions Class="justify-end">
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Class="me-3"
+                       OnClick="Cancel">
+              Cancel
+            </MudButton>
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       Disabled="!_formIsValid"
+                       OnClick="Save">
+              Save
+            </MudButton>
+          </MudCardActions>
+        </MudCard>
+      </MudForm>
+    </DialogContent>
+  </MudDialog>
+
+</div>
+@code {
+  private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+  private readonly Dictionary<string, object> _editorAttributes = new()
+    {
+      ["spellcheck"] = "false"
+    };
+  private bool _formIsValid;
+  private MudForm? _form;
+
+  private string _appSettingsJson = string.Empty;
+  private AgentAppSettings? _newAppSettings;
+
+  [Parameter]
+  public required AgentAppSettings AppSettings { get; set; }
+
+  [Parameter]
+  public required DeviceDto Device { get; set; }
+
+  [CascadingParameter]
+  public required MudDialogInstance DialogInstance { get; init; }
+
+  [Inject]
+  public required ILogger<AppSettingsEditorDialog> Logger { get; init; }
+
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+
+  [Inject]
+  public required IViewerHubConnection ViewerHub { get; set; }
+
+  protected override void OnInitialized()
+  {
+    base.OnInitialized();
+
+    try
+    {
+      _appSettingsJson = JsonSerializer.Serialize(AppSettings, _jsonOptions);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while loading agent's appsettings in editor dialog.");
+      Snackbar.Add("Failed to load settings", Severity.Error);
+    }
+  }
+
+  private void Cancel()
+  {
+    DialogInstance.Close(DialogResult.Cancel());
+  }
+
+  private async Task Save()
+  {
+    try
+    {
+      _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
+      Guard.IsNotNull(_newAppSettings);
+      var result = await ViewerHub.SendAgentAppSettings(Device.ConnectionId, _newAppSettings);
+      if (!result.IsSuccess)
+      {
+        Snackbar.Add(result.Reason, Severity.Error);
+        return;
+      }
+      DialogInstance.Close(DialogResult.Ok(true));
+    }
+    catch
+    {
+      Snackbar.Add("Failed to save settings", Severity.Error);
+      return;
+    }
+  }
+
+  private bool ValidateJson(string json)
+  {
+    try
+    {
+      _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
+      return true;
+    }
+    catch
+    {
+      return false;
+    }
+  }
+}
