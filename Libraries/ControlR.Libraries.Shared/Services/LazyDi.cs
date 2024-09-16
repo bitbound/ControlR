@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.Libraries.Shared.Services;
 
@@ -16,15 +17,17 @@ namespace ControlR.Libraries.Shared.Services;
 /// <typeparam name="T"></typeparam>
 public interface ILazyDi<T>
 {
-    public bool Exists { get; }
-    public T? Maybe { get; }
-    public T Value { get; }
+    [MemberNotNullWhen(true, nameof(Maybe))]
+    bool Exists { get; }
+    T? Maybe { get; }
+    T Value { get; }
 }
 
 public class LazyDi<T>(IServiceProvider _serviceProvider) : Lazy<T>(
-        valueFactory: _serviceProvider.GetRequiredService<T>,
-        isThreadSafe: true), ILazyDi<T> where T : class
+    valueFactory: _serviceProvider.GetRequiredService<T>,
+    isThreadSafe: true), ILazyDi<T> where T : class
 {
+    [MemberNotNullWhen(true, nameof(Maybe))]
     public bool Exists
     {
         get

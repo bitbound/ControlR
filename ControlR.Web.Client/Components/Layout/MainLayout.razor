@@ -1,10 +1,10 @@
 ﻿@inherits LayoutComponentBase
-@inject IMessenger Messenger
-@inject IBusyCounter BusyCounter
-@inject IViewerHubConnection ViewerHub
-@inject ISnackbar Snackbar
-@inject ILogger<MainLayout> Logger
-@inject NavigationManager NavManager
+@inject ILazyDi<IMessenger> Messenger
+@inject ILazyDi<IBusyCounter> BusyCounter
+@inject ILazyDi<IViewerHubConnection> ViewerHub
+@inject ILazyDi<ISnackbar> Snackbar
+@inject ILazyDi<NavigationManager> NavManager
+@inject ILazyDi<ILogger<MainLayout>> Logger
 
 <div>
   <MudThemeProvider IsDarkMode Theme="CustomTheme" />
@@ -23,16 +23,16 @@
 
       <MudSpacer />
 
-      @if (BusyCounter.IsBusy && ViewerHub.ConnectionState == HubConnectionState.Connected)
+      @if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
       {
-        <MudTooltip Text="@($"{BusyCounter.PendingOperations} operation(s) pending")">
+        <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
           <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
                                Class="mx-3 mt-1" />
         </MudTooltip>
       }
       else
       {
-        switch (ViewerHub.ConnectionState)
+        switch (_hubConnectionState)
         {
           case HubConnectionState.Connected:
             <MudTooltip Text="Connected">
@@ -41,7 +41,10 @@
             break;
           case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
             <MudTooltip Text="Reconnecting">
-              <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning"
+              <MudProgressCircular Indeterminate
+                                   StrokeWidth="6"
+                                   Size="Size.Small"
+                                   Color="Color.Warning"
                                    Class="mx-3 mt-1" />
             </MudTooltip>
             break;
@@ -55,15 +58,31 @@
         }
       }
       <MudTooltip Text="GitHub">
-        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-                       Href="https://github.com/bitbound/controlr/" Target="_blank" />
+        <MudIconButton 
+          Icon="@Icons.Custom.Brands.GitHub" 
+          Color="Color.Inherit"
+          Href="https://github.com/bitbound/controlr/" 
+          Target="_blank" />
+
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-      <NavMenu />
+      <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
-      @Body
+      @if (_isWaitingForWasmLoad)
+      {
+        <div class="w-100 text-center mt-8">
+          <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+            Loading
+          </MudText>
+          <MudProgressCircular Min="0" Max="1" Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+        </div>
+      }
+      else
+      {
+        @Body
+      }
     </MudMainContent>
   </MudLayout>
 </div>
@@ -77,11 +96,15 @@
 
 @code {
   private bool _drawerOpen = true;
+  private bool _isBusy = false;
+  private bool _isWaitingForWasmLoad = true;
   private bool _showAlert = false;
+  private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private AlertSeverity _alertSeverity = AlertSeverity.Information;
   private string _alertMessage = string.Empty;
   private bool _updateAvailable;
   private MudTheme? _customTheme;
+  private int _pendingOperations = 0;
 
   private MudTheme CustomTheme
   {
@@ -108,10 +131,38 @@
   protected override void OnInitialized()
   {
     base.OnInitialized();
-    Messenger.RegisterGenericMessage(this, HandleGeneric);
-    Messenger.Register<ToastMessage>(this, HandleToastMessage);
-    Messenger.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
-    Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+
+    if (OperatingSystem.IsBrowser())
+    { 
+      Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
+      Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Value.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
+      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+    }
+
+    if (NavManager.Exists)
+    {
+      _isWaitingForWasmLoad = 
+        !OperatingSystem.IsBrowser() &&
+        Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
+        !currentUri.PathAndQuery.StartsWith("/Account");
+    }
+  }
+
+  protected override bool ShouldRender()
+  {
+    if (BusyCounter.Exists)
+    {
+      _isBusy = BusyCounter.Value.IsBusy;
+      _pendingOperations = BusyCounter.Value.PendingOperations;
+    }
+
+    if (ViewerHub.Exists)
+    {
+      _hubConnectionState = ViewerHub.Value.ConnectionState;
+    }
+
+    return base.ShouldRender();
   }
 
   private void CloseAlert()
@@ -151,7 +202,7 @@
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
-    Snackbar.Add(toast.Message, toast.Severity);
+    Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
 }

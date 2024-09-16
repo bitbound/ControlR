@@ -40,11 +40,9 @@ builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 // Add telemetry.
 builder.AddServiceDefaults();
 
-builder.Services.AddLazyDi();
-
 // Add DB services.
 var connectionString = builder.Configuration.GetConnectionString(ServiceNames.Postgres)
-    ?? throw new InvalidOperationException("Connection string 'PostgreSQL' not found.");
+    ?? throw new InvalidOperationException("Connection string 'Postgres' not found.");
 
 builder.Services.AddDbContext<AppDb>(options =>
     options.UseNpgsql(connectionString));
@@ -57,7 +55,6 @@ builder.Services.AddMudServices();
 // Add components.
 builder.Services
     .AddRazorComponents()
-    .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
 // Add API services.
@@ -73,43 +70,41 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
 builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+  .AddAuthentication(options =>
+  {
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+  })
+  .AddIdentityCookies();
 
 builder.Services
-    .AddAuthorizationBuilder()
-    .AddPolicy(PolicyNames.RequireAdministratorPolicy, policyBuilder =>
-    {
-        policyBuilder.RequireAuthenticatedUser();
-        policyBuilder.RequireClaim(ClaimNames.IsAdministrator, "true");
-    });
-
+  .AddAuthorizationBuilder()
+  .AddPolicy(PolicyNames.RequireAdministratorPolicy, policyBuilder =>
+  {
+    policyBuilder.RequireAuthenticatedUser();
+    policyBuilder.RequireClaim(ClaimNames.IsAdministrator, "true");
+  });
 
 // Add Identity services.
 builder.Services
-    .AddIdentityCore<AppUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<AppDb>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
+  .AddIdentityCore<AppUser>(options => options.SignIn.RequireConfirmedAccount = true)
+  .AddEntityFrameworkStores<AppDb>()
+  .AddSignInManager()
+  .AddDefaultTokenProviders();
 
 // Add SignalR.
 var signalrBuilder = builder.Services
-    .AddSignalR(options =>
-    {
-        options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        options.MaximumReceiveMessageSize = 100_000;
-        options.MaximumParallelInvocationsPerClient = 5;
-    })
-    .AddMessagePackProtocol()
-    .AddJsonProtocol(options =>
-    {
-        options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
-    });
+  .AddSignalR(options =>
+  {
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.MaximumReceiveMessageSize = 100_000;
+    options.MaximumParallelInvocationsPerClient = 5;
+  })
+  .AddMessagePackProtocol()
+  .AddJsonProtocol(options =>
+  {
+    options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+  });
 
 // Add forwarded headers.
 ConfigureForwardedHeaders();
@@ -117,12 +112,9 @@ ConfigureForwardedHeaders();
 // Configure Redis, if scaled out.
 await ConfigureRedis();
 
-// Add proxies for client services to be used during prerendering.
-builder.Services.AddControlrWebClient();
-
 // Add other services.
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
-
+builder.Services.AddLazyDi();
 builder.Services.AddOutputCache();
 
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
@@ -139,15 +131,15 @@ builder.Services.AddWebSocketBridge();
 
 if (appOptions.UseRedisBackplane)
 {
-    builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
-    builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
-    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
-    builder.Services.AddHostedService<ConnectionCountSynchronizer>();
+  builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
+  builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
+  builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
+  builder.Services.AddHostedService<ConnectionCountSynchronizer>();
 }
 else
 {
-    builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
-    builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
+  builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
+  builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
 }
 
 builder.Host.UseSystemd();
@@ -160,16 +152,16 @@ app.MapDefaultEndpoints();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-    app.UseWebAssemblyDebugging();
-    app.UseMigrationsEndPoint();
+  app.UseSwagger();
+  app.UseSwaggerUI();
+  app.UseWebAssemblyDebugging();
+  app.UseMigrationsEndPoint();
 }
 else
 {
-    app.UseHttpsRedirection();
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+  app.UseHttpsRedirection();
+  app.UseExceptionHandler("/Error", createScopeForErrors: true);
+  app.UseHsts();
 }
 
 app.UseMiddleware<ContentHashHeaderMiddleware>();
@@ -185,7 +177,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(ControlR.Web.Client._Imports).Assembly);
 
@@ -203,91 +194,88 @@ app.Run();
 
 void ConfigureForwardedHeaders()
 {
+  builder.Services.Configure<ForwardedHeadersOptions>(options =>
+  {
+    options.ForwardedHeaders = ForwardedHeaders.All;
+    options.ForwardLimit = null;
 
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    // Default Docker host. We want to allow forwarded headers from this address.
+    if (!string.IsNullOrWhiteSpace(appOptions?.DockerGatewayIp))
     {
-        options.ForwardedHeaders = ForwardedHeaders.All;
-        options.ForwardLimit = null;
+      if (IPAddress.TryParse(appOptions?.DockerGatewayIp, out var dockerGatewayIp))
+      {
+        options.KnownProxies.Add(dockerGatewayIp);
+      }
+      else
+      {
+        Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
+      }
+    }
 
-        // Default Docker host. We want to allow forwarded headers from this address.
-        if (!string.IsNullOrWhiteSpace(appOptions?.DockerGatewayIp))
+    if (appOptions?.KnownProxies is { Length: > 0 } knownProxies)
+    {
+      foreach (var proxy in knownProxies)
+      {
+        if (IPAddress.TryParse(proxy, out var ip))
         {
-            if (IPAddress.TryParse(appOptions?.DockerGatewayIp, out var dockerGatewayIp))
-            {
-                options.KnownProxies.Add(dockerGatewayIp);
-            }
-            else
-            {
-                Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
-            }
+          options.KnownProxies.Add(ip);
         }
-
-        if (appOptions?.KnownProxies is { Length: > 0 } knownProxies)
+        else
         {
-            foreach (var proxy in knownProxies)
-            {
-                if (IPAddress.TryParse(proxy, out var ip))
-                {
-                    options.KnownProxies.Add(ip);
-                }
-                else
-                {
-                    Log.Error("Invalid KnownProxy IP: {KnownProxyIp}", proxy);
-                }
-            }
+          Log.Error("Invalid KnownProxy IP: {KnownProxyIp}", proxy);
         }
-    });
+      }
+    }
+  });
 }
 
 async Task ConfigureRedis()
 {
-    if (!appOptions.UseRedisBackplane)
-    {
-        return;
-    }
+  if (!appOptions.UseRedisBackplane)
+  {
+    return;
+  }
 
-    var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ??
-              throw new InvalidOperationException("Redis connection string cannot be empty if UseRedisBackplane is enabled.");
+  var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ??
+            throw new InvalidOperationException("Redis connection string cannot be empty if UseRedisBackplane is enabled.");
 
-    signalrBuilder.AddStackExchangeRedis(redisConnectionString, options =>
-    {
-        options.Configuration.AbortOnConnectFail = false;
-        options.Configuration.ChannelPrefix = RedisChannel.Literal("controlr-signalr");
-    });
+  signalrBuilder.AddStackExchangeRedis(redisConnectionString, options =>
+  {
+    options.Configuration.AbortOnConnectFail = false;
+    options.Configuration.ChannelPrefix = RedisChannel.Literal("controlr-signalr");
+  });
 
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = redisConnectionString;
-        options.InstanceName = "controlr-cache";
-    });
+  builder.Services.AddStackExchangeRedisCache(options =>
+  {
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "controlr-cache";
+  });
 
+  var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options =>
+  {
+    options.AllowAdmin = true;
+  });
 
-    var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options =>
-    {
-        options.AllowAdmin = true;
-    });
+  if (!multiplexer.IsConnected)
+  {
+    Log.Fatal("Failed to connect to Redis backplane.");
+  }
 
-    if (!multiplexer.IsConnected)
-    {
-        Log.Fatal("Failed to connect to Redis backplane.");
-    }
-
-    builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
+  builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
 }
 
 void ConfigureSerilog(ApplicationOptions applicationOptions)
 {
-    var logsRetention = applicationOptions.LogRetentionDays;
-    if (logsRetention <= 0)
-    {
-        logsRetention = 7;
-    }
+  var logsRetention = applicationOptions.LogRetentionDays;
+  if (logsRetention <= 0)
+  {
+    logsRetention = 7;
+  }
 
-    var logsPath = Path.Combine(
-      AppDomain.CurrentDomain.BaseDirectory,
-      "AppData",
-      "logs");
+  var logsPath = Path.Combine(
+    AppDomain.CurrentDomain.BaseDirectory,
+    "AppData",
+    "logs");
 
-    builder.Host.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
-
+  builder.Host.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
 }

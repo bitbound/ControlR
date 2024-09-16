@@ -11,11 +11,14 @@
     <link href="manifest.webmanifest" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <link rel="stylesheet" href="app.css" />
     <HeadOutlet @rendermode="RenderModeForPage" />
 </head>
 
 <body>
-    <Routes @rendermode="RenderModeForPage" />
+    <CascadingValue Value="@RenderModeForPage">
+      <Routes @rendermode="RenderModeForPage" />
+    </CascadingValue>
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"></script>
@@ -27,7 +30,8 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
+
     private IComponentRenderMode? RenderModeForPage => HttpContext.Request.Path.StartsWithSegments("/Account")
         ? null
-        : InteractiveAuto;
+        : InteractiveWebAssembly;
 }
