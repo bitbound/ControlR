@@ -2,26 +2,26 @@
 
 public interface IWsBridgeApi
 {
-    Task<bool> IsHealthy(Uri origin);
+  Task<bool> IsHealthy(Uri origin);
 }
 
 internal class WsBridgeApi(
-    HttpClient _client,
-    ILogger<KeyApi> _logger) : IWsBridgeApi
+  HttpClient client,
+  ILogger<KeyApi> logger) : IWsBridgeApi
 {
-    public async Task<bool> IsHealthy(Uri origin)
+  public async Task<bool> IsHealthy(Uri origin)
+  {
+    try
     {
-        try
-        {
-            var healthUri = new Uri(origin.ToHttpUri(), "/api/health");
-            using var response = await _client.GetAsync(healthUri);
-            response.EnsureSuccessStatusCode();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking health.");
-            return false;
-        }
+      var healthUri = new Uri(origin.ToHttpUri(), "/api/health");
+      using var response = await client.GetAsync(healthUri);
+      response.EnsureSuccessStatusCode();
+      return true;
     }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while checking health.");
+      return false;
+    }
+  }
 }

@@ -1,38 +1,38 @@
 ﻿@inject SignInManager<AppUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-@if (externalLogins.Length == 0)
+@if (_externalLogins.Length == 0)
 {
-    <MudAlert Variant="Variant.Text" Severity="Severity.Warning">There are no external authentication services configured.</MudAlert>
-    <MudText Typo="Typo.body1" Class="pt-4">
-        See <MudLink Target="_blank" Href="https://go.microsoft.com/fwlink/?LinkID=532715">this article</MudLink>
-        about setting up this ASP.NET application to support logging in via external services
-    </MudText>
+  <MudAlert Variant="Variant.Text" Severity="Severity.Warning">There are no external authentication services configured.</MudAlert>
+  <MudText Typo="Typo.body1" Class="pt-4">
+    See <MudLink Target="_blank" Href="https://go.microsoft.com/fwlink/?LinkID=532715">this article</MudLink>
+    about setting up this ASP.NET application to support logging in via external services
+  </MudText>
 }
 else
 {
-    <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
-        <div>
-            <AntiforgeryToken />
-            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-            <p>
-                @foreach (var provider in externalLogins)
-                {
-                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                }
-            </p>
-        </div>
-    </form>
+  <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
+    <div>
+      <AntiforgeryToken/>
+      <input type="hidden" name="ReturnUrl" value="@ReturnUrl"/>
+      <p>
+        @foreach (var provider in _externalLogins)
+        {
+          <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
+        }
+      </p>
+    </div>
+  </form>
 }
 
 @code {
-    private AuthenticationScheme[] externalLogins = [];
+  private AuthenticationScheme[] _externalLogins = [];
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
-    }
+  protected override async Task OnInitializedAsync()
+  {
+    _externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
+  }
+
 }

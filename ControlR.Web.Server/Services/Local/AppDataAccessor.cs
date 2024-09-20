@@ -4,107 +4,110 @@ namespace ControlR.Web.Server.Services.Local;
 
 public interface IAppDataAccessor
 {
-    Task<Result<AlertBroadcastDto>> GetCurrentAlert();
-    Task<Result> SaveCurrentAlert(AlertBroadcastDto alertDto);
-    Task<Result> ClearSavedAlert();
+  Task<Result<AlertBroadcastDto>> GetCurrentAlert();
+  Task<Result> SaveCurrentAlert(AlertBroadcastDto alertDto);
+  Task<Result> ClearSavedAlert();
 }
 
 public class AppDataAccessor(
-    IWebHostEnvironment _hostEnv,
-    IRetryer _retryer,
-    ILogger<AppDataAccessor> _logger) : IAppDataAccessor
+  IWebHostEnvironment hostEnv,
+  IRetryer retryer,
+  ILogger<AppDataAccessor> logger) : IAppDataAccessor
 {
-    private readonly string _appDataPath = Path.Combine(_hostEnv.ContentRootPath, "AppData");
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+  private readonly string _appDataPath = Path.Combine(hostEnv.ContentRootPath, "AppData");
+  private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    public async Task<Result> ClearSavedAlert()
+  public async Task<Result> ClearSavedAlert()
+  {
+    try
     {
-        try
+      return await retryer.Retry(
+        () =>
         {
-            return await _retryer.Retry(
-                () =>
-                {
-                    var alertPath = GetAlertFilePath();
-                    if (File.Exists(alertPath))
-                    {
-                        File.Delete(alertPath);
-                    }
+          var alertPath = GetAlertFilePath();
+          if (File.Exists(alertPath))
+          {
+            File.Delete(alertPath);
+          }
 
-                    return Result.Ok().AsTaskResult();
-                },
-                tryCount: 5,
-                TimeSpan.FromSeconds(3));
-        }
-        catch (Exception ex)
-        {
-            return Result
-                .Fail(ex, "Failed to clear alert from AppData.")
-                .Log(_logger);
-        }
+          return Result.Ok().AsTaskResult();
+        },
+        5,
+        TimeSpan.FromSeconds(3));
     }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Failed to clear alert from AppData.")
+        .Log(logger);
+    }
+  }
 
-    public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
+  public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
+  {
+    try
     {
-        try
+      return await retryer.Retry(
+        async () =>
         {
-            return await _retryer.Retry(
-               async () =>
-               {
-                   EnsureRootDirCreated();
-                   var alertPath = GetAlertFilePath();
-                   if (!File.Exists(alertPath))
-                   {
-                       return Result.Fail<AlertBroadcastDto>("No alert exists.");
-                   }
+          EnsureRootDirCreated();
+          var alertPath = GetAlertFilePath();
+          if (!File.Exists(alertPath))
+          {
+            return Result.Fail<AlertBroadcastDto>("No alert exists.");
+          }
 
-                   await using var fs = new FileStream(GetAlertFilePath(), FileMode.Open);
-                   var alert = await JsonSerializer.DeserializeAsync<AlertBroadcastDto>(fs);
-                   if (alert is not null)
-                   {
-                       return Result.Ok(alert);
-                   }
-                   return Result.Fail<AlertBroadcastDto>("Failed to deserialize alert.");
-               },
-               tryCount: 5,
-               TimeSpan.FromSeconds(3));
-        }
-        catch (Exception ex)
-        {
-            return Result
-                .Fail<AlertBroadcastDto>(ex, "Failed to get saved alert.")
-                .Log(_logger);
-        }
-    }
+          await using var fs = new FileStream(GetAlertFilePath(), FileMode.Open);
+          var alert = await JsonSerializer.DeserializeAsync<AlertBroadcastDto>(fs);
+          if (alert is not null)
+          {
+            return Result.Ok(alert);
+          }
 
-    public async Task<Result> SaveCurrentAlert(AlertBroadcastDto alertDto)
+          return Result.Fail<AlertBroadcastDto>("Failed to deserialize alert.");
+        },
+        5,
+        TimeSpan.FromSeconds(3));
+    }
+    catch (Exception ex)
     {
-        try
+      return Result
+        .Fail<AlertBroadcastDto>(ex, "Failed to get saved alert.")
+        .Log(logger);
+    }
+  }
+
+  public async Task<Result> SaveCurrentAlert(AlertBroadcastDto alertDto)
+  {
+    try
+    {
+      await retryer.Retry(
+        async () =>
         {
-            await _retryer.Retry(
-                async () =>
-                {
-                    EnsureRootDirCreated();
-                    var alertPath = GetAlertFilePath();
-                    await using var fs = new FileStream(GetAlertFilePath(), FileMode.Create);
-                    await JsonSerializer.SerializeAsync(fs, alertDto, _jsonOptions);
-                },
-                tryCount: 5,
-                TimeSpan.FromSeconds(3));
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            return Result
-                .Fail(ex, "Failed to save alert to AppData.")
-                .Log(_logger);
-        }
+          EnsureRootDirCreated();
+          var alertPath = GetAlertFilePath();
+          await using var fs = new FileStream(GetAlertFilePath(), FileMode.Create);
+          await JsonSerializer.SerializeAsync(fs, alertDto, _jsonOptions);
+        },
+        5,
+        TimeSpan.FromSeconds(3));
+      return Result.Ok();
     }
-    private void EnsureRootDirCreated()
+    catch (Exception ex)
     {
-        Directory.CreateDirectory(_appDataPath);
+      return Result
+        .Fail(ex, "Failed to save alert to AppData.")
+        .Log(logger);
     }
-    private string GetAlertFilePath()
-    {
-        return Path.Combine(_appDataPath, "Alert.json");
-    }
+  }
+
+  private void EnsureRootDirCreated()
+  {
+    Directory.CreateDirectory(_appDataPath);
+  }
+
+  private string GetAlertFilePath()
+  {
+    return Path.Combine(_appDataPath, "Alert.json");
+  }
 }

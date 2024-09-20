@@ -5,10 +5,10 @@ namespace ControlR.Agent.Services.Linux;
 
 public class ElevationCheckerLinux : IElevationChecker
 {
-    public static IElevationChecker Instance { get; } = new ElevationCheckerLinux();
+  public static IElevationChecker Instance { get; } = new ElevationCheckerLinux();
 
-    public bool IsElevated()
-    {
-        return Libc.geteuid() == 0;
-    }
+  public bool IsElevated()
+  {
+    return Libc.Geteuid() == 0;
+  }
 }

@@ -8,137 +8,130 @@ namespace ControlR.Viewer.Services;
 
 public interface IDeviceCache
 {
-    IEnumerable<DeviceDto> Devices { get; }
-    Task AddOrUpdate(DeviceDto device);
+  IEnumerable<DeviceDto> Devices { get; }
+  Task AddOrUpdate(DeviceDto device);
 
-    void Clear();
+  void Clear();
 
-    Task Initialize();
-    Task Remove(DeviceDto device);
+  Task Initialize();
+  Task Remove(DeviceDto device);
 
-    Task SetAllOffline();
+  Task SetAllOffline();
 
-    bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device);
+  bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device);
 }
 
-internal class DeviceCache : IDeviceCache
+internal class DeviceCache(IFileSystem fileSystem, IFileIo fileIo, ILogger<DeviceCache> logger)
+  : IDeviceCache
 {
-    private static readonly ConcurrentDictionary<string, DeviceDto> _cache = new();
-    private static readonly SemaphoreSlim _fileLock = new(1, 1);
-    private readonly string _deviceCachePath;
-    private readonly IFileIo _fileIo;
-    private readonly ILogger<DeviceCache> _logger;
+  private static readonly ConcurrentDictionary<string, DeviceDto> _cache = new();
+  private static readonly SemaphoreSlim _fileLock = new(1, 1);
+  private readonly string _deviceCachePath = Path.Combine(fileSystem.AppDataDirectory, "DeviceCache.json");
 
-    public DeviceCache(IFileSystem fileSystem, IFileIo fileIo, ILogger<DeviceCache> logger)
+  public IEnumerable<DeviceDto> Devices => _cache.Values;
+
+  public async Task AddOrUpdate(DeviceDto device)
+  {
+    _cache.AddOrUpdate(device.Id, device, (_, _) => device);
+    await TrySaveCache();
+  }
+
+  public void Clear()
+  {
+    _cache.Clear();
+  }
+
+  public async Task Initialize()
+  {
+    await _fileLock.WaitAsync();
+    try
     {
-        _fileIo = fileIo;
-        _deviceCachePath = Path.Combine(fileSystem.AppDataDirectory, "DeviceCache.json");
-        _logger = logger;
+      _cache.Clear();
+
+      if (!fileIo.FileExists(_deviceCachePath))
+      {
+        fileIo.CreateFile(_deviceCachePath).Close();
+      }
+
+      var content = fileIo.ReadAllText(_deviceCachePath);
+
+      if (string.IsNullOrWhiteSpace(content))
+      {
+        return;
+      }
+
+      var devices = JsonSerializer.Deserialize<DeviceDto[]>(content);
+
+      if (devices is null)
+      {
+        return;
+      }
+
+      foreach (var device in devices)
+      {
+        device.IsOnline = false;
+        _cache.AddOrUpdate(device.Id, device, (_, _) => device);
+      }
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while trying to load device cache from file system.");
+    }
+    finally
+    {
+      _fileLock.Release();
+    }
+  }
+
+  public async Task Remove(DeviceDto device)
+  {
+    if (_cache.Remove(device.Id, out _))
+    {
+      await TrySaveCache();
+    }
+  }
+
+  public async Task SetAllOffline()
+  {
+    foreach (var device in _cache.Values)
+    {
+      device.IsOnline = false;
     }
 
-    public IEnumerable<DeviceDto> Devices => _cache.Values;
+    await TrySaveCache();
+  }
 
-    public async Task AddOrUpdate(DeviceDto device)
-    {
-        _cache.AddOrUpdate(device.Id, device, (k, v) => device);
-        await TrySaveCache();
-    }
+  public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
+  {
+    return _cache.TryGetValue(deviceId, out device);
+  }
 
-    public void Clear()
-    {
-        _cache.Clear();
-    }
-
-    public async Task Initialize()
-    {
+  private Task TrySaveCache()
+  {
+    Debouncer.Debounce(
+      TimeSpan.FromSeconds(3),
+      async () =>
+      {
         await _fileLock.WaitAsync();
         try
         {
-            _cache.Clear();
+          if (!fileIo.FileExists(_deviceCachePath))
+          {
+            fileIo.CreateFile(_deviceCachePath).Close();
+          }
 
-            if (!_fileIo.FileExists(_deviceCachePath))
-            {
-                _fileIo.CreateFile(_deviceCachePath).Close();
-            }
-
-            var content = _fileIo.ReadAllText(_deviceCachePath);
-
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                return;
-            }
-
-            var devices = JsonSerializer.Deserialize<DeviceDto[]>(content);
-
-            if (devices is null)
-            {
-                return;
-            }
-
-            foreach (var device in devices)
-            {
-                device.IsOnline = false;
-                _cache.AddOrUpdate(device.Id, device, (k, v) => device);
-            }
+          var json = JsonSerializer.Serialize(_cache.Values);
+          fileIo.WriteAllText(_deviceCachePath, json);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while trying to load device cache from file system.");
+          logger.LogError(ex, "Error while trying to save device cache to file system.");
         }
         finally
         {
-            _fileLock.Release();
+          _fileLock.Release();
         }
-    }
-
-    public async Task Remove(DeviceDto device)
-    {
-        if (_cache.Remove(device.Id, out _))
-        {
-            await TrySaveCache();
-        }
-    }
-
-    public async Task SetAllOffline()
-    {
-        foreach (var device in _cache.Values)
-        {
-            device.IsOnline = false;
-        }
-        await TrySaveCache();
-    }
-
-    public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
-    {
-        return _cache.TryGetValue(deviceId, out device);
-    }
-
-    private Task TrySaveCache()
-    {
-        Debouncer.Debounce(
-            TimeSpan.FromSeconds(3), 
-            async () =>
-            {
-                await _fileLock.WaitAsync();
-                try
-                {
-                    if (!_fileIo.FileExists(_deviceCachePath))
-                    {
-                        _fileIo.CreateFile(_deviceCachePath).Close();
-                    }
-
-                    var json = JsonSerializer.Serialize(_cache.Values);
-                    _fileIo.WriteAllText(_deviceCachePath, json);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while trying to save device cache to file system.");
-                }
-                finally
-                {
-                    _fileLock.Release();
-                }
-            });
-        return Task.CompletedTask;
-    }
+      });
+    return Task.CompletedTask;
+  }
 }

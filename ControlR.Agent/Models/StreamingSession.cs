@@ -1,18 +1,23 @@
-﻿using ControlR.Libraries.Shared.Helpers;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Models;
-internal class StreamingSession(string _viewerConnectionId) : IDisposable
+
+internal class StreamingSession(string viewerConnectionId) : IDisposable
 {
-    public string ViewerConnectionId { get; } = _viewerConnectionId;
-    public Process? StreamerProcess { get; set; }
-    public void Dispose()
+  public string ViewerConnectionId { get; } = viewerConnectionId;
+  public Process? StreamerProcess { get; set; }
+
+  public void Dispose()
+  {
+    try
     {
-        try
-        {
-            StreamerProcess?.Kill();
-        }
-        catch { }
-        DisposeHelper.DisposeAll(StreamerProcess);
+      StreamerProcess?.Kill();
     }
+    catch
+    {
+    }
+
+    DisposeHelper.DisposeAll(StreamerProcess);
+  }
 }

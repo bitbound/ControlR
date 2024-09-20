@@ -2,25 +2,20 @@
 
 public interface IClipboardManager
 {
-    Task SetText(string text);
-    Task<string?> GetText();
+  Task SetText(string text);
+  Task<string?> GetText();
 }
 
-internal class ClipboardManager(
-    IMessenger _messenger,
-    ILogger<ClipboardManager> _logger) : IClipboardManager
+internal class ClipboardManager: IClipboardManager
 {
-    private readonly SemaphoreSlim _clipboardLock = new(1, 1);
-    private string? _lastClipboardText;
+  public async Task<string?> GetText()
+  {
+    await Task.Yield();
+    return "";
+  }
 
-
-    public async Task<string?> GetText()
-    {
-        return "";
-    }
-
-    public async Task SetText(string? text)
-    {
-        return;
-    }
+  public async Task SetText(string? text)
+  {
+    await Task.Yield();
+  }
 }

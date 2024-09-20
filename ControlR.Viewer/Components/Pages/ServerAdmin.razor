@@ -117,7 +117,7 @@
 
         Messenger.Register<ServerStatsUpdateMessage>(
             this,
-            async (subscriber, update) =>
+            async (_, update) =>
             {
                 _serverStats = update.ServerStats;
                 await InvokeAsync(StateHasChanged);

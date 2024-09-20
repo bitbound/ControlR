@@ -44,7 +44,7 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         });
 
         accountGroup.MapPost("/Logout", async (
-            ClaimsPrincipal user,
+            ClaimsPrincipal _,
             SignInManager<AppUser> signInManager,
             [FromForm] string returnUrl) =>
         {

@@ -1,79 +1,81 @@
-﻿using MessagePack;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net.Http.Headers;
+using MessagePack;
 
 namespace ControlR.Viewer.Services;
 
 internal interface IHttpConfigurer
 {
-    void ConfigureClient(HttpClient client);
+  void ConfigureClient(HttpClient client);
 
-    HttpClient GetAuthorizedClient();
+  HttpClient GetAuthorizedClient();
 
-    string GetDigitalSignature();
+  string GetDigitalSignature();
 
-    string GetDigitalSignature(IdentityDto keyDto);
+  string GetDigitalSignature(IdentityDto keyDto);
 
-    void UpdateClientAuthorizations(IdentityDto keyDto);
+  void UpdateClientAuthorizations(IdentityDto keyDto);
 }
 
 internal class HttpConfigurer(
-    IHttpClientFactory _clientFactory,
-    ISettings _settings,
-    IKeyProvider _keyProvider,
-    IAppState _appState) : IHttpConfigurer
+  IHttpClientFactory clientFactory,
+  ISettings settings,
+  IKeyProvider keyProvider,
+  IAppState appState) : IHttpConfigurer
 {
-    private static readonly ConcurrentBag<HttpClient> _clients = [];
+  private static readonly ConcurrentBag<HttpClient> _clients = [];
 
-    public void ConfigureClient(HttpClient client)
+  public void ConfigureClient(HttpClient client)
+  {
+    client.BaseAddress = settings.ServerUri;
+
+    if (appState.IsAuthenticated)
     {
-        client.BaseAddress = _settings.ServerUri;
+      var keyDto = new IdentityDto
+      {
+        Username = settings.Username
+      };
 
-        if (_appState.IsAuthenticated)
-        {
-            var keyDto = new IdentityDto()
-            {
-                Username = _settings.Username
-            };
-
-            var signature = GetDigitalSignature(keyDto);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(AuthSchemes.DigitalSignature, signature);
-        }
-
-        _clients.Add(client);
+      var signature = GetDigitalSignature(keyDto);
+      client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue(AuthSchemes.DigitalSignature, signature);
     }
 
-    public HttpClient GetAuthorizedClient()
-    {
-        var client = _clientFactory.CreateClient();
-        ConfigureClient(client);
-        return client;
-    }
+    _clients.Add(client);
+  }
 
-    public string GetDigitalSignature(IdentityDto keyDto)
-    {
-        var signedDto = _keyProvider.CreateSignedDto(keyDto, DtoType.IdentityAttestation, _appState.PrivateKey);
-        var dtoBytes = MessagePackSerializer.Serialize(signedDto);
-        var base64Payload = Convert.ToBase64String(dtoBytes);
-        return base64Payload;
-    }
+  public HttpClient GetAuthorizedClient()
+  {
+    var client = clientFactory.CreateClient();
+    ConfigureClient(client);
+    return client;
+  }
 
-    public string GetDigitalSignature()
-    {
-        var identityDto = new IdentityDto()
-        {
-            Username = _settings.Username
-        };
-        return GetDigitalSignature(identityDto);
-    }
+  public string GetDigitalSignature(IdentityDto keyDto)
+  {
+    var signedDto = keyProvider.CreateSignedDto(keyDto, DtoType.IdentityAttestation, appState.PrivateKey);
+    var dtoBytes = MessagePackSerializer.Serialize(signedDto);
+    var base64Payload = Convert.ToBase64String(dtoBytes);
+    return base64Payload;
+  }
 
-    public void UpdateClientAuthorizations(IdentityDto keyDto)
+  public string GetDigitalSignature()
+  {
+    var identityDto = new IdentityDto
     {
-        var signature = GetDigitalSignature(keyDto);
+      Username = settings.Username
+    };
+    return GetDigitalSignature(identityDto);
+  }
 
-        foreach (var client in _clients)
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(AuthSchemes.DigitalSignature, signature);
-        }
+  public void UpdateClientAuthorizations(IdentityDto keyDto)
+  {
+    var signature = GetDigitalSignature(keyDto);
+
+    foreach (var client in _clients)
+    {
+      client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue(AuthSchemes.DigitalSignature, signature);
     }
+  }
 }

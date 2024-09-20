@@ -1,147 +1,145 @@
 ﻿using ControlR.Agent.Interfaces;
 using ControlR.Agent.Services.Base;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Services;
-using Microsoft.Extensions.Logging;
 
 namespace ControlR.Agent.Services.Mac;
 
 internal class DeviceDataGeneratorMac(
-    IProcessManager processInvoker,
-    IEnvironmentHelper environmentHelper,
-    ILogger<DeviceDataGeneratorMac> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
+  IProcessManager processInvoker,
+  IEnvironmentHelper environmentHelper,
+  ILogger<DeviceDataGeneratorMac> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
-    private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
-    private readonly IProcessManager _processService = processInvoker;
+  private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
+  private readonly IProcessManager _processService = processInvoker;
 
-    public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys, string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys,
+    string deviceId)
+  {
+    try
     {
-        try
-        {
-            var (usedStorage, totalStorage) = GetSystemDriveInfo();
-            var (usedMemory, totalMemory) = await GetMemoryInGB();
+      var (usedStorage, totalStorage) = GetSystemDriveInfo();
+      var (usedMemory, totalMemory) = await GetMemoryInGb();
 
-            var currentUser = await GetCurrentUser();
-            var drives = GetAllDrives();
-            var agentVersion = GetAgentVersion();
+      var currentUser = await GetCurrentUser();
+      var drives = GetAllDrives();
+      var agentVersion = GetAgentVersion();
 
-            return GetDeviceBase(
-                authorizedKeys,
-                deviceId,
-                currentUser,
-                drives,
-                usedStorage,
-                totalStorage,
-                usedMemory,
-                totalMemory,
-                cpuUtilization,
-                agentVersion);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting device info.");
-            throw;
-        }
+      return GetDeviceBase(
+        authorizedKeys,
+        deviceId,
+        currentUser,
+        drives,
+        usedStorage,
+        totalStorage,
+        usedMemory,
+        totalMemory,
+        cpuUtilization,
+        agentVersion);
     }
-
-    public async Task<(double usedGB, double totalGB)> GetMemoryInGB()
+    catch (Exception ex)
     {
-        try
-        {
-            double totalGB = default;
-
-            var memTotalResult = await _processService.GetProcessOutput("zsh", "-c \"sysctl -n hw.memsize\"");
-            var memPercentResult = await _processService.GetProcessOutput("zsh", $"-c \"ps -A -o %mem\"");
-
-            if (!memTotalResult.IsSuccess)
-            {
-                _logger.LogResult(memTotalResult);
-                return (0, 0);
-            }
-
-            if (!memPercentResult.IsSuccess)
-            {
-                _logger.LogResult(memPercentResult);
-                return (0, 0);
-            }
-
-            if (double.TryParse(memTotalResult.Value, out var totalMemory))
-            {
-                totalGB = (double)Math.Round(totalMemory / 1024 / 1024 / 1024, 2);
-            }
-
-            double usedGB = default;
-
-            double usedMemPercent = 0;
-            memPercentResult
-                .Value
-                .Split(Environment.NewLine)
-                .ToList()
-                .ForEach(x =>
-                {
-                    if (double.TryParse(x, out var result))
-                    {
-                        usedMemPercent += result;
-                    }
-                });
-
-            usedMemPercent = usedMemPercent / 4 / 100;
-            usedGB = usedMemPercent * totalGB;
-
-            return (usedGB, totalGB);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting memory.");
-            return (0, 0);
-        }
+      _logger.LogError(ex, "Error getting device info.");
+      throw;
     }
+  }
 
-    private async Task<double> GetCpuUtilization()
+  public async Task<(double usedGB, double totalGB)> GetMemoryInGb()
+  {
+    try
     {
-        try
+      double totalGb = default;
+
+      var memTotalResult = await _processService.GetProcessOutput("zsh", "-c \"sysctl -n hw.memsize\"");
+      var memPercentResult = await _processService.GetProcessOutput("zsh", "-c \"ps -A -o %mem\"");
+
+      if (!memTotalResult.IsSuccess)
+      {
+        _logger.LogResult(memTotalResult);
+        return (0, 0);
+      }
+
+      if (!memPercentResult.IsSuccess)
+      {
+        _logger.LogResult(memPercentResult);
+        return (0, 0);
+      }
+
+      if (double.TryParse(memTotalResult.Value, out var totalMemory))
+      {
+        totalGb = Math.Round(totalMemory / 1024 / 1024 / 1024, 2);
+      }
+
+      double usedGb = default;
+
+      double usedMemPercent = 0;
+      memPercentResult
+        .Value
+        .Split(Environment.NewLine)
+        .ToList()
+        .ForEach(x =>
         {
-            var result = await _processService.GetProcessOutput("zsh", "-c \"ps -A -o %cpu\"");
+          if (double.TryParse(x, out var result))
+          {
+            usedMemPercent += result;
+          }
+        });
 
-            if (!result.IsSuccess)
-            {
-                _logger.LogResult(result);
-                return 0;
-            }
+      usedMemPercent = usedMemPercent / 4 / 100;
+      usedGb = usedMemPercent * totalGb;
 
-            double cpuPercent = 0;
-            result
-                .Value
-                .Split(Environment.NewLine)
-                .ToList()
-                .ForEach(x =>
-                {
-                    if (double.TryParse(x, out var result))
-                    {
-                        cpuPercent += result;
-                    }
-                });
+      return (usedGb, totalGb);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting memory.");
+      return (0, 0);
+    }
+  }
 
-            return cpuPercent / Environment.ProcessorCount / 100;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting CPU utilization.");
-        }
+  private async Task<double> GetCpuUtilization()
+  {
+    try
+    {
+      var result = await _processService.GetProcessOutput("zsh", "-c \"ps -A -o %cpu\"");
 
+      if (!result.IsSuccess)
+      {
+        _logger.LogResult(result);
         return 0;
+      }
+
+      double cpuPercent = 0;
+      result
+        .Value
+        .Split(Environment.NewLine)
+        .ToList()
+        .ForEach(x =>
+        {
+          if (double.TryParse(x, out var result))
+          {
+            cpuPercent += result;
+          }
+        });
+
+      return cpuPercent / Environment.ProcessorCount / 100;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting CPU utilization.");
     }
 
-    private async Task<string> GetCurrentUser()
+    return 0;
+  }
+
+  private async Task<string> GetCurrentUser()
+  {
+    var result = await _processService.GetProcessOutput("users", "");
+    if (!result.IsSuccess)
     {
-        var result = await _processService.GetProcessOutput("users", "");
-        if (!result.IsSuccess)
-        {
-            _logger.LogResult(result);
-            return string.Empty;
-        }
-        return result.Value?.Split()?.FirstOrDefault()?.Trim() ?? string.Empty;
+      _logger.LogResult(result);
+      return string.Empty;
     }
+
+    return result.Value?.Split()?.FirstOrDefault()?.Trim() ?? string.Empty;
+  }
 }

@@ -1,42 +1,39 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
+using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows")]
 internal class StreamingSessionWatcher(
-    IStreamingSessionCache _streamerCache,
-    ILogger<StreamingSessionWatcher> _logger) : BackgroundService
+  IStreamingSessionCache streamerCache,
+  ILogger<StreamingSessionWatcher> logger) : BackgroundService
 {
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+  {
+    using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    while (await timer.WaitForNextTickAsync(stoppingToken))
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
-
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+      foreach (var kvp in streamerCache.Sessions)
+      {
+        try
         {
-            foreach (var kvp in _streamerCache.Sessions)
-            {
-                try
-                {
-                    var session = kvp.Value;
+          var session = kvp.Value;
 
-                    if (session.StreamerProcess?.HasExited == true)
-                    {
-                        _logger.LogInformation("Removing streaming session for process {ProcessId}.", session.StreamerProcess.Id);
-                        _ = await _streamerCache.TryRemove(session.StreamerProcess.Id);
-                        session.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while checking streamer processes for exit.");
-                }
-               
-            }
+          if (session.StreamerProcess?.HasExited == true)
+          {
+            logger.LogInformation("Removing streaming session for process {ProcessId}.", session.StreamerProcess.Id);
+            _ = await streamerCache.TryRemove(session.StreamerProcess.Id);
+            session.Dispose();
+          }
         }
-
-        await _streamerCache.KillAllSessions();
+        catch (Exception ex)
+        {
+          logger.LogError(ex, "Error while checking streamer processes for exit.");
+        }
+      }
     }
+
+    await streamerCache.KillAllSessions();
+  }
 }

@@ -29,7 +29,33 @@ public class LazyDi<T>(IServiceProvider serviceProvider) : Lazy<T>(
   true), ILazyDi<T> where T : class
 {
   [MemberNotNullWhen(true, nameof(Maybe))]
-  public bool Exists => serviceProvider.GetService<T>() is not null;
+  public bool Exists
+  {
+    get
+    {
+      try
+      {
+        return serviceProvider.GetService<T>() is not null;
+      }
+      catch
+      {
+        return false;
+      }
+    }
+  }
 
-  public T? Maybe => serviceProvider.GetService<T>();
+  public T? Maybe
+  {
+    get
+    {
+      try
+      {
+        return serviceProvider.GetService<T>();
+      }
+      catch
+      {
+        return null;
+      }
+    }
+  }
 }

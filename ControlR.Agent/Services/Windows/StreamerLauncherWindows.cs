@@ -1,222 +1,221 @@
-﻿using ControlR.Agent.Interfaces;
-using ControlR.Agent.Models;
-using ControlR.Libraries.Shared;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using SimpleIpc;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.Versioning;
-using Result = ControlR.Libraries.Shared.Primitives.Result;
-using ControlR.Devices.Native.Services;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.Shared.Primitives;
+using ControlR.Agent.Interfaces;
 using ControlR.Agent.IpcDtos;
+using ControlR.Agent.Models;
+using ControlR.Devices.Native.Services;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
+using Microsoft.Extensions.Hosting;
+using SimpleIpc;
+using Result = ControlR.Libraries.Shared.Primitives.Result;
 
 namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class StreamerLauncherWindows(
-    IHostApplicationLifetime _appLifetime,
-    IWin32Interop _win32Interop,
-    IProcessManager _processes,
-    IIpcRouter _ipcRouter,
-    IEnvironmentHelper _environment,
-    IStreamingSessionCache _streamingSessionCache,
-    ISettingsProvider _settings,
-    IFileSystem _fileSystem,
-    ILogger<StreamerLauncherWindows> _logger) : IStreamerLauncher
+  IHostApplicationLifetime appLifetime,
+  IWin32Interop win32Interop,
+  IProcessManager processes,
+  IIpcRouter ipcRouter,
+  IEnvironmentHelper environment,
+  IStreamingSessionCache streamingSessionCache,
+  ISettingsProvider settings,
+  IFileSystem fileSystem,
+  ILogger<StreamerLauncherWindows> logger) : IStreamerLauncher
 {
-    private readonly SemaphoreSlim _createSessionLock = new(1, 1);
+  private readonly SemaphoreSlim _createSessionLock = new(1, 1);
 
-    public async Task<Result> CreateSession(
-        Guid sessionId,
-        Uri websocketUri,
-        string viewerConnectionId,
-        int targetWindowsSession = -1,
-        bool notifyViewerOnSessionStart = false,
-        string? viewerName = null)
+  public async Task<Result> CreateSession(
+    Guid sessionId,
+    Uri websocketUri,
+    string viewerConnectionId,
+    int targetWindowsSession = -1,
+    bool notifyViewerOnSessionStart = false,
+    string? viewerName = null)
+  {
+    await _createSessionLock.WaitAsync();
+
+    try
     {
-        await _createSessionLock.WaitAsync();
+      var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
 
-        try
+      if (!echoResult.IsSuccess)
+      {
+        logger.LogResult(echoResult);
+        return Result.Fail("Failed to determine initial input desktop.");
+      }
+
+      var targetDesktop = echoResult.Value.Trim();
+      logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
+
+      var session = new StreamingSession(viewerConnectionId);
+
+      var serverUri = settings.ServerUri.ToString().TrimEnd('/');
+      var args =
+        $"--session-id {sessionId} --viewer-id {viewerConnectionId} --origin {serverUri} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
+      if (!string.IsNullOrWhiteSpace(viewerName))
+      {
+        args += $" --viewer-name=\"{viewerName}\"";
+      }
+
+      logger.LogInformation("Launching remote control with args: {StreamerArguments}", args);
+
+      if (!environment.IsDebug)
+      {
+        var startupDir = environment.StartupDirectory;
+        var streamerDir = Path.Combine(startupDir, "Streamer");
+        var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
+
+        win32Interop.CreateInteractiveSystemProcess(
+          $"\"{binaryPath}\" {args}",
+          targetWindowsSession,
+          false,
+          targetDesktop,
+          true,
+          out var process);
+
+        if (process is null || process.Id == -1)
         {
-            var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
-
-            if (!echoResult.IsSuccess)
-            {
-                _logger.LogResult(echoResult);
-                return Result.Fail("Failed to determine initial input desktop.");
-            }
-
-            var targetDesktop = echoResult.Value.Trim();
-            _logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
-
-            var session = new StreamingSession(viewerConnectionId);
-
-            var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
-            var args = $"--session-id {sessionId} --viewer-id {viewerConnectionId} --origin {serverUri} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
-            if (!string.IsNullOrWhiteSpace(viewerName))
-            {
-                args += $" --viewer-name=\"{viewerName}\"";
-            }
-
-            _logger.LogInformation("Launching remote control with args: {StreamerArguments}", args);
-
-            if (!_environment.IsDebug)
-            {
-                var startupDir = _environment.StartupDirectory;
-                var streamerDir = Path.Combine(startupDir, "Streamer");
-                var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
-
-                _win32Interop.CreateInteractiveSystemProcess(
-                    $"\"{binaryPath}\" {args}",
-                    targetSessionId: targetWindowsSession,
-                    forceConsoleSession: false,
-                    desktopName: targetDesktop,
-                    hiddenWindow: true,
-                    out var process);
-
-                if (process is null || process.Id == -1)
-                {
-                    var streamerZipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
-                    // Delete streamer files so a clean install will be performed on the next attempt.
-                    _fileSystem.DeleteDirectory(streamerDir, true);
-                    _fileSystem.DeleteFile(streamerZipPath);
-                    return Result.Fail("Failed to start remote control process.");
-                }
-
-                session.StreamerProcess = process;
-            }
-            else
-            {
-                var solutionDirReult = GetSolutionDir(Environment.CurrentDirectory);
-
-                if (solutionDirReult.IsSuccess)
-                {
-                    var streamerBin = Path.Combine(
-                        solutionDirReult.Value,
-                        "ControlR.Streamer",
-                        "bin",
-                        "Debug");
-
-                    var streamerPath = _fileSystem
-                        .GetFiles(streamerBin, AppConstants.StreamerFileName, SearchOption.AllDirectories)
-                        .FirstOrDefault();
-
-                    if (string.IsNullOrWhiteSpace(streamerPath))
-                    {
-                        throw new FileNotFoundException("Streamer binary not found.", streamerPath);
-                    }
-
-                    var psi = new ProcessStartInfo()
-                    {
-                        FileName = streamerPath,
-                        Arguments = args,
-                        WorkingDirectory = Path.GetDirectoryName(streamerPath),
-                        UseShellExecute = true
-                    };
-                    //var psi = new ProcessStartInfo()
-                    //{
-                    //    FileName = "cmd.exe",
-                    //    Arguments = $"/k {streamerPath} {args}",
-                    //    WorkingDirectory = Path.GetDirectoryName(streamerPath),
-                    //    UseShellExecute = true
-                    //};
-                    session.StreamerProcess = _processes.Start(psi);
-                }
-
-                if (session.StreamerProcess is null)
-                {
-                    return Result.Fail("Failed to start remote control process.");
-                }
-            }
-
-            await _streamingSessionCache.AddOrUpdate(session);
-
-            return Result.Ok();
+          var streamerZipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
+          // Delete streamer files so a clean install will be performed on the next attempt.
+          fileSystem.DeleteDirectory(streamerDir, true);
+          fileSystem.DeleteFile(streamerZipPath);
+          return Result.Fail("Failed to start remote control process.");
         }
-        catch (Exception ex)
+
+        session.StreamerProcess = process;
+      }
+      else
+      {
+        var solutionDirReult = GetSolutionDir(Environment.CurrentDirectory);
+
+        if (solutionDirReult.IsSuccess)
         {
-            _logger.LogError(ex, "Error while creating remote control session.");
-            return Result.Fail("An error occurred while starting remote control.");
+          var streamerBin = Path.Combine(
+            solutionDirReult.Value,
+            "ControlR.Streamer",
+            "bin",
+            "Debug");
+
+          var streamerPath = fileSystem
+            .GetFiles(streamerBin, AppConstants.StreamerFileName, SearchOption.AllDirectories)
+            .FirstOrDefault();
+
+          if (string.IsNullOrWhiteSpace(streamerPath))
+          {
+            throw new FileNotFoundException("Streamer binary not found.", streamerPath);
+          }
+
+          var psi = new ProcessStartInfo
+          {
+            FileName = streamerPath,
+            Arguments = args,
+            WorkingDirectory = Path.GetDirectoryName(streamerPath),
+            UseShellExecute = true
+          };
+          //var psi = new ProcessStartInfo()
+          //{
+          //    FileName = "cmd.exe",
+          //    Arguments = $"/k {streamerPath} {args}",
+          //    WorkingDirectory = Path.GetDirectoryName(streamerPath),
+          //    UseShellExecute = true
+          //};
+          session.StreamerProcess = processes.Start(psi);
         }
-        finally
+
+        if (session.StreamerProcess is null)
         {
-            _createSessionLock.Release();
+          return Result.Fail("Failed to start remote control process.");
         }
+      }
+
+      await streamingSessionCache.AddOrUpdate(session);
+
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while creating remote control session.");
+      return Result.Fail("An error occurred while starting remote control.");
+    }
+    finally
+    {
+      _createSessionLock.Release();
+    }
+  }
+
+  // For debugging.
+  private static Result<string> GetSolutionDir(string currentDir)
+  {
+    var dirInfo = new DirectoryInfo(currentDir);
+    if (!dirInfo.Exists)
+    {
+      return Result.Fail<string>("Not found.");
     }
 
-    // For debugging.
-    private static Result<string> GetSolutionDir(string currentDir)
+    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
     {
-        var dirInfo = new DirectoryInfo(currentDir);
-        if (!dirInfo.Exists)
-        {
-            return Result.Fail<string>("Not found.");
-        }
-
-        if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
-        {
-            return Result.Ok(currentDir);
-        }
-
-        if (dirInfo.Parent is not null)
-        {
-            return GetSolutionDir(dirInfo.Parent.FullName);
-        }
-
-        return Result.Fail<string>("Not found.");
+      return Result.Ok(currentDir);
     }
 
-    private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
+    if (dirInfo.Parent is not null)
     {
-        var pipeName = Guid.NewGuid().ToString();
-        using var ipcServer = await _ipcRouter.CreateServer(pipeName);
-        
-        Process? process = null;
-
-        if (Environment.UserInteractive)
-        {
-            process = _processes.Start(
-                _environment.StartupExePath,
-                $"echo-desktop --pipe-name {pipeName}");
-        }
-        else
-        {
-            _win32Interop.CreateInteractiveSystemProcess(
-                $"\"{_environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
-                targetSessionId: targetWindowsSession,
-                forceConsoleSession: false,
-                desktopName: "Default",
-                hiddenWindow: true,
-                out process);
-        }
-
-        if (process is null || process.HasExited)
-        {
-            return Result.Fail<string>("Failed to start echo-desktop process.");
-        }
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_appLifetime.ApplicationStopping, cts.Token);
-        process.Exited += (_, _) => linkedCts.Cancel();
-        if (!await ipcServer.WaitForConnection(linkedCts.Token))
-        {
-            return Result.Fail<string>("Failed to connect to echo-desktop process.");
-        }
-
-        ipcServer.BeginRead(_appLifetime.ApplicationStopping);
-        _logger.LogInformation("Desktop echoer connected to pipe server.");
-        var desktopResult = await ipcServer.Invoke<DesktopRequestDto, DesktopResponseDto>(new());
-        if (desktopResult.IsSuccess)
-        {
-            _logger.LogInformation("Received current input desktop from echoer: {CurrentDesktop}", desktopResult.Value.DesktopName);
-            await ipcServer.Send(new ShutdownRequestDto());
-            return Result.Ok(desktopResult.Value.DesktopName);
-        }
-        _logger.LogError("Failed to get initial desktop from desktop echo.");
-        return Result.Fail<string>(desktopResult.Error);
+      return GetSolutionDir(dirInfo.Parent.FullName);
     }
+
+    return Result.Fail<string>("Not found.");
+  }
+
+  private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
+  {
+    var pipeName = Guid.NewGuid().ToString();
+    using var ipcServer = await ipcRouter.CreateServer(pipeName);
+
+    Process? process = null;
+
+    if (Environment.UserInteractive)
+    {
+      process = processes.Start(
+        environment.StartupExePath,
+        $"echo-desktop --pipe-name {pipeName}");
+    }
+    else
+    {
+      win32Interop.CreateInteractiveSystemProcess(
+        $"\"{environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
+        targetWindowsSession,
+        false,
+        "Default",
+        true,
+        out process);
+    }
+
+    if (process is null || process.HasExited)
+    {
+      return Result.Fail<string>("Failed to start echo-desktop process.");
+    }
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(appLifetime.ApplicationStopping, cts.Token);
+    process.Exited += (_, _) => linkedCts.Cancel();
+    if (!await ipcServer.WaitForConnection(linkedCts.Token))
+    {
+      return Result.Fail<string>("Failed to connect to echo-desktop process.");
+    }
+
+    ipcServer.BeginRead(appLifetime.ApplicationStopping);
+    logger.LogInformation("Desktop echoer connected to pipe server.");
+    var desktopResult = await ipcServer.Invoke<DesktopRequestDto, DesktopResponseDto>(new DesktopRequestDto());
+    if (desktopResult.IsSuccess)
+    {
+      logger.LogInformation("Received current input desktop from echoer: {CurrentDesktop}",
+        desktopResult.Value.DesktopName);
+      await ipcServer.Send(new ShutdownRequestDto());
+      return Result.Ok(desktopResult.Value.DesktopName);
+    }
+
+    logger.LogError("Failed to get initial desktop from desktop echo.");
+    return Result.Fail<string>(desktopResult.Error);
+  }
 }

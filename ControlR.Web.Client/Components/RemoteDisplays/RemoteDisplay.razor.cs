@@ -1,7 +1,6 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using FocusEventArgs = Microsoft.AspNetCore.Components.Web.FocusEventArgs;
@@ -37,54 +36,39 @@ public partial class RemoteDisplay : IAsyncDisposable
   private bool _virtualKeyboardToggled;
 
 
-  [Inject]
-  public required IBusyCounter AppState { get; init; }
+  [Inject] public required IBusyCounter AppState { get; init; }
 
-  [Inject]
-  public required NavigationManager NavManager { get; init; }
+  [Inject] public required NavigationManager NavManager { get; init; }
 
-  [Inject]
-  public required IClipboardManager ClipboardManager { get; init; }
+  [Inject] public required IClipboardManager ClipboardManager { get; init; }
 
-  [CascadingParameter]
-  public required DeviceContentInstance ContentInstance { get; init; }
+  [CascadingParameter] public required DeviceContentInstance ContentInstance { get; init; }
 
-  [CascadingParameter]
-  public required DeviceContentWindow ContentWindow { get; init; }
+  [CascadingParameter] public required DeviceContentWindow ContentWindow { get; init; }
 
-  [Inject]
-  public required IEnvironmentHelper EnvironmentHelper { get; init; }
+  [Inject] public required IEnvironmentHelper EnvironmentHelper { get; init; }
 
-  [Inject]
-  public required ILogger<RemoteDisplay> Logger { get; init; }
+  [Inject] public required ILogger<RemoteDisplay> Logger { get; init; }
 
-  [Inject]
-  public required IMemoryProvider MemoryProvider { get; init; }
+  [Inject] public required IMemoryProvider MemoryProvider { get; init; }
 
-  [Inject]
-  public required IMessenger Messenger { get; init; }
+  [Inject] public required IMessenger Messenger { get; init; }
 
-  [Inject]
-  public required IServiceProvider ServiceProvider { get; init; }
+  [Inject] public required IServiceProvider ServiceProvider { get; init; }
 
-  [Parameter, EditorRequired]
-  public required RemoteControlSession Session { get; set; }
+  [Parameter] [EditorRequired] public required RemoteControlSession Session { get; set; }
 
-  [Inject]
-  public required ISettings Settings { get; init; }
+  [Inject] public required ISettings Settings { get; init; }
 
-  [Inject]
-  public required ISnackbar Snackbar { get; init; }
+  [Inject] public required ISnackbar Snackbar { get; init; }
 
-  [Inject]
-  public required IViewerStreamingClient StreamingClient { get; init; }
+  [Inject] public required IViewerStreamingClient StreamingClient { get; init; }
 
 
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
+  [Inject] public required IViewerHubConnection ViewerHub { get; init; }
 
-  [Inject]
-  public required IDeviceContentWindowStore WindowStore { get; init; }
+  [Inject] public required IDeviceContentWindowStore WindowStore { get; init; }
+
   private string CanvasClasses
   {
     get
@@ -94,35 +78,29 @@ public partial class RemoteDisplay : IAsyncDisposable
       {
         classNames += " scroll-mode";
       }
+
       return classNames.ToLower();
     }
   }
+
   private string CanvasStyle
   {
     get
     {
-      var display = _streamStarted ?
-          "display: unset;" :
-          "display: none;";
+      var display = _streamStarted ? "display: unset;" : "display: none;";
 
       return
-          $"{display} " +
-          $"cursor: {_canvasCssCursor}; " +
-          $"width: {_canvasCssWidth}px; " +
-          $"height: {_canvasCssHeight}px;";
+        $"{display} " +
+        $"cursor: {_canvasCssCursor}; " +
+        $"width: {_canvasCssWidth}px; " +
+        $"height: {_canvasCssHeight}px;";
     }
   }
 
   private string VirtualKeyboardText
   {
-    get
-    {
-      return string.Empty;
-    }
-    set
-    {
-      _ = TypeText(value);
-    }
+    get => string.Empty;
+    set => _ = TypeText(value);
   }
 
 
@@ -232,7 +210,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   protected override Task OnInitializedAsync()
   {
-    if (EnvironmentHelper.Platform is SystemPlatform.Android or SystemPlatform.IOS)
+    if (EnvironmentHelper.Platform is SystemPlatform.Android or SystemPlatform.Ios)
     {
       _controlMode = ControlMode.Touch;
       _viewMode = ViewMode.Original;
@@ -275,13 +253,13 @@ public partial class RemoteDisplay : IAsyncDisposable
       }
 
       await JsModule.InvokeVoidAsync(
-          "drawFrame",
-          _canvasId,
-          dto.X,
-          dto.Y,
-          dto.Width,
-          dto.Height,
-          dto.EncodedImage);
+        "drawFrame",
+        _canvasId,
+        dto.X,
+        dto.Y,
+        dto.Width,
+        dto.Height,
+        dto.EncodedImage);
     }
     catch (Exception ex)
     {
@@ -297,6 +275,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       {
         return;
       }
+
       Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
       await ClipboardManager.SetText(dto.Text ?? string.Empty);
       await InvokeAsync(StateHasChanged);
@@ -346,7 +325,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     Messenger.Unregister<LocalClipboardChangedMessage>(this);
     Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
- 
+
     _displays = dto.Displays ?? [];
 
     if (_displays.Length == 0)
@@ -355,6 +334,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       await Close();
       return;
     }
+
     _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
 
     _canvasCssWidth = _selectedDisplay.Width;
@@ -400,9 +380,6 @@ public partial class RemoteDisplay : IAsyncDisposable
       case GenericMessageKind.ShuttingDown:
         await DisposeAsync();
         break;
-
-      default:
-        break;
     }
   }
 
@@ -447,31 +424,29 @@ public partial class RemoteDisplay : IAsyncDisposable
       switch (wrapper.DtoType)
       {
         case DtoType.DisplayData:
-          {
-            var dto = wrapper.GetPayload<DisplayDataDto>();
-            await HandleDisplayDataReceived(dto);
-            break;
-          }
-        case DtoType.ScreenRegion:
-          {
-            var dto = wrapper.GetPayload<ScreenRegionDto>();
-            await DrawRegion(dto);
-            break;
-          }
-        case DtoType.ClipboardChanged:
-          {
-            var dto = wrapper.GetPayload<ClipboardChangeDto>();
-            await HandleClipboardChangeReceived(dto);
-            break;
-          }
-        case DtoType.CursorChanged:
-          {
-            var dto = wrapper.GetPayload<CursorChangedDto>();
-            await HandleCursorChanged(dto);
-            break;
-          }
-        default:
+        {
+          var dto = wrapper.GetPayload<DisplayDataDto>();
+          await HandleDisplayDataReceived(dto);
           break;
+        }
+        case DtoType.ScreenRegion:
+        {
+          var dto = wrapper.GetPayload<ScreenRegionDto>();
+          await DrawRegion(dto);
+          break;
+        }
+        case DtoType.ClipboardChanged:
+        {
+          var dto = wrapper.GetPayload<ClipboardChangeDto>();
+          await HandleClipboardChangeReceived(dto);
+          break;
+        }
+        case DtoType.CursorChanged:
+        {
+          var dto = wrapper.GetPayload<CursorChangedDto>();
+          await HandleCursorChanged(dto);
+          break;
+        }
       }
     }
     catch (Exception ex)
@@ -479,6 +454,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", wrapper.DtoType);
     }
   }
+
   private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
   {
     if (_virtualKeyboardToggled)
@@ -522,10 +498,10 @@ public partial class RemoteDisplay : IAsyncDisposable
       }
 
       var pinchDistance = MathHelper.GetDistanceBetween(
-          ev.Touches[0].PageX,
-          ev.Touches[0].PageY,
-          ev.Touches[1].PageX,
-          ev.Touches[1].PageY);
+        ev.Touches[0].PageX,
+        ev.Touches[0].PageY,
+        ev.Touches[1].PageX,
+        ev.Touches[1].PageY);
 
       if (_lastPinchDistance <= 0)
       {
@@ -554,14 +530,14 @@ public partial class RemoteDisplay : IAsyncDisposable
       var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
 
       await JsModule.InvokeVoidAsync("scrollTowardPinch",
-          pinchCenterX,
-          pinchCenterY,
-          _screenArea,
-          _canvasRef,
-          _canvasCssWidth,
-          _canvasCssHeight,
-          widthChange,
-          heightChange);
+        pinchCenterX,
+        pinchCenterY,
+        _screenArea,
+        _canvasRef,
+        _canvasCssWidth,
+        _canvasCssHeight,
+        widthChange,
+        heightChange);
     }
     catch (Exception ex)
     {
@@ -583,6 +559,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
     }
   }
+
   private async Task RequestStreamingSessionFromAgent()
   {
     try
@@ -594,17 +571,17 @@ public partial class RemoteDisplay : IAsyncDisposable
 
       var serverUri = new Uri(NavManager.BaseUri);
 
-      var websocketUri = bridgeOrigin is not null ?
-          new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}/{accessKey}") :
-          new Uri(serverUri, $"bridge/{Session.SessionId}/{accessKey}").ToWebsocketUri();
+      var websocketUri = bridgeOrigin is not null
+        ? new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}/{accessKey}")
+        : new Uri(serverUri, $"bridge/{Session.SessionId}/{accessKey}").ToWebsocketUri();
 
       Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-          Session.Device.ConnectionId,
-          Session.SessionId,
-          websocketUri,
-          Session.InitialSystemSession);
+        Session.Device.ConnectionId,
+        Session.SessionId,
+        websocketUri,
+        Session.InitialSystemSession);
 
       _statusProgress = -1;
 
@@ -614,6 +591,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         await Close();
         return;
       }
+
       await SetStatusMessage("Connecting");
 
       StartWebsocketStreaming(websocketUri).Forget();

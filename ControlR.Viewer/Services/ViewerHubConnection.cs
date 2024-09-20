@@ -1,494 +1,503 @@
-﻿using ControlR.Libraries.Clients.Services;
+﻿using System.Runtime.CompilerServices;
+using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor;
-using System.Runtime.CompilerServices;
 
 namespace ControlR.Viewer.Services;
 
 public interface IViewerHubConnection : IHubConnectionBase
 {
-    Task ClearAlert();
-    Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
+  Task ClearAlert();
+  Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
 
-    Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
+  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
-    Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
+  Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
 
-    Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
+  Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
 
-    Task<Result<ServerStatsDto>> GetServerStats();
-    Task<Uri?> GetWebsocketBridgeOrigin();
-    Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
+  Task<Result<ServerStatsDto>> GetServerStats();
+  Task<Uri?> GetWebsocketBridgeOrigin();
+  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
-    Task InvokeCtrlAltDel(string deviceId);
+  Task InvokeCtrlAltDel(string deviceId);
 
-    Task Reconnect(CancellationToken cancellationToken);
+  Task Reconnect(CancellationToken cancellationToken);
 
-    Task RequestDeviceUpdates();
+  Task RequestDeviceUpdates();
 
-    Task<Result> RequestStreamingSession(
-        string agentConnectionId, 
-        Guid sessionId, 
-        Uri websocketUri, 
-        int targetSystemSession);
+  Task<Result> RequestStreamingSession(
+    string agentConnectionId,
+    Guid sessionId,
+    Uri websocketUri,
+    int targetSystemSession);
 
-    Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
+  Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
-    Task SendAgentUpdateTrigger(DeviceDto device);
+  Task SendAgentUpdateTrigger(DeviceDto device);
 
-    Task SendAlertBroadcast(string message, AlertSeverity severity);
+  Task SendAlertBroadcast(string message, AlertSeverity severity);
 
-    Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
-    Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
-    Task SendWakeDevice(string[] macAddresses);
-    Task Start(CancellationToken cancellationToken);
+  Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
+  Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
+  Task SendWakeDevice(string[] macAddresses);
+  Task Start(CancellationToken cancellationToken);
 }
 
 internal class ViewerHubConnection(
-    IServiceProvider _services,
-    IHttpConfigurer _httpConfigurer,
-    IAppState _appState,
-    IDeviceCache _devicesCache,
-    IKeyProvider _keyProvider,
-    ISettings _settings,
-    IDelayer _delayer,
-    IMessenger _messenger,
-    ILogger<ViewerHubConnection> _logger) : HubConnectionBase(_services, _messenger, _delayer, _logger), IViewerHubConnection, IViewerHubClient
+  IServiceProvider services,
+  IHttpConfigurer httpConfigurer,
+  IAppState appState,
+  IDeviceCache devicesCache,
+  IKeyProvider keyProvider,
+  ISettings settings,
+  IDelayer delayer,
+  IMessenger messenger,
+  ILogger<ViewerHubConnection> logger) : HubConnectionBase(services, messenger, delayer, logger), IViewerHubConnection,
+  IViewerHubClient
 {
+  public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
+  {
+    await Messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alert));
+  }
 
-    public async Task ClearAlert()
+  public Task ReceiveDeviceUpdate(DeviceDto device)
+  {
+    devicesCache.AddOrUpdate(device);
+    Messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
+    return Task.CompletedTask;
+  }
+
+  public async Task ReceiveServerStats(ServerStatsDto serverStats)
+  {
+    var message = new ServerStatsUpdateMessage(serverStats);
+    await Messenger.Send(message);
+  }
+
+
+  public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
+  {
+    Messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress,
+      progressDto.Message));
+    return Task.CompletedTask;
+  }
+
+
+  public Task ReceiveTerminalOutput(TerminalOutputDto output)
+  {
+    Messenger.Send(new TerminalOutputMessage(output));
+    return Task.CompletedTask;
+  }
+
+  public async Task ClearAlert()
+  {
+    await TryInvoke(
+      async () =>
+      {
+        await WaitForConnection();
+        await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert));
+      });
+  }
+
+
+  public async Task CloseTerminalSession(string deviceId, Guid terminalId)
+  {
+    await TryInvoke(async () =>
     {
-        await TryInvoke(
-            async () =>
-            {
-                await WaitForConnection();
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert));
-            });
-    }
+      var request = new CloseTerminalRequestDto(terminalId);
+      var signedDto = keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, appState.PrivateKey);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
+    });
+  }
 
+  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
+    Guid terminalId)
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        Guard.IsNotNull(Connection.ConnectionId);
 
+        var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
+        var signedDto = keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, appState.PrivateKey);
+        return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(
+          nameof(IViewerHub.CreateTerminalSession), agentConnectionId, signedDto);
+      },
+      () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
+  }
 
-    public async Task CloseTerminalSession(string deviceId, Guid terminalId)
-    {
-        await TryInvoke(async () =>
+  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        var dto = new GetAgentAppSettingsDto();
+        var signedDto = keyProvider.CreateSignedDto(dto, DtoType.GetAgentAppSettings, appState.PrivateKey);
+        return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings),
+          agentConnectionId, signedDto);
+      },
+      () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
+  }
+
+  public async Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer()
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        var alertResult = await Connection.InvokeAsync<Result<AlertBroadcastDto>>(nameof(IViewerHub.GetCurrentAlert));
+        if (alertResult.IsSuccess)
         {
-            var request = new CloseTerminalRequestDto(terminalId);
-            var signedDto = _keyProvider.CreateSignedDto(request, DtoType.CloseTerminalRequest, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
-        });
-    }
-
-    public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                Guard.IsNotNull(Connection.ConnectionId);
-
-                var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalSessionRequest, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(nameof(IViewerHub.CreateTerminalSession), agentConnectionId, signedDto);
-            },
-            () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
-    }
-
-    public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                var dto = new GetAgentAppSettingsDto();
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetAgentAppSettings, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings), agentConnectionId, signedDto);
-            },
-            () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
-    }
-
-    public async Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer()
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                var alertResult = await Connection.InvokeAsync<Result<AlertBroadcastDto>>(nameof(IViewerHub.GetCurrentAlert));
-                if (alertResult.IsSuccess)
-                {
-                    await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
-                }
-                else if (alertResult.HadException)
-                {
-                    alertResult.Log(_logger);
-                }
-                return alertResult;
-            },
-            () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
-    }
-
-
-
-    public async Task<Result<ServerStatsDto>> GetServerStats()
-    {
-        return await TryInvoke(
-            async () =>
-            {
-                var result = await Connection.InvokeAsync<Result<ServerStatsDto>>(nameof(IViewerHub.GetServerStats));
-                if (!result.IsSuccess)
-                {
-                    _logger.LogResult(result);
-                }
-
-                return result;
-            },
-            () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
-    }
-
-    public async Task<Uri?> GetWebsocketBridgeOrigin()
-    {
-        return await TryInvoke(async () =>
-        {
-            return await Connection.InvokeAsync<Uri?>(nameof(IViewerHub.GetWebSocketBridgeOrigin));
-        }, 
-        () => null);
-    }
-
-    public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
-    {
-        try
-        {
-            var dto = new GetWindowsSessionsDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.GetWindowsSessions, _appState.PrivateKey);
-            var sessions = await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId, signedDto);
-            return Result.Ok(sessions);
+          await Messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
         }
-        catch (Exception ex)
+        else if (alertResult.HadException)
         {
-            _logger.LogError(ex, "Error while getting windows sessions.");
-            return Result.Fail<WindowsSession[]>(ex);
+          alertResult.Log(logger);
         }
-    }
 
-    public async Task InvokeCtrlAltDel(string deviceId)
-    {
-        await TryInvoke(async () =>
+        return alertResult;
+      },
+      () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
+  }
+
+
+  public async Task<Result<ServerStatsDto>> GetServerStats()
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        var result = await Connection.InvokeAsync<Result<ServerStatsDto>>(nameof(IViewerHub.GetServerStats));
+        if (!result.IsSuccess)
         {
-            var dto = new InvokeCtrlAltDelRequestDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.InvokeCtrlAltDel, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
-        });
-    }
-
-    public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
-    {
-        await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alert));
-    }
-
-    public Task ReceiveDeviceUpdate(DeviceDto device)
-    {
-        _devicesCache.AddOrUpdate(device);
-        _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
-        return Task.CompletedTask;
-    }
-
-    public async Task ReceiveServerStats(ServerStatsDto serverStats)
-    {
-        var message = new ServerStatsUpdateMessage(serverStats);
-        await _messenger.Send(message);
-    }
-
-
-    public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
-    {
-        _messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress, progressDto.Message));
-        return Task.CompletedTask;
-    }
-
-
-    public Task ReceiveTerminalOutput(TerminalOutputDto output)
-    {
-        _messenger.Send(new TerminalOutputMessage(output));
-        return Task.CompletedTask;
-    }
-
-    public async Task Reconnect(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                if (IsConnected)
-                {
-                    await Connection.StopAsync(cancellationToken);
-                }
-                await Start(cancellationToken);
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
-            }
+          logger.LogResult(result);
         }
-    }
 
-    public async Task RequestDeviceUpdates()
+        return result;
+      },
+      () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
+  }
+
+  public async Task<Uri?> GetWebsocketBridgeOrigin()
+  {
+    return await TryInvoke(
+      async () => { return await Connection.InvokeAsync<Uri?>(nameof(IViewerHub.GetWebSocketBridgeOrigin)); },
+      () => null);
+  }
+
+  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
+  {
+    try
     {
-        await TryInvoke(async () =>
-        {
-            await WaitForConnection();
-            var dto = new DeviceUpdateRequestDto(_settings.PublicKeyLabel);
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.DeviceUpdateRequest, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
-        });
+      var dto = new GetWindowsSessionsDto();
+      var signedDto = keyProvider.CreateSignedDto(dto, DtoType.GetWindowsSessions, appState.PrivateKey);
+      var sessions =
+        await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId,
+          signedDto);
+      return Result.Ok(sessions);
     }
-
-    public async Task<Result> RequestStreamingSession(
-        string agentConnectionId, 
-        Guid sessionId, 
-        Uri websocketUri,
-        int targetSystemSession)
+    catch (Exception ex)
     {
-        try
+      logger.LogError(ex, "Error while getting windows sessions.");
+      return Result.Fail<WindowsSession[]>(ex);
+    }
+  }
+
+  public async Task InvokeCtrlAltDel(string deviceId)
+  {
+    await TryInvoke(async () =>
+    {
+      var dto = new InvokeCtrlAltDelRequestDto();
+      var signedDto = keyProvider.CreateSignedDto(dto, DtoType.InvokeCtrlAltDel, appState.PrivateKey);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), deviceId, signedDto);
+    });
+  }
+
+  public async Task Reconnect(CancellationToken cancellationToken)
+  {
+    while (!cancellationToken.IsCancellationRequested)
+    {
+      try
+      {
+        if (IsConnected)
         {
-            if (Connection.ConnectionId is null)
-            {
-                return Result.Fail("Connection has closed.");
-            }
-
-            var streamingSessionRequest = new StreamerSessionRequestDto(
-                sessionId,
-                websocketUri,
-                targetSystemSession,
-                Connection.ConnectionId,
-                agentConnectionId,
-                _settings.NotifyUserSessionStart,
-                _settings.Username);
-
-            var signedDto = _keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, _appState.PrivateKey);
-
-            var result = await Connection.InvokeAsync<Result>(
-                nameof(IViewerHub.RequestStreamingSession),
-                agentConnectionId,
-                signedDto);
-
-            return result.Log(_logger);
+          await Connection.StopAsync(cancellationToken);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting remote streaming session.");
-            return Result.Fail(ex);
-        }
+
+        await Start(cancellationToken);
+        break;
+      }
+      catch (Exception ex)
+      {
+        logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
+      }
     }
-    public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings)
+  }
+
+  public async Task RequestDeviceUpdates()
+  {
+    await TryInvoke(async () =>
     {
-        return await TryInvoke(
-            async () =>
-            {
-                await WaitForConnection();
-                var signedDto = _keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId, signedDto);
-            },
-            () => Result.Fail("Failed to send app settings"));
-    }
+      await WaitForConnection();
+      var dto = new DeviceUpdateRequestDto(settings.PublicKeyLabel);
+      var signedDto = keyProvider.CreateSignedDto(dto, DtoType.DeviceUpdateRequest, appState.PrivateKey);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
+    });
+  }
 
-    public async Task SendAgentUpdateTrigger(DeviceDto device)
+  public async Task<Result> RequestStreamingSession(
+    string agentConnectionId,
+    Guid sessionId,
+    Uri websocketUri,
+    int targetSystemSession)
+  {
+    try
     {
-        await TryInvoke(async () =>
-        {
-            var dto = new TriggerAgentUpdateDto();
-            var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.TriggerAgentUpdate, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
-        });
-    }
+      if (Connection.ConnectionId is null)
+      {
+        return Result.Fail("Connection has closed.");
+      }
 
-    public async Task SendAlertBroadcast(string message, AlertSeverity severity)
+      var streamingSessionRequest = new StreamerSessionRequestDto(
+        sessionId,
+        websocketUri,
+        targetSystemSession,
+        Connection.ConnectionId,
+        agentConnectionId,
+        settings.NotifyUserSessionStart,
+        settings.Username);
+
+      var signedDto =
+        keyProvider.CreateSignedDto(streamingSessionRequest, DtoType.StreamingSessionRequest, appState.PrivateKey);
+
+      var result = await Connection.InvokeAsync<Result>(
+        nameof(IViewerHub.RequestStreamingSession),
+        agentConnectionId,
+        signedDto);
+
+      return result.Log(logger);
+    }
+    catch (Exception ex)
     {
-        await TryInvoke(
-            async () =>
-            {
-                await WaitForConnection();
-                var dto = new AlertBroadcastDto(message, severity);
-                var signedDto = _keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, _appState.PrivateKey);
-                await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
-            });
+      logger.LogError(ex, "Error while getting remote streaming session.");
+      return Result.Fail(ex);
     }
+  }
 
+  public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings)
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        await WaitForConnection();
+        var signedDto = keyProvider.CreateSignedDto(agentAppSettings, DtoType.SendAppSettings, appState.PrivateKey);
+        return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId,
+          signedDto);
+      },
+      () => Result.Fail("Failed to send app settings"));
+  }
 
-    public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
+  public async Task SendAgentUpdateTrigger(DeviceDto device)
+  {
+    await TryInvoke(async () =>
     {
-        await TryInvoke(async () =>
-        {
-            var powerDto = new PowerStateChangeDto(powerStateType);
-            var signedDto = _keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, _appState.PrivateKey);
-            await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
-        });
-    }
+      var dto = new TriggerAgentUpdateDto();
+      var signedDto = keyProvider.CreateSignedDto(dto, DtoType.TriggerAgentUpdate, appState.PrivateKey);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+    });
+  }
 
-    public async Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input)
+  public async Task SendAlertBroadcast(string message, AlertSeverity severity)
+  {
+    await TryInvoke(
+      async () =>
+      {
+        await WaitForConnection();
+        var dto = new AlertBroadcastDto(message, severity);
+        var signedDto = keyProvider.CreateSignedDto(dto, DtoType.SendAlertBroadcast, appState.PrivateKey);
+        await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), signedDto);
+      });
+  }
+
+
+  public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
+  {
+    await TryInvoke(async () =>
     {
-        return await TryInvoke(
-            async () =>
-            {
-                var request = new TerminalInputDto(terminalId, input);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.TerminalInput, _appState.PrivateKey);
-                return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, signedDto);
-            },
-            () => Result.Fail("Failed to send terminal input"));
-    }
+      var powerDto = new PowerStateChangeDto(powerStateType);
+      var signedDto = keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, appState.PrivateKey);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+    });
+  }
 
-    public async Task SendWakeDevice(string[] macAddresses)
+  public async Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input)
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        var request = new TerminalInputDto(terminalId, input);
+        var signedDto = keyProvider.CreateSignedDto(request, DtoType.TerminalInput, appState.PrivateKey);
+        return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, signedDto);
+      },
+      () => Result.Fail("Failed to send terminal input"));
+  }
+
+  public async Task SendWakeDevice(string[] macAddresses)
+  {
+    await TryInvoke(
+      async () =>
+      {
+        var request = new WakeDeviceDto(macAddresses);
+        var signedDto = keyProvider.CreateSignedDto(request, DtoType.WakeDevice, appState.PrivateKey);
+        await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
+      });
+  }
+
+
+  public async Task Start(CancellationToken cancellationToken)
+  {
+    Messenger.UnregisterAll(this);
+
+    await Delayer.WaitForAsync(() => appState.IsAuthenticated, TimeSpan.MaxValue);
+
+    using var _ = appState.IncrementBusyCounter();
+
+    await Connect(
+      () => new Uri(settings.ServerUri, "/hubs/viewer"),
+      ConfigureConnection,
+      ConfigureHttpOptions,
+      OnConnectFailure,
+      true,
+      cancellationToken);
+
+    Messenger.RegisterGenericMessage(this, HandleGenericMessage);
+
+    await PerformAfterConnectInit();
+  }
+
+  private async Task CheckIfServerAdministrator()
+  {
+    await TryInvoke(
+      async () =>
+      {
+        appState.IsServerAdministrator =
+          await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
+        await Messenger.SendGenericMessage(GenericMessageKind.IsServerAdminChanged);
+      });
+  }
+
+
+  private void ConfigureConnection(HubConnection connection)
+  {
+    connection.Closed += Connection_Closed;
+    connection.Reconnecting += Connection_Reconnecting;
+    connection.Reconnected += Connection_Reconnected;
+    connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
+    connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
+    connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
+    connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
+    connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress),
+      ReceiveStreamerDownloadProgress);
+  }
+
+  private void ConfigureHttpOptions(HttpConnectionOptions options)
+  {
+    var signature = httpConfigurer.GetDigitalSignature();
+    options.Headers["Authorization"] = $"{AuthSchemes.DigitalSignature} {signature}";
+  }
+
+  private async Task Connection_Closed(Exception? arg)
+  {
+    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+  }
+
+  private async Task Connection_Reconnected(string? arg)
+  {
+    await PerformAfterConnectInit();
+  }
+
+  private async Task Connection_Reconnecting(Exception? arg)
+  {
+    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+  }
+
+  private async Task HandleAuthStateChanged()
+  {
+    await StopConnection(appState.AppExiting);
+
+    if (appState.IsAuthenticated)
     {
-        await TryInvoke(
-            async () =>
-            {
-                var request = new WakeDeviceDto(macAddresses);
-                var signedDto = _keyProvider.CreateSignedDto(request, DtoType.WakeDevice, _appState.PrivateKey);
-                await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToPublicKeyGroup), signedDto);
-            });
+      await Start(appState.AppExiting);
     }
+  }
 
-
-    public async Task Start(CancellationToken cancellationToken)
+  private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+  {
+    switch (kind)
     {
-        _messenger.UnregisterAll(this);
+      case GenericMessageKind.ServerUriChanged:
+        await HandleServerUriChanged();
+        break;
 
-        await _delayer.WaitForAsync(() => _appState.IsAuthenticated, TimeSpan.MaxValue);
-
-        using var _ = _appState.IncrementBusyCounter();
-
-        await Connect(
-            () => new Uri(_settings.ServerUri, "/hubs/viewer"),
-            ConfigureConnection,
-            ConfigureHttpOptions,
-            OnConnectFailure,
-            useReconnect: true,
-            cancellationToken);
-
-        _messenger.RegisterGenericMessage(this, HandleGenericMessage);
-
-        await PerformAfterConnectInit();
+      case GenericMessageKind.KeysStateChanged:
+        await HandleAuthStateChanged();
+        break;
     }
+  }
 
-    private async Task CheckIfServerAdministrator()
+  private async Task HandleServerUriChanged()
+  {
+    await Reconnect(appState.AppExiting);
+  }
+
+  private async Task OnConnectFailure(string reason)
+  {
+    await Messenger.Send(new ToastMessage(reason, Severity.Error));
+  }
+
+  private async Task PerformAfterConnectInit()
+  {
+    await CheckIfServerAdministrator();
+    await GetCurrentAlertFromServer();
+    await devicesCache.SetAllOffline();
+    await RequestDeviceUpdates();
+    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+  }
+
+  private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")
+  {
+    try
     {
-        await TryInvoke(
-            async () =>
-            {
-                _appState.IsServerAdministrator = await Connection.InvokeAsync<bool>(nameof(IViewerHub.CheckIfServerAdministrator));
-                await _messenger.SendGenericMessage(GenericMessageKind.IsServerAdminChanged);
-            });
+      using var _ = logger.BeginScope(callerName);
+      await func.Invoke();
     }
-
-
-    private void ConfigureConnection(HubConnection connection)
+    catch (Exception ex)
     {
-        connection.Closed += Connection_Closed;
-        connection.Reconnecting += Connection_Reconnecting;
-        connection.Reconnected += Connection_Reconnected;
-        connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
-        connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
-        connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
-        connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
-        connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress), ReceiveStreamerDownloadProgress);
+      logger.LogError(ex, "Error while invoking hub method.");
     }
+  }
 
-    private void ConfigureHttpOptions(HttpConnectionOptions options)
+  private async Task<T> TryInvoke<T>(Func<Task<T>> func, Func<T> defaultValue,
+    [CallerMemberName] string callerName = "")
+  {
+    try
     {
-        var signature = _httpConfigurer.GetDigitalSignature();
-        options.Headers["Authorization"] = $"{AuthSchemes.DigitalSignature} {signature}";
+      using var _ = logger.BeginScope(callerName);
+      return await func.Invoke();
     }
-
-    private async Task Connection_Closed(Exception? arg)
+    catch (Exception ex)
     {
-        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+      logger.LogError(ex, "Error while invoking hub method.");
+      return defaultValue();
     }
+  }
 
-    private async Task Connection_Reconnected(string? arg)
+  private class RetryPolicy : IRetryPolicy
+  {
+    public TimeSpan? NextRetryDelay(RetryContext retryContext)
     {
-        await PerformAfterConnectInit();
+      return TimeSpan.FromSeconds(3);
     }
-
-    private async Task Connection_Reconnecting(Exception? arg)
-    {
-        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
-    }
-
-    private async Task HandleAuthStateChanged()
-    {
-        await StopConnection(_appState.AppExiting);
-
-        if (_appState.IsAuthenticated)
-        {
-            await Start(_appState.AppExiting);
-        }
-    }
-
-    private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
-    {
-        switch (kind)
-        {
-            case GenericMessageKind.ServerUriChanged:
-                await HandleServerUriChanged();
-                break;
-
-            case GenericMessageKind.KeysStateChanged:
-                await HandleAuthStateChanged();
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    private async Task HandleServerUriChanged()
-    {
-        await Reconnect(_appState.AppExiting);
-    }
-
-    private async Task OnConnectFailure(string reason)
-    {
-        await _messenger.Send(new ToastMessage(reason, Severity.Error));
-    }
-
-    private async Task PerformAfterConnectInit()
-    {
-        await CheckIfServerAdministrator();
-        await GetCurrentAlertFromServer();
-        await _devicesCache.SetAllOffline();
-        await RequestDeviceUpdates();
-        await _messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
-    }
-    private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")
-    {
-        try
-        {
-            using var _ = _logger.BeginScope(callerName);
-            await func.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while invoking hub method.");
-        }
-    }
-
-    private async Task<T> TryInvoke<T>(Func<Task<T>> func, Func<T> defaultValue, [CallerMemberName] string callerName = "")
-    {
-        try
-        {
-            using var _ = _logger.BeginScope(callerName);
-            return await func.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while invoking hub method.");
-            return defaultValue();
-        }
-    }
-    private class RetryPolicy : IRetryPolicy
-    {
-        public TimeSpan? NextRetryDelay(RetryContext retryContext)
-        {
-            return TimeSpan.FromSeconds(3);
-        }
-    }
+  }
 }

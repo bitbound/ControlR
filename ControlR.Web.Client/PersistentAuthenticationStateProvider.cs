@@ -1,8 +1,9 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 
 namespace ControlR.Web.Client;
+
 // This is a client-side AuthenticationStateProvider that determines the user's authentication state by
 // looking for data persisted in the page when it was rendered on the server. This authentication state will
 // be fixed for the lifetime of the WebAssembly application. So, if the user needs to log in or out, a full
@@ -13,33 +14,38 @@ namespace ControlR.Web.Client;
 // cookie that will be included on HttpClient requests to the server.
 internal class PersistentAuthenticationStateProvider : AuthenticationStateProvider
 {
-    private static readonly Task<AuthenticationState> _defaultUnauthenticatedTask =
-        Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+  private static readonly Task<AuthenticationState> _defaultUnauthenticatedTask =
+    Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
 
-    private readonly Task<AuthenticationState> _authenticationStateTask = _defaultUnauthenticatedTask;
+  private readonly Task<AuthenticationState> _authenticationStateTask = _defaultUnauthenticatedTask;
 
-    public PersistentAuthenticationStateProvider(PersistentComponentState state)
+  public PersistentAuthenticationStateProvider(PersistentComponentState state)
+  {
+    if (!state.TryTakeFromJson<UserInfo>(nameof(UserInfo), out var userInfo) || userInfo is null)
     {
-        if (!state.TryTakeFromJson<UserInfo>(nameof(UserInfo), out var userInfo) || userInfo is null)
-        {
-            return;
-        }
-
-        Claim[] claims = [
-            new Claim(ClaimTypes.NameIdentifier, userInfo.UserId),
-            new Claim(ClaimTypes.Name, userInfo.Email),
-            new Claim(ClaimTypes.Email, userInfo.Email) ];
-
-        _authenticationStateTask = Task.FromResult(
-            new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,
-                authenticationType: nameof(PersistentAuthenticationStateProvider)))));
+      return;
     }
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync() => _authenticationStateTask;
+    Claim[] claims =
+    [
+      new(ClaimTypes.NameIdentifier, userInfo.UserId),
+      new(ClaimTypes.Name, userInfo.Email),
+      new(ClaimTypes.Email, userInfo.Email)
+    ];
 
-    public async Task<bool> IsAuthenticated()
-    {
-        var state = await GetAuthenticationStateAsync();
-        return state.User.Identity?.IsAuthenticated ?? false;
-    }
+    _authenticationStateTask = Task.FromResult(
+      new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,
+        nameof(PersistentAuthenticationStateProvider)))));
+  }
+
+  public override Task<AuthenticationState> GetAuthenticationStateAsync()
+  {
+    return _authenticationStateTask;
+  }
+
+  public async Task<bool> IsAuthenticated()
+  {
+    var state = await GetAuthenticationStateAsync();
+    return state.User.Identity?.IsAuthenticated ?? false;
+  }
 }

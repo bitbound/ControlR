@@ -1,69 +1,66 @@
-using ControlR.Web.Server.Services.Interfaces;
-
 namespace ControlR.Web.Server.Services;
 
 public interface IServerStatsProvider
 {
-    Task<Result<ServerStatsDto>> GetServerStats();
+  Task<Result<ServerStatsDto>> GetServerStats();
 }
 
 public class ServerStatsProvider(
-    IConnectionCounter _connectionCounter,
-    ILogger<ServerStatsProvider> _logger) : IServerStatsProvider
+  IConnectionCounter connectionCounter,
+  ILogger<ServerStatsProvider> logger) : IServerStatsProvider
 {
-    private string? _appVersion;
+  private string? _appVersion;
 
-    public async Task<Result<ServerStatsDto>> GetServerStats()
+  public async Task<Result<ServerStatsDto>> GetServerStats()
+  {
+    try
     {
-        try
-        {
-            _appVersion ??= GetAppVersion();
-            var agentResult = await _connectionCounter.GetAgentConnectionCount();
-            var viewerResult = await _connectionCounter.GetViewerConnectionCount();
+      _appVersion ??= GetAppVersion();
+      var agentResult = await connectionCounter.GetAgentConnectionCount();
+      var viewerResult = await connectionCounter.GetViewerConnectionCount();
 
-            if (!agentResult.IsSuccess)
-            {
-                _logger.LogResult(agentResult);
-                return Result.Fail<ServerStatsDto>(agentResult.Reason);
-            }
+      if (!agentResult.IsSuccess)
+      {
+        logger.LogResult(agentResult);
+        return Result.Fail<ServerStatsDto>(agentResult.Reason);
+      }
 
-            if (!viewerResult.IsSuccess)
-            {
-                _logger.LogResult(viewerResult);
-                return Result.Fail<ServerStatsDto>(viewerResult.Reason);
-            }
+      if (!viewerResult.IsSuccess)
+      {
+        logger.LogResult(viewerResult);
+        return Result.Fail<ServerStatsDto>(viewerResult.Reason);
+      }
 
-            var dto = new ServerStatsDto(
-                agentResult.Value,
-                viewerResult.Value,
-                _appVersion);
+      var dto = new ServerStatsDto(
+        agentResult.Value,
+        viewerResult.Value,
+        _appVersion);
 
-            return Result.Ok(dto);
-        }
-        catch (Exception ex)
-        {
-            return Result
-                .Fail<ServerStatsDto>(ex, "Error while getting server stats.")
-                .Log(_logger);
-        }
-
+      return Result.Ok(dto);
     }
-
-    private string GetAppVersion(string defaultVersion = "1.0.0")
+    catch (Exception ex)
     {
-        try
-        {
-            return typeof(ServerStatsDto)
-                .Assembly
-                .GetName()
-                ?.Version
-                ?.ToString()
-                ?? defaultVersion;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get app version.");
-            return defaultVersion;
-        }
+      return Result
+        .Fail<ServerStatsDto>(ex, "Error while getting server stats.")
+        .Log(logger);
     }
+  }
+
+  private string GetAppVersion(string defaultVersion = "1.0.0")
+  {
+    try
+    {
+      return typeof(ServerStatsDto)
+               .Assembly
+               .GetName()
+               ?.Version
+               ?.ToString()
+             ?? defaultVersion;
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Failed to get app version.");
+      return defaultVersion;
+    }
+  }
 }

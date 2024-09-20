@@ -26,42 +26,49 @@
     About
   </MudNavLink>
 
+  <MudDivider Class="mt-2 mb-2"/>
+
   <AuthorizeView>
     <Authorized>
-      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person" Class="mt-5">
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
       <form action="Account/Logout" method="post">
-        <AntiforgeryToken />
-        <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
+        <AntiforgeryToken/>
+        <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
         <button type="submit" class="mud-nav-link mud-ripple">
           <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
         </button>
       </form>
     </Authorized>
     <NotAuthorized>
-      <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
-      <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+        Register
+      </MudNavLink>
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+        Login
+      </MudNavLink>
     </NotAuthorized>
   </AuthorizeView>
 </MudNavMenu>
 
 
 @code {
+
   private string? _currentUrl;
   private bool _isServerAdmin;
   private bool _isAuthenticated;
 
-  [Parameter]
-  public bool IsDisabled { get; set; }
+  [Parameter] public bool IsDisabled { get; set; }
 
-  
+
   public void Dispose()
   {
     if (NavMan.Exists)
     {
       NavMan.Value.LocationChanged -= OnLocationChanged;
     }
+
     if (AuthState.Exists)
     {
       AuthState.Value.AuthenticationStateChanged -= HandleAuthStateChanged;
@@ -76,6 +83,7 @@
     {
       AuthState.Value.AuthenticationStateChanged += HandleAuthStateChanged;
     }
+
     if (NavMan.Exists)
     {
       _currentUrl = NavMan.Value.ToBaseRelativePath(NavMan.Value.Uri);
@@ -104,5 +112,3 @@
   }
 
 }
-
-

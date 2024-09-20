@@ -5,9 +5,9 @@ using Windows.Services.Store;
 
 namespace ControlR.Viewer.Services.Windows;
 internal class StoreIntegrationWindows(
-    IMessenger _messenger,
-    ILauncher _launcher,
-    ILogger<StoreIntegrationWindows> _logger) : IStoreIntegration
+    IMessenger messenger,
+    ILauncher launcher,
+    ILogger<StoreIntegrationWindows> logger) : IStoreIntegration
 {
      public Task<Uri> GetStorePageUri()
     {
@@ -34,16 +34,16 @@ internal class StoreIntegrationWindows(
     {
         try
         {
-            _logger.LogInformation("Checking Microsoft Store for updates.");
+            logger.LogInformation("Checking Microsoft Store for updates.");
             var store = StoreContext.GetDefault();
             var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
-            _logger.LogInformation("Found {UpdateCount} update(s).", updates.Count);
-            var updateAvailable =  updates.Count > 0;
+            logger.LogInformation("Found {UpdateCount} update(s).", updates.Count);
+            var updateAvailable = updates.Count > 0;
             return Result.Ok(updateAvailable);
         }
         catch (Exception ex)
         {
-            return Result.Fail<bool>(ex, "Error while checking store for update.").Log(_logger);
+            return Result.Fail<bool>(ex, "Error while checking store for update.").Log(logger);
         }
     }
 
@@ -51,21 +51,21 @@ internal class StoreIntegrationWindows(
     {
         try
         {
-            _logger.LogInformation("Starting update from Microsoft Store.");
+            logger.LogInformation("Starting update from Microsoft Store.");
             var store = StoreContext.GetDefault();
             if (!store.CanSilentlyDownloadStorePackageUpdates)
             {
-                _logger.LogInformation("CanSilentlyDownloadStorePackageUpdates is false.");
-                await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
+                logger.LogInformation("CanSilentlyDownloadStorePackageUpdates is false.");
+                await launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
                 return Result.Ok();
             }
 
-            _logger.LogInformation("Attempting silent upgrade.");
-            await _messenger.Send(new ToastMessage("Background update started via Microsoft Store", Severity.Info));
+            logger.LogInformation("Attempting silent upgrade.");
+            await messenger.Send(new ToastMessage("Background update started via Microsoft Store", Severity.Info));
             var updates = await store.GetAppAndOptionalStorePackageUpdatesAsync();
             var results = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(updates);
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Package update request sent to store.  " +
                 "Overall State: {OverallState}. " +
                 "Total Status Count: {UpdateStatusCount}. " +
@@ -80,18 +80,18 @@ internal class StoreIntegrationWindows(
                 case StorePackageUpdateState.ErrorLowBattery:
                 case StorePackageUpdateState.ErrorWiFiRecommended:
                 case StorePackageUpdateState.OtherError:
-                    await _messenger.Send(new ToastMessage("Store update error", Severity.Error));
-                    await _launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
+                    await messenger.Send(new ToastMessage("Store update error", Severity.Error));
+                    await launcher.OpenAsync(ViewerConstants.MicrosoftStoreProtocolUri);
                     break;
                 default:
-                    await _messenger.Send(new ToastMessage("Background update started", Severity.Info));
+                    await messenger.Send(new ToastMessage("Background update started", Severity.Info));
                     break;
             }
             return Result.Ok();
         }
         catch (Exception ex)
         {
-            return Result.Fail(ex, "Error while installing current version.").Log(_logger);
+            return Result.Fail(ex, "Error while installing current version.").Log(logger);
         }
     }
 }

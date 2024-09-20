@@ -1,33 +1,29 @@
-﻿using ControlR.Web.Server.Services.Interfaces;
+﻿namespace ControlR.Web.Server.Services.Local;
 
-namespace ControlR.Web.Server.Services.Local;
-
-
-public class AlertStoreLocal(IAppDataAccessor _appData) : IAlertStore
+public class AlertStoreLocal(IAppDataAccessor appData) : IAlertStore
 {
-    private volatile AlertBroadcastDto? _currentAlert;
+  private volatile AlertBroadcastDto? _currentAlert;
 
-    public async Task<Result> ClearAlert()
+  public async Task<Result> ClearAlert()
+  {
+    _currentAlert = null;
+    return await appData.ClearSavedAlert();
+  }
+
+  public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
+  {
+    if (_currentAlert is not null)
     {
-        _currentAlert = null;
-        return await _appData.ClearSavedAlert();
-
+      return Result.Ok(_currentAlert);
     }
 
-    public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
-    {
-        if (_currentAlert is not null)
-        {
-            return Result.Ok(_currentAlert);
-        }
+    return await appData.GetCurrentAlert();
+  }
 
-        return await _appData.GetCurrentAlert();
-    }
+  public async Task<Result> StoreAlert(AlertBroadcastDto alertDto)
+  {
+    _currentAlert = alertDto;
 
-    public async Task<Result> StoreAlert(AlertBroadcastDto alertDto)
-    {
-        _currentAlert = alertDto;
-
-        return await _appData.SaveCurrentAlert(alertDto);
-    }
+    return await appData.SaveCurrentAlert(alertDto);
+  }
 }

@@ -5,10 +5,10 @@ namespace ControlR.Agent.Services.Mac;
 
 public class ElevationCheckerMac : IElevationChecker
 {
-    public static IElevationChecker Instance { get; } = new ElevationCheckerMac();
+  public static IElevationChecker Instance { get; } = new ElevationCheckerMac();
 
-    public bool IsElevated()
-    {
-        return Libc.geteuid() == 0;
-    }
+  public bool IsElevated()
+  {
+    return Libc.Geteuid() == 0;
+  }
 }

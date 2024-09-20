@@ -10,178 +10,173 @@
 
 <PageTitle>Register</PageTitle>
 
-<StatusMessage Message="@message" />
+<StatusMessage Message="@_message"/>
 <h1>Register</h1>
 <h2>Associate your @ProviderDisplayName account.</h2>
-<MudDivider />
+<MudDivider/>
 
-<div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+<div class="alert alert-info">
+  You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
+  Please enter an email address for this site below and click the Register button to finish
+  logging in.
 </div>
 
 <div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
-    </div>
+  <div class="col-md-4">
+    <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
+      <DataAnnotationsValidator/>
+      <ValidationSummary class="text-danger" role="alert"/>
+      <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email."/>
+        <label for="email" class="form-label">Email</label>
+        <ValidationMessage For="() => Input.Email"/>
+      </div>
+      <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+    </EditForm>
+  </div>
 </div>
 
 @code {
-    public const string LoginCallbackAction = "LoginCallback";
+  public const string LoginCallbackAction = "LoginCallback";
 
-    private string? message;
-    private ExternalLoginInfo externalLoginInfo = default!;
+  private string? _message;
+  private ExternalLoginInfo _externalLoginInfo = default!;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm] private InputModel Input { get; } = new();
 
-    [SupplyParameterFromQuery]
-    private string? RemoteError { get; set; }
+  [SupplyParameterFromQuery] private string? RemoteError { get; }
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery] private string? ReturnUrl { get; }
 
-    [SupplyParameterFromQuery]
-    private string? Action { get; set; }
+  [SupplyParameterFromQuery] private string? Action { get; }
 
-    private string? ProviderDisplayName => externalLoginInfo.ProviderDisplayName;
+  private string? ProviderDisplayName => _externalLoginInfo.ProviderDisplayName;
 
-    protected override async Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
+  {
+    if (RemoteError is not null)
     {
-        if (RemoteError is not null)
-        {
-            RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
-        }
-
-        var info = await SignInManager.GetExternalLoginInfoAsync();
-        if (info is null)
-        {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
-        }
-
-        externalLoginInfo = info;
-
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            if (Action == LoginCallbackAction)
-            {
-                await OnLoginCallbackAsync();
-                return;
-            }
-
-            // We should only reach this page via the login callback, so redirect back to
-            // the login page if we get here some other way.
-            RedirectManager.RedirectTo("Account/Login");
-        }
+      RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
     }
 
-    private async Task OnLoginCallbackAsync()
+    var info = await SignInManager.GetExternalLoginInfoAsync();
+    if (info is null)
     {
-        // Sign in the user with this external login provider if the user already has a login.
-        var result = await SignInManager.ExternalLoginSignInAsync(
-            externalLoginInfo.LoginProvider,
-            externalLoginInfo.ProviderKey,
-            isPersistent: false,
-            bypassTwoFactor: true);
-
-        if (result.Succeeded)
-        {
-            Logger.LogInformation(
-                "{Name} logged in with {LoginProvider} provider.",
-                externalLoginInfo.Principal.Identity?.Name,
-                externalLoginInfo.LoginProvider);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else if (result.IsLockedOut)
-        {
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-
-        // If the user does not have an account, then ask the user to create an account.
-        if (externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
-        {
-            Input.Email = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
-        }
+      RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
     }
 
-    private async Task OnValidSubmitAsync()
+    _externalLoginInfo = info;
+
+    if (HttpMethods.IsGet(HttpContext.Request.Method))
     {
-        var emailStore = GetEmailStore();
-        var user = CreateUser();
+      if (Action == LoginCallbackAction)
+      {
+        await OnLoginCallbackAsync();
+        return;
+      }
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+      // We should only reach this page via the login callback, so redirect back to
+      // the login page if we get here some other way.
+      RedirectManager.RedirectTo("Account/Login");
+    }
+  }
 
-        var result = await UserManager.CreateAsync(user);
-        if (result.Succeeded)
-        {
-            result = await UserManager.AddLoginAsync(user, externalLoginInfo);
-            if (result.Succeeded)
-            {
-                Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
+  private async Task OnLoginCallbackAsync()
+  {
+    // Sign in the user with this external login provider if the user already has a login.
+    var result = await SignInManager.ExternalLoginSignInAsync(
+      _externalLoginInfo.LoginProvider,
+      _externalLoginInfo.ProviderKey,
+      false,
+      true);
 
-                var userId = await UserManager.GetUserIdAsync(user);
-                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-
-                var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-                    NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-                    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-                await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-                // If account confirmation is required, we need to show the link if we don't have a real email sender
-                if (UserManager.Options.SignIn.RequireConfirmedAccount)
-                {
-                    RedirectManager.RedirectTo("Account/RegisterConfirmation", new() { ["email"] = Input.Email });
-                }
-
-                await SignInManager.SignInAsync(user, isPersistent: false, externalLoginInfo.LoginProvider);
-                RedirectManager.RedirectTo(ReturnUrl);
-            }
-        }
-
-        message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+    if (result.Succeeded)
+    {
+      Logger.LogInformation(
+        "{Name} logged in with {LoginProvider} provider.",
+        _externalLoginInfo.Principal.Identity?.Name,
+        _externalLoginInfo.LoginProvider);
+      RedirectManager.RedirectTo(ReturnUrl);
+    }
+    else if (result.IsLockedOut)
+    {
+      RedirectManager.RedirectTo("Account/Lockout");
     }
 
-    private AppUser CreateUser()
+    // If the user does not have an account, then ask the user to create an account.
+    if (_externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
     {
-        try
+      Input.Email = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
+    }
+  }
+
+  private async Task OnValidSubmitAsync()
+  {
+    var emailStore = GetEmailStore();
+    var user = CreateUser();
+
+    await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+    var result = await UserManager.CreateAsync(user);
+    if (result.Succeeded)
+    {
+      result = await UserManager.AddLoginAsync(user, _externalLoginInfo);
+      if (result.Succeeded)
+      {
+        Logger.LogInformation("User created an account using {Name} provider.", _externalLoginInfo.LoginProvider);
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+          NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+          new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // If account confirmation is required, we need to show the link if we don't have a real email sender
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
-            return Activator.CreateInstance<AppUser>();
+          RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email });
         }
-        catch
-        {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(AppUser)}'. " +
-                $"Ensure that '{nameof(AppUser)}' is not an abstract class and has a parameterless constructor");
-        }
+
+        await SignInManager.SignInAsync(user, false, _externalLoginInfo.LoginProvider);
+        RedirectManager.RedirectTo(ReturnUrl);
+      }
     }
 
-    private IUserEmailStore<AppUser> GetEmailStore()
+    _message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+  }
+
+  private AppUser CreateUser()
+  {
+    try
     {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
-        }
-        return (IUserEmailStore<AppUser>)UserStore;
+      return Activator.CreateInstance<AppUser>();
+    }
+    catch
+    {
+      throw new InvalidOperationException($"Can't create an instance of '{nameof(AppUser)}'. " +
+                                          $"Ensure that '{nameof(AppUser)}' is not an abstract class and has a parameterless constructor");
+    }
+  }
+
+  private IUserEmailStore<AppUser> GetEmailStore()
+  {
+    if (!UserManager.SupportsUserEmail)
+    {
+      throw new NotSupportedException("The default UI requires a user store with email support.");
     }
 
-    private sealed class InputModel
-    {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = "";
-    }
+    return (IUserEmailStore<AppUser>)UserStore;
+  }
+
+  private sealed class InputModel
+  {
+    [Required] [EmailAddress] public string Email { get; set; } = "";
+  }
+
 }

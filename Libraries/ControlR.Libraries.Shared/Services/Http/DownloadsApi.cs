@@ -50,7 +50,7 @@ internal class DownloadsApi(
             await using var webStream = await _client.GetStreamAsync(streamerDownloadUri);
             await using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
 
-            fs.TotalBytesWrittenChanged += async (sender, written) =>
+            fs.TotalBytesWrittenChanged += async (_, written) =>
             {
                 if (onDownloadProgress is not null)
                 {

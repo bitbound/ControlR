@@ -6,7 +6,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
 {
     public const string StatusCookieName = "Identity.StatusMessage";
 
-    private static readonly CookieBuilder StatusCookieBuilder = new()
+    private static readonly CookieBuilder _statusCookieBuilder = new()
     {
         SameSite = SameSiteMode.Strict,
         HttpOnly = true,
@@ -42,7 +42,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
     [DoesNotReturn]
     public void RedirectToWithStatus(string uri, string message, HttpContext context)
     {
-        context.Response.Cookies.Append(StatusCookieName, message, StatusCookieBuilder.Build(context));
+        context.Response.Cookies.Append(StatusCookieName, message, _statusCookieBuilder.Build(context));
         RedirectTo(uri);
     }
 

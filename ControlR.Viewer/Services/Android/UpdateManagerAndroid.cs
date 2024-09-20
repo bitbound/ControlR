@@ -1,100 +1,103 @@
 ﻿#if ANDROID
 using ControlR.Libraries.Shared.Services.Http;
-using ControlR.Viewer.Services.Interfaces;
 using ControlR.Viewer.Extensions;
+using ControlR.Viewer.Services.Interfaces;
+using MudBlazor;
 
 namespace ControlR.Viewer.Services.Android;
 
 internal class UpdateManagerAndroid(
-    IVersionApi _versionApi,
-    IAppState _appState,
-    IStoreIntegration _storeIntegration,
-    IBrowser _browser,
-    ISettings _settings,
-    IMessenger _messenger,
-    ILogger<UpdateManagerAndroid> _logger) : IUpdateManager
+  IVersionApi versionApi,
+  IAppState appState,
+  IStoreIntegration storeIntegration,
+  IBrowser browser,
+  ISettings settings,
+  IMessenger messenger,
+  ILogger<UpdateManagerAndroid> logger) : IUpdateManager
 {
-    private readonly SemaphoreSlim _installLock = new(1, 1);
+  private readonly SemaphoreSlim _installLock = new(1, 1);
 
-    public async Task<Result<bool>> CheckForUpdate()
+  public async Task<Result<bool>> CheckForUpdate()
+  {
+    try
     {
-        try
-        {
-            if (_appState.IsStoreBuild)
-            {
-                return await _storeIntegration.IsUpdateAvailable();
-            }
+      if (appState.IsStoreBuild)
+      {
+        return await storeIntegration.IsUpdateAvailable();
+      }
 
-            return await CheckForSideloadedUpdate();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking for new versions.");
-            return Result.Fail<bool>("An error occurred.");
-        }
+      return await CheckForSideloadedUpdate();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while checking for new versions.");
+      return Result.Fail<bool>("An error occurred.");
+    }
+  }
+
+  public async Task<Result> InstallCurrentVersion()
+  {
+    if (!await _installLock.WaitAsync(0))
+    {
+      return Result.Fail("Update already started.");
     }
 
-    public async Task<Result> InstallCurrentVersion()
+    try
     {
-        if (!await _installLock.WaitAsync(0))
+      if (appState.IsStoreBuild)
+      {
+        var checkResult = await storeIntegration.IsUpdateAvailable();
+        if (!checkResult.IsSuccess)
         {
-            return Result.Fail("Update already started.");
+          return checkResult.ToResult();
         }
 
-        try
-        {
-            if (_appState.IsStoreBuild)
-            {
-                var checkResult = await _storeIntegration.IsUpdateAvailable();
-                if (!checkResult.IsSuccess)
-                {
-                    return checkResult.ToResult();
-                }
+        return await storeIntegration.InstallCurrentVersion();
+      }
 
-                return await _storeIntegration.InstallCurrentVersion();
-            }
+      if (!await browser.OpenAsync(settings.ViewerDownloadUri, BrowserLaunchMode.External))
+      {
+        await messenger.SendToast("Failed to launch download URL", Severity.Error);
+      }
 
-            if (!await _browser.OpenAsync(_settings.ViewerDownloadUri, BrowserLaunchMode.External))
-            {
-                await _messenger.SendToast("Failed to launch download URL", MudBlazor.Severity.Error);
-            }
-            return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while installing the current version.");
-        }
-        finally
-        {
-            _installLock.Release();
-        }
-        return Result.Fail("Installation failed.");
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while installing the current version.");
+    }
+    finally
+    {
+      _installLock.Release();
     }
 
-private async Task<Result<bool>> CheckForSideloadedUpdate()
+    return Result.Fail("Installation failed.");
+  }
+
+  private async Task<Result<bool>> CheckForSideloadedUpdate()
+  {
+    try
     {
-        try
-        {
-            var result = await _versionApi.GetCurrentViewerVersion();
-            if (!result.IsSuccess)
-            {
-                _logger.LogResult(result);
-                return Result.Fail<bool>(result.Reason);
-            }
+      var result = await versionApi.GetCurrentViewerVersion();
+      if (!result.IsSuccess)
+      {
+        logger.LogResult(result);
+        return Result.Fail<bool>(result.Reason);
+      }
 
-            var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
-            if (result.Value != currentVersion)
-            {
-                return Result.Ok(true);
-            }
+      var currentVersion = Version.Parse(VersionTracking.CurrentVersion);
+      if (result.Value != currentVersion)
+      {
+        return Result.Ok(true);
+      }
 
-            return Result.Ok(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking for new versions.");
-            return Result.Fail<bool>("An error occurred.");
-        }
+      return Result.Ok(false);
     }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while checking for new versions.");
+      return Result.Fail<bool>("An error occurred.");
+    }
+  }
 }
 #endif

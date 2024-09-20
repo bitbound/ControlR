@@ -7,14 +7,14 @@ using ControlR.Viewer.Extensions;
 namespace ControlR.Viewer.Services.Windows;
 
 internal class UpdateManagerWindows(
-    IVersionApi _versionApi,
-    IDownloadsApi _downloadsApi,
-    IFileSystem _fileSystem,
-    IProcessManager _processManager,
-    ISettings _settings,
-    IStoreIntegration _storeIntegration,
-    IAppState _appState,
-    ILogger<UpdateManagerWindows> _logger) : IUpdateManager
+    IVersionApi versionApi,
+    IDownloadsApi downloadsApi,
+    IFileSystem fileSystem,
+    IProcessManager processManager,
+    ISettings settings,
+    IStoreIntegration storeIntegration,
+    IAppState appState,
+    ILogger<UpdateManagerWindows> logger) : IUpdateManager
 {
     private readonly SemaphoreSlim _installLock = new(1, 1);
 
@@ -22,26 +22,26 @@ internal class UpdateManagerWindows(
     {
         try
         {
-            if (_appState.IsStoreBuild)
+            if (appState.IsStoreBuild)
             {
-                return await _storeIntegration.IsUpdateAvailable();
+                return await storeIntegration.IsUpdateAvailable();
             }
 
             return await CheckForSideloadedUpdate();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while checking for new versions.");
+            logger.LogError(ex, "Error while checking for new versions.");
             return Result.Fail<bool>("An error occurred.");
         }
     }
 
     private async Task<Result<bool>> CheckForSideloadedUpdate()
     {
-        var result = await _versionApi.GetCurrentViewerVersion();
+        var result = await versionApi.GetCurrentViewerVersion();
         if (!result.IsSuccess)
         {
-            _logger.LogResult(result);
+            logger.LogResult(result);
             return Result.Fail<bool>(result.Reason);
         }
 
@@ -63,22 +63,22 @@ internal class UpdateManagerWindows(
 
         try
         {
-            if (_appState.IsStoreBuild)
+            if (appState.IsStoreBuild)
             {
-                var checkResult = await _storeIntegration.IsUpdateAvailable();
+                var checkResult = await storeIntegration.IsUpdateAvailable();
                 if (!checkResult.IsSuccess)
                 {
                     return checkResult.ToResult();
                 }
 
-                return await _storeIntegration.InstallCurrentVersion();
+                return await storeIntegration.InstallCurrentVersion();
             }
 
             return await InstallCurrentVersionSelfHosted();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while installing the current version.");
+            logger.LogError(ex, "Error while installing the current version.");
         }
         finally
         {
@@ -90,18 +90,18 @@ internal class UpdateManagerWindows(
     private async Task<Result> InstallCurrentVersionSelfHosted()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), AppConstants.ViewerFileName);
-        if (_fileSystem.FileExists(tempPath))
+        if (fileSystem.FileExists(tempPath))
         {
-            _fileSystem.DeleteFile(tempPath);
+            fileSystem.DeleteFile(tempPath);
         }
 
-        var downloadResult = await _downloadsApi.DownloadFile(_settings.ViewerDownloadUri, tempPath);
+        var downloadResult = await downloadsApi.DownloadFile(settings.ViewerDownloadUri, tempPath);
         if (!downloadResult.IsSuccess)
         {
             return downloadResult;
         }
 
-        await _processManager.StartAndWaitForExit(
+        await processManager.StartAndWaitForExit(
             fileName: "explorer.exe",
             arguments: tempPath,
             useShellExec: true,

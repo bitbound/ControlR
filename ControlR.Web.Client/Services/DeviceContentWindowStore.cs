@@ -4,45 +4,45 @@ namespace ControlR.Web.Client.Services;
 
 public interface IDeviceContentWindowStore
 {
-    IReadOnlyList<DeviceContentInstance> Windows { get; }
+  IReadOnlyList<DeviceContentInstance> Windows { get; }
 
-    void Add(DeviceContentInstance instance);
+  void Add(DeviceContentInstance instance);
 
-    void Remove(DeviceContentInstance instance);
+  void Remove(DeviceContentInstance instance);
 }
 
 internal class DeviceContentWindowStore : IDeviceContentWindowStore
 {
-    private static readonly ConcurrentList<DeviceContentInstance> _cache = [];
-    private readonly IMessenger _messenger;
+  private static readonly ConcurrentList<DeviceContentInstance> _cache = [];
+  private readonly IMessenger _messenger;
 
-    public DeviceContentWindowStore(IMessenger messenger)
+  public DeviceContentWindowStore(IMessenger messenger)
+  {
+    _messenger = messenger;
+
+    _messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
+  }
+
+  public IReadOnlyList<DeviceContentInstance> Windows => _cache;
+
+  public void Add(DeviceContentInstance instance)
+  {
+    _cache.Add(instance);
+    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+  }
+
+  public void Remove(DeviceContentInstance instance)
+  {
+    _cache.Remove(instance);
+    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+  }
+
+  private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    if (message.NewState != HubConnectionState.Connected)
     {
-        _messenger = messenger;
-
-        _messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
+      _cache.RemoveAll(x => x.ContentType != DeviceContentInstanceType.RemoteControl);
+      await _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
     }
-
-    public IReadOnlyList<DeviceContentInstance> Windows => _cache;
-
-    public void Add(DeviceContentInstance instance)
-    {
-        _cache.Add(instance);
-        _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
-    }
-
-    public void Remove(DeviceContentInstance instance)
-    {
-        _cache.Remove(instance);
-        _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
-    }
-
-    private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
-    {
-        if (message.NewState != HubConnectionState.Connected)
-        {
-            _cache.RemoveAll(x => x.ContentType != DeviceContentInstanceType.RemoteControl);
-            await _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
-        }
-    }
+  }
 }

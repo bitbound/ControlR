@@ -2,34 +2,34 @@
 
 public interface IBusyCounter
 {
-    bool IsBusy { get; }
+  bool IsBusy { get; }
 
-    int PendingOperations { get; }
+  int PendingOperations { get; }
 
-    IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
+  IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null);
 }
 
-internal class BusyCounter(IMessenger _messenger) : IBusyCounter
+internal class BusyCounter(IMessenger messenger) : IBusyCounter
 {
-    private volatile int _busyCounter;
+  private volatile int _busyCounter;
 
-    public bool IsBusy => _busyCounter > 0;
+  public bool IsBusy => _busyCounter > 0;
 
 
-    public int PendingOperations => _busyCounter;
+  public int PendingOperations => _busyCounter;
 
-    public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
+  public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
+  {
+    Interlocked.Increment(ref _busyCounter);
+
+    messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
+
+    return new CallbackDisposable(() =>
     {
-        Interlocked.Increment(ref _busyCounter);
+      Interlocked.Decrement(ref _busyCounter);
+      messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
 
-        _messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
-
-        return new CallbackDisposable(() =>
-        {
-            Interlocked.Decrement(ref _busyCounter);
-            _messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
-
-            additionalDisposedAction?.Invoke();
-        });
-    }
+      additionalDisposedAction?.Invoke();
+    });
+  }
 }

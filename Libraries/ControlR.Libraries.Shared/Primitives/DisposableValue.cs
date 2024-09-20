@@ -1,25 +1,26 @@
 ﻿using System.Diagnostics;
 
 namespace ControlR.Libraries.Shared.Primitives;
+
 public sealed class DisposableValue<T>(
-    T _value,
-    Action? _disposeCallback = null) : IDisposable
+  T value,
+  Action? disposeCallback = null) : IDisposable
 {
-    private readonly Action? _disposeCallback = _disposeCallback;
+  private readonly Action? _disposeCallback = disposeCallback;
 
-    public T Value { get; } = _value;
+  public T Value { get; } = value;
 
-    public void Dispose()
+  public void Dispose()
+  {
+    try
     {
-        try
-        {
-            _disposeCallback?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine
-                ($"Error while invoking callback in {nameof(DisposableValue<T>)}.  " +
-                $"Exception: {ex}");
-        }
+      _disposeCallback?.Invoke();
     }
+    catch (Exception ex)
+    {
+      Debug.WriteLine
+      ($"Error while invoking callback in {nameof(DisposableValue<T>)}.  " +
+       $"Exception: {ex}");
+    }
+  }
 }

@@ -7,27 +7,27 @@
 @inject ILazyDi<ILogger<MainLayout>> Logger
 
 <div>
-  <MudThemeProvider IsDarkMode Theme="CustomTheme" />
-  <MudPopoverProvider />
-  <MudDialogProvider />
-  <MudSnackbarProvider />
+  <MudThemeProvider IsDarkMode Theme="CustomTheme"/>
+  <MudPopoverProvider/>
+  <MudDialogProvider/>
+  <MudSnackbarProvider/>
 
   <MudLayout>
     <MudAppBar Elevation="1">
       <MudIconButton Icon="@Icons.Material.Filled.Menu"
                      Color="Color.Inherit"
                      Edge="Edge.Start"
-                     OnClick="@((e) => DrawerToggle())" />
+                     OnClick="@(_ => DrawerToggle())"/>
 
-      <MudChip T="string" Text='Beta' Color="Color.Info" Class="ms-3" />
+      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3"/>
 
-      <MudSpacer />
+      <MudSpacer/>
 
       @if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
       {
         <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
           <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success"
-                               Class="mx-3 mt-1" />
+                               Class="mx-3 mt-1"/>
         </MudTooltip>
       }
       else
@@ -36,7 +36,7 @@
         {
           case HubConnectionState.Connected:
             <MudTooltip Text="Connected">
-              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1"/>
             </MudTooltip>
             break;
           case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
@@ -45,42 +45,48 @@
                                    StrokeWidth="6"
                                    Size="Size.Small"
                                    Color="Color.Warning"
-                                   Class="mx-3 mt-1" />
+                                   Class="mx-3 mt-1"/>
             </MudTooltip>
             break;
           case HubConnectionState.Disconnected:
             <MudTooltip Text="Disconnected">
-              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1"/>
             </MudTooltip>
-            break;
-          default:
             break;
         }
       }
       <MudTooltip Text="GitHub">
-        <MudIconButton 
-          Icon="@Icons.Custom.Brands.GitHub" 
+        <MudIconButton
+          Icon="@Icons.Custom.Brands.GitHub"
           Color="Color.Inherit"
-          Href="https://github.com/bitbound/controlr/" 
-          Target="_blank" />
+          Href="https://github.com/bitbound/controlr/"
+          Target="_blank"/>
 
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-      <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
+      <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
     </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
+    <MudMainContent>
       @if (_isWaitingForWasmLoad)
       {
         <div class="w-100 text-center mt-8">
           <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
             Loading
           </MudText>
-          <MudProgressCircular Min="0" Max="1" Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large"/>
         </div>
       }
       else
       {
+        <div>
+          @if (_showAlert)
+          {
+            <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
+              @(_alertMessage)
+            </MudAlert>
+          }
+        </div>
         @Body
       }
     </MudMainContent>
@@ -96,34 +102,33 @@
 
 @code {
   private bool _drawerOpen = true;
-  private bool _isBusy = false;
+  private bool _isBusy;
   private bool _isWaitingForWasmLoad = true;
-  private bool _showAlert = false;
+  private bool _showAlert;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private AlertSeverity _alertSeverity = AlertSeverity.Information;
   private string _alertMessage = string.Empty;
-  private bool _updateAvailable;
   private MudTheme? _customTheme;
-  private int _pendingOperations = 0;
+  private int _pendingOperations;
 
   private MudTheme CustomTheme
   {
     get
     {
-      return _customTheme ??= new MudTheme()
+      return _customTheme ??= new MudTheme
+      {
+        PaletteDark = new PaletteDark
         {
-          PaletteDark = new PaletteDark()
-          {
-            Primary = "#46AA46",
-            Secondary = "#BE6E46",
-            Tertiary = "#F082D2",
-            Info = "#42A5F5",
-            TextPrimary = "rgb(215, 215, 215)",
-            AppbarText = "rgb(215, 215, 215)",
-            Background = Colors.Gray.Darken4,
-            Surface = "rgb(45, 45, 45)",
-          }
-        };
+          Primary = "#46AA46",
+          Secondary = "#BE6E46",
+          Tertiary = "#F082D2",
+          Info = "#42A5F5",
+          TextPrimary = "rgb(215, 215, 215)",
+          AppbarText = "rgb(215, 215, 215)",
+          Background = Colors.Gray.Darken4,
+          Surface = "rgb(45, 45, 45)"
+        }
+      };
     }
   }
 
@@ -133,7 +138,7 @@
     base.OnInitialized();
 
     if (OperatingSystem.IsBrowser())
-    { 
+    {
       Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
       Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
       Messenger.Value.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
@@ -142,7 +147,7 @@
 
     if (NavManager.Exists)
     {
-      _isWaitingForWasmLoad = 
+      _isWaitingForWasmLoad =
         !OperatingSystem.IsBrowser() &&
         Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
         !currentUri.PathAndQuery.StartsWith("/Account");
@@ -205,4 +210,5 @@
     Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
+
 }

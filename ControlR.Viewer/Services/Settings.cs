@@ -4,155 +4,152 @@ namespace ControlR.Viewer.Services;
 
 public interface ISettings
 {
-    bool AppendInstanceIdToAgentInstall { get; set; }
-    bool HideOfflineDevices { get; set; }
-    bool NotifyUserSessionStart { get; set; }
-    string PublicKeyLabel { get; set; }
-    Uri ServerUri { get; set; }
-    string Username { get; set; }
-    Uri ViewerDownloadUri { get; }
+  bool AppendInstanceIdToAgentInstall { get; set; }
+  bool HideOfflineDevices { get; set; }
+  bool NotifyUserSessionStart { get; set; }
+  string PublicKeyLabel { get; set; }
+  Uri ServerUri { get; set; }
+  string Username { get; set; }
+  Uri ViewerDownloadUri { get; }
 
-    Task<Result<byte[]>> GetSecurePrivateKey();
+  Task<Result<byte[]>> GetSecurePrivateKey();
 
-    Task Reset();
-    Task StoreSecurePrivateKey(byte[] privateKey);
-
+  Task Reset();
+  Task StoreSecurePrivateKey(byte[] privateKey);
 }
 
 internal class Settings(
-    ISecureStorage _secureStorage,
-    IPreferences _preferences,
-    IMessenger _messenger,
-    IAppState _appState,
-    ILogger<Settings> _logger) : ISettings
+  ISecureStorage secureStorage,
+  IPreferences preferences,
+  IMessenger messenger,
+  IAppState appState,
+  ILogger<Settings> logger) : ISettings
 {
-    private const string PrivateKeyStorageKey = "SecurePrivateKey";
+  private const string PrivateKeyStorageKey = "SecurePrivateKey";
 
-    public bool AppendInstanceIdToAgentInstall
-    {
-        get => GetPref(false);
-        set => SetPref(value);
-    }
+  public bool AppendInstanceIdToAgentInstall
+  {
+    get => GetPref(false);
+    set => SetPref(value);
+  }
 
-    public bool HideOfflineDevices
-    {
-        get => GetPref(true);
-        set => SetPref(value);
-    }
+  public bool HideOfflineDevices
+  {
+    get => GetPref(true);
+    set => SetPref(value);
+  }
 
-    public bool NotifyUserSessionStart
-    {
-        get => GetPref(false);
-        set => SetPref(value);
-    }
+  public bool NotifyUserSessionStart
+  {
+    get => GetPref(false);
+    set => SetPref(value);
+  }
 
-    public string PublicKeyLabel
+  public string PublicKeyLabel
+  {
+    get
     {
-        get
-        {
-            var pref = GetPref("");
-            if (!string.IsNullOrWhiteSpace(pref))
-            {
-                return pref;
-            }
-            return Username;
-        }
-        set => SetPref(value);
-    }
+      var pref = GetPref("");
+      if (!string.IsNullOrWhiteSpace(pref))
+      {
+        return pref;
+      }
 
-    public Uri ServerUri
-    {
-        get
-        {
-            if (Uri.TryCreate(GetPref(""), UriKind.Absolute, out var uri))
-            {
-                return uri;
-            }
-            return AppConstants.ServerUri;
-        }
-        set
-        {
-            SetPref($"{value}".TrimEnd('/'));
-            _messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
-        }
+      return Username;
     }
-    public string Username
-    {
-        get => GetPref(string.Empty);
-        set => SetPref(value);
-    }
+    set => SetPref(value);
+  }
 
-    public Uri ViewerDownloadUri
+  public Uri ServerUri
+  {
+    get
     {
-        get
-        {
-            return new Uri(ServerUri , $"/downloads/{AppConstants.ViewerFileName}");
-        }
-    }
+      if (Uri.TryCreate(GetPref(""), UriKind.Absolute, out var uri))
+      {
+        return uri;
+      }
 
-    public async Task<Result<byte[]>> GetSecurePrivateKey()
-    {
-        try
-        {
-            var stored = await _secureStorage.GetAsync(PrivateKeyStorageKey);
-            if (string.IsNullOrWhiteSpace(stored))
-            {
-                return Result.Fail<byte[]>("Stored key is empty.");
-            }
-            return Result.Ok(Convert.FromBase64String(stored));
-        }
-        catch (Exception ex)
-        {
-            var result = Result.Fail<byte[]>(ex, "Error while getting private key from secure storage.");
-            _logger.LogResult(result);
-            _secureStorage.Remove(PrivateKeyStorageKey);
-            return result;
-        }
+      return AppConstants.ServerUri;
     }
+    set
+    {
+      SetPref($"{value}".TrimEnd('/'));
+      messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
+    }
+  }
 
-    public async Task Reset()
-    {
-        try
-        {
-            _preferences.Clear();
-            await _appState.ClearKeys();
-            _secureStorage.Remove(PrivateKeyStorageKey);
-            _secureStorage.RemoveAll();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while clearing settings.");
-        }
-    }
+  public string Username
+  {
+    get => GetPref(string.Empty);
+    set => SetPref(value);
+  }
 
-    public async Task StoreSecurePrivateKey(byte[] privateKey)
-    {
-        try
-        {
-            await _secureStorage.SetAsync(PrivateKeyStorageKey, Convert.ToBase64String(privateKey));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting private key from secure storage.");
-            _secureStorage.Remove(PrivateKeyStorageKey);
-        }
-    }
+  public Uri ViewerDownloadUri => new(ServerUri, $"/downloads/{AppConstants.ViewerFileName}");
 
-    private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
+  public async Task<Result<byte[]>> GetSecurePrivateKey()
+  {
+    try
     {
-        try
-        {
-            return _preferences.Get(callerMemberName, defaultValue);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting preference for {MemberName}.", callerMemberName);
-            return defaultValue;
-        }
-    }
+      var stored = await secureStorage.GetAsync(PrivateKeyStorageKey);
+      if (string.IsNullOrWhiteSpace(stored))
+      {
+        return Result.Fail<byte[]>("Stored key is empty.");
+      }
 
-    private void SetPref<T>(T newValue, [CallerMemberName] string callerMemmberName = "")
-    {
-        _preferences.Set(callerMemmberName, newValue);
+      return Result.Ok(Convert.FromBase64String(stored));
     }
+    catch (Exception ex)
+    {
+      var result = Result.Fail<byte[]>(ex, "Error while getting private key from secure storage.");
+      logger.LogResult(result);
+      secureStorage.Remove(PrivateKeyStorageKey);
+      return result;
+    }
+  }
+
+  public async Task Reset()
+  {
+    try
+    {
+      preferences.Clear();
+      await appState.ClearKeys();
+      secureStorage.Remove(PrivateKeyStorageKey);
+      secureStorage.RemoveAll();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while clearing settings.");
+    }
+  }
+
+  public async Task StoreSecurePrivateKey(byte[] privateKey)
+  {
+    try
+    {
+      await secureStorage.SetAsync(PrivateKeyStorageKey, Convert.ToBase64String(privateKey));
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while getting private key from secure storage.");
+      secureStorage.Remove(PrivateKeyStorageKey);
+    }
+  }
+
+  private T GetPref<T>(T defaultValue, [CallerMemberName] string callerMemberName = "")
+  {
+    try
+    {
+      return preferences.Get(callerMemberName, defaultValue);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while getting preference for {MemberName}.", callerMemberName);
+      return defaultValue;
+    }
+  }
+
+  private void SetPref<T>(T newValue, [CallerMemberName] string callerMemmberName = "")
+  {
+    preferences.Set(callerMemmberName, newValue);
+  }
 }

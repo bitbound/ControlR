@@ -11,9 +11,9 @@
 
 <MudGrid>
   <MudItem md="6">
-    <StatusMessage Message="@errorMessage" />
+    <StatusMessage Message="@_errorMessage"/>
     <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-      <DataAnnotationsValidator />
+      <DataAnnotationsValidator/>
 
       <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
 
@@ -21,12 +21,12 @@
         <MudItem xs="12">
           <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
                               Label="Email" Placeholder="name@example.com"
-                              UserAttributes="@(new() { { "autocomplete", "true" }, { "aria-required", "true" } } )" />
+                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })"/>
         </MudItem>
         <MudItem xs="12">
           <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
                               Label="Password" InputType="InputType.Password" Placeholder="password"
-                              UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
+                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })"/>
         </MudItem>
         <MudItem xs="12">
           <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
@@ -39,8 +39,8 @@
 
     <MudGrid Class="mt-4">
       <MudItem md="12">
-        <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
-        <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br />
+        <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br/>
+        <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br/>
         <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
       </MudItem>
     </MudGrid>
@@ -48,21 +48,18 @@
   <MudItem md="6">
     <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
 
-    <ExternalLoginPicker />
+    <ExternalLoginPicker/>
   </MudItem>
 </MudGrid>
 
 @code {
-  private string? errorMessage;
+  private string? _errorMessage;
 
-  [CascadingParameter]
-  private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm]
-  private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm] private InputModel Input { get; } = new();
 
-  [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery] private string? ReturnUrl { get; }
 
   protected override async Task OnInitializedAsync()
   {
@@ -77,7 +74,7 @@
   {
     // This doesn't count login failures towards account lockout
     // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-    var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+    var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, false);
     if (result.Succeeded)
     {
       Logger.LogInformation("User logged in.");
@@ -86,8 +83,8 @@
     else if (result.RequiresTwoFactor)
     {
       RedirectManager.RedirectTo(
-          "Account/LoginWith2fa",
-          new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        "Account/LoginWith2fa",
+        new Dictionary<string, object?> { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
     }
     else if (result.IsLockedOut)
     {
@@ -96,21 +93,19 @@
     }
     else
     {
-      errorMessage = "Error: Invalid login attempt.";
+      _errorMessage = "Error: Invalid login attempt.";
     }
   }
 
   private sealed class InputModel
   {
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; } = "";
+    [Required] [EmailAddress] public string Email { get; set; } = "";
 
     [Required]
     [DataType(DataType.Password)]
     public string Password { get; set; } = "";
 
-    [Display(Name = "Remember me?")]
-    public bool RememberMe { get; set; }
+    [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
   }
+
 }
