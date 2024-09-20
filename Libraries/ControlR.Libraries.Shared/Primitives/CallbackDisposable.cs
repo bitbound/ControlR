@@ -1,15 +1,18 @@
 ﻿namespace ControlR.Libraries.Shared.Primitives;
 
-public sealed class CallbackDisposable(Action _disposeCallback) : IDisposable
+public sealed class CallbackDisposable(
+  Action disposeCallback,
+  Action<Exception>? exceptionHandler = null) : IDisposable
 {
-    private readonly Action _disposeCallback = _disposeCallback;
-
-    public void Dispose()
+  public void Dispose()
+  {
+    try
     {
-        try
-        {
-            _disposeCallback();
-        }
-        catch { }
+      disposeCallback();
     }
+    catch (Exception ex)
+    {
+      exceptionHandler?.Invoke(ex);
+    }
+  }
 }

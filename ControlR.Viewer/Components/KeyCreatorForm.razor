@@ -253,7 +253,7 @@ else
             }
 
             using var cts = new CancellationTokenSource(5_000);
-            using var fs = await result.OpenReadAsync();
+            await using var fs = await result.OpenReadAsync();
             var encryptedPrivateKey = new byte[fs.Length];
             await fs.ReadAsync(encryptedPrivateKey, cts.Token);
 

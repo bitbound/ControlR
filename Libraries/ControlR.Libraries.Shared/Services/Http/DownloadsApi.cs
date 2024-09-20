@@ -22,8 +22,8 @@ internal class DownloadsApi(
     {
         try
         {
-            using var webStream = await _client.GetStreamAsync(downloadUri);
-            using var fs = new FileStream(destinationPath, FileMode.Create);
+          await using var webStream = await _client.GetStreamAsync(downloadUri);
+          await using var fs = new FileStream(destinationPath, FileMode.Create);
             await webStream.CopyToAsync(fs);
             return Result.Ok();
         }
@@ -47,8 +47,8 @@ internal class DownloadsApi(
             using var response = await _client.SendAsync(message);
             var totalSize = response.Content.Headers.ContentLength ?? 100_000_000; // rough estimate.
 
-            using var webStream = await _client.GetStreamAsync(streamerDownloadUri);
-            using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
+            await using var webStream = await _client.GetStreamAsync(streamerDownloadUri);
+            await using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
 
             fs.TotalBytesWrittenChanged += async (sender, written) =>
             {

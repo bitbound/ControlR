@@ -120,7 +120,7 @@ internal class StreamerUpdaterWindows(
                 return false;
             }
 
-            using (var tempFs = _fileSystem.OpenFileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            await using (var tempFs = _fileSystem.OpenFileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 var updateHash = await SHA256.HashDataAsync(tempFs);
                 var updateHexHash = Convert.ToHexString(updateHash);
@@ -148,7 +148,7 @@ internal class StreamerUpdaterWindows(
     {
         byte[] localHash = [];
 
-        using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        await using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             localHash = await SHA256.HashDataAsync(zipFs);
         }

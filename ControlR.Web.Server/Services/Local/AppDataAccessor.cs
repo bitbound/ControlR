@@ -57,7 +57,7 @@ public class AppDataAccessor(
                        return Result.Fail<AlertBroadcastDto>("No alert exists.");
                    }
 
-                   using var fs = new FileStream(GetAlertFilePath(), FileMode.Open);
+                   await using var fs = new FileStream(GetAlertFilePath(), FileMode.Open);
                    var alert = await JsonSerializer.DeserializeAsync<AlertBroadcastDto>(fs);
                    if (alert is not null)
                    {
@@ -85,7 +85,7 @@ public class AppDataAccessor(
                 {
                     EnsureRootDirCreated();
                     var alertPath = GetAlertFilePath();
-                    using var fs = new FileStream(GetAlertFilePath(), FileMode.Create);
+                    await using var fs = new FileStream(GetAlertFilePath(), FileMode.Create);
                     await JsonSerializer.SerializeAsync(fs, alertDto, _jsonOptions);
                 },
                 tryCount: 5,

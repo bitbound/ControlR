@@ -40,7 +40,7 @@ public class ContentHashHeaderMiddleware(
             return;
         }
 
-        using var fs = new FileStream(fileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var fs = new FileStream(fileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var sha256Hash = await SHA256.HashDataAsync(fs, _appLifetime.ApplicationStopping);
         var hexHash = Convert.ToHexString(sha256Hash);
         context.Response.Headers["Content-Hash"] = hexHash;

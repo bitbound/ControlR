@@ -19,7 +19,7 @@ public partial class VersionController(IFileProvider _phyiscalFileProvider) : Co
             return NotFound();
         }
 
-        using var fs = fileInfo.CreateReadStream();
+        await using var fs = fileInfo.CreateReadStream();
         using var sr = new StreamReader(fs);
         var versionString = await sr.ReadToEndAsync();
 
@@ -42,7 +42,7 @@ public partial class VersionController(IFileProvider _phyiscalFileProvider) : Co
             return NotFound();
         }
 
-        using var fs = fileInfo.CreateReadStream();
+        await using var fs = fileInfo.CreateReadStream();
         using var sr = new StreamReader(fs);
         var versionString = await sr.ReadToEndAsync();
 

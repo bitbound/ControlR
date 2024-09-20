@@ -70,7 +70,7 @@ internal class AgentUpdater(
             var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
             var downloadUrl = $"{serverOrigin}{downloadPath}";
 
-            using var startupExeFs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using var startupExeFs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var startupExeHash = await SHA256.HashDataAsync(startupExeFs, linkedCts.Token);
 
             _logger.LogInformation(
@@ -105,7 +105,7 @@ internal class AgentUpdater(
                 return;
             }
 
-            using (var tempFs = _fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            await using (var tempFs = _fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 var updateHash = await SHA256.HashDataAsync(tempFs, linkedCts.Token);
                 var updateHexHash = Convert.ToHexString(updateHash);

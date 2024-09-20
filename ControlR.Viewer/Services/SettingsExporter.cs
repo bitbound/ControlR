@@ -64,7 +64,7 @@ internal class SettingsExporter(
             return Result.Fail("Import cancelled");
         }
 
-        using var fs = await pickResult.OpenReadAsync();
+        await using var fs = await pickResult.OpenReadAsync();
         var export = await JsonSerializer.DeserializeAsync<SettingsExport>(fs);
 
         if (export is null)
