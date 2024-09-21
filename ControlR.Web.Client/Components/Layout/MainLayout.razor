@@ -19,6 +19,9 @@
                      Edge="Edge.Start"
                      OnClick="@(_ => DrawerToggle())"/>
 
+      <MudImage Src="/icon-192.png" Height="30" Class="mx-2" />
+      <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+
       <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3"/>
 
       <MudSpacer/>
@@ -67,7 +70,7 @@
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
       <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
     </MudDrawer>
-    <MudMainContent>
+    <MudMainContent Class="mt-16 pa-4">
       @if (_isWaitingForWasmLoad)
       {
         <div class="w-100 text-center mt-8">

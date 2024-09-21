@@ -17,9 +17,7 @@ using StackExchange.Redis;
 using System.Net;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Hubs;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.ServiceDefaults;
-using ControlR.Web.Client.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,11 +77,7 @@ builder.Services
 
 builder.Services
   .AddAuthorizationBuilder()
-  .AddPolicy(PolicyNames.RequireAdministrator, policyBuilder =>
-  {
-    policyBuilder.RequireAuthenticatedUser();
-    policyBuilder.RequireClaim(ClaimNames.IsAdministrator, "true");
-  });
+  .AddPolicy(PolicyNames.RequireAdministrator, AuthorizationPolicies.RequireAdministrator);
 
 // Add Identity services.
 builder.Services
