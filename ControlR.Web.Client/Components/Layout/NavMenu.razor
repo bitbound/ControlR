@@ -1,7 +1,7 @@
 ﻿@implements IDisposable
 
-@inject ILazyDi<NavigationManager> NavMan
-@inject ILazyDi<PersistentAuthenticationStateProvider> AuthState
+@inject NavigationManager NavMan
+@inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
 
 <MudNavMenu>
@@ -15,19 +15,22 @@
     Settings
   </MudNavLink>
 
-  @if (_isServerAdmin)
-  {
-    <MudText Typo="Typo.caption" Color="Color.Dark" GutterBottom="true">
-      Server Admin
-    </MudText>
-    <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
-      Server Admin
-    </MudNavLink>
-  }
-
   <MudNavLink Href="@(RouteNames.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
     About
   </MudNavLink>
+
+  <AuthorizeView Policy="@(PolicyNames.RequireAdministrator)">
+    <Authorized>
+      <div class="ms-2 mt-5">
+        <MudText Typo="Typo.caption" Color="Color.Default">
+          Admin Area
+        </MudText>
+      </div>
+      <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+        Server Admin
+      </MudNavLink>
+    </Authorized>
+  </AuthorizeView>
 
   <MudDivider Class="mt-2 mb-2"/>
 
@@ -59,7 +62,6 @@
 @code {
 
   private string? _currentUrl;
-  private bool _isServerAdmin;
   private bool _isAuthenticated;
 
   [Parameter]
@@ -68,38 +70,19 @@
 
   public void Dispose()
   {
-    if (NavMan.Exists)
-    {
-      NavMan.Value.LocationChanged -= OnLocationChanged;
-    }
-
-    if (AuthState.Exists)
-    {
-      AuthState.Value.AuthenticationStateChanged -= HandleAuthStateChanged;
-    }
+    NavMan.LocationChanged -= OnLocationChanged;
+    AuthState.AuthenticationStateChanged -= HandleAuthStateChanged;
   }
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
 
-    if (AuthState.Exists)
-    {
-      var state = await AuthState.Value.GetAuthenticationStateAsync();
-      _isAuthenticated = state.User.IsAuthenticated();
-      _isServerAdmin = state.User.IsAdministrator();
-    }
-
-    if (AuthState.Exists)
-    {
-      AuthState.Value.AuthenticationStateChanged += HandleAuthStateChanged;
-    }
-
-    if (NavMan.Exists)
-    {
-      _currentUrl = NavMan.Value.ToBaseRelativePath(NavMan.Value.Uri);
-      NavMan.Value.LocationChanged += OnLocationChanged;
-    }
+    var state = await AuthState.GetAuthenticationStateAsync();
+    _isAuthenticated = state.User.IsAuthenticated();
+    AuthState.AuthenticationStateChanged += HandleAuthStateChanged;
+    _currentUrl = NavMan.ToBaseRelativePath(NavMan.Uri);
+    NavMan.LocationChanged += OnLocationChanged;
   }
 
   private async void HandleAuthStateChanged(Task<AuthenticationState> stateTask)
@@ -108,7 +91,6 @@
     {
       var state = await stateTask;
       _isAuthenticated = state.User.IsAuthenticated();
-      _isServerAdmin = state.User.IsAdministrator();
       await InvokeAsync(StateHasChanged);
     }
     catch (Exception ex)
@@ -119,7 +101,7 @@
 
   private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
   {
-    _currentUrl = NavMan.Value.ToBaseRelativePath(e.Location);
+    _currentUrl = NavMan.ToBaseRelativePath(e.Location);
     StateHasChanged();
   }
 

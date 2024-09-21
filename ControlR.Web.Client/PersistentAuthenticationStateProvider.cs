@@ -33,6 +33,15 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
       new(ClaimTypes.Email, userInfo.Email)
     ];
 
+    if (userInfo.IsAdministrator)
+    {
+      claims =
+      [
+        ..claims,
+        new Claim(ClaimNames.IsAdministrator, string.Empty)
+      ];
+    }
+
     _authenticationStateTask = Task.FromResult(
       new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,
         nameof(PersistentAuthenticationStateProvider)))));

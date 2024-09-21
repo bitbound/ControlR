@@ -4,6 +4,7 @@ namespace ControlR.Web.Client;
 // to expose more information about the authenticated user to the client.
 public class UserInfo
 {
-    public required string UserId { get; set; }
-    public required string Email { get; set; }
+  public required string UserId { get; set; }
+  public required string Email { get; set; }
+  public required bool IsAdministrator { get; set; }
 }

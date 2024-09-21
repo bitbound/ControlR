@@ -6,7 +6,7 @@ public static class AuthorizationPolicies
 {
   public static AuthorizationPolicy RequireAdministrator =>
     new AuthorizationPolicyBuilder()
-    .RequireAuthenticatedUser()
-    .RequireClaim(ClaimNames.IsAdministrator, "true")
-    .Build();
+      .RequireAuthenticatedUser()
+      .RequireClaim(ClaimNames.IsAdministrator)
+      .Build();
 }
