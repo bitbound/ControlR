@@ -17,6 +17,9 @@
 
   @if (_isServerAdmin)
   {
+    <MudText Typo="Typo.caption" Color="Color.Dark" GutterBottom="true">
+      Server Admin
+    </MudText>
     <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
       Server Admin
     </MudNavLink>
@@ -59,7 +62,8 @@
   private bool _isServerAdmin;
   private bool _isAuthenticated;
 
-  [Parameter] public bool IsDisabled { get; set; }
+  [Parameter]
+  public bool IsDisabled { get; set; }
 
 
   public void Dispose()
@@ -81,6 +85,13 @@
 
     if (AuthState.Exists)
     {
+      var state = await AuthState.Value.GetAuthenticationStateAsync();
+      _isAuthenticated = state.User.IsAuthenticated();
+      _isServerAdmin = state.User.IsAdministrator();
+    }
+
+    if (AuthState.Exists)
+    {
       AuthState.Value.AuthenticationStateChanged += HandleAuthStateChanged;
     }
 
@@ -96,7 +107,8 @@
     try
     {
       var state = await stateTask;
-      _isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+      _isAuthenticated = state.User.IsAuthenticated();
+      _isServerAdmin = state.User.IsAdministrator();
       await InvokeAsync(StateHasChanged);
     }
     catch (Exception ex)

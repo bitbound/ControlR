@@ -42,15 +42,20 @@
   private string? _message;
   private ExternalLoginInfo _externalLoginInfo = default!;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm] private InputModel Input { get; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-  [SupplyParameterFromQuery] private string? RemoteError { get; }
+  [SupplyParameterFromQuery]
+  private string? RemoteError { get; set; }
 
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
-  [SupplyParameterFromQuery] private string? Action { get; }
+  [SupplyParameterFromQuery]
+  private string? Action { get; set; }
 
   private string? ProviderDisplayName => _externalLoginInfo.ProviderDisplayName;
 
@@ -176,7 +181,9 @@
 
   private sealed class InputModel
   {
-    [Required] [EmailAddress] public string Email { get; set; } = "";
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = "";
   }
 
 }

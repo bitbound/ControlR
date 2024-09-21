@@ -13,13 +13,17 @@
 @code {
   private string? _message;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromQuery] private string? UserId { get; }
+  [SupplyParameterFromQuery]
+  private string? UserId { get; set; }
 
-  [SupplyParameterFromQuery] private string? Email { get; }
+  [SupplyParameterFromQuery]
+  private string? Email { get; set; }
 
-  [SupplyParameterFromQuery] private string? Code { get; }
+  [SupplyParameterFromQuery]
+  private string? Code { get; set; }
 
   protected override async Task OnInitializedAsync()
   {

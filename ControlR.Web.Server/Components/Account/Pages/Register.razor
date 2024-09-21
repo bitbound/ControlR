@@ -1,4 +1,5 @@
 ﻿@page "/Account/Register"
+@using Microsoft.EntityFrameworkCore
 
 @inject UserManager<AppUser> UserManager
 @inject IUserStore<AppUser> UserStore
@@ -51,15 +52,20 @@
 @code {
   private IEnumerable<IdentityError>? _identityErrors;
 
-  [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
-  private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+  private string? Message => _identityErrors is null
+    ? null
+    : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
 
   public async Task RegisterUser(EditContext editContext)
   {
     var user = CreateUser();
+
 
     await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
     var emailStore = GetEmailStore();
@@ -73,6 +79,12 @@
     }
 
     Logger.LogInformation("User created a new account with password.");
+
+    if (await UserManager.Users.CountAsync() == 1)
+    {
+      Logger.LogInformation("First user created. Assigning administrator role.");
+      await UserManager.AddClaimAsync(user, new Claim(ClaimNames.IsAdministrator, "true"));
+    }
 
     var userId = await UserManager.GetUserIdAsync(user);
     var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);

@@ -28,7 +28,8 @@ else
 @code {
   private AuthenticationScheme[] _externalLogins = [];
 
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
   protected override async Task OnInitializedAsync()
   {

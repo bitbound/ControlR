@@ -67,13 +67,17 @@
   private IList<AuthenticationScheme>? _otherLogins;
   private bool _showRemoveButton;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm] private string? LoginProvider { get; set; }
+  [SupplyParameterFromForm]
+  private string? LoginProvider { get; set; }
 
-  [SupplyParameterFromForm] private string? ProviderKey { get; set; }
+  [SupplyParameterFromForm]
+  private string? ProviderKey { get; set; }
 
-  [SupplyParameterFromQuery] private string? Action { get; }
+  [SupplyParameterFromQuery]
+  private string? Action { get; set; }
 
   protected override async Task OnInitializedAsync()
   {

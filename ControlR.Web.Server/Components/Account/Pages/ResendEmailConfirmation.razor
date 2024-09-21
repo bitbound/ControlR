@@ -31,7 +31,8 @@
 @code {
   private string? _message;
 
-  [SupplyParameterFromForm] private InputModel Input { get; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
   private async Task OnValidSubmitAsync()
   {
@@ -55,7 +56,9 @@
 
   private sealed class InputModel
   {
-    [Required] [EmailAddress] public string Email { get; set; } = "";
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = "";
   }
 
 }

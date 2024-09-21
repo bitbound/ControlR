@@ -33,9 +33,11 @@
   private string? _message;
   private AppUser _user = default!;
 
-  [SupplyParameterFromForm] private InputModel Input { get; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
   protected override async Task OnInitializedAsync()
   {

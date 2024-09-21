@@ -55,13 +55,14 @@
 @code {
   private string? _errorMessage;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-  [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-  // ReSharper disable once UnusedAutoPropertyAccessor.Local
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
   protected override async Task OnInitializedAsync()
   {
@@ -101,13 +102,16 @@
 
   private sealed class InputModel
   {
-    [Required] [EmailAddress] public string Email { get; set; } = "";
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = "";
 
     [Required]
     [DataType(DataType.Password)]
     public string Password { get; set; } = "";
 
-    [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
+    [Display(Name = "Remember me?")]
+    public bool RememberMe { get; set; }
   }
 
 }

@@ -14,7 +14,7 @@
 @if (_emailConfirmationLink is not null)
 {
   <p>
-    This app does not currently have a real email sender registered, see <a class="mud-link mud-primary-text mud-link-underline-hover" href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
+    This app does not currently have a real email sender registered.
     Normally this would be emailed: <a class="mud-link mud-primary-text mud-link-underline-hover" href="@_emailConfirmationLink">Click here to confirm your account</a>
   </p>
 }
@@ -27,11 +27,14 @@ else
   private string? _emailConfirmationLink;
   private string? _statusMessage;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromQuery] private string? Email { get; }
+  [SupplyParameterFromQuery]
+  private string? Email { get; set; }
 
-  [SupplyParameterFromQuery] private string? ReturnUrl { get; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
   protected override async Task OnInitializedAsync()
   {
@@ -59,3 +62,4 @@ else
   }
 
 }
+

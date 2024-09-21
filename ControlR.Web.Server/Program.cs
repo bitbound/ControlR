@@ -1,11 +1,15 @@
+using System.Net;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Services.Distributed.Locking;
+using ControlR.Web.Server.Hubs;
+using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services.Distributed;
+using ControlR.Web.Server.Services.Distributed.Locking;
 using ControlR.Web.Server.Services.Local;
+using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -14,10 +18,7 @@ using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Serilog;
 using StackExchange.Redis;
-using System.Net;
-using ControlR.Web.Server.Middleware;
-using ControlR.Web.Server.Hubs;
-using ControlR.Web.ServiceDefaults;
+using _Imports = ControlR.Web.Client._Imports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,11 +26,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables("ControlR_");
 
 builder.Services.Configure<ApplicationOptions>(
-    builder.Configuration.GetSection(ApplicationOptions.SectionKey));
+  builder.Configuration.GetSection(ApplicationOptions.SectionKey));
 
 var appOptions = builder.Configuration
-    .GetSection(ApplicationOptions.SectionKey)
-    .Get<ApplicationOptions>() ?? new();
+  .GetSection(ApplicationOptions.SectionKey)
+  .Get<ApplicationOptions>() ?? new ApplicationOptions();
 
 // Configure logging.
 ConfigureSerilog(appOptions);
@@ -40,10 +41,10 @@ builder.AddServiceDefaults();
 
 // Add DB services.
 var connectionString = builder.Configuration.GetConnectionString(ServiceNames.Postgres)
-    ?? throw new InvalidOperationException("Connection string 'Postgres' not found.");
+                       ?? throw new InvalidOperationException("Connection string 'Postgres' not found.");
 
 builder.Services.AddDbContext<AppDb>(options =>
-    options.UseNpgsql(connectionString));
+  options.UseNpgsql(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -52,8 +53,8 @@ builder.Services.AddMudServices();
 
 // Add components.
 builder.Services
-    .AddRazorComponents()
-    .AddInteractiveWebAssemblyComponents();
+  .AddRazorComponents()
+  .AddInteractiveWebAssemblyComponents();
 
 // Add API services.
 builder.Services.AddControllers();
@@ -81,7 +82,12 @@ builder.Services
 
 // Add Identity services.
 builder.Services
-  .AddIdentityCore<AppUser>(options => options.SignIn.RequireConfirmedAccount = true)
+  .AddIdentityCore<AppUser>(options =>
+  {
+    options.SignIn.RequireConfirmedAccount = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+  })
   .AddEntityFrameworkStores<AppDb>()
   .AddSignInManager()
   .AddDefaultTokenProviders();
@@ -92,13 +98,9 @@ var signalrBuilder = builder.Services
   {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
     options.MaximumReceiveMessageSize = 100_000;
-    options.MaximumParallelInvocationsPerClient = 5;
   })
   .AddMessagePackProtocol()
-  .AddJsonProtocol(options =>
-  {
-    options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
-  });
+  .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
 
 // Add forwarded headers.
 ConfigureForwardedHeaders();
@@ -154,7 +156,7 @@ if (app.Environment.IsDevelopment())
 else
 {
   app.UseHttpsRedirection();
-  app.UseExceptionHandler("/Error", createScopeForErrors: true);
+  app.UseExceptionHandler("/Error", true);
   app.UseHsts();
 }
 
@@ -162,7 +164,7 @@ app.UseMiddleware<ContentHashHeaderMiddleware>();
 
 app.UseStaticFiles();
 
-app.MapWebSocketBridge("/bridge");
+app.MapWebSocketBridge();
 app.MapHub<AgentHub>("/hubs/agent");
 
 app.UseAntiforgery();
@@ -171,8 +173,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(ControlR.Web.Client._Imports).Assembly);
+  .AddInteractiveWebAssemblyRenderMode()
+  .AddAdditionalAssemblies(typeof(_Imports).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
 
@@ -184,7 +186,9 @@ app.UseOutputCache();
 
 await app.ApplyMigrations<AppDb>();
 
-app.Run();
+await app.RunAsync();
+
+return;
 
 void ConfigureForwardedHeaders()
 {
@@ -231,7 +235,8 @@ async Task ConfigureRedis()
   }
 
   var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ??
-            throw new InvalidOperationException("Redis connection string cannot be empty if UseRedisBackplane is enabled.");
+                              throw new InvalidOperationException(
+                                "Redis connection string cannot be empty if UseRedisBackplane is enabled.");
 
   signalrBuilder.AddStackExchangeRedis(redisConnectionString, options =>
   {
@@ -245,10 +250,8 @@ async Task ConfigureRedis()
     options.InstanceName = "controlr-cache";
   });
 
-  var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options =>
-  {
-    options.AllowAdmin = true;
-  });
+  var multiplexer =
+    await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options => { options.AllowAdmin = true; });
 
   if (!multiplexer.IsConnected)
   {

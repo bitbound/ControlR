@@ -83,9 +83,11 @@ else
   private string? _authenticatorUri;
   private IEnumerable<string>? _recoveryCodes;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm] private InputModel Input { get; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
   protected override async Task OnInitializedAsync()
   {

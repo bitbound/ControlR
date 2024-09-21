@@ -34,9 +34,11 @@
   private string? _username;
   private string? _phoneNumber;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm] private InputModel Input { get; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
   protected override async Task OnInitializedAsync()
   {
