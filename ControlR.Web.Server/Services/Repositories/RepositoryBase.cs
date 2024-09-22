@@ -1,5 +1,4 @@
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Services.Repositories;
@@ -10,9 +9,51 @@ public abstract class RepositoryBase<TDto, TEntity>(AppDb appDb) : IRepository<T
 {
   private readonly AppDb _appDb = appDb;
 
+  public async Task<TEntity?> AddOrUpdate(TDto dto)
+  {
+    var set = _appDb.Set<TEntity>();
+    var existing = await set.FirstOrDefaultAsync(x => x.Uid == dto.Uid);
+    existing = MapToEntity(dto, existing);
+    if (existing.Id == 0)
+    {
+      await set.AddAsync(existing);
+    }
+
+    await _appDb.SaveChangesAsync();
+    return existing;
+  }
+
   public IQueryable<TEntity> AsQueryable()
   {
     return _appDb.Set<TEntity>().AsQueryable();
+  }
+
+  public async Task<bool> Delete(int id)
+  {
+    var set = _appDb.Set<TEntity>();
+    var entity = await set.FindAsync(id);
+    if (entity is null)
+    {
+      return false;
+    }
+
+    set.Remove(entity);
+    await _appDb.SaveChangesAsync();
+    return true;
+  }
+
+  public async Task<List<TDto>> GetAll(
+    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+  {
+    var query = _appDb.Set<TEntity>().AsQueryable();
+    if (includeBuilder is not null)
+    {
+      query = includeBuilder(query);
+    }
+
+    var entities = await query.ToArrayAsync();
+
+    return entities.Select(MapToDto).ToList();
   }
 
   public async Task<TDto?> GetById(
@@ -47,39 +88,10 @@ public abstract class RepositoryBase<TDto, TEntity>(AppDb appDb) : IRepository<T
       : null;
   }
 
-  public async Task<TEntity?> AddOrUpdate(TDto dto)
-  {
-    var set = _appDb.Set<TEntity>();
-    var existing = await set.FindAsync(dto.Id);
-    existing = MapToEntity(dto, existing);
-    if (existing.Id == 0)
-    {
-      await set.AddAsync(existing);
-    }
-
-    await _appDb.SaveChangesAsync();
-    return existing;
-  }
-
-  public async Task<List<TDto>> GetAll(
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
-  {
-    var query = _appDb.Set<TEntity>().AsQueryable();
-    if (includeBuilder is not null)
-    {
-      query = includeBuilder(query);
-    }
-
-    var entities = await query.ToArrayAsync();
-
-    return entities.Select(MapToDto).ToList();
-  }
-
   public async Task<List<TDto>> GetWhere(
     Func<IQueryable<TEntity>, IQueryable<TEntity>> whereFilter,
     Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
   {
-    //IQueryable<TEntity>, IInfrastructure<IServiceProvider>, IListSource
     var query = _appDb.Set<TEntity>().AsQueryable();
     if (includeBuilder is not null)
     {
@@ -89,20 +101,6 @@ public abstract class RepositoryBase<TDto, TEntity>(AppDb appDb) : IRepository<T
     query = whereFilter(query);
     var entities = await query.ToArrayAsync();
     return entities.Select(MapToDto).ToList();
-  }
-
-  public async Task<bool> Delete(int id)
-  {
-    var set = _appDb.Set<TEntity>();
-    var entity = await set.FindAsync(id);
-    if (entity is null)
-    {
-      return false;
-    }
-
-    set.Remove(entity);
-    await _appDb.SaveChangesAsync();
-    return true;
   }
 
   protected abstract TDto MapToDto(TEntity entity);

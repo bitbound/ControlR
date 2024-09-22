@@ -3,7 +3,6 @@ using ControlR.Web.Server.Data.Entities;
 
 namespace ControlR.Web.Server.Services.Repositories;
 
-
 public class DevicesRepository(AppDb appDb) : RepositoryBase<DeviceDto, Device>(appDb)
 {
   protected override DeviceDto MapToDto(Device entity)

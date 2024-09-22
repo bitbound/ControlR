@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Compose + Agent",
+    "Projects": [
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

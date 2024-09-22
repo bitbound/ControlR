@@ -6,6 +6,7 @@ x-postgres-password: &pgPassword password
 
 networks:
   controlr:
+    name: controlr-network
     driver: bridge
     ipam:
       config:
