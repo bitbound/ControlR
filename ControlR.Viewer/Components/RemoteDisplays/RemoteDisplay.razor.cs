@@ -466,7 +466,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   private async Task InvokeCtrlAltDel()
   {
-    await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
+    await ViewerHub.InvokeCtrlAltDel(Session.Device.Uid);
   }
 
   private void OnTouchCancel(TouchEventArgs ev)

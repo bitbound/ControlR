@@ -19,13 +19,13 @@ internal class DeviceDataGeneratorMac(
       var (usedStorage, totalStorage) = GetSystemDriveInfo();
       var (usedMemory, totalMemory) = await GetMemoryInGb();
 
-      var currentUser = await GetCurrentUser();
+      var currentUsers = await GetCurrentUser();
       var drives = GetAllDrives();
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
         deviceId,
-        currentUser,
+        currentUsers,
         drives,
         usedStorage,
         totalStorage,
@@ -129,15 +129,19 @@ internal class DeviceDataGeneratorMac(
     return 0;
   }
 
-  private async Task<string> GetCurrentUser()
+  private async Task<string[]> GetCurrentUser()
   {
     var result = await _processService.GetProcessOutput("users", "");
-    if (!result.IsSuccess)
+    if (result.IsSuccess)
     {
-      _logger.LogResult(result);
-      return string.Empty;
+      return result.Value
+        .Split()
+        .Select(x => x.Trim())
+        .ToArray();
     }
 
-    return result.Value?.Split()?.FirstOrDefault()?.Trim() ?? string.Empty;
+    _logger.LogResult(result);
+    return [];
+
   }
 }

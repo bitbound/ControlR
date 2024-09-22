@@ -19,13 +19,13 @@ internal class DeviceDataGeneratorLinux(
       var (usedStorage, totalStorage) = GetSystemDriveInfo();
       var (usedMemory, totalMemory) = await GetMemoryInGb();
 
-      var currentUser = await GetCurrentUser();
+      var currentUsers = await GetCurrentUsers();
       var drives = GetAllDrives();
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
         deviceId,
-        currentUser,
+        currentUsers,
         drives,
         usedStorage,
         totalStorage,
@@ -90,14 +90,18 @@ internal class DeviceDataGeneratorLinux(
     }
   }
 
-  private async Task<string> GetCurrentUser()
+  private async Task<string[]> GetCurrentUsers()
   {
     var result = await _processInvoker.GetProcessOutput("users", "");
-    if (!result.IsSuccess)
+    if (result.IsSuccess)
     {
-      return string.Empty;
+      return result.Value
+        .Split()
+        .Select(x => x.Trim())
+        .ToArray();
     }
 
-    return result.Value.Split()?.FirstOrDefault()?.Trim() ?? string.Empty;
+    _logger.LogResult(result);
+    return [];
   }
 }

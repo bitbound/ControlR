@@ -10,7 +10,7 @@ public interface IDeviceDataGenerator
 
   DeviceDto GetDeviceBase(
     Guid deviceId,
-    string currentUser,
+    string[] currentUsers,
     List<Drive> drives,
     double usedStorage,
     double totalStorage,

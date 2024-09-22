@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using ControlR.Web.Server.Services.Repositories;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -7,6 +8,7 @@ public class AgentHub(
   ISystemTime systemTime,
   IServerStatsProvider serverStatsProvider,
   IConnectionCounter connectionCounter,
+  IRepository<DeviceDto, Device> deviceRepo,
   ILogger<AgentHub> logger) : Hub<IAgentHubClient>, IAgentHub
 {
   private DeviceDto? Device
@@ -51,9 +53,9 @@ public class AgentHub(
       device.IsOnline = true;
       device.LastSeen = systemTime.Now;
 
-      // TODO: Save to DB.
+      _ = await deviceRepo.AddOrUpdate(device);
       
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(device.Id));
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(device.Uid));
       
       Device = device;
 
@@ -96,7 +98,7 @@ public class AgentHub(
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveDeviceUpdate(cachedDevice);
         
-        // TODO: Update DB.
+        await deviceRepo.AddOrUpdate(cachedDevice);
       }
 
       await base.OnDisconnectedAsync(exception);

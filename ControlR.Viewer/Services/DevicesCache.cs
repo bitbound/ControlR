@@ -32,7 +32,7 @@ internal class DeviceCache(IFileSystem fileSystem, IFileIo fileIo, ILogger<Devic
 
   public async Task AddOrUpdate(DeviceDto device)
   {
-    _cache.AddOrUpdate(device.Id, device, (_, _) => device);
+    _cache.AddOrUpdate(device.Uid, device, (_, _) => device);
     await TrySaveCache();
   }
 
@@ -70,7 +70,7 @@ internal class DeviceCache(IFileSystem fileSystem, IFileIo fileIo, ILogger<Devic
       foreach (var device in devices)
       {
         device.IsOnline = false;
-        _cache.AddOrUpdate(device.Id, device, (_, _) => device);
+        _cache.AddOrUpdate(device.Uid, device, (_, _) => device);
       }
     }
     catch (Exception ex)
@@ -85,7 +85,7 @@ internal class DeviceCache(IFileSystem fileSystem, IFileIo fileIo, ILogger<Devic
 
   public async Task Remove(DeviceDto device)
   {
-    if (_cache.Remove(device.Id, out _))
+    if (_cache.Remove(device.Uid, out _))
     {
       await TrySaveCache();
     }

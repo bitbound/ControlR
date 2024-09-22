@@ -82,7 +82,7 @@ internal class SettingsExporter(
 
     foreach (var device in export.Devices)
     {
-      if (!deviceCache.TryGet(device.Id, out _))
+      if (!deviceCache.TryGet(device.Uid, out _))
       {
         await deviceCache.AddOrUpdate(device);
       }

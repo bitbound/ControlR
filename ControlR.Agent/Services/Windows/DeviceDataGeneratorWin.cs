@@ -21,13 +21,17 @@ internal class DeviceDataGeneratorWin(
       var (usedStorage, totalStorage) = GetSystemDriveInfo();
       var (usedMemory, totalMemory) = await GetMemoryInGb();
 
-      var currentUser = win32Interop.GetActiveSessions().LastOrDefault()?.Username ?? string.Empty;
+      var currentUsers = win32Interop.GetActiveSessions()
+        .Select(x => x.Username)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToArray();
+      
       var drives = GetAllDrives();
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
         deviceId,
-        currentUser,
+        currentUsers,
         drives,
         usedStorage,
         totalStorage,

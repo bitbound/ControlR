@@ -4,11 +4,13 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services.Distributed;
 using ControlR.Web.Server.Services.Distributed.Locking;
 using ControlR.Web.Server.Services.Local;
+using ControlR.Web.Server.Services.Repositories;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -124,6 +126,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 builder.Services.AddWebSocketBridge();
+builder.Services.AddScoped<IRepository<DeviceDto, Device>, DevicesRepository>();
 
 if (appOptions.UseRedisBackplane)
 {

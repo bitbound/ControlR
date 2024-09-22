@@ -304,7 +304,7 @@ internal class ViewerHubConnection(
     {
       var dto = new TriggerAgentUpdateDto();
       var signedDto = keyProvider.CreateSignedDto(dto, DtoType.TriggerAgentUpdate, appState.PrivateKey);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Uid, signedDto);
     });
   }
 
@@ -327,7 +327,7 @@ internal class ViewerHubConnection(
     {
       var powerDto = new PowerStateChangeDto(powerStateType);
       var signedDto = keyProvider.CreateSignedDto(powerDto, DtoType.PowerStateChange, appState.PrivateKey);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Id, signedDto);
+      await Connection.InvokeAsync(nameof(IViewerHub.SendSignedDtoToAgent), device.Uid, signedDto);
     });
   }
 
