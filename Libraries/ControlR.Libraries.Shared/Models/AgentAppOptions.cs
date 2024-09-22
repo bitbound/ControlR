@@ -9,7 +9,7 @@ public class AgentAppOptions
     public const string SectionKey = "AppOptions";
     
     [MsgPackKey]
-    public string? DeviceId { get; set; }
+    public Guid DeviceId { get; set; }
 
     [MsgPackKey]
     public Uri? ServerUri { get; set; }

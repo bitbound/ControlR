@@ -15,12 +15,12 @@ public interface IDeviceCache
 
   Task SetAllOffline();
 
-  bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device);
+  bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceDto? device);
 }
 
 internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
 {
-  private static readonly ConcurrentDictionary<string, DeviceDto> _cache = new();
+  private static readonly ConcurrentDictionary<Guid, DeviceDto> _cache = new();
   private static readonly SemaphoreSlim _initLock = new(1, 1);
 
   public IEnumerable<DeviceDto> Devices => _cache.Values;
@@ -68,7 +68,7 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
     return Task.CompletedTask;
   }
 
-  public bool TryGet(string deviceId, [NotNullWhen(true)] out DeviceDto? device)
+  public bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceDto? device)
   {
     return _cache.TryGetValue(deviceId, out device);
   }

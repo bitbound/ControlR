@@ -53,7 +53,7 @@ internal class DeviceDataGeneratorBase(
     }
 
     public DeviceDto GetDeviceBase(
-        string deviceId, 
+        Guid deviceId, 
         string currentUser, 
         List<Drive> drives, 
         double usedStorage, 

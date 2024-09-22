@@ -11,7 +11,7 @@ namespace ControlR.Web.Client.Services;
 public interface IViewerHubConnection : IHubConnectionBase
 {
   Task ClearAlert();
-  Task CloseTerminalSession(string agentConnectionId, Guid terminalId);
+  Task CloseTerminalSession(Guid deviceId, Guid terminalId);
 
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
@@ -23,7 +23,7 @@ public interface IViewerHubConnection : IHubConnectionBase
   Task<Uri?> GetWebsocketBridgeOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
-  Task InvokeCtrlAltDel(string deviceId);
+  Task InvokeCtrlAltDel(Guid deviceId);
 
   Task Reconnect(CancellationToken cancellationToken);
 
@@ -102,7 +102,7 @@ internal class ViewerHubConnection(
   }
 
 
-  public async Task CloseTerminalSession(string deviceId, Guid terminalId)
+  public async Task CloseTerminalSession(Guid deviceId, Guid terminalId)
   {
     await TryInvoke(async () =>
     {
@@ -112,8 +112,7 @@ internal class ViewerHubConnection(
     });
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
-    Guid terminalId)
+  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
   {
     return await TryInvoke(
       async () =>
@@ -197,7 +196,7 @@ internal class ViewerHubConnection(
     }
   }
 
-  public async Task InvokeCtrlAltDel(string deviceId)
+  public async Task InvokeCtrlAltDel(Guid deviceId)
   {
     await TryInvoke(async () =>
     {

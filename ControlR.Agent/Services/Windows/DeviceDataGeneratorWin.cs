@@ -14,7 +14,7 @@ internal class DeviceDataGeneratorWin(
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

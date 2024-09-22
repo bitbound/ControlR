@@ -218,11 +218,11 @@ public class ViewerHub(
     }
   }
 
-  public async Task SendDtoToAgent(string deviceId, DtoWrapper wrapper)
+  public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {
     using var scope = logger.BeginMemberScope();
 
-    await agentHub.Clients.Group(deviceId).ReceiveDto(wrapper);
+    await agentHub.Clients.Group(HubGroupNames.GetDeviceGroupName(deviceId)).ReceiveDto(wrapper);
   }
 
   public Task SendDtoToUserGroups(DtoWrapper wrapper)

@@ -53,7 +53,7 @@ public class AgentHub(
 
       // TODO: Save to DB.
       
-      await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(device.Id));
       
       Device = device;
 

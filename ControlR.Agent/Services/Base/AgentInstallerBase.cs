@@ -27,10 +27,10 @@ internal abstract class AgentInstallerBase(
     logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
     currentOptions.ServerUri = updatedServerUri;
     
-    if (string.IsNullOrWhiteSpace(currentOptions.DeviceId))
+    if (currentOptions.DeviceId == Guid.Empty)
     {
       logger.LogInformation("DeviceId is empty.  Generating new one.");
-      currentOptions.DeviceId = RandomGenerator.CreateDeviceToken();
+      currentOptions.DeviceId = Guid.NewGuid();
     }
 
     logger.LogInformation("Writing results to disk.");

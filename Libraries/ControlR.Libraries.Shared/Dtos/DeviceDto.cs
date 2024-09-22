@@ -35,7 +35,7 @@ public class DeviceDto
 
   [MsgPackKey]
   [Display(Name = "Device Id")]
-  public string Id { get; init; } = string.Empty;
+  public Guid Id { get; init; }
 
   [MsgPackKey]
   [Display(Name = "64-bit")]

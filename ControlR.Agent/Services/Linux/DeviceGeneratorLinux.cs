@@ -12,7 +12,7 @@ internal class DeviceDataGeneratorLinux(
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

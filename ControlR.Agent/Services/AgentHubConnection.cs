@@ -116,12 +116,9 @@ internal class AgentHubConnection(
   [SupportedOSPlatform("windows6.0.6000")]
   public Task<WindowsSession[]> GetWindowsSessions()
   {
-    if (environmentHelper.Platform != SystemPlatform.Windows)
-    {
-      return Array.Empty<WindowsSession>().AsTaskResult();
-    }
-
-    return win32Interop.GetActiveSessions().ToArray().AsTaskResult();
+    return environmentHelper.Platform == SystemPlatform.Windows
+      ? win32Interop.GetActiveSessions().ToArray().AsTaskResult()
+      : Array.Empty<WindowsSession>().AsTaskResult();
   }
 
   public Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings)

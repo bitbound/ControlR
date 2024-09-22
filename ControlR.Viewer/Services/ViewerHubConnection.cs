@@ -23,7 +23,7 @@ public interface IViewerHubConnection : IHubConnectionBase
   Task<Uri?> GetWebsocketBridgeOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
 
-  Task InvokeCtrlAltDel(string deviceId);
+  Task InvokeCtrlAltDel(Guid deviceId);
 
   Task Reconnect(CancellationToken cancellationToken);
 
@@ -103,7 +103,7 @@ internal class ViewerHubConnection(
   }
 
 
-  public async Task CloseTerminalSession(string deviceId, Guid terminalId)
+  public async Task CloseTerminalSession(Guid deviceId, Guid terminalId)
   {
     await TryInvoke(async () =>
     {
@@ -204,7 +204,7 @@ internal class ViewerHubConnection(
     }
   }
 
-  public async Task InvokeCtrlAltDel(string deviceId)
+  public async Task InvokeCtrlAltDel(Guid deviceId)
   {
     await TryInvoke(async () =>
     {

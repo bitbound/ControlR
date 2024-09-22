@@ -7,7 +7,7 @@ namespace ControlR.Agent.Services;
 
 internal interface ISettingsProvider
 {
-  string DeviceId { get; }
+  Guid DeviceId { get; }
   bool IsConnectedToPublicServer { get; }
   Uri ServerUri { get; }
   string GetAppSettingsPath();
@@ -23,7 +23,7 @@ internal class SettingsProvider(
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
-  public string DeviceId => appOptions.CurrentValue.DeviceId;
+  public Guid DeviceId => appOptions.CurrentValue.DeviceId;
 
   public Uri ServerUri =>
     appOptions.CurrentValue.ServerUri ??
