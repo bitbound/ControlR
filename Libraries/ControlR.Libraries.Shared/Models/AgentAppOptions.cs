@@ -7,13 +7,9 @@ namespace ControlR.Libraries.Shared.Models;
 public class AgentAppOptions
 {
     public const string SectionKey = "AppOptions";
-
+    
     [MsgPackKey]
-    public ConcurrentList<AuthorizedKeyDto> AuthorizedKeys { get; set; } = [];
-
-
-    [MsgPackKey]
-    public string DeviceId { get; set; } = string.Empty;
+    public string? DeviceId { get; set; }
 
     [MsgPackKey]
     public Uri? ServerUri { get; set; }

@@ -51,43 +51,15 @@ public class AgentHub(
       device.IsOnline = true;
       device.LastSeen = systemTime.Now;
 
+      // TODO: Save to DB.
+      
       await Groups.AddToGroupAsync(Context.ConnectionId, device.Id);
-
-      var newPubKeys = device.AuthorizedKeys.Select(x => x.PublicKey).ToArray();
-
-      if (Device is DeviceDto cachedDevice)
-      {
-        var oldKeys = cachedDevice.AuthorizedKeys
-          .ExceptBy(newPubKeys, x => x.PublicKey)
-          .Select(x => x.PublicKey)
-          .ToArray();
-
-        foreach (var oldKey in oldKeys)
-        {
-          await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldKey);
-        }
-
-        var oldPubKeys = cachedDevice.AuthorizedKeys.Select(x => x.PublicKey).ToArray();
-        var newKeys = device.AuthorizedKeys
-          .ExceptBy(oldPubKeys, x => x.PublicKey)
-          .Select(x => x.PublicKey)
-          .ToArray();
-
-        foreach (var newKey in newPubKeys)
-        {
-          await Groups.AddToGroupAsync(Context.ConnectionId, newKey);
-        }
-      }
-      else
-      {
-        foreach (var key in newPubKeys)
-        {
-          await Groups.AddToGroupAsync(Context.ConnectionId, key);
-        }
-      }
-
+      
       Device = device;
-      await viewerHub.Clients.Groups(newPubKeys).ReceiveDeviceUpdate(device);
+
+      await viewerHub.Clients
+        .Group(HubGroupNames.ServerAdministrators)
+        .ReceiveDeviceUpdate(device);
     }
     catch (Exception ex)
     {
@@ -116,21 +88,15 @@ public class AgentHub(
       connectionCounter.DecrementAgentCount();
       await SendUpdatedConnectionCountToAdmins();
 
-      if (Device is DeviceDto cachedDevice)
+      if (Device is { } cachedDevice)
       {
         cachedDevice.IsOnline = false;
         cachedDevice.LastSeen = systemTime.Now;
-
-        var publicKeys = cachedDevice.AuthorizedKeys
-          .Select(x => x.PublicKey)
-          .ToArray();
-
-        await viewerHub.Clients.Groups(publicKeys).ReceiveDeviceUpdate(cachedDevice);
-
-        foreach (var key in publicKeys)
-        {
-          await Groups.RemoveFromGroupAsync(Context.ConnectionId, key);
-        }
+        await viewerHub.Clients
+          .Group(HubGroupNames.ServerAdministrators)
+          .ReceiveDeviceUpdate(cachedDevice);
+        
+        // TODO: Update DB.
       }
 
       await base.OnDisconnectedAsync(exception);

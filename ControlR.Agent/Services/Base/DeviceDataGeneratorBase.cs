@@ -53,7 +53,6 @@ internal class DeviceDataGeneratorBase(
     }
 
     public DeviceDto GetDeviceBase(
-        IEnumerable<AuthorizedKeyDto> authorizedKeys, 
         string deviceId, 
         string currentUser, 
         List<Drive> drives, 
@@ -67,7 +66,6 @@ internal class DeviceDataGeneratorBase(
         return new DeviceDto()
         {
             Id = deviceId,
-            AuthorizedKeys = authorizedKeys,
             CurrentUser = currentUser,
             CpuUtilization = cpuUtilization,
             Drives = drives,

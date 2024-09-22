@@ -171,16 +171,9 @@ internal class AgentHubConnection(
         logger.LogWarning("Not connected to hub when trying to send device update.");
         return;
       }
-
-      if (settings.AuthorizedKeys.Count == 0)
-      {
-        logger.LogWarning("There are no authorized keys in appsettings. Aborting heartbeat.");
-        return;
-      }
-
+      
       var deviceDto = await deviceCreator.CreateDevice(
         cpuSampler.CurrentUtilization,
-        settings.AuthorizedKeys,
         settings.DeviceId);
 
       await Connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto);

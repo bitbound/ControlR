@@ -12,8 +12,7 @@ internal class DeviceDataGeneratorMac(
   private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys,
-    string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, string deviceId)
   {
     try
     {
@@ -25,7 +24,6 @@ internal class DeviceDataGeneratorMac(
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
-        authorizedKeys,
         deviceId,
         currentUser,
         drives,

@@ -26,28 +26,7 @@ internal abstract class AgentInstallerBase(
 
     logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
     currentOptions.ServerUri = updatedServerUri;
-
-    var authorizedKeys = currentOptions.AuthorizedKeys ?? [];
-
-    logger.LogInformation("Updating authorized keys.  Initial count: {KeyCount}", authorizedKeys.Count);
-
-    if (!string.IsNullOrWhiteSpace(authorizedKey))
-    {
-      var currentKeyIndex = authorizedKeys.FindIndex(x => x.PublicKey == authorizedKey);
-      if (currentKeyIndex == -1)
-      {
-        authorizedKeys.Add(new AuthorizedKeyDto(label ?? "", authorizedKey));
-      }
-      else
-      {
-        var currentKey = authorizedKeys[currentKeyIndex];
-        var newLabel = label ?? currentKey.Label ?? "";
-        authorizedKeys[currentKeyIndex] = currentKey with { Label = newLabel };
-      }
-    }
-
-    currentOptions.AuthorizedKeys = authorizedKeys;
-
+    
     if (string.IsNullOrWhiteSpace(currentOptions.DeviceId))
     {
       logger.LogInformation("DeviceId is empty.  Generating new one.");

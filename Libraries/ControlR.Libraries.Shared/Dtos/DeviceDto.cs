@@ -19,10 +19,6 @@ public class DeviceDto
   [Display(Name = "Alias")]
   public string Alias { get; init; } = string.Empty;
 
-  [MsgPackKey]
-  [Display(Name = "Authorized Keys")]
-  public IEnumerable<AuthorizedKeyDto> AuthorizedKeys { get; init; } = [];
-
   [MsgPackKey] public string ConnectionId { get; set; } = string.Empty;
 
   [MsgPackKey]

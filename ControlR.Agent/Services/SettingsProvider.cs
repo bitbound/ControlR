@@ -7,12 +7,10 @@ namespace ControlR.Agent.Services;
 
 internal interface ISettingsProvider
 {
-  IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys { get; }
   string DeviceId { get; }
   bool IsConnectedToPublicServer { get; }
   Uri ServerUri { get; }
   string GetAppSettingsPath();
-  Task UpdatePublicKeyLabel(string publicKeyBase64, string publicKeyLabel);
   Task UpdateSettings(AgentAppSettings settings);
 }
 
@@ -24,10 +22,6 @@ internal class SettingsProvider(
 {
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
-
-
-  public IReadOnlyList<AuthorizedKeyDto> AuthorizedKeys => appOptions.CurrentValue.AuthorizedKeys;
-
 
   public string DeviceId => appOptions.CurrentValue.DeviceId;
 
@@ -43,35 +37,7 @@ internal class SettingsProvider(
   {
     return PathConstants.GetAppSettingsPath(instanceOptions.Value.InstanceId);
   }
-
-  public async Task UpdatePublicKeyLabel(string publicKeyBase64, string publicKeyLabel)
-  {
-    await _updateLock.WaitAsync();
-    try
-    {
-      var authorizedKeys = AuthorizedKeys.ToList();
-
-      var index = authorizedKeys.FindIndex(x => x.PublicKey == publicKeyBase64);
-      if (index == -1)
-      {
-        logger.LogWarning("Unable to update public key label.  Public key {PublicKey} not found.", publicKeyBase64);
-        return;
-      }
-
-      authorizedKeys[index] = authorizedKeys[index] with { Label = publicKeyLabel };
-      appOptions.CurrentValue.AuthorizedKeys = [.. authorizedKeys];
-      await WriteToDisk(appOptions.CurrentValue);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Failed to update public key label.");
-    }
-    finally
-    {
-      _updateLock.Release();
-    }
-  }
-
+  
   public async Task UpdateSettings(AgentAppSettings settings)
   {
     await _updateLock.WaitAsync();

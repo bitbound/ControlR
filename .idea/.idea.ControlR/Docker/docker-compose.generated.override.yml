@@ -24,15 +24,15 @@ services:
       RESHARPER_LOG_CONF: "/etc/opt/rider-debugger/backend-log.xml"
     image: "controlrwebserver:dev"
     ports:
-    - "127.0.0.1:57820:57100"
+    - "127.0.0.1:57000:57100"
     - "127.0.0.1:57200:57300"
     volumes:
     - "C:\\Users\\trans\\.nuget\\packages:/home/app/.nuget/packages"
     - "C:\\Repos\\ControlR\\ControlR.Web.Server:/app:rw"
     - "C:\\Repos\\ControlR:/src:rw"
-    - "C:\\Users\\trans\\AppData\\Local\\JetBrains\\RiderRemoteDebugger\\2024.2.5\\\
+    - "C:\\Users\\trans\\AppData\\Local\\JetBrains\\RiderRemoteDebugger\\2024.2.4\\\
       Linux64:/opt/rider-debugger"
     - "C:\\Program Files\\JetBrains\\JetBrains Rider 2024.2.4\\bin:/etc/opt/rider-debugger/backend-log.xml"
     - "C:\\Users\\trans\\AppData\\Local\\JetBrains\\Rider2024.2\\log\\DebuggerWorker\\\
-      JetBrains.Debugger.Worker.2024_9_21_10_12_06:/var/opt/rider-debugger:rw"
+      JetBrains.Debugger.Worker.2024_9_22_12_03_45:/var/opt/rider-debugger:rw"
     working_dir: "/app"

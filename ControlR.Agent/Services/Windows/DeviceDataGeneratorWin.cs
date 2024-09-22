@@ -14,8 +14,7 @@ internal class DeviceDataGeneratorWin(
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys,
-    string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, string deviceId)
   {
     try
     {
@@ -27,7 +26,6 @@ internal class DeviceDataGeneratorWin(
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
-        authorizedKeys,
         deviceId,
         currentUser,
         drives,

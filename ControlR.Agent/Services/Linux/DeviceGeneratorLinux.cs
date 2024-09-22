@@ -12,8 +12,7 @@ internal class DeviceDataGeneratorLinux(
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, IEnumerable<AuthorizedKeyDto> authorizedKeys,
-    string deviceId)
+  public async Task<DeviceDto> CreateDevice(double cpuUtilization, string deviceId)
   {
     try
     {
@@ -25,7 +24,6 @@ internal class DeviceDataGeneratorLinux(
       var agentVersion = GetAgentVersion();
 
       return GetDeviceBase(
-        authorizedKeys,
         deviceId,
         currentUser,
         drives,
