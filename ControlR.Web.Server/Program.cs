@@ -4,7 +4,6 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services.Distributed;
@@ -18,6 +17,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
+using Npgsql;
 using Serilog;
 using StackExchange.Redis;
 using _Imports = ControlR.Web.Client._Imports;
@@ -39,14 +39,21 @@ ConfigureSerilog(appOptions);
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 // Add telemetry.
-builder.AddServiceDefaults();
+builder.AddServiceDefaults(ServiceNames.Controlr);
 
 // Add DB services.
-var connectionString = builder.Configuration.GetConnectionString(ServiceNames.Postgres)
-                       ?? throw new InvalidOperationException("Connection string 'Postgres' not found.");
+var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
+var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
+var pgBuilder = new NpgsqlConnectionStringBuilder
+{
+  Database = "controlr",
+  Username = pgUser,
+  Password = pgPass,
+  Host = ServiceNames.Postgres
+};
 
 builder.Services.AddDbContext<AppDb>(options =>
-  options.UseNpgsql(connectionString));
+  options.UseNpgsql(pgBuilder.ConnectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

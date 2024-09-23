@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Docker Compose": {
+    "controlr": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "composeLaunchAction": "LaunchBrowser",
@@ -8,6 +8,11 @@
       "composeLaunchUrl": "http://localhost:5120/",
       "serviceActions": {
         "controlr": "StartDebugging"
+      },
+      "environmentVariables": {
+        "ControlR_POSTGRES_USER": "postgres",
+        "ControlR_POSTGRES_PASSWORD": "password",
+        "ControlR_ASPIRE_BROWSER_TOKEN": "aspire-token"
       }
     }
   }
