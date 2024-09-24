@@ -34,12 +34,6 @@ public class AppDb(DbContextOptions<AppDb> options)
 
     builder
       .Entity<Device>()
-      .Property(x => x.Uid)
-      .HasDefaultValueSql("gen_random_uuid()")
-      .HasSentinel(Guid.Empty);
-
-    builder
-      .Entity<Device>()
       .Property(x => x.CurrentUsers)
       .HasConversion(
         x => JsonSerializer.Serialize(x, _jsonOptions),
