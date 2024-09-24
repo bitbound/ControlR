@@ -34,7 +34,7 @@ services:
 
       ControlR_POSTGRES_USER: *pgUser
       ControlR_POSTGRES_PASSWORD: *pgPassword
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=controlr;Username=postgres;Password=password;"
+      ControlR_POSTGRES_HOST: "postgres"
       
       # Whether to make self-registration publicly available.
       ControlR_ApplicationOptions__EnablePublicRegistration: false

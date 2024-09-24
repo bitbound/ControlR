@@ -13,7 +13,7 @@ internal abstract class AgentInstallerBase(
 {
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-  protected async Task UpdateAppSettings(Uri? serverUri, string? authorizedKey, string? label)
+  protected async Task UpdateAppSettings(Uri? serverUri)
   {
     using var _ = logger.BeginMemberScope();
 

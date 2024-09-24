@@ -7,7 +7,6 @@ public interface ISettings
   bool AppendInstanceIdToAgentInstall { get; set; }
   bool HideOfflineDevices { get; set; }
   bool NotifyUserSessionStart { get; set; }
-  string PublicKeyLabel { get; set; }
   Uri ServerUri { get; set; }
   string Username { get; set; }
   Uri ViewerDownloadUri { get; }
@@ -74,7 +73,6 @@ internal class Settings(
     set
     {
       SetPref($"{value}".TrimEnd('/'));
-      messenger.SendGenericMessage(GenericMessageKind.ServerUriChanged).Forget();
     }
   }
 

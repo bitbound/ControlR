@@ -103,6 +103,4 @@ public static partial class AppConstants
   [GeneratedRegex("[^A-Za-z0-9_-]")]
   public static partial Regex UsernameValidator();
 
-  [GeneratedRegex("[^A-Za-z0-9_@-]")]
-  public static partial Regex PublicKeyLabelValidator();
 }

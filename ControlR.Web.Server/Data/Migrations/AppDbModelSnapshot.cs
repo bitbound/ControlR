@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ControlR.Web.Data.Migrations
+namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
     partial class AppDbModelSnapshot : ModelSnapshot
@@ -110,9 +110,6 @@ namespace ControlR.Web.Data.Migrations
                     b.Property<string>("CurrentUsers")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Drives")
                         .IsRequired()

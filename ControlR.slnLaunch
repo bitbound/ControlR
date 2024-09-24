@@ -12,5 +12,20 @@
         "DebugTarget": "controlr"
       }
     ]
+  },
+  {
+    "Name": "Server + Agent",
+    "Projects": [
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
+      },
+      {
+        "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      }
+    ]
   }
 ]

@@ -9,10 +9,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ControlR.Web.Data.Migrations
+namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20240922234018_Add_Device")]
+    [Migration("20240924024717_Add_Device")]
     partial class Add_Device
     {
         /// <inheritdoc />
@@ -113,9 +113,6 @@ namespace ControlR.Web.Data.Migrations
                     b.Property<string>("CurrentUsers")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Drives")
                         .IsRequired()

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ControlR.Web.Server.Converters;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -33,6 +34,12 @@ public class AppDb(DbContextOptions<AppDb> options)
 
     builder
       .Entity<Device>()
+      .Property(x => x.Uid)
+      .HasDefaultValueSql("gen_random_uuid()")
+      .HasSentinel(Guid.Empty);
+
+    builder
+      .Entity<Device>()
       .Property(x => x.CurrentUsers)
       .HasConversion(
         x => JsonSerializer.Serialize(x, _jsonOptions),
@@ -60,6 +67,20 @@ public class AppDb(DbContextOptions<AppDb> options)
           .Entity(entityType.ClrType)
           .Property(nameof(EntityBase.Uid))
           .HasDefaultValueSql("gen_random_uuid()");
+      }
+
+      var properties = entityType.ClrType
+        .GetProperties()
+        .Where(p =>
+            p.PropertyType == typeof(DateTimeOffset) ||
+            p.PropertyType == typeof(DateTimeOffset?));
+
+      foreach (var property in properties)
+      {
+        builder
+          .Entity(entityType.Name)
+          .Property(property.Name)
+          .HasConversion(new PostgresDateTimeOffsetConverter());
       }
     }
   }

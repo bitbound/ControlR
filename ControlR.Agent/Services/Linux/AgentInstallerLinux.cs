@@ -27,7 +27,7 @@ internal class AgentInstallerLinux(
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task Install(Uri? serverUri = null, string? authorizedPublicKey = null, string? label = null)
+  public async Task Install(Uri? serverUri = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -68,7 +68,7 @@ internal class AgentInstallerLinux(
       var serviceFile = GetServiceFile().Trim();
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
-      await UpdateAppSettings(serverUri, authorizedPublicKey, label);
+      await UpdateAppSettings(serverUri);
       var serviceName = GetServiceName();
 
       var psi = new ProcessStartInfo

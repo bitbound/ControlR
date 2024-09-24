@@ -53,7 +53,7 @@ internal class DeviceDataGeneratorBase(
     }
   }
 
-  public DeviceDto GetDeviceBase(
+  public DeviceFromAgentDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     List<Drive> drives,
@@ -64,7 +64,7 @@ internal class DeviceDataGeneratorBase(
     double cpuUtilization,
     string agentVersion)
   {
-    return new DeviceDto
+    return new DeviceFromAgentDto
     {
       Uid = deviceId,
       CurrentUsers = currentUsers,

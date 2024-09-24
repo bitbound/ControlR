@@ -100,11 +100,6 @@
     {
         var commonArgs = new StringBuilder($"-s {Settings.ServerUri}");
 
-        if (!string.IsNullOrWhiteSpace(Settings.PublicKeyLabel))
-        {
-            commonArgs.Append($" -l {Settings.PublicKeyLabel}");
-        }
-
         if (Settings.AppendInstanceIdToAgentInstall)
         {
             commonArgs.Append($" -i {Settings.ServerUri.Authority}");

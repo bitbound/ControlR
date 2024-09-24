@@ -17,7 +17,6 @@ public class Device : EntityBase
   public string[] CurrentUsers { get; set; } = [];
 
   public List<Drive> Drives { get; set; } = [];
-  public int DeviceId { get; set; }
   public bool Is64Bit { get; set; }
   public bool IsOnline { get; set; }
   public DateTimeOffset LastSeen { get; set; }

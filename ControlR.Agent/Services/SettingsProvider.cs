@@ -12,30 +12,31 @@ internal interface ISettingsProvider
   Uri ServerUri { get; }
   string GetAppSettingsPath();
   Task UpdateSettings(AgentAppSettings settings);
+  Task UpdateUid(Guid uid);
 }
 
 internal class SettingsProvider(
-  IOptionsMonitor<AgentAppOptions> appOptions,
-  IFileSystem fileSystem,
-  IOptions<InstanceOptions> instanceOptions,
-  ILogger<SettingsProvider> logger) : ISettingsProvider
+  IOptionsMonitor<AgentAppOptions> _appOptions,
+  IFileSystem _fileSystem,
+  IOptions<InstanceOptions> _instanceOptions,
+  ILogger<SettingsProvider> _logger) : ISettingsProvider
 {
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
-  public Guid DeviceId => appOptions.CurrentValue.DeviceId;
+  public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
 
   public Uri ServerUri =>
-    appOptions.CurrentValue.ServerUri ??
+    _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
 
   public bool IsConnectedToPublicServer =>
-    appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
+    _appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
 
   public string GetAppSettingsPath()
   {
-    return PathConstants.GetAppSettingsPath(instanceOptions.Value.InstanceId);
+    return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
   }
   
   public async Task UpdateSettings(AgentAppSettings settings)
@@ -47,12 +48,18 @@ internal class SettingsProvider(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Failed to update settings.");
+      _logger.LogError(ex, "Failed to update settings.");
     }
     finally
     {
       _updateLock.Release();
     }
+  }
+
+  public async Task UpdateUid(Guid uid)
+  {
+    _appOptions.CurrentValue.DeviceId = uid;
+    await WriteToDisk(_appOptions.CurrentValue);
   }
 
   private async Task WriteToDisk(AgentAppOptions options)
@@ -63,6 +70,6 @@ internal class SettingsProvider(
   private async Task WriteToDisk(AgentAppSettings settings)
   {
     var content = JsonSerializer.Serialize(settings, _jsonOptions);
-    await fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
+    await _fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
   }
 }

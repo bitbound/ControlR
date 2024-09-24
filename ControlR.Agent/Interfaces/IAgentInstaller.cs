@@ -2,10 +2,7 @@
 
 public interface IAgentInstaller
 {
-    Task Install(
-        Uri? serverUri = null,
-        string? authorizedPublicKey = null,
-        string? label = null);
+    Task Install(Uri? serverUri = null);
 
     Task Uninstall();
 }

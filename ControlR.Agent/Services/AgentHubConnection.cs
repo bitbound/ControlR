@@ -173,7 +173,19 @@ internal class AgentHubConnection(
         cpuSampler.CurrentUtilization,
         settings.DeviceId);
 
-      await Connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto);
+      var updateResult = await Connection.InvokeAsync<Result<DeviceDto>>(nameof(IAgentHub.UpdateDevice), deviceDto);
+
+      if (!updateResult.IsSuccess)
+      {
+        logger.LogResult(updateResult);
+        return;
+      }
+
+      if (updateResult.Value.Uid != deviceDto.Uid)
+      {
+        logger.LogInformation("Device UID changed.  Updating appsettings.");
+        await settings.UpdateUid(updateResult.Value.Uid);
+      }
     }
     catch (Exception ex)
     {

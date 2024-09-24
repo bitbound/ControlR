@@ -44,12 +44,23 @@ builder.AddServiceDefaults(ServiceNames.Controlr);
 // Add DB services.
 var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
 var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
+var pgHost = builder.Configuration.GetValue<string>("POSTGRES_HOST");
+
+ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
+ArgumentException.ThrowIfNullOrWhiteSpace(pgPass);
+ArgumentException.ThrowIfNullOrWhiteSpace(pgHost);
+
+if (Uri.TryCreate(pgHost, UriKind.Absolute, out var pgHostUri))
+{
+  pgHost = pgHostUri.Authority;
+}
+
 var pgBuilder = new NpgsqlConnectionStringBuilder
 {
   Database = "controlr",
   Username = pgUser,
   Password = pgPass,
-  Host = ServiceNames.Postgres
+  Host = pgHost
 };
 
 builder.Services.AddDbContext<AppDb>(options =>
@@ -133,7 +144,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 builder.Services.AddWebSocketBridge();
-builder.Services.AddScoped<IRepository<DeviceDto, Device>, DevicesRepository>();
+builder.Services.AddMappers();
+builder.Services.AddRepository<DeviceDto, Device>();
+builder.Services.AddRepository<DeviceFromAgentDto, Device>();
 
 if (appOptions.UseRedisBackplane)
 {

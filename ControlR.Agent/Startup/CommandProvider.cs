@@ -10,11 +10,9 @@ namespace ControlR.Agent.Startup;
 
 internal class CommandProvider
 {
-  private static readonly string[] _authorizedKeyAlias = ["-a", "--authorized-key"];
   private static readonly string[] _instanceIdAlias = ["-i", "--instance-id"];
   private static readonly string[] _pipeNameAlias = ["-p", "--pipe-name"];
   private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
-  private static readonly string[] _labelAlias = ["-l", "--label"];
 
   internal static Command GetEchoDesktopCommand(string[] args)
   {
@@ -48,15 +46,6 @@ internal class CommandProvider
       "The fully-qualified server URI to which the agent will connect " +
       "(e.g. 'https://my.example.com' or 'http://my.example.com:8080').");
 
-    var authorizedKeyOption = new Option<string?>(
-      _authorizedKeyAlias,
-      "An optional public key to preconfigure with authorization to this device.");
-
-    var labelOption = new Option<string?>(
-      _labelAlias,
-      "An optional label to add to the public key (e.g. username), which can make it easier " +
-      "to identify key owners when managing access.");
-
     var instanceIdOption = new Option<string?>(
       _instanceIdAlias,
       "An optional instance ID of the agent, which can be used for multiple agent installations.");
@@ -64,19 +53,17 @@ internal class CommandProvider
 
     var installCommand = new Command("install", "Install the ControlR service.")
     {
-      authorizedKeyOption,
       serverUriOption,
       instanceIdOption,
-      labelOption
     };
 
-    installCommand.SetHandler(async (serverUri, authorizedKey, label, instanceId) =>
+    installCommand.SetHandler(async (serverUri, instanceId) =>
     {
       using var host = CreateHost(StartupMode.Install, args, instanceId);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
-      await installer.Install(serverUri, authorizedKey, label);
+      await installer.Install(serverUri);
       await host.RunAsync();
-    }, serverUriOption, authorizedKeyOption, labelOption, instanceIdOption);
+    }, serverUriOption, instanceIdOption);
 
     return installCommand;
   }

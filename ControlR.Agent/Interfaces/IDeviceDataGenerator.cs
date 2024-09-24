@@ -2,13 +2,13 @@
 
 public interface IDeviceDataGenerator
 {
-  Task<DeviceDto> CreateDevice(double cpuUtilization, Guid deviceId);
+  Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId);
 
   string GetAgentVersion();
 
   List<Drive> GetAllDrives();
 
-  DeviceDto GetDeviceBase(
+  DeviceFromAgentDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     List<Drive> drives,

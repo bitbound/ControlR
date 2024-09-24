@@ -12,7 +12,7 @@ internal class DeviceDataGeneratorMac(
   private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
-  public async Task<DeviceDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

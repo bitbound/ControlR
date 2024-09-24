@@ -1,15 +1,19 @@
-﻿using ControlR.Web.Server.Services.Repositories;
+﻿using ControlR.Libraries.Shared.Extensions;
+using ControlR.Web.Server.Mappers;
+using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.SignalR;
+using System.Net.Sockets;
 
 namespace ControlR.Web.Server.Hubs;
 
 public class AgentHub(
-  IHubContext<ViewerHub, IViewerHubClient> viewerHub,
-  ISystemTime systemTime,
-  IServerStatsProvider serverStatsProvider,
-  IConnectionCounter connectionCounter,
-  IRepository<DeviceDto, Device> deviceRepo,
-  ILogger<AgentHub> logger) : Hub<IAgentHubClient>, IAgentHub
+  IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
+  ISystemTime _systemTime,
+  IServerStatsProvider _serverStatsProvider,
+  IConnectionCounter _connectionCounter,
+  IRepository<DeviceFromAgentDto, Device> _deviceRepo,
+  IMapper<Device, DeviceDto> _deviceDtoMapper,
+  ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
   private DeviceDto? Device
   {
@@ -28,44 +32,61 @@ public class AgentHub(
 
   public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
   {
-    await viewerHub.Clients.Client(progressDto.ViewerConnectionId).ReceiveStreamerDownloadProgress(progressDto);
+    await _viewerHub.Clients.Client(progressDto.ViewerConnectionId).ReceiveStreamerDownloadProgress(progressDto);
   }
 
   public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
   {
     try
     {
-      await viewerHub.Clients
+      await _viewerHub.Clients
         .Client(viewerConnectionId)
         .ReceiveTerminalOutput(outputDto);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending terminal output to viewer.");
+      _logger.LogError(ex, "Error while sending terminal output to viewer.");
     }
   }
 
-  public async Task UpdateDevice(DeviceDto device)
+  public async Task<Result<DeviceDto>> UpdateDevice(DeviceFromAgentDto device)
   {
     try
     {
-      device.ConnectionId = Context.ConnectionId;
       device.IsOnline = true;
-      device.LastSeen = systemTime.Now;
+      device.LastSeen = _systemTime.Now;
 
-      _ = await deviceRepo.AddOrUpdate(device);
-      
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(device.Uid));
-      
-      Device = device;
+      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
+      if (remoteIp is not null)
+      {
+        if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+          device.PublicIpV6 = remoteIp.ToString();
+        }
+        else
+        {
+          device.PublicIpV4 = remoteIp.ToString();
+        }
+      }
 
-      await viewerHub.Clients
+      var updateResult = await _deviceRepo.AddOrUpdate(device);
+
+      Device = _deviceDtoMapper.Map(updateResult);
+
+      Device.ConnectionId = Context.ConnectionId;
+
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Uid));
+
+      await _viewerHub.Clients
         .Group(HubGroupNames.ServerAdministrators)
-        .ReceiveDeviceUpdate(device);
+        .ReceiveDeviceUpdate(Device);
+
+      return Result.Ok(Device);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while updating device.");
+      _logger.LogError(ex, "Error while updating device.");
+      return Result.Fail<DeviceDto>("An error occurred while updating the device.");
     }
   }
 
@@ -73,13 +94,13 @@ public class AgentHub(
   {
     try
     {
-      connectionCounter.IncrementAgentCount();
+      _connectionCounter.IncrementAgentCount();
       await SendUpdatedConnectionCountToAdmins();
       await base.OnConnectedAsync();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error during device connect.");
+      _logger.LogError(ex, "Error during device connect.");
     }
   }
 
@@ -87,25 +108,25 @@ public class AgentHub(
   {
     try
     {
-      connectionCounter.DecrementAgentCount();
+      _connectionCounter.DecrementAgentCount();
       await SendUpdatedConnectionCountToAdmins();
 
       if (Device is { } cachedDevice)
       {
         cachedDevice.IsOnline = false;
-        cachedDevice.LastSeen = systemTime.Now;
-        await viewerHub.Clients
+        cachedDevice.LastSeen = _systemTime.Now;
+        await _viewerHub.Clients
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveDeviceUpdate(cachedDevice);
         
-        await deviceRepo.AddOrUpdate(cachedDevice);
+        await _deviceRepo.AddOrUpdate(cachedDevice);
       }
 
       await base.OnDisconnectedAsync(exception);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error during device disconnect.");
+      _logger.LogError(ex, "Error during device disconnect.");
     }
   }
 
@@ -113,17 +134,17 @@ public class AgentHub(
   {
     try
     {
-      var statsResult = await serverStatsProvider.GetServerStats();
+      var statsResult = await _serverStatsProvider.GetServerStats();
       if (statsResult.IsSuccess)
       {
-        await viewerHub.Clients
+        await _viewerHub.Clients
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveServerStats(statsResult.Value);
       }
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending updated agent connection count to admins.");
+      _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
     }
   }
 }
