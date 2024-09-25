@@ -82,7 +82,7 @@ services:
     networks:
       - controlr
     volumes:
-      - controlr-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: *pgUser
       POSTGRES_PASSWORD: *pgPassword

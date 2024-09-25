@@ -51,10 +51,4 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
   {
     return _authenticationStateTask;
   }
-
-  public async Task<bool> IsAuthenticated()
-  {
-    var state = await GetAuthenticationStateAsync();
-    return state.User.Identity?.IsAuthenticated ?? false;
-  }
 }

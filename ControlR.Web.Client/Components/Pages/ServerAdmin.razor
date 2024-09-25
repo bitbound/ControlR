@@ -134,6 +134,8 @@
         try
         {
             await ViewerHub.ClearAlert();
+            _alertMessage = string.Empty;
+            _alertSeverity = AlertSeverity.Information;
             Snackbar.Add("Alert cleared on the server", Severity.Success);
         }
         catch (Exception ex)

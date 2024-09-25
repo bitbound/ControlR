@@ -2,6 +2,10 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+RUN apt update
+RUN apt -y install curl
+RUN mkdir -p /app/AppData
+RUN chown app:app -R /app/AppData
 USER app
 WORKDIR /app
 EXPOSE 8080

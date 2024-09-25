@@ -44,7 +44,7 @@ public interface IViewerHubConnection : IHubConnectionBase
   Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
-  Task Start(CancellationToken cancellationToken);
+  Task Start(CancellationToken cancellationToken = default);
 }
 
 internal class ViewerHubConnection(
@@ -303,8 +303,7 @@ internal class ViewerHubConnection(
       {
         await WaitForConnection();
         var dto = new AlertBroadcastDto(message, severity);
-        var wrapper = DtoWrapper.Create(dto, DtoType.SendAlertBroadcast);
-        await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), wrapper);
+        await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), dto);
       });
   }
 
@@ -343,7 +342,7 @@ internal class ViewerHubConnection(
   }
 
 
-  public async Task Start(CancellationToken cancellationToken)
+  public async Task Start(CancellationToken cancellationToken = default)
   {
     using var _ = busyCounter.IncrementBusyCounter();
 

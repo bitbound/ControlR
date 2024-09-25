@@ -18,7 +18,16 @@ builder.Services
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
+builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
+
 builder.Services.AddLazyDi();
 builder.Services.AddControlrWebClient();
 
 await builder.Build().RunAsync();
+
+return;
+
+void ConfigureHttpClient(IServiceProvider services, HttpClient client)
+{
+  client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+}

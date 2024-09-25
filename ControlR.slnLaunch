@@ -4,7 +4,8 @@
     "Projects": [
       {
         "Path": "ControlR.Agent\\ControlR.Agent.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "Run"
       },
       {
         "Path": "docker-compose\\docker-compose.dcproj",

@@ -19,116 +19,120 @@ namespace ControlR.Web.ServiceDefaults;
 // To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
 public static class Extensions
 {
-    public static IHostApplicationBuilder AddServiceDefaults(
-      this IHostApplicationBuilder builder,
-      string serviceName)
+  public static IHostApplicationBuilder AddServiceDefaults(
+    this IHostApplicationBuilder builder,
+    string serviceName)
+  {
+    builder.ConfigureOpenTelemetry(serviceName);
+
+    builder.AddDefaultHealthChecks();
+
+    builder.Services.AddServiceDiscovery();
+
+    builder.Services.ConfigureHttpClientDefaults(http =>
     {
-        builder.ConfigureOpenTelemetry(serviceName);
+      // Turn on resilience by default
+      http.AddStandardResilienceHandler();
 
-        builder.AddDefaultHealthChecks();
+      // Turn on service discovery by default
+      http.AddServiceDiscovery();
+    });
 
-        builder.Services.AddServiceDiscovery();
+    return builder;
+  }
 
-        builder.Services.ConfigureHttpClientDefaults(http =>
+  public static IHostApplicationBuilder ConfigureOpenTelemetry(
+    this IHostApplicationBuilder builder,
+    string serviceName)
+  {
+    builder.Logging.AddOpenTelemetry(logging =>
+    {
+      var resourceBuilder = ResourceBuilder.CreateDefault();
+      resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
+
+      logging.IncludeFormattedMessage = true;
+      logging.IncludeScopes = true;
+      logging.ParseStateValues = true;
+    });
+
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resourceBuilder =>
         {
-            // Turn on resilience by default
-            http.AddStandardResilienceHandler();
-
-            // Turn on service discovery by default
-            http.AddServiceDiscovery();
+          resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
+        })
+        .WithMetrics(metrics =>
+        {
+          metrics
+                  .AddAspNetCoreInstrumentation()
+                  .AddHttpClientInstrumentation()
+                  .AddRuntimeInstrumentation();
+        })
+        .WithTracing(tracing =>
+        {
+          tracing
+                  .AddAspNetCoreInstrumentation()
+                  // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
+                  //.AddGrpcClientInstrumentation()
+                  .AddHttpClientInstrumentation()
+                  .SetSampler(new HealthCheckFilterSampler());
         });
 
-        return builder;
-    }
+    builder.AddOpenTelemetryExporters();
 
-    public static IHostApplicationBuilder ConfigureOpenTelemetry(
-      this IHostApplicationBuilder builder,
-      string serviceName)
+    return builder;
+  }
+
+  private static IHostApplicationBuilder AddOpenTelemetryExporters(
+      this IHostApplicationBuilder builder)
+  {
+    var otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
+    var azureMonitorConnectionString = builder.Configuration["AzureMonitor:ConnectionString"];
+
+    if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))
     {
-        builder.Logging.AddOpenTelemetry(logging =>
-        {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-        });
-
-        builder.Services.AddOpenTelemetry()
-            .ConfigureResource(resourceBuilder =>
-            {
-              resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
-            })
-            .WithMetrics(metrics =>
-            {
-                metrics
-                    .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing
-                    .AddAspNetCoreInstrumentation()
-                    // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
-                    //.AddGrpcClientInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .SetSampler(new HealthCheckFilterSampler());
-            });
-
-        builder.AddOpenTelemetryExporters();
-
-        return builder;
+      builder.Services
+          .AddOpenTelemetry()
+          .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpUri);
     }
 
-    private static IHostApplicationBuilder AddOpenTelemetryExporters(
-        this IHostApplicationBuilder builder)
+    if (!string.IsNullOrWhiteSpace(azureMonitorConnectionString))
     {
-        var otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
-        var azureMonitorConnectionString = builder.Configuration["AzureMonitor:ConnectionString"];
-
-        if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))
-        {
-            builder.Services
-                .AddOpenTelemetry()
-                .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpUri);
-        }
-
-        if (!string.IsNullOrWhiteSpace(azureMonitorConnectionString))
-        {
-            builder.Services
-                .AddOpenTelemetry()
-                .UseAzureMonitor(options =>
-                {
-                    options.ConnectionString = azureMonitorConnectionString;
-                });
-        }
-
-        return builder;
+      builder.Services
+          .AddOpenTelemetry()
+          .UseAzureMonitor(options =>
+          {
+            options.ConnectionString = azureMonitorConnectionString;
+          });
     }
 
-    public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
+    return builder;
+  }
+
+  public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
+  {
+    builder.Services.AddHealthChecks()
+        // Add a default liveness check to ensure app is responsive
+        .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+    return builder;
+  }
+
+  public static WebApplication MapDefaultEndpoints(this WebApplication app)
+  {
+    // Adding health checks endpoints to applications in non-development environments has security implications.
+    // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
+    if (app.Environment.IsDevelopment())
     {
-        builder.Services.AddHealthChecks()
-            // Add a default liveness check to ensure app is responsive
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+      // All health checks must pass for app to be considered ready to accept traffic after starting
+      app.MapHealthChecks("/health");
 
-        return builder;
+      // Only health checks tagged with the "live" tag must pass for app to be considered alive
+      app.MapHealthChecks("/alive", new HealthCheckOptions
+      {
+        Predicate = r => r.Tags.Contains("live")
+      });
     }
 
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
-    {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
-
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks("/alive", new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
-
-        return app;
-    }
+    return app;
+  }
 }

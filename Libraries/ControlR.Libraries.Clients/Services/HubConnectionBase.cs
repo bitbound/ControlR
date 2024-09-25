@@ -14,14 +14,14 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
-  IServiceProvider services,
-  IMessenger messenger,
-  IDelayer delayer,
+  IServiceProvider _services,
+  IMessenger _messenger,
+  IDelayer _delayer,
   ILogger<HubConnectionBase> logger) : IHubConnectionBase
 {
-  protected readonly IDelayer Delayer = delayer;
-  protected readonly IMessenger Messenger = messenger;
-  protected readonly IServiceProvider Services = services;
+  protected readonly IDelayer Delayer = _delayer;
+  protected readonly IMessenger Messenger = _messenger;
+  protected readonly IServiceProvider Services = _services;
   private CancellationToken _cancellationToken;
   private HubConnection? _connection;
   private Func<string, Task> _onConnectFailure = _ => Task.CompletedTask;

@@ -86,7 +86,7 @@ public class AppDataAccessor(
         {
           EnsureRootDirCreated();
           var alertPath = GetAlertFilePath();
-          await using var fs = new FileStream(GetAlertFilePath(), FileMode.Create);
+          await using var fs = new FileStream(alertPath, FileMode.Create);
           await JsonSerializer.SerializeAsync(fs, alertDto, _jsonOptions);
         },
         5,
