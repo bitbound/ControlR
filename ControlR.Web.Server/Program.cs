@@ -9,7 +9,6 @@ using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services.Distributed;
 using ControlR.Web.Server.Services.Distributed.Locking;
 using ControlR.Web.Server.Services.Local;
-using ControlR.Web.Server.Services.Repositories;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -192,9 +191,6 @@ app.MapWebSocketBridge();
 app.MapHub<AgentHub>("/hubs/agent");
 
 app.UseAntiforgery();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapRazorComponents<App>()
   .AddInteractiveWebAssemblyRenderMode()
