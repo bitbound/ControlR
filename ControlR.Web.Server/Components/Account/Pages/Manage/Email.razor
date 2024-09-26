@@ -12,7 +12,7 @@
 <StatusMessage Message="@_message"/>
 
 <form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
-  <AntiforgeryToken/>
+  <AntiforgeryToken />
 </form>
 <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
   <DataAnnotationsValidator/>
@@ -21,25 +21,25 @@
 
     @if (_isEmailConfirmed)
     {
-      <MudItem md="12">
+      <MudItem xs="12">
         <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true" AdornmentIcon="Icons.Material.Filled.Check" AdornmentColor="Color.Success"/>
       </MudItem>
     }
     else
     {
-      <MudItem md="12">
+      <MudItem xs="12">
         <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true"/>
       </MudItem>
-      <MudItem md="12">
+      <MudItem xs="12">
         <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Send verification email</MudStaticButton>
       </MudItem>
     }
 
-    <MudItem md="12">
+    <MudItem xs="12">
       <MudStaticTextField @bind-Value="@Input.NewEmail" For="@(() => Input.NewEmail)" Label="New Email" HelperText="Please enter new email."/>
     </MudItem>
 
-    <MudItem md="12">
+    <MudItem xs="12">
       <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Change email</MudStaticButton>
     </MudItem>
   </MudGrid>
