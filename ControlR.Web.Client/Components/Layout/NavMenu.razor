@@ -19,7 +19,7 @@
     About
   </MudNavLink>
 
-  <AuthorizeView Policy="@(PolicyNames.RequireAdministrator)">
+  <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
     <Authorized>
       <div class="ms-2 mt-5">
         <MudText Typo="Typo.caption" Color="Color.Default">

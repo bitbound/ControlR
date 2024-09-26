@@ -2,5 +2,5 @@
 
 public static class PolicyNames
 {
-  public const string RequireAdministrator = nameof(RequireAdministrator);
+  public const string RequireServerAdministrator = nameof(RequireServerAdministrator);
 }

@@ -26,7 +26,7 @@ public class ViewerHub(
   {
     using var scope = logger.BeginMemberScope();
 
-    if (!VerifyIsAdmin())
+    if (!VerifyIsServerAdmin())
     {
       return Result.Fail("Unauthorized.");
     }
@@ -81,7 +81,7 @@ public class ViewerHub(
   {
     try
     {
-      if (!VerifyIsAdmin())
+      if (!VerifyIsServerAdmin())
       {
         return Result.Fail<ServerStatsDto>("Unauthorized.");
       }
@@ -199,6 +199,11 @@ public class ViewerHub(
   {
     try
     {
+      if (!VerifyIsServerAdmin())
+      {
+        return Result.Fail("Unauthorized.");
+      }
+
       using var scope = logger.BeginMemberScope();
 
       var storeResult = await alertStore.StoreAlert(alertDto);
@@ -296,7 +301,7 @@ public class ViewerHub(
 
   private bool IsServerAdmin()
   {
-    return Context.User?.IsAdministrator() ?? false;
+    return Context.User?.IsInRole(RoleNames.ServerAdministrator) ?? false;
   }
 
   private async Task SendUpdatedConnectionCountToAdmins()
@@ -318,7 +323,7 @@ public class ViewerHub(
     }
   }
 
-  private bool VerifyIsAdmin([CallerMemberName] string callerMember = "")
+  private bool VerifyIsServerAdmin([CallerMemberName] string callerMember = "")
   {
     if (IsServerAdmin())
     {

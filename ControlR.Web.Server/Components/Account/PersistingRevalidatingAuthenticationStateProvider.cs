@@ -18,6 +18,7 @@ namespace ControlR.Web.Server.Components.Account;
 internal sealed class PersistingRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
   private readonly IdentityOptions _options;
+  private readonly ILogger<PersistingRevalidatingAuthenticationStateProvider> _logger;
   private readonly IServiceScopeFactory _scopeFactory;
   private readonly PersistentComponentState _state;
   private readonly PersistingComponentStateSubscription _subscription;
@@ -28,12 +29,14 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     PersistentComponentState persistentComponentState,
     ILoggerFactory loggerFactory,
     IServiceScopeFactory serviceScopeFactory,
-    IOptions<IdentityOptions> optionsAccessor)
+    IOptions<IdentityOptions> optionsAccessor,
+    ILogger<PersistingRevalidatingAuthenticationStateProvider> logger)
     : base(loggerFactory)
   {
     _scopeFactory = serviceScopeFactory;
     _state = persistentComponentState;
     _options = optionsAccessor.Value;
+    _logger = logger;
 
     AuthenticationStateChanged += OnAuthenticationStateChanged;
     _subscription = _state.RegisterOnPersisting(OnPersistingAsync, RenderMode.InteractiveWebAssembly);
@@ -73,22 +76,41 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     var authenticationState = await _authenticationStateTask;
     var principal = authenticationState.User;
 
-    if (principal.Identity?.IsAuthenticated == true)
+    if (principal.Identity?.IsAuthenticated == false)
     {
-      var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
-      var email = principal.FindFirst(_options.ClaimsIdentity.EmailClaimType)?.Value;
-      var isAdministrator = principal.IsAdministrator();
-
-      if (userId != null && email != null)
-      {
-        _state.PersistAsJson(nameof(UserInfo), new UserInfo
-        {
-          UserId = userId,
-          Email = email,
-          IsAdministrator = isAdministrator
-        });
-      }
+      return;
     }
+
+    var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
+    var email = principal.FindFirst(_options.ClaimsIdentity.EmailClaimType)?.Value;
+
+    if (userId is null || email is null)
+    {
+      return;
+    }
+
+    await using var scope = _scopeFactory.CreateAsyncScope();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var user = await userManager.GetUserAsync(principal);
+
+    var userInfo = new UserInfo
+    {
+      UserId = userId,
+      Email = email
+    };
+
+    if (user is not null)
+    {
+      userInfo.Roles = await userManager.GetRolesAsync(user);
+      userInfo.Claims = await userManager.GetClaimsAsync(user);
+    }
+    else
+    {
+      _logger.LogCritical(
+        "User is authenticated but not found in the database. Username: {UserName}",
+        principal.Identity?.Name);
+    }
+    _state.PersistAsJson(nameof(UserInfo), userInfo);
   }
 
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)

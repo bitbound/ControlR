@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ControlR.Web.Server.Converters;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 namespace ControlR.Web.Server.Data;
 
 public class AppDb(DbContextOptions<AppDb> options)
-  : IdentityDbContext<AppUser>(options)
+  : IdentityDbContext<AppUser, IdentityRole<int>, int>(options)
 {
   private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
 
@@ -31,6 +32,16 @@ public class AppDb(DbContextOptions<AppDb> options)
       .Entity<Device>()
       .HasIndex(x => x.Uid)
       .IsUnique();
+
+    builder
+      .Entity<IdentityRole<int>>()
+      .HasData(
+        new IdentityRole<int>()
+        {
+          Id = 1,
+          Name = RoleNames.ServerAdministrator,
+          NormalizedName = RoleNames.ServerAdministrator.ToUpper()
+        });
 
     builder
       .Entity<Device>()

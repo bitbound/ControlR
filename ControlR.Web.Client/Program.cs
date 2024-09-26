@@ -1,4 +1,3 @@
-using ControlR.Web.Client;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -12,7 +11,7 @@ builder.Services.AddMudServices();
 builder.Services
   .AddAuthorizationCore(options =>
   {
-    options.AddPolicy(PolicyNames.RequireAdministrator, AuthorizationPolicies.RequireAdministrator);
+    options.AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator);
   });
 
 builder.Services.AddCascadingAuthenticationState();

@@ -82,8 +82,8 @@
 
     if (await UserManager.Users.CountAsync() == 1)
     {
-      Logger.LogInformation("First user created. Assigning administrator role.");
-      await UserManager.AddClaimAsync(user, new Claim(ClaimNames.IsAdministrator, "true"));
+      Logger.LogInformation("First user created. User: {UserName}. Assigning server administrator role.", user.UserName);
+      await UserManager.AddToRoleAsync(user, RoleNames.ServerAdministrator);
     }
 
     var userId = await UserManager.GetUserIdAsync(user);

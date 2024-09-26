@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
-namespace ControlR.Web.Client;
+namespace ControlR.Web.Client.Services;
 
 // This is a client-side AuthenticationStateProvider that determines the user's authentication state by
 // looking for data persisted in the page when it was rendered on the server. This authentication state will
@@ -26,25 +26,20 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
       return;
     }
 
+    var roleClaims = userInfo.Roles.Select(x => new Claim(ClaimTypes.Role, x));
+
     Claim[] claims =
     [
       new(ClaimTypes.NameIdentifier, userInfo.UserId),
       new(ClaimTypes.Name, userInfo.Email),
-      new(ClaimTypes.Email, userInfo.Email)
+      new(ClaimTypes.Email, userInfo.Email),
+      ..roleClaims,
+      ..userInfo.Claims
     ];
 
-    if (userInfo.IsAdministrator)
-    {
-      claims =
-      [
-        ..claims,
-        new Claim(ClaimNames.IsAdministrator, string.Empty)
-      ];
-    }
-
-    _authenticationStateTask = Task.FromResult(
-      new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,
-        nameof(PersistentAuthenticationStateProvider)))));
+    var identity = new ClaimsIdentity(claims, nameof(PersistentAuthenticationStateProvider));
+    
+    _authenticationStateTask = Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
   }
 
   public override Task<AuthenticationState> GetAuthenticationStateAsync()

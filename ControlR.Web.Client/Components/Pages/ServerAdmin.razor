@@ -1,5 +1,5 @@
 ﻿@attribute [Route(RouteNames.ServerAdmin)]
-@attribute [Authorize(PolicyNames.RequireAdministrator)]
+@attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
 
 @inject IMessenger Messenger;
 @inject IViewerHubConnection ViewerHub;

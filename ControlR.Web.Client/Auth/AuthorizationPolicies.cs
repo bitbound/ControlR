@@ -4,9 +4,9 @@ namespace ControlR.Web.Client.Auth;
 
 public static class AuthorizationPolicies
 {
-  public static AuthorizationPolicy RequireAdministrator =>
+  public static AuthorizationPolicy RequireServerAdministrator =>
     new AuthorizationPolicyBuilder()
       .RequireAuthenticatedUser()
-      .RequireClaim(ClaimNames.IsAdministrator)
+      .RequireRole(RoleNames.ServerAdministrator)
       .Build();
 }

@@ -98,7 +98,7 @@ builder.Services
 
 builder.Services
   .AddAuthorizationBuilder()
-  .AddPolicy(PolicyNames.RequireAdministrator, AuthorizationPolicies.RequireAdministrator);
+  .AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator);
 
 // Add Identity services.
 builder.Services
@@ -108,6 +108,7 @@ builder.Services
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
   })
+  .AddRoles<IdentityRole<int>>()
   .AddEntityFrameworkStores<AppDb>()
   .AddSignInManager()
   .AddDefaultTokenProviders();

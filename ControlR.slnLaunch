@@ -26,6 +26,11 @@
         "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
         "Action": "Start",
         "DebugTarget": "https"
+      },
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "postgres"
       }
     ]
   }
