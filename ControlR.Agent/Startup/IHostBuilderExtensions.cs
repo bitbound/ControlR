@@ -20,141 +20,133 @@ using SimpleIpc;
 
 namespace ControlR.Agent.Startup;
 
-internal static class HostBuilderExtensions
+internal static class HostApplicationBuilderExtensions
 {
-  internal static IHostBuilder AddControlRAgent(this IHostBuilder builder, StartupMode startupMode, string? instanceId)
+  internal static IHostApplicationBuilder AddControlRAgent(this HostApplicationBuilder builder, StartupMode startupMode, string? instanceId)
   {
-    if (Environment.UserInteractive)
-    {
-      builder.UseConsoleLifetime();
-    }
-    else if (OperatingSystem.IsWindows())
-    {
-      builder.UseWindowsService(config => { config.ServiceName = "ControlR.Agent"; });
-    }
-    else if (OperatingSystem.IsLinux())
-    {
-      builder.UseSystemd();
-    }
+    var services = builder.Services;
+    var configuration = builder.Configuration;
+    var logging = builder.Logging;
 
-    builder.ConfigureAppConfiguration((_, config) =>
-    {
-      if (!EnvironmentHelper.Instance.IsDebug)
+    services
+      .AddWindowsService(config =>
       {
-        config.Sources.Clear();
-      }
+        config.ServiceName = "ControlR.Agent";
+      })
+      .AddSystemd();
+    configuration.Sources.Clear();
 
-      config
-        .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
-        .AddEnvironmentVariables();
+    if (!EnvironmentHelper.Instance.IsDebug)
+    {
+      configuration.Sources.Clear();
+    }
 
-      config.AddInMemoryCollection(new Dictionary<string, string?>
+    builder.Configuration
+      .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
+      .AddEnvironmentVariables()
+      .AddInMemoryCollection(new Dictionary<string, string?>
       {
         { "InstanceOptions:InstanceId", instanceId }
       });
-    });
 
-    builder.ConfigureServices((context, services) =>
+    services
+      .AddOptions<AgentAppOptions>()
+      .Bind(configuration.GetSection(AgentAppOptions.SectionKey));
+
+    services
+      .AddOptions<InstanceOptions>()
+      .Bind(configuration.GetSection(InstanceOptions.SectionKey));
+
+    services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
+    services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
+    services.AddHttpClient<IReleasesApi, ReleasesApi>();
+
+    services.AddSingleton<ISettingsProvider, SettingsProvider>();
+    services.AddSingleton<IRuntimeSettingsProvider, RuntimeSettingsProvider>();
+    services.AddSingleton<IProcessManager, ProcessManager>();
+    services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
+    services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+    services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
+    services.AddSingleton(WeakReferenceMessenger.Default);
+    services.AddSingleton<ISystemTime, SystemTime>();
+    services.AddSingleton<IMemoryProvider, MemoryProvider>();
+    services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
+    services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
+    services.AddSingleton<IDelayer, Delayer>();
+    services.AddSingleton<IRetryer, Retryer>();
+    services.AddSimpleIpc();
+    services.AddHostedService<HostLifetimeEventResponder>();
+
+    if (startupMode == StartupMode.Run)
     {
-      services
-        .AddOptions<AgentAppOptions>()
-        .Bind(context.Configuration.GetSection(AgentAppOptions.SectionKey));
-
-      services
-        .AddOptions<InstanceOptions>()
-        .Bind(context.Configuration.GetSection(InstanceOptions.SectionKey));
-
-      services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-      services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
-      services.AddHttpClient<IReleasesApi, ReleasesApi>();
-
-      services.AddSingleton<ISettingsProvider, SettingsProvider>();
-      services.AddSingleton<IRuntimeSettingsProvider, RuntimeSettingsProvider>();
-      services.AddSingleton<IProcessManager, ProcessManager>();
-      services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
-      services.AddSingleton<IFileSystem, FileSystem>();
-      services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+      services.AddSingleton<IAgentUpdater, AgentUpdater>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+      services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
+      services.AddSingleton<ITerminalStore, TerminalStore>();
       services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
-      services.AddSingleton(WeakReferenceMessenger.Default);
-      services.AddSingleton<ISystemTime, SystemTime>();
-      services.AddSingleton<IMemoryProvider, MemoryProvider>();
-      services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
-      services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
-      services.AddSingleton<IDelayer, Delayer>();
-      services.AddSingleton<IRetryer, Retryer>();
-      services.AddSimpleIpc();
-      services.AddHostedService<HostLifetimeEventResponder>();
-
-      if (startupMode == StartupMode.Run)
-      {
-        services.AddSingleton<IAgentUpdater, AgentUpdater>();
-        services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-        services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-        services.AddSingleton<ITerminalStore, TerminalStore>();
-        services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
-        services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
-        services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
-        services.AddHostedService(services => services.GetRequiredService<IAgentHubConnection>());
-        services.AddHostedService<AgentHeartbeatTimer>();
-        services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
-        services.AddHostedService<DtoHandler>();
-
-        if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
-        {
-          services.AddSingleton<IStreamerLauncher, StreamerLauncherWindows>();
-          services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
-          services.AddHostedService<StreamingSessionWatcher>();
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-          services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-          services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-          services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-          services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
-        }
-        else
-        {
-          throw new PlatformNotSupportedException();
-        }
-      }
-
-      if (startupMode == StartupMode.EchoDesktop)
-      {
-        services.AddSingleton<IDesktopEchoer, DesktopEchoer>();
-      }
+      services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
+      services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
+      services.AddHostedService(services => services.GetRequiredService<IAgentHubConnection>());
+      services.AddHostedService<AgentHeartbeatTimer>();
+      services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
+      services.AddHostedService<DtoHandler>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {
-        services.AddSingleton<IWin32Interop, Win32Interop>();
-        services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
-        services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
-        services.AddSingleton<IPowerControl, PowerControlWindows>();
-        services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
+        services.AddSingleton<IStreamerLauncher, StreamerLauncherWindows>();
+        services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
+        services.AddHostedService<StreamingSessionWatcher>();
       }
       else if (OperatingSystem.IsLinux())
       {
-        services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
-        services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
-        services.AddSingleton<IPowerControl, PowerControlMac>();
-        services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
-        services.AddSingleton<IWin32Interop, Win32InteropFake>();
+        services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
+        services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
       }
       else if (OperatingSystem.IsMacOS())
       {
-        services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
-        services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
-        services.AddSingleton<IPowerControl, PowerControlMac>();
-        services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
-        services.AddSingleton<IWin32Interop, Win32InteropFake>();
+        services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
+        services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
       }
       else
       {
         throw new PlatformNotSupportedException();
       }
-    });
+    }
+
+    if (startupMode == StartupMode.EchoDesktop)
+    {
+      services.AddSingleton<IDesktopEchoer, DesktopEchoer>();
+    }
+
+    if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
+    {
+      services.AddSingleton<IWin32Interop, Win32Interop>();
+      services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
+      services.AddSingleton<IPowerControl, PowerControlWindows>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
+    }
+    else if (OperatingSystem.IsLinux())
+    {
+      services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
+      services.AddSingleton<IPowerControl, PowerControlMac>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
+      services.AddSingleton<IWin32Interop, Win32InteropFake>();
+    }
+    else if (OperatingSystem.IsMacOS())
+    {
+      services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
+      services.AddSingleton<IPowerControl, PowerControlMac>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
+      services.AddSingleton<IWin32Interop, Win32InteropFake>();
+    }
+    else
+    {
+      throw new PlatformNotSupportedException();
+    }
 
     builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));
 

@@ -230,10 +230,10 @@ public class ViewerHub(
     await agentHub.Clients.Group(HubGroupNames.GetDeviceGroupName(deviceId)).ReceiveDto(wrapper);
   }
 
-  public Task SendDtoToUserGroups(DtoWrapper wrapper)
+  public async Task SendDtoToUserGroups(DtoWrapper wrapper)
   {
     // TODO: Implement this.
-    throw new NotImplementedException();
+    await Task.Yield();
   }
 
   public async Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto)

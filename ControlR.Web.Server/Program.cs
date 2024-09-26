@@ -298,5 +298,5 @@ void ConfigureSerilog(ApplicationOptions applicationOptions)
     "AppData",
     "logs");
 
-  builder.Host.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
+  builder.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
 }
