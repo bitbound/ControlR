@@ -1,70 +1,81 @@
-using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Mappers;
+﻿using ControlR.Web.Server.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Services.Repositories;
 
-public interface IRepository<TDto, TEntity>
-  where TDto : EntityDtoBase, new()
-  where TEntity : EntityBase, new()
+public interface IRepository
 {
-  Task<TEntity> AddOrUpdate(TDto dto);
-
-  IQueryable<TEntity> AsQueryable();
-
-  Task<bool> Delete(int id);
-
-  Task<List<TEntity>> GetAll(
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null);
-
-  Task<TEntity?> GetById(
-        int id,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null);
-
-  Task<TEntity?> GetByUid(
-    Guid uid,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null);
-  Task<List<TEntity>> GetWhere(
-    Func<IQueryable<TEntity>, IQueryable<TEntity>> whereFilter,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null);
-
-  Task<TEntity?> UpdatePartial(object partialDto, int id);
-  Task<TEntity?> UpdatePartial(object partialDto, Guid uid);
+  Task<int> Count<TEntity>()
+    where TEntity : class, new();
+  Task<TEntity> AddOrUpdate<TEntity, TDto>(TDto dto)
+    where TEntity : EntityBase, new()
+    where TDto : EntityDtoBase, new();
+  IQueryable<TEntity> AsQueryable<TEntity>() 
+    where TEntity : class, new();
+  Task<bool> Delete<TEntity>(int id) 
+    where TEntity : class, new();
+  Task<TEntity?> FirstOrDefault<TEntity>(
+    Func<IQueryable<TEntity>, Task<TEntity?>> filter,
+    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+    where TEntity : class, new();
+  Task<List<TEntity>> GetAll<TEntity>(Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null) 
+    where TEntity : class, new();
+  Task<TEntity?> GetById<TEntity>(int id, Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null) 
+    where TEntity : EntityBase, new();
+  Task<TEntity?> GetByUid<TEntity>(Guid uid, Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null) 
+    where TEntity : EntityBase, new();
+  Task<List<TEntity>> GetWhere<TEntity>(Func<IQueryable<TEntity>, IQueryable<TEntity>> whereFilter, Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null) 
+    where TEntity : class, new();
+  Task<TEntity?> UpdatePartial<TEntity>(object partialDto, Guid uid) 
+    where TEntity : EntityBase, new();
+  Task<TEntity?> UpdatePartial<TEntity>(object partialDto, int id) 
+    where TEntity : EntityBase, new();
 }
 
-public class Repository<TDto, TEntity>(
-  AppDb appDb, 
-  IMapper<TDto, TEntity> entityMapper) : IRepository<TDto, TEntity>
-  where TDto : EntityDtoBase, new()
-  where TEntity : EntityBase, new()
+public class Repository(AppDb _appDb) : IRepository
 {
-  private readonly AppDb _appDb = appDb;
-
-  public async Task<TEntity> AddOrUpdate(TDto dto)
+  public async Task<TEntity> AddOrUpdate<TEntity, TDto>(TDto dto)
+    where TEntity : EntityBase, new()
+    where TDto : EntityDtoBase, new()
   {
     var set = _appDb.Set<TEntity>();
     var entity = await set.FirstOrDefaultAsync(x => x.Uid == dto.Uid);
 
-    if (entity is null)
+    if (entity is not null)
     {
-      entity = entityMapper.Map(dto);
-      await set.AddAsync(entity);
+      set
+        .Update(entity)
+        .CurrentValues
+        .SetValues(dto);
     }
     else
     {
-      entityMapper.Map(dto, entity);
+      entity = new TEntity();
+      set
+        .Add(entity)
+        .CurrentValues
+        .SetValues(dto);
+
     }
 
     await _appDb.SaveChangesAsync();
     return entity;
   }
 
-  public IQueryable<TEntity> AsQueryable()
+  public IQueryable<TEntity> AsQueryable<TEntity>()
+     where TEntity : class, new()
   {
     return _appDb.Set<TEntity>().AsQueryable();
   }
 
-  public async Task<bool> Delete(int id)
+  public async Task<int> Count<TEntity>()
+    where TEntity : class, new()
+  {
+    return await _appDb.Set<TEntity>().CountAsync();
+  }
+
+  public async Task<bool> Delete<TEntity>(int id)
+    where TEntity : class, new()
   {
     var set = _appDb.Set<TEntity>();
     var entity = await set.FindAsync(id);
@@ -78,8 +89,21 @@ public class Repository<TDto, TEntity>(
     return true;
   }
 
-  public async Task<List<TEntity>> GetAll(
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+  public async Task<TEntity?> FirstOrDefault<TEntity>(
+    Func<IQueryable<TEntity>, Task<TEntity?>> filter,
+    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null) where TEntity : class, new()
+  {
+    var query = _appDb.Set<TEntity>().AsQueryable();
+    if (includeBuilder is not null)
+    {
+      query = includeBuilder(query);
+    }
+
+    return await filter(query);
+  }
+
+  public async Task<List<TEntity>> GetAll<TEntity>(Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+    where TEntity : class, new()
   {
     var query = _appDb.Set<TEntity>().AsQueryable();
     if (includeBuilder is not null)
@@ -90,9 +114,8 @@ public class Repository<TDto, TEntity>(
     return await query.ToListAsync();
   }
 
-  public async Task<TEntity?> GetById(
-    int id,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+  public async Task<TEntity?> GetById<TEntity>(int id, Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+    where TEntity : EntityBase, new()
   {
     var query = _appDb.Set<TEntity>().AsQueryable();
     if (includeBuilder is not null)
@@ -104,9 +127,10 @@ public class Repository<TDto, TEntity>(
     return entity;
   }
 
-  public async Task<TEntity?> GetByUid(
+  public async Task<TEntity?> GetByUid<TEntity>(
     Guid uid,
     Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+    where TEntity : EntityBase, new()
   {
     var query = _appDb.Set<TEntity>().AsQueryable();
     if (includeBuilder is not null)
@@ -118,9 +142,10 @@ public class Repository<TDto, TEntity>(
     return entity;
   }
 
-  public async Task<List<TEntity>> GetWhere(
+  public async Task<List<TEntity>> GetWhere<TEntity>(
     Func<IQueryable<TEntity>, IQueryable<TEntity>> whereFilter,
     Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeBuilder = null)
+    where TEntity : class, new()
   {
     var query = _appDb.Set<TEntity>().AsQueryable();
     if (includeBuilder is not null)
@@ -133,7 +158,8 @@ public class Repository<TDto, TEntity>(
     return entities;
   }
 
-  public async Task<TEntity?> UpdatePartial(object partialDto, int id)
+  public async Task<TEntity?> UpdatePartial<TEntity>(object partialDto, int id)
+    where TEntity : EntityBase, new()
   {
     var set = _appDb.Set<TEntity>();
     var entity = await set.FindAsync(id);
@@ -148,7 +174,8 @@ public class Repository<TDto, TEntity>(
     return entity;
   }
 
-  public async Task<TEntity?> UpdatePartial(object partialDto, Guid uid)
+  public async Task<TEntity?> UpdatePartial<TEntity>(object partialDto, Guid uid)
+    where TEntity : EntityBase, new()
   {
     var set = _appDb.Set<TEntity>();
     var entity = await set.FirstOrDefaultAsync(x => x.Uid == uid);

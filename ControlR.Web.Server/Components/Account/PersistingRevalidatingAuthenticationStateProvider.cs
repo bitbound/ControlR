@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Security.Claims;
-using ControlR.Web.Client;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -101,8 +99,16 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
 
     if (user is not null)
     {
-      userInfo.Roles = await userManager.GetRolesAsync(user);
-      userInfo.Claims = await userManager.GetClaimsAsync(user);
+      var userRoles = await userManager.GetRolesAsync(user);
+      var claims = await userManager.GetClaimsAsync(user);
+      var userClaims = claims.Select(x => new UserClaim()
+      {
+        Type = x.Type,
+        Value = x.Value
+      });
+
+      userInfo.Claims.AddRange(userClaims);
+      userInfo.Roles.AddRange(userRoles);
     }
     else
     {

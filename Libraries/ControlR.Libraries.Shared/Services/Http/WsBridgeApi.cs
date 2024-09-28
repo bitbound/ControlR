@@ -7,7 +7,7 @@ public interface IWsBridgeApi
 
 internal class WsBridgeApi(
   HttpClient client,
-  ILogger<KeyApi> logger) : IWsBridgeApi
+  ILogger<WsBridgeApi> logger) : IWsBridgeApi
 {
   public async Task<bool> IsHealthy(Uri origin)
   {

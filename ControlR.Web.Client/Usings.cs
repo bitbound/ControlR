@@ -22,3 +22,4 @@ global using ControlR.Libraries.Shared.Services.Http;
 global using ControlR.Web.Client.Components.RemoteDisplays;
 global using ControlR.Web.Client.Components.Dialogs;
 global using ControlR.Web.Client.Auth;
+global using ControlR.Libraries.Shared.Dtos.ServerApi;

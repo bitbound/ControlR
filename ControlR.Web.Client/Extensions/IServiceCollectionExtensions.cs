@@ -21,7 +21,6 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddTransient<IJsInterop, JsInterop>();
 
-    services.AddHttpClient<IKeyApi, KeyApi>();
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
     services.AddHttpClient<IVersionApi, VersionApi>();
 
