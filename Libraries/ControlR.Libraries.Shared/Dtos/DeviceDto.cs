@@ -14,6 +14,12 @@ public class DeviceDto : DeviceFromAgentDto
   [MsgPackKey]
   public string ConnectionId { get; set; } = string.Empty;
 
+  [MsgPackKey]
+  public int? DeviceGroupId { get; set; }
+
+  [MsgPackKey]
+  public int TenantId { get; set; }
+
   [IgnoreDataMember]
   [JsonIgnore]
   [Display(Name = "Memory Used %")]

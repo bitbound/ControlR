@@ -24,6 +24,10 @@ public class AppDb(DbContextOptions<AppDb> options)
 
   public DbSet<Device> Devices { get; init; }
 
+  public DbSet<DeviceGroup> DeviceGroups { get; init; }
+
+  public DbSet<Tenant> Tenants { get; init; }
+
   protected override void OnModelCreating(ModelBuilder builder)
   {
     base.OnModelCreating(builder);
