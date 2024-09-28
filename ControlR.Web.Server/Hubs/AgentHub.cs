@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Extensions;
-using ControlR.Web.Server.Mappers;
+﻿using ControlR.Web.Server.Mappers;
 using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.SignalR;
 using System.Net.Sockets;

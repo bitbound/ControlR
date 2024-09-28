@@ -65,7 +65,7 @@
   public async Task RegisterUser(EditContext editContext)
   {
     var user = CreateUser();
-
+    user.Tenant = new();
 
     await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
     var emailStore = GetEmailStore();

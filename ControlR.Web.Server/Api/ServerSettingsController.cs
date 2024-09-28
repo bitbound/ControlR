@@ -1,6 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Web.Server.Components.Account;
-using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

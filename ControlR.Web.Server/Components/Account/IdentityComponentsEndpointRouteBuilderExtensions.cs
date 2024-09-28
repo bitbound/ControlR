@@ -1,6 +1,5 @@
 using ControlR.Web.Server.Components.Account.Pages;
 using ControlR.Web.Server.Components.Account.Pages.Manage;
-using ControlR.Web.Server.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
