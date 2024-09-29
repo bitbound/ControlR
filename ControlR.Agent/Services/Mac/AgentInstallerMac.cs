@@ -28,7 +28,7 @@ internal class AgentInstallerMac(
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task Install(Uri? serverUri = null)
+  public async Task Install(Uri? serverUri = null, Guid? deviceGroupId = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -38,6 +38,14 @@ internal class AgentInstallerMac(
 
     try
     {
+      if (serverUri is null && AppOptions.CurrentValue.ServerUri is null)
+      {
+        Logger.LogWarning(
+          "The ServerUri needs to be provided either via command line arguments or installed appsettings file.  " +
+          "Aborting installation.");
+        return;
+      }
+
       _logger.LogInformation("Install started.");
 
       if (Libc.Geteuid() != 0)

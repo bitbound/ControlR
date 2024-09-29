@@ -7,7 +7,7 @@ public static class IServiceCollectionExtensions
 {
   public static IServiceCollection AddRepository<TDto, TEntity>(
     this IServiceCollection services)
-    where TDto : EntityDtoBase, new()
+    where TDto : EntityBaseDto, new()
     where TEntity : EntityBase, new()
   {
     return services.AddScoped<IRepository<TDto, TEntity>, Repository<TDto, TEntity>>();

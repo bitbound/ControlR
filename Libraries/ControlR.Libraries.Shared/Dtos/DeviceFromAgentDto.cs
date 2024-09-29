@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public class DeviceFromAgentDto : EntityDtoBase
+public class DeviceFromAgentDto : EntityBaseDto
 {
   [MsgPackKey]
   [Display(Name = "Agent Version")]

@@ -14,42 +14,48 @@ namespace ControlR.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows")]
 internal class AgentInstallerWindows(
-  IHostApplicationLifetime lifetime,
-  IProcessManager processes,
+  IHostApplicationLifetime _lifetime,
+  IProcessManager _processes,
+  IEnvironmentHelper _environmentHelper,
+  IElevationChecker _elevationChecker,
+  IRetryer _retryer,
+  IRegistryAccessor registryAccessor,
+  IOptions<InstanceOptions> _instanceOptions,
   IFileSystem fileSystem,
-  IEnvironmentHelper environmentHelper,
-  IElevationChecker elevationChecker,
-  IRetryer retryer,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  IRegistryAccessor registryAccessor,
-  IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerWindows> logger)
   : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
-  private readonly IElevationChecker _elevationChecker = elevationChecker;
-  private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
-  private readonly IFileSystem _fileSystem = fileSystem;
-  private readonly IHostApplicationLifetime _lifetime = lifetime;
-  private readonly ILogger<AgentInstallerWindows> _logger = logger;
-  private readonly IProcessManager _processes = processes;
+  private readonly IElevationChecker _elevationChecker = _elevationChecker;
+  private readonly IEnvironmentHelper _environmentHelper = _environmentHelper;
+  private readonly IHostApplicationLifetime _lifetime = _lifetime;
+  private readonly IProcessManager _processes = _processes;
 
-  public async Task Install(Uri? serverUri = null)
+  public async Task Install(Uri? serverUri = null, Guid? deviceGroupId = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
-      _logger.LogWarning("Installer lock already acquired.  Aborting.");
+      Logger.LogWarning("Installer lock already acquired.  Aborting.");
       return;
     }
 
     try
     {
-      _logger.LogInformation("Install started.");
+      if (serverUri is null && AppOptions.CurrentValue.ServerUri  is null)
+      {
+        Logger.LogWarning(
+          "The ServerUri needs to be provided either via command line arguments or installed appsettings file.  " +
+          "Aborting installation.");
+        return;
+      }
+
+      Logger.LogInformation("Install started.");
 
       if (!_elevationChecker.IsElevated())
       {
-        _logger.LogError("Install command must be run as administrator.");
+        Logger.LogError("Install command must be run as administrator.");
         return;
       }
 
@@ -68,15 +74,15 @@ internal class AgentInstallerWindows(
       var exePath = _environmentHelper.StartupExePath;
       var fileName = Path.GetFileName(exePath);
       var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
-      _fileSystem.CreateDirectory(installDir);
+      FileSystem.CreateDirectory(installDir);
 
       try
       {
-        await retryer.Retry(
+        await _retryer.Retry(
           () =>
           {
-            _logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);
-            _fileSystem.CopyFile(exePath, targetPath, true);
+            Logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);
+            FileSystem.CopyFile(exePath, targetPath, true);
             return Task.CompletedTask;
           },
           5,
@@ -84,16 +90,16 @@ internal class AgentInstallerWindows(
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Unable to copy app to install directory.  Aborting.");
+        Logger.LogError(ex, "Unable to copy app to install directory.  Aborting.");
         return;
       }
 
-      await UpdateAppSettings(serverUri);
+      await UpdateAppSettings(serverUri, deviceGroupId);
 
       var serviceName = GetServiceName();
 
       var subcommand = "run";
-      if (instanceOptions.Value.InstanceId is string instanceId)
+      if (_instanceOptions.Value.InstanceId is string instanceId)
       {
         subcommand += $" -i {instanceId}";
       }
@@ -106,20 +112,20 @@ internal class AgentInstallerWindows(
 
       if (!result.IsSuccess)
       {
-        _logger.LogResult(result);
+        Logger.LogResult(result);
         return;
       }
 
       registryAccessor.EnableSoftwareSas();
 
-      _logger.LogInformation("Creating uninstall registry key.");
+      Logger.LogInformation("Creating uninstall registry key.");
       CreateUninstallKey();
 
-      _logger.LogInformation("Install completed.");
+      Logger.LogInformation("Install completed.");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while installing the ControlR service.");
+      Logger.LogError(ex, "Error while installing the ControlR service.");
     }
     finally
     {
@@ -132,17 +138,17 @@ internal class AgentInstallerWindows(
   {
     if (!await _installLock.WaitAsync(0))
     {
-      _logger.LogWarning("Installer lock already acquired.  Aborting.");
+      Logger.LogWarning("Installer lock already acquired.  Aborting.");
       return;
     }
 
     try
     {
-      _logger.LogInformation("Uninstall started.");
+      Logger.LogInformation("Uninstall started.");
 
       if (!_elevationChecker.IsElevated())
       {
-        _logger.LogError("Uninstall command must be run as administrator.");
+        Logger.LogError("Uninstall command must be run as administrator.");
         return;
       }
 
@@ -160,7 +166,7 @@ internal class AgentInstallerWindows(
       var deleteResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe delete \"{GetServiceName()}\"");
       if (!deleteResult.IsSuccess)
       {
-        _logger.LogError("{msg}", deleteResult.Reason);
+        Logger.LogError("{msg}", deleteResult.Reason);
         return;
       }
 
@@ -170,16 +176,16 @@ internal class AgentInstallerWindows(
         {
           if (i == 5)
           {
-            _logger.LogWarning("Unable to delete installation directory.  Continuing.");
+            Logger.LogWarning("Unable to delete installation directory.  Continuing.");
             break;
           }
 
-          _fileSystem.DeleteDirectory(GetInstallDirectory(), true);
+          FileSystem.DeleteDirectory(GetInstallDirectory(), true);
           break;
         }
         catch (Exception ex)
         {
-          _logger.LogWarning(ex, "Failed to delete install directory.  Retrying in a moment.");
+          Logger.LogWarning(ex, "Failed to delete install directory.  Retrying in a moment.");
           await Task.Delay(3_000);
         }
       }
@@ -190,11 +196,11 @@ internal class AgentInstallerWindows(
 
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 
-      _logger.LogInformation("Uninstall completed.");
+      Logger.LogInformation("Uninstall completed.");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while uninstalling the ControlR service.");
+      Logger.LogError(ex, "Error while uninstalling the ControlR service.");
     }
     finally
     {
@@ -223,7 +229,7 @@ internal class AgentInstallerWindows(
     var version = FileVersionInfo.GetVersionInfo(exePath);
     var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");
 
-    if (instanceOptions.Value.InstanceId is { } instanceId)
+    if (_instanceOptions.Value.InstanceId is { } instanceId)
     {
       displayName += $" ({instanceId})";
       uninstallCommand += $" -i {instanceId}";
@@ -246,32 +252,32 @@ internal class AgentInstallerWindows(
   private string GetInstallDirectory()
   {
     var dir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
       return dir;
     }
 
-    return Path.Combine(dir, instanceOptions.Value.InstanceId);
+    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
   }
 
   private string GetServiceName()
   {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
       return "ControlR.Agent";
     }
 
-    return $"ControlR.Agent ({instanceOptions.Value.InstanceId})";
+    return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
   }
 
   private string GetUninstallKeyPath()
   {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
       return @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR";
     }
 
-    return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({instanceOptions.Value.InstanceId})";
+    return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({_instanceOptions.Value.InstanceId})";
   }
 
   private bool IsRunningFromAppDir()
@@ -286,14 +292,14 @@ internal class AgentInstallerWindows(
 
     var args = Environment.GetCommandLineArgs().Skip(1).StringJoin(" ");
 
-    _logger.LogInformation(
+    Logger.LogInformation(
       "Installer is being run from the app directory.  " +
       "Copying to temp directory and relaunching with args: {args}.",
       args);
 
     var dest = Path.Combine(Path.GetTempPath(), $"ControlR_{Guid.NewGuid()}.exe");
 
-    _fileSystem.CopyFile(exePath, dest, true);
+    FileSystem.CopyFile(exePath, dest, true);
 
     var psi = new ProcessStartInfo
     {
@@ -313,16 +319,16 @@ internal class AgentInstallerWindows(
         ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == GetServiceName());
       if (existingService is not null)
       {
-        _logger.LogInformation("Existing service found.  CanStop value: {value}", existingService.CanStop);
+        Logger.LogInformation("Existing service found.  CanStop value: {value}", existingService.CanStop);
       }
       else
       {
-        _logger.LogInformation("No existing service found.");
+        Logger.LogInformation("No existing service found.");
       }
 
       if (existingService?.CanStop == true)
       {
-        _logger.LogInformation("Stopping service.");
+        Logger.LogInformation("Stopping service.");
         existingService.Stop();
         existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
       }
@@ -339,7 +345,7 @@ internal class AgentInstallerWindows(
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Failed to kill agent process with ID {AgentProcessId}.", proc.Id);
+          Logger.LogError(ex, "Failed to kill agent process with ID {AgentProcessId}.", proc.Id);
         }
       }
 
@@ -347,7 +353,7 @@ internal class AgentInstallerWindows(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while stopping service and processes.");
+      Logger.LogError(ex, "Error while stopping service and processes.");
       return Result.Fail(ex);
     }
   }

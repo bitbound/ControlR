@@ -48,13 +48,13 @@ public interface IViewerHubConnection : IHubConnectionBase
 }
 
 internal class ViewerHubConnection(
-  NavigationManager navMan,
+  NavigationManager _navMan,
+  IBusyCounter _busyCounter,
+  IDeviceCache _devicesCache,
+  ISettings _settings,
   IServiceProvider services,
-  IBusyCounter busyCounter,
-  IDeviceCache devicesCache,
-  ISettings settings,
-  IDelayer delayer,
   IMessenger messenger,
+  IDelayer delayer,
   ILogger<ViewerHubConnection> logger) : HubConnectionBase(services, messenger, delayer, logger), IViewerHubConnection,
   IViewerHubClient
 {
@@ -65,7 +65,7 @@ internal class ViewerHubConnection(
 
   public Task ReceiveDeviceUpdate(DeviceDto device)
   {
-    devicesCache.AddOrUpdate(device);
+    _devicesCache.AddOrUpdate(device);
     Messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
     return Task.CompletedTask;
   }
@@ -149,7 +149,7 @@ internal class ViewerHubConnection(
         }
         else if (alertResult.HadException)
         {
-          alertResult.Log(logger);
+          alertResult.Log(Logger);
         }
 
         return alertResult;
@@ -166,7 +166,7 @@ internal class ViewerHubConnection(
         var result = await Connection.InvokeAsync<Result<ServerStatsDto>>(nameof(IViewerHub.GetServerStats));
         if (!result.IsSuccess)
         {
-          logger.LogResult(result);
+          Logger.LogResult(result);
         }
 
         return result;
@@ -191,7 +191,7 @@ internal class ViewerHubConnection(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting windows sessions.");
+      Logger.LogError(ex, "Error while getting windows sessions.");
       return Result.Fail<WindowsSession[]>(ex);
     }
   }
@@ -222,7 +222,7 @@ internal class ViewerHubConnection(
       }
       catch (Exception ex)
       {
-        logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
+        Logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
       }
     }
   }
@@ -257,18 +257,18 @@ internal class ViewerHubConnection(
         targetSystemSession,
         Connection.ConnectionId,
         agentConnectionId,
-        settings.NotifyUserSessionStart);
+        _settings.NotifyUserSessionStart);
 
       var result = await Connection.InvokeAsync<Result>(
         nameof(IViewerHub.RequestStreamingSession),
         agentConnectionId,
         requestDto);
 
-      return result.Log(logger);
+      return result.Log(Logger);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting remote streaming session.");
+      Logger.LogError(ex, "Error while getting remote streaming session.");
       return Result.Fail(ex);
     }
   }
@@ -344,10 +344,10 @@ internal class ViewerHubConnection(
 
   public async Task Start(CancellationToken cancellationToken = default)
   {
-    using var _ = busyCounter.IncrementBusyCounter();
+    using var _ = _busyCounter.IncrementBusyCounter();
 
     await Connect(
-      () => new Uri($"{navMan.BaseUri}hubs/viewer"),
+      () => new Uri($"{_navMan.BaseUri}hubs/viewer"),
       ConfigureConnection,
       ConfigureHttpOptions,
       OnConnectFailure,
@@ -398,7 +398,7 @@ internal class ViewerHubConnection(
   private async Task PerformAfterConnectInit()
   {
     await GetCurrentAlertFromServer();
-    await devicesCache.SetAllOffline();
+    await _devicesCache.SetAllOffline();
     await RequestDeviceUpdates();
     await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
   }
@@ -407,12 +407,12 @@ internal class ViewerHubConnection(
   {
     try
     {
-      using var _ = logger.BeginScope(callerName);
+      using var _ = Logger.BeginScope(callerName);
       await func.Invoke();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while invoking hub method.");
+      Logger.LogError(ex, "Error while invoking hub method.");
     }
   }
 
@@ -421,12 +421,12 @@ internal class ViewerHubConnection(
   {
     try
     {
-      using var _ = logger.BeginScope(callerName);
+      using var _ = Logger.BeginScope(callerName);
       return await func.Invoke();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while invoking hub method.");
+      Logger.LogError(ex, "Error while invoking hub method.");
       return defaultValue();
     }
   }

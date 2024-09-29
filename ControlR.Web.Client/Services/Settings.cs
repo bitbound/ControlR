@@ -5,7 +5,6 @@ namespace ControlR.Web.Client.Services;
 
 public interface ISettings
 {
-  bool AppendInstanceIdToAgentInstall { get; set; }
   bool HideOfflineDevices { get; set; }
   bool NotifyUserSessionStart { get; set; }
   Task Reset();
@@ -14,12 +13,6 @@ public interface ISettings
 internal class Settings(ILogger<Settings> logger) : ISettings
 {
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
-
-  public bool AppendInstanceIdToAgentInstall
-  {
-    get => GetPref(false);
-    set => SetPref(value);
-  }
 
   public bool HideOfflineDevices
   {

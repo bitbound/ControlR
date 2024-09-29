@@ -45,6 +45,12 @@ public class AppDb(DbContextOptions<AppDb> options)
           Id = 1,
           Name = RoleNames.ServerAdministrator,
           NormalizedName = RoleNames.ServerAdministrator.ToUpper()
+        },
+        new IdentityRole<int>()
+        {
+          Id = 2,
+          Name = RoleNames.DeviceAdministrator,
+          NormalizedName = RoleNames.DeviceAdministrator.ToUpper()
         });
 
     builder

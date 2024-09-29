@@ -9,8 +9,6 @@ public interface IVersionApi
     Task<Result<Version>> GetCurrentAgentVersion();
 
     Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
-
-    Task<Result<Version>> GetCurrentViewerVersion();
 }
 
 internal class VersionApi(
@@ -20,7 +18,6 @@ internal class VersionApi(
     private readonly string _agentVersionEndpoint = "/api/version/agent";
     private readonly HttpClient _client = client;
     private readonly ILogger<VersionApi> _logger = logger;
-    private readonly string _viewerVersionEndpoint = "/api/version/viewer";
 
     public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
     {
@@ -87,24 +84,6 @@ internal class VersionApi(
         {
             _logger.LogError(ex, "Error while checking for new streamer hash.");
             return Result.Fail<byte[]>(ex);
-        }
-    }
-    public async Task<Result<Version>> GetCurrentViewerVersion()
-    {
-        try
-        {
-            var version = await _client.GetFromJsonAsync<Version>(_viewerVersionEndpoint);
-            _logger.LogInformation("Latest viewer version on server: {LatestViewerVersion}", version);
-            if (version is null)
-            {
-                return Result.Fail<Version>("Server version response was empty.");
-            }
-            return Result.Ok(version);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking for new viewer versions.");
-            return Result.Fail<Version>(ex);
         }
     }
 }

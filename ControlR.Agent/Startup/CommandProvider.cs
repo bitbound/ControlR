@@ -13,6 +13,7 @@ internal class CommandProvider
   private static readonly string[] _instanceIdAlias = ["-i", "--instance-id"];
   private static readonly string[] _pipeNameAlias = ["-p", "--pipe-name"];
   private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
+  private static readonly string[] _deviceGroupAlias = ["-g", "--device-group"];
 
   internal static Command GetEchoDesktopCommand(string[] args)
   {
@@ -46,24 +47,31 @@ internal class CommandProvider
       "The fully-qualified server URI to which the agent will connect " +
       "(e.g. 'https://my.example.com' or 'http://my.example.com:8080').");
 
-    var instanceIdOption = new Option<string?>(
+    var instanceIdOption = new Option<string>(
       _instanceIdAlias,
-      "An optional instance ID of the agent, which can be used for multiple agent installations.");
+      "An instance ID for this agent installation, which allows multiple agent installations.  " +
+      "This is typically the server origin (e.g. 'example.controlr.app').");
+
+    var deviceGroupOption = new Option<Guid?>(
+      _deviceGroupAlias,
+      "An optional device group GUID to which the agent should be added.");
+
     instanceIdOption.AddValidator(ValidateInstanceId);
 
     var installCommand = new Command("install", "Install the ControlR service.")
     {
       serverUriOption,
       instanceIdOption,
+      deviceGroupOption,
     };
 
-    installCommand.SetHandler(async (serverUri, instanceId) =>
+    installCommand.SetHandler(async (serverUri, instanceId, deviceGroupId) =>
     {
       using var host = CreateHost(StartupMode.Install, args, instanceId);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
-      await installer.Install(serverUri);
+      await installer.Install(serverUri, deviceGroupId);
       await host.RunAsync();
-    }, serverUriOption, instanceIdOption);
+    }, serverUriOption, instanceIdOption, deviceGroupOption);
 
     return installCommand;
   }

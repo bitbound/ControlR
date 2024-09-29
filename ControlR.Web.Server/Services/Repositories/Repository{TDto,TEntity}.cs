@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ControlR.Web.Server.Services.Repositories;
 
 public interface IRepository<TDto, TEntity>
-  where TDto : EntityDtoBase, new()
+  where TDto : EntityBaseDto, new()
   where TEntity : EntityBase, new()
 {
   Task<TEntity> AddOrUpdate(TDto dto);
@@ -35,7 +35,7 @@ public interface IRepository<TDto, TEntity>
 public class Repository<TDto, TEntity>(
   AppDb appDb,
   IMapper<TDto, TEntity> entityMapper) : IRepository<TDto, TEntity>
-  where TDto : EntityDtoBase, new()
+  where TDto : EntityBaseDto, new()
   where TEntity : EntityBase, new()
 {
   private readonly AppDb _appDb = appDb;

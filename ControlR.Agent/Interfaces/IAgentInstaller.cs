@@ -2,7 +2,7 @@
 
 public interface IAgentInstaller
 {
-    Task Install(Uri? serverUri = null);
+    Task Install(Uri? serverUri = null, Guid? deviceGroupId = null);
 
     Task Uninstall();
 }

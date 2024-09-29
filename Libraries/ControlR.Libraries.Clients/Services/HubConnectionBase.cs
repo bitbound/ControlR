@@ -17,11 +17,13 @@ public abstract class HubConnectionBase(
   IServiceProvider _services,
   IMessenger _messenger,
   IDelayer _delayer,
-  ILogger<HubConnectionBase> logger) : IHubConnectionBase
+  ILogger<HubConnectionBase> _logger) : IHubConnectionBase
 {
   protected readonly IDelayer Delayer = _delayer;
   protected readonly IMessenger Messenger = _messenger;
   protected readonly IServiceProvider Services = _services;
+  protected readonly ILogger<HubConnectionBase> Logger = _logger;
+
   private CancellationToken _cancellationToken;
   private HubConnection? _connection;
   private Func<string, Task> _onConnectFailure = _ => Task.CompletedTask;
@@ -100,22 +102,22 @@ public abstract class HubConnectionBase(
 
         connectionConfig.Invoke(_connection);
 
-        logger.LogInformation("Starting connection to {HubUrl}.", hubUrl);
+        Logger.LogInformation("Starting connection to {HubUrl}.", hubUrl);
 
         await _connection.StartAsync(cancellationToken);
 
-        logger.LogInformation("Connected to server.");
+        Logger.LogInformation("Connected to server.");
 
         break;
       }
       catch (HttpRequestException ex)
       {
-        logger.LogWarning(ex, "Failed to connect to server.  Status Code: {code}", ex.StatusCode);
+        Logger.LogWarning(ex, "Failed to connect to server.  Status Code: {code}", ex.StatusCode);
         await _onConnectFailure.Invoke($"Communication failure.  Status Code: {ex.StatusCode}");
       }
       catch (Exception ex)
       {
-        logger.LogError(ex, "Error in hub connection.");
+        Logger.LogError(ex, "Error in hub connection.");
         await _onConnectFailure.Invoke($"Connection error.  Message: {ex.Message}");
       }
 
@@ -151,19 +153,19 @@ public abstract class HubConnectionBase(
 
   private Task HubConnection_Closed(Exception? arg)
   {
-    logger.LogWarning(arg, "Hub connection closed.");
+    Logger.LogWarning(arg, "Hub connection closed.");
     return Task.CompletedTask;
   }
 
   private Task HubConnection_Reconnected(string? arg)
   {
-    logger.LogInformation("Reconnected to hub.  New connection ID: {id}", arg);
+    Logger.LogInformation("Reconnected to hub.  New connection ID: {id}", arg);
     return Task.CompletedTask;
   }
 
   private Task HubConnection_Reconnecting(Exception? arg)
   {
-    logger.LogInformation(arg, "Reconnecting to hub.");
+    Logger.LogInformation(arg, "Reconnecting to hub.");
     return Task.CompletedTask;
   }
 

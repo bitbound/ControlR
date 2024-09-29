@@ -7,6 +7,7 @@
 @inject ISnackbar Snackbar
 @inject IClipboardManager Clipboard
 @inject IBusyCounter BusyCounter
+@inject IDeviceGroupsApi DeviceGroupsApi
 
 <PageTitle>Deploy</PageTitle>
 
@@ -79,24 +80,50 @@
 
   <div>
     <MudText Typo="Typo.subtitle2" Color="Color.Info">
-      Append Instance ID
+      Device Group
     </MudText>
     <MudText Typo="Typo.body1" GutterBottom>
-      If enabled, the server's hostname will be used as an identifier for the agent installation.
-      This allows for having multiple agent installations on the same machine, with each agent
-      targeting a different server.
+      If enabled, the device will be added to the specified group during installation.
     </MudText>
-    <MudText Typo="Typo.body1">
-      This is an advanced function, primarily used for testing.  If unsure, you can leave this
-      option disable.
-    </MudText>
-    <MudCheckBox @bind-Value="Settings.AppendInstanceIdToAgentInstall" Class="mb-3" />
+    <MudCheckBox @bind-Value="_addToDeviceGroup" Label="Add to device group" />
+
+    <MudSelect T="DeviceGroupDto" @bind-Value="_selectedDeviceGroup" Disabled="!_addToDeviceGroup" Immediate FullWidth="false" Label="Device Group">
+      <MudSelectItem T="DeviceGroupDto" Value="@(null)">
+        None
+      </MudSelectItem>
+
+      @foreach (var group in _deviceGroups)
+      {
+        <MudSelectItem Value="@group">
+          @(group.Name)
+        </MudSelectItem>
+      }
+    </MudSelect>
   </div>
 
 </div>
 
 
 @code {
+  private bool _addToDeviceGroup;
+  private DeviceGroupDto? _selectedDeviceGroup;
+  private List<DeviceGroupDto> _deviceGroups = [];
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    var result = await DeviceGroupsApi.GetAllDeviceGroups();
+    if (result.IsSuccess)
+    {
+      _deviceGroups = result.Value;
+    }
+    else
+    {
+      Snackbar.Add("Failed to get device groups", Severity.Error);     
+    }
+  }
+
   private string MacArm64DeployScript
   {
     get
@@ -175,7 +202,13 @@
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
-    return $"-s {NavMan.Uri} -i {serverUri.Authority}";
+    var args = $"-s {NavMan.Uri} -i {serverUri.Authority}";
+    if (_addToDeviceGroup && _selectedDeviceGroup is not null)
+    {
+      args += $" -g {_selectedDeviceGroup.Uid}";
+    }
+
+    return args;
   }
 
   private Uri GetServerUri()

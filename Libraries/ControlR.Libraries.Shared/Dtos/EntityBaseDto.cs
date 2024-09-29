@@ -2,7 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ControlR.Libraries.Shared.Dtos;
 
-public class EntityDtoBase
+[MessagePackObject]
+public class EntityBaseDto
 {
   [MsgPackKey]
   [Display(Name = "Id")]
