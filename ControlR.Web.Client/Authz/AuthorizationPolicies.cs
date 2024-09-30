@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace ControlR.Web.Client.Auth;
+namespace ControlR.Web.Client.Authz;
 
 public static class AuthorizationPolicies
 {

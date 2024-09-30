@@ -2,5 +2,5 @@
 
 public static class UserClaimTypes
 {
-  public const string Tenant = "controlr:tenant:uid";
+  public const string TenantUid = "controlr:tenant:uid";
 }

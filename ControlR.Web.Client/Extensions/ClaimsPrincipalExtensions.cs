@@ -20,7 +20,7 @@ public static class ClaimsPrincipalExtensions
       return false;
     }
 
-    var tenantClaim = user.FindFirst(UserClaimTypes.Tenant);
+    var tenantClaim = user.FindFirst(UserClaimTypes.TenantUid);
     if (!Guid.TryParse(tenantClaim?.Value, out var uid))
     {
       return false;

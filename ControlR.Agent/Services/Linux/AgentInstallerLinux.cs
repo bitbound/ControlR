@@ -77,6 +77,7 @@ internal class AgentInstallerLinux(
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
       await UpdateAppSettings(serverUri);
+      await CreateDeviceOnServer(serverUri, deviceGroupId);
       var serviceName = GetServiceName();
 
       var psi = new ProcessStartInfo

@@ -78,6 +78,7 @@ internal class AgentInstallerMac(
       _logger.LogInformation("Writing service file.");
       await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
       await UpdateAppSettings(serverUri);
+      await CreateDeviceOnServer(serverUri, deviceGroupId);
 
       var psi = new ProcessStartInfo
       {

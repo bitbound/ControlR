@@ -1,8 +1,12 @@
 ﻿using ControlR.Web.Client.Extensions;
+using ControlR.Web.Server.Authz.Policies;
+using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Api;
 
@@ -14,13 +18,26 @@ public class DevicesController : ControllerBase
 {
 
   [HttpGet]
-  public async Task<List<DeviceDto>> Get(
-    [FromServices] IRepository repo)
+  public async Task<ActionResult<List<DeviceDto>>> Get(
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService)
   {
-    var tenantId = User.IsAuthenticated
-    var devices = await repo.GetAll<Device>();
-    return devices
-      .Select(x => x.ToDto())
-      .ToList();
+    var user = await userManager.GetUserAsync(User) ??
+      throw new InvalidOperationException("Unable to find user.");
+
+    var deviceQuery = appDb.Devices.Where(x => x.TenantId == user.TenantId);
+    var authorizedDevices = new List<DeviceDto>();
+
+    await foreach (var device in deviceQuery.AsAsyncEnumerable())
+    {
+      var authResult = await authorizationService.AuthorizeAsync(User, device, RemoteControlByDevicePolicy.PolicyName);
+      if (authResult.Succeeded)
+      {
+        authorizedDevices.Add(device.ToDto());
+      }
+    }
+
+    return authorizedDevices;
   }
 }

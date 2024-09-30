@@ -14,15 +14,15 @@ public class DeviceGroupsController : ControllerBase
 {
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<DeviceGroupDto>>> Get(
-    [FromServices]IRepository repo)
+  public async Task<ActionResult<List<DeviceGroupDto>>> Get(
+    [FromServices] IRepository repo)
   {
     if (!User.TryGetTenantUid(out var tenantUid))
     {
       return NotFound("User tenant not found.");
     }
 
-    return await repo
-      .GetWhere<DeviceGroup, DeviceGroupDto>(x => new DeviceGroupDto(x.Name, x.Id, x.Uid));
+    // TODO
+    return Ok(new List<DeviceGroupDto>());
   }
 }

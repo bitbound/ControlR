@@ -94,7 +94,9 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      await UpdateAppSettings(serverUri, deviceGroupId);
+      await UpdateAppSettings(serverUri);
+
+      await CreateDeviceOnServer(serverUri, deviceGroupId);
 
       var serviceName = GetServiceName();
 
