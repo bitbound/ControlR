@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Services;
-
-namespace ControlR.Agent.Startup;
+﻿namespace ControlR.Agent.Startup;
 
 internal static class PathConstants
 {

@@ -1,6 +1,4 @@
-﻿using MudBlazor;
-
-namespace ControlR.Web.Client.Extensions;
+﻿namespace ControlR.Web.Client.Extensions;
 public static class AlertSeverityExtensions
 {
     public static Severity ToMudSeverity(this AlertSeverity severity)

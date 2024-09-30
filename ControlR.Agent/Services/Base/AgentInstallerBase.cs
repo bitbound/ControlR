@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Services.Base;

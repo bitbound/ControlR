@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Hosting;
 
 namespace ControlR.Libraries.Shared.Extensions;
 

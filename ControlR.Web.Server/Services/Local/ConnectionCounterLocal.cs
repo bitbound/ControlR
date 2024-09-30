@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Server.Services.Interfaces;
-
-namespace ControlR.Web.Server.Services.Local;
+﻿namespace ControlR.Web.Server.Services.Local;
 
 
 public class ConnectionCounterLocal : IConnectionCounter

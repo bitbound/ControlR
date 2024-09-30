@@ -1,5 +1,4 @@
 ﻿using ControlR.Agent.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Agent.Services.Linux;

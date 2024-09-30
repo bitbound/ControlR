@@ -1,8 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-using ControlR.Web.Server.Authz.Policies;
-using ControlR.Web.Server.Components.Account;
-using ControlR.Web.Server.Services.Repositories;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;

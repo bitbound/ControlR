@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 
 namespace ControlR.Web.Server.Authz.Policies;
 

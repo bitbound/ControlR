@@ -1,6 +1,4 @@
-﻿using MudBlazor;
-
-namespace ControlR.Web.Client.Models.Messages;
+﻿namespace ControlR.Web.Client.Models.Messages;
 
 /// <summary>
 /// This message allows using <see cref="ISnackbar"/> outside of UI elements.

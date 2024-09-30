@@ -1,7 +1,4 @@
-﻿using ControlR.Libraries.Shared.Collections;
-using ControlR.Libraries.Shared.Dtos;
-
-namespace ControlR.Libraries.Shared.Models;
+﻿namespace ControlR.Libraries.Shared.Models;
 
 [MessagePackObject]
 public class AgentAppOptions

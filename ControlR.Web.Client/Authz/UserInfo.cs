@@ -1,5 +1,3 @@
-using System.Security.Claims;
-
 namespace ControlR.Web.Client.Auth;
 
 // Add properties to this class and update the server and client AuthenticationStateProviders

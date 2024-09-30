@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using MudBlazor;
 
 namespace ControlR.Web.Client.Components;
 public class ViewportAwareComponent : ComponentBase, IBrowserViewportObserver

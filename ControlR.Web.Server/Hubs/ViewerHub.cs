@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;

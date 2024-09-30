@@ -1,4 +1,3 @@
-using Aspire.Hosting;
 using ControlR.Web.ServiceDefaults;
 
 var builder = DistributedApplication.CreateBuilder(args);
