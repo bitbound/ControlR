@@ -1,12 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace ControlR.Web.Server.Data.Migrations
 {
-  /// <inheritdoc />
-  public partial class Initial : Migration
+    /// <inheritdoc />
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -226,7 +229,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     TotalStorage = table.Column<double>(type: "double precision", nullable: false),
                     UsedMemory = table.Column<double>(type: "double precision", nullable: false),
                     UsedStorage = table.Column<double>(type: "double precision", nullable: false),
-                    DeviceGroupId = table.Column<int>(type: "integer", nullable: false),
+                    DeviceGroupId = table.Column<int>(type: "integer", nullable: true),
                     TenantId = table.Column<int>(type: "integer", nullable: true),
                     Uid = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()")
                 },
@@ -237,8 +240,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         name: "FK_Devices_DeviceGroups_DeviceGroupId",
                         column: x => x.DeviceGroupId,
                         principalTable: "DeviceGroups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Devices_Tenants_TenantId",
                         column: x => x.TenantId,
@@ -249,7 +251,11 @@ namespace ControlR.Web.Server.Data.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
-                values: new object[] { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" });
+                values: new object[,]
+                {
+                    { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" },
+                    { 2, null, "DeviceAdministrator", "DEVICEADMINISTRATOR" }
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",

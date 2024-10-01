@@ -1,17 +1,20 @@
 ﻿using ControlR.Web.Server.Mappers;
 using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using System.Net.Sockets;
 
 namespace ControlR.Web.Server.Hubs;
 
 public class AgentHub(
+  AppDb _appDb,
   IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
   ISystemTime _systemTime,
   IServerStatsProvider _serverStatsProvider,
   IConnectionCounter _connectionCounter,
   IRepository<DeviceFromAgentDto, Device> _deviceRepo,
   IMapper<Device, DeviceDto> _deviceDtoMapper,
+  IWebHostEnvironment _hostEnvironment,
   ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
   private DeviceDto? Device
@@ -68,9 +71,16 @@ public class AgentHub(
         }
       }
 
-      var updateResult = await _deviceRepo.AddOrUpdate(device);
+      var deviceEntity = await _deviceRepo.AddOrUpdate(device);
 
-      Device = _deviceDtoMapper.Map(updateResult);
+      if (_hostEnvironment.IsDevelopment() && deviceEntity.TenantId is null)
+      {
+        var firstTenant = await _appDb.Tenants.OrderBy(x => x.Id).FirstOrDefaultAsync();
+        deviceEntity.TenantId = firstTenant?.Id;
+        await _appDb.SaveChangesAsync();
+      }
+
+      Device = _deviceDtoMapper.Map(deviceEntity);
 
       Device.ConnectionId = Context.ConnectionId;
 

@@ -119,8 +119,8 @@ public interface IHubConnection<out THub> : IAsyncDisposable
 
 /// <inheritdoc />
 internal sealed class HubConnection<THub, TClient>(
-  IServiceProvider serviceProvider,
-  ILogger<HubConnection<THub, TClient>> logger) : IHubConnection<THub>
+  IServiceProvider _serviceProvider,
+  ILogger<HubConnection<THub, TClient>> _logger) : IHubConnection<THub>
   where TClient : class
   where THub : class
 {
@@ -163,7 +163,7 @@ internal sealed class HubConnection<THub, TClient>(
           return true;
         }
 
-        logger.LogInformation("Connecting to SignalR hub ({HubEndpoint}).", hubEndpoint);
+        _logger.LogInformation("Connecting to SignalR hub ({HubEndpoint}).", hubEndpoint);
 
         if (_connection is not null)
         {
@@ -175,7 +175,7 @@ internal sealed class HubConnection<THub, TClient>(
           {
             // This can happen if the connection is already stopped.  We could check the
             // state first, but it might change in between the check and the call to StopAsync.
-            logger.LogInformation(ex, "Exception while stopping connection.  This is probably normal.");
+            _logger.LogInformation(ex, "Exception while stopping connection.  This is probably normal.");
           }
 
           await _connection.DisposeAsync();
@@ -196,7 +196,7 @@ internal sealed class HubConnection<THub, TClient>(
 
         await _connection.StartAsync(cancellationToken);
 
-        logger.LogInformation("Connection successful.");
+        _logger.LogInformation("Connection successful.");
 
         return true;
       }
@@ -206,7 +206,7 @@ internal sealed class HubConnection<THub, TClient>(
       }
       catch (Exception ex)
       {
-        logger.LogError(ex, "Failed to initialize hub connection.");
+        _logger.LogError(ex, "Failed to initialize hub connection.");
       }
       finally
       {
@@ -220,7 +220,7 @@ internal sealed class HubConnection<THub, TClient>(
 
       retryCount++;
       var delay = GetNextRetryDelay(retryCount);
-      logger.LogInformation("Retrying connection in {WaitSeconds} seconds.", delay.TotalSeconds);
+      _logger.LogInformation("Retrying connection in {WaitSeconds} seconds.", delay.TotalSeconds);
       await Task.Delay(delay, cancellationToken);
     }
     return ConnectionState == HubConnectionState.Connected;
@@ -259,10 +259,8 @@ internal sealed class HubConnection<THub, TClient>(
 
   private async Task BindClientInterface(HubConnection connection)
   {
-    var client = serviceProvider.GetRequiredService<TClient>();
+    var client = _serviceProvider.GetRequiredService<TClient>();
     var clientMethods = typeof(TClient).GetMethods(_bindingFlags);
-
-
 
     await foreach (var method in clientMethods.ToAsyncEnumerable())
     {
@@ -301,10 +299,10 @@ internal sealed class HubConnection<THub, TClient>(
 
   private HubConnection BuildConnection(Uri hubEndpoint, Action<HttpConnectionOptions> configure)
   {
-    var builder = serviceProvider.GetRequiredService<IHubConnectionBuilder>();
+    var builder = _serviceProvider.GetRequiredService<IHubConnectionBuilder>();
     var connection = builder
       .WithUrl(hubEndpoint, configure)
-      .WithAutomaticReconnect(new RetryPolicy(this, logger))
+      .WithAutomaticReconnect(new RetryPolicy(this, _logger))
       .Build();
 
     connection.Closed += HandleClosed;
@@ -357,7 +355,7 @@ internal sealed class HubConnection<THub, TClient>(
       }
       else
       {
-        logger.LogWarning(
+        _logger.LogWarning(
           "Unexpected return type from client method: {ReturnValueType}.",
           returnValue?.GetType().Name);
       }
@@ -365,7 +363,7 @@ internal sealed class HubConnection<THub, TClient>(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while invoking client method.");
+      _logger.LogError(ex, "Error while invoking client method.");
     }
     return null;
   }
@@ -381,7 +379,7 @@ internal sealed class HubConnection<THub, TClient>(
       }
       else
       {
-        logger.LogWarning(
+        _logger.LogWarning(
           "Unexpected return type from client method: {ReturnValueType}.",
           returnValue?.GetType().Name);
       }
@@ -389,7 +387,7 @@ internal sealed class HubConnection<THub, TClient>(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while invoking client method.");
+      _logger.LogError(ex, "Error while invoking client method.");
     }
     return null;
   }

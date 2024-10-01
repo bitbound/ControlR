@@ -2,7 +2,9 @@
 using System.Text;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Signalr.Client;
 
 namespace ControlR.Agent.Services;
 
@@ -17,19 +19,19 @@ public interface ITerminalSession : IDisposable
 }
 
 internal class TerminalSession(
-  Guid terminalId,
-  string viewerConnectionId,
-  IFileSystem fileSystem,
-  IProcessManager processManager,
-  IEnvironmentHelper environment,
-  ISystemTime systemTime,
-  IAgentHubConnection hubConnection,
-  ILogger<TerminalSession> logger) : ITerminalSession
+  Guid _terminalId,
+  string _viewerConnectionId,
+  IFileSystem _fileSystem,
+  IProcessManager _processManager,
+  IEnvironmentHelper _environment,
+  ISystemTime _systemTime,
+  IHubConnection<IAgentHub> _hubConnection,
+  ILogger<TerminalSession> _logger) : ITerminalSession
 {
   private readonly StringBuilder _inputBuilder = new();
   private readonly Process _shellProcess = new();
   private readonly SemaphoreSlim _writeLock = new(1, 1);
-  public Guid TerminalId { get; } = terminalId;
+  public Guid TerminalId { get; } = _terminalId;
 
   public event EventHandler? ProcessExited;
 
@@ -78,7 +80,7 @@ internal class TerminalSession(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while writing input to command shell.");
+      _logger.LogError(ex, "Error while writing input to command shell.");
 
       // Something's wrong.  Let the next command start a new session.
       Dispose();
@@ -102,7 +104,7 @@ internal class TerminalSession(
       RedirectStandardError = true,
       RedirectStandardInput = true,
       RedirectStandardOutput = true,
-      WorkingDirectory = environment.StartupDirectory
+      WorkingDirectory = _environment.StartupDirectory
     };
 
     if (SessionKind == TerminalSessionKind.PowerShell)
@@ -138,7 +140,7 @@ internal class TerminalSession(
 
   private async Task<string> GetShellProcessName()
   {
-    switch (environment.Platform)
+    switch (_environment.Platform)
     {
       case SystemPlatform.Windows:
         var result = await TryGetPwshPath();
@@ -152,13 +154,13 @@ internal class TerminalSession(
         return "powershell.exe";
 
       case SystemPlatform.Linux:
-        if (fileSystem.FileExists("/bin/bash"))
+        if (_fileSystem.FileExists("/bin/bash"))
         {
           SessionKind = TerminalSessionKind.Bash;
           return "/bin/bash";
         }
 
-        if (fileSystem.FileExists("/bin/sh"))
+        if (_fileSystem.FileExists("/bin/sh"))
         {
           SessionKind = TerminalSessionKind.Sh;
           return "/bin/sh";
@@ -188,13 +190,13 @@ internal class TerminalSession(
         TerminalId,
         e.Data ?? string.Empty,
         TerminalOutputKind.StandardError,
-        systemTime.Now);
+        _systemTime.Now);
 
-      await hubConnection.SendTerminalOutputToViewer(viewerConnectionId, outputDto);
+      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending terminal output.");
+      _logger.LogError(ex, "Error while sending terminal output.");
     }
   }
 
@@ -211,13 +213,13 @@ internal class TerminalSession(
         TerminalId,
         e.Data ?? string.Empty,
         TerminalOutputKind.StandardOutput,
-        systemTime.Now);
+        _systemTime.Now);
 
-      await hubConnection.SendTerminalOutputToViewer(viewerConnectionId, outputDto);
+      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending terminal output.");
+      _logger.LogError(ex, "Error while sending terminal output.");
     }
   }
 
@@ -225,10 +227,10 @@ internal class TerminalSession(
   {
     try
     {
-      var output = await processManager.GetProcessOutput("where.exe", "pwsh.exe");
+      var output = await _processManager.GetProcessOutput("where.exe", "pwsh.exe");
       if (!output.IsSuccess)
       {
-        logger.LogResult(output);
+        _logger.LogResult(output);
         return Result.Fail<string>("Failed to find path to pwsh.exe.");
       }
 
@@ -236,7 +238,7 @@ internal class TerminalSession(
       if (split.Length == 0)
       {
         var result = Result.Fail<string>("Path to pwsh not found.");
-        logger.LogResult(result);
+        _logger.LogResult(result);
         return result;
       }
 
@@ -244,7 +246,7 @@ internal class TerminalSession(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while trying to get pwsh path.");
+      _logger.LogError(ex, "Error while trying to get pwsh path.");
       return Result.Fail<string>("An error occurred.");
     }
   }

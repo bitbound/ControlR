@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20240928152858_Initial")]
+    [Migration("20241001141129_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -122,7 +122,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("DeviceGroupId")
+                    b.Property<int?>("DeviceGroupId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Drives")
@@ -285,6 +285,12 @@ namespace ControlR.Web.Server.Data.Migrations
                             Id = 1,
                             Name = "ServerAdministrator",
                             NormalizedName = "SERVERADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "DeviceAdministrator",
+                            NormalizedName = "DEVICEADMINISTRATOR"
                         });
                 });
 
@@ -406,9 +412,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.DeviceGroup", "DeviceGroup")
                         .WithMany("Devices")
-                        .HasForeignKey("DeviceGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DeviceGroupId");
 
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
                         .WithMany("Devices")

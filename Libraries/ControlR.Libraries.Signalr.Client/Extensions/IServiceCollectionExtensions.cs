@@ -7,11 +7,11 @@ public static class IServiceCollectionExtensions
 {
   /// <summary>
   /// <para>
-  ///   Creates a transient registration in DI for <typeparamref name="TClientImpl"/>
+  ///   Creates a scoped registration in DI for <typeparamref name="TClientImpl"/>
   ///   that resolves to <typeparamref name="TClient"/>.
   /// </para>
   /// <para>
-  ///   Creates a transient registration in DI for <see cref="IHubConnection{THub, TClient}"/>.
+  ///   Creates a scoped registration in DI for <see cref="IHubConnection{THub, TClient}"/>.
   /// </para>
   /// <para>
   ///   Consumers should use the <see cref="IHubConnection{THub, TClient}"/> interface for
@@ -23,7 +23,7 @@ public static class IServiceCollectionExtensions
   ///   These methods will be invokable by the client.
   /// </typeparam>
   /// <typeparam name="TClient">
-  ///   An interface representing the public methods on the client-side hub.
+  ///   An interface representing the public methods on the client.
   ///   These methods will be invokable by the server.
   /// </typeparam>
   /// <typeparam name="TClientImpl">
@@ -48,8 +48,8 @@ public static class IServiceCollectionExtensions
     }
 
     services.TryAddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-    services.TryAddTransient<TClient, TClientImpl>();
-    services.TryAddTransient<
+    services.TryAddSingleton<TClient, TClientImpl>();
+    services.TryAddSingleton<
       IHubConnection<THub>,
       HubConnection<THub, TClient>>();
 

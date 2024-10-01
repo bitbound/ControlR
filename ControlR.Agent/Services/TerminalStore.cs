@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
@@ -29,7 +31,7 @@ internal class TerminalStore(
       var processManager = serviceProvider.GetRequiredService<IProcessManager>();
       var environment = serviceProvider.GetRequiredService<IEnvironmentHelper>();
       var systemTime = serviceProvider.GetRequiredService<ISystemTime>();
-      var hubConnection = serviceProvider.GetRequiredService<IAgentHubConnection>();
+      var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
       var logger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
 
       var terminalSession = new TerminalSession(

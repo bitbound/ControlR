@@ -119,7 +119,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("DeviceGroupId")
+                    b.Property<int?>("DeviceGroupId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Drives")
@@ -409,9 +409,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.DeviceGroup", "DeviceGroup")
                         .WithMany("Devices")
-                        .HasForeignKey("DeviceGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DeviceGroupId");
 
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
                         .WithMany("Devices")

@@ -9,8 +9,12 @@ using ControlR.Agent.Services.Windows;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.DevicesNative.Services;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Hubs;
+using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Libraries.Signalr.Client;
+using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,9 +85,10 @@ internal static class HostApplicationBuilderExtensions
     {
       services.AddSingleton<IAgentUpdater, AgentUpdater>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-      services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddSingleton<ITerminalStore, TerminalStore>();
       services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
+      services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>();
+      services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
       services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
       services.AddHostedService(services => services.GetRequiredService<IAgentHubConnection>());

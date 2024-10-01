@@ -45,7 +45,7 @@ public class Device : EntityBase
   public double UsedStorage { get; set; }
 
   public DeviceGroup? DeviceGroup { get; set; }
-  public int DeviceGroupId { get; set; }
+  public int? DeviceGroupId { get; set; }
   public Tenant? Tenant { get; set; }
   public int? TenantId { get; set; }
 }
