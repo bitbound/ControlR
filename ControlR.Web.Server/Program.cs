@@ -99,7 +99,7 @@ builder.Services
 builder.Services
   .AddAuthorizationBuilder()
   .AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator)
-  .AddPolicy(RemoteControlByDevicePolicy.PolicyName, RemoteControlByDevicePolicy.Create());
+  .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 
 // Add Identity services.
 builder.Services

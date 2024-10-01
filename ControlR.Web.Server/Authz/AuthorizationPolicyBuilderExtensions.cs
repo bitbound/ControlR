@@ -8,6 +8,14 @@ public static class AuthorizationPolicyBuilderExtensions
     this AuthorizationPolicyBuilder builder,
     Func<IServiceProvider, AuthorizationHandlerContext, Task<bool>> assertion)
   {
+    builder.Requirements.Add(new ServiceProviderAsyncRequirement(assertion));
+    return builder;
+  }
+
+  public static AuthorizationPolicyBuilder RequireServiceProviderAssertion(
+  this AuthorizationPolicyBuilder builder,
+  Func<IServiceProvider, AuthorizationHandlerContext, bool> assertion)
+  {
     builder.Requirements.Add(new ServiceProviderRequirement(assertion));
     return builder;
   }

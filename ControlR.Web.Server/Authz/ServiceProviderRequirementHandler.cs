@@ -8,9 +8,13 @@ public class ServiceProviderRequirementHandler(IServiceProvider serviceProvider)
 
   public async Task HandleAsync(AuthorizationHandlerContext context)
   {
-    foreach (var requirement in context.Requirements.OfType<ServiceProviderRequirement>())
+    var requirements = context.Requirements
+      .OfType<ServiceProviderRequirement>()
+      .ToAsyncEnumerable();
+
+    await foreach (var requirement in requirements)
     {
-      if (await requirement.Assertion.Invoke(_serviceProvider, context))
+      if (requirement.Assertion.Invoke(_serviceProvider, context))
       {
         context.Succeed(requirement);
       }

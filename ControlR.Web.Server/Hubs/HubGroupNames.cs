@@ -8,4 +8,9 @@ public static class HubGroupNames
   {
     return $"device-{deviceId}";
   }
+
+  public static string GetUserRoleGroupName(string roleName, Guid tenantUid)
+  {
+    return $"tenant-{tenantUid}-user-role-{roleName}";
+  }
 }

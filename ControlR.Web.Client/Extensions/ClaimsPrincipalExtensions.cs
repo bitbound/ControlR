@@ -9,8 +9,28 @@ public static class ClaimsPrincipalExtensions
     return user.Identity?.IsAuthenticated ?? false;
   }
 
-  public static bool TryGetTenantUid(
+  public static bool TryGetTenantId(
     this ClaimsPrincipal user,
+    out int tenantId)
+  {
+    tenantId = 0;
+    if (!user.IsAuthenticated())
+    {
+      return false;
+    }
+
+    var tenantClaim = user.FindFirst(UserClaimTypes.TenantId);
+    if (!int.TryParse(tenantClaim?.Value, out var id))
+    {
+      return false;
+    }
+
+    tenantId = id;
+    return true;
+  }
+
+  public static bool TryGetTenantUid(
+      this ClaimsPrincipal user,
     out Guid tenantUid)
   {
     tenantUid = Guid.Empty;

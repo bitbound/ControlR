@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
@@ -263,17 +264,23 @@ public class ViewerHub(
         return;
       }
 
-      // TODO: Add user to groups.
-      //await Groups.AddToGroupAsync(Context.ConnectionId, publicKey);
-
-      if (IsServerAdmin())
+      if (Context.User.TryGetTenantUid(out var tenantUid))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-
-        var getResult = await serverStatsProvider.GetServerStats();
-        if (getResult.IsSuccess)
+        if (Context.User.IsInRole(RoleNames.ServerAdministrator))
         {
-          await Clients.Caller.ReceiveServerStats(getResult.Value);
+          await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+
+          var getResult = await serverStatsProvider.GetServerStats();
+          if (getResult.IsSuccess)
+          {
+            await Clients.Caller.ReceiveServerStats(getResult.Value);
+          }
+        }
+
+        if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
+        {
+          var hubGroupName = HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceAdministrator, tenantUid);
+          await Groups.AddToGroupAsync(Context.ConnectionId, hubGroupName);
         }
       }
     }

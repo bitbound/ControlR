@@ -31,11 +31,10 @@ public static class CollectionExtensions
 
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> enumerable)
     {
-        await Task.Yield();
-
         foreach (var item in enumerable)
         {
             yield return item;
+            await Task.Yield();
         }
     }
 

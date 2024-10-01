@@ -27,7 +27,7 @@ public class DevicesController : ControllerBase
 
     await foreach (var device in deviceQuery.AsAsyncEnumerable())
     {
-      var authResult = await authorizationService.AuthorizeAsync(User, device, RemoteControlByDevicePolicy.PolicyName);
+      var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
       if (authResult.Succeeded)
       {
         authorizedDevices.Add(device.ToDto());
