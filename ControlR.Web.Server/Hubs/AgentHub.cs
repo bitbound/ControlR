@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Server.Mappers;
-using ControlR.Web.Server.Services.Repositories;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Sockets;
 
@@ -12,8 +10,6 @@ public class AgentHub(
   ISystemTime _systemTime,
   IServerStatsProvider _serverStatsProvider,
   IConnectionCounter _connectionCounter,
-  IRepository<DeviceFromAgentDto, Device> _deviceRepo,
-  IMapper<Device, DeviceDto> _deviceDtoMapper,
   IWebHostEnvironment _hostEnvironment,
   ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
 {
@@ -71,7 +67,7 @@ public class AgentHub(
         }
       }
 
-      var deviceEntity = await _deviceRepo.AddOrUpdate(device);
+      var deviceEntity = await _appDb.AddOrUpdate<DeviceFromAgentDto, Device>(device);
 
       if (_hostEnvironment.IsDevelopment() && deviceEntity.TenantId is null)
       {
@@ -80,7 +76,7 @@ public class AgentHub(
         await _appDb.SaveChangesAsync();
       }
 
-      Device = _deviceDtoMapper.Map(deviceEntity);
+      Device = deviceEntity.ToDto();
 
       Device.ConnectionId = Context.ConnectionId;
 
@@ -128,7 +124,7 @@ public class AgentHub(
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveDeviceUpdate(cachedDevice);
         
-        await _deviceRepo.AddOrUpdate(cachedDevice);
+        await _appDb.AddOrUpdate<DeviceDto, Device>(cachedDevice);
       }
 
       await base.OnDisconnectedAsync(exception);

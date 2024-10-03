@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Enums;
+﻿using ControlR.Libraries.Shared.Dtos.Interfaces;
+using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
@@ -6,7 +7,7 @@ using System.Runtime.InteropServices;
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public class DeviceFromAgentDto : EntityBaseDto
+public class DeviceFromAgentDto : IHasSettableUid
 {
   [MsgPackKey]
   [Display(Name = "Agent Version")]
@@ -82,4 +83,8 @@ public class DeviceFromAgentDto : EntityBaseDto
   [MsgPackKey]
   [Display(Name = "Storage Used")]
   public double UsedStorage { get; set; }
+
+  [MsgPackKey]
+  [Display(Name = "Uid")]
+  public Guid Uid { get; set; }
 }

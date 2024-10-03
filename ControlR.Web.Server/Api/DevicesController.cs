@@ -22,7 +22,10 @@ public class DevicesController : ControllerBase
     var user = await userManager.GetUserAsync(User) ??
       throw new InvalidOperationException("Unable to find user.");
 
-    var deviceQuery = appDb.Devices.Where(x => x.TenantId == user.TenantId);
+    var deviceQuery = appDb.Devices
+      .AsNoTracking()
+      .Where(x => x.TenantId == user.TenantId);
+
     var authorizedDevices = new List<DeviceDto>();
 
     await foreach (var device in deviceQuery.AsAsyncEnumerable())

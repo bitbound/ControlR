@@ -1,5 +1,4 @@
 ﻿using ControlR.Web.Client.Extensions;
-using ControlR.Web.Server.Services.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
@@ -15,7 +14,7 @@ public class DeviceGroupsController : ControllerBase
 
   [HttpGet]
   public async Task<ActionResult<List<DeviceGroupDto>>> Get(
-    [FromServices] IRepository repo)
+    [FromServices] AppDb db)
   {
     if (!User.TryGetTenantUid(out var tenantUid))
     {

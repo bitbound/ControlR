@@ -524,7 +524,9 @@ public partial class RemoteDisplay : IAsyncDisposable
       _canvasCssHeight = newHeight;
 
       _lastPinchDistance = pinchDistance;
-      await InvokeAsync(StateHasChanged);
+
+      // TODO: Needed?  Makes a flicker.
+      //await InvokeAsync(StateHasChanged);
 
       var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
       var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
