@@ -83,6 +83,9 @@
     Logger.LogInformation("User created a new account with password.");
 
     await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantUid, $"{tenant.Uid}"));
+    Logger.LogInformation("Added user's tenant ID claim.");
+
+    await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
     Logger.LogInformation("Added user's tenant UID claim.");
 
     if (await UserManager.Users.CountAsync() == 1)

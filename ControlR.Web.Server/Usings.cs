@@ -19,3 +19,6 @@ global using ControlR.Libraries.Shared.Dtos.ServerApi;
 global using ControlR.Web.Server.Authz.Policies;
 global using ControlR.Web.Server.Data;
 global using Microsoft.AspNetCore.Identity;
+global using Microsoft.AspNetCore.Authorization;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Options;

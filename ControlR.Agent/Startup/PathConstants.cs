@@ -28,7 +28,7 @@ internal static class PathConstants
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "ControlR");
 
-            if (EnvironmentHelper.Instance.IsDebug)
+            if (SystemEnvironment.Instance.IsDebug)
             {
                 settingsDir = Path.Combine(settingsDir, "Debug");
             }
@@ -43,7 +43,7 @@ internal static class PathConstants
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
             var settingsDir = "/etc/controlr";
-            if (EnvironmentHelper.Instance.IsDebug)
+            if (SystemEnvironment.Instance.IsDebug)
             {
                 settingsDir += "/debug";
             }

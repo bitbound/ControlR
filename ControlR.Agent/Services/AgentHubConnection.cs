@@ -9,8 +9,9 @@ using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Services;
 
-internal interface IAgentHubConnection : IHostedService
+public interface IAgentHubConnection : IAsyncDisposable
 {
+  Task Connect(CancellationToken cancellationToken);
   Task SendDeviceHeartbeat();
   Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
@@ -27,6 +28,38 @@ internal class AgentHubConnection(
   ILogger<AgentHubConnection> _logger)
   : IAgentHubConnection
 {
+  public async Task Connect(CancellationToken cancellationToken)
+  {
+    var hubEndpoint = new Uri(_settings.ServerUri, "/hubs/agent");
+
+    var result = await _hubConnection.Connect(
+      hubEndpoint,
+      true,
+      options =>
+      {
+        options.SkipNegotiation = true;
+        options.Transports = HttpTransportType.WebSockets;
+      },
+      _appLifetime.ApplicationStopping);
+
+    if (!result)
+    {
+      _logger.LogError("Failed to connect to hub.");
+      return;
+    }
+
+    await SendDeviceHeartbeat();
+
+    _hubConnection.Reconnected += HubConnection_Reconnected;
+
+    _logger.LogInformation("Connected to hub.");
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    await _hubConnection.DisposeAsync();
+  }
+
   public async Task SendDeviceHeartbeat()
   {
     try
@@ -79,45 +112,13 @@ internal class AgentHubConnection(
       _logger.LogError(ex, "Error while sending output to viewer.");
     }
   }
-
-  public async Task StartAsync(CancellationToken cancellationToken)
-  {
-    var hubEndpoint = new Uri(_settings.ServerUri, "/hubs/agent");
-
-    var result = await _hubConnection.Connect(
-      hubEndpoint,
-      true,
-      options =>
-      {
-        options.SkipNegotiation = true;
-        options.Transports = HttpTransportType.WebSockets;
-      },
-      _appLifetime.ApplicationStopping);
-
-    if (!result)
-    {
-      _logger.LogError("Failed to connect to hub.");
-      return;
-    }
-
-    await SendDeviceHeartbeat();
-
-    _hubConnection.Reconnected += HubConnection_Reconnected;
-
-    _logger.LogInformation("Connected to hub.");
-  }
-
-  public async Task StopAsync(CancellationToken cancellationToken)
-  {
-    await _hubConnection.DisposeAsync();
-  }
-
   private async Task HubConnection_Reconnected(string? arg)
   {
     await SendDeviceHeartbeat();
     await _agentUpdater.CheckForUpdate();
     await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
   }
+
 
   private class RetryPolicy : IRetryPolicy
   {

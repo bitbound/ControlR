@@ -21,7 +21,7 @@ internal class AgentUpdater(
   IReleasesApi releasesApi,
   IFileSystem fileSystem,
   IProcessManager processInvoker,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   ISettingsProvider settings,
   IHostApplicationLifetime appLifetime,
   IOptions<InstanceOptions> instanceOptions,

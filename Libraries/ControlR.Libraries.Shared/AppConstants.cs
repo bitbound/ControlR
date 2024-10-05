@@ -16,7 +16,7 @@ public static partial class AppConstants
   {
     get
     {
-      return EnvironmentHelper.Instance.Platform switch
+      return SystemEnvironment.Instance.Platform switch
       {
         SystemPlatform.Windows => "ControlR.Streamer.exe",
         SystemPlatform.Linux => "ControlR.Streamer",
@@ -32,7 +32,7 @@ public static partial class AppConstants
   {
     get
     {
-      return EnvironmentHelper.Instance.Platform switch
+      return SystemEnvironment.Instance.Platform switch
       {
         SystemPlatform.Windows => "ControlR.Streamer.zip",
         _ => throw new PlatformNotSupportedException()
@@ -57,7 +57,7 @@ public static partial class AppConstants
   {
     get
     {
-      return EnvironmentHelper.Instance.Platform switch
+      return SystemEnvironment.Instance.Platform switch
       {
         SystemPlatform.Windows => "ControlR.Viewer.msix",
         SystemPlatform.Android => "ControlR.Viewer.apk",

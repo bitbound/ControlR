@@ -15,7 +15,7 @@ internal class StreamerUpdaterWindows(
   IServiceProvider serviceProvider,
   IFileSystem fileSystem,
   IDownloadsApi downloadsApi,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   IVersionApi versionApi,
   IReleasesApi releasesApi,
   ISettingsProvider settings,

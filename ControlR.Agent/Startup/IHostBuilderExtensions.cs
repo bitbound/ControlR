@@ -40,7 +40,7 @@ internal static class HostApplicationBuilderExtensions
       .AddSystemd();
     configuration.Sources.Clear();
 
-    if (!EnvironmentHelper.Instance.IsDebug)
+    if (!SystemEnvironment.Instance.IsDebug)
     {
       configuration.Sources.Clear();
     }
@@ -67,7 +67,7 @@ internal static class HostApplicationBuilderExtensions
 
     services.AddSingleton<ISettingsProvider, SettingsProvider>();
     services.AddSingleton<IProcessManager, ProcessManager>();
-    services.AddSingleton<IEnvironmentHelper>(_ => EnvironmentHelper.Instance);
+    services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     services.AddSingleton<IFileSystem, FileSystem>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
@@ -87,11 +87,11 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
       services.AddSingleton<ITerminalStore, TerminalStore>();
       services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
-      services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>();
+      services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
       services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
-      services.AddHostedService(services => services.GetRequiredService<IAgentHubConnection>());
+      services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService<AgentHeartbeatTimer>();
       services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
       services.AddHostedService<DtoHandler>();

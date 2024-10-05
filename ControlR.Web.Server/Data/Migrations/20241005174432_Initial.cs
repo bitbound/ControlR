@@ -212,7 +212,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     AgentVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Alias = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     CpuUtilization = table.Column<double>(type: "double precision", nullable: false),
-                    CurrentUsers = table.Column<string>(type: "text", nullable: false),
+                    CurrentUsers = table.Column<string[]>(type: "text[]", nullable: false),
                     Drives = table.Column<string>(type: "text", nullable: false),
                     Is64Bit = table.Column<bool>(type: "boolean", nullable: false),
                     IsOnline = table.Column<bool>(type: "boolean", nullable: false),

@@ -12,7 +12,7 @@ internal class AgentInstallerLinux(
   IHostApplicationLifetime lifetime,
   IFileSystem fileSystem,
   IProcessManager processInvoker,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
@@ -21,7 +21,7 @@ internal class AgentInstallerLinux(
   : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
-  private readonly IEnvironmentHelper _environment = environmentHelper;
+  private readonly ISystemEnvironment _environment = environmentHelper;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;

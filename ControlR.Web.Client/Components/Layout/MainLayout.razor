@@ -167,7 +167,7 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Value.Start();
+        await ViewerHub.Value.Connect();
       }
     }
   }
@@ -216,7 +216,7 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Value.Start();
+        await ViewerHub.Value.Connect();
       }
     }
     catch (Exception ex)

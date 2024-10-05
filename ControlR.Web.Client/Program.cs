@@ -21,18 +21,6 @@ builder.Services
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
-builder.Services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
-builder.Services.AddHttpClient<IDeviceGroupsApi, DeviceGroupsApi>(ConfigureHttpClient);
-builder.Services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>(ConfigureHttpClient);
-
-builder.Services.AddLazyDi();
-builder.Services.AddControlrWebClient();
+builder.Services.AddControlrWebClient(builder.HostEnvironment.BaseAddress);
 
 await builder.Build().RunAsync();
-
-return;
-
-void ConfigureHttpClient(IServiceProvider services, HttpClient client)
-{
-  client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
-}

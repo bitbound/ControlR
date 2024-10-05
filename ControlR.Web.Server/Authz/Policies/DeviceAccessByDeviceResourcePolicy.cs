@@ -18,7 +18,7 @@ public static class DeviceAccessByDeviceResourcePolicy
           return false;
         }
 
-        if (handlerCtx.User.TryGetTenantId(out var tenantId))
+        if (!handlerCtx.User.TryGetTenantId(out var tenantId))
         {
           return false;
         }

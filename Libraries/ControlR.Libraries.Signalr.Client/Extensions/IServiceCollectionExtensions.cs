@@ -31,8 +31,13 @@ public static class IServiceCollectionExtensions
   ///   will handle the RPC invocations from the server.
   /// </typeparam>
   /// <param name="services"></param>
+  /// <param name="clientLifetime">
+  ///   The service lifetime to use for the hub connection client.
+  /// </param>
   /// <returns></returns>
-  public static IServiceCollection AddStronglyTypedSignalrClient<THub, TClient, TClientImpl>(this IServiceCollection services)
+  public static IServiceCollection AddStronglyTypedSignalrClient<THub, TClient, TClientImpl>(
+    this IServiceCollection services, 
+    ServiceLifetime clientLifetime)
     where THub : class
     where TClient : class
     where TClientImpl : class, TClient
@@ -48,10 +53,30 @@ public static class IServiceCollectionExtensions
     }
 
     services.TryAddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-    services.TryAddSingleton<TClient, TClientImpl>();
-    services.TryAddSingleton<
-      IHubConnection<THub>,
-      HubConnection<THub, TClient>>();
+
+    switch (clientLifetime)
+    {
+      case ServiceLifetime.Singleton:
+        {
+          services.TryAddSingleton<TClient, TClientImpl>();
+          services.TryAddSingleton<IHubConnection<THub>, HubConnection<THub, TClient>>();
+          break;
+        }
+      case ServiceLifetime.Scoped:
+        {
+          services.TryAddScoped<TClient, TClientImpl>();
+          services.TryAddScoped<IHubConnection<THub>, HubConnection<THub, TClient>>();
+          break;
+        }
+      case ServiceLifetime.Transient:
+        {
+          services.TryAddTransient<TClient, TClientImpl>();
+          services.TryAddTransient<IHubConnection<THub>, HubConnection<THub, TClient>>();
+          break;
+        }
+      default:
+        throw new InvalidOperationException($"Unknown service lifetime: {clientLifetime}");
+    }
 
     return services;
   }

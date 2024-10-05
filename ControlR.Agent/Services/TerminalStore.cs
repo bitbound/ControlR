@@ -29,7 +29,7 @@ internal class TerminalStore(
     {
       var fileSystem = serviceProvider.GetRequiredService<IFileSystem>();
       var processManager = serviceProvider.GetRequiredService<IProcessManager>();
-      var environment = serviceProvider.GetRequiredService<IEnvironmentHelper>();
+      var environment = serviceProvider.GetRequiredService<ISystemEnvironment>();
       var systemTime = serviceProvider.GetRequiredService<ISystemTime>();
       var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
       var logger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();

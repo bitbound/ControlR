@@ -164,9 +164,13 @@
     </TemplateColumn>
 
     <PropertyColumn Property="x => x!.CurrentUsers"
-                    Title="Current User"
+                    Title="Current Users"
                     Sortable="true"
-                    Filterable="true"/>
+                    Filterable="true">
+      <CellTemplate>
+        @(string.Join(", ", context.Item.CurrentUsers))
+      </CellTemplate>              
+    </PropertyColumn>
 
     <TemplateColumn T="DeviceDto"
                     Title="CPU"

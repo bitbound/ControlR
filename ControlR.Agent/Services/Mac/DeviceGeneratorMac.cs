@@ -6,7 +6,7 @@ namespace ControlR.Agent.Services.Mac;
 
 internal class DeviceDataGeneratorMac(
   IProcessManager processInvoker,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   ILogger<DeviceDataGeneratorMac> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;

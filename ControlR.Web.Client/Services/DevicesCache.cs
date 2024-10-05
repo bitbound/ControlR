@@ -6,7 +6,7 @@ namespace ControlR.Web.Client.Services;
 public interface IDeviceCache
 {
   IEnumerable<DeviceDto> Devices { get; }
-  Task AddOrUpdate(DeviceDto device);
+  void AddOrUpdate(DeviceDto device);
 
   void Clear();
 
@@ -25,10 +25,9 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
 
   public IEnumerable<DeviceDto> Devices => _cache.Values;
 
-  public Task AddOrUpdate(DeviceDto device)
+  public void AddOrUpdate(DeviceDto device)
   {
     _cache.AddOrUpdate(device.Uid, device, (_, _) => device);
-    return Task.CompletedTask;
   }
 
   public void Clear()

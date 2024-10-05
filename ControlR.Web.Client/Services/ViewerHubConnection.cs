@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http.Connections.Client;
@@ -8,10 +9,14 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Services;
 
-public interface IViewerHubConnection : IHubConnectionBase
+public interface IViewerHubConnection
 {
+  HubConnectionState ConnectionState { get; }
+  bool IsConnected { get; }
   Task ClearAlert();
   Task CloseTerminalSession(Guid deviceId, Guid terminalId);
+
+  Task Connect(CancellationToken cancellationToken = default);
 
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
 
@@ -25,9 +30,7 @@ public interface IViewerHubConnection : IHubConnectionBase
 
   Task InvokeCtrlAltDel(Guid deviceId);
 
-  Task Reconnect(CancellationToken cancellationToken);
-
-  Task RequestDeviceUpdates();
+  Task RefreshDevices();
 
   Task<Result> RequestStreamingSession(
     string agentConnectionId,
@@ -44,63 +47,29 @@ public interface IViewerHubConnection : IHubConnectionBase
   Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
-  Task Start(CancellationToken cancellationToken = default);
 }
 
 internal class ViewerHubConnection(
   NavigationManager _navMan,
+  IHubConnection<IViewerHub> _viewerHub,
   IBusyCounter _busyCounter,
   IDeviceCache _devicesCache,
   ISettings _settings,
-  IServiceProvider services,
-  IMessenger messenger,
-  IDelayer delayer,
-  ILogger<ViewerHubConnection> logger) : HubConnectionBase(services, messenger, delayer, logger), IViewerHubConnection,
-  IViewerHubClient
+  IMessenger _messenger,
+  IDelayer _delayer,
+  ILogger<ViewerHubConnection> _logger) : IViewerHubConnection
 {
-  public async Task ReceiveAlertBroadcast(AlertBroadcastDto alert)
-  {
-    await Messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alert));
-  }
-
-  public Task ReceiveDeviceUpdate(DeviceDto device)
-  {
-    _devicesCache.AddOrUpdate(device);
-    Messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
-    return Task.CompletedTask;
-  }
-
-  public async Task ReceiveServerStats(ServerStatsDto serverStats)
-  {
-    var message = new ServerStatsUpdateMessage(serverStats);
-    await Messenger.Send(message);
-  }
-
-
-  public Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
-  {
-    Messenger.Send(new StreamerDownloadProgressMessage(progressDto.StreamingSessionId, progressDto.Progress,
-      progressDto.Message));
-    return Task.CompletedTask;
-  }
-
-
-  public Task ReceiveTerminalOutput(TerminalOutputDto output)
-  {
-    Messenger.Send(new TerminalOutputMessage(output));
-    return Task.CompletedTask;
-  }
-
+  public HubConnectionState ConnectionState => _viewerHub.ConnectionState;
+  public bool IsConnected => _viewerHub.IsConnected;
   public async Task ClearAlert()
   {
     await TryInvoke(
       async () =>
       {
         await WaitForConnection();
-        await Connection.InvokeAsync<Result>(nameof(IViewerHub.ClearAlert));
+        await _viewerHub.Server.ClearAlert();
       });
   }
-
 
   public async Task CloseTerminalSession(Guid deviceId, Guid terminalId)
   {
@@ -108,8 +77,32 @@ internal class ViewerHubConnection(
     {
       var request = new CloseTerminalRequestDto(terminalId);
       var wrapper = DtoWrapper.Create(request, DtoType.CloseTerminalRequest);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), deviceId, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(deviceId, wrapper);
     });
+  }
+
+  public async Task Connect(CancellationToken cancellationToken = default)
+  {
+    using var _ = _busyCounter.IncrementBusyCounter();
+
+    while (true)
+    {
+      var result = await _viewerHub.Connect(
+        hubEndpoint: new Uri($"{_navMan.BaseUri}hubs/viewer"),
+        autoRetry: true,
+        cancellationToken: cancellationToken);
+
+      if (result)
+      {
+        break;
+      }
+    }
+
+    _viewerHub.Closed += Connection_Closed;
+    _viewerHub.Reconnecting += Connection_Reconnecting;
+    _viewerHub.Reconnected += Connection_Reconnected;
+    _viewerHub.ConnectThrew += Connection_Threw;
+    await PerformAfterConnectInit();
   }
 
   public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
@@ -117,11 +110,11 @@ internal class ViewerHubConnection(
     return await TryInvoke(
       async () =>
       {
-        Guard.IsNotNull(Connection.ConnectionId);
+        Guard.IsNotNull(_viewerHub.ConnectionId);
 
-        var request = new TerminalSessionRequest(terminalId, Connection.ConnectionId);
-        return await Connection.InvokeAsync<Result<TerminalSessionRequestResult>>(
-          nameof(IViewerHub.CreateTerminalSession), agentConnectionId, request);
+        var request = new TerminalSessionRequest(terminalId, _viewerHub.ConnectionId);
+
+        return await _viewerHub.Server.CreateTerminalSession(agentConnectionId, request);
       },
       () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
   }
@@ -131,8 +124,7 @@ internal class ViewerHubConnection(
     return await TryInvoke(
       async () =>
       {
-        return await Connection.InvokeAsync<Result<AgentAppSettings>>(nameof(IViewerHub.GetAgentAppSettings),
-          agentConnectionId);
+        return await _viewerHub.Server.GetAgentAppSettings(agentConnectionId);
       },
       () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
   }
@@ -142,14 +134,15 @@ internal class ViewerHubConnection(
     return await TryInvoke(
       async () =>
       {
-        var alertResult = await Connection.InvokeAsync<Result<AlertBroadcastDto>>(nameof(IViewerHub.GetCurrentAlert));
+        await WaitForConnection();
+        var alertResult = await _viewerHub.Server.GetCurrentAlert();
         if (alertResult.IsSuccess)
         {
-          await Messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
+          await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
         }
         else if (alertResult.HadException)
         {
-          alertResult.Log(Logger);
+          alertResult.Log(_logger);
         }
 
         return alertResult;
@@ -157,16 +150,16 @@ internal class ViewerHubConnection(
       () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
   }
 
-
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
     return await TryInvoke(
       async () =>
       {
-        var result = await Connection.InvokeAsync<Result<ServerStatsDto>>(nameof(IViewerHub.GetServerStats));
+        await WaitForConnection();
+        var result = await _viewerHub.Server.GetServerStats();
         if (!result.IsSuccess)
         {
-          Logger.LogResult(result);
+          _logger.LogResult(result);
         }
 
         return result;
@@ -177,7 +170,7 @@ internal class ViewerHubConnection(
   public async Task<Uri?> GetWebsocketBridgeOrigin()
   {
     return await TryInvoke(
-      async () => { return await Connection.InvokeAsync<Uri?>(nameof(IViewerHub.GetWebSocketBridgeOrigin)); },
+      _viewerHub.Server.GetWebSocketBridgeOrigin,
       () => null);
   }
 
@@ -185,13 +178,12 @@ internal class ViewerHubConnection(
   {
     try
     {
-      var sessions =
-        await Connection.InvokeAsync<WindowsSession[]>(nameof(IViewerHub.GetWindowsSessions), device.ConnectionId);
+      var sessions = await _viewerHub.Server.GetWindowsSessions(device.ConnectionId);
       return Result.Ok(sessions);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while getting windows sessions.");
+      _logger.LogError(ex, "Error while getting windows sessions.");
       return Result.Fail<WindowsSession[]>(ex);
     }
   }
@@ -202,39 +194,22 @@ internal class ViewerHubConnection(
     {
       var dto = new InvokeCtrlAltDelRequestDto();
       var dtoWrapper = DtoWrapper.Create(dto, DtoType.InvokeCtrlAltDel);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), deviceId, dtoWrapper);
+      await _viewerHub.Server.SendDtoToAgent(deviceId, dtoWrapper);
     });
   }
 
-  public async Task Reconnect(CancellationToken cancellationToken)
-  {
-    while (!cancellationToken.IsCancellationRequested)
-    {
-      try
-      {
-        if (IsConnected)
-        {
-          await Connection.StopAsync(cancellationToken);
-        }
 
-        await Start(cancellationToken);
-        break;
-      }
-      catch (Exception ex)
-      {
-        Logger.LogDebug(ex, "Failed to reconnect to viewer hub.");
-      }
-    }
-  }
-
-  public async Task RequestDeviceUpdates()
+  public async Task RefreshDevices()
   {
     await TryInvoke(async () =>
     {
       await WaitForConnection();
-      var dto = new DeviceUpdateRequestDto();
-      var wrapper = DtoWrapper.Create(dto, DtoType.DeviceUpdateRequest);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToUserGroups), wrapper);
+      await _devicesCache.SetAllOffline();
+      await foreach (var device in _viewerHub.Server.StreamAuthorizedDevices())
+      {
+        _devicesCache.AddOrUpdate(device);
+        await _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
+      }
     });
   }
 
@@ -246,7 +221,7 @@ internal class ViewerHubConnection(
   {
     try
     {
-      if (Connection.ConnectionId is null)
+      if (_viewerHub.ConnectionId is null)
       {
         return Result.Fail("Connection has closed.");
       }
@@ -255,20 +230,17 @@ internal class ViewerHubConnection(
         sessionId,
         websocketUri,
         targetSystemSession,
-        Connection.ConnectionId,
+        _viewerHub.ConnectionId,
         agentConnectionId,
         _settings.NotifyUserSessionStart);
 
-      var result = await Connection.InvokeAsync<Result>(
-        nameof(IViewerHub.RequestStreamingSession),
-        agentConnectionId,
-        requestDto);
+      var result = await _viewerHub.Server.RequestStreamingSession(agentConnectionId, requestDto);
 
-      return result.Log(Logger);
+      return result.Log(_logger);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while getting remote streaming session.");
+      _logger.LogError(ex, "Error while getting remote streaming session.");
       return Result.Fail(ex);
     }
   }
@@ -279,9 +251,7 @@ internal class ViewerHubConnection(
       async () =>
       {
         await WaitForConnection();
-        var wrapper = DtoWrapper.Create(agentAppSettings, DtoType.SendAppSettings);
-        return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAgentAppSettings), agentConnectionId,
-          wrapper);
+        return await _viewerHub.Server.SendAgentAppSettings(agentConnectionId, agentAppSettings);
       },
       () => Result.Fail("Failed to send app settings"));
   }
@@ -292,7 +262,7 @@ internal class ViewerHubConnection(
     {
       var dto = new TriggerAgentUpdateDto();
       var wrapper = DtoWrapper.Create(dto, DtoType.TriggerAgentUpdate);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), device.Uid, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(device.Uid, wrapper);
     });
   }
 
@@ -303,7 +273,7 @@ internal class ViewerHubConnection(
       {
         await WaitForConnection();
         var dto = new AlertBroadcastDto(message, severity);
-        await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendAlertBroadcast), dto);
+        await _viewerHub.Server.SendAlertBroadcast(dto);
       });
   }
 
@@ -314,7 +284,7 @@ internal class ViewerHubConnection(
     {
       var powerDto = new PowerStateChangeDto(powerStateType);
       var wrapper = DtoWrapper.Create(powerDto, DtoType.PowerStateChange);
-      await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToAgent), device.Uid, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(device.Uid, wrapper);
     });
   }
 
@@ -325,7 +295,7 @@ internal class ViewerHubConnection(
       {
         var request = new TerminalInputDto(terminalId, input);
         var wrapper = DtoWrapper.Create(request, DtoType.TerminalInput);
-        return await Connection.InvokeAsync<Result>(nameof(IViewerHub.SendTerminalInput), agentConnectionId, wrapper);
+        return await _viewerHub.Server.SendTerminalInput(agentConnectionId, request);
       },
       () => Result.Fail("Failed to send terminal input"));
   }
@@ -337,47 +307,12 @@ internal class ViewerHubConnection(
       {
         var request = new WakeDeviceDto(macAddresses);
         var wrapper = DtoWrapper.Create(request, DtoType.WakeDevice);
-        await Connection.InvokeAsync(nameof(IViewerHub.SendDtoToUserGroups), wrapper);
+        await _viewerHub.Server.SendDtoToUserGroups(wrapper);
       });
   }
-
-
-  public async Task Start(CancellationToken cancellationToken = default)
-  {
-    using var _ = _busyCounter.IncrementBusyCounter();
-
-    await Connect(
-      () => new Uri($"{_navMan.BaseUri}hubs/viewer"),
-      ConfigureConnection,
-      ConfigureHttpOptions,
-      OnConnectFailure,
-      true,
-      cancellationToken);
-
-    await PerformAfterConnectInit();
-  }
-
-
-  private void ConfigureConnection(HubConnection connection)
-  {
-    connection.Closed += Connection_Closed;
-    connection.Reconnecting += Connection_Reconnecting;
-    connection.Reconnected += Connection_Reconnected;
-    connection.On<DeviceDto>(nameof(ReceiveDeviceUpdate), ReceiveDeviceUpdate);
-    connection.On<TerminalOutputDto>(nameof(ReceiveTerminalOutput), ReceiveTerminalOutput);
-    connection.On<AlertBroadcastDto>(nameof(ReceiveAlertBroadcast), ReceiveAlertBroadcast);
-    connection.On<ServerStatsDto>(nameof(ReceiveServerStats), ReceiveServerStats);
-    connection.On<StreamerDownloadProgressDto>(nameof(ReceiveStreamerDownloadProgress),
-      ReceiveStreamerDownloadProgress);
-  }
-
-  private void ConfigureHttpOptions(HttpConnectionOptions options)
-  {
-  }
-
   private async Task Connection_Closed(Exception? arg)
   {
-    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
   private async Task Connection_Reconnected(string? arg)
@@ -387,32 +322,31 @@ internal class ViewerHubConnection(
 
   private async Task Connection_Reconnecting(Exception? arg)
   {
-    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
-  private async Task OnConnectFailure(string reason)
+  private async Task Connection_Threw(Exception ex)
   {
-    await Messenger.Send(new ToastMessage(reason, Severity.Error));
+    await _messenger.Send(new ToastMessage(ex.Message, Severity.Error));
   }
 
   private async Task PerformAfterConnectInit()
   {
     await GetCurrentAlertFromServer();
-    await _devicesCache.SetAllOffline();
-    await RequestDeviceUpdates();
-    await Messenger.Send(new HubConnectionStateChangedMessage(ConnectionState));
+    await RefreshDevices();
+    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
   private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")
   {
     try
     {
-      using var _ = Logger.BeginScope(callerName);
+      using var _ = _logger.BeginScope(callerName);
       await func.Invoke();
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while invoking hub method.");
+      _logger.LogError(ex, "Error while invoking hub method.");
     }
   }
 
@@ -421,14 +355,19 @@ internal class ViewerHubConnection(
   {
     try
     {
-      using var _ = Logger.BeginScope(callerName);
+      using var _ = _logger.BeginScope(callerName);
       return await func.Invoke();
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while invoking hub method.");
+      _logger.LogError(ex, "Error while invoking hub method.");
       return defaultValue();
     }
+  }
+
+  private async Task WaitForConnection()
+  {
+    await _delayer.WaitForAsync(() => _viewerHub.IsConnected, TimeSpan.MaxValue);
   }
 
   private class RetryPolicy : IRetryPolicy

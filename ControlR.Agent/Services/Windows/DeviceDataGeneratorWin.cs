@@ -9,7 +9,7 @@ namespace ControlR.Agent.Services.Windows;
 [SupportedOSPlatform("windows6.0.6000")]
 internal class DeviceDataGeneratorWin(
   IWin32Interop win32Interop,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   ILogger<DeviceDataGeneratorWin> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;

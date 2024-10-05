@@ -1,8 +1,6 @@
 using System.Text.Json;
 using ControlR.Web.Server.Converters;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace ControlR.Web.Server.Data;
@@ -11,11 +9,6 @@ public class AppDb(DbContextOptions<AppDb> options)
   : IdentityDbContext<AppUser, IdentityRole<int>, int>(options)
 {
   private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
-
-  private static readonly ValueComparer<string[]> _stringArrayComparer = new(
-    (a, b) => (a ?? Array.Empty<string>()).SequenceEqual(b ?? Array.Empty<string>()),
-    c => c.Aggregate(0, (a, b) => HashCode.Combine(a, b.GetHashCode())),
-    c => c.ToArray());
 
   private static readonly ValueComparer<List<Drive>> _driveListComparer = new(
     (a, b) => (a ?? new List<Drive>()).SequenceEqual(b ?? new List<Drive>()),
@@ -52,14 +45,6 @@ public class AppDb(DbContextOptions<AppDb> options)
           Name = RoleNames.DeviceAdministrator,
           NormalizedName = RoleNames.DeviceAdministrator.ToUpper()
         });
-
-    builder
-      .Entity<Device>()
-      .Property(x => x.CurrentUsers)
-      .HasConversion(
-        x => JsonSerializer.Serialize(x, _jsonOptions),
-        x => JsonSerializer.Deserialize<string[]>(x, _jsonOptions) ?? Array.Empty<string>(),
-        _stringArrayComparer);
 
     builder
       .Entity<Device>()

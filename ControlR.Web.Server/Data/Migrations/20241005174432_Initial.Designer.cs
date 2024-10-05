@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20241001141129_Initial")]
+    [Migration("20241005174432_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -118,9 +118,9 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<double>("CpuUtilization")
                         .HasColumnType("double precision");
 
-                    b.Property<string>("CurrentUsers")
+                    b.Property<string[]>("CurrentUsers")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text[]");
 
                     b.Property<int?>("DeviceGroupId")
                         .HasColumnType("integer");

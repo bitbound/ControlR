@@ -3,7 +3,7 @@ using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Libraries.Shared.Services;
 
-public interface IEnvironmentHelper
+public interface ISystemEnvironment
 {
   bool IsDebug { get; }
   bool IsMobileDevice { get; }
@@ -14,9 +14,9 @@ public interface IEnvironmentHelper
   string StartupExePath { get; }
 }
 
-internal class EnvironmentHelper : IEnvironmentHelper
+internal class SystemEnvironment : ISystemEnvironment
 {
-  public static EnvironmentHelper Instance { get; } = new();
+  public static SystemEnvironment Instance { get; } = new();
 
   public bool IsDebug
   {

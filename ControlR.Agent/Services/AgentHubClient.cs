@@ -21,7 +21,7 @@ namespace ControlR.Agent.Services;
 
 internal class AgentHubClient(
   IAgentHubConnection _hubConnection,
-  IEnvironmentHelper _environmentHelper,
+  ISystemEnvironment _environmentHelper,
   IStreamerLauncher _streamerLauncher,
   IMessenger _messenger,
   ITerminalStore _terminalStore,

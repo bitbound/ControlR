@@ -23,7 +23,7 @@ internal class TerminalSession(
   string _viewerConnectionId,
   IFileSystem _fileSystem,
   IProcessManager _processManager,
-  IEnvironmentHelper _environment,
+  ISystemEnvironment _environment,
   ISystemTime _systemTime,
   IHubConnection<IAgentHub> _hubConnection,
   ILogger<TerminalSession> _logger) : ITerminalSession

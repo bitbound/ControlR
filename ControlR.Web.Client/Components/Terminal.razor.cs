@@ -80,7 +80,7 @@ public partial class Terminal : IAsyncDisposable
     {
       await base.OnInitializedAsync();
 
-      Messenger.Register<TerminalOutputMessage>(this, HandleTerminalOutputMessage);
+      Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
       var result = await ViewerHub.CreateTerminalSession(Device.ConnectionId, Id);
       if (!result.IsSuccess)
@@ -136,9 +136,11 @@ public partial class Terminal : IAsyncDisposable
     return _inputHistory.ElementAt(_inputHistoryIndex);
   }
 
-  private async Task HandleTerminalOutputMessage(object subscriber, TerminalOutputMessage message)
+  private async Task HandleTerminalOutputMessage(object subscriber, DtoReceivedMessage<TerminalOutputDto> message)
   {
-    if (message.OutputDto.TerminalId != Id)
+    var dto = message.Dto;
+
+    if (dto.TerminalId != Id)
     {
       return;
     }
@@ -148,7 +150,7 @@ public partial class Terminal : IAsyncDisposable
       _ = Output.TryDequeue(out _);
     }
 
-    Output.Enqueue(message.OutputDto);
+    Output.Enqueue(dto);
     await InvokeAsync(StateHasChanged);
 
     await JsInterop.ScrollToEnd(_terminalOutputContainer);

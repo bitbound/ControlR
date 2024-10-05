@@ -2,6 +2,7 @@ using System.Net;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Client.Authz;
+using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Hubs;
@@ -99,6 +100,9 @@ builder.Services
   .AddAuthorizationBuilder()
   .AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator)
   .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
+
+builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
 
 // Add Identity services.
 builder.Services

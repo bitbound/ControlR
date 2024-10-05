@@ -1,13 +1,14 @@
 ﻿using System.Runtime.CompilerServices;
 using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
+  AppDb _appDb,
+  UserManager<AppUser> _userManager,
+  IAuthorizationService _authzService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IConnectionCounter connectionCounter,
@@ -155,8 +156,64 @@ public class ViewerHub(
     }
   }
 
+  public override async Task OnConnectedAsync()
+  {
+    try
+    {
+      connectionCounter.IncrementViewerCount();
+      await SendUpdatedConnectionCountToAdmins();
+
+      await base.OnConnectedAsync();
+
+      if (Context.User is null)
+      {
+        logger.LogWarning("User is null.  Authorize tag should have prevented this.");
+        return;
+      }
+
+      if (Context.User.TryGetTenantUid(out var tenantUid))
+      {
+        if (Context.User.IsInRole(RoleNames.ServerAdministrator))
+        {
+          await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+
+          var getResult = await serverStatsProvider.GetServerStats();
+          if (getResult.IsSuccess)
+          {
+            await Clients.Caller.ReceiveServerStats(getResult.Value);
+          }
+        }
+
+        if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
+        {
+          var hubGroupName = HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceAdministrator, tenantUid);
+          await Groups.AddToGroupAsync(Context.ConnectionId, hubGroupName);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error during viewer connect.");
+    }
+  }
+
+  public override async Task OnDisconnectedAsync(Exception? exception)
+  {
+    try
+    {
+      connectionCounter.DecrementViewerCount();
+      await SendUpdatedConnectionCountToAdmins();
+      // TODO: Remove from groups.
+      await base.OnDisconnectedAsync(exception);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error during viewer disconnect.");
+    }
+  }
+
   public async Task<Result> RequestStreamingSession(
-    string agentConnectionId,
+        string agentConnectionId,
     StreamerSessionRequestDto sessionRequestDto)
   {
     try
@@ -248,60 +305,29 @@ public class ViewerHub(
       return Result.Fail("Agent could not be reached.");
     }
   }
-
-  public override async Task OnConnectedAsync()
+  public async IAsyncEnumerable<DeviceDto> StreamAuthorizedDevices()
   {
-    try
+    if (Context.User is null)
     {
-      connectionCounter.IncrementViewerCount();
-      await SendUpdatedConnectionCountToAdmins();
+      yield break;
+    }
 
-      await base.OnConnectedAsync();
+    var user = await _userManager.GetUserAsync(Context.User) ??
+      throw new InvalidOperationException("Unable to find user.");
 
-      if (Context.User is null)
+    var deviceQuery = _appDb.Devices
+      .AsNoTracking()
+      .Where(x => x.TenantId == user.TenantId);
+
+    var authorizedDevices = new List<DeviceDto>();
+
+    await foreach (var device in deviceQuery.AsAsyncEnumerable())
+    {
+      var authResult = await _authzService.AuthorizeAsync(Context.User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+      if (authResult.Succeeded)
       {
-        logger.LogWarning("User is null.  Authorize tag should have prevented this.");
-        return;
+        yield return device.ToDto();
       }
-
-      if (Context.User.TryGetTenantUid(out var tenantUid))
-      {
-        if (Context.User.IsInRole(RoleNames.ServerAdministrator))
-        {
-          await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-
-          var getResult = await serverStatsProvider.GetServerStats();
-          if (getResult.IsSuccess)
-          {
-            await Clients.Caller.ReceiveServerStats(getResult.Value);
-          }
-        }
-
-        if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
-        {
-          var hubGroupName = HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceAdministrator, tenantUid);
-          await Groups.AddToGroupAsync(Context.ConnectionId, hubGroupName);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error during viewer connect.");
-    }
-  }
-
-  public override async Task OnDisconnectedAsync(Exception? exception)
-  {
-    try
-    {
-      connectionCounter.DecrementViewerCount();
-      await SendUpdatedConnectionCountToAdmins();
-      // TODO: Remove from groups.
-      await base.OnDisconnectedAsync(exception);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error during viewer disconnect.");
     }
   }
 

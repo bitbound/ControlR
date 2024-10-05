@@ -6,7 +6,7 @@ namespace ControlR.Agent.Services.Linux;
 
 internal class DeviceDataGeneratorLinux(
   IProcessManager processInvoker,
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   ILogger<DeviceDataGeneratorLinux> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;

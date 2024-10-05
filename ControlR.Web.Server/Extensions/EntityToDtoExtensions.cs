@@ -27,6 +27,8 @@ public static class EntityToDtoExtensions
       TenantId = device.TenantId ?? 0,
       TotalMemory = device.TotalMemory,
       TotalStorage = device.TotalStorage,
+      UsedMemory = device.UsedMemory,
+      UsedStorage = device.UsedStorage,
       Uid = device.Uid
     };
   }

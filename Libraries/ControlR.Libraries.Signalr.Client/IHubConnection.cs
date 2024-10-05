@@ -37,6 +37,11 @@ public interface IHubConnection<out THub> : IAsyncDisposable
   /// </summary>
   event Func<Exception?, Task>? Closed;
 
+  /// <summary>
+  ///  Occurs when an exception is thrown inside the Connect method.
+  /// </summary>
+  event Func<Exception, Task>? ConnectThrew;
+
   ///<summary>
   ///<para>
   ///  Occurs when the Microsoft.AspNetCore.SignalR.Client.HubConnection successfully
@@ -62,16 +67,25 @@ public interface IHubConnection<out THub> : IAsyncDisposable
   event Func<Exception?, Task>? Reconnecting;
 
   /// <summary>
+  /// The current connection ID.
+  /// </summary>
+  string? ConnectionId { get; }
+
+  /// <summary>
   /// The current connection state.
   /// </summary>
   HubConnectionState ConnectionState { get; }
+
+  /// <summary>
+  /// Indicates whether the connection is currently connected.
+  /// </summary>
+  bool IsConnected { get; }
 
   /// <summary>
   ///   An implementation of the server-side hub interface.  Invoking
   ///   methods on this will invoke the corresponding methods on the server.
   /// </summary>
   THub Server { get; }
-
   /// <summary>
   /// <para>
   ///   Attempts to connect to the given hub endpoint.  If <paramref name="autoRetry"/> is
@@ -91,8 +105,8 @@ public interface IHubConnection<out THub> : IAsyncDisposable
   Task<bool> Connect(
     Uri hubEndpoint,
     bool autoRetry,
-    Action<HttpConnectionOptions> configure,
-    CancellationToken cancellationToken);
+    Action<HttpConnectionOptions>? configure = null,
+    CancellationToken cancellationToken = default);
 
   /// <summary>
   ///   Sends a message to the server without waiting for a response.
@@ -137,17 +151,21 @@ internal sealed class HubConnection<THub, TClient>(
   public event Func<Exception?, Task>? Closed;
   public event Func<string?, Task>? Reconnected;
   public event Func<Exception?, Task>? Reconnecting;
+  public event Func<Exception, Task>? ConnectThrew;
 
+  public string? ConnectionId => _connection?.ConnectionId;
   public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
+  public bool IsConnected => ConnectionState == HubConnectionState.Connected;
   public THub Server => _hubProxy ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
   internal HubConnection Connection => _connection ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
+
   public async Task<bool> Connect(
     Uri hubEndpoint,
     bool autoRetry,
-    Action<HttpConnectionOptions> configure,
-    CancellationToken cancellationToken)
+    Action<HttpConnectionOptions>? configure = null,
+    CancellationToken cancellationToken = default)
   {
     var retryCount = 0;
     while (true)
@@ -207,6 +225,11 @@ internal sealed class HubConnection<THub, TClient>(
       catch (Exception ex)
       {
         _logger.LogError(ex, "Failed to initialize hub connection.");
+        try
+        {
+          ConnectThrew?.Invoke(ex);
+        }
+        catch { }
       }
       finally
       {
@@ -297,13 +320,22 @@ internal sealed class HubConnection<THub, TClient>(
     }
   }
 
-  private HubConnection BuildConnection(Uri hubEndpoint, Action<HttpConnectionOptions> configure)
+  private HubConnection BuildConnection(Uri hubEndpoint, Action<HttpConnectionOptions>? configure)
   {
-    var builder = _serviceProvider.GetRequiredService<IHubConnectionBuilder>();
-    var connection = builder
-      .WithUrl(hubEndpoint, configure)
-      .WithAutomaticReconnect(new RetryPolicy(this, _logger))
-      .Build();
+    var builder = _serviceProvider
+      .GetRequiredService<IHubConnectionBuilder>()
+      .WithAutomaticReconnect(new RetryPolicy(this, _logger));
+
+    if (configure is not null)
+    {
+      builder.WithUrl(hubEndpoint, configure);
+    }
+    else
+    {
+      builder.WithUrl(hubEndpoint);
+    }
+
+    var connection = builder.Build();
 
     connection.Closed += HandleClosed;
     connection.Reconnected += HandleReconnected;

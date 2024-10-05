@@ -9,7 +9,7 @@ public partial class DeviceContentWindow : IAsyncDisposable
   public required DeviceContentInstance ContentInstance { get; init; }
 
   [Inject]
-  public required IEnvironmentHelper EnvironmentHelper { get; init; }
+  public required ISystemEnvironment EnvironmentHelper { get; init; }
 
   [Inject]
   public required IJSRuntime JsRuntime { get; init; }

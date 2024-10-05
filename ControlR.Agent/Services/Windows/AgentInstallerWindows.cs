@@ -16,7 +16,7 @@ namespace ControlR.Agent.Services.Windows;
 internal class AgentInstallerWindows(
   IHostApplicationLifetime _lifetime,
   IProcessManager _processes,
-  IEnvironmentHelper _environmentHelper,
+  ISystemEnvironment _environmentHelper,
   IElevationChecker _elevationChecker,
   IRetryer _retryer,
   IRegistryAccessor registryAccessor,
@@ -29,7 +29,7 @@ internal class AgentInstallerWindows(
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IElevationChecker _elevationChecker = _elevationChecker;
-  private readonly IEnvironmentHelper _environmentHelper = _environmentHelper;
+  private readonly ISystemEnvironment _environmentHelper = _environmentHelper;
   private readonly IHostApplicationLifetime _lifetime = _lifetime;
   private readonly IProcessManager _processes = _processes;
 

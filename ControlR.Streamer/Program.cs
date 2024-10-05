@@ -64,7 +64,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
   var services = builder.Services;
   var logging = builder.Logging;
 
-  var appsettingsFile = EnvironmentHelper.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
+  var appsettingsFile = SystemEnvironment.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
   configuration
     .AddJsonFile(PathConstants.GetAppSettingsPath(originUri), true, true)
     .AddJsonFile(appsettingsFile, true, true)

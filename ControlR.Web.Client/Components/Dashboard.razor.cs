@@ -168,7 +168,7 @@ public partial class Dashboard
 
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
-    if (ViewerHub.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+    if (ViewerHub.IsConnected)
     {
       await RefreshLatestAgentVersion();
     }
@@ -180,7 +180,7 @@ public partial class Dashboard
     {
       using var _ = BusyCounter.IncrementBusyCounter();
       await DeviceCache.SetAllOffline();
-      await ViewerHub.RequestDeviceUpdates();
+      await ViewerHub.RefreshDevices();
       await RefreshLatestAgentVersion();
       Snackbar.Add("Device refresh requested", Severity.Success);
     }

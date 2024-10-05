@@ -29,4 +29,5 @@ public interface IViewerHub
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);
   Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto);
+  IAsyncEnumerable<DeviceDto> StreamAuthorizedDevices();
 }

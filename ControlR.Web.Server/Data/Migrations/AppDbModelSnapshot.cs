@@ -115,9 +115,9 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<double>("CpuUtilization")
                         .HasColumnType("double precision");
 
-                    b.Property<string>("CurrentUsers")
+                    b.Property<string[]>("CurrentUsers")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text[]");
 
                     b.Property<int?>("DeviceGroupId")
                         .HasColumnType("integer");

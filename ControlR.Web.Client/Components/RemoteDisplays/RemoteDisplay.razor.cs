@@ -46,7 +46,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   [CascadingParameter] public required DeviceContentWindow ContentWindow { get; init; }
 
-  [Inject] public required IEnvironmentHelper EnvironmentHelper { get; init; }
+  [Inject] public required ISystemEnvironment EnvironmentHelper { get; init; }
 
   [Inject] public required ILogger<RemoteDisplay> Logger { get; init; }
 
@@ -216,7 +216,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       _viewMode = ViewMode.Original;
     }
 
-    Messenger.Register<StreamerDownloadProgressMessage>(this, HandleStreamerDownloadProgress);
+    Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     Messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleUnsignedDtoReceived);
     Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
 
@@ -403,15 +403,17 @@ public partial class RemoteDisplay : IAsyncDisposable
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task HandleStreamerDownloadProgress(object recipient, StreamerDownloadProgressMessage message)
+  private async Task HandleStreamerDownloadProgress(object recipient, DtoReceivedMessage<StreamerDownloadProgressDto> message)
   {
-    if (message.StreamingSessionId != Session.SessionId)
+    var dto = message.Dto;
+
+    if (dto.StreamingSessionId != Session.SessionId)
     {
       return;
     }
 
-    _statusProgress = message.DownloadProgress;
-    _statusMessage = message.Message;
+    _statusProgress = dto.Progress;
+    _statusMessage = dto.Message;
 
     await InvokeAsync(StateHasChanged);
   }
@@ -556,7 +558,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     await JsModuleReady.Wait(_componentClosing.Token);
 
-    if (args.Key == "Enter" || args.Key == "Backspace")
+    if (args.Key is "Enter" or "Backspace")
     {
       await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
     }

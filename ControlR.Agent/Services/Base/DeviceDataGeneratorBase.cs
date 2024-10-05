@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 namespace ControlR.Agent.Services.Base;
 
 internal class DeviceDataGeneratorBase(
-  IEnvironmentHelper environmentHelper,
+  ISystemEnvironment environmentHelper,
   ILogger<DeviceDataGeneratorBase> logger)
 {
-  private readonly IEnvironmentHelper _environmentHelper = environmentHelper;
+  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly ILogger<DeviceDataGeneratorBase> _logger = logger;
 
   public string GetAgentVersion()

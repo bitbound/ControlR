@@ -18,7 +18,7 @@ internal class StreamerLauncherWindows(
   IWin32Interop win32Interop,
   IProcessManager processes,
   IIpcRouter ipcRouter,
-  IEnvironmentHelper environment,
+  ISystemEnvironment environment,
   IStreamingSessionCache streamingSessionCache,
   ISettingsProvider settings,
   IFileSystem fileSystem,
