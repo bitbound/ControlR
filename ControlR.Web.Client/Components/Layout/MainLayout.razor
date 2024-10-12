@@ -1,11 +1,11 @@
 ﻿@inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthState
-@inject IMessenger Messenger
-@inject IBusyCounter BusyCounter
-@inject IViewerHubConnection ViewerHub
-@inject ISnackbar Snackbar
-@inject NavigationManager NavManager
-@inject ILogger<MainLayout> Logger
+@inject ILazyDi<IMessenger> Messenger
+@inject ILazyDi<IBusyCounter> BusyCounter
+@inject ILazyDi<IViewerHubConnection> ViewerHub
+@inject ILazyDi<ISnackbar> Snackbar
+@inject ILazyDi<NavigationManager> NavManager
+@inject ILazyDi<ILogger<MainLayout>> Logger
 
 <div>
   <MudThemeProvider IsDarkMode Theme="CustomTheme" />
@@ -74,18 +74,30 @@
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-      <NavMenu />
+      <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
-      <div>
-        @if (_showAlert)
-        {
-          <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
-            @(_alertMessage)
-          </MudAlert>
-        }
-      </div>
-      @Body
+      @if (_isWaitingForWasmLoad)
+      {
+        <div class="w-100 text-center mt-8">
+          <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+            Loading
+          </MudText>
+          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+        </div>
+      }
+      else
+      {
+        <div>
+          @if (_showAlert)
+          {
+            <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
+              @(_alertMessage)
+            </MudAlert>
+          }
+        </div>
+        @Body
+      }
     </MudMainContent>
   </MudLayout>
 
@@ -104,6 +116,7 @@
   private bool _isAuthenticated;
   private bool _isBrowser;
   private bool _isBusy;
+  private bool _isWaitingForWasmLoad = true;
   private bool _showAlert;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private AlertSeverity _alertSeverity = AlertSeverity.Information;
@@ -140,27 +153,39 @@
     _isBrowser = OperatingSystem.IsBrowser();
     _isAuthenticated = await AuthState.IsAuthenticated();
 
+    _isWaitingForWasmLoad =
+     !_isBrowser &&
+     Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
+     !currentUri.PathAndQuery.StartsWith("/Account");
+
     if (_isBrowser)
     {
-      Messenger.RegisterGenericMessage(this, HandleGeneric);
-      Messenger.Register<ToastMessage>(this, HandleToastMessage);
-      Messenger.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
-      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+      Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
+      Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Value.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
+      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Connect();
+        await ViewerHub.Value.Connect();
       }
     }
   }
 
   protected override bool ShouldRender()
   {
-    _isBusy = BusyCounter.IsBusy;
-    _pendingOperations = BusyCounter.PendingOperations;
-    _hubConnectionState = ViewerHub.ConnectionState;
+    if (BusyCounter.Exists)
+    {
+      _isBusy = BusyCounter.Value.IsBusy;
+      _pendingOperations = BusyCounter.Value.PendingOperations;
+    }
+
+    if (ViewerHub.Exists)
+    {
+      _hubConnectionState = ViewerHub.Value.ConnectionState;
+    }
 
     return base.ShouldRender();
   }
@@ -193,13 +218,13 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Connect();
+        await ViewerHub.Value.Connect();
       }
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling authentication state change.");
-      Snackbar.Add("Authentication state change error", Severity.Error);
+      Logger.Value.LogError(ex, "Error while handling authentication state change.");
+      Snackbar.Value.Add("Authentication state change error", Severity.Error);
     }
   }
 
@@ -223,7 +248,7 @@
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
-    Snackbar.Add(toast.Message, toast.Severity);
+    Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
 

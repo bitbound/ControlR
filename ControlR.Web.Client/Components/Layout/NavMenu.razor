@@ -8,10 +8,10 @@
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
     Home
   </MudNavLink>
-  <MudNavLink Disabled="!_isAuthenticated" Href="@(RouteNames.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
-  <MudNavLink Disabled="!_isAuthenticated" Href="@(RouteNames.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
     Settings
   </MudNavLink>
 
@@ -26,7 +26,7 @@
           Admin Area
         </MudText>
       </div>
-      <MudNavLink Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
         Server Admin
       </MudNavLink>
     </Authorized>
@@ -36,7 +36,7 @@
 
   <AuthorizeView>
     <Authorized>
-      <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
       <form action="Account/Logout" method="post">
@@ -48,10 +48,10 @@
       </form>
     </Authorized>
     <NotAuthorized>
-      <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Register
       </MudNavLink>
-      <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>
     </NotAuthorized>
@@ -63,6 +63,9 @@
 
   private string? _currentUrl;
   private bool _isAuthenticated;
+
+  [Parameter]
+  public bool IsDisabled { get; set; }
 
 
   public void Dispose()
