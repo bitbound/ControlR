@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using ControlR.Web.Client.Components;
+using ControlR.Web.Client.Enums;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Services;
 
@@ -7,7 +11,8 @@ public interface IDeviceContentWindowStore
   IReadOnlyList<DeviceContentInstance> Windows { get; }
 
   void Add(DeviceContentInstance instance);
-
+  void AddContentInstance<T>(DeviceDto device, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
+     where T : ComponentBase;
   void Remove(DeviceContentInstance instance);
 }
 
@@ -28,6 +33,35 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   public void Add(DeviceContentInstance instance)
   {
     _cache.Add(instance);
+    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+  }
+
+  public void AddContentInstance<T>(
+    DeviceDto device, 
+    DeviceContentInstanceType instanceType, 
+    Dictionary<string, object?>? componentParams = null)
+    where T : ComponentBase
+  {
+    void RenderComponent(RenderTreeBuilder builder)
+    {
+      builder.OpenComponent<T>(0);
+      
+      if (componentParams is not null)
+      {
+        for (var i = 0; i < componentParams.Count; i++)
+        {
+          var key = componentParams.Keys.ElementAt(i);
+          var value = componentParams[key];
+
+          builder.AddComponentParameter(i + 1, key, value);
+        }
+      }
+
+      builder.CloseComponent();
+    }
+
+    var contentInstance = new DeviceContentInstance(device, RenderComponent, instanceType);
+    _cache.Add(contentInstance);
     _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
   }
 

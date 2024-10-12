@@ -293,14 +293,13 @@ public partial class Dashboard
         if (result.Data is uint sessionId)
         {
           var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
-          void RenderRemoteDisplay(RenderTreeBuilder builder)
-          {
-            builder.OpenComponent<RemoteDisplay>(0);
-            builder.AddComponentParameter(1, nameof(RemoteDisplay.Session), remoteControlSession);
-            builder.CloseComponent();
-          }
-          var contentInstance = new DeviceContentInstance(device, RenderRemoteDisplay, DeviceContentInstanceType.RemoteControl);
-          WindowStore.Add(contentInstance);
+          WindowStore.AddContentInstance<RemoteDisplay>(
+            device, 
+            DeviceContentInstanceType.RemoteControl,
+            new Dictionary<string, object?>()
+            {
+              [nameof(RemoteDisplay.Session)] = remoteControlSession
+            });
         }
         break;
       default:
@@ -317,16 +316,15 @@ public partial class Dashboard
     {
       var terminalId = Guid.NewGuid();
 
-      void RenderTerminal(RenderTreeBuilder builder)
-      {
-        builder.OpenComponent<Terminal>(0);
-        builder.AddComponentParameter(1, nameof(Terminal.Device), device);
-        builder.AddComponentParameter(2, nameof(Terminal.Id), terminalId);
-        builder.CloseComponent();
-      }
+      WindowStore.AddContentInstance<Terminal>(
+        device,
+        DeviceContentInstanceType.Terminal,
+        new Dictionary<string, object?>()
+        {
+          [nameof(Terminal.Id)] = terminalId,
+          [nameof(Terminal.Device)] = device
+        });
 
-      var contentInstance = new DeviceContentInstance(device, RenderTerminal, DeviceContentInstanceType.Terminal);
-      WindowStore.Add(contentInstance);
     }
     catch (Exception ex)
     {
