@@ -34,5 +34,5 @@
 
   private IComponentRenderMode? RenderModeForPage => HttpContext.Request.Path.StartsWithSegments("/Account")
       ? null
-      : InteractiveWebAssembly;
+      : InteractiveAuto;
 }

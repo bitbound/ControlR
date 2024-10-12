@@ -72,6 +72,7 @@ builder.Services.AddMudServices();
 // Add components.
 builder.Services
   .AddRazorComponents()
+  .AddInteractiveServerComponents()
   .AddInteractiveWebAssemblyComponents();
 
 // Add API services.
@@ -197,6 +198,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
   .AddInteractiveWebAssemblyRenderMode()
+  .AddInteractiveServerRenderMode()
   .AddAdditionalAssemblies(typeof(_Imports).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
