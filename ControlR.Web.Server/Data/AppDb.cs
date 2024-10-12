@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Converters;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -38,12 +39,6 @@ public class AppDb(DbContextOptions<AppDb> options)
           Id = 1,
           Name = RoleNames.ServerAdministrator,
           NormalizedName = RoleNames.ServerAdministrator.ToUpper()
-        },
-        new IdentityRole<int>()
-        {
-          Id = 2,
-          Name = RoleNames.DeviceAdministrator,
-          NormalizedName = RoleNames.DeviceAdministrator.ToUpper()
         });
 
     builder

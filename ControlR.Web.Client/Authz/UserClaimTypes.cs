@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Client.Auth;
+﻿namespace ControlR.Web.Client.Authz;
 
 public static class UserClaimTypes
 {

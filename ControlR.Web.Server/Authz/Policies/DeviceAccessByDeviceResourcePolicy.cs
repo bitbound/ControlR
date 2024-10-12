@@ -1,5 +1,4 @@
 ﻿using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Authorization;
 
 namespace ControlR.Web.Server.Authz.Policies;
 
@@ -11,25 +10,39 @@ public static class DeviceAccessByDeviceResourcePolicy
   {
     return new AuthorizationPolicyBuilder()
       .RequireAuthenticatedUser()
-      .RequireServiceProviderAssertion((sp, handlerCtx) =>
+      .RequireServiceProviderAssertion(async (sp, handlerCtx) =>
       {
         if (handlerCtx.Resource is not Device device)
         {
+          handlerCtx.Fail();
           return false;
         }
 
         if (!handlerCtx.User.TryGetTenantId(out var tenantId))
         {
+          handlerCtx.Fail();
           return false;
         }
 
         if (device.TenantId != tenantId)
         {
+          handlerCtx.Fail();
           return false;
         }
 
-        if (handlerCtx.User.IsInRole(RoleNames.ServerAdministrator) ||
-          handlerCtx.User.IsInRole(RoleNames.DeviceAdministrator))
+        await using var scope = sp.CreateAsyncScope();
+        using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+        var tenant = await db.Tenants
+          .AsNoTracking()
+          .FirstOrDefaultAsync(x => x.Id == tenantId);
+
+        if (tenant is null)
+        {
+          handlerCtx.Fail();
+          return false;
+        }
+
+        if (handlerCtx.User.IsDeviceAdministrator(tenant.Uid))
         {
           return true;
         }

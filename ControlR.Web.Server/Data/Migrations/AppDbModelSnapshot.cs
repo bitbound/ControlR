@@ -17,7 +17,7 @@ namespace ControlR.Web.Server.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -282,12 +282,6 @@ namespace ControlR.Web.Server.Data.Migrations
                             Id = 1,
                             Name = "ServerAdministrator",
                             NormalizedName = "SERVERADMINISTRATOR"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "DeviceAdministrator",
-                            NormalizedName = "DEVICEADMINISTRATOR"
                         });
                 });
 

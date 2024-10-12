@@ -4,8 +4,6 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace ControlR.Web.Server.Data.Migrations
 {
     /// <inheritdoc />
@@ -251,11 +249,7 @@ namespace ControlR.Web.Server.Data.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
-                values: new object[,]
-                {
-                    { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" },
-                    { 2, null, "DeviceAdministrator", "DEVICEADMINISTRATOR" }
-                });
+                values: new object[] { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",

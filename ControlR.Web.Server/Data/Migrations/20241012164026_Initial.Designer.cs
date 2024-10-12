@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20241005174432_Initial")]
+    [Migration("20241012164026_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace ControlR.Web.Server.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -285,12 +285,6 @@ namespace ControlR.Web.Server.Data.Migrations
                             Id = 1,
                             Name = "ServerAdministrator",
                             NormalizedName = "SERVERADMINISTRATOR"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "DeviceAdministrator",
-                            NormalizedName = "DEVICEADMINISTRATOR"
                         });
                 });
 

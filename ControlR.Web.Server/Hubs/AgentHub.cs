@@ -11,21 +11,18 @@ public class AgentHub(
   IServerStatsProvider _serverStatsProvider,
   IConnectionCounter _connectionCounter,
   IWebHostEnvironment _hostEnvironment,
-  ILogger<AgentHub> _logger) : Hub<IAgentHubClient>, IAgentHub
+  ILogger<AgentHub> _logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private DeviceDto? Device
   {
-    get
-    {
-      if (Context.Items.TryGetValue(nameof(Device), out var cachedItem) &&
-          cachedItem is DeviceDto deviceDto)
-      {
-        return deviceDto;
-      }
+    get => GetItem<DeviceDto?>(null);
+    set => SetItem(value);
+  }
 
-      return null;
-    }
-    set => Context.Items[nameof(Device)] = value;
+  private Guid? TenantUid
+  {
+    get => GetItem<Guid?>(null);
+    set => SetItem(value);
   }
 
   public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
@@ -67,7 +64,9 @@ public class AgentHub(
         }
       }
 
-      var deviceEntity = await _appDb.AddOrUpdate<DeviceFromAgentDto, Device>(device);
+      var deviceEntity = await _appDb.AddOrUpdate<DeviceFromAgentDto, Device>(
+        device, 
+        [x => x.Tenant]);
 
       if (_hostEnvironment.IsDevelopment() && deviceEntity.TenantId is null)
       {
@@ -76,27 +75,19 @@ public class AgentHub(
         await _appDb.SaveChangesAsync();
       }
 
+      TenantUid = deviceEntity.Tenant?.Uid;
       Device = deviceEntity.ToDto();
 
       Device.ConnectionId = Context.ConnectionId;
 
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Uid));
 
-      // TODO: Add IncludeBuilder above.
-      if (deviceEntity.TenantId is not null)
+      if (TenantUid.HasValue)
       {
-        var tenant = _appDb.Tenants
-          .AsNoTracking()
-          .FirstOrDefault(x => x.Id == deviceEntity.TenantId);
-
-        if (tenant is not null)
-        {
-          await _viewerHub.Clients
-            .Group(HubGroupNames.GetDeviceAdministratorGroup(tenant.Uid))
-            .ReceiveDeviceUpdate(Device);
-        }
+        await _viewerHub.Clients
+          .Group(HubGroupNames.GetDeviceAdministratorGroup(TenantUid.Value))
+          .ReceiveDeviceUpdate(Device);
       }
-
 
       return Result.Ok(Device);
     }

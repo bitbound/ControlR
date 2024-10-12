@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using ControlR.Web.Client.Authz;
 using System.Security.Claims;
 
 namespace ControlR.Web.Client.Extensions;
