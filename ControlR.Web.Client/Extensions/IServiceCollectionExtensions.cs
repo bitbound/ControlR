@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IDelayer, Delayer>();
     services.AddScoped<IRetryer, Retryer>();
     services.AddScoped<IClipboardManager, ClipboardManager>();
+    services.AddScoped<IScreenWake, ScreenWake>();
     services.AddTransient<IJsInterop, JsInterop>();
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
@@ -42,7 +43,10 @@ public static class ServiceCollectionExtensions
 
     void ConfigureHttpClient(IServiceProvider services, HttpClient client)
     {
-      client.BaseAddress = new Uri(baseAddress);
+      if (!string.IsNullOrWhiteSpace(baseAddress))
+      {
+        client.BaseAddress = new Uri(baseAddress);
+      }
     }
   }
 }

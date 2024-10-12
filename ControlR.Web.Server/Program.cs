@@ -1,7 +1,7 @@
 using System.Net;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Client.Authz;
+using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
@@ -13,8 +13,6 @@ using ControlR.Web.Server.Services.Local;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
@@ -132,6 +130,9 @@ ConfigureForwardedHeaders();
 
 // Configure Redis, if scaled out.
 await ConfigureRedis();
+
+// Add client services for pre-rendering.
+builder.Services.AddControlrWebClient(string.Empty);
 
 // Add other services.
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
