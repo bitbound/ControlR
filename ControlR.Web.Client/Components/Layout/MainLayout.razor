@@ -101,7 +101,7 @@
     </MudMainContent>
   </MudLayout>
 
-   <DeviceContentHarness />
+  <DeviceContentHarness />
 </div>
 
 
@@ -154,9 +154,9 @@
     _isAuthenticated = await AuthState.IsAuthenticated();
 
     _isWaitingForWasmLoad =
-     !_isBrowser &&
-     Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
-     !currentUri.PathAndQuery.StartsWith("/Account");
+      !_isBrowser &&
+      Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
+      !currentUri.PathAndQuery.StartsWith("/Account");
 
     if (_isBrowser)
     {

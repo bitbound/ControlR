@@ -195,13 +195,14 @@ app.MapHub<AgentHub>("/hubs/agent");
 
 app.UseAntiforgery();
 
+app.MapControllers();
+
 app.MapRazorComponents<App>()
   .AddInteractiveWebAssemblyRenderMode()
   .AddAdditionalAssemblies(typeof(_Imports).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
 
-app.MapControllers();
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
