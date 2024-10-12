@@ -82,9 +82,21 @@ public class AgentHub(
 
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Uid));
 
-      await _viewerHub.Clients
-        .Group(HubGroupNames.ServerAdministrators)
-        .ReceiveDeviceUpdate(Device);
+      // TODO: Add IncludeBuilder above.
+      if (deviceEntity.TenantId is not null)
+      {
+        var tenant = _appDb.Tenants
+          .AsNoTracking()
+          .FirstOrDefault(x => x.Id == deviceEntity.TenantId);
+
+        if (tenant is not null)
+        {
+          await _viewerHub.Clients
+            .Group(HubGroupNames.GetDeviceAdministratorGroup(tenant.Uid))
+            .ReceiveDeviceUpdate(Device);
+        }
+      }
+
 
       return Result.Ok(Device);
     }

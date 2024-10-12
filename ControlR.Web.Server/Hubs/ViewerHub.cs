@@ -167,28 +167,30 @@ public class ViewerHub(
 
       if (Context.User is null)
       {
-        logger.LogWarning("User is null.  Authorize tag should have prevented this.");
+        logger.LogCritical("User is null.  Authorize tag should have prevented this.");
         return;
       }
 
-      if (Context.User.TryGetTenantUid(out var tenantUid))
+      if (!Context.User.TryGetTenantUid(out var tenantUid))
       {
-        if (Context.User.IsInRole(RoleNames.ServerAdministrator))
-        {
-          await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+        logger.LogCritical("Failed to get tenant UID.");
+        return;
+      }
 
-          var getResult = await serverStatsProvider.GetServerStats();
-          if (getResult.IsSuccess)
-          {
-            await Clients.Caller.ReceiveServerStats(getResult.Value);
-          }
-        }
+      if (Context.User.IsInRole(RoleNames.ServerAdministrator))
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
 
-        if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
+        var getResult = await serverStatsProvider.GetServerStats();
+        if (getResult.IsSuccess)
         {
-          var hubGroupName = HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceAdministrator, tenantUid);
-          await Groups.AddToGroupAsync(Context.ConnectionId, hubGroupName);
+          await Clients.Caller.ReceiveServerStats(getResult.Value);
         }
+      }
+
+      if (Context.User.IsDeviceAdministrator(tenantUid))
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceAdministratorGroup(tenantUid));
       }
     }
     catch (Exception ex)

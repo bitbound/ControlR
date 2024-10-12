@@ -1,5 +1,4 @@
-﻿
-@page "/Account/Register"
+﻿@page "/Account/Register"
 @using Microsoft.EntityFrameworkCore
 
 @inject UserManager<AppUser> UserManager
@@ -87,6 +86,9 @@
 
     await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
     Logger.LogInformation("Added user's tenant UID claim.");
+
+    await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.DeviceAdministrator, $"{tenant.Uid}"));
+    Logger.LogInformation("Added user's DeviceAdministrator claim for new tenant claim.");
 
     if (await UserManager.Users.CountAsync() == 1)
     {
