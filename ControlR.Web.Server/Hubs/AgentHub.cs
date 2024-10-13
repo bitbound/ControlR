@@ -25,6 +25,49 @@ public class AgentHub(
     set => SetItem(value);
   }
 
+  public override async Task OnConnectedAsync()
+  {
+    try
+    {
+      _connectionCounter.IncrementAgentCount();
+      await SendUpdatedConnectionCountToAdmins();
+      await base.OnConnectedAsync();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error during device connect.");
+    }
+  }
+
+  public override async Task OnDisconnectedAsync(Exception? exception)
+  {
+    try
+    {
+      _connectionCounter.DecrementAgentCount();
+      await SendUpdatedConnectionCountToAdmins();
+
+      if (Device is { } cachedDevice)
+      {
+        cachedDevice.IsOnline = false;
+        cachedDevice.LastSeen = _systemTime.Now;
+        await _viewerHub.Clients
+          .Group(HubGroupNames.ServerAdministrators)
+          .ReceiveDeviceUpdate(cachedDevice);
+
+        await _appDb.AddOrUpdate<DeviceDto, Device>(cachedDevice);
+
+        await SendDeviceUpdate();
+      }
+
+
+      await base.OnDisconnectedAsync(exception);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error during device disconnect.");
+    }
+  }
+
   public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
   {
     await _viewerHub.Clients.Client(progressDto.ViewerConnectionId).ReceiveStreamerDownloadProgress(progressDto);
@@ -64,9 +107,10 @@ public class AgentHub(
         }
       }
 
-      var deviceEntity = await _appDb.AddOrUpdate<DeviceFromAgentDto, Device>(
-        device, 
-        [x => x.Tenant]);
+      var deviceEntity = await _appDb
+        .AddOrUpdate<DeviceFromAgentDto, Device>(
+          device, 
+          [x => x.Tenant]);
 
       if (_hostEnvironment.IsDevelopment() && deviceEntity.TenantId is null)
       {
@@ -82,12 +126,7 @@ public class AgentHub(
 
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Uid));
 
-      if (TenantUid.HasValue)
-      {
-        await _viewerHub.Clients
-          .Group(HubGroupNames.GetDeviceAdministratorGroup(TenantUid.Value))
-          .ReceiveDeviceUpdate(Device);
-      }
+      await SendDeviceUpdate();
 
       return Result.Ok(Device);
     }
@@ -98,46 +137,20 @@ public class AgentHub(
     }
   }
 
-  public override async Task OnConnectedAsync()
+  private async Task SendDeviceUpdate()
   {
-    try
+    if (Device is null)
     {
-      _connectionCounter.IncrementAgentCount();
-      await SendUpdatedConnectionCountToAdmins();
-      await base.OnConnectedAsync();
+      return;
     }
-    catch (Exception ex)
+
+    if (TenantUid.HasValue)
     {
-      _logger.LogError(ex, "Error during device connect.");
+      await _viewerHub.Clients
+        .Group(HubGroupNames.GetDeviceAdministratorGroup(TenantUid.Value))
+        .ReceiveDeviceUpdate(Device);
     }
   }
-
-  public override async Task OnDisconnectedAsync(Exception? exception)
-  {
-    try
-    {
-      _connectionCounter.DecrementAgentCount();
-      await SendUpdatedConnectionCountToAdmins();
-
-      if (Device is { } cachedDevice)
-      {
-        cachedDevice.IsOnline = false;
-        cachedDevice.LastSeen = _systemTime.Now;
-        await _viewerHub.Clients
-          .Group(HubGroupNames.ServerAdministrators)
-          .ReceiveDeviceUpdate(cachedDevice);
-        
-        await _appDb.AddOrUpdate<DeviceDto, Device>(cachedDevice);
-      }
-
-      await base.OnDisconnectedAsync(exception);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error during device disconnect.");
-    }
-  }
-
   private async Task SendUpdatedConnectionCountToAdmins()
   {
     try
