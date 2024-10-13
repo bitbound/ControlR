@@ -36,7 +36,8 @@ public class ViewerHub(
     return await alertStore.ClearAlert();
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
+  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+    string agentConnectionId,
     TerminalSessionRequest requestDto)
   {
     try
@@ -321,8 +322,6 @@ public class ViewerHub(
     var deviceQuery = _appDb.Devices
       .AsNoTracking()
       .Where(x => x.TenantId == user.TenantId);
-
-    var authorizedDevices = new List<DeviceDto>();
 
     await foreach (var device in deviceQuery.AsAsyncEnumerable())
     {

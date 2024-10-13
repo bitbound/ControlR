@@ -19,6 +19,7 @@
 </div>
 
 <MudDataGrid T="DeviceDto"
+             RowsPerPage="@(25)"
              Items="FilteredDevices"
              SortMode="SortMode.Multiple"
              QuickFilter="QuickFilter"
@@ -253,4 +254,7 @@
       </div>
     </div>
   </ChildRowContent>
+  <PagerContent>
+    <MudDataGridPager T="DeviceDto" />
+  </PagerContent>
 </MudDataGrid>

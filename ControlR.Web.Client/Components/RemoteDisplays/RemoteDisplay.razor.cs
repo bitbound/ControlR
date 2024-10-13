@@ -36,38 +36,54 @@ public partial class RemoteDisplay : IAsyncDisposable
   private bool _virtualKeyboardToggled;
 
 
-  [Inject] public required IBusyCounter AppState { get; init; }
+  [Inject]
+  public required IBusyCounter AppState { get; init; }
 
-  [Inject] public required NavigationManager NavManager { get; init; }
+  [Inject]
+  public required NavigationManager NavManager { get; init; }
 
-  [Inject] public required IClipboardManager ClipboardManager { get; init; }
+  [Inject]
+  public required IClipboardManager ClipboardManager { get; init; }
 
-  [CascadingParameter] public required DeviceContentInstance ContentInstance { get; init; }
+  [CascadingParameter]
+  public required DeviceContentInstance ContentInstance { get; init; }
 
-  [CascadingParameter] public required DeviceContentWindow ContentWindow { get; init; }
+  [CascadingParameter]
+  public required DeviceContentWindow ContentWindow { get; init; }
 
-  [Inject] public required ISystemEnvironment EnvironmentHelper { get; init; }
+  [Inject]
+  public required ISystemEnvironment EnvironmentHelper { get; init; }
 
-  [Inject] public required ILogger<RemoteDisplay> Logger { get; init; }
+  [Inject]
+  public required ILogger<RemoteDisplay> Logger { get; init; }
 
-  [Inject] public required IMemoryProvider MemoryProvider { get; init; }
+  [Inject]
+  public required IMemoryProvider MemoryProvider { get; init; }
 
-  [Inject] public required IMessenger Messenger { get; init; }
+  [Inject]
+  public required IMessenger Messenger { get; init; }
 
-  [Inject] public required IServiceProvider ServiceProvider { get; init; }
+  [Inject]
+  public required IServiceProvider ServiceProvider { get; init; }
 
-  [Parameter] [EditorRequired] public required RemoteControlSession Session { get; set; }
+  [Parameter, EditorRequired]
+  public required RemoteControlSession Session { get; set; }
 
-  [Inject] public required ISettings Settings { get; init; }
+  [Inject]
+  public required ISettings Settings { get; init; }
 
-  [Inject] public required ISnackbar Snackbar { get; init; }
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
 
-  [Inject] public required IViewerStreamingClient StreamingClient { get; init; }
+  [Inject]
+  public required IViewerStreamingClient StreamingClient { get; init; }
 
 
-  [Inject] public required IViewerHubConnection ViewerHub { get; init; }
+  [Inject]
+  public required IViewerHubConnection ViewerHub { get; init; }
 
-  [Inject] public required IDeviceContentWindowStore WindowStore { get; init; }
+  [Inject]
+  public required IDeviceContentWindowStore WindowStore { get; init; }
 
   private string CanvasClasses
   {

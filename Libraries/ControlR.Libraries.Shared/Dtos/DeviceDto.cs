@@ -13,9 +13,6 @@ public class DeviceDto : DeviceFromAgentDto, IEntityBaseDto
   public string Alias { get; set; } = string.Empty;
 
   [MsgPackKey]
-  public string ConnectionId { get; set; } = string.Empty;
-
-  [MsgPackKey]
   public int? DeviceGroupId { get; set; }
 
   [MsgPackKey]

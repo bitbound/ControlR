@@ -11,7 +11,7 @@ public class Device : EntityBase
 
   [StringLength(100)]
   public string Alias { get; set; } = string.Empty;
-
+  public string ConnectionId { get; set; } = string.Empty;
   public double CpuUtilization { get; set; }
 
   public string[] CurrentUsers { get; set; } = [];

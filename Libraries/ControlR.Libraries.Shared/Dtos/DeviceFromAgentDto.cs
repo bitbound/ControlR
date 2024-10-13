@@ -14,6 +14,10 @@ public class DeviceFromAgentDto : IHasSettableUid
   public string AgentVersion { get; set; } = string.Empty;
 
   [MsgPackKey]
+  [Display(Name = "Connection ID")]
+  public string ConnectionId { get; set; } = string.Empty;
+
+  [MsgPackKey]
   [Display(Name = "CPU Utilization")]
   public double CpuUtilization { get; set; }
 

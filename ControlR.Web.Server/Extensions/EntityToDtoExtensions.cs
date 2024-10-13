@@ -8,6 +8,7 @@ public static class EntityToDtoExtensions
     {
       AgentVersion = device.AgentVersion,
       Alias = device.Alias,
+      ConnectionId = device.ConnectionId,
       CpuUtilization = device.CpuUtilization,
       CurrentUsers = device.CurrentUsers,
       DeviceGroupId = device.DeviceGroupId,

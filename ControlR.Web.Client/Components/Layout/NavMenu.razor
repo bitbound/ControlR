@@ -19,11 +19,27 @@
     About
   </MudNavLink>
 
+  @* TODO: Tenant Admin policy *@
+  <AuthorizeView>
+    <Authorized>
+      <div class="ms-2 mt-5">
+        <MudText Typo="Typo.caption" Color="Color.Default">
+          Tenant Admin
+        </MudText>
+      </div>
+      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.UserManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+        User Management
+      </MudNavLink>
+      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.DeviceManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Devices">
+        Device Management
+      </MudNavLink>
+    </Authorized>
+  </AuthorizeView>
   <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
     <Authorized>
       <div class="ms-2 mt-5">
         <MudText Typo="Typo.caption" Color="Color.Default">
-          Admin Area
+          Server Admin
         </MudText>
       </div>
       <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">

@@ -93,6 +93,7 @@ public class AgentHub(
     {
       device.IsOnline = true;
       device.LastSeen = _systemTime.Now;
+      device.ConnectionId = Context.ConnectionId;
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
       if (remoteIp is not null)
