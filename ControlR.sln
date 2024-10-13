@@ -28,7 +28,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B85287-C904-4672-821E-D0B96BBDF89C}"
 	ProjectSection(SolutionItems) = preProject
 		.build\Build.ps1 = .build\Build.ps1
-		.build\CreateKeystore.cmd = .build\CreateKeystore.cmd
 		.build\PrepareArtifacts.ps1 = .build\PrepareArtifacts.ps1
 	EndProjectSection
 EndProject
