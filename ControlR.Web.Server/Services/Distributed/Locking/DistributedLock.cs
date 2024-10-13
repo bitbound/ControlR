@@ -12,7 +12,7 @@ public interface IDistributedLock
 
 public class DistributedLock(
   IConnectionMultiplexer multi,
-  ILogger<AlertStoreDistributed> logger) : IDistributedLock
+  ILogger<DistributedLock> logger) : IDistributedLock
 {
   public Guid NodeId { get; } = Guid.NewGuid();
 

@@ -64,6 +64,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Web.AppHost", "Con
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Signalr.Client", "Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj", "{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Agent.LoadTester", "Tests\ControlR.Agent.LoadTester\ControlR.Agent.LoadTester.csproj", "{475BDB0D-06C2-4C45-BD1F-7039CA14856A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -144,6 +146,10 @@ Global
 		{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{475BDB0D-06C2-4C45-BD1F-7039CA14856A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{475BDB0D-06C2-4C45-BD1F-7039CA14856A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{475BDB0D-06C2-4C45-BD1F-7039CA14856A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{475BDB0D-06C2-4C45-BD1F-7039CA14856A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -162,6 +168,7 @@ Global
 		{95B98845-4F9C-4B6B-88F7-9194A2A824CA} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 		{E36620C7-2D12-4956-BF31-A82258A7C656} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
+		{475BDB0D-06C2-4C45-BD1F-7039CA14856A} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}
