@@ -23,7 +23,7 @@ $InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
 $VsWhere = "$InstallerDir\vswhere.exe"
 $MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
-$DownloadsFolder = "$Root\ControlR.Server\wwwroot\downloads"
+$DownloadsFolder = "$Root\ControlR.Web.Server\wwwroot\downloads"
 
 function Check-LastExitCode {
   if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
@@ -91,7 +91,7 @@ if ($BuildStreamer) {
   Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 }
 
-dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Server\"
+dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
 
 
 if ($BuildWebsite) {
