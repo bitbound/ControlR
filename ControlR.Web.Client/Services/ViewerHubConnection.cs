@@ -367,7 +367,7 @@ internal class ViewerHubConnection(
 
   private async Task WaitForConnection()
   {
-    await _delayer.WaitForAsync(() => _viewerHub.IsConnected, TimeSpan.MaxValue);
+    await _delayer.WaitForAsync(() => _viewerHub.IsConnected);
   }
 
   private class RetryPolicy : IRetryPolicy

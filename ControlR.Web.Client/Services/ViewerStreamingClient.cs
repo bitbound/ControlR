@@ -174,9 +174,12 @@ public class ViewerStreamingClient(
       return;
     }
 
+    using var cts = new CancellationTokenSource();
+    cts.CancelAfter(TimeSpan.FromSeconds(30));
+
     await delayer.WaitForAsync(
-      () => Client.State == WebSocketState.Open || IsDisposed,
-      TimeSpan.FromSeconds(30),
-      100);
+      condition: () => Client.State == WebSocketState.Open || IsDisposed,
+      pollingDelay: TimeSpan.FromMilliseconds(100),
+      cancellationToken: cts.Token);
   }
 }

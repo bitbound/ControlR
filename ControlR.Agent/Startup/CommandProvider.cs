@@ -1,8 +1,9 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using ControlR.Agent.Interfaces;
-using ControlR.Agent.Models;
-using ControlR.Agent.Services.Windows;
+using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Models;
+using ControlR.Libraries.Agent.Services.Windows;
+using ControlR.Libraries.Agent.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

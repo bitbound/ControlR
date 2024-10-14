@@ -148,7 +148,7 @@ public abstract class HubConnectionBase(
 
   protected async Task WaitForConnection()
   {
-    await Delayer.WaitForAsync(() => IsConnected, TimeSpan.MaxValue);
+    await Delayer.WaitForAsync(() => IsConnected);
   }
 
   private Task HubConnection_Closed(Exception? arg)

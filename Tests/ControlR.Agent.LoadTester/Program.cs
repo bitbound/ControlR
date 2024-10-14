@@ -1,19 +1,22 @@
-﻿// See https://aka.ms/new-console-template for more information
-using ControlR.Agent.Interfaces;
-using ControlR.Agent.LoadTester;
-using ControlR.Agent.Models;
-using ControlR.Agent.Services.Windows;
-using ControlR.Agent.Startup;
+﻿using ControlR.Agent.LoadTester;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Models;
+using ControlR.Libraries.Agent.Services;
+using ControlR.Libraries.Agent.Services.Windows;
+using ControlR.Libraries.Agent.Startup;
+using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
-var agentCount = 1000;
+var agentCount = 20000;
 var connectParallelism = 100;
 var serverBase = "http://cubey";
 var portStart = 42000;
@@ -34,6 +37,8 @@ var paralellOptions = new ParallelOptions()
   MaxDegreeOfParallelism = connectParallelism
 };
 
+_ = ReportHosts(hosts, cancellationToken);
+
 await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
@@ -52,9 +57,13 @@ await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
       {
         { "AppOptions:DeviceId", CreateGuid(i).ToString() },
         { "AppOptions:ServerUri", serverUri },
-        { "Logging:LogLevel:Default", "Information" },
-        { "Serilog:MinimumLevel:Default", "Information" },
+        { "Logging:LogLevel:Default", "Warning" },
+        { "Serilog:MinimumLevel:Default", "Warning" },
       });
+
+  var agentUpdater = builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater));
+  builder.Services.Remove(agentUpdater);
+  builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
 
   var deviceDataGenerator = builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator));
   builder.Services.Remove(deviceDataGenerator);
@@ -72,7 +81,23 @@ await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
   await host.StartAsync(cancellationToken);
   hosts.Add(host);
 
-  await Task.Delay(100, ct);
+  await Delayer.Default.WaitForAsync(
+    condition: () =>
+    {
+      return hosts.All(x =>
+      {
+        return x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected;
+      });
+    },
+    pollingDelay: TimeSpan.FromSeconds(1),
+    conditionFailedCallback: () =>
+    {
+      Log.Information("Waiting for all connections to be established.");
+      return Task.CompletedTask;
+    },
+    cancellationToken: cancellationToken);
+
+  await Task.Delay(1000, ct);
 });
 
 var hostTasks = hosts.Select(x => x.WaitForShutdownAsync());
@@ -83,8 +108,26 @@ return;
 
 static Guid CreateGuid(int seed)
 {
-  using var md5 = MD5.Create();
   var seedBytes = BitConverter.GetBytes(seed);
-  var hash = md5.ComputeHash(seedBytes);
+  var hash = MD5.HashData(seedBytes);
   return new Guid(hash);
+}
+
+async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken cancellationToken)
+{
+  using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+  while (await timer.WaitForNextTickAsync(cancellationToken))
+  {
+    var hubConnections = hosts.Select(x =>
+    {
+      return x.Services.GetRequiredService<IHubConnection<IAgentHub>>();
+    });
+
+    var groups = hubConnections.GroupBy(x => x.ConnectionState);
+
+    foreach (var group in groups)
+    {
+      Console.WriteLine($"{group.Key}: {group.Count()}");
+    }
+  }
 }
