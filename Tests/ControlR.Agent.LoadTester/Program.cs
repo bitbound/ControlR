@@ -17,6 +17,14 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 var startCount = 0;
+
+if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
+{
+  startCount = lastArg;
+}
+
+Console.WriteLine($"Starting agent count at {startCount}");
+
 var agentCount = 4000;
 var connectParallelism = 100;
 var serverBase = "http://cubey";
