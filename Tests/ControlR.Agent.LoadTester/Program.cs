@@ -16,7 +16,8 @@ using Serilog;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
-var agentCount = 20000;
+var startCount = 0;
+var agentCount = 4000;
 var connectParallelism = 100;
 var serverBase = "http://cubey";
 var portStart = 42000;
@@ -39,7 +40,7 @@ var paralellOptions = new ParallelOptions()
 
 _ = ReportHosts(hosts, cancellationToken);
 
-await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
+await Parallel.ForAsync(startCount, startCount + agentCount, paralellOptions, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
   {
@@ -64,6 +65,10 @@ await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
   var agentUpdater = builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater));
   builder.Services.Remove(agentUpdater);
   builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
+
+  var cpuSampler = builder.Services.First(x => x.ServiceType == typeof(ICpuUtilizationSampler));
+  builder.Services.Remove(cpuSampler);
+  builder.Services.AddSingleton<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
 
   var deviceDataGenerator = builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator));
   builder.Services.Remove(deviceDataGenerator);
@@ -113,7 +118,7 @@ static Guid CreateGuid(int seed)
   return new Guid(hash);
 }
 
-async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken cancellationToken)
+static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken cancellationToken)
 {
   using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
   while (await timer.WaitForNextTickAsync(cancellationToken))
