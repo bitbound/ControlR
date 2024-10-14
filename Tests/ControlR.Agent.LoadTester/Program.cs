@@ -26,7 +26,6 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 Console.WriteLine($"Starting agent count at {startCount}");
 
 var agentCount = 4000;
-var connectParallelism = 100;
 var serverBase = "http://cubey";
 var portStart = 42000;
 var portEnd = 42999;
@@ -41,14 +40,10 @@ Console.CancelKeyPress += (s, e) =>
 };
 
 var hosts = new ConcurrentBag<IHost>();
-var paralellOptions = new ParallelOptions()
-{
-  MaxDegreeOfParallelism = connectParallelism
-};
 
 _ = ReportHosts(hosts, cancellationToken);
 
-await Parallel.ForAsync(startCount, startCount + agentCount, paralellOptions, async (i, ct) =>
+await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
   {

@@ -218,13 +218,13 @@ app.MapRazorComponents<App>()
 
 app.MapAdditionalIdentityEndpoints();
 
-
 app.MapHub<ViewerHub>("/hubs/viewer");
 
 app.UseOutputCache();
 
 Log.Information("Applying migrations to database at host: {DbHost}", pgHost);
-await app.ApplyMigrations<AppDb>();
+await app.ApplyMigrations();
+await app.SetAllDevicesOffline();
 
 await app.RunAsync();
 
