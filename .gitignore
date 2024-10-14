@@ -361,18 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/ControlR.Server/App.db
-/ControlR.Server/App.db-shm
-/ControlR.Server/App.db-wal
 /ControlR.Website/public/downloads/**
-/ControlR.Server/wwwroot/downloads/**
-/ControlR.Viewer/controlr.keystore
-/ControlR.Server/wwwroot/downloads/ControlR.Agent.exe
-ControlR.Server/wwwroot/novnc/
-/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.dll
-/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.exp
-/ControlR.Devices.Common/Resources/ControlR.WinVncPassword.lib
-/ControlR.Agent/Resources/TightVnc/*
-/ControlR.Viewer/VncResources/*
-/ControlR.Server/appsettings.Development.json
+/ControlR.Web.Server/wwwroot/downloads/**
+/ControlR.Web.Server/appsettings.Development.json
 /ControlR.Streamer/.artifacts/*

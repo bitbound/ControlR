@@ -18,10 +18,11 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["ControlR.Web.Server/ControlR.Web.Server.csproj", "ControlR.Web.Server/"]
-COPY ["ControlR.Web.ServiceDefaults/ControlR.Web.ServiceDefaults.csproj", "ControlR.Web.ServiceDefaults/"]
 COPY ["ControlR.Web.Client/ControlR.Web.Client.csproj", "ControlR.Web.Client/"]
 COPY ["Libraries/ControlR.Libraries.Clients/ControlR.Libraries.Clients.csproj", "Libraries/ControlR.Libraries.Clients/"]
 COPY ["Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj", "Libraries/ControlR.Libraries.Shared/"]
+COPY ["Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj", "Libraries/ControlR.Libraries.Signalr.Client/"]
+COPY ["ControlR.Web.ServiceDefaults/ControlR.Web.ServiceDefaults.csproj", "ControlR.Web.ServiceDefaults/"]
 RUN dotnet restore "./ControlR.Web.Server/ControlR.Web.Server.csproj"
 COPY . .
 WORKDIR "/src/ControlR.Web.Server"

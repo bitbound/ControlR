@@ -28,6 +28,7 @@ internal class FakeDeviceDataGenerator : DeviceDataGeneratorWin, IDeviceDataGene
   {
     var device = await  base.CreateDevice(cpuUtilization, deviceId);
     device.Name = $"Test Device {_deviceNumber}";
+    device.AgentVersion = "0.9.15.0";
     return device;
   }
 }

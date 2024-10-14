@@ -50,7 +50,7 @@ internal abstract class AgentInstallerBase(
       Logger.LogInformation("ServerUri or DeviceGroupId is null.  Skipping device pre-creation.");
       return;
     }
-
     // TODO: Add device pre-creation
+    await Task.Yield();
   }
 }

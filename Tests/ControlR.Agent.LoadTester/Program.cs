@@ -5,7 +5,6 @@ using ControlR.Agent.Models;
 using ControlR.Agent.Services.Windows;
 using ControlR.Agent.Startup;
 using ControlR.Devices.Native.Services;
-using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,11 +13,11 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
-var agentCount = 5;
-var connectParallelism = 1;
-var serverBase = "https://localhost";
+var agentCount = 1000;
+var connectParallelism = 100;
+var serverBase = "http://cubey";
 var portStart = 42000;
-var portEnd = 44000;
+var portEnd = 42999;
 var portCount = portEnd - portStart + 1;
 
 var cancellationTokenSource = new CancellationTokenSource();
@@ -30,33 +29,32 @@ Console.CancelKeyPress += (s, e) =>
 };
 
 var hosts = new ConcurrentBag<IHost>();
-var hostTasks = new ConcurrentBag<Task>();
 var paralellOptions = new ParallelOptions()
 {
-  MaxDegreeOfParallelism = connectParallelism,
+  MaxDegreeOfParallelism = connectParallelism
 };
 
-await Parallel.ForAsync(0, agentCount, paralellOptions, (i, ct) =>
+await Parallel.ForAsync(0, agentCount, paralellOptions, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
   {
-    return ValueTask.CompletedTask;
+    return;
   }
 
   var port = portStart + (i % portCount);
-  var serverUri = new Uri($"{serverBase}:{port}");
-
-  var appOptions = new AgentAppOptions()
-  {
-    DeviceId = CreateGuid(i),
-    ServerUri = serverUri,
-  };
+  var serverUri = $"{serverBase}:{port}";
 
   var builder = Host.CreateApplicationBuilder(args);
   builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}");
+
   builder.Configuration
-    .GetSection(AgentAppOptions.SectionKey)
-    .Bind(appOptions);
+    .AddInMemoryCollection(new Dictionary<string, string?>
+      {
+        { "AppOptions:DeviceId", CreateGuid(i).ToString() },
+        { "AppOptions:ServerUri", serverUri },
+        { "Logging:LogLevel:Default", "Information" },
+        { "Serilog:MinimumLevel:Default", "Information" },
+      });
 
   var deviceDataGenerator = builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator));
   builder.Services.Remove(deviceDataGenerator);
@@ -71,13 +69,13 @@ await Parallel.ForAsync(0, agentCount, paralellOptions, (i, ct) =>
   });
 
   var host = builder.Build();
-  var hostTask = host.RunAsync(cancellationToken);
+  await host.StartAsync(cancellationToken);
   hosts.Add(host);
-  hostTasks.Add(hostTask);
 
-  return ValueTask.CompletedTask;
+  await Task.Delay(100, ct);
 });
 
+var hostTasks = hosts.Select(x => x.WaitForShutdownAsync());
 await Task.WhenAll(hostTasks);
 
 return;

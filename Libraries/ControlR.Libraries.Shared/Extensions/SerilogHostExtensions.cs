@@ -34,14 +34,16 @@ public static class SerilogHostExtensions
       ApplySharedLoggerConfig(loggerConfig);
       Log.Logger = loggerConfig.CreateBootstrapLogger();
 
-      hostBuilder.Services.AddSerilog((serviceProvider, configuration) =>
-      {
-        configuration
-          .ReadFrom.Configuration(hostBuilder.Configuration)
-          .ReadFrom.Services(serviceProvider);
+      hostBuilder.Services.AddSerilog(
+        (serviceProvider, configuration) =>
+        {
+          configuration
+            .ReadFrom.Configuration(hostBuilder.Configuration)
+            .ReadFrom.Services(serviceProvider);
 
-        ApplySharedLoggerConfig(configuration);
-      });
+          ApplySharedLoggerConfig(configuration);
+        },
+        preserveStaticLogger: true);
     }
     catch (Exception ex)
     {

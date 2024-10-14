@@ -22,6 +22,7 @@ public class DeviceGroupsController : ControllerBase
     }
 
     // TODO
+    await Task.Yield();
     return Ok(new List<DeviceGroupDto>());
   }
 }
