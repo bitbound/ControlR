@@ -22,21 +22,6 @@ using _Imports = ControlR.Web.Client._Imports;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// For load testing.
-if (int.TryParse(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORT_START"), out var portStart) &&
-    int.TryParse(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORT_END"), out var portEnd))
-{
-  builder.WebHost.ConfigureKestrel(kestrelOptions =>
-  {
-    var range = Enumerable.Range(portStart, portEnd - portStart + 1);
-
-    foreach (var port in range)
-    {
-      kestrelOptions.ListenAnyIP(port);
-    }
-  });
-}
-
 // Configure IOptions.
 builder.Configuration.AddEnvironmentVariables("ControlR_");
 
