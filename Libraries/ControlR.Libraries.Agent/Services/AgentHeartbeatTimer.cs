@@ -1,13 +1,15 @@
 ﻿using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Libraries.Agent.Services;
+
 internal class AgentHeartbeatTimer(
     IAgentHubConnection hubConnection,
-    ISystemEnvironment _systemEnvironment,
+    ISystemEnvironment systemEnvironment,
     ILogger<AgentHeartbeatTimer> logger) : BackgroundService
 {
   private readonly IAgentHubConnection _hubConnection = hubConnection;
   private readonly ILogger<AgentHeartbeatTimer> _logger = logger;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -16,17 +18,24 @@ internal class AgentHeartbeatTimer(
         TimeSpan.FromMinutes(5);
 
     using var timer = new PeriodicTimer(delayTime);
-
-    while (await timer.WaitForNextTickAsync(stoppingToken))
+    try
     {
-      try
+      while (await timer.WaitForNextTickAsync(stoppingToken))
       {
-        await _hubConnection.SendDeviceHeartbeat();
+        try
+        {
+          await _hubConnection.SendDeviceHeartbeat();
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error while sending agent heartbeat.");
+        }
       }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while sending agent heartbeat.");
-      }
+
+    }
+    catch (OperationCanceledException)
+    {
+      _logger.LogInformation("Heartbeat aborted.  Application shutting down.");
     }
   }
 }

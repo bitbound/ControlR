@@ -23,25 +23,26 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
   startCount = lastArg;
 }
 
-Console.WriteLine($"Starting agent count at {startCount}");
+Console.WriteLine($"Starting agent count at {startCount}.");
 
 var agentCount = 4000;
-var serverBase = "http://cubey";
-var portStart = 42000;
-var portEnd = 42999;
-var portCount = portEnd - portStart + 1;
+var serverUri = "http://192.168.0.2:5003/";
 
-var cancellationTokenSource = new CancellationTokenSource();
-var cancellationToken = cancellationTokenSource.Token;
+
+var cts = new CancellationTokenSource();
+var cancellationToken = cts.Token;
 
 Console.CancelKeyPress += (s, e) =>
 {
-  cancellationTokenSource.Cancel();
+  cts.Cancel();
 };
+
+Console.WriteLine($"Connecting to {serverUri}");
 
 var hosts = new ConcurrentBag<IHost>();
 
 _ = ReportHosts(hosts, cancellationToken);
+
 
 await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
 {
@@ -49,9 +50,6 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   {
     return;
   }
-
-  var port = portStart + (i % portCount);
-  var serverUri = $"{serverBase}:{port}";
 
   var builder = Host.CreateApplicationBuilder(args);
   builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}");
@@ -69,9 +67,16 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   builder.Services.Remove(agentUpdater);
   builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
 
+  var streamerUpdater = builder.Services.First(x => x.ServiceType == typeof(IStreamerUpdater));
+  builder.Services.Remove(streamerUpdater);
+  builder.Services.AddSingleton<IStreamerUpdater, FakeStreamerUpdater>();
+
   var cpuSampler = builder.Services.First(x => x.ServiceType == typeof(ICpuUtilizationSampler));
   builder.Services.Remove(cpuSampler);
   builder.Services.AddSingleton<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
+
+  var sessionWatcher = builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher));
+  builder.Services.Remove(sessionWatcher);
 
   var deviceDataGenerator = builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator));
   builder.Services.Remove(deviceDataGenerator);
@@ -104,8 +109,6 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
       return Task.CompletedTask;
     },
     cancellationToken: cancellationToken);
-
-  await Task.Delay(1000, ct);
 });
 
 var hostTasks = hosts.Select(x => x.WaitForShutdownAsync());

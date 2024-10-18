@@ -1,21 +1,13 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Devices.Native.Services;
+﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ControlR.Libraries.Agent.Services;
 

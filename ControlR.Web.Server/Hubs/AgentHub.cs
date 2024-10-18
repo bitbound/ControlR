@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using System.Net.Sockets;
 
 namespace ControlR.Web.Server.Hubs;

@@ -19,7 +19,7 @@ public static class SerilogHostExtensions
             .Destructure.ToMaximumDepth(3)
             .Enrich.FromLogContext()
             .Enrich.WithThreadId()
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")
             .WriteTo.File(logFilePath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileTimeLimit: logRetention,
