@@ -286,6 +286,18 @@ namespace ControlR.Web.Server.Data.Migrations
                             Id = 1,
                             Name = "ServerAdministrator",
                             NormalizedName = "SERVERADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "DeviceAdministrator",
+                            NormalizedName = "DEVICEADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "UserAdministrator",
+                            NormalizedName = "USERADMINISTRATOR"
                         });
                 });
 

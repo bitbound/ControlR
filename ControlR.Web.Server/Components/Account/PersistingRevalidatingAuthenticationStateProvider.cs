@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Components.Account;
 
@@ -14,8 +12,8 @@ namespace ControlR.Web.Server.Components.Account;
 // authentication state to the client which is then fixed for the lifetime of the WebAssembly application.
 internal sealed class PersistingRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
-  private readonly IdentityOptions _options;
   private readonly ILogger<PersistingRevalidatingAuthenticationStateProvider> _logger;
+  private readonly IdentityOptions _options;
   private readonly IServiceScopeFactory _scopeFactory;
   private readonly PersistentComponentState _state;
   private readonly PersistingComponentStateSubscription _subscription;
@@ -58,43 +56,10 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     return await ValidateSecurityStampAsync(userManager, authenticationState.User);
   }
 
-  private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+  private async Task AddDbRolesAndClaims(AsyncServiceScope scope, UserInfo userInfo, ClaimsPrincipal principal)
   {
-    _authenticationStateTask = task;
-  }
-
-  private async Task OnPersistingAsync()
-  {
-    if (_authenticationStateTask is null)
-    {
-      throw new UnreachableException($"Authentication state not set in {nameof(OnPersistingAsync)}().");
-    }
-
-    var authenticationState = await _authenticationStateTask;
-    var principal = authenticationState.User;
-
-    if (principal.Identity?.IsAuthenticated == false)
-    {
-      return;
-    }
-
-    var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
-    var email = principal.FindFirst(_options.ClaimsIdentity.EmailClaimType)?.Value;
-
-    if (userId is null || email is null)
-    {
-      return;
-    }
-
-    await using var scope = _scopeFactory.CreateAsyncScope();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
     var user = await userManager.GetUserAsync(principal);
-
-    var userInfo = new UserInfo
-    {
-      UserId = userId,
-      Email = email
-    };
 
     if (user is not null)
     {
@@ -115,9 +80,51 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
         "User is authenticated but not found in the database. Username: {UserName}",
         principal.Identity?.Name);
     }
-    _state.PersistAsJson(nameof(UserInfo), userInfo);
   }
 
+  private async Task AddSelfRegistrationClaims(IServiceScope scope, UserInfo userInfo)
+  {
+    var regProvider = scope.ServiceProvider.GetRequiredService<IUserRegistrationProvider>();
+    if (await regProvider.IsSelfRegistrationEnabled())
+    {
+      userInfo.Claims.Add(new UserClaim() { Type = UserClaimTypes.CanSelfRegister, Value = "" });
+    }
+  }
+
+  private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+  {
+    _authenticationStateTask = task;
+  }
+
+  private async Task OnPersistingAsync()
+  {
+    if (_authenticationStateTask is null)
+    {
+      throw new UnreachableException($"Authentication state not set in {nameof(OnPersistingAsync)}().");
+    }
+
+    await using var scope = _scopeFactory.CreateAsyncScope();
+
+    var authenticationState = await _authenticationStateTask;
+    var principal = authenticationState.User;
+    var isAuthenticated = principal.Identity?.IsAuthenticated == true;
+    var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
+    var email = principal.FindFirst(_options.ClaimsIdentity.EmailClaimType)?.Value;
+    var userInfo = new UserInfo(isAuthenticated)
+    {
+      UserId = userId ?? string.Empty,
+      Email = email ?? string.Empty
+    };
+
+    await AddSelfRegistrationClaims(scope, userInfo);
+    
+    if (isAuthenticated)
+    {
+      await AddDbRolesAndClaims(scope, userInfo, principal);
+    }
+
+    _state.PersistAsJson(nameof(UserInfo), userInfo);
+  }
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)
   {
     var user = await userManager.GetUserAsync(principal);

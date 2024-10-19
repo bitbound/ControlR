@@ -14,6 +14,7 @@ global using ControlR.Web.Server.Options;
 global using ControlR.Web.Server.Services;
 global using ControlR.Web.Server.Services.Interfaces;
 global using ControlR.Web.Client.Authz;
+global using ControlR.Web.Client.Authz.Policies;
 global using ControlR.Web.Server.Data.Entities;
 global using ControlR.Libraries.Shared.Dtos.ServerApi;
 global using ControlR.Web.Server.Authz.Policies;

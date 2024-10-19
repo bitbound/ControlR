@@ -16,7 +16,7 @@ public class ViewerHub(
   IAlertStore alertStore,
   IIpApi ipApi,
   IWsBridgeApi wsBridgeApi,
-  IOptionsMonitor<ApplicationOptions> appOptions,
+  IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
   public Task<bool> CheckIfServerAdministrator()
@@ -190,7 +190,7 @@ public class ViewerHub(
         }
       }
 
-      if (Context.User.IsDeviceAdministrator(tenantUid))
+      if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
       {
         await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceAdministratorGroup(tenantUid));
       }

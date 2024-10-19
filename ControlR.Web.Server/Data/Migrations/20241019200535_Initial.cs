@@ -4,6 +4,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace ControlR.Web.Server.Data.Migrations
 {
     /// <inheritdoc />
@@ -209,6 +211,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     AgentVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Alias = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ConnectionId = table.Column<string>(type: "text", nullable: false),
                     CpuUtilization = table.Column<double>(type: "double precision", nullable: false),
                     CurrentUsers = table.Column<string[]>(type: "text[]", nullable: false),
                     Drives = table.Column<string>(type: "text", nullable: false),
@@ -249,7 +252,12 @@ namespace ControlR.Web.Server.Data.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
-                values: new object[] { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" });
+                values: new object[,]
+                {
+                    { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" },
+                    { 2, null, "DeviceAdministrator", "DEVICEADMINISTRATOR" },
+                    { 3, null, "UserAdministrator", "USERADMINISTRATOR" }
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",

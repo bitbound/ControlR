@@ -10,20 +10,6 @@ public static class ClaimsPrincipalExtensions
     return user.Identity?.IsAuthenticated ?? false;
   }
 
-  public static bool IsDeviceAdministrator(
-    this ClaimsPrincipal user,
-    Guid tenantUid)
-  {
-    if (!user.IsAuthenticated())
-    {
-      return false;
-    }
-
-    return user.HasClaim(x => 
-      x.Type == UserClaimTypes.DeviceAdministrator &&
-      x.Value == tenantUid.ToString());
-  }
-
   public static bool TryGetTenantId(
     this ClaimsPrincipal user,
     out int tenantId)

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20241012164026_Initial")]
+    [Migration("20241019200535_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -114,6 +114,10 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ConnectionId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<double>("CpuUtilization")
                         .HasColumnType("double precision");
@@ -285,6 +289,18 @@ namespace ControlR.Web.Server.Data.Migrations
                             Id = 1,
                             Name = "ServerAdministrator",
                             NormalizedName = "SERVERADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "DeviceAdministrator",
+                            NormalizedName = "DEVICEADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "UserAdministrator",
+                            NormalizedName = "USERADMINISTRATOR"
                         });
                 });
 

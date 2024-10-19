@@ -8,6 +8,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IUserRegistrationProvider UserRegistrationProvider
 
 <PageTitle>Register</PageTitle>
 
@@ -64,6 +65,12 @@
 
   public async Task RegisterUser(EditContext editContext)
   {
+    if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
+    {
+      Logger.LogCritical("Self-registration attempted while self-registration is disabled.  Email: {Email}", Input.Email);
+      return;
+    }
+
     var user = CreateUser();
     var tenant = new Tenant();
     user.Tenant = tenant;
@@ -87,8 +94,11 @@
     await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
     Logger.LogInformation("Added user's tenant UID claim.");
 
-    await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.DeviceAdministrator, $"{tenant.Uid}"));
-    Logger.LogInformation("Added user's DeviceAdministrator claim for new tenant claim.");
+    await UserManager.AddToRoleAsync(user, RoleNames.DeviceAdministrator);
+    Logger.LogInformation("Assigned user role DeviceAdministrator for newly-created tenant.");
+
+    await UserManager.AddToRoleAsync(user, RoleNames.UserAdministrator);
+    Logger.LogInformation("Assigned user role UserAdministrator for newly-created tenant.");
 
     if (await UserManager.Users.CountAsync() == 1)
     {
@@ -114,6 +124,19 @@
 
     await SignInManager.SignInAsync(user, false);
     RedirectManager.RedirectTo(ReturnUrl);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
+      {
+        RedirectManager.RedirectTo("/");
+        return;
+      }
+    }
+    await base.OnAfterRenderAsync(firstRender);
   }
 
   private AppUser CreateUser()

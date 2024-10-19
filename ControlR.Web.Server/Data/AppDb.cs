@@ -42,6 +42,26 @@ public class AppDb(DbContextOptions<AppDb> options)
         });
 
     builder
+      .Entity<IdentityRole<int>>()
+      .HasData(
+        new IdentityRole<int>()
+        {
+          Id = 2,
+          Name = RoleNames.DeviceAdministrator,
+          NormalizedName = RoleNames.DeviceAdministrator.ToUpper()
+        });
+
+    builder
+      .Entity<IdentityRole<int>>()
+      .HasData(
+        new IdentityRole<int>()
+        {
+          Id = 3,
+          Name = RoleNames.UserAdministrator,
+          NormalizedName = RoleNames.UserAdministrator.ToUpper()
+        });
+
+    builder
       .Entity<Device>()
       .Property(x => x.Drives)
       .HasConversion(

@@ -38,7 +38,10 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
       ..userClaims
     ];
 
-    var identity = new ClaimsIdentity(claims, nameof(PersistentAuthenticationStateProvider));
+    var identity = new ControlrClaimsIdentity(
+      userInfo,
+      claims,
+      nameof(PersistentAuthenticationStateProvider));
     
     _authenticationStateTask = Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
   }

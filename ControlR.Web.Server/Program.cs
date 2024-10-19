@@ -1,6 +1,7 @@
 using System.Net;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Web.Client.Authz.Policies;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
@@ -25,12 +26,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure IOptions.
 builder.Configuration.AddEnvironmentVariables("ControlR_");
 
-builder.Services.Configure<ApplicationOptions>(
-  builder.Configuration.GetSection(ApplicationOptions.SectionKey));
+builder.Services.Configure<AppOptions>(
+  builder.Configuration.GetSection(AppOptions.SectionKey));
 
 var appOptions = builder.Configuration
-  .GetSection(ApplicationOptions.SectionKey)
-  .Get<ApplicationOptions>() ?? new ApplicationOptions();
+  .GetSection(AppOptions.SectionKey)
+  .Get<AppOptions>() ?? new AppOptions();
 
 // Configure logging.
 ConfigureSerilog(appOptions);
@@ -96,7 +97,8 @@ builder.Services
 
 builder.Services
   .AddAuthorizationBuilder()
-  .AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator)
+  .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
+  .AddPolicy(CanSelfRegisterPolicy.PolicyName, CanSelfRegisterPolicy.Create())
   .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 
 builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
@@ -146,6 +148,7 @@ builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
+builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
@@ -286,7 +289,7 @@ async Task ConfigureRedis()
   builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
 }
 
-void ConfigureSerilog(ApplicationOptions applicationOptions)
+void ConfigureSerilog(AppOptions applicationOptions)
 {
   var logsRetention = applicationOptions.LogRetentionDays;
   if (logsRetention <= 0)

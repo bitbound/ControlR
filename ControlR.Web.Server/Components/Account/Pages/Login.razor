@@ -40,7 +40,9 @@
     <MudGrid Class="mt-4">
       <MudItem xs="12">
         <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br/>
-        <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br/>
+        <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)">
+          <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br/>
+        </AuthorizeView>
         <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
       </MudItem>
     </MudGrid>

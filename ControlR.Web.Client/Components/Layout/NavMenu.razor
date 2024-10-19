@@ -20,20 +20,24 @@
   </MudNavLink>
 
   @* TODO: Tenant Admin policy *@
-  <AuthorizeView>
+  <AuthorizeView Roles="@($"{RoleNames.UserAdministrator}, {RoleNames.DeviceAdministrator}")">
     <Authorized>
       <div class="ms-2 mt-5">
         <MudText Typo="Typo.caption" Color="Color.Default">
           Tenant Admin
         </MudText>
       </div>
-      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.UserManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
-        User Management
-      </MudNavLink>
-      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.DeviceManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Devices">
-        Device Management
-      </MudNavLink>
     </Authorized>
+  </AuthorizeView>
+  <AuthorizeView Roles="@(RoleNames.UserAdministrator)">
+    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.UserManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+      User Management
+    </MudNavLink>
+  </AuthorizeView>
+  <AuthorizeView Roles="@(RoleNames.DeviceAdministrator)">
+    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.DeviceManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Devices">
+      Device Management
+    </MudNavLink>
   </AuthorizeView>
   <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
     <Authorized>
@@ -64,9 +68,11 @@
       </form>
     </Authorized>
     <NotAuthorized>
-      <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
-        Register
-      </MudNavLink>
+      <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)" Context="registerContext">
+        <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+          Register
+        </MudNavLink>
+      </AuthorizeView>
       <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>

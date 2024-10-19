@@ -15,7 +15,7 @@ public class ServerSettingsController : ControllerBase
   [HttpGet]
   public async Task<ServerSettingsDto> Get(
     [FromServices] AppDb db,
-    [FromServices] IOptionsMonitor<ApplicationOptions> applicationOptions)
+    [FromServices] IOptionsMonitor<AppOptions> applicationOptions)
   {
     var userCount = await db.Users.CountAsync();
     var registrationEnabled = userCount == 0 || applicationOptions.CurrentValue.EnablePublicRegistration;

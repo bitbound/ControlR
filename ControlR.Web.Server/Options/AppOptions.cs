@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Web.Server.Options;
 
-public class ApplicationOptions
+public class AppOptions
 {
   public const string SectionKey = "ApplicationOptions";
   public string? DockerGatewayIp { get; init; }

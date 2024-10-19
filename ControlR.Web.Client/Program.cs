@@ -14,7 +14,8 @@ builder.Services.AddMudServices(config =>
 builder.Services
   .AddAuthorizationCore(options =>
   {
-    options.AddPolicy(PolicyNames.RequireServerAdministrator, AuthorizationPolicies.RequireServerAdministrator);
+    options.AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create());
+    options.AddPolicy(CanSelfRegisterPolicy.PolicyName, CanSelfRegisterPolicy.Create());
   });
 
 builder.Services.AddCascadingAuthenticationState();

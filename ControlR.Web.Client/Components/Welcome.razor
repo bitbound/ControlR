@@ -7,11 +7,13 @@
       Login
     </MudButton>
   </div>
-  <div>
-    <MudButton Color="Color.Default" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined">
-      Register
-    </MudButton>
-  </div>
+  <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)">
+    <div>
+      <MudButton Color="Color.Default" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined">
+        Register
+      </MudButton>
+    </div>
+  </AuthorizeView>
 </div>
 
 @code {

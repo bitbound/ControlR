@@ -12,6 +12,8 @@ public static class DeviceAccessByDeviceResourcePolicy
       .RequireAuthenticatedUser()
       .RequireServiceProviderAssertion(async (sp, handlerCtx) =>
       {
+        var logger = sp.GetRequiredService<ILogger<AuthorizationPolicyBuilder>>();
+
         if (handlerCtx.Resource is not Device device)
         {
           handlerCtx.Fail();
@@ -30,6 +32,11 @@ public static class DeviceAccessByDeviceResourcePolicy
           return false;
         }
 
+        if (handlerCtx.User.IsInRole(RoleNames.DeviceAdministrator))
+        {
+          return true;
+        }
+
         await using var scope = sp.CreateAsyncScope();
         using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
         var tenant = await db.Tenants
@@ -42,10 +49,6 @@ public static class DeviceAccessByDeviceResourcePolicy
           return false;
         }
 
-        if (handlerCtx.User.IsDeviceAdministrator(tenant.Uid))
-        {
-          return true;
-        }
 
         handlerCtx.Fail();
         return false;
