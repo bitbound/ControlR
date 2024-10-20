@@ -76,9 +76,9 @@
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen"
+               id="nav-drawer"
                ClipMode="DrawerClipMode.Always"
-               Elevation="2"
-               Breakpoint="_drawerBreakpoint">
+               Elevation="2">
 
       <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
     </MudDrawer>
@@ -125,7 +125,6 @@
 @code {
   private bool _drawerOpen = true;
   private bool _isIdentityPage;
-  private Breakpoint _drawerBreakpoint = Breakpoint.Md;
   private bool _isAuthenticated;
   private bool _isBrowser;
   private bool _isBusy;
@@ -136,7 +135,7 @@
   private string _alertMessage = string.Empty;
   private MudTheme? _customTheme;
   private int _pendingOperations;
-  
+
   private MudTheme CustomTheme
   {
     get
@@ -183,18 +182,6 @@
       if (_isAuthenticated)
       {
         await ViewerHub.Value.Connect();
-      }
-    }
-
-    if (_isIdentityPage)
-    {
-      var uri = new Uri(NavManager.Uri);
-      var query = uri.ParseQueryParams();
-      if (query.TryGetValue("drawerOpen", out var drawerOpenValue) &&
-          bool.TryParse(drawerOpenValue, out var drawerOpen))
-      {
-        _drawerOpen = drawerOpen;
-        _drawerBreakpoint = Breakpoint.Always;
       }
     }
   }

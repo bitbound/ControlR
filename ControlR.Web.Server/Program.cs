@@ -135,7 +135,7 @@ builder.Services.AddControlrWebClient(string.Empty);
 
 // Add HTTP clients.
 builder.Services.AddHttpClient<IIpApi, IpApi>();
-builder.Services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>();
+builder.Services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>(ConfigureHttpClient);
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 
 // Add other services.
@@ -287,4 +287,11 @@ async Task ConfigureRedis()
   }
 
   builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
+}
+
+void ConfigureHttpClient(IServiceProvider services, HttpClient client)
+{
+  var options = services.GetRequiredService<IOptionsMonitor<AppOptions>>();
+  client.BaseAddress = options.CurrentValue.ServerBaseUri ??
+    throw new InvalidOperationException("ServerBaseUri cannot be empty.");
 }

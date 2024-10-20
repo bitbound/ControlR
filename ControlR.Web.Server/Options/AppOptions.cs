@@ -9,6 +9,7 @@ public class AppOptions
   public string[] KnownProxies { get; init; } = [];
   public int LogRetentionDays { get; } = 7;
   public bool RequireUserEmailConfirmation { get; init; }
+  public Uri? ServerBaseUri { get; init; }
   public bool SmtpCheckCertificateRevocation { get; set; } = true;
   public string? SmtpDisplayName { get; set; }
   public string? SmtpEmail { get; set; }
