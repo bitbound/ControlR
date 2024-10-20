@@ -56,6 +56,15 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
     return await ValidateSecurityStampAsync(userManager, authenticationState.User);
   }
 
+  private static async Task AddSelfRegistrationClaims(IServiceScope scope, UserInfo userInfo)
+  {
+    var regProvider = scope.ServiceProvider.GetRequiredService<IUserRegistrationProvider>();
+    if (await regProvider.IsSelfRegistrationEnabled())
+    {
+      userInfo.Claims.Add(new UserClaim() { Type = UserClaimTypes.CanSelfRegister, Value = "" });
+    }
+  }
+
   private async Task AddDbRolesAndClaims(AsyncServiceScope scope, UserInfo userInfo, ClaimsPrincipal principal)
   {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
@@ -81,16 +90,6 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
         principal.Identity?.Name);
     }
   }
-
-  private async Task AddSelfRegistrationClaims(IServiceScope scope, UserInfo userInfo)
-  {
-    var regProvider = scope.ServiceProvider.GetRequiredService<IUserRegistrationProvider>();
-    if (await regProvider.IsSelfRegistrationEnabled())
-    {
-      userInfo.Claims.Add(new UserClaim() { Type = UserClaimTypes.CanSelfRegister, Value = "" });
-    }
-  }
-
   private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
   {
     _authenticationStateTask = task;

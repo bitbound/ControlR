@@ -19,7 +19,6 @@
     About
   </MudNavLink>
 
-  @* TODO: Tenant Admin policy *@
   <AuthorizeView Roles="@($"{RoleNames.UserAdministrator}, {RoleNames.DeviceAdministrator}")">
     <Authorized>
       <div class="ms-2 mt-5">
