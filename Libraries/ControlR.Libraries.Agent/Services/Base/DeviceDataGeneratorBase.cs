@@ -66,7 +66,7 @@ internal class DeviceDataGeneratorBase(
   {
     return new DeviceFromAgentDto
     {
-      Uid = deviceId,
+      Id = deviceId,
       CurrentUsers = currentUsers,
       CpuUtilization = cpuUtilization,
       Drives = drives,

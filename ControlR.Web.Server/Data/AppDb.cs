@@ -27,11 +27,6 @@ public class AppDb(DbContextOptions<AppDb> options)
     base.OnModelCreating(builder);
 
     builder
-      .Entity<Device>()
-      .HasIndex(x => x.Uid)
-      .IsUnique();
-
-    builder
       .Entity<IdentityRole<int>>()
       .HasData(
         new IdentityRole<int>()
@@ -80,7 +75,7 @@ public class AppDb(DbContextOptions<AppDb> options)
       {
         builder
           .Entity(entityType.ClrType)
-          .Property(nameof(EntityBase.Uid))
+          .Property(nameof(EntityBase.Id))
           .HasDefaultValueSql("gen_random_uuid()");
       }
 

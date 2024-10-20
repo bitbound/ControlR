@@ -9,10 +9,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ControlR.Web.Server.Data.Migrations
+namespace ControlR.Web.Server.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20241019200535_Initial")]
+    [Migration("20241020214528_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -73,8 +73,8 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
@@ -99,11 +99,10 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Device", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("AgentVersion")
                         .IsRequired()
@@ -126,8 +125,8 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text[]");
 
-                    b.Property<int?>("DeviceGroupId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("DeviceGroupId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Drives")
                         .IsRequired()
@@ -175,19 +174,14 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasMaxLength(39)
                         .HasColumnType("character varying(39)");
 
-                    b.Property<int?>("TenantId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.Property<double>("TotalMemory")
                         .HasColumnType("double precision");
 
                     b.Property<double>("TotalStorage")
                         .HasColumnType("double precision");
-
-                    b.Property<Guid>("Uid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<double>("UsedMemory")
                         .HasColumnType("double precision");
@@ -201,31 +195,22 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("Uid")
-                        .IsUnique();
-
                     b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.DeviceGroup", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("Uid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -236,19 +221,13 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("Uid")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

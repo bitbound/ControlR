@@ -12,7 +12,7 @@ internal interface ISettingsProvider
   Uri ServerUri { get; }
   string GetAppSettingsPath();
   Task UpdateSettings(AgentAppSettings settings);
-  Task UpdateUid(Guid uid);
+  Task UpdateId(Guid uid);
 }
 
 internal class SettingsProvider(
@@ -56,7 +56,7 @@ internal class SettingsProvider(
     }
   }
 
-  public async Task UpdateUid(Guid uid)
+  public async Task UpdateId(Guid uid)
   {
     _appOptions.CurrentValue.DeviceId = uid;
     await WriteToDisk(_appOptions.CurrentValue);

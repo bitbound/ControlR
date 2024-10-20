@@ -16,7 +16,7 @@ public class DeviceGroupsController : ControllerBase
   public async Task<ActionResult<List<DeviceGroupDto>>> Get(
     [FromServices] AppDb db)
   {
-    if (!User.TryGetTenantUid(out var tenantUid))
+    if (!User.TryGetTenantId(out var tenantId))
     {
       return NotFound("User tenant not found.");
     }

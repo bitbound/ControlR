@@ -13,14 +13,14 @@ public class DeviceDto : DeviceFromAgentDto, IEntityBaseDto
   public string Alias { get; set; } = string.Empty;
 
   [MsgPackKey]
-  public int? DeviceGroupId { get; set; }
+  public Guid? DeviceGroupId { get; set; }
 
   [MsgPackKey]
   [Display(Name = "Id")]
-  public int Id { get; set; }
+  public Guid Id { get; set; }
 
   [MsgPackKey]
-  public int TenantId { get; set; }
+  public Guid TenantId { get; set; }
 
   [IgnoreDataMember]
   [JsonIgnore]

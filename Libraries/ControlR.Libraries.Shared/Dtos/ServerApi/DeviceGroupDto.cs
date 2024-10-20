@@ -2,5 +2,4 @@
 
 public record DeviceGroupDto(
   string Name, 
-  int Id, 
-  Guid Uid) : EntityBaseRecordDto(Id, Uid);
+  Guid Id) : EntityBaseRecordDto(Id);

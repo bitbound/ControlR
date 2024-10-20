@@ -27,7 +27,7 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
 
   public void AddOrUpdate(DeviceDto device)
   {
-    _cache.AddOrUpdate(device.Uid, device, (_, _) => device);
+    _cache.AddOrUpdate(device.Id, device, (_, _) => device);
   }
 
   public void Clear()
@@ -53,7 +53,7 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
 
   public Task Remove(DeviceDto device)
   {
-    _cache.Remove(device.Uid, out _);
+    _cache.Remove(device.Id, out _);
     return Task.CompletedTask;
   }
 

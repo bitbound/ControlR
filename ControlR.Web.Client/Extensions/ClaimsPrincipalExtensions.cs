@@ -12,41 +12,21 @@ public static class ClaimsPrincipalExtensions
 
   public static bool TryGetTenantId(
     this ClaimsPrincipal user,
-    out int tenantId)
+    out Guid tenantId)
   {
-    tenantId = 0;
+    tenantId = Guid.Empty;
     if (!user.IsAuthenticated())
     {
       return false;
     }
 
     var tenantClaim = user.FindFirst(UserClaimTypes.TenantId);
-    if (!int.TryParse(tenantClaim?.Value, out var id))
+    if (!Guid.TryParse(tenantClaim?.Value, out var id))
     {
       return false;
     }
 
     tenantId = id;
-    return true;
-  }
-
-  public static bool TryGetTenantUid(
-    this ClaimsPrincipal user,
-    out Guid tenantUid)
-  {
-    tenantUid = Guid.Empty;
-    if (!user.IsAuthenticated())
-    {
-      return false;
-    }
-
-    var tenantClaim = user.FindFirst(UserClaimTypes.TenantUid);
-    if (!Guid.TryParse(tenantClaim?.Value, out var uid))
-    {
-      return false;
-    }
-
-    tenantUid = uid;
     return true;
   }
 }

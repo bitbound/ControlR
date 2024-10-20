@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace ControlR.Web.Server.Data.Migrations
+namespace ControlR.Web.Server.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -33,10 +33,8 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "Tenants",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: true),
-                    Uid = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()")
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    Name = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -70,7 +68,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -101,11 +99,9 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "DeviceGroups",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Uid = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()")
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -207,8 +203,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "Devices",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     AgentVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Alias = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     ConnectionId = table.Column<string>(type: "text", nullable: false),
@@ -230,9 +225,8 @@ namespace ControlR.Web.Server.Data.Migrations
                     TotalStorage = table.Column<double>(type: "double precision", nullable: false),
                     UsedMemory = table.Column<double>(type: "double precision", nullable: false),
                     UsedStorage = table.Column<double>(type: "double precision", nullable: false),
-                    DeviceGroupId = table.Column<int>(type: "integer", nullable: true),
-                    TenantId = table.Column<int>(type: "integer", nullable: true),
-                    Uid = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()")
+                    DeviceGroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -315,12 +309,6 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "IX_Devices_TenantId",
                 table: "Devices",
                 column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Devices_Uid",
-                table: "Devices",
-                column: "Uid",
-                unique: true);
         }
 
         /// <inheritdoc />

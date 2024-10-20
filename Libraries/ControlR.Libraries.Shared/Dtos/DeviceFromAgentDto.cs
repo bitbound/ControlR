@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 namespace ControlR.Libraries.Shared.Dtos;
 
 [MessagePackObject]
-public class DeviceFromAgentDto : IHasSettableUid
+public class DeviceFromAgentDto : IHasSettablePrimaryKey
 {
   [MsgPackKey]
   [Display(Name = "Agent Version")]
@@ -28,6 +28,10 @@ public class DeviceFromAgentDto : IHasSettableUid
   [MsgPackKey]
   [Display(Name = "Drives")]
   public List<Drive> Drives { get; set; } = [];
+
+  [MsgPackKey]
+  [Display(Name = "Id")]
+  public Guid Id { get; set; }
 
   [MsgPackKey]
   [Display(Name = "64-bit")]
@@ -87,8 +91,4 @@ public class DeviceFromAgentDto : IHasSettableUid
   [MsgPackKey]
   [Display(Name = "Storage Used")]
   public double UsedStorage { get; set; }
-
-  [MsgPackKey]
-  [Display(Name = "Uid")]
-  public Guid Uid { get; set; }
 }

@@ -205,7 +205,7 @@
     var args = $"-s {NavMan.Uri} -i {serverUri.Authority}";
     if (_addToDeviceGroup && _selectedDeviceGroup is not null)
     {
-      args += $" -g {_selectedDeviceGroup.Uid}";
+      args += $" -g {_selectedDeviceGroup.Id}";
     }
 
     return args;

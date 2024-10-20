@@ -4,15 +4,15 @@ namespace ControlR.Web.Server.Data.Entities;
 
 public class EntityBase
 {
-  private int _id;
+  private Guid _id;
 
   [Key]
-  public int Id
+  public Guid Id
   {
     get => _id;
     set
     {
-      if (value == 0)
+      if (_id == Guid.Empty)
       {
         return;
       }
@@ -20,6 +20,4 @@ public class EntityBase
       _id = value;
     }
   }
-  
-  public Guid Uid { get; set; }
 }

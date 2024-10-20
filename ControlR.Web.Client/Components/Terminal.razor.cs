@@ -66,7 +66,7 @@ public partial class Terminal : IAsyncDisposable
     try
     {
       GC.SuppressFinalize(this);
-      await ViewerHub.CloseTerminalSession(Device.Uid, Id);
+      await ViewerHub.CloseTerminalSession(Device.Id, Id);
     }
     catch (Exception ex)
     {

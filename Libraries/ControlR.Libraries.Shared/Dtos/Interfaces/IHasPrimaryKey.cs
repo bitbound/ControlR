@@ -2,10 +2,10 @@
 
 public interface IHasPrimaryKey
 {
-  int Id { get; }
+  Guid Id { get; }
 }
 
 public interface IHasSettablePrimaryKey : IHasPrimaryKey
 {
-  new int Id { get; set; }
+  new Guid Id { get; set; }
 }

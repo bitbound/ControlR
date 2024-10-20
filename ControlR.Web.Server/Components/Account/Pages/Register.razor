@@ -88,11 +88,8 @@
 
     Logger.LogInformation("User created a new account with password.");
 
-    await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantUid, $"{tenant.Uid}"));
-    Logger.LogInformation("Added user's tenant ID claim.");
-
     await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
-    Logger.LogInformation("Added user's tenant UID claim.");
+    Logger.LogInformation("Added user's tenant ID claim.");
 
     await UserManager.AddToRoleAsync(user, RoleNames.DeviceAdministrator);
     Logger.LogInformation("Assigned user role DeviceAdministrator for newly-created tenant.");

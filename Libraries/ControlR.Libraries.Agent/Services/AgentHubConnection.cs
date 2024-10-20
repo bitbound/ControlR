@@ -84,10 +84,10 @@ internal class AgentHubConnection(
         return;
       }
 
-      if (updateResult.Value.Uid != deviceDto.Uid)
+      if (updateResult.Value.Id != deviceDto.Id)
       {
-        _logger.LogInformation("Device UID changed.  Updating appsettings.");
-        await _settings.UpdateUid(updateResult.Value.Uid);
+        _logger.LogInformation("Device ID changed.  Updating appsettings.");
+        await _settings.UpdateId(updateResult.Value.Id);
       }
     }
     catch (Exception ex)

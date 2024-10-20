@@ -11,23 +11,22 @@ public static class AppDbExtensions
     this AppDb db, 
     TDto dto,
     IEnumerable<Expression<Func<TEntity, object?>>>? navigations = null)
-    where TDto : IHasUid
+    where TDto : IHasPrimaryKey
     where TEntity : EntityBase, new()
   {
     var set = db.Set<TEntity>();
     TEntity? entity = null;
-
-    if (dto.Uid != Guid.Empty)
+    
+    if (dto.Id != Guid.Empty)
     {
-      entity = await set.FirstOrDefaultAsync(x => x.Uid == dto.Uid);
+      entity = await set.FirstOrDefaultAsync(x => x.Id == dto.Id);
     }
 
+    var entityState = entity is null ? EntityState.Added : EntityState.Modified;
     entity ??= new TEntity();
     var entry = set.Entry(entity);
     entry.CurrentValues.SetValues(dto);
-    entry.State = entity.Id == 0 ? 
-      EntityState.Added : 
-      EntityState.Modified;
+    entry.State = entityState;
 
     if (navigations is not null)
     {

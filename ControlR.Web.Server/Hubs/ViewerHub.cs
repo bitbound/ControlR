@@ -173,9 +173,9 @@ public class ViewerHub(
         return;
       }
 
-      if (!Context.User.TryGetTenantUid(out var tenantUid))
+      if (!Context.User.TryGetTenantId(out var tenantId))
       {
-        logger.LogCritical("Failed to get tenant UID.");
+        logger.LogCritical("Failed to get tenant ID.");
         return;
       }
 
@@ -192,7 +192,7 @@ public class ViewerHub(
 
       if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceAdministratorGroup(tenantUid));
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceAdministratorGroup(tenantId));
       }
     }
     catch (Exception ex)

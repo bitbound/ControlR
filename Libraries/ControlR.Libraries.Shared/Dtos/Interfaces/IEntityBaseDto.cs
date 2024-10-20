@@ -1,9 +1,9 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.Interfaces;
-public interface IEntityBaseDto : IHasSettablePrimaryKey, IHasSettableUid
+public interface IEntityBaseDto : IHasSettablePrimaryKey
 {
 }
 
-public interface IReadOnlyEntityBaseDto : IHasPrimaryKey, IHasUid
+public interface IReadOnlyEntityBaseDto : IHasPrimaryKey
 {
 
 }

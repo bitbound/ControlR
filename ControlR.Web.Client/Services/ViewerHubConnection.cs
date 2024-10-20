@@ -262,7 +262,7 @@ internal class ViewerHubConnection(
     {
       var dto = new TriggerAgentUpdateDto();
       var wrapper = DtoWrapper.Create(dto, DtoType.TriggerAgentUpdate);
-      await _viewerHub.Server.SendDtoToAgent(device.Uid, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(device.Id, wrapper);
     });
   }
 
@@ -284,7 +284,7 @@ internal class ViewerHubConnection(
     {
       var powerDto = new PowerStateChangeDto(powerStateType);
       var wrapper = DtoWrapper.Create(powerDto, DtoType.PowerStateChange);
-      await _viewerHub.Server.SendDtoToAgent(device.Uid, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(device.Id, wrapper);
     });
   }
 

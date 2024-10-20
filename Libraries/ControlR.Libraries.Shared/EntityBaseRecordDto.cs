@@ -6,8 +6,4 @@ namespace ControlR.Libraries.Shared;
 public record EntityBaseRecordDto(
   [property: MsgPackKey]
   [property: Display(Name = "Id")]
-  int Id,
-
-  [property: MsgPackKey]
-  [property: Display(Name = "Device Uid")]
-   Guid Uid);
+  Guid Id);

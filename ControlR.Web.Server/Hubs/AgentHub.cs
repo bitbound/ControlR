@@ -119,12 +119,12 @@ public class AgentHub(
         await _appDb.SaveChangesAsync();
       }
 
-      TenantUid = deviceEntity.Tenant?.Uid;
+      TenantUid = deviceEntity.Tenant?.Id;
       Device = deviceEntity.ToDto();
 
       Device.ConnectionId = Context.ConnectionId;
 
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Uid));
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id));
 
       await SendDeviceUpdate();
 
