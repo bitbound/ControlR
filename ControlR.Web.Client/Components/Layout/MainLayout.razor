@@ -124,9 +124,9 @@
 
 @code {
   private bool _drawerOpen = true;
+  private bool _isIdentityPage;
   private Breakpoint _drawerBreakpoint = Breakpoint.Md;
   private bool _isAuthenticated;
-  private bool _isIdentityPage;
   private bool _isBrowser;
   private bool _isBusy;
   private bool _isWaitingForWasmLoad = true;
@@ -136,7 +136,7 @@
   private string _alertMessage = string.Empty;
   private MudTheme? _customTheme;
   private int _pendingOperations;
-
+  
   private MudTheme CustomTheme
   {
     get
@@ -194,7 +194,7 @@
           bool.TryParse(drawerOpenValue, out var drawerOpen))
       {
         _drawerOpen = drawerOpen;
-        _drawerBreakpoint = _drawerOpen ? Breakpoint.Md : Breakpoint.Always;
+        _drawerBreakpoint = Breakpoint.Always;
       }
     }
   }

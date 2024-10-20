@@ -3,6 +3,7 @@
 @inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
+@inject IServerSettingsApi ServerSettingsApi
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -67,11 +68,12 @@
       </form>
     </Authorized>
     <NotAuthorized>
-      <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)" Context="registerContext">
+      @if (_isPublicRegistrationEnabled)
+      {
         <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
           Register
         </MudNavLink>
-      </AuthorizeView>
+      }
       <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>
@@ -84,6 +86,7 @@
 
   private string? _currentUrl;
   private bool _isAuthenticated;
+  private bool _isPublicRegistrationEnabled;
 
   [Parameter]
   public bool IsDisabled { get; set; }
@@ -98,6 +101,12 @@
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    var settingsResult = await ServerSettingsApi.GetServerSettings();
+    if (settingsResult.IsSuccess)
+    {
+      _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
+    }
 
     var state = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = state.User.IsAuthenticated();

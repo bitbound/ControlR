@@ -1,3 +1,4 @@
+@inject IServerSettingsApi ServerSettingsApi
 <div class="mt-8 text-center">
   <MudText Typo="Typo.h3" Class="mb-8">
     Welcome to ControlR
@@ -7,15 +8,25 @@
       Login
     </MudButton>
   </div>
-  <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)">
+  @if (_isPublicRegistrationEnabled)
+  {
     <div>
       <MudButton Color="Color.Default" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined">
         Register
       </MudButton>
     </div>
-  </AuthorizeView>
+  }
 </div>
 
 @code {
+  private bool _isPublicRegistrationEnabled;
 
+  protected override async Task OnInitializedAsync()
+  {
+    var settingsResults = await ServerSettingsApi.GetServerSettings();
+    if (settingsResults.IsSuccess)
+    {
+      _isPublicRegistrationEnabled = settingsResults.Value.IsPublicRegistrationEnabled;
+    }
+  }
 }

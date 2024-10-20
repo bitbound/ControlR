@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route("api/server-settings")]
 [ApiController]
 [OutputCache(Duration = 60)]
-[Authorize]
 public class ServerSettingsController : ControllerBase
 {
   [HttpGet]

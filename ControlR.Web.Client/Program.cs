@@ -15,7 +15,6 @@ builder.Services
   .AddAuthorizationCore(options =>
   {
     options.AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create());
-    options.AddPolicy(CanSelfRegisterPolicy.PolicyName, CanSelfRegisterPolicy.Create());
   });
 
 builder.Services.AddCascadingAuthenticationState();

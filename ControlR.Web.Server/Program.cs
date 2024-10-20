@@ -1,7 +1,6 @@
 using System.Net;
 using Bitbound.WebSocketBridge.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Client.Authz.Policies;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
@@ -18,7 +17,6 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
-using Serilog;
 using StackExchange.Redis;
 using _Imports = ControlR.Web.Client._Imports;
 
@@ -35,7 +33,6 @@ var appOptions = builder.Configuration
   .Get<AppOptions>() ?? new AppOptions();
 
 // Configure logging.
-//ConfigureSerilog(appOptions);
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 // Add telemetry.
@@ -99,7 +96,6 @@ builder.Services
 builder.Services
   .AddAuthorizationBuilder()
   .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
-  .AddPolicy(CanSelfRegisterPolicy.PolicyName, CanSelfRegisterPolicy.Create())
   .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 
 builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
@@ -137,11 +133,17 @@ await ConfigureRedis();
 // Add client services for pre-rendering.
 builder.Services.AddControlrWebClient(string.Empty);
 
+// Add HTTP clients.
+builder.Services.AddHttpClient<IIpApi, IpApi>();
+builder.Services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>();
+builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
+
 // Add other services.
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
 builder.Services.AddLazyDi();
 builder.Services.AddOutputCache();
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
@@ -151,9 +153,6 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddHttpClient<IIpApi, IpApi>();
-builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 builder.Services.AddWebSocketBridge();
 
 if (appOptions.UseRedisBackplane)
@@ -212,7 +211,6 @@ app.MapHub<ViewerHub>("/hubs/viewer");
 
 app.UseOutputCache();
 
-Log.Information("Applying migrations to database at host: {DbHost}", pgHost);
 await app.ApplyMigrations();
 await app.SetAllDevicesOffline();
 
@@ -236,7 +234,7 @@ void ConfigureForwardedHeaders()
       }
       else
       {
-        Log.Error("Invalid DockerGatewayIp: {DockerGatewayIp}", appOptions?.DockerGatewayIp);
+        Console.WriteLine($"Invalid DockerGatewayIp: {appOptions?.DockerGatewayIp}");
       }
     }
 
@@ -250,7 +248,7 @@ void ConfigureForwardedHeaders()
         }
         else
         {
-          Log.Error("Invalid KnownProxy IP: {KnownProxyIp}", proxy);
+          Console.WriteLine("Invalid KnownProxy IP: {proxy}");
         }
       }
     }
@@ -285,24 +283,8 @@ async Task ConfigureRedis()
 
   if (!multiplexer.IsConnected)
   {
-    Log.Fatal("Failed to connect to Redis backplane.");
+    Console.WriteLine("Failed to connect to Redis backplane.");
   }
 
   builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
-}
-
-void ConfigureSerilog(AppOptions appOptions)
-{
-  var logsRetention = appOptions.LogRetentionDays;
-  if (logsRetention <= 0)
-  {
-    logsRetention = 7;
-  }
-
-  var logsPath = Path.Combine(
-    AppDomain.CurrentDomain.BaseDirectory,
-    "AppData",
-    "logs");
-
-  builder.BootstrapSerilog(Path.Combine(logsPath, "ControlR.Server.log"), TimeSpan.FromDays(logsRetention));
 }

@@ -3,18 +3,15 @@ const toggleButton = document.getElementById("nav-drawer-toggle-button");
 
 toggleButton.addEventListener("click", () => {
   const currentLocation = new URL(location.href);
-  const drawerOpen = currentLocation.searchParams.get("drawerOpen");
+  const drawerSetOpen = currentLocation.searchParams.get("drawerOpen");
+  const drawerDefaultOpen = window.matchMedia("(min-width: 960px)").matches;
 
-  if (!drawerOpen) {
-    currentLocation.searchParams.set("drawerOpen", "true");
+  if (!drawerSetOpen) {
+    currentLocation.searchParams.set("drawerOpen", `${!drawerDefaultOpen}`);
   }
   else {
-    if (drawerOpen === "true") {
-      currentLocation.searchParams.set("drawerOpen", "false");
-    }
-    else {
-      currentLocation.searchParams.set("drawerOpen", "true");
-    }
+    currentLocation.searchParams.delete("drawerOpen");
   }
+
   location.assign(currentLocation.href);
 });

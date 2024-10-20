@@ -11,20 +11,9 @@
 
 <StatusMessage Message="@_statusMessage"/>
 
-@if (_emailConfirmationLink is not null)
-{
-  <p>
-    This app does not currently have a real email sender registered.
-    Normally this would be emailed: <a class="mud-link mud-primary-text mud-link-underline-hover" href="@_emailConfirmationLink">Click here to confirm your account</a>
-  </p>
-}
-else
-{
-  <p>Please check your email to confirm your account.</p>
-}
+<p>Please check your email to confirm your account.</p>
 
 @code {
-  private string? _emailConfirmationLink;
   private string? _statusMessage;
 
   [CascadingParameter]

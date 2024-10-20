@@ -4,6 +4,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IServerSettingsApi ServerSettingsApi
 
 <PageTitle>Log in</PageTitle>
 
@@ -40,9 +41,10 @@
     <MudGrid Class="mt-4">
       <MudItem xs="12">
         <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br/>
-        <AuthorizeView Policy="@(CanSelfRegisterPolicy.PolicyName)">
-          <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br/>
-        </AuthorizeView>
+        @if (_isPublicRegistrationEnabled)
+        {
+          <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br/> 
+        }
         <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
       </MudItem>
     </MudGrid>
@@ -56,6 +58,7 @@
 
 @code {
   private string? _errorMessage;
+  private bool _isPublicRegistrationEnabled;
 
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
@@ -72,6 +75,12 @@
     {
       // Clear the existing external cookie to ensure a clean login process
       await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+    }
+
+    var settingsResult = await ServerSettingsApi.GetServerSettings();
+    if (settingsResult.IsSuccess)
+    {
+      _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
     }
   }
 
