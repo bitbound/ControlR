@@ -35,5 +35,4 @@ public class ServerSettingsApi(
         .Log(_logger);
     }
   }
-
 }

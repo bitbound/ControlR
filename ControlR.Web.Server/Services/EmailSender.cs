@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Server.Components.Account.Pages.Manage;
-using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using Microsoft.AspNetCore.Identity.UI.Services;
 using MimeKit.Text;
 using MimeKit;
 using MailKit.Net.Smtp;
@@ -17,6 +16,12 @@ public class EmailSender(
   {
     try
     {
+      if (!ValidateOptions())
+      {
+        _logger.LogCritical("SMTP options are not properly configured.  Unable to send email.");
+        return;
+      }
+
       var message = new MimeMessage();
       message.From.Add(new MailboxAddress(_appOptions.SmtpDisplayName, _appOptions.SmtpEmail));
       message.To.Add(MailboxAddress.Parse(email));
@@ -53,5 +58,16 @@ public class EmailSender(
       _logger.LogError(ex, "Error while sending email.");
       throw;
     }
+  }
+
+  private bool ValidateOptions()
+  {
+    if (string.IsNullOrWhiteSpace(_appOptions.SmtpDisplayName) ||
+        string.IsNullOrWhiteSpace(_appOptions.SmtpEmail) ||
+        string.IsNullOrWhiteSpace(_appOptions.SmtpHost))
+    {
+      return false;
+    }
+    return true;
   }
 }

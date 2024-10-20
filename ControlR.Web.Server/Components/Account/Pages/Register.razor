@@ -126,17 +126,14 @@
     RedirectManager.RedirectTo(ReturnUrl);
   }
 
-  protected override async Task OnAfterRenderAsync(bool firstRender)
+  protected override async Task OnInitializedAsync()
   {
-    if (firstRender)
+    if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
     {
-      if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
-      {
-        RedirectManager.RedirectTo("/");
-        return;
-      }
+      RedirectManager.RedirectTo("/");
+      return;
     }
-    await base.OnAfterRenderAsync(firstRender);
+    await base.OnInitializedAsync();
   }
 
   private AppUser CreateUser()

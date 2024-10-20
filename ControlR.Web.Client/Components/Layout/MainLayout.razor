@@ -1,10 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthState
+@inject NavigationManager NavManager
 @inject ILazyDi<IMessenger> Messenger
 @inject ILazyDi<IBusyCounter> BusyCounter
 @inject ILazyDi<IViewerHubConnection> ViewerHub
 @inject ILazyDi<ISnackbar> Snackbar
-@inject ILazyDi<NavigationManager> NavManager
 @inject ILazyDi<ILogger<MainLayout>> Logger
 
 <div>
@@ -15,14 +15,16 @@
 
   <MudLayout>
     <MudAppBar Elevation="1">
-      <MudIconButton Icon="@Icons.Material.Filled.Menu"
+      <MudIconButton id="nav-drawer-toggle-button"
+                     Icon="@Icons.Material.Filled.Menu"
                      Color="Color.Inherit"
                      Edge="Edge.Start"
                      OnClick="@(_ => DrawerToggle())" />
 
       <MudImage Src="/icon-192.png" Height="30" Class="mx-2" />
-      <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-
+      <MudLink Href="/" Underline="Underline.None">
+        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+      </MudLink>
       <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3" />
 
       <MudSpacer />
@@ -73,7 +75,11 @@
 
       </MudTooltip>
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2"
+               Breakpoint="_drawerBreakpoint">
+
       <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
@@ -102,6 +108,11 @@
   </MudLayout>
 
   <DeviceContentHarness />
+
+  @if (_isIdentityPage)
+  {
+    <script src="/Components/Layout/MainLayout.razor.js"></script>
+  }
 </div>
 
 
@@ -113,7 +124,9 @@
 
 @code {
   private bool _drawerOpen = true;
+  private Breakpoint _drawerBreakpoint = Breakpoint.Md;
   private bool _isAuthenticated;
+  private bool _isIdentityPage;
   private bool _isBrowser;
   private bool _isBusy;
   private bool _isWaitingForWasmLoad = true;
@@ -145,18 +158,18 @@
     }
   }
 
-
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
 
-    _isBrowser = OperatingSystem.IsBrowser();
     _isAuthenticated = await AuthState.IsAuthenticated();
+    _isBrowser = OperatingSystem.IsBrowser();
 
-    _isWaitingForWasmLoad =
-      !_isBrowser &&
-      Uri.TryCreate(NavManager.Value.Uri, UriKind.Absolute, out var currentUri) &&
-      !currentUri.PathAndQuery.StartsWith("/Account");
+    _isIdentityPage =
+      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
+      currentUri.PathAndQuery.StartsWith("/Account");
+
+    _isWaitingForWasmLoad = !_isBrowser && !_isIdentityPage; ;
 
     if (_isBrowser)
     {
@@ -170,6 +183,18 @@
       if (_isAuthenticated)
       {
         await ViewerHub.Value.Connect();
+      }
+    }
+
+    if (_isIdentityPage)
+    {
+      var uri = new Uri(NavManager.Uri);
+      var query = uri.ParseQueryParams();
+      if (query.TryGetValue("drawerOpen", out var drawerOpenValue) &&
+          bool.TryParse(drawerOpenValue, out var drawerOpen))
+      {
+        _drawerOpen = drawerOpen;
+        _drawerBreakpoint = _drawerOpen ? Breakpoint.Md : Breakpoint.Always;
       }
     }
   }
