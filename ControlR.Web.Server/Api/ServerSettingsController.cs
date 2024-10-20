@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Api;
 
@@ -15,10 +12,9 @@ public class ServerSettingsController : ControllerBase
   [HttpGet]
   public async Task<ServerSettingsDto> Get(
     [FromServices] AppDb db,
-    [FromServices] IOptionsMonitor<AppOptions> applicationOptions)
+    [FromServices] IOptionsMonitor<AppOptions> appOptions)
   {
-    var userCount = await db.Users.CountAsync();
-    var registrationEnabled = userCount == 0 || applicationOptions.CurrentValue.EnablePublicRegistration;
+    var registrationEnabled = !await db.Users.AnyAsync() || appOptions.CurrentValue.EnablePublicRegistration;
     return new ServerSettingsDto(registrationEnabled);
   }
 }

@@ -162,10 +162,10 @@ public class ViewerHub(
   {
     try
     {
+      await base.OnConnectedAsync();
+
       connectionCounter.IncrementViewerCount();
       await SendUpdatedConnectionCountToAdmins();
-
-      await base.OnConnectedAsync();
 
       if (Context.User is null)
       {

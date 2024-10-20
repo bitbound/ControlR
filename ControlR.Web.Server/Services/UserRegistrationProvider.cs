@@ -7,11 +7,11 @@ public interface IUserRegistrationProvider
 
 public class UserRegistrationProvider(
   IServiceScopeFactory scopeFactory,
-  IOptions<AppOptions> appOptions,
+  IOptionsMonitor<AppOptions> appOptions,
   ILogger<UserRegistrationProvider> logger) : IUserRegistrationProvider
 {
   private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
-  private readonly IOptions<AppOptions> _appOptions = appOptions;
+  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly ILogger<UserRegistrationProvider> _logger = logger;
 
   public async Task<bool> IsSelfRegistrationEnabled()
@@ -23,7 +23,7 @@ public class UserRegistrationProvider(
       await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
       return
-        _appOptions.Value.EnablePublicRegistration ||
+        _appOptions.CurrentValue.EnablePublicRegistration ||
         await appDb.Users.AnyAsync() == false;
     }
     catch (Exception ex)

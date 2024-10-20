@@ -14,6 +14,7 @@ using ControlR.Web.Server.Services.Local;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
@@ -34,7 +35,7 @@ var appOptions = builder.Configuration
   .Get<AppOptions>() ?? new AppOptions();
 
 // Configure logging.
-ConfigureSerilog(appOptions);
+//ConfigureSerilog(appOptions);
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 // Add telemetry.
@@ -108,7 +109,7 @@ builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequiremen
 builder.Services
   .AddIdentityCore<AppUser>(options =>
   {
-    options.SignIn.RequireConfirmedAccount = true;
+    options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
   })
@@ -137,7 +138,7 @@ await ConfigureRedis();
 builder.Services.AddControlrWebClient(string.Empty);
 
 // Add other services.
-builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
 builder.Services.AddLazyDi();
 builder.Services.AddOutputCache();
 
@@ -149,6 +150,7 @@ builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
+builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IIpApi, IpApi>();
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
@@ -289,9 +291,9 @@ async Task ConfigureRedis()
   builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
 }
 
-void ConfigureSerilog(AppOptions applicationOptions)
+void ConfigureSerilog(AppOptions appOptions)
 {
-  var logsRetention = applicationOptions.LogRetentionDays;
+  var logsRetention = appOptions.LogRetentionDays;
   if (logsRetention <= 0)
   {
     logsRetention = 7;
