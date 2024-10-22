@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace ControlR.Web.Server.Migrations
+namespace ControlR.Web.Server.Data.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -249,8 +249,8 @@ namespace ControlR.Web.Server.Migrations
                 values: new object[,]
                 {
                     { 1, null, "ServerAdministrator", "SERVERADMINISTRATOR" },
-                    { 2, null, "DeviceAdministrator", "DEVICEADMINISTRATOR" },
-                    { 3, null, "UserAdministrator", "USERADMINISTRATOR" }
+                    { 2, null, "TenantAdministrator", "TENANTADMINISTRATOR" },
+                    { 3, null, "DeviceSuperUser", "DEVICESUPERUSER" }
                 });
 
             migrationBuilder.CreateIndex(

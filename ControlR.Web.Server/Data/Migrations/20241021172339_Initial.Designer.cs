@@ -3,17 +3,20 @@ using System;
 using ControlR.Web.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ControlR.Web.Server.Migrations
+namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20241021172339_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -269,14 +272,14 @@ namespace ControlR.Web.Server.Migrations
                         new
                         {
                             Id = 2,
-                            Name = "DeviceAdministrator",
-                            NormalizedName = "DEVICEADMINISTRATOR"
+                            Name = "TenantAdministrator",
+                            NormalizedName = "TENANTADMINISTRATOR"
                         },
                         new
                         {
                             Id = 3,
-                            Name = "UserAdministrator",
-                            NormalizedName = "USERADMINISTRATOR"
+                            Name = "DeviceSuperUser",
+                            NormalizedName = "DEVICESUPERUSER"
                         });
                 });
 

@@ -3,6 +3,6 @@
 public static class RoleNames
 {
   public const string ServerAdministrator = "ServerAdministrator";
-  public const string DeviceAdministrator = "DeviceAdministrator";
-  public const string UserAdministrator = "UserAdministrator";
+  public const string TenantAdministrator = "TenantAdministrator";
+  public const string DeviceSuperUser = "DeviceSuperUser";
 }

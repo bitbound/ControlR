@@ -32,7 +32,7 @@ public static class DeviceAccessByDeviceResourcePolicy
           return false;
         }
 
-        if (handlerCtx.User.IsInRole(RoleNames.DeviceAdministrator))
+        if (handlerCtx.User.IsInRole(RoleNames.TenantAdministrator))
         {
           return true;
         }

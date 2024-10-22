@@ -91,11 +91,11 @@
     await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
     Logger.LogInformation("Added user's tenant ID claim.");
 
-    await UserManager.AddToRoleAsync(user, RoleNames.DeviceAdministrator);
-    Logger.LogInformation("Assigned user role DeviceAdministrator for newly-created tenant.");
+    await UserManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
+    Logger.LogInformation("Assigned user role TenantAdministrator for newly-created tenant.");
 
-    await UserManager.AddToRoleAsync(user, RoleNames.UserAdministrator);
-    Logger.LogInformation("Assigned user role UserAdministrator for newly-created tenant.");
+    await UserManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
+    Logger.LogInformation("Assigned user role DeviceSuperUser for newly-created tenant.");
 
     if (await UserManager.Users.CountAsync() == 1)
     {

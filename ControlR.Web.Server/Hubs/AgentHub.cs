@@ -18,7 +18,7 @@ public class AgentHub(
     set => SetItem(value);
   }
 
-  private Guid? TenantUid
+  private Guid? TenantId
   {
     get => GetItem<Guid?>(null);
     set => SetItem(value);
@@ -119,7 +119,7 @@ public class AgentHub(
         await _appDb.SaveChangesAsync();
       }
 
-      TenantUid = deviceEntity.Tenant?.Id;
+      TenantId = deviceEntity.Tenant?.Id;
       Device = deviceEntity.ToDto();
 
       Device.ConnectionId = Context.ConnectionId;
@@ -144,10 +144,10 @@ public class AgentHub(
       return;
     }
 
-    if (TenantUid.HasValue)
+    if (TenantId.HasValue)
     {
       await _viewerHub.Clients
-        .Group(HubGroupNames.GetDeviceAdministratorGroup(TenantUid.Value))
+        .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, TenantId.Value))
         .ReceiveDeviceUpdate(Device);
     }
   }

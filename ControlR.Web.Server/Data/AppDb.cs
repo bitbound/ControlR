@@ -42,19 +42,19 @@ public class AppDb(DbContextOptions<AppDb> options)
         new IdentityRole<int>()
         {
           Id = 2,
-          Name = RoleNames.DeviceAdministrator,
-          NormalizedName = RoleNames.DeviceAdministrator.ToUpper()
+          Name = RoleNames.TenantAdministrator,
+          NormalizedName = RoleNames.TenantAdministrator.ToUpper()
         });
 
     builder
-      .Entity<IdentityRole<int>>()
-      .HasData(
-        new IdentityRole<int>()
-        {
-          Id = 3,
-          Name = RoleNames.UserAdministrator,
-          NormalizedName = RoleNames.UserAdministrator.ToUpper()
-        });
+    .Entity<IdentityRole<int>>()
+    .HasData(
+      new IdentityRole<int>()
+      {
+        Id = 3,
+        Name = RoleNames.DeviceSuperUser,
+        NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
+      });
 
     builder
       .Entity<Device>()

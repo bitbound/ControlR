@@ -189,10 +189,15 @@ public class ViewerHub(
           await Clients.Caller.ReceiveServerStats(getResult.Value);
         }
       }
-
-      if (Context.User.IsInRole(RoleNames.DeviceAdministrator))
+      
+      if (Context.User.IsInRole(RoleNames.TenantAdministrator))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceAdministratorGroup(tenantId));
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
+      }
+
+      if (Context.User.IsInRole(RoleNames.DeviceSuperUser))
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
       }
     }
     catch (Exception ex)

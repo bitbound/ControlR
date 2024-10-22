@@ -20,23 +20,14 @@
     About
   </MudNavLink>
 
-  <AuthorizeView Roles="@($"{RoleNames.UserAdministrator}, {RoleNames.DeviceAdministrator}")">
-    <Authorized>
-      <div class="ms-2 mt-5">
-        <MudText Typo="Typo.caption" Color="Color.Default">
-          Tenant Admin
-        </MudText>
-      </div>
-    </Authorized>
-  </AuthorizeView>
-  <AuthorizeView Roles="@(RoleNames.UserAdministrator)">
-    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.UserManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
-      User Management
-    </MudNavLink>
-  </AuthorizeView>
-  <AuthorizeView Roles="@(RoleNames.DeviceAdministrator)">
-    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.DeviceManagement)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Devices">
-      Device Management
+  <AuthorizeView Roles="@($"{RoleNames.TenantAdministrator}")">
+    <div class="ms-2 mt-5">
+      <MudText Typo="Typo.caption" Color="Color.Default">
+        Tenant Admin
+      </MudText>
+    </div>
+    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+      Permissions
     </MudNavLink>
   </AuthorizeView>
   <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
