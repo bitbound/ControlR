@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Converters;
+using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -16,10 +16,9 @@ public class AppDb(DbContextOptions<AppDb> options)
     c => c.ToList());
 
   private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
-  public DbSet<DeviceGroup> DeviceGroups { get; init; }
   public DbSet<Device> Devices { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
-
+  public DbSet<Tag> Tags { get; init; }
   public DbSet<UserPreference> UserPreferences { get; init; }
 
   protected override void OnModelCreating(ModelBuilder builder)
@@ -71,7 +70,8 @@ public class AppDb(DbContextOptions<AppDb> options)
         builder
           .Entity(entityType.Name)
           .Property(property.Name)
-          .HasConversion(new PostgresDateTimeOffsetConverter());
+          .HasConversion(new PostgresDateTimeOffsetConverter())
+          .HasDefaultValueSql("CURRENT_TIMESTAMP");
       }
     }
   }

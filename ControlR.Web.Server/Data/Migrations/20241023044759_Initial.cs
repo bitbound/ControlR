@@ -33,7 +33,8 @@ namespace ControlR.Web.Server.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    Name = table.Column<string>(type: "text", nullable: true)
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -78,7 +79,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     PhoneNumber = table.Column<string>(type: "text", nullable: true),
                     PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
                     TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
                 },
@@ -94,18 +95,61 @@ namespace ControlR.Web.Server.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DeviceGroups",
+                name: "Devices",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    AgentVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Alias = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ConnectionId = table.Column<string>(type: "text", nullable: false),
+                    CpuUtilization = table.Column<double>(type: "double precision", nullable: false),
+                    CurrentUsers = table.Column<string[]>(type: "text[]", nullable: false),
+                    Drives = table.Column<string>(type: "text", nullable: false),
+                    Is64Bit = table.Column<bool>(type: "boolean", nullable: false),
+                    IsOnline = table.Column<bool>(type: "boolean", nullable: false),
+                    LastSeen = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    MacAddresses = table.Column<string[]>(type: "text[]", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    OsArchitecture = table.Column<int>(type: "integer", nullable: false),
+                    OsDescription = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Platform = table.Column<int>(type: "integer", nullable: false),
+                    ProcessorCount = table.Column<int>(type: "integer", nullable: false),
+                    PublicIpV4 = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
+                    PublicIpV6 = table.Column<string>(type: "character varying(39)", maxLength: 39, nullable: false),
+                    TotalMemory = table.Column<double>(type: "double precision", nullable: false),
+                    TotalStorage = table.Column<double>(type: "double precision", nullable: false),
+                    UsedMemory = table.Column<double>(type: "double precision", nullable: false),
+                    UsedStorage = table.Column<double>(type: "double precision", nullable: false),
+                    DeviceGroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_DeviceGroups", x => x.Id);
+                    table.PrimaryKey("PK_Devices", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_DeviceGroups_Tenants_TenantId",
+                        name: "FK_Devices_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tags",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tags_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
                         principalColumn: "Id",
@@ -201,10 +245,12 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "UserPreferences",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Value = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
+                    Value = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -215,50 +261,60 @@ namespace ControlR.Web.Server.Data.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserPreferences_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Devices",
+                name: "AppUserTag",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    AgentVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Alias = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    ConnectionId = table.Column<string>(type: "text", nullable: false),
-                    CpuUtilization = table.Column<double>(type: "double precision", nullable: false),
-                    CurrentUsers = table.Column<string[]>(type: "text[]", nullable: false),
-                    Drives = table.Column<string>(type: "text", nullable: false),
-                    Is64Bit = table.Column<bool>(type: "boolean", nullable: false),
-                    IsOnline = table.Column<bool>(type: "boolean", nullable: false),
-                    LastSeen = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    MacAddresses = table.Column<string[]>(type: "text[]", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    OsArchitecture = table.Column<int>(type: "integer", nullable: false),
-                    OsDescription = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Platform = table.Column<int>(type: "integer", nullable: false),
-                    ProcessorCount = table.Column<int>(type: "integer", nullable: false),
-                    PublicIpV4 = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
-                    PublicIpV6 = table.Column<string>(type: "character varying(39)", maxLength: 39, nullable: false),
-                    TotalMemory = table.Column<double>(type: "double precision", nullable: false),
-                    TotalStorage = table.Column<double>(type: "double precision", nullable: false),
-                    UsedMemory = table.Column<double>(type: "double precision", nullable: false),
-                    UsedStorage = table.Column<double>(type: "double precision", nullable: false),
-                    DeviceGroupId = table.Column<Guid>(type: "uuid", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: true)
+                    TagsId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UsersId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Devices", x => x.Id);
+                    table.PrimaryKey("PK_AppUserTag", x => new { x.TagsId, x.UsersId });
                     table.ForeignKey(
-                        name: "FK_Devices_DeviceGroups_DeviceGroupId",
-                        column: x => x.DeviceGroupId,
-                        principalTable: "DeviceGroups",
-                        principalColumn: "Id");
+                        name: "FK_AppUserTag_AspNetUsers_UsersId",
+                        column: x => x.UsersId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Devices_Tenants_TenantId",
-                        column: x => x.TenantId,
-                        principalTable: "Tenants",
-                        principalColumn: "Id");
+                        name: "FK_AppUserTag_Tags_TagsId",
+                        column: x => x.TagsId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DeviceTag",
+                columns: table => new
+                {
+                    DevicesId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TagsId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeviceTag", x => new { x.DevicesId, x.TagsId });
+                    table.ForeignKey(
+                        name: "FK_DeviceTag_Devices_DevicesId",
+                        column: x => x.DevicesId,
+                        principalTable: "Devices",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DeviceTag_Tags_TagsId",
+                        column: x => x.TagsId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.InsertData(
@@ -270,6 +326,11 @@ namespace ControlR.Web.Server.Data.Migrations
                     { new Guid("98aecfed-4095-42fd-e4b8-556d5b723bb6"), null, "DeviceSuperUser", "DEVICESUPERUSER" },
                     { new Guid("ed0dddf2-c2b2-4160-9ece-4a9e03b2e828"), null, "TenantAdministrator", "TENANTADMINISTRATOR" }
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AppUserTag_UsersId",
+                table: "AppUserTag",
+                column: "UsersId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -314,18 +375,18 @@ namespace ControlR.Web.Server.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_DeviceGroups_TenantId",
-                table: "DeviceGroups",
+                name: "IX_Devices_TenantId",
+                table: "Devices",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Devices_DeviceGroupId",
-                table: "Devices",
-                column: "DeviceGroupId");
+                name: "IX_DeviceTag_TagsId",
+                table: "DeviceTag",
+                column: "TagsId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Devices_TenantId",
-                table: "Devices",
+                name: "IX_Tags_TenantId",
+                table: "Tags",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
@@ -333,6 +394,11 @@ namespace ControlR.Web.Server.Data.Migrations
                 table: "UserPreferences",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPreferences_TenantId",
+                table: "UserPreferences",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserPreferences_UserId",
@@ -343,6 +409,9 @@ namespace ControlR.Web.Server.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AppUserTag");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -359,7 +428,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Devices");
+                name: "DeviceTag");
 
             migrationBuilder.DropTable(
                 name: "UserPreferences");
@@ -368,7 +437,10 @@ namespace ControlR.Web.Server.Data.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "DeviceGroups");
+                name: "Devices");
+
+            migrationBuilder.DropTable(
+                name: "Tags");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

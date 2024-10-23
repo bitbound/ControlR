@@ -25,7 +25,7 @@ public static class EntityToDtoExtensions
       ProcessorCount = device.ProcessorCount,
       PublicIpV4 = device.PublicIpV4,
       PublicIpV6 = device.PublicIpV6,
-      TenantId = device.TenantId ?? Guid.Empty,
+      TenantId = device.TenantId,
       TotalMemory = device.TotalMemory,
       TotalStorage = device.TotalStorage,
       UsedMemory = device.UsedMemory,

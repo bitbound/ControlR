@@ -7,6 +7,7 @@ public class AppUser : IdentityUser<Guid>
 {
   public Tenant? Tenant { get; set; }
   public Guid TenantId { get; set; }
-  public List<UserPreference> UserPreferences { get; init; } = [];
+  public List<UserPreference>? UserPreferences { get; set; }
+  public List<Tag>? Tags { get; set; }
 }
 

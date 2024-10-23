@@ -21,7 +21,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
       .Include(x => x.UserPreferences)
       .FirstOrDefaultAsync(x => x.UserName == User.Identity.Name);
 
-    if (user is null)
+    if (user?.UserPreferences is null)
     {
       yield break;
     }
@@ -50,6 +50,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
       return NotFound();
     }
 
+    user.UserPreferences ??= [];
     var preference = user.UserPreferences.FirstOrDefault(x => x.Name == name);
 
     if (preference is null)
@@ -81,8 +82,11 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
     { 
       Name = preference.Name , 
       Value = preference.Value , 
-      UserId = user.Id 
+      UserId = user.Id,
+      TenantId = user.TenantId
     };
+
+    user.UserPreferences ??= [];
 
     var index = user.UserPreferences.FindIndex(x => x.Name == preference.Name);
 

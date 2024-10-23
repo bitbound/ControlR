@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Enums;
+using ControlR.Web.Server.Data.Entities.Bases;
 
 namespace ControlR.Web.Server.Data.Entities;
 
-public class Device : EntityBase
+public class Device : TenantEntityBase
 {
   [StringLength(50)]
   public string AgentVersion { get; set; } = string.Empty;
@@ -44,8 +45,6 @@ public class Device : EntityBase
   public double UsedMemory { get; set; }
   public double UsedStorage { get; set; }
 
-  public DeviceGroup? DeviceGroup { get; set; }
+  public List<Tag>? Tags { get; set; }
   public Guid? DeviceGroupId { get; set; }
-  public Tenant? Tenant { get; set; }
-  public Guid? TenantId { get; set; }
 }

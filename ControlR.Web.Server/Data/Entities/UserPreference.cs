@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using ControlR.Web.Server.Data.Entities.Bases;
 
 namespace ControlR.Web.Server.Data.Entities;
 
-public class UserPreference : EntityBase
+public class UserPreference : TenantEntityBase
 {
   [StringLength(100)]
   public required string Name { get; set; }

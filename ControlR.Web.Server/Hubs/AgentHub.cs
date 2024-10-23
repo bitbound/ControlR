@@ -91,6 +91,31 @@ public class AgentHub(
   {
     try
     {
+      if (_hostEnvironment.IsDevelopment() && device.TenantId == Guid.Empty)
+      {
+        var firstTenant = await _appDb.Tenants
+          .OrderBy(x => x.CreatedAt)
+          .FirstOrDefaultAsync();
+
+        if (firstTenant is null)
+        {
+          return Result.Fail<DeviceResponseDto>("No tenants found.");
+        }
+
+        device.TenantId = firstTenant.Id;
+      }
+
+      if (device.TenantId == Guid.Empty)
+      {
+        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
+      }
+
+      if (!await _appDb.Tenants.AnyAsync(x => x.Id == device.TenantId))
+      {
+        // TODO: Send uninstall command.
+        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
+      }
+
       device.IsOnline = true;
       device.LastSeen = _systemTime.Now;
       device.ConnectionId = Context.ConnectionId;
@@ -113,14 +138,7 @@ public class AgentHub(
           device, 
           [x => x.Tenant]);
 
-      if (_hostEnvironment.IsDevelopment() && deviceEntity.TenantId is null)
-      {
-        var firstTenant = await _appDb.Tenants.OrderBy(x => x.Id).FirstOrDefaultAsync();
-        deviceEntity.TenantId = firstTenant?.Id;
-        await _appDb.SaveChangesAsync();
-      }
-
-      TenantId = deviceEntity.Tenant?.Id;
+      TenantId = deviceEntity.TenantId;
       Device = deviceEntity.ToDto();
 
       Device.ConnectionId = Context.ConnectionId;

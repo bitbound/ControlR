@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.Interfaces;
+using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Linq.Expressions;
