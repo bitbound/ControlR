@@ -1,5 +1,6 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Base;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.Libraries.Agent.Services.Linux;
@@ -12,7 +13,7 @@ internal class DeviceDataGeneratorLinux(
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

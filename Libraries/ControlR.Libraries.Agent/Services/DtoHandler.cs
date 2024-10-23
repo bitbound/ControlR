@@ -1,5 +1,6 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 

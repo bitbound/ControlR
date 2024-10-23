@@ -5,27 +5,27 @@ namespace ControlR.Web.Client.Services;
 
 public interface IDeviceCache
 {
-  IEnumerable<DeviceDto> Devices { get; }
-  void AddOrUpdate(DeviceDto device);
+  IEnumerable<DeviceResponseDto> Devices { get; }
+  void AddOrUpdate(DeviceResponseDto device);
 
   void Clear();
 
   Task Initialize();
-  Task Remove(DeviceDto device);
+  Task Remove(DeviceResponseDto device);
 
   Task SetAllOffline();
 
-  bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceDto? device);
+  bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceResponseDto? device);
 }
 
 internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
 {
-  private static readonly ConcurrentDictionary<Guid, DeviceDto> _cache = new();
+  private static readonly ConcurrentDictionary<Guid, DeviceResponseDto> _cache = new();
   private static readonly SemaphoreSlim _initLock = new(1, 1);
 
-  public IEnumerable<DeviceDto> Devices => _cache.Values;
+  public IEnumerable<DeviceResponseDto> Devices => _cache.Values;
 
-  public void AddOrUpdate(DeviceDto device)
+  public void AddOrUpdate(DeviceResponseDto device)
   {
     _cache.AddOrUpdate(device.Id, device, (_, _) => device);
   }
@@ -51,7 +51,7 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
     }
   }
 
-  public Task Remove(DeviceDto device)
+  public Task Remove(DeviceResponseDto device)
   {
     _cache.Remove(device.Id, out _);
     return Task.CompletedTask;
@@ -67,7 +67,7 @@ internal class DeviceCache(ILogger<DeviceCache> logger) : IDeviceCache
     return Task.CompletedTask;
   }
 
-  public bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceDto? device)
+  public bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceResponseDto? device)
   {
     return _cache.TryGetValue(deviceId, out device);
   }

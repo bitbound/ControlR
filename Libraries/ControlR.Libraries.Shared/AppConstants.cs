@@ -20,9 +20,6 @@ public static partial class AppConstants
       {
         SystemPlatform.Windows => "ControlR.Streamer.exe",
         SystemPlatform.Linux => "ControlR.Streamer",
-        SystemPlatform.Android => throw new PlatformNotSupportedException(),
-        SystemPlatform.MacOs => throw new PlatformNotSupportedException(),
-        SystemPlatform.MacCatalyst => throw new PlatformNotSupportedException(),
         _ => throw new PlatformNotSupportedException()
       };
     }
@@ -50,19 +47,6 @@ public static partial class AppConstants
       }
 
       return ProdServerUri;
-    }
-  }
-
-  public static string ViewerFileName
-  {
-    get
-    {
-      return SystemEnvironment.Instance.Platform switch
-      {
-        SystemPlatform.Windows => "ControlR.Viewer.msix",
-        SystemPlatform.Android => "ControlR.Viewer.apk",
-        _ => throw new PlatformNotSupportedException()
-      };
     }
   }
 

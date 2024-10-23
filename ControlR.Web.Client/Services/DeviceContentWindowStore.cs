@@ -11,7 +11,7 @@ public interface IDeviceContentWindowStore
   IReadOnlyList<DeviceContentInstance> Windows { get; }
 
   void Add(DeviceContentInstance instance);
-  void AddContentInstance<T>(DeviceDto device, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
+  void AddContentInstance<T>(DeviceResponseDto device, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
      where T : ComponentBase;
   void Remove(DeviceContentInstance instance);
 }
@@ -37,7 +37,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   }
 
   public void AddContentInstance<T>(
-    DeviceDto device, 
+    DeviceResponseDto device, 
     DeviceContentInstanceType instanceType, 
     Dictionary<string, object?>? componentParams = null)
     where T : ComponentBase

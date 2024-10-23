@@ -3,11 +3,10 @@
 @attribute [Authorize]
 
 @inject NavigationManager NavMan
-@inject ISettings Settings
 @inject ISnackbar Snackbar
 @inject IClipboardManager Clipboard
 @inject IBusyCounter BusyCounter
-@inject IDeviceGroupsApi DeviceGroupsApi
+@inject IControlrApi ControlrApi
 
 <PageTitle>Deploy</PageTitle>
 
@@ -113,7 +112,7 @@
   {
     await base.OnInitializedAsync();
 
-    var result = await DeviceGroupsApi.GetAllDeviceGroups();
+    var result = await ControlrApi.GetAllDeviceGroups();
     if (result.IsSuccess)
     {
       _deviceGroups = result.Value;

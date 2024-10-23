@@ -10,9 +10,8 @@ public static class ServiceCollectionExtensions
 {
   public static IServiceCollection AddControlrWebClient(this IServiceCollection services, string baseAddress)
   {
-    services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
-    services.AddHttpClient<IDeviceGroupsApi, DeviceGroupsApi>(ConfigureHttpClient);
-    services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>(ConfigureHttpClient);
+    services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
+    services.AddHttpClient<IDownloadsApi, DownloadsApi>();
     
     services.AddLazyDi();
 
@@ -30,10 +29,6 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddScoped<IScreenWake, ScreenWake>();
     services.AddTransient<IJsInterop, JsInterop>();
-
-    services.AddHttpClient<IDownloadsApi, DownloadsApi>();
-    services.AddHttpClient<IVersionApi, VersionApi>();
-
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddTransient<IViewerStreamingClient, ViewerStreamingClient>();
 

@@ -1,7 +1,7 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Windows;
-using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.Versioning;
@@ -24,7 +24,7 @@ internal class FakeDeviceDataGenerator : DeviceDataGeneratorWin, IDeviceDataGene
   }
 
   
-  public override async Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public override async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     var device = await  base.CreateDevice(cpuUtilization, deviceId);
     device.Name = $"Test Device {_deviceNumber}";

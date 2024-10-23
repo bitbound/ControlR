@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Collections.Concurrent;
@@ -25,7 +26,7 @@ public partial class Terminal : IAsyncDisposable
   public required DeviceContentInstance ContentInstance { get; init; }
 
   [Parameter, EditorRequired]
-  public required DeviceDto Device { get; init; }
+  public required DeviceResponseDto Device { get; init; }
 
   [Parameter, EditorRequired]
   public required Guid Id { get; init; }

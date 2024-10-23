@@ -5,10 +5,10 @@ namespace ControlR.Web.Client.Components;
 
 public partial class Dashboard
 {
-  private readonly Dictionary<string, SortDefinition<DeviceDto>> _sortDefinitions = new()
+  private readonly Dictionary<string, SortDefinition<DeviceResponseDto>> _sortDefinitions = new()
   {
-    ["IsOnline"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.IsOnline), true, 0, x => x.IsOnline),
-    ["Name"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.Name), false, 1, x => x.Name)
+    ["IsOnline"] = new SortDefinition<DeviceResponseDto>(nameof(DeviceResponseDto.IsOnline), true, 0, x => x.IsOnline),
+    ["Name"] = new SortDefinition<DeviceResponseDto>(nameof(DeviceResponseDto.Name), false, 1, x => x.Name)
   };
 
   private readonly FunnelLock _stateChangeLock = new(2, 2, 1, 1);
@@ -37,9 +37,8 @@ public partial class Dashboard
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-
   [Inject]
-  public required IVersionApi VersionApi { get; init; }
+  public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
@@ -48,11 +47,14 @@ public partial class Dashboard
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private IEnumerable<DeviceDto> FilteredDevices
+  private bool _hideOfflineDevices;
+
+
+  private IEnumerable<DeviceResponseDto> FilteredDevices
   {
     get
     {
-      if (!Settings.HideOfflineDevices || IsHideOfflineDevicesDisabled)
+      if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
       {
         return DeviceCache.Devices;
       }
@@ -64,7 +66,7 @@ public partial class Dashboard
   private bool IsHideOfflineDevicesDisabled =>
       !string.IsNullOrWhiteSpace(_searchText);
 
-  private Func<DeviceDto, bool> QuickFilter => x =>
+  private Func<DeviceResponseDto, bool> QuickFilter => x =>
       {
         if (string.IsNullOrWhiteSpace(_searchText))
         {
@@ -90,6 +92,8 @@ public partial class Dashboard
   {
     using var _ = BusyCounter.IncrementBusyCounter();
 
+    _hideOfflineDevices = await Settings.GetHideOfflineDevices();
+
     await RefreshLatestAgentVersion();
 
     Messenger.RegisterGenericMessage(this, HandleGenericMessage);
@@ -100,7 +104,7 @@ public partial class Dashboard
     _loading = false;
   }
 
-  private async Task ConfigureDeviceSettings(DeviceDto device)
+  private async Task ConfigureDeviceSettings(DeviceResponseDto device)
   {
     try
     {
@@ -194,11 +198,12 @@ public partial class Dashboard
 
   private async Task HideOfflineDevicesChanged(bool isChecked)
   {
-    Settings.HideOfflineDevices = isChecked;
+    _hideOfflineDevices = isChecked;
+    await Settings.SetHideOfflineDevices(isChecked);
     await InvokeAsync(StateHasChanged);
   }
 
-  private bool IsAgentOutdated(DeviceDto device)
+  private bool IsAgentOutdated(DeviceResponseDto device)
   {
     return _agentReleaseVersion is not null &&
             Version.TryParse(device.AgentVersion, out var agentVersion) &&
@@ -207,14 +212,14 @@ public partial class Dashboard
 
   private async Task RefreshLatestAgentVersion()
   {
-    var agentVerResult = await VersionApi.GetCurrentAgentVersion();
+    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
     if (agentVerResult.IsSuccess)
     {
       _agentReleaseVersion = agentVerResult.Value;
     }
   }
 
-  private async Task RemoveDevice(DeviceDto device)
+  private async Task RemoveDevice(DeviceResponseDto device)
   {
     var result = await DialogService.ShowMessageBox(
         "Confirm Removal",
@@ -230,7 +235,7 @@ public partial class Dashboard
     Snackbar.Add("Device removed", Severity.Success);
   }
 
-  private async Task RestartDevice(DeviceDto device)
+  private async Task RestartDevice(DeviceResponseDto device)
   {
     var result = await DialogService.ShowMessageBox(
         "Confirm Restart",
@@ -247,7 +252,7 @@ public partial class Dashboard
     Snackbar.Add("Restart command sent", Severity.Success);
   }
 
-  private async Task ShutdownDevice(DeviceDto device)
+  private async Task ShutdownDevice(DeviceResponseDto device)
   {
     var result = await DialogService.ShowMessageBox(
        "Confirm Shutdown",
@@ -264,12 +269,12 @@ public partial class Dashboard
     Snackbar.Add("Shutdown command sent", Severity.Success);
   }
 
-  private async Task UpdateDevice(DeviceDto device)
+  private async Task UpdateDevice(DeviceResponseDto device)
   {
     Snackbar.Add("Sending update request", Severity.Success);
     await ViewerHub.SendAgentUpdateTrigger(device);
   }
-  private async Task RemoteControlClicked(DeviceDto device)
+  private async Task RemoteControlClicked(DeviceResponseDto device)
   {
     switch (device.Platform)
     {
@@ -310,7 +315,7 @@ public partial class Dashboard
   }
 
 
-  private void StartTerminal(DeviceDto device)
+  private void StartTerminal(DeviceResponseDto device)
   {
     try
     {
@@ -333,7 +338,7 @@ public partial class Dashboard
     }
   }
 
-  private async Task WakeDevice(DeviceDto device)
+  private async Task WakeDevice(DeviceResponseDto device)
   {
     if (device.MacAddresses is null ||
         device.MacAddresses.Length == 0)

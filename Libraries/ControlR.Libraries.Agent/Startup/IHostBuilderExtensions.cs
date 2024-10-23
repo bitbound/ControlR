@@ -62,7 +62,7 @@ internal static class HostApplicationBuilderExtensions
       .Bind(configuration.GetSection(InstanceOptions.SectionKey));
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-    services.AddHttpClient<IVersionApi, VersionApi>(ConfigureHttpClient);
+    services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
     services.AddHttpClient<IReleasesApi, ReleasesApi>();
 
     services.AddSingleton<ISettingsProvider, SettingsProvider>();

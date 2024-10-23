@@ -1,5 +1,5 @@
 ﻿using System.Net.Http.Json;
-using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Libraries.Shared.Services.Http;

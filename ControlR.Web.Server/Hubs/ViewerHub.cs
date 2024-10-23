@@ -1,6 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -13,7 +15,6 @@ public class ViewerHub(
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IConnectionCounter connectionCounter,
-  IAlertStore alertStore,
   IIpApi ipApi,
   IWsBridgeApi wsBridgeApi,
   IOptionsMonitor<AppOptions> appOptions,
@@ -22,18 +23,6 @@ public class ViewerHub(
   public Task<bool> CheckIfServerAdministrator()
   {
     return IsServerAdmin().AsTaskResult();
-  }
-
-  public async Task<Result> ClearAlert()
-  {
-    using var scope = logger.BeginMemberScope();
-
-    if (!VerifyIsServerAdmin())
-    {
-      return Result.Fail("Unauthorized.");
-    }
-
-    return await alertStore.ClearAlert();
   }
 
   public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
@@ -66,19 +55,6 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<AlertBroadcastDto>> GetCurrentAlert()
-  {
-    try
-    {
-      return await alertStore.GetCurrentAlert();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<AlertBroadcastDto>(ex, "Failed to get current alert.")
-        .Log(logger);
-    }
-  }
 
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
@@ -210,10 +186,35 @@ public class ViewerHub(
   {
     try
     {
+      await base.OnDisconnectedAsync(exception);
+
       connectionCounter.DecrementViewerCount();
       await SendUpdatedConnectionCountToAdmins();
-      // TODO: Remove from groups.
-      await base.OnDisconnectedAsync(exception);
+
+      if (Context.User is null)
+      {
+        return;
+      }
+
+      if (Context.User.IsInRole(RoleNames.ServerAdministrator))
+      {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
+      }
+
+      if (!Context.User.TryGetTenantId(out var tenantId))
+      {
+        return;
+      }
+
+      if (Context.User.IsInRole(RoleNames.TenantAdministrator))
+      {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
+      }
+
+      if (Context.User.IsInRole(RoleNames.DeviceSuperUser))
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
+      }
     }
     catch (Exception ex)
     {
@@ -261,34 +262,6 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> SendAlertBroadcast(AlertBroadcastDto alertDto)
-  {
-    try
-    {
-      if (!VerifyIsServerAdmin())
-      {
-        return Result.Fail("Unauthorized.");
-      }
-
-      using var scope = logger.BeginMemberScope();
-
-      var storeResult = await alertStore.StoreAlert(alertDto);
-      if (!storeResult.IsSuccess)
-      {
-        return storeResult;
-      }
-
-      await Clients.All.ReceiveAlertBroadcast(alertDto);
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Failed to send agent app settings.")
-        .Log(logger);
-    }
-  }
-
   public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {
     using var scope = logger.BeginMemberScope();
@@ -314,7 +287,7 @@ public class ViewerHub(
       return Result.Fail("Agent could not be reached.");
     }
   }
-  public async IAsyncEnumerable<DeviceDto> StreamAuthorizedDevices()
+  public async IAsyncEnumerable<DeviceResponseDto> StreamAuthorizedDevices()
   {
     if (Context.User is null)
     {

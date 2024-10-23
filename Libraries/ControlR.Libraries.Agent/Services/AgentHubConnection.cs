@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Hubs;

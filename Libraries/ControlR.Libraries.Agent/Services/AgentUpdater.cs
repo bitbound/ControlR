@@ -16,7 +16,7 @@ internal interface IAgentUpdater : IHostedService
 }
 
 internal class AgentUpdater(
-  IVersionApi versionApi,
+  IControlrApi controlrApi,
   IDownloadsApi downloadsApi,
   IReleasesApi releasesApi,
   IFileSystem fileSystem,
@@ -57,7 +57,7 @@ internal class AgentUpdater(
       _logger.LogInformation("Beginning version check.");
 
 
-      var hashResult = await versionApi.GetCurrentAgentHash(environmentHelper.Runtime);
+      var hashResult = await controlrApi.GetCurrentAgentHash(environmentHelper.Runtime);
       if (!hashResult.IsSuccess)
       {
         return;

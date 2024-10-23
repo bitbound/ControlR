@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using ControlR.Libraries.Clients.Services;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;

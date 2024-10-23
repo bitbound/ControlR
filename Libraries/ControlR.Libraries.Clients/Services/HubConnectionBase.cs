@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Services;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;

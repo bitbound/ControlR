@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using Microsoft.AspNetCore.SignalR;
 using System.Net.Sockets;
 
 namespace ControlR.Web.Server.Hubs;
@@ -12,9 +13,9 @@ public class AgentHub(
   IWebHostEnvironment _hostEnvironment,
   ILogger<AgentHub> _logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
-  private DeviceDto? Device
+  private DeviceResponseDto? Device
   {
-    get => GetItem<DeviceDto?>(null);
+    get => GetItem<DeviceResponseDto?>(null);
     set => SetItem(value);
   }
 
@@ -53,7 +54,7 @@ public class AgentHub(
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveDeviceUpdate(cachedDevice);
 
-        await _appDb.AddOrUpdate<DeviceDto, Device>(cachedDevice);
+        await _appDb.AddOrUpdate<DeviceResponseDto, Device>(cachedDevice);
 
         await SendDeviceUpdate();
       }
@@ -86,7 +87,7 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result<DeviceDto>> UpdateDevice(DeviceFromAgentDto device)
+  public async Task<Result<DeviceResponseDto>> UpdateDevice(DeviceRequestDto device)
   {
     try
     {
@@ -108,7 +109,7 @@ public class AgentHub(
       }
 
       var deviceEntity = await _appDb
-        .AddOrUpdate<DeviceFromAgentDto, Device>(
+        .AddOrUpdate<DeviceRequestDto, Device>(
           device, 
           [x => x.Tenant]);
 
@@ -133,7 +134,7 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating device.");
-      return Result.Fail<DeviceDto>("An error occurred while updating the device.");
+      return Result.Fail<DeviceResponseDto>("An error occurred while updating the device.");
     }
   }
 

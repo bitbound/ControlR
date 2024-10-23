@@ -1,3 +1,5 @@
+using ControlR.Libraries.Shared.Dtos.HubDtos;
+
 namespace ControlR.Web.Server.Services;
 
 public interface IServerStatsProvider
@@ -9,13 +11,10 @@ public class ServerStatsProvider(
   IConnectionCounter connectionCounter,
   ILogger<ServerStatsProvider> logger) : IServerStatsProvider
 {
-  private string? _appVersion;
-
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
     try
     {
-      _appVersion ??= GetAppVersion();
       var agentResult = await connectionCounter.GetAgentConnectionCount();
       var viewerResult = await connectionCounter.GetViewerConnectionCount();
 
@@ -33,8 +32,7 @@ public class ServerStatsProvider(
 
       var dto = new ServerStatsDto(
         agentResult.Value,
-        viewerResult.Value,
-        _appVersion);
+        viewerResult.Value);
 
       return Result.Ok(dto);
     }
@@ -43,24 +41,6 @@ public class ServerStatsProvider(
       return Result
         .Fail<ServerStatsDto>(ex, "Error while getting server stats.")
         .Log(logger);
-    }
-  }
-
-  private string GetAppVersion(string defaultVersion = "1.0.0")
-  {
-    try
-    {
-      return typeof(ServerStatsDto)
-               .Assembly
-               .GetName()
-               ?.Version
-               ?.ToString()
-             ?? defaultVersion;
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Failed to get app version.");
-      return defaultVersion;
     }
   }
 }

@@ -53,9 +53,6 @@ services:
       # The Gateway IP here must match the IP address in the above controlr network gateway.
       ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
 
-      # How long to keep logs on the file system before deleting them.
-      ControlR_AppOptions__LogRetentionDays: 7
-
 
       ControlR_AppOptions__RequireUserEmailConfirmation: true
       ControlR_AppOptions__SmtpDisplayName: ""

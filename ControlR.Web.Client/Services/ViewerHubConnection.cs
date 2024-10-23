@@ -1,10 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Services;
@@ -13,7 +9,6 @@ public interface IViewerHubConnection
 {
   HubConnectionState ConnectionState { get; }
   bool IsConnected { get; }
-  Task ClearAlert();
   Task CloseTerminalSession(Guid deviceId, Guid terminalId);
 
   Task Connect(CancellationToken cancellationToken = default);
@@ -22,11 +17,9 @@ public interface IViewerHubConnection
 
   Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
 
-  Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer();
-
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebsocketBridgeOrigin();
-  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device);
+  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceResponseDto device);
 
   Task InvokeCtrlAltDel(Guid deviceId);
 
@@ -40,11 +33,8 @@ public interface IViewerHubConnection
 
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
-  Task SendAgentUpdateTrigger(DeviceDto device);
-
-  Task SendAlertBroadcast(string message, AlertSeverity severity);
-
-  Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType);
+  Task SendAgentUpdateTrigger(DeviceResponseDto device);
+  Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
 }
@@ -61,15 +51,6 @@ internal class ViewerHubConnection(
 {
   public HubConnectionState ConnectionState => _viewerHub.ConnectionState;
   public bool IsConnected => _viewerHub.IsConnected;
-  public async Task ClearAlert()
-  {
-    await TryInvoke(
-      async () =>
-      {
-        await WaitForConnection();
-        await _viewerHub.Server.ClearAlert();
-      });
-  }
 
   public async Task CloseTerminalSession(Guid deviceId, Guid terminalId)
   {
@@ -129,27 +110,6 @@ internal class ViewerHubConnection(
       () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
   }
 
-  public async Task<Result<AlertBroadcastDto>> GetCurrentAlertFromServer()
-  {
-    return await TryInvoke(
-      async () =>
-      {
-        await WaitForConnection();
-        var alertResult = await _viewerHub.Server.GetCurrentAlert();
-        if (alertResult.IsSuccess)
-        {
-          await _messenger.Send(new DtoReceivedMessage<AlertBroadcastDto>(alertResult.Value));
-        }
-        else if (alertResult.HadException)
-        {
-          alertResult.Log(_logger);
-        }
-
-        return alertResult;
-      },
-      () => Result.Fail<AlertBroadcastDto>("Failed to get current alert from the server."));
-  }
-
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
     return await TryInvoke(
@@ -174,7 +134,7 @@ internal class ViewerHubConnection(
       () => null);
   }
 
-  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto device)
+  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceResponseDto device)
   {
     try
     {
@@ -226,13 +186,14 @@ internal class ViewerHubConnection(
         return Result.Fail("Connection has closed.");
       }
 
+      var notifyUser = await _settings.GetNotifyUserOnSessionStart();
       var requestDto = new StreamerSessionRequestDto(
         sessionId,
         websocketUri,
         targetSystemSession,
         _viewerHub.ConnectionId,
         agentConnectionId,
-        _settings.NotifyUserSessionStart);
+        notifyUser);
 
       var result = await _viewerHub.Server.RequestStreamingSession(agentConnectionId, requestDto);
 
@@ -256,7 +217,7 @@ internal class ViewerHubConnection(
       () => Result.Fail("Failed to send app settings"));
   }
 
-  public async Task SendAgentUpdateTrigger(DeviceDto device)
+  public async Task SendAgentUpdateTrigger(DeviceResponseDto device)
   {
     await TryInvoke(async () =>
     {
@@ -266,19 +227,7 @@ internal class ViewerHubConnection(
     });
   }
 
-  public async Task SendAlertBroadcast(string message, AlertSeverity severity)
-  {
-    await TryInvoke(
-      async () =>
-      {
-        await WaitForConnection();
-        var dto = new AlertBroadcastDto(message, severity);
-        await _viewerHub.Server.SendAlertBroadcast(dto);
-      });
-  }
-
-
-  public async Task SendPowerStateChange(DeviceDto device, PowerStateChangeType powerStateType)
+  public async Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType)
   {
     await TryInvoke(async () =>
     {
@@ -332,7 +281,6 @@ internal class ViewerHubConnection(
 
   private async Task PerformAfterConnectInit()
   {
-    await GetCurrentAlertFromServer();
     await RefreshDevices();
     await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }

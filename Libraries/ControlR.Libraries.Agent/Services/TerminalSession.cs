@@ -1,10 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Signalr.Client;
 
 namespace ControlR.Libraries.Agent.Services;
 

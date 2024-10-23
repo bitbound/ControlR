@@ -3,7 +3,7 @@
 @inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
-@inject IServerSettingsApi ServerSettingsApi
+@inject IControlrApi ServerSettingsApi
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -37,8 +37,8 @@
           Server Admin
         </MudText>
       </div>
-      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerAdmin)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
-        Server Admin
+      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+        Server Stats
       </MudNavLink>
     </Authorized>
   </AuthorizeView>

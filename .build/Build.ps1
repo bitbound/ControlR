@@ -91,7 +91,7 @@ if ($BuildStreamer) {
   Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 }
 
-dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
+dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
 
 
 if ($BuildWebsite) {

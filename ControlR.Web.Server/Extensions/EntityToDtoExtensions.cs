@@ -2,9 +2,9 @@
 
 public static class EntityToDtoExtensions
 {
-  public static DeviceDto ToDto(this Device device)
+  public static DeviceResponseDto ToDto(this Device device)
   {
-    return new DeviceDto()
+    return new DeviceResponseDto()
     {
       AgentVersion = device.AgentVersion,
       Alias = device.Alias,
@@ -31,5 +31,10 @@ public static class EntityToDtoExtensions
       UsedMemory = device.UsedMemory,
       UsedStorage = device.UsedStorage,
     };
+  }
+
+  public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
+  {
+    return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
 }

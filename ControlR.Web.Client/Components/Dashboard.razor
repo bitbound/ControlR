@@ -12,13 +12,13 @@
 
 <div class="d-inline-block">
   <MudCheckBox T="bool"
-               Value="Settings.HideOfflineDevices"
+               Value="_hideOfflineDevices"
                ValueChanged="HideOfflineDevicesChanged"
                Label="Hide Offline Devices"
                Disabled="IsHideOfflineDevicesDisabled"/>
 </div>
 
-<MudDataGrid T="DeviceDto"
+<MudDataGrid T="DeviceResponseDto"
              RowsPerPage="@(25)"
              Items="FilteredDevices"
              SortMode="SortMode.Multiple"
@@ -53,7 +53,7 @@
   </ToolBarContent>
 
   <Columns>
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     Sortable="false"
                     Filterable="false"
                     ShowColumnOptions="false"
@@ -118,7 +118,7 @@
       </CellTemplate>
     </TemplateColumn>
 
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     StickyLeft="true"
                     Sortable="true"
                     Filterable="true"
@@ -135,7 +135,7 @@
       </CellTemplate>
     </TemplateColumn>
 
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     Sortable="true"
                     Filterable="true"
                     Title="Online">
@@ -173,7 +173,7 @@
       </CellTemplate>              
     </PropertyColumn>
 
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     Title="CPU"
                     Sortable="true"
                     Filterable="true">
@@ -182,7 +182,7 @@
       </CellTemplate>
     </TemplateColumn>
 
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     Title="Memory"
                     Sortable="true"
                     Filterable="true">
@@ -191,7 +191,7 @@
       </CellTemplate>
     </TemplateColumn>
 
-    <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceResponseDto"
                     Title="Storage"
                     Sortable="true"
                     Filterable="true">
@@ -200,7 +200,7 @@
       </CellTemplate>
     </TemplateColumn>
 
-    <HierarchyColumn T="DeviceDto"/>
+    <HierarchyColumn T="DeviceResponseDto"/>
   </Columns>
   <ChildRowContent>
     <div class="child-content-grid">
@@ -255,6 +255,6 @@
     </div>
   </ChildRowContent>
   <PagerContent>
-    <MudDataGridPager T="DeviceDto" />
+    <MudDataGridPager T="DeviceResponseDto" />
   </PagerContent>
 </MudDataGrid>

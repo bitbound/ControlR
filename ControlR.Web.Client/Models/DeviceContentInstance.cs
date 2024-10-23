@@ -2,7 +2,7 @@
 
 namespace ControlR.Web.Client.Models;
 
-public class DeviceContentInstance(DeviceDto device, RenderFragment content, DeviceContentInstanceType contentType)
+public class DeviceContentInstance(DeviceResponseDto device, RenderFragment content, DeviceContentInstanceType contentType)
 {
   public RenderFragment Content { get; } = content;
   public DeviceContentInstanceType ContentType { get; } = contentType;
@@ -20,7 +20,7 @@ public class DeviceContentInstance(DeviceDto device, RenderFragment content, Dev
     }
   }
 
-  public DeviceDto Device { get; } = device;
+  public DeviceResponseDto Device { get; } = device;
   public Guid WindowId { get; } = Guid.NewGuid();
 }
 

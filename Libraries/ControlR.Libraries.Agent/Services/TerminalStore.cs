@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Signalr.Client;

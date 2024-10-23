@@ -19,5 +19,4 @@ public class AppOptions
   public int SmtpPort { get; set; } = 587;
   public string? SmtpUserName { get; set; }
   public bool UseExternalWebSocketBridge { get; init; }
-  public bool UseRedisBackplane { get; init; }
 }

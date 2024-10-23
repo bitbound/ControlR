@@ -3,6 +3,7 @@ using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.DevicesNative.Windows;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Libraries.Agent.Services.Windows;
 
@@ -14,7 +15,7 @@ internal class DeviceDataGeneratorWin(
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-  public virtual async Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public virtual async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

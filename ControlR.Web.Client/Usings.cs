@@ -26,3 +26,4 @@ global using ControlR.Libraries.Shared.Dtos.ServerApi;
 global using ControlR.Libraries.Signalr.Client;
 global using Microsoft.AspNetCore.Authorization;
 global using ControlR.Web.Client.Authz.Policies;
+global using ControlR.Libraries.Shared.Dtos.HubDtos;

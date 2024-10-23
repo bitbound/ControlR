@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Dtos;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
 
@@ -8,14 +9,11 @@ public interface IViewerHub
 {
   Task<bool> CheckIfServerAdministrator();
 
-  Task<Result> ClearAlert();
-
-  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
+  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+    string agentConnectionId,
     TerminalSessionRequest requestDto);
 
   Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
-
-  Task<Result<AlertBroadcastDto>> GetCurrentAlert();
 
   Task<Result<ServerStatsDto>> GetServerStats();
 
@@ -24,10 +22,8 @@ public interface IViewerHub
 
   Task<Result> RequestStreamingSession(string agentConnectionId, StreamerSessionRequestDto sessionRequestDto);
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings signedDto);
-
-  Task<Result> SendAlertBroadcast(AlertBroadcastDto signedDto);
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);
   Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto);
-  IAsyncEnumerable<DeviceDto> StreamAuthorizedDevices();
+  IAsyncEnumerable<DeviceResponseDto> StreamAuthorizedDevices();
 }

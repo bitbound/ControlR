@@ -14,7 +14,7 @@ public class DevicesController : ControllerBase
 {
 
   [HttpGet]
-  public async Task<ActionResult<List<DeviceDto>>> Get(
+  public async IAsyncEnumerable<DeviceResponseDto> Get(
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService)
@@ -26,17 +26,13 @@ public class DevicesController : ControllerBase
       .AsNoTracking()
       .Where(x => x.TenantId == user.TenantId);
 
-    var authorizedDevices = new List<DeviceDto>();
-
     await foreach (var device in deviceQuery.AsAsyncEnumerable())
     {
       var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
       if (authResult.Succeeded)
       {
-        authorizedDevices.Add(device.ToDto());
+        yield return device.ToDto();
       }
     }
-
-    return authorizedDevices;
   }
 }

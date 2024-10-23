@@ -94,14 +94,6 @@
       }
       else
       {
-        <div>
-          @if (_showAlert)
-          {
-            <MudAlert Severity="_alertSeverity.ToMudSeverity()" ShowCloseIcon="true" CloseIconClicked="CloseAlert">
-              @(_alertMessage)
-            </MudAlert>
-          }
-        </div>
         @Body
       }
     </MudMainContent>
@@ -129,10 +121,7 @@
   private bool _isBrowser;
   private bool _isBusy;
   private bool _isWaitingForWasmLoad = true;
-  private bool _showAlert;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
-  private AlertSeverity _alertSeverity = AlertSeverity.Information;
-  private string _alertMessage = string.Empty;
   private MudTheme? _customTheme;
   private int _pendingOperations;
 
@@ -174,7 +163,6 @@
     {
       Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
       Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
-      Messenger.Value.Register<DtoReceivedMessage<AlertBroadcastDto>>(this, HandleAlertBroadcastReceived);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
@@ -202,22 +190,10 @@
     return base.ShouldRender();
   }
 
-  private void CloseAlert()
-  {
-    _showAlert = false;
-  }
 
   private void DrawerToggle()
   {
     _drawerOpen = !_drawerOpen;
-  }
-
-  private async Task HandleAlertBroadcastReceived(object subscriber, DtoReceivedMessage<AlertBroadcastDto> message)
-  {
-    _alertMessage = message.Dto.Message;
-    _alertSeverity = message.Dto.Severity;
-    _showAlert = true;
-    await InvokeAsync(StateHasChanged);
   }
 
   private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)

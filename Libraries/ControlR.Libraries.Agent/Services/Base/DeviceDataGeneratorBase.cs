@@ -1,6 +1,7 @@
 ﻿using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Libraries.Agent.Services.Base;
 
@@ -53,7 +54,7 @@ internal class DeviceDataGeneratorBase(
     }
   }
 
-  public DeviceFromAgentDto GetDeviceBase(
+  public DeviceRequestDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     List<Drive> drives,
@@ -64,7 +65,7 @@ internal class DeviceDataGeneratorBase(
     double cpuUtilization,
     string agentVersion)
   {
-    return new DeviceFromAgentDto
+    return new DeviceRequestDto
     {
       Id = deviceId,
       CurrentUsers = currentUsers,

@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 
 namespace ControlR.Libraries.Clients.Services;
 

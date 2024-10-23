@@ -16,7 +16,7 @@ internal class StreamerUpdaterWindows(
   IFileSystem fileSystem,
   IDownloadsApi downloadsApi,
   ISystemEnvironment environmentHelper,
-  IVersionApi versionApi,
+  IControlrApi controlrApi,
   IReleasesApi releasesApi,
   ISettingsProvider settings,
   IAgentUpdater agentUpdater,
@@ -148,7 +148,7 @@ internal class StreamerUpdaterWindows(
     }
 
     logger.LogInformation("Checking streamer remote archive hash.");
-    var streamerHashResult = await versionApi.GetCurrentStreamerHash(environmentHelper.Runtime);
+    var streamerHashResult = await controlrApi.GetCurrentStreamerHash(environmentHelper.Runtime);
     if (!streamerHashResult.IsSuccess)
     {
       logger.LogResult(streamerHashResult);

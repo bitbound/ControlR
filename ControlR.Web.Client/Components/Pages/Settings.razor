@@ -20,19 +20,28 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Show Notification to User
   </MudText>
-  <MudCheckBox @bind-Value="NotifyUser"
+  <MudCheckBox T="bool" 
+               @bind-Value:get="_notifyUser"
+               @bind-Value:set="SetNotifyUser"
                Label="Notify users when a remote control session starts"/>
 </div>
 
 
 @code {
 
-  private bool NotifyUser
+  private bool _notifyUser;
+
+  protected override async Task OnInitializedAsync()
   {
-    get => SettingsStore.NotifyUserSessionStart;
-    set => SettingsStore.NotifyUserSessionStart = value;
+    _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
+    await base.OnInitializedAsync();
   }
 
+  private async Task SetNotifyUser(bool value)
+  {
+    _notifyUser = value;
+    await SettingsStore.SetNotifyUserOnSessionStart(value);
+  }
 
   private string? ValidateUsername(string input)
   {

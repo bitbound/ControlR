@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Clients.Services;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Messages;
 using Microsoft.Extensions.Hosting;

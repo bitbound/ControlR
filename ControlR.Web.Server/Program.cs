@@ -7,9 +7,6 @@ using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Middleware;
-using ControlR.Web.Server.Services.Distributed;
-using ControlR.Web.Server.Services.Distributed.Locking;
-using ControlR.Web.Server.Services.Local;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -17,7 +14,6 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
-using StackExchange.Redis;
 using _Imports = ControlR.Web.Client._Imports;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -109,7 +105,7 @@ builder.Services
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
   })
-  .AddRoles<IdentityRole<int>>()
+  .AddRoles<IdentityRole<Guid>>()
   .AddEntityFrameworkStores<AppDb>()
   .AddSignInManager()
   .AddDefaultTokenProviders();
@@ -127,15 +123,12 @@ var signalrBuilder = builder.Services
 // Add forwarded headers.
 ConfigureForwardedHeaders();
 
-// Configure Redis, if scaled out.
-await ConfigureRedis();
-
 // Add client services for pre-rendering.
 builder.Services.AddControlrWebClient(string.Empty);
 
 // Add HTTP clients.
 builder.Services.AddHttpClient<IIpApi, IpApi>();
-builder.Services.AddHttpClient<IServerSettingsApi, ServerSettingsApi>(ConfigureHttpClient);
+builder.Services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
 builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
 
 // Add other services.
@@ -147,26 +140,13 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ISystemTime, SystemTime>();
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
-builder.Services.AddSingleton<IAppDataAccessor, AppDataAccessor>();
 builder.Services.AddSingleton<IRetryer, Retryer>();
 builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
+builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
 builder.Services.AddWebSocketBridge();
-
-if (appOptions.UseRedisBackplane)
-{
-  builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
-  builder.Services.AddSingleton<IAlertStore, AlertStoreDistributed>();
-  builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterDistributed>();
-  builder.Services.AddHostedService<ConnectionCountSynchronizer>();
-}
-else
-{
-  builder.Services.AddSingleton<IConnectionCounter, ConnectionCounterLocal>();
-  builder.Services.AddSingleton<IAlertStore, AlertStoreLocal>();
-}
 
 builder.Host.UseSystemd();
 
@@ -201,9 +181,14 @@ app.UseAntiforgery();
 
 app.MapControllers();
 
-app.MapRazorComponents<App>()
-  .AddInteractiveWebAssemblyRenderMode()
-  .AddAdditionalAssemblies(typeof(_Imports).Assembly);
+app.UseWhen(
+  ctx => !ctx.Request.Path.StartsWithSegments("/api"),
+  appBuilder =>
+  {
+    app.MapRazorComponents<App>()
+       .AddInteractiveWebAssemblyRenderMode()
+       .AddAdditionalAssemblies(typeof(_Imports).Assembly);
+  });
 
 app.MapAdditionalIdentityEndpoints();
 
@@ -255,39 +240,6 @@ void ConfigureForwardedHeaders()
   });
 }
 
-async Task ConfigureRedis()
-{
-  if (!appOptions.UseRedisBackplane)
-  {
-    return;
-  }
-
-  var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ??
-                              throw new InvalidOperationException(
-                                "Redis connection string cannot be empty if UseRedisBackplane is enabled.");
-
-  signalrBuilder.AddStackExchangeRedis(redisConnectionString, options =>
-  {
-    options.Configuration.AbortOnConnectFail = false;
-    options.Configuration.ChannelPrefix = RedisChannel.Literal("controlr-signalr");
-  });
-
-  builder.Services.AddStackExchangeRedisCache(options =>
-  {
-    options.Configuration = redisConnectionString;
-    options.InstanceName = "controlr-cache";
-  });
-
-  var multiplexer =
-    await ConnectionMultiplexer.ConnectAsync(redisConnectionString, options => { options.AllowAdmin = true; });
-
-  if (!multiplexer.IsConnected)
-  {
-    Console.WriteLine("Failed to connect to Redis backplane.");
-  }
-
-  builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
-}
 
 void ConfigureHttpClient(IServiceProvider services, HttpClient client)
 {

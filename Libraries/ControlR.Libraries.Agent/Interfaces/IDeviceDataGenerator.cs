@@ -1,14 +1,16 @@
-﻿namespace ControlR.Libraries.Agent.Interfaces;
+﻿using ControlR.Libraries.Shared.Dtos.ServerApi;
+
+namespace ControlR.Libraries.Agent.Interfaces;
 
 public interface IDeviceDataGenerator
 {
-  Task<DeviceFromAgentDto> CreateDevice(double cpuUtilization, Guid deviceId);
+  Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId);
 
   string GetAgentVersion();
 
   List<Drive> GetAllDrives();
 
-  DeviceFromAgentDto GetDeviceBase(
+  DeviceRequestDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     List<Drive> drives,
