@@ -25,8 +25,9 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
-var agentCount = 4000;
+var agentCount = 1000;
 var serverUri = "http://192.168.0.2:5003/";
+var tenantId = Guid.Parse("941842e5-5836-4e44-af44-f35e6f73b2e7");
 
 
 var cts = new CancellationTokenSource();
@@ -85,6 +86,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   {
     return new FakeDeviceDataGenerator(
       i, 
+      tenantId,
       sp.GetRequiredService<IWin32Interop>(), 
       sp.GetRequiredService<ISystemEnvironment>(), 
       sp.GetRequiredService<ILogger<DeviceDataGeneratorWin>>());

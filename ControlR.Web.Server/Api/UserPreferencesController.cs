@@ -55,7 +55,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
 
     if (preference is null)
     {
-      return NotFound();
+      return NoContent();
     }
 
     return preference.ToDto();

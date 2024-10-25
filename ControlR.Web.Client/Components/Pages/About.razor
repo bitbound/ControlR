@@ -1,4 +1,5 @@
-﻿@attribute [Route(RouteNames.About)]
+﻿@using System.Reflection
+@attribute [Route(RouteNames.About)]
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
 
@@ -119,12 +120,12 @@
   {
     try
     {
-      _currentVersion = typeof(About).Assembly.GetName().Version ?? new(1, 0);
+      _currentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new(1, 0);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while getting store page URI.");
-      Snackbar.Add("Failed to get store page URI.", Severity.Error);
+      Logger.LogError(ex, "Error determining version.");
+      Snackbar.Add("Error determining version.", Severity.Error);
     }
     return Task.CompletedTask;
   }
