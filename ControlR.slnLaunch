@@ -33,5 +33,25 @@
         "DebugTarget": "postgres"
       }
     ]
+  },
+  {
+    "Name": "Load Test",
+    "Projects": [
+      {
+        "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "Tests\\ControlR.Agent.LoadTester\\ControlR.Agent.LoadTester.csproj",
+        "Action": "Start",
+        "DebugTarget": "ControlR.Agent.LoadTester"
+      },
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "postgres"
+      }
+    ]
   }
 ]

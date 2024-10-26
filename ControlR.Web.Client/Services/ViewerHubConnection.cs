@@ -23,8 +23,6 @@ public interface IViewerHubConnection
 
   Task InvokeCtrlAltDel(Guid deviceId);
 
-  Task RefreshDevices();
-
   Task<Result> RequestStreamingSession(
     string agentConnectionId,
     Guid sessionId,
@@ -40,15 +38,22 @@ public interface IViewerHubConnection
 }
 
 internal class ViewerHubConnection(
-  NavigationManager _navMan,
-  IHubConnection<IViewerHub> _viewerHub,
-  IBusyCounter _busyCounter,
-  IDeviceCache _devicesCache,
-  ISettings _settings,
-  IMessenger _messenger,
-  IDelayer _delayer,
-  ILogger<ViewerHubConnection> _logger) : IViewerHubConnection
+  NavigationManager navMan,
+  IHubConnection<IViewerHub> viewerHub,
+  IBusyCounter busyCounter,
+  ISettings settings,
+  IMessenger messenger,
+  IDelayer delayer,
+  ILogger<ViewerHubConnection> logger) : IViewerHubConnection
 {
+  private readonly NavigationManager _navMan = navMan;
+  private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
+  private readonly IBusyCounter _busyCounter = busyCounter;
+  private readonly ISettings _settings = settings;
+  private readonly IMessenger _messenger = messenger;
+  private readonly IDelayer _delayer = delayer;
+  private readonly ILogger<ViewerHubConnection> _logger = logger;
+
   public HubConnectionState ConnectionState => _viewerHub.ConnectionState;
   public bool IsConnected => _viewerHub.IsConnected;
 
@@ -83,7 +88,7 @@ internal class ViewerHubConnection(
     _viewerHub.Reconnecting += Connection_Reconnecting;
     _viewerHub.Reconnected += Connection_Reconnected;
     _viewerHub.ConnectThrew += Connection_Threw;
-    await PerformAfterConnectInit();
+    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
   public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
@@ -158,20 +163,6 @@ internal class ViewerHubConnection(
     });
   }
 
-
-  public async Task RefreshDevices()
-  {
-    await TryInvoke(async () =>
-    {
-      await WaitForConnection();
-      await _devicesCache.SetAllOffline();
-      await foreach (var device in _viewerHub.Server.StreamAuthorizedDevices())
-      {
-        _devicesCache.AddOrUpdate(device);
-        await _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
-      }
-    });
-  }
 
   public async Task<Result> RequestStreamingSession(
     string agentConnectionId,
@@ -266,7 +257,7 @@ internal class ViewerHubConnection(
 
   private async Task Connection_Reconnected(string? arg)
   {
-    await PerformAfterConnectInit();
+    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
   private async Task Connection_Reconnecting(Exception? arg)
@@ -277,12 +268,6 @@ internal class ViewerHubConnection(
   private async Task Connection_Threw(Exception ex)
   {
     await _messenger.Send(new ToastMessage(ex.Message, Severity.Error));
-  }
-
-  private async Task PerformAfterConnectInit()
-  {
-    await RefreshDevices();
-    await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
   private async Task TryInvoke(Func<Task> func, [CallerMemberName] string callerName = "")

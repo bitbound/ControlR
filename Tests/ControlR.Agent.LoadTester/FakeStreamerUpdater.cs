@@ -8,13 +8,11 @@ internal class FakeStreamerUpdater : IHostedService, IStreamerUpdater
 
   public Task<bool> EnsureLatestVersion(StreamerSessionRequestDto requestDto, CancellationToken cancellationToken)
   {
-    Console.WriteLine("Yup");
     return Task.FromResult(true);
   }
 
   public Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
   {
-    Console.WriteLine("Yup");
     return Task.FromResult(true);
   }
 

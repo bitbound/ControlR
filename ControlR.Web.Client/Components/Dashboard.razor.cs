@@ -90,6 +90,8 @@ public partial class Dashboard
 
   protected override async Task OnInitializedAsync()
   {
+    await base.OnInitializedAsync();
+
     using var _ = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
@@ -99,7 +101,10 @@ public partial class Dashboard
     Messenger.RegisterGenericMessage(this, HandleGenericMessage);
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
-    await base.OnInitializedAsync();
+    if (!DeviceCache.Devices.Any())
+    {
+      await DeviceCache.Refresh();
+    }
 
     _loading = false;
   }
@@ -153,11 +158,21 @@ public partial class Dashboard
       {
         case GenericMessageKind.DevicesCacheUpdated:
           {
-            using var result = await _stateChangeLock.WaitAsync(TimeSpan.FromSeconds(30));
-            if (result.Value)
-            {
-              await InvokeAsync(StateHasChanged);
-            }
+            _loading = true;
+            await RateLimiter
+              .Throttle(async () =>
+              {
+                await InvokeAsync(StateHasChanged);
+              },
+              TimeSpan.FromSeconds(2));
+
+            Debouncer.Debounce(
+              TimeSpan.FromSeconds(1),
+              async () => 
+              {
+                _loading = false;
+                await InvokeAsync(StateHasChanged);
+              });
           }
           break;
         default:
@@ -182,9 +197,10 @@ public partial class Dashboard
   {
     try
     {
+      _loading = true;
+      await InvokeAsync(StateHasChanged);
       using var _ = BusyCounter.IncrementBusyCounter();
-      await DeviceCache.SetAllOffline();
-      await ViewerHub.RefreshDevices();
+      await DeviceCache.Refresh();
       await RefreshLatestAgentVersion();
       Snackbar.Add("Device refresh requested", Severity.Success);
     }
@@ -193,7 +209,10 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while refreshing the dashboard.");
       Snackbar.Add("Dashboard refresh failed", Severity.Error);
     }
-
+    finally
+    {
+      _loading = false;
+    }
   }
 
   private async Task HideOfflineDevicesChanged(bool isChecked)

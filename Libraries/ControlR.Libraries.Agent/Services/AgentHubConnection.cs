@@ -1,17 +1,15 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Signalr.Client;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
+using System.Diagnostics;
 
 namespace ControlR.Libraries.Agent.Services;
 
 public interface IAgentHubConnection : IAsyncDisposable
 {
+  HubConnectionState State { get; }
   Task Connect(CancellationToken cancellationToken);
   Task SendDeviceHeartbeat();
   Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
@@ -29,6 +27,8 @@ internal class AgentHubConnection(
   ILogger<AgentHubConnection> _logger)
   : IAgentHubConnection
 {
+  public HubConnectionState State => _hubConnection?.ConnectionState ?? HubConnectionState.Disconnected;
+
   public async Task Connect(CancellationToken cancellationToken)
   {
     var hubEndpoint = new Uri(_settings.ServerUri, "/hubs/agent");
@@ -72,7 +72,6 @@ internal class AgentHubConnection(
         _logger.LogWarning("Not connected to hub when trying to send device update.");
         return;
       }
-
       var deviceDto = await _deviceCreator.CreateDevice(
         _cpuSampler.CurrentUtilization,
         _settings.DeviceId);

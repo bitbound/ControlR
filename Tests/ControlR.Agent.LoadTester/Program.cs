@@ -5,6 +5,7 @@ using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Agent.Services;
 using ControlR.Libraries.Agent.Services.Windows;
 using ControlR.Libraries.Agent.Startup;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Signalr.Client;
@@ -14,7 +15,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
 
 var startCount = 0;
 
@@ -26,9 +26,10 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 Console.WriteLine($"Starting agent count at {startCount}.");
 
 var agentCount = 1000;
-var serverUri = "http://192.168.0.2:5003/";
-var tenantId = Guid.Parse("941842e5-5836-4e44-af44-f35e6f73b2e7");
-
+var serverUri = new Uri("https://localhost:7033");
+var tenantId = Guid.Parse("2d05e6ca-00bb-410f-a3a7-5090233df7c5");
+//var serverUri = new Uri("http://192.168.0.2:5003/");
+//var tenantId = Guid.Parse("941842e5-5836-4e44-af44-f35e6f73b2e7");
 
 var cts = new CancellationTokenSource();
 var cancellationToken = cts.Token;
@@ -55,41 +56,50 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   var builder = Host.CreateApplicationBuilder(args);
   builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}");
 
+  var deviceId = DeterministicGuid.Create(i);
+
   builder.Configuration
     .AddInMemoryCollection(new Dictionary<string, string?>
       {
-        { "AppOptions:DeviceId", CreateGuid(i).ToString() },
-        { "AppOptions:ServerUri", serverUri },
+        { "AppOptions:DeviceId", deviceId.ToString() },
+        { "AppOptions:ServerUri", $"{serverUri}" },
         { "Logging:LogLevel:Default", "Warning" },
         { "Serilog:MinimumLevel:Default", "Warning" },
       });
 
-  var agentUpdater = builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater));
-  builder.Services.Remove(agentUpdater);
+  builder.Services.Remove(
+     builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater)));
   builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
 
-  var streamerUpdater = builder.Services.First(x => x.ServiceType == typeof(IStreamerUpdater));
-  builder.Services.Remove(streamerUpdater);
+  builder.Services.Remove(
+    builder.Services.First(x => x.ServiceType == typeof(IStreamerUpdater)));
   builder.Services.AddSingleton<IStreamerUpdater, FakeStreamerUpdater>();
 
-  var cpuSampler = builder.Services.First(x => x.ServiceType == typeof(ICpuUtilizationSampler));
-  builder.Services.Remove(cpuSampler);
+  builder.Services.Remove(
+    builder.Services.First(x => x.ServiceType == typeof(ICpuUtilizationSampler)));
   builder.Services.AddSingleton<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
 
-  var sessionWatcher = builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher));
-  builder.Services.Remove(sessionWatcher);
+  builder.Services.Remove(
+    builder.Services.First(x => x.ServiceType == typeof(ISettingsProvider)));
+  builder.Services.AddSingleton<ISettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
 
-  var deviceDataGenerator = builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator));
-  builder.Services.Remove(deviceDataGenerator);
+  builder.Services.Remove(
+     builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher)));
+
+  builder.Services.Remove(
+     builder.Services.First(x => x.ImplementationType == typeof(AgentHeartbeatTimer)));
+
+  builder.Services.Remove(
+    builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator)));
+
 
   builder.Services.AddSingleton<IDeviceDataGenerator>(sp =>
   {
     return new FakeDeviceDataGenerator(
       i, 
       tenantId,
-      sp.GetRequiredService<IWin32Interop>(), 
       sp.GetRequiredService<ISystemEnvironment>(), 
-      sp.GetRequiredService<ILogger<DeviceDataGeneratorWin>>());
+      sp.GetRequiredService<ILogger<FakeDeviceDataGenerator>>());
   });
 
   var host = builder.Build();
@@ -117,14 +127,6 @@ var hostTasks = hosts.Select(x => x.WaitForShutdownAsync());
 await Task.WhenAll(hostTasks);
 
 return;
-
-
-static Guid CreateGuid(int seed)
-{
-  var seedBytes = BitConverter.GetBytes(seed);
-  var hash = MD5.HashData(seedBytes);
-  return new Guid(hash);
-}
 
 static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken cancellationToken)
 {

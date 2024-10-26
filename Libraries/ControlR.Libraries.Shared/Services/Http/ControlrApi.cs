@@ -6,11 +6,14 @@ namespace ControlR.Libraries.Shared.Services.Http;
 public interface IControlrApi
 {
   Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups();
+  IAsyncEnumerable<DeviceResponseDto> GetAllDevices();
+
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
-  Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
   Task<Result<ServerSettingsDto>> GetServerSettings();
+
+  Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
 
@@ -21,6 +24,7 @@ public class ControlrApi(
   private readonly string _agentVersionEndpoint = "/api/version/agent";
   private readonly HttpClient _client = httpClient;
   private readonly string _deviceGroupsEndpoint = "/api/device-groups";
+  private readonly string _devicesEndpoint = "/api/devices";
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly string _serverSettingsEndpoint = "/api/server-settings";
   private readonly string _userPreferencesEndpoint = "/api/user-preferences";
@@ -42,6 +46,19 @@ public class ControlrApi(
       return Result
         .Fail<List<DeviceGroupDto>>(ex, "Error while getting device groups.")
         .Log(_logger);
+    }
+  }
+
+  public async IAsyncEnumerable<DeviceResponseDto> GetAllDevices()
+  {
+    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(_devicesEndpoint);
+    await foreach (var device in stream)
+    {
+      if (device is null)
+      {
+        continue;
+      }
+      yield return device;
     }
   }
 
@@ -113,6 +130,26 @@ public class ControlrApi(
     }
   }
 
+  public async Task<Result<ServerSettingsDto>> GetServerSettings()
+  {
+    try
+    {
+      var serverSettings = await _client.GetFromJsonAsync<ServerSettingsDto>(_serverSettingsEndpoint);
+      if (serverSettings is null)
+      {
+        return Result.Fail<ServerSettingsDto>("Server settings response was empty.");
+      }
+
+      return Result.Ok(serverSettings);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<ServerSettingsDto>(ex, "Error while getting server settings.")
+        .Log(_logger);
+    }
+  }
+
   public async Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName)
   {
     try
@@ -136,27 +173,6 @@ public class ControlrApi(
         .Log(_logger);
     }
   }
-
-  public async Task<Result<ServerSettingsDto>> GetServerSettings()
-  {
-    try
-    {
-      var serverSettings = await _client.GetFromJsonAsync<ServerSettingsDto>(_serverSettingsEndpoint);
-      if (serverSettings is null)
-      {
-        return Result.Fail<ServerSettingsDto>("Server settings response was empty.");
-      }
-
-      return Result.Ok(serverSettings);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<ServerSettingsDto>(ex, "Error while getting server settings.")
-        .Log(_logger);
-    }
-  }
-
   public async Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue)
   {
     try

@@ -1,38 +1,53 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Agent.Services.Windows;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 namespace ControlR.Agent.LoadTester;
 
 [SupportedOSPlatform("windows6.0.6000")]
-internal class FakeDeviceDataGenerator : DeviceDataGeneratorWin, IDeviceDataGenerator
+internal class FakeDeviceDataGenerator(
+  int deviceNumber, 
+  Guid tenantId,
+  ISystemEnvironment systemEnvironment,
+  ILogger<FakeDeviceDataGenerator> logger) : DeviceDataGeneratorBase(systemEnvironment, logger), IDeviceDataGenerator
 {
-  private readonly Guid _tenantId;
-  private readonly int _deviceNumber;
+  private readonly string _agentVersion = "0.9.15.0";
+  private readonly int _deviceNumber = deviceNumber;
+  private readonly Guid _tenantId = tenantId;
+  private DeviceRequestDto? _device;
 
-  public FakeDeviceDataGenerator(
-    int deviceNumber,
-    Guid tenantId,
-    IWin32Interop win32Interop, 
-    ISystemEnvironment environmentHelper, 
-    ILogger<DeviceDataGeneratorWin> logger) 
-    : base(win32Interop, environmentHelper, logger)
+  public Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
-    _tenantId = tenantId;
-    _deviceNumber = deviceNumber;
+    _device ??= new DeviceRequestDto()
+    {
+      Name = $"Test Device {_deviceNumber}",
+      AgentVersion = _agentVersion,
+      TenantId = _tenantId,
+      IsOnline = true,
+      Platform = SystemEnvironment.Instance.Platform,
+      ProcessorCount = Environment.ProcessorCount,
+      OsArchitecture = RuntimeInformation.OSArchitecture,
+      OsDescription = RuntimeInformation.OSDescription,
+      Is64Bit = Environment.Is64BitOperatingSystem,
+    };
+    return _device.AsTaskResult();
   }
 
-  
-  public override async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public new string GetAgentVersion()
   {
-    var device = await  base.CreateDevice(cpuUtilization, deviceId);
-    device.Name = $"Test Device {_deviceNumber}";
-    device.AgentVersion = "0.9.15.0";
-    device.TenantId = _tenantId;
-    return device;
+    return _agentVersion;
+  }
+
+  public Task<(double usedGB, double totalGB)> GetMemoryInGb()
+  {
+    return (0d, 0d).AsTaskResult();
   }
 }

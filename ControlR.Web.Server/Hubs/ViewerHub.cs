@@ -287,29 +287,6 @@ public class ViewerHub(
       return Result.Fail("Agent could not be reached.");
     }
   }
-  public async IAsyncEnumerable<DeviceResponseDto> StreamAuthorizedDevices()
-  {
-    if (Context.User is null)
-    {
-      yield break;
-    }
-
-    var user = await _userManager.GetUserAsync(Context.User) ??
-      throw new InvalidOperationException("Unable to find user.");
-
-    var deviceQuery = _appDb.Devices
-      .AsNoTracking()
-      .Where(x => x.TenantId == user.TenantId);
-
-    await foreach (var device in deviceQuery.AsAsyncEnumerable())
-    {
-      var authResult = await _authzService.AuthorizeAsync(Context.User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-      if (authResult.Succeeded)
-      {
-        yield return device.ToDto();
-      }
-    }
-  }
 
   private bool IsServerAdmin()
   {
