@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.FileProviders;
 
@@ -25,6 +26,23 @@ public class VersionController(IFileProvider phyiscalFileProvider) : ControllerB
     var versionString = await sr.ReadToEndAsync();
 
     if (!Version.TryParse(versionString?.Trim(), out var version))
+    {
+      return NotFound();
+    }
+
+    return Ok(version);
+  }
+
+  [HttpGet("server")]
+  [OutputCache]
+  public ActionResult<Version> GetServerVersion()
+  {
+    var version = typeof(VersionController)
+      .Assembly
+      .GetName()
+      ?.Version;
+
+    if (version is null)
     {
       return NotFound();
     }

@@ -10,6 +10,7 @@ public interface IControlrApi
 
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
+  Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
 
@@ -27,6 +28,7 @@ public class ControlrApi(
   private readonly string _devicesEndpoint = "/api/devices";
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly string _serverSettingsEndpoint = "/api/server-settings";
+  private readonly string _serverVersionEndpoint = "/api/version/server";
   private readonly string _userPreferencesEndpoint = "/api/user-preferences";
 
   public async Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups()
@@ -94,17 +96,36 @@ public class ControlrApi(
       _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
       if (version is null)
       {
-        return Result.Fail<Version>("Server version response was empty.");
+        return Result.Fail<Version>("Server response was empty.");
       }
       return Result.Ok(version);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while checking for new agent versions.");
-      return Result.Fail<Version>(ex);
+      return Result
+        .Fail<Version>(ex, "Error while checking for new agent version.")
+        .Log(_logger);
     }
   }
 
+  public async Task<Result<Version>> GetCurrentServerVersion()
+  {
+    try
+    {
+      var serverVersion = await _client.GetFromJsonAsync<Version>(_serverVersionEndpoint);
+      if (serverVersion is null)
+      {
+        return Result.Fail<Version>("Server response was empty.");
+      }
+      return Result.Ok<Version>(serverVersion);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<Version>(ex, "Error while getting server version.")
+        .Log(_logger);
+    }
+  }
   public async Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime)
   {
     try
