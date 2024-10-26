@@ -1,7 +1,9 @@
 ﻿window.addClassName = (element, className) => {
   element.classList.add(className);
 }
-
+window.getClipboardText = async () => {
+  return await navigator.clipboard.readText();
+}
 window.getSelectionStart = (element) => {
   return element.selectionStart;
 }
@@ -48,6 +50,11 @@ window.scrollToElement = (element) => {
     window.scrollTo({ top: element.offsetTop, behavior: "smooth" });
   }, 200);
 }
+
+window.setClipboardText = async (text) => {
+  await navigator.clipboard.writeText(text);
+}
+
 window.setStyleProperty = (element, propertyName, value) => {
   element.style[propertyName] = value;
 }

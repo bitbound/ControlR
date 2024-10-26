@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ControlR.Libraries.Shared.Dtos.SidecarDtos;
+namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 [MessagePackObject]
 public record MovePointerDto(
@@ -10,6 +10,6 @@ public record MovePointerDto(
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MovePointerType
 {
-    Absolute,
-    Relative
+  Absolute,
+  Relative
 }

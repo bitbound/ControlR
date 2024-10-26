@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
 namespace ControlR.Web.Client.Components;
@@ -11,7 +12,6 @@ public partial class Dashboard
     ["Name"] = new SortDefinition<DeviceResponseDto>(nameof(DeviceResponseDto.Name), false, 1, x => x.Name)
   };
 
-  private readonly FunnelLock _stateChangeLock = new(2, 2, 1, 1);
   private Version? _agentReleaseVersion;
   private bool _loading = true;
   private string? _searchText;
@@ -150,7 +150,7 @@ public partial class Dashboard
     }
   }
 
-  private async Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+  private Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
   {
     try
     {
@@ -158,19 +158,10 @@ public partial class Dashboard
       {
         case GenericMessageKind.DevicesCacheUpdated:
           {
-            _loading = true;
-            await RateLimiter
-              .Throttle(async () =>
-              {
-                await InvokeAsync(StateHasChanged);
-              },
-              TimeSpan.FromSeconds(2));
-
             Debouncer.Debounce(
               TimeSpan.FromSeconds(1),
               async () => 
               {
-                _loading = false;
                 await InvokeAsync(StateHasChanged);
               });
           }
@@ -183,36 +174,21 @@ public partial class Dashboard
     {
       Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
     }
+    return Task.CompletedTask;
   }
 
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     if (ViewerHub.IsConnected)
     {
-      await RefreshLatestAgentVersion();
+      await RefreshDevices();
     }
   }
 
   private async Task HandleRefreshClicked()
   {
-    try
-    {
-      _loading = true;
-      await InvokeAsync(StateHasChanged);
-      using var _ = BusyCounter.IncrementBusyCounter();
-      await DeviceCache.Refresh();
-      await RefreshLatestAgentVersion();
-      Snackbar.Add("Device refresh requested", Severity.Success);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while refreshing the dashboard.");
-      Snackbar.Add("Dashboard refresh failed", Severity.Error);
-    }
-    finally
-    {
-      _loading = false;
-    }
+    Snackbar.Add("Refreshing devices", Severity.Success);
+    await RefreshDevices();
   }
 
   private async Task HideOfflineDevicesChanged(bool isChecked)
@@ -227,6 +203,27 @@ public partial class Dashboard
     return _agentReleaseVersion is not null &&
             Version.TryParse(device.AgentVersion, out var agentVersion) &&
             !agentVersion.Equals(_agentReleaseVersion);
+  }
+
+  private async Task RefreshDevices()
+  {
+    try
+    {
+      _loading = true;
+      await InvokeAsync(StateHasChanged);
+      using var _ = BusyCounter.IncrementBusyCounter();
+      await RefreshLatestAgentVersion();
+      await DeviceCache.Refresh();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while refreshing the dashboard.");
+      Snackbar.Add("Dashboard refresh failed", Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+    }
   }
 
   private async Task RefreshLatestAgentVersion()

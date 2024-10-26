@@ -66,7 +66,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Signalr.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent.LoadTester", "Tests\ControlR.Agent.LoadTester\ControlR.Agent.LoadTester.csproj", "{475BDB0D-06C2-4C45-BD1F-7039CA14856A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControlR.Libraries.Agent", "Libraries\ControlR.Libraries.Agent\ControlR.Libraries.Agent.csproj", "{0BF63213-693A-44FE-AEAE-FF1D97521B30}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Agent", "Libraries\ControlR.Libraries.Agent\ControlR.Libraries.Agent.csproj", "{0BF63213-693A-44FE-AEAE-FF1D97521B30}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

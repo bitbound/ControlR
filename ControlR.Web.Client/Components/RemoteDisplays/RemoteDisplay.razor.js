@@ -424,17 +424,6 @@ export async function sendKeyPress(key, canvasId) {
 }
 
 /**
- * 
- * @param {string} text
- * @param {string} canvasId
- */
-export async function typeText(text, canvasId) {
-    const state = getState(canvasId);
-
-    await state.invokeDotNet("SendTypeText", text);
-}
-
-/**
  * @param {number} point1X
  * @param {number} point1Y
  * @param {number} point2X

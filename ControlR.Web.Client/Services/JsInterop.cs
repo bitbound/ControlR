@@ -34,6 +34,8 @@ public interface IJsInterop
   ValueTask SetStyleProperty(ElementReference element, string propertyName, string value);
 
   ValueTask StartDraggingY(ElementReference element, double clientY);
+  ValueTask SetClipboardText(string? text);
+  ValueTask<string> GetClipboardText();
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -56,6 +58,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask<bool> Confirm(string message)
   {
     return jsRuntime.InvokeAsync<bool>("invokeConfirm", message);
+  }
+
+  public ValueTask<string> GetClipboardText()
+  {
+    return jsRuntime.InvokeAsync<string>("getClipboardText");
   }
 
   public ValueTask<int> GetCursorIndex(ElementReference inputElement)
@@ -101,6 +108,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask ScrollToEnd(ElementReference element)
   {
     return jsRuntime.InvokeVoidAsync("scrollToEnd", element);
+  }
+
+  public async ValueTask SetClipboardText(string? text)
+  {
+    await jsRuntime.InvokeVoidAsync("setClipboardText", text);
   }
 
   public ValueTask SetStyleProperty(ElementReference element, string propertyName, string value)

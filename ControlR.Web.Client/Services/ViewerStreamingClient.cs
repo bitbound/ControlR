@@ -1,8 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using ControlR.Libraries.Clients.Services;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.SidecarDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 
@@ -10,6 +8,7 @@ namespace ControlR.Web.Client.Services;
 
 public interface IViewerStreamingClient : IStreamingClient, IClosable
 {
+  Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
 
@@ -37,6 +36,17 @@ public class ViewerStreamingClient(
   ILogger<ViewerStreamingClient> logger,
   ILogger<StreamingClient> baseLogger) : StreamingClient(messenger, memoryProvider, baseLogger), IViewerStreamingClient
 {
+  public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var dto = new RequestClipboardTextDto();
+        var wrapper = DtoWrapper.Create(dto, DtoType.RequestClipboardText);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
   public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -53,8 +63,8 @@ public class ViewerStreamingClient(
     await TrySend(
       async () =>
       {
-        var dto = new ClipboardChangeDto(text, sessionId);
-        var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardChanged);
+        var dto = new ClipboardTextDto(text, sessionId);
+        var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardText);
         await Send(wrapper, cancellationToken);
       });
   }

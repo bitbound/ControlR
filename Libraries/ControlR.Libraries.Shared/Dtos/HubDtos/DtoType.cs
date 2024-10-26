@@ -18,7 +18,7 @@ public enum DtoType
     ChangeDisplays = 17,
     CloseStreamingSession = 19,
     InvokeCtrlAltDel = 20,
-    ClipboardChanged = 21,
+    ClipboardText = 21,
     TriggerAgentUpdate = 22,
     DisplayData = 23,
     DesktopChanged = 24,
@@ -31,5 +31,6 @@ public enum DtoType
     WheelScroll = 31,
     ScreenRegion = 32,
     MouseClick = 33,
-    CursorChanged = 34
+    CursorChanged = 34,
+    RequestClipboardText = 35,
 }

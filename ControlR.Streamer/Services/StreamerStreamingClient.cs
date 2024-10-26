@@ -11,6 +11,7 @@ namespace ControlR.Streamer.Services;
 
 public interface IStreamerStreamingClient : IHostedService
 {
+  Task SendCurrentClipboardText();
 }
 
 internal sealed class StreamerStreamingClient(
@@ -18,17 +19,20 @@ internal sealed class StreamerStreamingClient(
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
   IDisplayManager displayManager,
+  IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IOptions<StartupOptions> startupOptions,
   ILogger<StreamerStreamingClient> logger)
   : StreamingClient(messenger, memoryProvider, logger), IStreamerStreamingClient
 {
+  private readonly IClipboardManager _clipboardManager = clipboardManager;
+
   public async Task StartAsync(CancellationToken cancellationToken)
   {
     try
     {
       await Connect(startupOptions.Value.WebSocketUri, appLifetime.ApplicationStopping);
-      Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
+      //Messenger.Register<DtoReceivedMessage<RequestClipboardTextDto>>(this, HandleClipboardTextRequested);
       Messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
 
@@ -52,6 +56,21 @@ internal sealed class StreamerStreamingClient(
         "Error while initializing streaming session. " +
         "Streaming cannot start.  Shutting down.");
       appLifetime.StopApplication();
+    }
+  }
+
+  public async Task SendCurrentClipboardText()
+  {
+    try
+    {
+      var clipboardText = await _clipboardManager.GetText();
+      var dto = new ClipboardTextDto(clipboardText, startupOptions.Value.SessionId);
+      var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardText);
+      await Send(wrapper, appLifetime.ApplicationStopping);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while sending clipboard text.");
     }
   }
 
@@ -80,19 +99,6 @@ internal sealed class StreamerStreamingClient(
     await SendDisplayData();
   }
 
-  private async Task HandleLocalClipboardChanged(object subscriber, LocalClipboardChangedMessage message)
-  {
-    try
-    {
-      var dto = new ClipboardChangeDto(message.Text, startupOptions.Value.SessionId);
-      var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardChanged);
-      await Send(wrapper, appLifetime.ApplicationStopping);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while handling local clipboard change.");
-    }
-  }
 
   private async Task SendDisplayData()
   {

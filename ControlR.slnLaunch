@@ -53,5 +53,25 @@
         "DebugTarget": "postgres"
       }
     ]
+  },
+  {
+    "Name": "Streamer Debug",
+    "Projects": [
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run (Native Debug)"
+      },
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "postgres"
+      },
+      {
+        "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      }
+    ]
   }
 ]

@@ -41,9 +41,6 @@ public partial class RemoteDisplay : IAsyncDisposable
   public required IBusyCounter AppState { get; init; }
 
   [Inject]
-  public required NavigationManager NavManager { get; init; }
-
-  [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
 
   [CascadingParameter]
@@ -64,6 +61,8 @@ public partial class RemoteDisplay : IAsyncDisposable
   [Inject]
   public required IMessenger Messenger { get; init; }
 
+  [Inject]
+  public required NavigationManager NavManager { get; init; }
   [Inject]
   public required IServiceProvider ServiceProvider { get; init; }
 
@@ -177,12 +176,6 @@ public partial class RemoteDisplay : IAsyncDisposable
   }
 
   [JSInvokable]
-  public async Task SendTypeText(string text)
-  {
-    await StreamingClient.SendTypeText(text, _componentClosing.Token);
-  }
-
-  [JSInvokable]
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
   {
     await StreamingClient.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
@@ -284,7 +277,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async Task HandleClipboardChangeReceived(ClipboardChangeDto dto)
+  private async Task HandleClipboardTextReceived(ClipboardTextDto dto)
   {
     try
     {
@@ -293,7 +286,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         return;
       }
 
-      Snackbar.Add("Clipboard synced (incoming)", Severity.Info);
+      Snackbar.Add("Received clipboard text", Severity.Info);
       await ClipboardManager.SetText(dto.Text ?? string.Empty);
       await InvokeAsync(StateHasChanged);
     }
@@ -340,9 +333,6 @@ public partial class RemoteDisplay : IAsyncDisposable
       return;
     }
 
-    Messenger.Unregister<LocalClipboardChangedMessage>(this);
-    Messenger.Register<LocalClipboardChangedMessage>(this, HandleLocalClipboardChanged);
-
     _displays = dto.Displays ?? [];
 
     if (_displays.Length == 0)
@@ -377,19 +367,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async Task HandleLocalClipboardChanged(object subscriber, LocalClipboardChangedMessage message)
-  {
-    try
-    {
-      Snackbar.Add("Clipboard synced (outgoing)", Severity.Info);
-      await StreamingClient.SendClipboardText(message.Text, Session.SessionId, _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while handling clipboard change.");
-    }
-  }
-
   private async void HandleParameterlessMessage(object sender, GenericMessageKind kind)
   {
     switch (kind)
@@ -400,9 +377,63 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
+  private async Task HandleReceiveClipboardClicked()
+  {
+    try
+    {
+      await StreamingClient.RequestClipboardText(Session.SessionId, _componentClosing.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while handling clipboard change.");
+      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
+    }
+  }
   private void HandleScrollModeToggled(bool isEnabled)
   {
     _isScrollModeEnabled = isEnabled;
+  }
+
+  private async Task HandleSendClipboardClicked()
+  {
+    try
+    {
+      var text = await ClipboardManager.GetText();
+      if (string.IsNullOrWhiteSpace(text))
+      {
+        Snackbar.Add("Clipboard is empty", Severity.Warning);
+        return;
+      }
+
+      Snackbar.Add("Sending clipboard", Severity.Info);
+      await StreamingClient.SendClipboardText(text, Session.SessionId, _componentClosing.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending clipboard.");
+      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
+    }
+  }
+
+  private async Task HandleTypeClipboardClicked()
+  {
+    try
+    {
+      var text = await ClipboardManager.GetText();
+      if (string.IsNullOrWhiteSpace(text))
+      {
+        Snackbar.Add("Clipboard is empty", Severity.Warning);
+        return;
+      }
+
+      Snackbar.Add("Sending clipboard to type", Severity.Info);
+      await StreamingClient.SendTypeText(text, _componentClosing.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending clipboard.");
+      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
+    }
   }
 
   private async Task HandleStreamerDisconnected()
@@ -454,10 +485,10 @@ public partial class RemoteDisplay : IAsyncDisposable
           await DrawRegion(dto);
           break;
         }
-        case DtoType.ClipboardChanged:
+        case DtoType.ClipboardText:
         {
-          var dto = wrapper.GetPayload<ClipboardChangeDto>();
-          await HandleClipboardChangeReceived(dto);
+          var dto = wrapper.GetPayload<ClipboardTextDto>();
+          await HandleClipboardTextReceived(dto);
           break;
         }
         case DtoType.CursorChanged:
@@ -486,7 +517,6 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
   }
-
   private void OnTouchCancel(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
@@ -654,7 +684,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     await _typeLock.WaitAsync();
     try
     {
-      await JsModule.InvokeVoidAsync("typeText", text, _canvasId);
+      await StreamingClient.SendTypeText(text, _componentClosing.Token);
     }
     catch (Exception ex)
     {

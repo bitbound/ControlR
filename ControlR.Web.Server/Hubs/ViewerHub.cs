@@ -1,17 +1,12 @@
 ﻿using System.Runtime.CompilerServices;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Client.Extensions;
-using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
-  AppDb _appDb,
-  UserManager<AppUser> _userManager,
-  IAuthorizationService _authzService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IConnectionCounter connectionCounter,
@@ -20,6 +15,14 @@ public class ViewerHub(
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
+  private readonly IHubContext<AgentHub, IAgentHubClient> _agentHub = agentHub;
+  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly IConnectionCounter _connectionCounter = connectionCounter;
+  private readonly IIpApi _ipApi = ipApi;
+  private readonly IWsBridgeApi _wsBridgeApi = wsBridgeApi;
+  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
+  private readonly ILogger<ViewerHub> _logger = logger;
+
   public Task<bool> CheckIfServerAdministrator()
   {
     return IsServerAdmin().AsTaskResult();
@@ -31,13 +34,13 @@ public class ViewerHub(
   {
     try
     {
-      return await agentHub.Clients
+      return await _agentHub.Clients
         .Client(agentConnectionId)
         .CreateTerminalSession(requestDto);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while creating terminal session.");
+      _logger.LogError(ex, "Error while creating terminal session.");
       return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
     }
   }
@@ -46,11 +49,11 @@ public class ViewerHub(
   {
     try
     {
-      return await agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings();
+      return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting agent appsettings.");
+      _logger.LogError(ex, "Error while getting agent appsettings.");
       return Result.Fail<AgentAppSettings>("Failed to get agent app settings.");
     }
   }
@@ -65,11 +68,11 @@ public class ViewerHub(
         return Result.Fail<ServerStatsDto>("Unauthorized.");
       }
 
-      return await serverStatsProvider.GetServerStats();
+      return await _serverStatsProvider.GetServerStats();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting agent count.");
+      _logger.LogError(ex, "Error while getting agent count.");
       return Result.Fail<ServerStatsDto>("Failed to get agent count.");
     }
   }
@@ -78,8 +81,8 @@ public class ViewerHub(
   {
     try
     {
-      if (!appOptions.CurrentValue.UseExternalWebSocketBridge ||
-          appOptions.CurrentValue.ExternalWebSocketHosts.Count == 0)
+      if (!_appOptions.CurrentValue.UseExternalWebSocketBridge ||
+          _appOptions.CurrentValue.ExternalWebSocketHosts.Count == 0)
       {
         return null;
       }
@@ -90,7 +93,7 @@ public class ViewerHub(
         return null;
       }
 
-      var result = await ipApi.GetIpInfo(ipAddress);
+      var result = await _ipApi.GetIpInfo(ipAddress);
       if (!result.IsSuccess)
       {
         return null;
@@ -101,13 +104,13 @@ public class ViewerHub(
 
       if (ipInfo.Status == IpApiResponseStatus.Fail)
       {
-        logger.LogError("IpApi returned a failed status message.  Message: {IpMessage}", ipInfo.Message);
+        _logger.LogError("IpApi returned a failed status message.  Message: {IpMessage}", ipInfo.Message);
         return null;
       }
 
       var location = new Coordinate(ipInfo.Lat, ipInfo.Lon);
-      var closest = CoordinateHelper.FindClosestCoordinate(location, appOptions.CurrentValue.ExternalWebSocketHosts);
-      if (closest.Origin is null || !await wsBridgeApi.IsHealthy(closest.Origin))
+      var closest = CoordinateHelper.FindClosestCoordinate(location, _appOptions.CurrentValue.ExternalWebSocketHosts);
+      if (closest.Origin is null || !await _wsBridgeApi.IsHealthy(closest.Origin))
       {
         return null;
       }
@@ -116,7 +119,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting WebSocket bridge URI.");
+      _logger.LogError(ex, "Error while getting WebSocket bridge URI.");
       return null;
     }
   }
@@ -125,11 +128,11 @@ public class ViewerHub(
   {
     try
     {
-      return await agentHub.Clients.Client(agentConnectionId).GetWindowsSessions();
+      return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting Windows sessions from agent.");
+      _logger.LogError(ex, "Error while getting Windows sessions from agent.");
       return [];
     }
   }
@@ -140,18 +143,18 @@ public class ViewerHub(
     {
       await base.OnConnectedAsync();
 
-      connectionCounter.IncrementViewerCount();
+      _connectionCounter.IncrementViewerCount();
       await SendUpdatedConnectionCountToAdmins();
 
       if (Context.User is null)
       {
-        logger.LogCritical("User is null.  Authorize tag should have prevented this.");
+        _logger.LogCritical("User is null.  Authorize tag should have prevented this.");
         return;
       }
 
       if (!Context.User.TryGetTenantId(out var tenantId))
       {
-        logger.LogCritical("Failed to get tenant ID.");
+        _logger.LogCritical("Failed to get tenant ID.");
         return;
       }
 
@@ -159,7 +162,7 @@ public class ViewerHub(
       {
         await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
 
-        var getResult = await serverStatsProvider.GetServerStats();
+        var getResult = await _serverStatsProvider.GetServerStats();
         if (getResult.IsSuccess)
         {
           await Clients.Caller.ReceiveServerStats(getResult.Value);
@@ -178,7 +181,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error during viewer connect.");
+      _logger.LogError(ex, "Error during viewer connect.");
     }
   }
 
@@ -188,7 +191,7 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
-      connectionCounter.DecrementViewerCount();
+      _connectionCounter.DecrementViewerCount();
       await SendUpdatedConnectionCountToAdmins();
 
       if (Context.User is null)
@@ -218,7 +221,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error during viewer disconnect.");
+      _logger.LogError(ex, "Error during viewer disconnect.");
     }
   }
 
@@ -232,7 +235,7 @@ public class ViewerHub(
       //var name = Context.User?.Identity?.Name;
       //sessionRequestDto = sessionRequestDto with { ViewerName = name ?? "" };
 
-      var sessionSuccess = await agentHub.Clients
+      var sessionSuccess = await _agentHub.Clients
         .Client(agentConnectionId)
         .CreateStreamingSession(sessionRequestDto);
 
@@ -253,20 +256,20 @@ public class ViewerHub(
   {
     try
     {
-      return await agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(appSettings);
+      return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(appSettings);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending agent appsettings.");
+      _logger.LogError(ex, "Error while sending agent appsettings.");
       return Result.Fail("Failed to send agent app settings.");
     }
   }
 
   public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {
-    using var scope = logger.BeginMemberScope();
+    using var scope = _logger.BeginMemberScope();
 
-    await agentHub.Clients.Group(HubGroupNames.GetDeviceGroupName(deviceId)).ReceiveDto(wrapper);
+    await _agentHub.Clients.Group(HubGroupNames.GetDeviceGroupName(deviceId)).ReceiveDto(wrapper);
   }
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
@@ -279,11 +282,11 @@ public class ViewerHub(
   {
     try
     {
-      return await agentHub.Clients.Client(agentConnectionId).ReceiveTerminalInput(dto);
+      return await _agentHub.Clients.Client(agentConnectionId).ReceiveTerminalInput(dto);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending terminal input.");
+      _logger.LogError(ex, "Error while sending terminal input.");
       return Result.Fail("Agent could not be reached.");
     }
   }
@@ -297,7 +300,7 @@ public class ViewerHub(
   {
     try
     {
-      var getResult = await serverStatsProvider.GetServerStats();
+      var getResult = await _serverStatsProvider.GetServerStats();
 
       if (getResult.IsSuccess)
       {
@@ -308,7 +311,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending updated agent connection count to admins.");
+      _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
     }
   }
 
@@ -320,7 +323,7 @@ public class ViewerHub(
     }
 
     var userName = Context.User?.Identity?.Name;
-    logger.LogCritical(
+    _logger.LogCritical(
       "Admin verification failed when invoking member {MemberName}. User: {UserName}",
       callerMember,
       userName);

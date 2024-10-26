@@ -16,6 +16,11 @@
 
         <DisplaysMenu Displays="_displays" SelectedDisplay="_selectedDisplay" OnDisplaySelected="ChangeDisplays" />
 
+        <ClipboardMenu 
+          OnReceiveClipboardClicked="HandleReceiveClipboardClicked" 
+          OnSendClipboardClicked="HandleSendClipboardClicked"
+          OnTypeClipboardClicked="HandleTypeClipboardClicked" />
+
         <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
             @if (CurrentBreakpoint < Breakpoint.Sm)
             {

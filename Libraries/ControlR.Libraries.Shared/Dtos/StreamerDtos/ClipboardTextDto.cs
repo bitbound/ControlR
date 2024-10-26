@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 [MessagePackObject]
-public record ClipboardChangeDto(
+public record ClipboardTextDto(
     [property: MsgPackKey] string? Text,
     [property: MsgPackKey] Guid SessionId);

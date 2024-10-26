@@ -6,16 +6,17 @@ public interface IClipboardManager
   Task<string?> GetText();
 }
 
-internal class ClipboardManager: IClipboardManager
+internal class ClipboardManager(IJsInterop jsInterop): IClipboardManager
 {
+  private readonly IJsInterop _jsInterop = jsInterop;
+
   public async Task<string?> GetText()
   {
-    await Task.Yield();
-    return "";
+    return await _jsInterop.GetClipboardText();
   }
 
   public async Task SetText(string? text)
   {
-    await Task.Yield();
+    await _jsInterop.SetClipboardText(text);
   }
 }

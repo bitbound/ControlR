@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
-
-namespace ControlR.Streamer.Services;
+﻿namespace ControlR.Streamer.Services;
 
 public interface IInputSimulator
 {

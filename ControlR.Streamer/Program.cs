@@ -99,7 +99,6 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
   services.AddHostedService<CursorWatcher>();
   services.AddHostedService<DtoHandler>();
   services.AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>());
-  services.AddHostedService(x => x.GetRequiredService<IClipboardManager>());
 
   builder.BootstrapSerilog(
     logFilePath: PathConstants.GetLogsPath(originUri),

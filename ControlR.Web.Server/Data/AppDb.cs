@@ -94,7 +94,7 @@ public class AppDb(DbContextOptions<AppDb> options)
         .HasData(
           new IdentityRole<Guid>()
           {
-            Id = DeterministicGuid.CreateDeterministicGuid(1),
+            Id = DeterministicGuid.Create(1),
             Name = RoleNames.ServerAdministrator,
             NormalizedName = RoleNames.ServerAdministrator.ToUpper()
           });
@@ -104,7 +104,7 @@ public class AppDb(DbContextOptions<AppDb> options)
       .HasData(
         new IdentityRole<Guid>()
         {
-          Id = DeterministicGuid.CreateDeterministicGuid(2),
+          Id = DeterministicGuid.Create(2),
           Name = RoleNames.TenantAdministrator,
           NormalizedName = RoleNames.TenantAdministrator.ToUpper()
         });
@@ -114,7 +114,7 @@ public class AppDb(DbContextOptions<AppDb> options)
     .HasData(
       new IdentityRole<Guid>()
       {
-        Id = DeterministicGuid.CreateDeterministicGuid(3),
+        Id = DeterministicGuid.Create(3),
         Name = RoleNames.DeviceSuperUser,
         NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
       });

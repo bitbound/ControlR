@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.Shared.Dtos.SidecarDtos;
+﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 [MessagePackObject]
 public record TypeTextDto([property: MsgPackKey] string Text);
