@@ -1,6 +1,5 @@
 ﻿@using System.Reflection
 @attribute [Route(RouteNames.About)]
-@inject IControlrApi ControlrApi
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
 
@@ -117,22 +116,17 @@
     await base.OnInitializedAsync();
   }
 
-  private async Task Init()
+  private Task Init()
   {
     try
     {
-      var versionResult = await ControlrApi.GetCurrentServerVersion();
-      if (!versionResult.IsSuccess)
-      {
-        Snackbar.Add("Failed to get server version", Severity.Error);
-        return;
-      }
-      _currentVersion = versionResult.Value;
+      _currentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new(0, 1);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error determining version.");
       Snackbar.Add("Error determining version.", Severity.Error);
     }
+    return Task.CompletedTask;
   }
 }
