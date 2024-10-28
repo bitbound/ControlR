@@ -1,8 +1,8 @@
 {
   "name": "ControlR",
   "short_name": "ControlR",
-  "id": "./",
-  "start_url": "./",
+  "id": "controlr",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#141414",
   "theme_color": "#46AA46",
