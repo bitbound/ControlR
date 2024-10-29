@@ -144,10 +144,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<Guid?>("DeviceGroupId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Drives")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("Is64Bit")
                         .HasColumnType("boolean");
 
@@ -499,6 +495,52 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.OwnsMany("ControlR.Libraries.Shared.Models.Drive", "Drives", b1 =>
+                        {
+                            b1.Property<Guid>("DeviceId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("DriveFormat")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<int>("DriveType")
+                                .HasColumnType("integer");
+
+                            b1.Property<double>("FreeSpace")
+                                .HasColumnType("double precision");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("RootDirectory")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<double>("TotalSize")
+                                .HasColumnType("double precision");
+
+                            b1.Property<string>("VolumeLabel")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("DeviceId", "Id");
+
+                            b1.ToTable("Devices");
+
+                            b1.ToJson("Drives");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DeviceId");
+                        });
+
+                    b.Navigation("Drives");
 
                     b.Navigation("Tenant");
                 });

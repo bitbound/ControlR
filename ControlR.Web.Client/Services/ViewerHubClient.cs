@@ -1,6 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 
 namespace ControlR.Web.Client.Services;

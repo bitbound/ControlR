@@ -54,7 +54,7 @@ public class AgentHub(
           .Group(HubGroupNames.ServerAdministrators)
           .ReceiveDeviceUpdate(cachedDevice);
 
-        await _appDb.AddOrUpdate<DeviceResponseDto, Device>(cachedDevice);
+        await _appDb.AddOrUpdateDevice(cachedDevice);
 
         await SendDeviceUpdate();
       }
@@ -133,11 +133,8 @@ public class AgentHub(
         }
       }
 
-      var deviceEntity = await _appDb
-        .AddOrUpdate<DeviceRequestDto, Device>(
-          device, 
-          [x => x.Tenant]);
 
+      var deviceEntity = await _appDb.AddOrUpdateDevice(device);
       TenantId = deviceEntity.TenantId;
       Device = deviceEntity.ToDto();
 

@@ -7,7 +7,7 @@ namespace ControlR.Web.Client.Services;
 
 public interface IDeviceCache
 {
-  IEnumerable<DeviceResponseDto> Devices { get; }
+  ICollection<DeviceResponseDto> Devices { get; }
   void AddOrUpdate(DeviceResponseDto device);
 
   void Clear();
@@ -30,6 +30,7 @@ internal class DeviceCache : IDeviceCache
   {
     _controlrApi = controlrApi;
     _snackbar = snackbar;
+    _messenger = messenger;
     _logger = logger;
 
     messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
@@ -37,10 +38,11 @@ internal class DeviceCache : IDeviceCache
 
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
   private readonly ISnackbar _snackbar;
+  private readonly IMessenger _messenger;
   private readonly IControlrApi _controlrApi;
   private readonly ILogger<DeviceCache> _logger;
 
-  public IEnumerable<DeviceResponseDto> Devices => _cache.Values;
+  public ICollection<DeviceResponseDto> Devices => _cache.Values;
 
   public void AddOrUpdate(DeviceResponseDto device)
   {
@@ -67,6 +69,7 @@ internal class DeviceCache : IDeviceCache
       {
         _cache.AddOrUpdate(device.Id, device, (_, _) => device);
       }
+      await _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
     }
     catch (Exception ex)
     {

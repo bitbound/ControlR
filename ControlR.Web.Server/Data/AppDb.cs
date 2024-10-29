@@ -10,12 +10,6 @@ namespace ControlR.Web.Server.Data;
 public class AppDb(DbContextOptions<AppDb> options)
   : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
-  private static readonly ValueComparer<List<Drive>> _driveListComparer = new(
-    (a, b) => (a ?? new List<Drive>()).SequenceEqual(b ?? new List<Drive>()),
-    c => c.Aggregate(0, (a, b) => HashCode.Combine(a, b.GetHashCode())),
-    c => c.ToList());
-
-  private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
   public DbSet<Device> Devices { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
   public DbSet<Tag> Tags { get; init; }
@@ -80,11 +74,8 @@ public class AppDb(DbContextOptions<AppDb> options)
   {
     builder
       .Entity<Device>()
-      .Property(x => x.Drives)
-      .HasConversion(
-          x => JsonSerializer.Serialize(x, _jsonOptions),
-          x => JsonSerializer.Deserialize<List<Drive>>(x, _jsonOptions) ?? new List<Drive>(),
-          _driveListComparer);
+      .OwnsMany(x => x.Drives)
+      .ToJson();
   }
 
   private static void AddSeedData(ModelBuilder builder)

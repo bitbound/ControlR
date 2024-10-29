@@ -1,22 +1,13 @@
-﻿using ControlR.Libraries.Shared.Dtos.Interfaces;
-using ControlR.Web.Server.Data.Entities.Bases;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using System.Linq.Expressions;
-
-namespace ControlR.Web.Server.Data;
+﻿namespace ControlR.Web.Server.Data;
 
 public static class AppDbExtensions
 {
-  public static async Task<TEntity> AddOrUpdate<TDto, TEntity>(
+  public static async Task<Device> AddOrUpdateDevice(
     this AppDb db, 
-    TDto dto,
-    IEnumerable<Expression<Func<TEntity, object?>>>? navigations = null)
-    where TDto : IHasPrimaryKey
-    where TEntity : EntityBase, new()
+    DeviceRequestDto dto)
   {
-    var set = db.Set<TEntity>();
-    TEntity? entity = null;
+    var set = db.Set<Device>();
+    Device? entity = null;
     
     if (dto.Id != Guid.Empty)
     {
@@ -24,18 +15,12 @@ public static class AppDbExtensions
     }
 
     var entityState = entity is null ? EntityState.Added : EntityState.Modified;
-    entity ??= new TEntity();
+    entity ??= new Device();
     var entry = set.Entry(entity);
-    entry.CurrentValues.SetValues(dto);
+    await entry.Reference(x => x.Tenant).LoadAsync();
     entry.State = entityState;
-
-    if (navigations is not null)
-    {
-      foreach (var navigation in navigations)
-      {
-        await entry.Reference(navigation).LoadAsync();
-      }
-    }
+    entry.CurrentValues.SetValues(dto);
+    entity.Drives = dto.Drives;
 
     await db.SaveChangesAsync();
     return entity;

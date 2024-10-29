@@ -104,7 +104,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     ConnectionId = table.Column<string>(type: "text", nullable: false),
                     CpuUtilization = table.Column<double>(type: "double precision", nullable: false),
                     CurrentUsers = table.Column<string[]>(type: "text[]", nullable: false),
-                    Drives = table.Column<string>(type: "text", nullable: false),
                     Is64Bit = table.Column<bool>(type: "boolean", nullable: false),
                     IsOnline = table.Column<bool>(type: "boolean", nullable: false),
                     LastSeen = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -122,7 +121,8 @@ namespace ControlR.Web.Server.Data.Migrations
                     UsedStorage = table.Column<double>(type: "double precision", nullable: false),
                     DeviceGroupId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Drives = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>
                 {

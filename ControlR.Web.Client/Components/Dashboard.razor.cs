@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Rendering;
+﻿using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components;
 
@@ -13,11 +11,15 @@ public partial class Dashboard
   };
 
   private Version? _agentReleaseVersion;
+  private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
 
   [Inject]
   public required IBusyCounter BusyCounter { get; init; }
+
+  [Inject]
+  public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
   public required IDeviceCache DeviceCache { get; init; }
@@ -36,10 +38,6 @@ public partial class Dashboard
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-
-  [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
 
@@ -47,10 +45,7 @@ public partial class Dashboard
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private bool _hideOfflineDevices;
-
-
-  private IEnumerable<DeviceResponseDto> FilteredDevices
+  private ICollection<DeviceResponseDto> FilteredDevices
   {
     get
     {
@@ -59,7 +54,9 @@ public partial class Dashboard
         return DeviceCache.Devices;
       }
 
-      return DeviceCache.Devices.Where(x => x.IsOnline);
+      return DeviceCache.Devices
+        .Where(x => x.IsOnline)
+        .ToArray();
     }
   }
 
@@ -99,9 +96,8 @@ public partial class Dashboard
     await RefreshLatestAgentVersion();
 
     Messenger.RegisterGenericMessage(this, HandleGenericMessage);
-    Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
-    if (!DeviceCache.Devices.Any())
+    if (DeviceCache.Devices.Count == 0)
     {
       await DeviceCache.Refresh();
     }
@@ -128,10 +124,10 @@ public partial class Dashboard
       };
 
       var parameters = new DialogParameters
-            {
-                { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-                { nameof(AppSettingsEditorDialog.Device), device }
-            };
+        {
+          { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
+          { nameof(AppSettingsEditorDialog.Device), device }
+        };
       var dialogRef = await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
       if (dialogRef is null)
       {
@@ -160,7 +156,7 @@ public partial class Dashboard
           {
             Debouncer.Debounce(
               TimeSpan.FromSeconds(1),
-              async () => 
+              async () =>
               {
                 await InvokeAsync(StateHasChanged);
               });
@@ -175,14 +171,6 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
     }
     return Task.CompletedTask;
-  }
-
-  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
-  {
-    if (ViewerHub.IsConnected)
-    {
-      await RefreshDevices();
-    }
   }
 
   private async Task HandleRefreshClicked()
@@ -210,8 +198,8 @@ public partial class Dashboard
     try
     {
       _loading = true;
-      await InvokeAsync(StateHasChanged);
       using var _ = BusyCounter.IncrementBusyCounter();
+      await InvokeAsync(StateHasChanged);
       await RefreshLatestAgentVersion();
       await DeviceCache.Refresh();
     }
@@ -233,6 +221,46 @@ public partial class Dashboard
     {
       _agentReleaseVersion = agentVerResult.Value;
     }
+  }
+
+  private async Task RemoteControlClicked(DeviceResponseDto device)
+  {
+    switch (device.Platform)
+    {
+      case SystemPlatform.Windows:
+        var sessionResult = await ViewerHub.GetWindowsSessions(device);
+        if (!sessionResult.IsSuccess)
+        {
+          Logger.LogResult(sessionResult);
+          Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
+          return;
+        }
+
+        var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
+        var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+        var result = await dialogRef.Result;
+        if (result is null || result.Canceled)
+        {
+          return;
+        }
+
+        if (result.Data is uint sessionId)
+        {
+          var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
+          WindowStore.AddContentInstance<RemoteDisplay>(
+            device,
+            DeviceContentInstanceType.RemoteControl,
+            new Dictionary<string, object?>()
+            {
+              [nameof(RemoteDisplay.Session)] = remoteControlSession
+            });
+        }
+        break;
+      default:
+        Snackbar.Add("Platform is not supported", Severity.Warning);
+        break;
+    }
+
   }
 
   private async Task RemoveDevice(DeviceResponseDto device)
@@ -285,52 +313,6 @@ public partial class Dashboard
     Snackbar.Add("Shutdown command sent", Severity.Success);
   }
 
-  private async Task UpdateDevice(DeviceResponseDto device)
-  {
-    Snackbar.Add("Sending update request", Severity.Success);
-    await ViewerHub.SendAgentUpdateTrigger(device);
-  }
-  private async Task RemoteControlClicked(DeviceResponseDto device)
-  {
-    switch (device.Platform)
-    {
-      case SystemPlatform.Windows:
-        var sessionResult = await ViewerHub.GetWindowsSessions(device);
-        if (!sessionResult.IsSuccess)
-        {
-          Logger.LogResult(sessionResult);
-          Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
-          return;
-        }
-
-        var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
-        var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
-        var result = await dialogRef.Result;
-        if (result is null || result.Canceled)
-        {
-          return;
-        }
-
-        if (result.Data is uint sessionId)
-        {
-          var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
-          WindowStore.AddContentInstance<RemoteDisplay>(
-            device, 
-            DeviceContentInstanceType.RemoteControl,
-            new Dictionary<string, object?>()
-            {
-              [nameof(RemoteDisplay.Session)] = remoteControlSession
-            });
-        }
-        break;
-      default:
-        Snackbar.Add("Platform is not supported", Severity.Warning);
-        break;
-    }
-
-  }
-
-
   private void StartTerminal(DeviceResponseDto device)
   {
     try
@@ -354,6 +336,11 @@ public partial class Dashboard
     }
   }
 
+  private async Task UpdateDevice(DeviceResponseDto device)
+  {
+    Snackbar.Add("Sending update request", Severity.Success);
+    await ViewerHub.SendAgentUpdateTrigger(device);
+  }
   private async Task WakeDevice(DeviceResponseDto device)
   {
     if (device.MacAddresses is null ||

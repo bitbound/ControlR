@@ -1,7 +1,7 @@
-﻿@if (!DeviceCache.Devices.Any())
+﻿@if (DeviceCache.Devices.Count == 0)
 {
   <MudAlert Severity="Severity.Info">
-    No devices found. Head over to the <MudLink Href="/deploy">Deploy Page</MudLink>
+    No devices found. Head over to the <MudLink Color="Color.Tertiary" Href="/deploy">Deploy Page</MudLink>
     to install an agent!
   </MudAlert>
 }
