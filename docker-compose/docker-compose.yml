@@ -82,6 +82,10 @@ services:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Latitude:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Longitude:
 
+      # Create an App Registration in Azure and set these values to enable Microsoft account authentication.
+      #ControlR_AppOptions__MicrosoftClientId: ""
+      #ControlR_AppOptions__MicrosoftClientSecret: ""
+
   postgres:
     image: postgres:latest
     container_name: postgres

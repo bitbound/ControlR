@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Server.Data.Entities.Enums;
+﻿namespace ControlR.Libraries.Shared.Enums;
 
 public enum TagType
 {

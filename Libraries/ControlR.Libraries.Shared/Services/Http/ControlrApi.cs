@@ -8,13 +8,15 @@ public interface IControlrApi
   Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups();
   IAsyncEnumerable<DeviceResponseDto> GetAllDevices();
 
+  Task<Result<List<TagDto>>> GetAllTags(bool includeLinkedIds = false);
+
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
-
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
+  Task<Result<List<TagDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
 
@@ -22,14 +24,15 @@ public class ControlrApi(
   HttpClient httpClient,
   ILogger<ControlrApi> logger) : IControlrApi
 {
-  private readonly string _agentVersionEndpoint = "/api/version/agent";
+  private const string _agentVersionEndpoint = "/api/version/agent";
+  private const string _deviceGroupsEndpoint = "/api/device-groups";
+  private const string _devicesEndpoint = "/api/devices";
+  private const string _serverSettingsEndpoint = "/api/server-settings";
+  private const string _serverVersionEndpoint = "/api/version/server";
+  private const string _tagsEndpoint = "/api/tags";
+  private const string _userPreferencesEndpoint = "/api/user-preferences";
   private readonly HttpClient _client = httpClient;
-  private readonly string _deviceGroupsEndpoint = "/api/device-groups";
-  private readonly string _devicesEndpoint = "/api/devices";
   private readonly ILogger<ControlrApi> _logger = logger;
-  private readonly string _serverSettingsEndpoint = "/api/server-settings";
-  private readonly string _serverVersionEndpoint = "/api/version/server";
-  private readonly string _userPreferencesEndpoint = "/api/user-preferences";
 
   public async Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups()
   {
@@ -61,6 +64,25 @@ public class ControlrApi(
         continue;
       }
       yield return device;
+    }
+  }
+
+  public async Task<Result<List<TagDto>>> GetAllTags(bool includeLinkedIds = false)
+  {
+    try
+    {
+      var tags = await _client.GetFromJsonAsync<List<TagDto>>($"{_tagsEndpoint}?includeLinkedIds={includeLinkedIds}");
+      if (tags is null)
+      {
+        return Result.Fail<List<TagDto>>("Server response was empty.");
+      }
+      return Result.Ok(tags);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<List<TagDto>>(ex, "Error while getting user tags.")
+        .Log(_logger);
     }
   }
 
@@ -191,6 +213,25 @@ public class ControlrApi(
     {
       return Result
         .Fail<UserPreferenceResponseDto>(ex, "Error while getting user preference.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result<List<TagDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
+  {
+    try
+    {
+      var tags = await _client.GetFromJsonAsync<List<TagDto>>($"{_tagsEndpoint}/{userId}?includeLinkedIds={includeLinkedIds}");
+      if (tags is null)
+      {
+        return Result.Fail<List<TagDto>>("Server response was empty.");
+      }
+      return Result.Ok(tags);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<List<TagDto>>(ex, "Error while getting user tags.")
         .Log(_logger);
     }
   }

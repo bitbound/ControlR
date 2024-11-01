@@ -16,7 +16,9 @@
     <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
       <DataAnnotationsValidator/>
 
-      <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
+      <MudText GutterBottom="true" Typo="Typo.body1" Color="Color.Primary">
+        Use a local account to log in.
+      </MudText>
 
       <MudGrid>
         <MudItem xs="12">
@@ -50,8 +52,9 @@
     </MudGrid>
   </MudItem>
   <MudItem md="6">
-    <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
-
+    <MudText Typo="Typo.body1" Color="Color.Secondary" GutterBottom="true">
+      Log in with an external provider.
+    </MudText>
     <ExternalLoginPicker/>
   </MudItem>
 </MudGrid>

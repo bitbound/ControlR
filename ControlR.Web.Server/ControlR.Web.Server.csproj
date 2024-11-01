@@ -10,6 +10,7 @@
 
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.10" />
     <ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
     <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
@@ -36,6 +37,7 @@
 
 
   <ItemGroup>
+    <Folder Include="Data\Entities\Enums\" />
     <Folder Include="Data\Migrations\" />
   </ItemGroup>
 

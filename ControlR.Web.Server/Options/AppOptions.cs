@@ -7,7 +7,8 @@ public class AppOptions
   public bool EnablePublicRegistration { get; init; }
   public IReadOnlyList<ExternalWebSocketHost> ExternalWebSocketHosts { get; init; } = [];
   public string[] KnownProxies { get; init; } = [];
-  public int LogRetentionDays { get; } = 7;
+  public string? MicrosoftClientId { get; init; }
+  public string? MicrosoftClientSecret { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }
   public Uri? ServerBaseUri { get; init; }
   public bool SmtpCheckCertificateRevocation { get; set; } = true;

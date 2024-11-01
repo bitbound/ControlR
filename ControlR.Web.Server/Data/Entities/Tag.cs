@@ -1,5 +1,5 @@
-﻿using ControlR.Web.Server.Data.Entities.Bases;
-using ControlR.Web.Server.Data.Entities.Enums;
+﻿using ControlR.Libraries.Shared.Enums;
+using ControlR.Web.Server.Data.Entities.Bases;
 
 namespace ControlR.Web.Server.Data.Entities;
 

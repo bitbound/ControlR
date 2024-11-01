@@ -81,13 +81,24 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
-builder.Services
+var authBuilder = builder.Services
   .AddAuthentication(options =>
   {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-  })
-  .AddIdentityCookies();
+  });
+
+if (!string.IsNullOrWhiteSpace(appOptions.MicrosoftClientId) &&
+    !string.IsNullOrWhiteSpace(appOptions.MicrosoftClientSecret))
+{
+  authBuilder.AddMicrosoftAccount(microsoftOptions =>
+  {
+    microsoftOptions.ClientId = appOptions.MicrosoftClientId;
+    microsoftOptions.ClientSecret = appOptions.MicrosoftClientSecret;
+  });
+}
+
+authBuilder.AddIdentityCookies();
 
 builder.Services
   .AddAuthorizationBuilder()
@@ -170,7 +181,12 @@ else
   app.UseHsts();
 }
 
-app.UseMiddleware<ContentHashHeaderMiddleware>();
+app.UseWhen(
+  ctx => ctx.Request.Method == HttpMethods.Head && ctx.Request.Path.StartsWithSegments("/downloads"),
+  appBuilder =>
+  {
+    appBuilder.UseMiddleware<ContentHashHeaderMiddleware>();
+  });
 
 app.UseStaticFiles();
 

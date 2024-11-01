@@ -3,6 +3,7 @@
 @attribute [Authorize]
 
 @inject NavigationManager NavMan
+@inject AuthenticationStateProvider AuthState
 @inject ISnackbar Snackbar
 @inject IClipboardManager Clipboard
 @inject IBusyCounter BusyCounter
@@ -106,11 +107,18 @@
 @code {
   private bool _addToDeviceGroup;
   private DeviceGroupDto? _selectedDeviceGroup;
+  private Guid? _tenantId;
   private List<DeviceGroupDto> _deviceGroups = [];
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (state.User.TryGetTenantId(out var tenantId))
+    {
+      _tenantId = tenantId;
+    }
 
     var result = await ControlrApi.GetAllDeviceGroups();
     if (result.IsSuccess)
