@@ -12,7 +12,10 @@ var postgres = builder
 var pgHost = postgres.GetEndpoint("tcp");
 
 var web = builder
-    .AddProject<Projects.ControlR_Web_Server>(ServiceNames.Controlr)
+    .AddProject<Projects.ControlR_Web_Server>(ServiceNames.Controlr, configure =>
+    {
+      configure.LaunchProfileName = "https";
+    })
     .WithEnvironment("POSTGRES_USER", pgUser)
     .WithEnvironment("POSTGRES_PASSWORD", pgPassword)
     .WithEnvironment("ControlR_POSTGRES_HOST", pgHost)
