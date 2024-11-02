@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using ControlR.Libraries.Agent.Options;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;

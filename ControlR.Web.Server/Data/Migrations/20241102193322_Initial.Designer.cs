@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20241028173205_Initial")]
+    [Migration("20241102193322_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -238,6 +238,9 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("Name", "TenantId")
+                        .IsUnique();
+
                     b.ToTable("Tags");
                 });
 
@@ -290,12 +293,12 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
-
                     b.HasIndex("TenantId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("Name", "UserId")
+                        .IsUnique();
 
                     b.ToTable("UserPreferences");
                 });

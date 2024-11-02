@@ -7,6 +7,8 @@ public interface ISettings
 {
   Task<bool> GetHideOfflineDevices();
   Task<bool> GetNotifyUserOnSessionStart();
+  Task<string> GetUserDisplayName();
+  Task SetUserDisplayName(string value);
   Task SetHideOfflineDevices(bool value);
   Task SetNotifyUserOnSessionStart(bool value);
 }
@@ -16,29 +18,40 @@ internal class Settings(
   ISnackbar snackbar,
   ILogger<Settings> logger) : ISettings
 {
-  private const string _notifyUserOnSessionStartName = "notify-user-on-session-start";
-  private const string _hideOfflineDevicesName = "hide-offline-devices";
+  private readonly IControlrApi _controlrApi = controlrApi;
+  private readonly ILogger<Settings> _logger = logger;
 
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
+  private readonly ISnackbar _snackbar = snackbar;
 
   public async Task<bool> GetHideOfflineDevices()
   {
-    return await GetPref(_hideOfflineDevicesName, true);
+    return await GetPref(UserPreferenceNames.HideOfflineDevicesName, true);
+  }
+
+  public async Task SetUserDisplayName(string value)
+  {
+    await SetPref(UserPreferenceNames.UserDisplayName, value);
   }
 
   public async Task SetHideOfflineDevices(bool value)
   {
-    await SetPref(_hideOfflineDevicesName, value);
+    await SetPref(UserPreferenceNames.HideOfflineDevicesName, value);
   }
 
   public async Task<bool> GetNotifyUserOnSessionStart()
   {
-    return await GetPref(_notifyUserOnSessionStartName, true);
+    return await GetPref(UserPreferenceNames.NotifyUserOnSessionStartName, true);
+  }
+
+  public async Task<string> GetUserDisplayName()
+  {
+    return await GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
   }
 
   public async Task SetNotifyUserOnSessionStart(bool value)
   {
-    await SetPref(_notifyUserOnSessionStartName, value);
+    await SetPref(UserPreferenceNames.NotifyUserOnSessionStartName, value);
   }
 
 
@@ -52,31 +65,31 @@ internal class Settings(
         return typedValue;
       }
 
-      var getResult = await controlrApi.GetUserPreference(preferenceName);
+      var getResult = await _controlrApi.GetUserPreference(preferenceName);
 
       if (!getResult.IsSuccess)
       {
-        if (getResult.Exception is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.NotFound)
+        if (getResult.Exception is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
         {
           return defaultValue;
         }
 
-        snackbar.Add(getResult.Reason, Severity.Error);
+        _snackbar.Add(getResult.Reason, Severity.Error);
         return defaultValue;
       }
 
-      if (Convert.ChangeType(getResult.Value.Value, typeof(T)) is T typedResult)
+      if (Convert.ChangeType(getResult.Value.Value, typeof(T)) is not T typedResult)
       {
-        _preferences[preferenceName] = typedResult;
-        return typedResult;
+        return defaultValue;
       }
 
-      return defaultValue;
+      _preferences[preferenceName] = typedResult;
+      return typedResult;
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting preference for {PreferenceName}.", preferenceName);
-      snackbar.Add("Error while getting preference", Severity.Error);
+      _logger.LogError(ex, "Error while getting preference for {PreferenceName}.", preferenceName);
+      _snackbar.Add("Error while getting preference", Severity.Error);
       return defaultValue;
     }
   }
@@ -88,18 +101,18 @@ internal class Settings(
       _preferences[preferenceName] = newValue;
       var stringValue = Convert.ToString(newValue);
       Guard.IsNotNull(stringValue);
-      var setResult = await controlrApi.SetUserPreference(preferenceName, stringValue);
+      var setResult = await _controlrApi.SetUserPreference(preferenceName, stringValue);
 
       if (!setResult.IsSuccess)
       {
-        setResult.Log(logger);
-        snackbar.Add(setResult.Reason, Severity.Error);
+        setResult.Log(_logger);
+        _snackbar.Add(setResult.Reason, Severity.Error);
       }
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while setting preference for {PreferenceName}.", preferenceName);
-      snackbar.Add("Error while setting preference", Severity.Error);
+      _logger.LogError(ex, "Error while setting preference for {PreferenceName}.", preferenceName);
+      _snackbar.Add("Error while setting preference", Severity.Error);
     }
   }
 }

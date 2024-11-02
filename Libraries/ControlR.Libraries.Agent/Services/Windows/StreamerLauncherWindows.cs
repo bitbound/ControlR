@@ -4,6 +4,7 @@ using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.IpcDtos;
 using ControlR.Libraries.Agent.Models;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;

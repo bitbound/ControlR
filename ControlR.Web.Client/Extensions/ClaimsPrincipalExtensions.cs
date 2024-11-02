@@ -29,4 +29,24 @@ public static class ClaimsPrincipalExtensions
     tenantId = id;
     return true;
   }
+  
+  public static bool TryGetUserId(
+    this ClaimsPrincipal user,
+    out Guid userId)
+  {
+    userId = Guid.Empty;
+    if (!user.IsAuthenticated())
+    {
+      return false;
+    }
+
+    var userIdClaim = user.FindFirst(UserClaimTypes.UserId);
+    if (!Guid.TryParse(userIdClaim?.Value, out var id))
+    {
+      return false;
+    }
+
+    userId = id;
+    return true;
+  }
 }

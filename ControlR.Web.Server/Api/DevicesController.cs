@@ -22,11 +22,9 @@ public class DevicesController : ControllerBase
     var user = await userManager.GetUserAsync(User) ??
       throw new InvalidOperationException("Unable to find user.");
 
-    var deviceQuery = appDb.Devices
-      .AsNoTracking()
-      .Where(x => x.TenantId == user.TenantId);
+    var deviceStream = appDb.Devices.AsAsyncEnumerable();
 
-    await foreach (var device in deviceQuery.AsAsyncEnumerable())
+    await foreach (var device in deviceStream)
     {
       var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
       if (authResult.Succeeded)

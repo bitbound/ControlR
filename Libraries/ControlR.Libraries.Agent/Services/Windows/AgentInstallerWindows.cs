@@ -4,6 +4,7 @@ using System.ServiceProcess;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Services.Base;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;

@@ -1,4 +1,6 @@
-﻿namespace ControlR.Web.Server.Extensions;
+﻿using System.Collections.Immutable;
+
+namespace ControlR.Web.Server.Extensions;
 
 public static class EntityToDtoExtensions
 {
@@ -36,5 +38,25 @@ public static class EntityToDtoExtensions
   public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
   {
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
+  }
+
+  public static TagResponseDto ToDto(this Tag tag)
+  {
+    var userTuples = tag
+      .Users?
+      .Select(x => new IdNameTuple(x.Id, x.UserName ?? ""))
+      .ToImmutableArray() ?? [];
+    
+    var deviceTuples = tag
+      .Devices?
+      .Select(x => new IdNameTuple(x.Id, x.Name))
+      .ToImmutableArray() ?? [];
+    
+    return new TagResponseDto(
+      tag.Id, 
+      tag.Name, 
+      tag.Type, 
+      userTuples,
+      deviceTuples);
   }
 }

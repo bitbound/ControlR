@@ -3,6 +3,7 @@ using ControlR.Devices.Native.Linux;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Services.Base;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 

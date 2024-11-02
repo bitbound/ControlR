@@ -1,20 +1,28 @@
 ﻿@attribute [Route(RouteNames.Settings)]
 @attribute [Authorize]
 
-@inject ISettings SettingsStore
 @inject ISnackbar Snackbar
-@inject IMessenger Messenger
-@inject IViewerHubConnection HubConnection
-@inject IDeviceCache DeviceCache
-@inject IBusyCounter AppState
-@inject IDialogService Dialogs
-@inject ILogger<Settings> Logger
+@inject ISettings SettingsStore
 
 <PageTitle>Settings</PageTitle>
 
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
   Settings
 </MudText>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    User Display Name
+  </MudText>
+  <MudTextField T="string"
+                @bind-Value:get="_userDisplayName"
+                @bind-Value:set="SetUserDisplayName"
+                MaxLength="25"
+                Validation="(string e) => ValidateUsername(e)"
+                Label="Shown to partners when connecting">
+
+  </MudTextField>
+</div>
 
 <div class="mt-10">
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -30,10 +38,12 @@
 @code {
 
   private bool _notifyUser;
+  private string _userDisplayName = "";
 
   protected override async Task OnInitializedAsync()
   {
     _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
+    _userDisplayName = await SettingsStore.GetUserDisplayName();
     await base.OnInitializedAsync();
   }
 
@@ -42,8 +52,15 @@
     _notifyUser = value;
     await SettingsStore.SetNotifyUserOnSessionStart(value);
   }
+  
+  private async Task SetUserDisplayName(string value)
+  {
+    _userDisplayName = value;
+    await SettingsStore.SetUserDisplayName(value);
+    Snackbar.Add("Display name updated", Severity.Success);
+  }
 
-  private string? ValidateUsername(string input)
+  private static string? ValidateUsername(string input)
   {
     if (string.IsNullOrEmpty(input))
     {
@@ -55,7 +72,7 @@
       return "Username must be 25 characters or less.";
     }
 
-    return AppConstants.UsernameValidator().IsMatch(input)
+    return Validators.UsernameValidator().IsMatch(input)
       ? "Username can only contain letters, numbers, underscores, and hyphens."
       : null;
   }

@@ -74,7 +74,7 @@
       return;
     }
 
-    var createResult = await UserCreator.CreateUser(Input.Email, ReturnUrl, Input.Password);
+    var createResult = await UserCreator.CreateUser(Input.Email, Input.Password, ReturnUrl);
     if (!createResult.Succeeded)
     {
       _identityErrors = createResult.IdentityResult.Errors;

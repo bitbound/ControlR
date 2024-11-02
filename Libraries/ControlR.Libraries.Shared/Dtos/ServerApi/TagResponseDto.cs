@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
-public record TagDto(
+public record TagResponseDto(
   Guid Id,
   string Name, 
   TagType Type,
-  ImmutableArray<Guid> UserIds,
-  ImmutableArray<Guid> DeviceIds);
+  ImmutableArray<IdNameTuple> UserIds,
+  ImmutableArray<IdNameTuple> DeviceIds);

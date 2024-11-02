@@ -1,0 +1,57 @@
+﻿<MudGrid>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Tags
+    </MudText>
+    
+    <MudTextField T="string"
+                  @bind-Value="_newTagName"
+                  Label="Create New Tag"
+                  InputType="InputType.Text"
+                  Immediate
+                  Placeholder="Enter the name for the new tag"
+                  AdornmentIcon="@(Icons.Material.Filled.NewLabel)"
+                  OnAdornmentClick="CreateTag"
+                  AdornmentColor="Color.Success"
+                  AdornmentAriaLabel="Create Tag"
+                  Adornment="Adornment.End"
+                  OnKeyDown="HandleNewTagKeyDown"
+                  Class="mb-2"
+                  Validation="@((string x) => ValidateNewTagName(x))">
+    </MudTextField>
+    <MudPaper>
+      <MudList T="TagResponseDto?"
+               SelectionMode="SelectionMode.SingleSelection"
+               Color="Color.Info"
+               @bind-SelectedValue="_selectedTag">
+
+        @foreach (var tag in Tags)
+        {
+          <MudListItem T="TagResponseDto" Value="@tag">
+            @tag.Name
+          </MudListItem>
+        }
+
+      </MudList>
+    </MudPaper>
+    <div class="d-flex justify-end">
+      <MudTooltip Text="Delete Tag">
+        <MudIconButton Color="Color.Error"
+                       ButtonType="ButtonType.Button"
+                       Icon="@(Icons.Material.Filled.Delete)"
+                       Disabled="@(_selectedTag == null)"
+                       OnClick="DeleteSelectedTag"/>
+      </MudTooltip>
+    </div>
+  </MudItem>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Users
+    </MudText>
+  </MudItem>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Devices
+    </MudText>
+  </MudItem>
+</MudGrid>

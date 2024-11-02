@@ -5,14 +5,22 @@ using System.Net.Sockets;
 namespace ControlR.Web.Server.Hubs;
 
 public class AgentHub(
-  AppDb _appDb,
-  IHubContext<ViewerHub, IViewerHubClient> _viewerHub,
-  ISystemTime _systemTime,
-  IServerStatsProvider _serverStatsProvider,
-  IConnectionCounter _connectionCounter,
-  IWebHostEnvironment _hostEnvironment,
-  ILogger<AgentHub> _logger) : HubWithItems<IAgentHubClient>, IAgentHub
+  AppDb appDb,
+  IHubContext<ViewerHub, IViewerHubClient> viewerHub,
+  ISystemTime systemTime,
+  IServerStatsProvider serverStatsProvider,
+  IConnectionCounter connectionCounter,
+  IWebHostEnvironment hostEnvironment,
+  ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
+  private readonly AppDb _appDb = appDb;
+  private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
+  private readonly ISystemTime _systemTime = systemTime;
+  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly IConnectionCounter _connectionCounter = connectionCounter;
+  private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
+  private readonly ILogger<AgentHub> _logger = logger;
+  
   private DeviceResponseDto? Device
   {
     get => GetItem<DeviceResponseDto?>(null);

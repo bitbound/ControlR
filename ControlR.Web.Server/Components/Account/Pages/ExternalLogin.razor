@@ -29,10 +29,9 @@
 
     </MudForm>
     <EditForm Model="@Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation">
-      <DataAnnotationsValidator/>
+      <DataAnnotationsValidator />
       <div class="mb-3">
-        <InputText @bind-Value="Input.Email" hidden/>
-        <MudTextField @bind-Value="Input.Email" Required Label="Email" Placeholder="Please enter your email." Variant="Variant.Filled"/>
+        <MudStaticTextField @bind-Value="Input.Email" Required Label="Email" Placeholder="Please enter your email." Variant="Variant.Filled"/>
       </div>
       <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="Color.Primary">
         Register
@@ -126,10 +125,11 @@
 
   private async Task OnValidSubmitAsync()
   {
-    var createUserResult = await UserCreator.CreateUser(Input.Email, ReturnUrl, externalLoginInfo: _externalLoginInfo);
+    var createUserResult = await UserCreator.CreateUser(Input.Email, _externalLoginInfo, ReturnUrl);
     if (!createUserResult.Succeeded)
     {
-      _message = $"Error: {createUserResult.IdentityResult.Errors.FirstOrDefault()?.Description}";
+      var errors = createUserResult.IdentityResult.Errors.Select(error => error.Description);
+      _message = $"Error: {string.Join(",", errors)}";
       return;
     }
 

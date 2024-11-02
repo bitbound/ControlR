@@ -3,7 +3,7 @@
 @inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
-@inject IControlrApi ServerSettingsApi
+@inject IControlrApi ControlrApi
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -93,7 +93,7 @@
   {
     await base.OnInitializedAsync();
 
-    var settingsResult = await ServerSettingsApi.GetServerSettings();
+    var settingsResult = await ControlrApi.GetServerSettings();
     if (settingsResult.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;

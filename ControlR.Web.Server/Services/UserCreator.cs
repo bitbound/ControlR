@@ -9,11 +9,12 @@ namespace ControlR.Web.Server.Services;
 
 public interface IUserCreator
 {
+  Task<CreateUserResult> CreateUser(string emailAddress, string password, string? returnUrl);
+
   Task<CreateUserResult> CreateUser(
-    string emailAddress,
-    string? returnUrl,
-    string? password = null,
-    ExternalLoginInfo? externalLoginInfo = null);
+    string emailAddress, 
+    ExternalLoginInfo externalLoginInfo,
+    string? returnUrl);
 }
 
 public class UserCreator(
@@ -29,9 +30,20 @@ public class UserCreator(
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
 
-  #region IUserCreator Members
+  public async Task<CreateUserResult> CreateUser(string emailAddress, string password, string? returnUrl)
+  {
+    return await CreateUserImpl(emailAddress, returnUrl, password);
+  }
 
   public async Task<CreateUserResult> CreateUser(
+    string emailAddress, 
+    ExternalLoginInfo externalLoginInfo,
+    string? returnUrl)
+  {
+    return await CreateUserImpl(emailAddress, returnUrl, password: null, externalLoginInfo);
+  }
+
+  private async Task<CreateUserResult> CreateUserImpl(
     string emailAddress,
     string? returnUrl,
     string? password = null,
@@ -71,6 +83,9 @@ public class UserCreator(
 
       _logger.LogInformation("User created a new account with password.");
 
+      await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.UserId, $"{user.Id}"));
+      _logger.LogInformation("Added user's ID claim.");
+      
       await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
       _logger.LogInformation("Added user's tenant ID claim.");
 
@@ -119,6 +134,4 @@ public class UserCreator(
       return new CreateUserResult(false, IdentityResult.Failed(identityError));
     }
   }
-
-  #endregion
 }

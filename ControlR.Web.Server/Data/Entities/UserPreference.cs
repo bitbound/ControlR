@@ -6,11 +6,13 @@ namespace ControlR.Web.Server.Data.Entities;
 public class UserPreference : TenantEntityBase
 {
   [StringLength(100)]
+  [RegularExpression("^[a-zA-Z0-9-]+$", ErrorMessage = "Preference name can only contain letters, numbers, and hyphens.")]
   public required string Name { get; set; }
 
-  public Guid UserId { get; set; }
   public AppUser? User { get; set; }
+  public Guid UserId { get; set; }
 
   [StringLength(100)]
+  [RegularExpression("^[a-zA-Z0-9-]+$", ErrorMessage = "Preference values can only contain letters, numbers, and hyphens.")]
   public required string Value { get; set; }
 }

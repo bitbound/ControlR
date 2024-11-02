@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Startup;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Libraries.Agent.Services;

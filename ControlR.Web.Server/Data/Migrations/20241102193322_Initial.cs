@@ -385,14 +385,20 @@ namespace ControlR.Web.Server.Data.Migrations
                 column: "TagsId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tags_Name_TenantId",
+                table: "Tags",
+                columns: new[] { "Name", "TenantId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tags_TenantId",
                 table: "Tags",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserPreferences_Name",
+                name: "IX_UserPreferences_Name_UserId",
                 table: "UserPreferences",
-                column: "Name",
+                columns: new[] { "Name", "UserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

@@ -1,13 +1,16 @@
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Converters;
 using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Data;
 
-public class AppDb(DbContextOptions<AppDb> options)
+public class AppDb(DbContextOptions<AppDb> options, IHttpContextAccessor httpContextAccessor)
   : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
+  private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+
   public DbSet<Device> Devices { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
   public DbSet<Tag> Tags { get; init; }
@@ -17,24 +20,80 @@ public class AppDb(DbContextOptions<AppDb> options)
   {
     base.OnModelCreating(builder);
 
-    AddSeedData(builder);
+    var tenantId = Guid.Empty;
+    var userId = Guid.Empty;
+    _ = _httpContextAccessor.HttpContext?.User.TryGetTenantId(out tenantId);
+    _ = _httpContextAccessor.HttpContext?.User.TryGetUserId(out userId);
+    
+    SeedDatabase(builder);
 
-    AddDeviceConfig(builder);
+    AddDeviceConfig(builder, tenantId);
 
-    AddUserPreferenceConfig(builder);
+    AddTagsConfig(builder, tenantId);
+    
+    AddUsersConfig(builder, tenantId);
 
-    AddDateTimeConversions(builder);
+    AddUserPreferenceConfig(builder, userId);
+
+    ApplyReflectionBasedConfiguration(builder);
   }
 
-  private static void AddUserPreferenceConfig(ModelBuilder builder)
+  private static void AddUsersConfig(ModelBuilder builder, Guid tenantId)
+  {
+    if (tenantId != Guid.Empty)
+    {
+      builder
+        .Entity<AppUser>()
+        .HasQueryFilter(x => x.TenantId == tenantId);
+    }
+  }
+  
+  private static void AddDeviceConfig(ModelBuilder builder, Guid tenantId)
+  {
+    builder
+      .Entity<Device>()
+      .OwnsMany(x => x.Drives)
+      .ToJson();
+
+    if (tenantId != Guid.Empty)
+    {
+      builder
+        .Entity<Device>()
+        .HasQueryFilter(x => x.TenantId == tenantId);
+    }
+  }
+
+  private static void AddTagsConfig(ModelBuilder builder, Guid tenantId)
+  {
+    builder
+      .Entity<Tag>()
+      .HasIndex(x => new { x.Name, x.TenantId })
+      .IsUnique();
+    
+    if (tenantId != Guid.Empty)
+    {
+      builder
+        .Entity<Tag>()
+        .HasQueryFilter(x => x.TenantId == tenantId);
+    }
+  }
+
+  private static void AddUserPreferenceConfig(ModelBuilder builder, Guid userId)
   {
     builder
       .Entity<UserPreference>()
-      .HasIndex(x => x.Name)
+      .HasIndex(x => new { x.Name, x.UserId })
       .IsUnique();
-  }
 
-  private static void AddDateTimeConversions(ModelBuilder builder)
+    if (userId != Guid.Empty)
+    {
+      builder
+        .Entity<UserPreference>()
+        .HasQueryFilter(x => x.UserId == userId);
+    }
+  }
+  
+  private static void ApplyReflectionBasedConfiguration(ModelBuilder builder)
   {
     foreach (var entityType in builder.Model.GetEntityTypes())
     {
@@ -54,8 +113,8 @@ public class AppDb(DbContextOptions<AppDb> options)
       var properties = entityType.ClrType
         .GetProperties()
         .Where(p =>
-            p.PropertyType == typeof(DateTimeOffset) ||
-            p.PropertyType == typeof(DateTimeOffset?));
+          p.PropertyType == typeof(DateTimeOffset) ||
+          p.PropertyType == typeof(DateTimeOffset?));
 
       foreach (var property in properties)
       {
@@ -67,31 +126,23 @@ public class AppDb(DbContextOptions<AppDb> options)
       }
     }
   }
-
-  private static void AddDeviceConfig(ModelBuilder builder)
+  
+  private static void SeedDatabase(ModelBuilder builder)
   {
     builder
-      .Entity<Device>()
-      .OwnsMany(x => x.Drives)
-      .ToJson();
-  }
-
-  private static void AddSeedData(ModelBuilder builder)
-  {
-    builder
-        .Entity<IdentityRole<Guid>>()
-        .HasData(
-          new IdentityRole<Guid>()
-          {
-            Id = DeterministicGuid.Create(1),
-            Name = RoleNames.ServerAdministrator,
-            NormalizedName = RoleNames.ServerAdministrator.ToUpper()
-          });
+      .Entity<IdentityRole<Guid>>()
+      .HasData(
+        new IdentityRole<Guid>
+        {
+          Id = DeterministicGuid.Create(1),
+          Name = RoleNames.ServerAdministrator,
+          NormalizedName = RoleNames.ServerAdministrator.ToUpper()
+        });
 
     builder
       .Entity<IdentityRole<Guid>>()
       .HasData(
-        new IdentityRole<Guid>()
+        new IdentityRole<Guid>
         {
           Id = DeterministicGuid.Create(2),
           Name = RoleNames.TenantAdministrator,
@@ -99,13 +150,13 @@ public class AppDb(DbContextOptions<AppDb> options)
         });
 
     builder
-    .Entity<IdentityRole<Guid>>()
-    .HasData(
-      new IdentityRole<Guid>()
-      {
-        Id = DeterministicGuid.Create(3),
-        Name = RoleNames.DeviceSuperUser,
-        NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
-      });
+      .Entity<IdentityRole<Guid>>()
+      .HasData(
+        new IdentityRole<Guid>
+        {
+          Id = DeterministicGuid.Create(3),
+          Name = RoleNames.DeviceSuperUser,
+          NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
+        });
   }
 }

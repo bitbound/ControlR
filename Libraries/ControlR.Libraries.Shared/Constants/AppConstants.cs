@@ -1,11 +1,10 @@
 ﻿using System.Diagnostics;
-using System.Text.RegularExpressions;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Services;
 
-namespace ControlR.Libraries.Shared;
+namespace ControlR.Libraries.Shared.Constants;
 
-public static partial class AppConstants
+public static class AppConstants
 {
   public static Uri DevServerUri { get; } = new("http://localhost:5120");
   public static Uri ProdServerUri { get; } = new("https://app.controlr.app");
@@ -83,8 +82,4 @@ public static partial class AppConstants
       _ => throw new PlatformNotSupportedException()
     };
   }
-
-  [GeneratedRegex("[^A-Za-z0-9_-]")]
-  public static partial Regex UsernameValidator();
-
 }

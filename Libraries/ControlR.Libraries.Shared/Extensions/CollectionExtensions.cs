@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using ControlR.Libraries.Shared.Collections;
 
 namespace ControlR.Libraries.Shared.Extensions;
 
@@ -36,6 +37,13 @@ public static class CollectionExtensions
             yield return item;
             await Task.Yield();
         }
+    }
+
+    public static ConcurrentList<T> ToConcurrentList<T>(this IEnumerable<T> enumerable)
+    {
+        var list = new ConcurrentList<T>();
+        list.AddRange(enumerable);
+        return list;
     }
 
     public static bool TryFindIndex<T>(this ObservableCollection<T> self, Predicate<T> predicate, out int index)

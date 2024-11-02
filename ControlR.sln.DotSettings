@@ -103,43 +103,41 @@
         &lt;/HasMember&gt;
       &lt;/And&gt;
     &lt;/TypePattern.Match&gt;
+    
+    &lt;Entry DisplayName="Fields"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Kind Is="Field" /&gt;
+          &lt;Not&gt;
+            &lt;Static /&gt;
+          &lt;/Not&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
 
-    &lt;Region Name="Setup/Teardown"&gt;
-      &lt;Entry DisplayName="Fields"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Kind Is="Field" /&gt;
-            &lt;Not&gt;
-              &lt;Static /&gt;
-            &lt;/Not&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
+      &lt;Entry.SortBy&gt;
+        &lt;Readonly /&gt;
+        &lt;Name /&gt;
+      &lt;/Entry.SortBy&gt;
+    &lt;/Entry&gt;
 
-        &lt;Entry.SortBy&gt;
-          &lt;Readonly /&gt;
-          &lt;Name /&gt;
-        &lt;/Entry.SortBy&gt;
-      &lt;/Entry&gt;
+    &lt;Entry DisplayName="Constructors"&gt;
+      &lt;Entry.Match&gt;
+        &lt;Kind Is="Constructor" /&gt;
+      &lt;/Entry.Match&gt;
 
-      &lt;Entry DisplayName="Constructors"&gt;
-        &lt;Entry.Match&gt;
-          &lt;Kind Is="Constructor" /&gt;
-        &lt;/Entry.Match&gt;
+      &lt;Entry.SortBy&gt;
+        &lt;Static/&gt;
+      &lt;/Entry.SortBy&gt;
+    &lt;/Entry&gt;
 
-        &lt;Entry.SortBy&gt;
-          &lt;Static /&gt;
-        &lt;/Entry.SortBy&gt;
-      &lt;/Entry&gt;
-      
-      &lt;Entry DisplayName="Teardown Methods"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Kind Is="Method" /&gt;
-            &lt;ImplementsInterface Name="System.IDisposable" /&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
+    &lt;Entry DisplayName="Teardown Methods"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Kind Is="Method" /&gt;
+          &lt;ImplementsInterface Name="System.IDisposable" /&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
+    &lt;/Entry&gt;
 
     &lt;Entry DisplayName="All other members" /&gt;
 
@@ -147,10 +145,8 @@
       &lt;Entry.Match&gt;
         &lt;And&gt;
           &lt;Kind Is="Method" /&gt;
-          &lt;Or&gt;
-            &lt;HasAttribute Name="Xunit.FactAttribute" Inherited="false" /&gt;
-            &lt;HasAttribute Name="Xunit.TheoryAttribute" Inherited="false" /&gt;
-          &lt;/Or&gt;
+          &lt;HasAttribute Name="Xunit.FactAttribute" Inherited="false" /&gt;
+          &lt;HasAttribute Name="Xunit.TheoryAttribute" Inherited="false" /&gt;
         &lt;/And&gt;
       &lt;/Entry.Match&gt;
 
@@ -179,23 +175,21 @@
       &lt;/And&gt;
     &lt;/TypePattern.Match&gt;
 
-    &lt;Region Name="Setup/Teardown"&gt;
-      &lt;Entry DisplayName="Setup/Teardown Methods"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Kind Is="Method" /&gt;
-            &lt;Or&gt;
-              &lt;HasAttribute Name="NUnit.Framework.SetUpAttribute" Inherited="true" /&gt;
-              &lt;HasAttribute Name="NUnit.Framework.TearDownAttribute" Inherited="true" /&gt;
-              &lt;HasAttribute Name="NUnit.Framework.TestFixtureSetUpAttribute" Inherited="true" /&gt;
-              &lt;HasAttribute Name="NUnit.Framework.TestFixtureTearDownAttribute" Inherited="true" /&gt;
-              &lt;HasAttribute Name="NUnit.Framework.OneTimeSetUpAttribute" Inherited="true" /&gt;
-              &lt;HasAttribute Name="NUnit.Framework.OneTimeTearDownAttribute" Inherited="true" /&gt;
-            &lt;/Or&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
+    &lt;Entry DisplayName="Setup/Teardown Methods"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Kind Is="Method" /&gt;
+          &lt;Or&gt;
+            &lt;HasAttribute Name="NUnit.Framework.SetUpAttribute" Inherited="true" /&gt;
+            &lt;HasAttribute Name="NUnit.Framework.TearDownAttribute" Inherited="true" /&gt;
+            &lt;HasAttribute Name="NUnit.Framework.TestFixtureSetUpAttribute" Inherited="true" /&gt;
+            &lt;HasAttribute Name="NUnit.Framework.TestFixtureTearDownAttribute" Inherited="true" /&gt;
+            &lt;HasAttribute Name="NUnit.Framework.OneTimeSetUpAttribute" Inherited="true" /&gt;
+            &lt;HasAttribute Name="NUnit.Framework.OneTimeTearDownAttribute" Inherited="true" /&gt;
+          &lt;/Or&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
+    &lt;/Entry&gt;
 
     &lt;Entry DisplayName="All other members" /&gt;
 
@@ -203,11 +197,9 @@
       &lt;Entry.Match&gt;
         &lt;And&gt;
           &lt;Kind Is="Method" /&gt;
-          &lt;Or&gt;
-            &lt;HasAttribute Name="NUnit.Framework.TestAttribute" Inherited="false" /&gt;
-            &lt;HasAttribute Name="NUnit.Framework.TestCaseAttribute" Inherited="false" /&gt;
-            &lt;HasAttribute Name="NUnit.Framework.TestCaseSourceAttribute" Inherited="false" /&gt;
-          &lt;/Or&gt;
+          &lt;HasAttribute Name="NUnit.Framework.TestAttribute" Inherited="false" /&gt;
+          &lt;HasAttribute Name="NUnit.Framework.TestCaseAttribute" Inherited="false" /&gt;
+          &lt;HasAttribute Name="NUnit.Framework.TestCaseSourceAttribute" Inherited="false" /&gt;
         &lt;/And&gt;
       &lt;/Entry.Match&gt;
 
@@ -218,39 +210,31 @@
   &lt;/TypePattern&gt;
 
   &lt;TypePattern DisplayName="Default Pattern"&gt;
-    &lt;Region Name="Delegates"&gt;
-      &lt;Entry DisplayName="Public Delegates" Priority="100"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Access Is="Public" /&gt;
-            &lt;Kind Is="Delegate" /&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
+    &lt;Entry DisplayName="Public Delegates" Priority="100"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Access Is="Public" /&gt;
+          &lt;Kind Is="Delegate" /&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
 
-        &lt;Entry.SortBy&gt;
-          &lt;Name /&gt;
-        &lt;/Entry.SortBy&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
-
-    &lt;Region Name="${0} enum" Priority="100"&gt;
-      &lt;Region.GroupBy&gt;
+      &lt;Entry.SortBy&gt;
         &lt;Name /&gt;
-      &lt;/Region.GroupBy&gt;
+      &lt;/Entry.SortBy&gt;
+    &lt;/Entry&gt;
 
-      &lt;Entry DisplayName="Public Enums"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Access Is="Public" /&gt;
-            &lt;Kind Is="Enum" /&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
+    &lt;Entry DisplayName="Public Enums" Priority="100"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Access Is="Public" /&gt;
+          &lt;Kind Is="Enum" /&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
 
-        &lt;Entry.SortBy&gt;
-          &lt;Name /&gt;
-        &lt;/Entry.SortBy&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
+      &lt;Entry.SortBy&gt;
+        &lt;Name /&gt;
+      &lt;/Entry.SortBy&gt;
+    &lt;/Entry&gt;
 
     &lt;Entry DisplayName="Static Fields and Constants"&gt;
       &lt;Entry.Match&gt;
@@ -308,41 +292,28 @@
       &lt;/Entry.Match&gt;
     &lt;/Entry&gt;
 
-    &lt;Region Name="${0} Members" Priority="100"&gt;
-      &lt;Region.GroupBy&gt;
+    &lt;Entry DisplayName="Interface Implementations" Priority="100"&gt;
+      &lt;Entry.Match&gt;
+        &lt;And&gt;
+          &lt;Kind Is="Member" /&gt;
+          &lt;ImplementsInterface /&gt;
+        &lt;/And&gt;
+      &lt;/Entry.Match&gt;
+
+      &lt;Entry.SortBy&gt;
         &lt;ImplementsInterface Immediate="true" /&gt;
-      &lt;/Region.GroupBy&gt;
+      &lt;/Entry.SortBy&gt;
+    &lt;/Entry&gt;
 
-      &lt;Entry DisplayName="Interface Members"&gt;
-        &lt;Entry.Match&gt;
-          &lt;And&gt;
-            &lt;Kind Is="Member" /&gt;
-            &lt;ImplementsInterface /&gt;
-          &lt;/And&gt;
-        &lt;/Entry.Match&gt;
+    &lt;Entry DisplayName="All other members" /&gt;
 
-        &lt;Entry.SortBy&gt;
-          &lt;ImplementsInterface Immediate="true" /&gt;
-        &lt;/Entry.SortBy&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
-
-    &lt;Entry DisplayName="All Other Members" /&gt;
-
-    &lt;Region Name="Nested type: ${0}"&gt;
-      &lt;Region.GroupBy&gt;
-        &lt;Name /&gt;
-      &lt;/Region.GroupBy&gt;
-
-      &lt;Entry DisplayName="Nested Types"&gt;
-        &lt;Entry.Match&gt;
-          &lt;Kind Is="Type" /&gt;
-        &lt;/Entry.Match&gt;
-      &lt;/Entry&gt;
-    &lt;/Region&gt;
+    &lt;Entry DisplayName="Nested Types"&gt;
+      &lt;Entry.Match&gt;
+        &lt;Kind Is="Type" /&gt;
+      &lt;/Entry.Match&gt;
+    &lt;/Entry&gt;
   &lt;/TypePattern&gt;
 &lt;/Patterns&gt;
-
 </s:String>
 	<s:Boolean x:Key="/Default/CodeStyle/Naming/CSharpNaming/ApplyAutoDetectedRules/@EntryValue">False</s:Boolean>
 	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/UserRules/=15b5b1f1_002D457c_002D4ca6_002Db278_002D5615aedc07d3/@EntryIndexedValue">&lt;Policy&gt;&lt;Descriptor Staticness="Static" AccessRightKinds="Private, Protected, ProtectedInternal, PrivateProtected" Description="Static readonly fields (private)"&gt;&lt;ElementKinds&gt;&lt;Kind Name="READONLY_FIELD" /&gt;&lt;/ElementKinds&gt;&lt;/Descriptor&gt;&lt;Policy Inspect="True" Prefix="_" Suffix="" Style="aaBb" /&gt;&lt;/Policy&gt;</s:String>
