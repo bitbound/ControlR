@@ -11,13 +11,13 @@ public class AppOptions
   public string? MicrosoftClientSecret { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }
   public Uri? ServerBaseUri { get; init; }
-  public bool SmtpCheckCertificateRevocation { get; set; } = true;
-  public string? SmtpDisplayName { get; set; }
-  public string? SmtpEmail { get; set; }
-  public string? SmtpHost { get; set; }
-  public string? SmtpLocalDomain { get; set; }
-  public string? SmtpPassword { get; set; }
-  public int SmtpPort { get; set; } = 587;
-  public string? SmtpUserName { get; set; }
+  public bool SmtpCheckCertificateRevocation { get; init; } = true;
+  public string? SmtpDisplayName { get; init; }
+  public string? SmtpEmail { get; init; }
+  public string? SmtpHost { get; init; }
+  public string? SmtpLocalDomain { get; init; }
+  public string? SmtpPassword { get; init; }
+  public int SmtpPort { get; init; } = 587;
+  public string? SmtpUserName { get; init; }
   public bool UseExternalWebSocketBridge { get; init; }
 }

@@ -7,17 +7,18 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
+@inject IUserCreator UserCreator
 
 <PageTitle>Register</PageTitle>
 
-<StatusMessage Message="@_message" />
+<StatusMessage Message="@_message"/>
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
   Register
 </MudText>
 
 <MudText Typo="Typo.h5">Associate your @ProviderDisplayName account.</MudText>
 
-<MudDivider />
+<MudDivider/>
 
 <MudAlert Severity="Severity.Info" Class="mb-5 mt-5">
   You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
@@ -27,14 +28,14 @@
 
 <MudGrid>
   <MudItem md="4">
-    <MudForm Model="@Input" >
+    <MudForm Model="@Input">
 
     </MudForm>
     <EditForm Model="@Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation">
-      <DataAnnotationsValidator />
+      <DataAnnotationsValidator/>
       <div class="mb-3">
-        <InputText @bind-Value="Input.Email" hidden />
-        <MudTextField @bind-Value="Input.Email" Required Label="Email" Placeholder="Please enter your email." Variant="Variant.Filled" />
+        <InputText @bind-Value="Input.Email" hidden/>
+        <MudTextField @bind-Value="Input.Email" Required Label="Email" Placeholder="Please enter your email." Variant="Variant.Filled"/>
       </div>
       <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="Color.Primary">
         Register
@@ -54,16 +55,16 @@
   private HttpContext HttpContext { get; set; } = default!;
 
   [SupplyParameterFromForm(FormName = "confirmation")]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; } = new();
 
   [SupplyParameterFromQuery]
-  private string? RemoteError { get; set; }
+  private string? RemoteError { get; }
 
   [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; set; }
+  private string? ReturnUrl { get; }
 
   [SupplyParameterFromQuery]
-  private string? Action { get; set; }
+  private string? Action { get; }
 
   private string? ProviderDisplayName => _externalLoginInfo.ProviderDisplayName;
 
@@ -127,41 +128,20 @@
 
   private async Task OnValidSubmitAsync()
   {
-    var emailStore = GetEmailStore();
-    var user = CreateUser();
-
-    await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-
-    var result = await UserManager.CreateAsync(user);
-    if (result.Succeeded)
+    var createUserResult = await UserCreator.CreateUser(Input.Email, ReturnUrl);
+    if (!createUserResult.Succeeded)
     {
-      result = await UserManager.AddLoginAsync(user, _externalLoginInfo);
-      if (result.Succeeded)
-      {
-        Logger.LogInformation("User created an account using {Name} provider.", _externalLoginInfo.LoginProvider);
-
-        var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-          NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-          new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        // If account confirmation is required, we need to show the link if we don't have a real email sender
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
-        {
-          RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email });
-        }
-
-        await SignInManager.SignInAsync(user, false, _externalLoginInfo.LoginProvider);
-        RedirectManager.RedirectTo(ReturnUrl);
-      }
+      return;
     }
 
-    _message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+    // If account confirmation is required, we need to show the link if we don't have a real email sender
+    if (UserManager.Options.SignIn.RequireConfirmedAccount)
+    {
+      RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email });
+    }
+
+    await SignInManager.SignInAsync(createUserResult.User, false, _externalLoginInfo.LoginProvider);
+    RedirectManager.RedirectTo(ReturnUrl);
   }
 
   private AppUser CreateUser()

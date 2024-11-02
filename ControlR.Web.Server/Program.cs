@@ -121,8 +121,10 @@ builder.Services
   .AddSignInManager()
   .AddDefaultTokenProviders();
 
+builder.Services.AddScoped<IUserCreator, UserCreator>();
+
 // Add SignalR.
-var signalrBuilder = builder.Services
+builder.Services
   .AddSignalR(options =>
   {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
@@ -183,10 +185,7 @@ else
 
 app.UseWhen(
   ctx => ctx.Request.Method == HttpMethods.Head && ctx.Request.Path.StartsWithSegments("/downloads"),
-  appBuilder =>
-  {
-    appBuilder.UseMiddleware<ContentHashHeaderMiddleware>();
-  });
+  appBuilder => { appBuilder.UseMiddleware<ContentHashHeaderMiddleware>(); });
 
 app.UseStaticFiles();
 
@@ -202,8 +201,8 @@ app.UseWhen(
   appBuilder =>
   {
     app.MapRazorComponents<App>()
-       .AddInteractiveWebAssemblyRenderMode()
-       .AddAdditionalAssemblies(typeof(_Imports).Assembly);
+      .AddInteractiveWebAssemblyRenderMode()
+      .AddAdditionalAssemblies(typeof(_Imports).Assembly);
   });
 
 app.MapAdditionalIdentityEndpoints();
@@ -261,5 +260,5 @@ void ConfigureHttpClient(IServiceProvider services, HttpClient client)
 {
   var options = services.GetRequiredService<IOptionsMonitor<AppOptions>>();
   client.BaseAddress = options.CurrentValue.ServerBaseUri ??
-    throw new InvalidOperationException("ServerBaseUri cannot be empty.");
+                       throw new InvalidOperationException("ServerBaseUri cannot be empty.");
 }

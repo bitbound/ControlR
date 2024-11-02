@@ -1,10 +1,9 @@
-﻿using ControlR.Web.Client.Extensions;
-using ControlR.Web.Server.Components.Account;
-using Microsoft.AspNetCore.Http;
+﻿using System.Collections.Immutable;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Immutable;
 
 namespace ControlR.Web.Server.Api;
+
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
@@ -13,8 +12,8 @@ public class TagsController : ControllerBase
   [HttpGet]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<List<TagDto>>> GetAllTags(
-    [FromServices]AppDb appDb,
-    [FromQuery]bool includeLinkedIds = false)
+    [FromServices] AppDb appDb,
+    [FromQuery] bool includeLinkedIds = false)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -53,5 +52,5 @@ public class TagsController : ControllerBase
       .ToList();
 
     return Ok(dtos);
-  } 
+  }
 }

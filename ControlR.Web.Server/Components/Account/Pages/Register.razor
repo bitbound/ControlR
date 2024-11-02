@@ -1,12 +1,10 @@
 ﻿@page "/Account/Register"
-@using Microsoft.EntityFrameworkCore
 
 @inject UserManager<AppUser> UserManager
 @inject IUserStore<AppUser> UserStore
 @inject SignInManager<AppUser> SignInManager
-@inject IEmailSender<AppUser> EmailSender
+@inject IUserCreator UserCreator
 @inject ILogger<Register> Logger
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IUserRegistrationProvider UserRegistrationProvider
 
@@ -16,9 +14,9 @@
 
 <MudGrid>
   <MudItem md="6">
-    <StatusMessage Message="@Message" />
+    <StatusMessage Message="@Message"/>
     <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
-      <DataAnnotationsValidator />
+      <DataAnnotationsValidator/>
 
       <MudText Typo="Typo.body1" Color="Color.Primary" GutterBottom="true">
         Create a new account.
@@ -28,17 +26,17 @@
         <MudItem xs="12">
           <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
                               Label="Email" Placeholder="name@example.com"
-                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })" />
+                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })"/>
         </MudItem>
         <MudItem xs="12">
           <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
                               Label="Password" InputType="InputType.Password" Placeholder="password"
-                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })" />
+                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })"/>
         </MudItem>
         <MudItem xs="12">
           <MudStaticTextField For="@(() => Input.ConfirmPassword)" @bind-Value="Input.ConfirmPassword"
                               Label="Confirm Password" InputType="InputType.Password" Placeholder="confirm password"
-                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })" />
+                              UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })"/>
         </MudItem>
         <MudItem xs="12">
           <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Register</MudStaticButton>
@@ -50,18 +48,20 @@
     <MudText Typo="Typo.body1" Color="Color.Secondary" GutterBottom="true">
       Register using an external provider.
     </MudText>
-    <ExternalLoginPicker />
+    <ExternalLoginPicker/>
   </MudItem>
 </MudGrid>
+
+@* ReSharper disable once UnassignedGetOnlyAutoProperty *@
 
 @code {
   private IEnumerable<IdentityError>? _identityErrors;
 
   [SupplyParameterFromForm]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; } = new();
 
   [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; set; }
+  private string? ReturnUrl { get; }
 
   private string? Message => _identityErrors is null
     ? null
@@ -75,46 +75,12 @@
       return;
     }
 
-    var user = CreateUser();
-    var tenant = new Tenant();
-    user.Tenant = tenant;
-
-    await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-    var emailStore = GetEmailStore();
-    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-    var result = await UserManager.CreateAsync(user, Input.Password);
-
-    if (!result.Succeeded)
+    var createResult = await UserCreator.CreateUser(Input.Email, ReturnUrl, Input.Password);
+    if (!createResult.Succeeded)
     {
-      _identityErrors = result.Errors;
+      _identityErrors = createResult.IdentityResult.Errors;
       return;
     }
-
-    Logger.LogInformation("User created a new account with password.");
-
-    await UserManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
-    Logger.LogInformation("Added user's tenant ID claim.");
-
-    await UserManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
-    Logger.LogInformation("Assigned user role TenantAdministrator for newly-created tenant.");
-
-    await UserManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Logger.LogInformation("Assigned user role DeviceSuperUser for newly-created tenant.");
-
-    if (await UserManager.Users.CountAsync() == 1)
-    {
-      Logger.LogInformation("First user created. User: {UserName}. Assigning server administrator role.", user.UserName);
-      await UserManager.AddToRoleAsync(user, RoleNames.ServerAdministrator);
-    }
-
-    var userId = await UserManager.GetUserIdAsync(user);
-    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-      NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-      new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-    await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
     if (UserManager.Options.SignIn.RequireConfirmedAccount)
     {
@@ -123,7 +89,7 @@
         new Dictionary<string, object?> { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
     }
 
-    await SignInManager.SignInAsync(user, false);
+    await SignInManager.SignInAsync(createResult.User, false);
     RedirectManager.RedirectTo(ReturnUrl);
   }
 
@@ -134,30 +100,8 @@
       RedirectManager.RedirectTo("/");
       return;
     }
+
     await base.OnInitializedAsync();
-  }
-
-  private AppUser CreateUser()
-  {
-    try
-    {
-      return Activator.CreateInstance<AppUser>();
-    }
-    catch
-    {
-      throw new InvalidOperationException($"Can't create an instance of '{nameof(AppUser)}'. " +
-                                          $"Ensure that '{nameof(AppUser)}' is not an abstract class and has a parameterless constructor.");
-    }
-  }
-
-  private IUserEmailStore<AppUser> GetEmailStore()
-  {
-    if (!UserManager.SupportsUserEmail)
-    {
-      throw new NotSupportedException("The default UI requires a user store with email support.");
-    }
-
-    return (IUserEmailStore<AppUser>)UserStore;
   }
 
   private sealed class InputModel
