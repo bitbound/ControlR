@@ -21,11 +21,9 @@ public class UserCreator(
   NavigationManager navigationManager,
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
-  IUserEmailStore<AppUser> emailStore,
   ILogger<UserCreator> logger) : IUserCreator
 {
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
-  private readonly IUserEmailStore<AppUser> _emailStore = emailStore;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
   private readonly UserManager<AppUser> _userManager = userManager;
@@ -47,7 +45,12 @@ public class UserCreator(
         Tenant = tenant
       };
       await _userStore.SetUserNameAsync(user, emailAddress, CancellationToken.None);
-      await _emailStore.SetEmailAsync(user, emailAddress, CancellationToken.None);
+      if (_userStore is not IUserEmailStore<AppUser> userEmailStore)
+      {
+        throw new InvalidOperationException("The user store does not implement the IUserEmailStore<AppUser>.");
+      }
+      
+      await userEmailStore.SetEmailAsync(user, emailAddress, CancellationToken.None);
 
       var identityResult = string.IsNullOrWhiteSpace(password)
         ? await _userManager.CreateAsync(user)

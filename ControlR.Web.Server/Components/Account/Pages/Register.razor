@@ -1,7 +1,6 @@
 ﻿@page "/Account/Register"
 
 @inject UserManager<AppUser> UserManager
-@inject IUserStore<AppUser> UserStore
 @inject SignInManager<AppUser> SignInManager
 @inject IUserCreator UserCreator
 @inject ILogger<Register> Logger
@@ -58,10 +57,10 @@
   private IEnumerable<IdentityError>? _identityErrors;
 
   [SupplyParameterFromForm]
-  private InputModel Input { get; } = new();
+  private InputModel Input { get; set; } = new();
 
   [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; }
+  private string? ReturnUrl { get; set; }
 
   private string? Message => _identityErrors is null
     ? null

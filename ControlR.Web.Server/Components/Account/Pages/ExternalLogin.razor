@@ -2,9 +2,6 @@
 
 @inject SignInManager<AppUser> SignInManager
 @inject UserManager<AppUser> UserManager
-@inject IUserStore<AppUser> UserStore
-@inject IEmailSender<AppUser> EmailSender
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
 @inject IUserCreator UserCreator
@@ -49,22 +46,23 @@
   public const string LoginCallbackAction = "LoginCallback";
 
   private string? _message;
+  
   private ExternalLoginInfo _externalLoginInfo = default!;
 
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
 
   [SupplyParameterFromForm(FormName = "confirmation")]
-  private InputModel Input { get; } = new();
+  private InputModel Input { get; set; } = new();
 
   [SupplyParameterFromQuery]
-  private string? RemoteError { get; }
+  private string? RemoteError { get; set; }
 
   [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; }
+  private string? ReturnUrl { get; set; }
 
   [SupplyParameterFromQuery]
-  private string? Action { get; }
+  private string? Action { get; set; }
 
   private string? ProviderDisplayName => _externalLoginInfo.ProviderDisplayName;
 
@@ -128,9 +126,10 @@
 
   private async Task OnValidSubmitAsync()
   {
-    var createUserResult = await UserCreator.CreateUser(Input.Email, ReturnUrl);
+    var createUserResult = await UserCreator.CreateUser(Input.Email, ReturnUrl, externalLoginInfo: _externalLoginInfo);
     if (!createUserResult.Succeeded)
     {
+      _message = $"Error: {createUserResult.IdentityResult.Errors.FirstOrDefault()?.Description}";
       return;
     }
 
@@ -144,34 +143,10 @@
     RedirectManager.RedirectTo(ReturnUrl);
   }
 
-  private AppUser CreateUser()
-  {
-    try
-    {
-      return Activator.CreateInstance<AppUser>();
-    }
-    catch
-    {
-      throw new InvalidOperationException($"Can't create an instance of '{nameof(AppUser)}'. " +
-                                          $"Ensure that '{nameof(AppUser)}' is not an abstract class and has a parameterless constructor");
-    }
-  }
-
-  private IUserEmailStore<AppUser> GetEmailStore()
-  {
-    if (!UserManager.SupportsUserEmail)
-    {
-      throw new NotSupportedException("The default UI requires a user store with email support.");
-    }
-
-    return (IUserEmailStore<AppUser>)UserStore;
-  }
-
   private sealed class InputModel
   {
     [Required]
     [EmailAddress]
     public string Email { get; set; } = "";
   }
-
 }
