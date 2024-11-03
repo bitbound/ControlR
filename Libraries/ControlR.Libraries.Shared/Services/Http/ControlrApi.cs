@@ -22,6 +22,7 @@ public interface IControlrApi
   Task<Result<List<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result> DeleteTag(Guid tagId);
+  Task<Result> DeleteDevice(Guid deviceId);
 }
 
 public class ControlrApi(
@@ -128,6 +129,22 @@ public class ControlrApi(
     {
       return Result
         .Fail(ex, "Error while deleting tag.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result> DeleteDevice(Guid deviceId)
+  {
+    try
+    {
+      var response = await _client.DeleteAsync($"{DevicesEndpoint}/{deviceId}");
+      response.EnsureSuccessStatusCode();
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Error while deleting device.")
         .Log(_logger);
     }
   }

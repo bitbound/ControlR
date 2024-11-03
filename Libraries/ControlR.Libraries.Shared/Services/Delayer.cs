@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace ControlR.Libraries.Shared.Services;
+﻿namespace ControlR.Libraries.Shared.Services;
 
 public interface IDelayer
 {

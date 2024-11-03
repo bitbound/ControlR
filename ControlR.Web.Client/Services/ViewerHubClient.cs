@@ -1,14 +1,15 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Web.Client.Services.Stores;
 
 namespace ControlR.Web.Client.Services;
 
-public class ViewerHubClient(IMessenger messenger, IDeviceCache deviceCache) : IViewerHubClient
+public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : IViewerHubClient
 {
   public async Task ReceiveDeviceUpdate(DeviceResponseDto device)
   {
-    deviceCache.AddOrUpdate(device);
-    await messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
+    deviceStore.AddOrUpdate(device);
+    await messenger.SendGenericMessage(GenericMessageKind.DeviceStoreUpdated);
   }
 
   public async Task ReceiveDto(DtoWrapper dto)

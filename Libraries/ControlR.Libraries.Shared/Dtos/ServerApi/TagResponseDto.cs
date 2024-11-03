@@ -7,5 +7,5 @@ public record TagResponseDto(
   Guid Id,
   string Name, 
   TagType Type,
-  ImmutableArray<IdNameTuple> UserIds,
-  ImmutableArray<IdNameTuple> DeviceIds);
+  ImmutableArray<Guid> UserIds,
+  ImmutableArray<Guid> DeviceIds);

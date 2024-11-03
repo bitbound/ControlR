@@ -1,6 +1,7 @@
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
+using ControlR.Web.Client.Services.Stores;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -20,7 +21,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
     services.AddScoped<IViewerHubConnection, ViewerHubConnection>();
-    services.AddScoped<IDeviceCache, DeviceCache>();
+    services.AddScoped<IDeviceStore, DeviceStore>();
     services.AddScoped<ISystemTime, SystemTime>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
     services.AddScoped<IMemoryProvider, MemoryProvider>();

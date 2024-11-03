@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
-public class DeviceRequestDto : IHasSettablePrimaryKey
+public class DeviceRequestDto
 {
   [MsgPackKey]
   public string AgentVersion { get; set; } = string.Empty;

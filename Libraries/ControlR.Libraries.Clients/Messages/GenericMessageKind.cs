@@ -4,6 +4,6 @@ public enum GenericMessageKind
 {
     ShuttingDown,
     PendingOperationsChanged,
-    DevicesCacheUpdated,
+    DeviceStoreUpdated,
     DeviceContentWindowsChanged,
 }

@@ -42,21 +42,21 @@ public static class EntityToDtoExtensions
 
   public static TagResponseDto ToDto(this Tag tag)
   {
-    var userTuples = tag
+    var userIds = tag
       .Users?
-      .Select(x => new IdNameTuple(x.Id, x.UserName ?? ""))
+      .Select(x => x.Id)
       .ToImmutableArray() ?? [];
     
-    var deviceTuples = tag
+    var deviceIds = tag
       .Devices?
-      .Select(x => new IdNameTuple(x.Id, x.Name))
+      .Select(x => x.Id)
       .ToImmutableArray() ?? [];
     
     return new TagResponseDto(
       tag.Id, 
       tag.Name, 
       tag.Type, 
-      userTuples,
-      deviceTuples);
+      userIds,
+      deviceIds);
   }
 }

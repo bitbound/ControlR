@@ -1,4 +1,4 @@
-﻿@if (DeviceCache.Devices.Count == 0)
+﻿@if (DeviceStore.Devices.Count == 0)
 {
   <MudAlert Severity="Severity.Info">
     No devices found. Head over to the <MudLink Color="Color.Tertiary" Href="/deploy">Deploy Page</MudLink>
@@ -32,6 +32,7 @@
   <ToolBarContent>
     <MudSpacer/>
     <MudTextField
+      T="string"
       @bind-Value="_searchText"
       Placeholder="Search"
       Clearable

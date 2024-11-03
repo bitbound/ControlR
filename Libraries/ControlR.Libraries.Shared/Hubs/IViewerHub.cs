@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
 

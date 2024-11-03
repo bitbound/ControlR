@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using ControlR.Web.Client.Services.Stores;
+using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components;
 
@@ -22,7 +23,7 @@ public partial class Dashboard
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  public required IDeviceCache DeviceCache { get; init; }
+  public required IDeviceStore DeviceStore { get; init; }
 
   [Inject]
   public required IDialogService DialogService { get; init; }
@@ -51,10 +52,10 @@ public partial class Dashboard
     {
       if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
       {
-        return DeviceCache.Devices;
+        return DeviceStore.Devices;
       }
 
-      return DeviceCache.Devices
+      return DeviceStore.Devices
         .Where(x => x.IsOnline)
         .ToArray();
     }
@@ -80,7 +81,10 @@ public partial class Dashboard
               return true;
             }
           }
-          catch { }
+          catch (Exception ex)
+          {
+            Logger.LogError(ex, "Error while filtering devices.");
+          }
         }
         return false;
       };
@@ -97,9 +101,9 @@ public partial class Dashboard
 
     Messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
-    if (DeviceCache.Devices.Count == 0)
+    if (DeviceStore.Devices.Count == 0)
     {
-      await DeviceCache.Refresh();
+      await DeviceStore.Refresh();
     }
 
     _loading = false;
@@ -129,12 +133,8 @@ public partial class Dashboard
           { nameof(AppSettingsEditorDialog.Device), device }
         };
       var dialogRef = await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
-      if (dialogRef is null)
-      {
-        return;
-      }
       var result = await dialogRef.Result;
-      if (result?.Data is bool isSuccess && isSuccess)
+      if (result?.Data is true)
       {
         Snackbar.Add("Settings saved on device", Severity.Success);
       }
@@ -146,13 +146,14 @@ public partial class Dashboard
     }
   }
 
+
   private Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
   {
     try
     {
       switch (kind)
       {
-        case GenericMessageKind.DevicesCacheUpdated:
+        case GenericMessageKind.DeviceStoreUpdated:
           {
             Debouncer.Debounce(
               TimeSpan.FromSeconds(1),
@@ -161,8 +162,6 @@ public partial class Dashboard
                 await InvokeAsync(StateHasChanged);
               });
           }
-          break;
-        default:
           break;
       }
     }
@@ -201,7 +200,7 @@ public partial class Dashboard
       using var _ = BusyCounter.IncrementBusyCounter();
       await InvokeAsync(StateHasChanged);
       await RefreshLatestAgentVersion();
-      await DeviceCache.Refresh();
+      await DeviceStore.Refresh();
     }
     catch (Exception ex)
     {
@@ -211,6 +210,7 @@ public partial class Dashboard
     finally
     {
       _loading = false;
+      await InvokeAsync(StateHasChanged);
     }
   }
 
@@ -265,52 +265,80 @@ public partial class Dashboard
 
   private async Task RemoveDevice(DeviceResponseDto device)
   {
-    var result = await DialogService.ShowMessageBox(
-        "Confirm Removal",
-        "Are you sure you want to remove this device?",
-        "Remove",
-        "Cancel");
-
-    if (result != true)
+    try
     {
-      return;
+      var result = await DialogService.ShowMessageBox(
+          "Confirm Removal",
+          "Are you sure you want to remove this device?",
+          "Remove",
+          "Cancel");
+
+      if (result != true)
+      {
+        return;
+      }
+
+      var deleteResult = await ControlrApi.DeleteDevice(device.Id);
+      if (!deleteResult.IsSuccess)
+      {
+        Snackbar.Add(deleteResult.Reason, Severity.Error);
+        return;
+      }
+      await DeviceStore.Remove(device);
+      Snackbar.Add("Device removed", Severity.Success);
     }
-    await DeviceCache.Remove(device);
-    Snackbar.Add("Device removed", Severity.Success);
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while removing device.");
+    }
   }
 
   private async Task RestartDevice(DeviceResponseDto device)
   {
-    var result = await DialogService.ShowMessageBox(
-        "Confirm Restart",
-        $"Are you sure you want to restart {device.Name}?",
-        "Yes",
-        "No");
-
-    if (result != true)
+    try
     {
-      return;
-    }
+      var result = await DialogService.ShowMessageBox(
+          "Confirm Restart",
+          $"Are you sure you want to restart {device.Name}?",
+          "Yes",
+          "No");
 
-    await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Restart);
-    Snackbar.Add("Restart command sent", Severity.Success);
+      if (result != true)
+      {
+        return;
+      }
+
+      await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Restart);
+      Snackbar.Add("Restart command sent", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while restarting device.");
+    }
   }
 
   private async Task ShutdownDevice(DeviceResponseDto device)
   {
-    var result = await DialogService.ShowMessageBox(
-       "Confirm Shutdown",
-       $"Are you sure you want to shut down {device.Name}?",
-       "Yes",
-       "No");
-
-    if (result != true)
+    try
     {
-      return;
-    }
+      var result = await DialogService.ShowMessageBox(
+         "Confirm Shutdown",
+         $"Are you sure you want to shut down {device.Name}?",
+         "Yes",
+         "No");
 
-    await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
-    Snackbar.Add("Shutdown command sent", Severity.Success);
+      if (result != true)
+      {
+        return;
+      }
+
+      await ViewerHub.SendPowerStateChange(device, PowerStateChangeType.Shutdown);
+      Snackbar.Add("Shutdown command sent", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while shutting down device.");
+    }
   }
 
   private void StartTerminal(DeviceResponseDto device)
@@ -338,19 +366,32 @@ public partial class Dashboard
 
   private async Task UpdateDevice(DeviceResponseDto device)
   {
-    Snackbar.Add("Sending update request", Severity.Success);
-    await ViewerHub.SendAgentUpdateTrigger(device);
+    try
+    {
+      Snackbar.Add("Sending update request", Severity.Success);
+      await ViewerHub.SendAgentUpdateTrigger(device);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending update request.");
+    }
   }
   private async Task WakeDevice(DeviceResponseDto device)
   {
-    if (device.MacAddresses is null ||
-        device.MacAddresses.Length == 0)
+    try
     {
-      Snackbar.Add("No MAC addresses on device", Severity.Warning);
-      return;
-    }
+      if (device.MacAddresses.Length == 0)
+      {
+        Snackbar.Add("No MAC addresses on device", Severity.Warning);
+        return;
+      }
 
-    await ViewerHub.SendWakeDevice(device.MacAddresses);
-    Snackbar.Add("Wake command sent", Severity.Success);
+      await ViewerHub.SendWakeDevice(device.MacAddresses);
+      Snackbar.Add("Wake command sent", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending wake command.");
+    }
   }
 }

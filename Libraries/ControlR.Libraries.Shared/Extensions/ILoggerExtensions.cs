@@ -40,8 +40,9 @@ public static class LoggerExtensions
     Result result,
     [CallerMemberName] string callerName = "")
   {
-    using var logScope = string.IsNullOrWhiteSpace(callerName) ? new NoopDisposable() : logger.BeginScope(callerName);
-
+    using var logScope = string.IsNullOrWhiteSpace(callerName) 
+      ? new NoopDisposable() 
+      : logger.BeginScope(callerName);
 
     if (result.IsSuccess)
     {
@@ -49,7 +50,7 @@ public static class LoggerExtensions
     }
     else if (result.HadException)
     {
-      logger.LogError(result.Exception, "Error result.");
+      logger.LogError(result.Exception, "Error result. Reason: {Reason}", result.Reason);
     }
     else
     {

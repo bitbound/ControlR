@@ -1,12 +1,10 @@
-﻿using ControlR.Libraries.Shared.Dtos.Interfaces;
-using System.ComponentModel.DataAnnotations;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
-public class DeviceResponseDto : DeviceRequestDto, IEntityBaseDto
+public class DeviceResponseDto : DeviceRequestDto
 {
     [MsgPackKey]
     public string Alias { get; set; } = string.Empty;

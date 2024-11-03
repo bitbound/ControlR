@@ -1,32 +1,37 @@
-﻿using ControlR.Libraries.Shared.Hubs;
-using Microsoft.AspNetCore.SignalR.Client;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.SignalR.Client;
 
-namespace ControlR.Web.Client.Services;
+namespace ControlR.Web.Client.Services.Stores;
 
-public interface IDeviceCache
+public interface IDeviceStore
 {
   ICollection<DeviceResponseDto> Devices { get; }
   void AddOrUpdate(DeviceResponseDto device);
 
   void Clear();
+  Task Refresh();
   Task Remove(DeviceResponseDto device);
 
   Task SetAllOffline();
-  Task Refresh();
   bool TryGet(Guid deviceId, [NotNullWhen(true)] out DeviceResponseDto? device);
 }
 
-internal class DeviceCache : IDeviceCache
+internal class DeviceStore : IDeviceStore
 {
   private readonly ConcurrentDictionary<Guid, DeviceResponseDto> _cache = new();
+  private readonly IControlrApi _controlrApi;
+  private readonly ILogger<DeviceStore> _logger;
+  private readonly IMessenger _messenger;
 
-  public DeviceCache(
+  private readonly SemaphoreSlim _refreshLock = new(1, 1);
+  private readonly ISnackbar _snackbar;
+
+  public DeviceStore(
     IControlrApi controlrApi,
     ISnackbar snackbar,
     IMessenger messenger,
-    ILogger<DeviceCache> logger)
+    ILogger<DeviceStore> logger)
   {
     _controlrApi = controlrApi;
     _snackbar = snackbar;
@@ -35,12 +40,6 @@ internal class DeviceCache : IDeviceCache
 
     messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
   }
-
-  private readonly SemaphoreSlim _refreshLock = new(1, 1);
-  private readonly ISnackbar _snackbar;
-  private readonly IMessenger _messenger;
-  private readonly IControlrApi _controlrApi;
-  private readonly ILogger<DeviceCache> _logger;
 
   public ICollection<DeviceResponseDto> Devices => _cache.Values;
 
@@ -53,12 +52,15 @@ internal class DeviceCache : IDeviceCache
   {
     _cache.Clear();
   }
-
-
+  
   public async Task Refresh()
   {
     if (!await _refreshLock.WaitAsync(0))
     {
+      // If another thread already acquired the lock, we still want to wait
+      // for it to finish, but we don't want to do another refresh.
+      await _refreshLock.WaitAsync();
+      _refreshLock.Release();
       return;
     }
 
@@ -69,7 +71,8 @@ internal class DeviceCache : IDeviceCache
       {
         _cache.AddOrUpdate(device.Id, device, (_, _) => device);
       }
-      await _messenger.SendGenericMessage(GenericMessageKind.DevicesCacheUpdated);
+
+      await _messenger.SendGenericMessage(GenericMessageKind.DeviceStoreUpdated);
     }
     catch (Exception ex)
     {
@@ -87,6 +90,7 @@ internal class DeviceCache : IDeviceCache
     _cache.Remove(device.Id, out _);
     return Task.CompletedTask;
   }
+
 
   public Task SetAllOffline()
   {

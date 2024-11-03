@@ -3,15 +3,12 @@
 
 public interface IConnectionCounter
 {
-    int AgentConnectionLocalCount { get; }
-    int ViewerConnectionLocalCount { get; }
+    int AgentConnectionCount { get; }
+    int ViewerConnectionCount { get; }
 
     void DecrementAgentCount();
 
     void DecrementViewerCount();
-
-    Task<Result<int>> GetAgentConnectionCount();
-    Task<Result<int>> GetViewerConnectionCount();
 
     void IncrementAgentCount();
 
@@ -24,8 +21,8 @@ public class ConnectionCounter : IConnectionCounter
 
     private volatile int _viewerCount;
 
-    public int AgentConnectionLocalCount => _agentCount;
-    public int ViewerConnectionLocalCount => _viewerCount;
+    public int AgentConnectionCount => _agentCount;
+    public int ViewerConnectionCount => _viewerCount;
 
     public void DecrementAgentCount()
     {
@@ -35,16 +32,6 @@ public class ConnectionCounter : IConnectionCounter
     public void DecrementViewerCount()
     {
         Interlocked.Decrement(ref _viewerCount);
-    }
-
-    public Task<Result<int>> GetAgentConnectionCount()
-    {
-        return Result.Ok(_agentCount).AsTaskResult();
-    }
-
-    public Task<Result<int>> GetViewerConnectionCount()
-    {
-        return Result.Ok(_viewerCount).AsTaskResult();
     }
 
     public void IncrementAgentCount()
