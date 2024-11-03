@@ -1,14 +1,16 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Libraries.Agent.Services.Mac;
 
 internal class DeviceDataGeneratorMac(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
-  ILogger<DeviceDataGeneratorMac> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
+  IOptionsMonitor<AgentAppOptions> appOptions,
+  ILogger<DeviceDataGeneratorMac> logger)
+  : DeviceDataGeneratorBase(environmentHelper, appOptions, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
@@ -143,6 +145,5 @@ internal class DeviceDataGeneratorMac(
 
     _logger.LogResult(result);
     return [];
-
   }
 }

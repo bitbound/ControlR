@@ -1,31 +1,42 @@
-﻿using ControlR.Devices.Native.Services;
+﻿using System.Runtime.Versioning;
+using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
-using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.Runtime.Versioning;
 
 namespace ControlR.Libraries.Agent.Services;
 
 internal class AgentHubClient(
-  IAgentHubConnection _hubConnection,
-  ISystemEnvironment _environmentHelper,
-  IStreamerLauncher _streamerLauncher,
-  IMessenger _messenger,
-  ITerminalStore _terminalStore,
-  IDelayer _delayer,
-  IWin32Interop _win32Interop,
-  IStreamerUpdater _streamerUpdater,
-  IHostApplicationLifetime _appLifetime,
-  IOptionsMonitor<AgentAppOptions> _appOptions,
-  ISettingsProvider _settings,
-  ILogger<AgentHubClient> _logger) : IAgentHubClient
+  IAgentHubConnection hubConnection,
+  ISystemEnvironment environmentHelper,
+  IStreamerLauncher streamerLauncher,
+  IMessenger messenger,
+  ITerminalStore terminalStore,
+  IDelayer delayer,
+  IWin32Interop win32Interop,
+  IStreamerUpdater streamerUpdater,
+  IHostApplicationLifetime appLifetime,
+  IOptionsMonitor<AgentAppOptions> appOptions,
+  ISettingsProvider settings,
+  IAgentInstaller agentInstaller,
+  ILogger<AgentHubClient> logger) : IAgentHubClient
 {
+  private readonly IAgentInstaller _agentInstaller = agentInstaller;
+  private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
+  private readonly IDelayer _delayer = delayer;
+  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
+  private readonly IAgentHubConnection _hubConnection = hubConnection;
+  private readonly ILogger<AgentHubClient> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
+  private readonly ISettingsProvider _settings = settings;
+  private readonly IStreamerLauncher _streamerLauncher = streamerLauncher;
+  private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
+  private readonly ITerminalStore _terminalStore = terminalStore;
+  private readonly IWin32Interop _win32Interop = win32Interop;
+
   public async Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto)
   {
     try
@@ -149,4 +160,16 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task UninstallAgent(string reason)
+  {
+    try
+    {
+      _logger.LogInformation("Uninstall command received.  Reason: {reason}", reason);
+      await _agentInstaller.Uninstall();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while uninstalling agent.");
+    }
+  }
 }

@@ -39,6 +39,7 @@ public partial class Dashboard
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
 
@@ -52,62 +53,43 @@ public partial class Dashboard
     {
       if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
       {
-        return DeviceStore.Devices;
+        return DeviceStore.Resources;
       }
 
-      return DeviceStore.Devices
+      return DeviceStore.Resources
         .Where(x => x.IsOnline)
         .ToArray();
     }
   }
 
   private bool IsHideOfflineDevicesDisabled =>
-      !string.IsNullOrWhiteSpace(_searchText);
+    !string.IsNullOrWhiteSpace(_searchText);
 
   private Func<DeviceResponseDto, bool> QuickFilter => x =>
+  {
+    if (string.IsNullOrWhiteSpace(_searchText))
+    {
+      return true;
+    }
+
+    var element = JsonSerializer.SerializeToElement(x);
+    foreach (var property in element.EnumerateObject())
+    {
+      try
       {
-        if (string.IsNullOrWhiteSpace(_searchText))
+        if (property.Value.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
         {
           return true;
         }
-
-        var element = JsonSerializer.SerializeToElement(x);
-        foreach (var property in element.EnumerateObject())
-        {
-          try
-          {
-            if (property.Value.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-            {
-              return true;
-            }
-          }
-          catch (Exception ex)
-          {
-            Logger.LogError(ex, "Error while filtering devices.");
-          }
-        }
-        return false;
-      };
-
-  protected override async Task OnInitializedAsync()
-  {
-    await base.OnInitializedAsync();
-
-    using var _ = BusyCounter.IncrementBusyCounter();
-
-    _hideOfflineDevices = await Settings.GetHideOfflineDevices();
-
-    await RefreshLatestAgentVersion();
-
-    Messenger.RegisterGenericMessage(this, HandleGenericMessage);
-
-    if (DeviceStore.Devices.Count == 0)
-    {
-      await DeviceStore.Refresh();
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error while filtering devices.");
+      }
     }
 
-    _loading = false;
-  }
+    return false;
+  };
 
   private async Task ConfigureDeviceSettings(DeviceResponseDto device)
   {
@@ -120,7 +102,7 @@ public partial class Dashboard
         return;
       }
 
-      var dialogOptions = new DialogOptions()
+      var dialogOptions = new DialogOptions
       {
         BackdropClick = false,
         FullWidth = true,
@@ -128,11 +110,12 @@ public partial class Dashboard
       };
 
       var parameters = new DialogParameters
-        {
-          { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-          { nameof(AppSettingsEditorDialog.Device), device }
-        };
-      var dialogRef = await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
+      {
+        { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
+        { nameof(AppSettingsEditorDialog.Device), device }
+      };
+      var dialogRef =
+        await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
       var result = await dialogRef.Result;
       if (result?.Data is true)
       {
@@ -154,14 +137,11 @@ public partial class Dashboard
       switch (kind)
       {
         case GenericMessageKind.DeviceStoreUpdated:
-          {
-            Debouncer.Debounce(
-              TimeSpan.FromSeconds(1),
-              async () =>
-              {
-                await InvokeAsync(StateHasChanged);
-              });
-          }
+        {
+          Debouncer.Debounce(
+            TimeSpan.FromSeconds(1),
+            async () => { await InvokeAsync(StateHasChanged); });
+        }
           break;
       }
     }
@@ -169,6 +149,7 @@ public partial class Dashboard
     {
       Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
     }
+
     return Task.CompletedTask;
   }
 
@@ -188,8 +169,8 @@ public partial class Dashboard
   private bool IsAgentOutdated(DeviceResponseDto device)
   {
     return _agentReleaseVersion is not null &&
-            Version.TryParse(device.AgentVersion, out var agentVersion) &&
-            !agentVersion.Equals(_agentReleaseVersion);
+           Version.TryParse(device.AgentVersion, out var agentVersion) &&
+           !agentVersion.Equals(_agentReleaseVersion);
   }
 
   private async Task RefreshDevices()
@@ -236,8 +217,9 @@ public partial class Dashboard
           return;
         }
 
-        var dialogParams = new DialogParameters() { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
-        var dialogRef = await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+        var dialogParams = new DialogParameters { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
+        var dialogRef =
+          await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
         var result = await dialogRef.Result;
         if (result is null || result.Canceled)
         {
@@ -250,17 +232,17 @@ public partial class Dashboard
           WindowStore.AddContentInstance<RemoteDisplay>(
             device,
             DeviceContentInstanceType.RemoteControl,
-            new Dictionary<string, object?>()
+            new Dictionary<string, object?>
             {
               [nameof(RemoteDisplay.Session)] = remoteControlSession
             });
         }
+
         break;
       default:
         Snackbar.Add("Platform is not supported", Severity.Warning);
         break;
     }
-
   }
 
   private async Task RemoveDevice(DeviceResponseDto device)
@@ -268,10 +250,10 @@ public partial class Dashboard
     try
     {
       var result = await DialogService.ShowMessageBox(
-          "Confirm Removal",
-          "Are you sure you want to remove this device?",
-          "Remove",
-          "Cancel");
+        "Confirm Removal",
+        "Are you sure you want to remove this device?",
+        "Remove",
+        "Cancel");
 
       if (result != true)
       {
@@ -284,6 +266,7 @@ public partial class Dashboard
         Snackbar.Add(deleteResult.Reason, Severity.Error);
         return;
       }
+
       await DeviceStore.Remove(device);
       Snackbar.Add("Device removed", Severity.Success);
     }
@@ -298,10 +281,10 @@ public partial class Dashboard
     try
     {
       var result = await DialogService.ShowMessageBox(
-          "Confirm Restart",
-          $"Are you sure you want to restart {device.Name}?",
-          "Yes",
-          "No");
+        "Confirm Restart",
+        $"Are you sure you want to restart {device.Name}?",
+        "Yes",
+        "No");
 
       if (result != true)
       {
@@ -322,10 +305,10 @@ public partial class Dashboard
     try
     {
       var result = await DialogService.ShowMessageBox(
-         "Confirm Shutdown",
-         $"Are you sure you want to shut down {device.Name}?",
-         "Yes",
-         "No");
+        "Confirm Shutdown",
+        $"Are you sure you want to shut down {device.Name}?",
+        "Yes",
+        "No");
 
       if (result != true)
       {
@@ -350,17 +333,40 @@ public partial class Dashboard
       WindowStore.AddContentInstance<Terminal>(
         device,
         DeviceContentInstanceType.Terminal,
-        new Dictionary<string, object?>()
+        new Dictionary<string, object?>
         {
           [nameof(Terminal.Id)] = terminalId,
           [nameof(Terminal.Device)] = device
         });
-
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while starting terminal session.");
       Snackbar.Add("An error occurred while starting the terminal", Severity.Error);
+    }
+  }
+
+  private async Task UninstallAgent(DeviceResponseDto device)
+  {
+    try
+    {
+      var result = await DialogService.ShowMessageBox(
+        "Confirm Uninstall",
+        $"Are you sure you want to uninstall the agent from {device.Name}?",
+        "Yes",
+        "No");
+
+      if (result != true)
+      {
+        return;
+      }
+
+      await ViewerHub.UninstallAgent(device.Id, "Manually uninstalled.");
+      Snackbar.Add("Uninstall command sent", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while shutting down device.");
     }
   }
 
@@ -376,6 +382,7 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while sending update request.");
     }
   }
+
   private async Task WakeDevice(DeviceResponseDto device)
   {
     try
@@ -393,5 +400,25 @@ public partial class Dashboard
     {
       Logger.LogError(ex, "Error while sending wake command.");
     }
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    using var _ = BusyCounter.IncrementBusyCounter();
+
+    _hideOfflineDevices = await Settings.GetHideOfflineDevices();
+
+    await RefreshLatestAgentVersion();
+
+    Messenger.RegisterGenericMessage(this, HandleGenericMessage);
+
+    if (DeviceStore.Resources.Count == 0)
+    {
+      await DeviceStore.Refresh();
+    }
+
+    _loading = false;
   }
 }

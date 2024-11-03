@@ -1,5 +1,5 @@
-﻿using ControlR.Agent.LoadTester;
-using ControlR.Devices.Native.Services;
+﻿using System.Collections.Concurrent;
+using ControlR.Agent.LoadTester;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Agent.Services;
@@ -7,14 +7,15 @@ using ControlR.Libraries.Agent.Services.Windows;
 using ControlR.Libraries.Agent.Startup;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
+using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
-using System.Collections.Concurrent;
 
 var startCount = 0;
 
@@ -34,10 +35,7 @@ var tenantId = Guid.Parse("2d05e6ca-00bb-410f-a3a7-5090233df7c5");
 var cts = new CancellationTokenSource();
 var cancellationToken = cts.Token;
 
-Console.CancelKeyPress += (s, e) =>
-{
-  cts.Cancel();
-};
+Console.CancelKeyPress += (s, e) => { cts.Cancel(); };
 
 Console.WriteLine($"Connecting to {serverUri}");
 
@@ -60,15 +58,16 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
 
   builder.Configuration
     .AddInMemoryCollection(new Dictionary<string, string?>
-      {
-        { "AppOptions:DeviceId", deviceId.ToString() },
-        { "AppOptions:ServerUri", $"{serverUri}" },
-        { "Logging:LogLevel:Default", "Warning" },
-        { "Serilog:MinimumLevel:Default", "Warning" },
-      });
+    {
+      { "AppOptions:DeviceId", deviceId.ToString() },
+      { "AppOptions:ServerUri", $"{serverUri}" },
+      { "AppOptions:TenantId", tenantId.ToString() },
+      { "Logging:LogLevel:Default", "Warning" },
+      { "Serilog:MinimumLevel:Default", "Warning" }
+    });
 
   builder.Services.Remove(
-     builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater)));
+    builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater)));
   builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
 
   builder.Services.Remove(
@@ -84,10 +83,10 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   builder.Services.AddSingleton<ISettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
 
   builder.Services.Remove(
-     builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher)));
+    builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher)));
 
   builder.Services.Remove(
-     builder.Services.First(x => x.ImplementationType == typeof(AgentHeartbeatTimer)));
+    builder.Services.First(x => x.ImplementationType == typeof(AgentHeartbeatTimer)));
 
   builder.Services.Remove(
     builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator)));
@@ -96,9 +95,10 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   builder.Services.AddSingleton<IDeviceDataGenerator>(sp =>
   {
     return new FakeDeviceDataGenerator(
-      i, 
+      i,
       tenantId,
-      sp.GetRequiredService<ISystemEnvironment>(), 
+      sp.GetRequiredService<ISystemEnvironment>(),
+      sp.GetRequiredService<IOptionsMonitor<AgentAppOptions>>(),
       sp.GetRequiredService<ILogger<FakeDeviceDataGenerator>>());
   });
 
@@ -107,15 +107,12 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   hosts.Add(host);
 
   await Delayer.Default.WaitForAsync(
-    condition: () =>
+    () =>
     {
-      return hosts.All(x =>
-      {
-        return x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected;
-      });
+      return hosts.All(x => { return x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected; });
     },
-    pollingDelay: TimeSpan.FromSeconds(1),
-    conditionFailedCallback: () =>
+    TimeSpan.FromSeconds(1),
+    () =>
     {
       Log.Information("Waiting for all connections to be established.");
       return Task.CompletedTask;
@@ -133,10 +130,7 @@ static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken canc
   using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
   while (await timer.WaitForNextTickAsync(cancellationToken))
   {
-    var hubConnections = hosts.Select(x =>
-    {
-      return x.Services.GetRequiredService<IHubConnection<IAgentHub>>();
-    });
+    var hubConnections = hosts.Select(x => { return x.Services.GetRequiredService<IHubConnection<IAgentHub>>(); });
 
     var groups = hubConnections.GroupBy(x => x.ConnectionState);
 

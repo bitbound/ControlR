@@ -28,3 +28,4 @@ global using Microsoft.AspNetCore.Authorization;
 global using ControlR.Web.Client.Authz.Policies;
 global using ControlR.Libraries.Shared.Dtos.HubDtos;
 global using ControlR.Libraries.Shared.Constants;
+global using ControlR.Libraries.Shared.Dtos.Interfaces;

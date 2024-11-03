@@ -1,9 +1,6 @@
 ﻿using System.Security.Cryptography;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -26,16 +23,27 @@ internal class AgentUpdater(
   ISettingsProvider settings,
   IHostApplicationLifetime appLifetime,
   IOptions<InstanceOptions> instanceOptions,
+  IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
+  private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
+  private readonly IControlrApi _controlrApi = controlrApi;
+  private readonly IDownloadsApi _downloadsApi = downloadsApi;
+  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
+  private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<AgentUpdater> _logger = logger;
+  private readonly IProcessManager _processInvoker = processInvoker;
+  private readonly IReleasesApi _releasesApi = releasesApi;
+  private readonly ISettingsProvider _settings = settings;
 
   public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new();
 
   public async Task CheckForUpdate(CancellationToken cancellationToken = default)
   {
-    if (environmentHelper.IsDebug)
+    if (_environmentHelper.IsDebug)
     {
       return;
     }
@@ -43,7 +51,7 @@ internal class AgentUpdater(
     using var logScope = _logger.BeginMemberScope();
 
     using var linkedCts =
-      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, appLifetime.ApplicationStopping);
+      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping);
 
     if (!await _checkForUpdatesLock.WaitAsync(0, linkedCts.Token))
     {
@@ -58,18 +66,18 @@ internal class AgentUpdater(
       _logger.LogInformation("Beginning version check.");
 
 
-      var hashResult = await controlrApi.GetCurrentAgentHash(environmentHelper.Runtime);
+      var hashResult = await _controlrApi.GetCurrentAgentHash(_environmentHelper.Runtime);
       if (!hashResult.IsSuccess)
       {
         return;
       }
 
       var remoteHash = hashResult.Value;
-      var serverOrigin = settings.ServerUri.ToString().TrimEnd('/');
-      var downloadPath = AppConstants.GetAgentFileDownloadPath(environmentHelper.Runtime);
+      var serverOrigin = _settings.ServerUri.ToString().TrimEnd('/');
+      var downloadPath = AppConstants.GetAgentFileDownloadPath(_environmentHelper.Runtime);
       var downloadUrl = $"{serverOrigin}{downloadPath}";
 
-      await using var startupExeFs = fileSystem.OpenFileStream(environmentHelper.StartupExePath, FileMode.Open,
+      await using var startupExeFs = _fileSystem.OpenFileStream(_environmentHelper.StartupExePath, FileMode.Open,
         FileAccess.Read, FileShare.Read);
       var startupExeHash = await SHA256.HashDataAsync(startupExeFs, linkedCts.Token);
 
@@ -86,32 +94,32 @@ internal class AgentUpdater(
 
       _logger.LogInformation("Update found. Downloading update.");
 
-      var tempDirPath = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
+      var tempDirPath = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
         ? Path.Combine(Path.GetTempPath(), "ControlR_Update")
-        : Path.Combine(Path.GetTempPath(), "ControlR_Update", instanceOptions.Value.InstanceId);
+        : Path.Combine(Path.GetTempPath(), "ControlR_Update", _instanceOptions.Value.InstanceId);
 
-      _ = fileSystem.CreateDirectory(tempDirPath);
-      var tempPath = Path.Combine(tempDirPath, AppConstants.GetAgentFileName(environmentHelper.Platform));
+      _ = _fileSystem.CreateDirectory(tempDirPath);
+      var tempPath = Path.Combine(tempDirPath, AppConstants.GetAgentFileName(_environmentHelper.Platform));
 
-      if (fileSystem.FileExists(tempPath))
+      if (_fileSystem.FileExists(tempPath))
       {
-        fileSystem.DeleteFile(tempPath);
+        _fileSystem.DeleteFile(tempPath);
       }
 
-      var result = await downloadsApi.DownloadFile(downloadUrl, tempPath);
+      var result = await _downloadsApi.DownloadFile(downloadUrl, tempPath);
       if (!result.IsSuccess)
       {
         _logger.LogCritical("Download failed.  Aborting update.");
         return;
       }
 
-      await using (var tempFs = fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+      await using (var tempFs = _fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
       {
         var updateHash = await SHA256.HashDataAsync(tempFs, linkedCts.Token);
         var updateHexHash = Convert.ToHexString(updateHash);
 
-        if (settings.IsConnectedToPublicServer &&
-            !await releasesApi.DoesReleaseHashExist(updateHexHash))
+        if (_settings.IsConnectedToPublicServer &&
+            !await _releasesApi.DoesReleaseHashExist(updateHexHash))
         {
           _logger.LogCritical(
             "A new agent version is available, but the hash does not exist in the public releases data.");
@@ -121,48 +129,49 @@ internal class AgentUpdater(
 
       _logger.LogInformation("Launching installer.");
 
-      var installCommand = "install";
-      if (instanceOptions.Value.InstanceId is string instanceId)
+      var tenantId = _appOptions.CurrentValue.TenantId;
+      var installCommand = $"install -t {tenantId}";
+      if (_instanceOptions.Value.InstanceId is { } instanceId)
       {
         installCommand += $" -i {instanceId}";
       }
 
-      switch (environmentHelper.Platform)
+      switch (_environmentHelper.Platform)
       {
         case SystemPlatform.Windows:
-          {
-            await processInvoker
-              .Start(tempPath, installCommand)
-              .WaitForExitAsync(linkedCts.Token);
-          }
+        {
+          await _processInvoker
+            .Start(tempPath, installCommand)
+            .WaitForExitAsync(linkedCts.Token);
+        }
           break;
 
         case SystemPlatform.Linux:
-          {
-            await processInvoker
-              .Start("sudo", $"chmod +x {tempPath}")
-              .WaitForExitAsync(linkedCts.Token);
+        {
+          await _processInvoker
+            .Start("sudo", $"chmod +x {tempPath}")
+            .WaitForExitAsync(linkedCts.Token);
 
-            await processInvoker.StartAndWaitForExit(
-              "/bin/bash",
-              $"-c \"{tempPath} {installCommand} &\"",
-              true,
-              linkedCts.Token);
-          }
+          await _processInvoker.StartAndWaitForExit(
+            "/bin/bash",
+            $"-c \"{tempPath} {installCommand} &\"",
+            true,
+            linkedCts.Token);
+        }
           break;
 
         case SystemPlatform.MacOs:
-          {
-            await processInvoker
-              .Start("sudo", $"chmod +x {tempPath}")
-              .WaitForExitAsync(linkedCts.Token);
+        {
+          await _processInvoker
+            .Start("sudo", $"chmod +x {tempPath}")
+            .WaitForExitAsync(linkedCts.Token);
 
-            await processInvoker.StartAndWaitForExit(
-              "/bin/zsh",
-              $"-c \"{tempPath} {installCommand} &\"",
-              true,
-              linkedCts.Token);
-          }
+          await _processInvoker.StartAndWaitForExit(
+            "/bin/zsh",
+            $"-c \"{tempPath} {installCommand} &\"",
+            true,
+            linkedCts.Token);
+        }
           break;
 
         default:
@@ -182,7 +191,7 @@ internal class AgentUpdater(
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    if (environmentHelper.IsDebug)
+    if (_environmentHelper.IsDebug)
     {
       return;
     }

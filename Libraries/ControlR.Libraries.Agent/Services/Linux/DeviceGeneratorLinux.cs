@@ -1,14 +1,16 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Libraries.Agent.Services.Linux;
 
 internal class DeviceDataGeneratorLinux(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
-  ILogger<DeviceDataGeneratorLinux> logger) : DeviceDataGeneratorBase(environmentHelper, logger), IDeviceDataGenerator
+  IOptionsMonitor<AgentAppOptions> appOptions,
+  ILogger<DeviceDataGeneratorLinux> logger)
+  : DeviceDataGeneratorBase(environmentHelper, appOptions, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;

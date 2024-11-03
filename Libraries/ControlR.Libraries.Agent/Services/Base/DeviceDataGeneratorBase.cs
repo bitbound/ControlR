@@ -2,13 +2,16 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Libraries.Agent.Services.Base;
 
 internal class DeviceDataGeneratorBase(
   ISystemEnvironment environmentHelper,
+  IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<DeviceDataGeneratorBase> logger)
 {
+  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly ILogger<DeviceDataGeneratorBase> _logger = logger;
 
@@ -68,6 +71,7 @@ internal class DeviceDataGeneratorBase(
     return new DeviceRequestDto
     {
       Id = deviceId,
+      TenantId = _appOptions.CurrentValue.TenantId,
       CurrentUsers = currentUsers,
       CpuUtilization = cpuUtilization,
       Drives = drives,
@@ -97,7 +101,7 @@ internal class DeviceDataGeneratorBase(
 
       if (_environmentHelper.IsWindows)
       {
-        var rootDir = Path.GetPathRoot(Environment.SystemDirectory ?? Environment.CurrentDirectory) ?? string.Empty;
+        var rootDir = Path.GetPathRoot(Environment.SystemDirectory) ?? string.Empty;
 
         systemDrive = allDrives.FirstOrDefault(x =>
           x.IsReady &&

@@ -4,6 +4,7 @@ using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -16,10 +17,11 @@ internal class AgentInstallerLinux(
   ISystemEnvironment environmentHelper,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
+  IControlrApi controlrApi,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, settingsProvider, controlrApi, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;
@@ -28,7 +30,7 @@ internal class AgentInstallerLinux(
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task Install(Uri? serverUri = null, Guid? deviceGroupId = null)
+  public async Task Install(Uri? serverUri = null, Guid? tenantId = null, Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -77,8 +79,8 @@ internal class AgentInstallerLinux(
       var serviceFile = GetServiceFile().Trim();
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
-      await UpdateAppSettings(serverUri);
-      await CreateDeviceOnServer(serverUri, deviceGroupId);
+      await UpdateAppSettings(serverUri, tenantId);
+      await CreateDeviceOnServer(serverUri, tenantId, tags);
       var serviceName = GetServiceName();
 
       var psi = new ProcessStartInfo

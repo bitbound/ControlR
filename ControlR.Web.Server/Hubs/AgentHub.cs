@@ -1,6 +1,6 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿using System.Net.Sockets;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.SignalR;
-using System.Net.Sockets;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -14,13 +14,13 @@ public class AgentHub(
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
-  private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
-  private readonly ISystemTime _systemTime = systemTime;
-  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly IConnectionCounter _connectionCounter = connectionCounter;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
-  
+  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly ISystemTime _systemTime = systemTime;
+  private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
+
   private DeviceResponseDto? Device
   {
     get => GetItem<DeviceResponseDto?>(null);
@@ -120,7 +120,7 @@ public class AgentHub(
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == device.TenantId))
       {
-        // TODO: Send uninstall command.
+        await Clients.Client(Context.ConnectionId).UninstallAgent("Invalid tenant ID.");
         return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
       }
 
@@ -148,7 +148,7 @@ public class AgentHub(
 
       Device.ConnectionId = Context.ConnectionId;
 
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id));
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id, Device.TenantId));
 
       await SendDeviceUpdate();
 
@@ -175,6 +175,7 @@ public class AgentHub(
         .ReceiveDeviceUpdate(Device);
     }
   }
+
   private async Task SendUpdatedConnectionCountToAdmins()
   {
     try

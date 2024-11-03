@@ -5,8 +5,7 @@ using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
@@ -15,26 +14,27 @@ namespace ControlR.Libraries.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows")]
 internal class AgentInstallerWindows(
-  IHostApplicationLifetime _lifetime,
-  IProcessManager _processes,
-  ISystemEnvironment _environmentHelper,
-  IElevationChecker _elevationChecker,
-  IRetryer _retryer,
+  IHostApplicationLifetime lifetime,
+  IProcessManager processes,
+  ISystemEnvironment environmentHelper,
+  IElevationChecker elevationChecker,
+  IRetryer retryer,
   IRegistryAccessor registryAccessor,
-  IOptions<InstanceOptions> _instanceOptions,
+  IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
   ISettingsProvider settingsProvider,
+  IControlrApi controlrApi,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, settingsProvider, controlrApi, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
-  private readonly IElevationChecker _elevationChecker = _elevationChecker;
-  private readonly ISystemEnvironment _environmentHelper = _environmentHelper;
-  private readonly IHostApplicationLifetime _lifetime = _lifetime;
-  private readonly IProcessManager _processes = _processes;
+  private readonly IElevationChecker _elevationChecker = elevationChecker;
+  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
+  private readonly IHostApplicationLifetime _lifetime = lifetime;
+  private readonly IProcessManager _processes = processes;
 
-  public async Task Install(Uri? serverUri = null, Guid? deviceGroupId = null)
+  public async Task Install(Uri? serverUri = null, Guid? tenantId = null, Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -79,7 +79,7 @@ internal class AgentInstallerWindows(
 
       try
       {
-        await _retryer.Retry(
+        await retryer.Retry(
           () =>
           {
             Logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);
@@ -95,14 +95,14 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      await UpdateAppSettings(serverUri);
+      await UpdateAppSettings(serverUri, tenantId);
 
-      await CreateDeviceOnServer(serverUri, deviceGroupId);
+      await CreateDeviceOnServer(serverUri, tenantId, tags);
 
       var serviceName = GetServiceName();
 
       var subcommand = "run";
-      if (_instanceOptions.Value.InstanceId is string instanceId)
+      if (instanceOptions.Value.InstanceId is { } instanceId)
       {
         subcommand += $" -i {instanceId}";
       }
@@ -232,7 +232,7 @@ internal class AgentInstallerWindows(
     var version = FileVersionInfo.GetVersionInfo(exePath);
     var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");
 
-    if (_instanceOptions.Value.InstanceId is { } instanceId)
+    if (instanceOptions.Value.InstanceId is { } instanceId)
     {
       displayName += $" ({instanceId})";
       uninstallCommand += $" -i {instanceId}";
@@ -255,32 +255,32 @@ internal class AgentInstallerWindows(
   private string GetInstallDirectory()
   {
     var dir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
       return dir;
     }
 
-    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+    return Path.Combine(dir, instanceOptions.Value.InstanceId);
   }
 
   private string GetServiceName()
   {
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
       return "ControlR.Agent";
     }
 
-    return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
+    return $"ControlR.Agent ({instanceOptions.Value.InstanceId})";
   }
 
   private string GetUninstallKeyPath()
   {
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
       return @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR";
     }
 
-    return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({_instanceOptions.Value.InstanceId})";
+    return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({instanceOptions.Value.InstanceId})";
   }
 
   private bool IsRunningFromAppDir()

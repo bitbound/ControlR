@@ -6,7 +6,7 @@ public static class EntityToDtoExtensions
 {
   public static DeviceResponseDto ToDto(this Device device)
   {
-    return new DeviceResponseDto()
+    return new DeviceResponseDto
     {
       AgentVersion = device.AgentVersion,
       Alias = device.Alias,
@@ -18,7 +18,7 @@ public static class EntityToDtoExtensions
       Id = device.Id,
       Is64Bit = device.Is64Bit,
       IsOnline = device.IsOnline,
-      LastSeen  = device.LastSeen,
+      LastSeen = device.LastSeen,
       MacAddresses = device.MacAddresses,
       Name = device.Name,
       OsArchitecture = device.OsArchitecture,
@@ -31,7 +31,7 @@ public static class EntityToDtoExtensions
       TotalMemory = device.TotalMemory,
       TotalStorage = device.TotalStorage,
       UsedMemory = device.UsedMemory,
-      UsedStorage = device.UsedStorage,
+      UsedStorage = device.UsedStorage
     };
   }
 
@@ -45,17 +45,17 @@ public static class EntityToDtoExtensions
     var userIds = tag
       .Users?
       .Select(x => x.Id)
-      .ToImmutableArray() ?? [];
-    
+      .ToImmutableList() ?? [];
+
     var deviceIds = tag
       .Devices?
       .Select(x => x.Id)
-      .ToImmutableArray() ?? [];
-    
+      .ToImmutableList() ?? [];
+
     return new TagResponseDto(
-      tag.Id, 
-      tag.Name, 
-      tag.Type, 
+      tag.Id,
+      tag.Name,
+      tag.Type,
       userIds,
       deviceIds);
   }

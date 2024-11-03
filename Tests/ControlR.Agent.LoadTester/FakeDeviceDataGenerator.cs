@@ -1,23 +1,24 @@
-﻿using ControlR.Devices.Native.Services;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Services.Base;
-using ControlR.Libraries.Agent.Services.Windows;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.LoadTester;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class FakeDeviceDataGenerator(
-  int deviceNumber, 
+  int deviceNumber,
   Guid tenantId,
   ISystemEnvironment systemEnvironment,
-  ILogger<FakeDeviceDataGenerator> logger) : DeviceDataGeneratorBase(systemEnvironment, logger), IDeviceDataGenerator
+  IOptionsMonitor<AgentAppOptions> appOptions,
+  ILogger<FakeDeviceDataGenerator> logger)
+  : DeviceDataGeneratorBase(systemEnvironment, appOptions, logger), IDeviceDataGenerator
 {
   private readonly string _agentVersion = "0.9.15.0";
   private readonly int _deviceNumber = deviceNumber;
@@ -26,7 +27,7 @@ internal class FakeDeviceDataGenerator(
 
   public Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
-    _device ??= new DeviceRequestDto()
+    _device ??= new DeviceRequestDto
     {
       Name = $"Test Device {_deviceNumber}",
       AgentVersion = _agentVersion,
@@ -36,7 +37,7 @@ internal class FakeDeviceDataGenerator(
       ProcessorCount = Environment.ProcessorCount,
       OsArchitecture = RuntimeInformation.OSArchitecture,
       OsDescription = RuntimeInformation.OSDescription,
-      Is64Bit = Environment.Is64BitOperatingSystem,
+      Is64Bit = Environment.Is64BitOperatingSystem
     };
     return _device.AsTaskResult();
   }

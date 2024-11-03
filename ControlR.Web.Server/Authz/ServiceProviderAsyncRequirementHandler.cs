@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace ControlR.Web.Server.Authz;
+﻿namespace ControlR.Web.Server.Authz;
 
 public class ServiceProviderAsyncRequirementHandler(IServiceProvider serviceProvider) : IAuthorizationHandler
 {
@@ -10,7 +8,7 @@ public class ServiceProviderAsyncRequirementHandler(IServiceProvider serviceProv
   {
     foreach (var requirement in context.Requirements.OfType<ServiceProviderAsyncRequirement>())
     {
-      if (await requirement.Assertion.Invoke(_serviceProvider, context))
+      if (await requirement.Assertion.Invoke(_serviceProvider, context, this))
       {
         context.Succeed(requirement);
       }

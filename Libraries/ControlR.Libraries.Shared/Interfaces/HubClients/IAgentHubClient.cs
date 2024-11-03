@@ -6,12 +6,12 @@ namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 
 public interface IAgentHubClient : IHubClient
 {
-    Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto);
+  Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto);
+  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto);
 
-    Task<Result<AgentAppSettings>> GetAgentAppSettings();
-
-    Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto);
-    Task<WindowsSession[]> GetWindowsSessions();
-    Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings);
-    Task<Result> ReceiveTerminalInput(TerminalInputDto dto);
+  Task<Result<AgentAppSettings>> GetAgentAppSettings();
+  Task<WindowsSession[]> GetWindowsSessions();
+  Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings);
+  Task<Result> ReceiveTerminalInput(TerminalInputDto dto);
+  Task UninstallAgent(string reason);
 }

@@ -3,12 +3,28 @@
 
 @inject ISnackbar Snackbar
 @inject ISettings SettingsStore
+@inject IClipboardManager ClipboardManager
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>Settings</PageTitle>
 
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
   Settings
 </MudText>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Tenant ID
+  </MudText>
+  <MudTextField T="Guid?"
+                Label="Your Public Key"
+                ReadOnly="true"
+                Variant="Variant.Filled"
+                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                OnAdornmentClick="CopyTenantId"
+                Adornment="Adornment.End"
+                Value="_tenantId"/>
+</div>
 
 <div class="mt-10">
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -28,7 +44,7 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Show Notification to User
   </MudText>
-  <MudCheckBox T="bool" 
+  <MudCheckBox T="bool"
                @bind-Value:get="_notifyUser"
                @bind-Value:set="SetNotifyUser"
                Label="Notify users when a remote control session starts"/>
@@ -39,12 +55,24 @@
 
   private bool _notifyUser;
   private string _userDisplayName = "";
+  private Guid? _tenantId;
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (state.User.TryGetTenantId(out var tenantId))
+    {
+      _tenantId = tenantId;
+    }
+
     _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
     _userDisplayName = await SettingsStore.GetUserDisplayName();
     await base.OnInitializedAsync();
+  }
+
+  private async Task CopyTenantId()
+  {
+    await ClipboardManager.SetText($"{_tenantId}");
   }
 
   private async Task SetNotifyUser(bool value)
@@ -52,7 +80,7 @@
     _notifyUser = value;
     await SettingsStore.SetNotifyUserOnSessionStart(value);
   }
-  
+
   private async Task SetUserDisplayName(string value)
   {
     _userDisplayName = value;

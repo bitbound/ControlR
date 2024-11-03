@@ -8,21 +8,21 @@ namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IControlrApi
 {
-  Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups();
+  Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
+  Task<Result> DeleteDevice(Guid deviceId);
+  Task<Result> DeleteTag(Guid tagId);
   IAsyncEnumerable<DeviceResponseDto> GetAllDevices();
 
-  Task<Result<List<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
-  Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
+  Task<Result<IReadOnlyList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
+  Task<Result<IReadOnlyList<UserResponseDto>>> GetAllUsers();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
-  Task<Result<List<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result<IReadOnlyList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
-  Task<Result> DeleteTag(Guid tagId);
-  Task<Result> DeleteDevice(Guid deviceId);
 }
 
 public class ControlrApi(
@@ -36,63 +36,9 @@ public class ControlrApi(
   private const string ServerVersionEndpoint = "/api/version/server";
   private const string TagsEndpoint = "/api/tags";
   private const string UserPreferencesEndpoint = "/api/user-preferences";
+  private const string UsersEndpoint = "/api/users";
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
-
-  public async Task<Result<List<DeviceGroupDto>>> GetAllDeviceGroups()
-  {
-    try
-    {
-      var deviceGroups = await _client.GetFromJsonAsync<List<DeviceGroupDto>>(DeviceGroupsEndpoint);
-      if (deviceGroups is null)
-      {
-        return Result.Fail<List<DeviceGroupDto>>("Server response was empty.");
-      }
-
-      return Result.Ok(deviceGroups);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<List<DeviceGroupDto>>(ex, "Error while getting device groups.")
-        .Log(_logger);
-    }
-  }
-
-  public async IAsyncEnumerable<DeviceResponseDto> GetAllDevices()
-  {
-    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(DevicesEndpoint);
-    await foreach (var device in stream)
-    {
-      if (device is null)
-      {
-        continue;
-      }
-
-      yield return device;
-    }
-  }
-
-  public async Task<Result<List<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
-  {
-    try
-    {
-      var tags = await _client.GetFromJsonAsync<List<TagResponseDto>>(
-        $"{TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
-      if (tags is null)
-      {
-        return Result.Fail<List<TagResponseDto>>("Server response was empty.");
-      }
-
-      return Result.Ok(tags);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<List<TagResponseDto>>(ex, "Error while getting user tags.")
-        .Log(_logger);
-    }
-  }
 
   public async Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType)
   {
@@ -117,22 +63,6 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result> DeleteTag(Guid tagId)
-  {
-    try
-    {
-      var response = await _client.DeleteAsync($"{TagsEndpoint}/{tagId}");
-      response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while deleting tag.")
-        .Log(_logger);
-    }
-  }
-
   public async Task<Result> DeleteDevice(Guid deviceId)
   {
     try
@@ -149,6 +79,72 @@ public class ControlrApi(
     }
   }
 
+  public async Task<Result> DeleteTag(Guid tagId)
+  {
+    try
+    {
+      var response = await _client.DeleteAsync($"{TagsEndpoint}/{tagId}");
+      response.EnsureSuccessStatusCode();
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Error while deleting tag.")
+        .Log(_logger);
+    }
+  }
+
+  public async IAsyncEnumerable<DeviceResponseDto> GetAllDevices()
+  {
+    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(DevicesEndpoint);
+    await foreach (var device in stream)
+    {
+      if (device is null)
+      {
+        continue;
+      }
+
+      yield return device;
+    }
+  }
+
+  public async Task<Result<IReadOnlyList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
+  {
+    try
+    {
+      var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
+        $"{TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
+
+      return tags is null
+        ? Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.")
+        : Result.Ok(tags);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<IReadOnlyList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result<IReadOnlyList<UserResponseDto>>> GetAllUsers()
+  {
+    try
+    {
+      var users = await _client.GetFromJsonAsync<IReadOnlyList<UserResponseDto>>(UsersEndpoint);
+      return users is null
+        ? Result.Fail<IReadOnlyList<UserResponseDto>>("Server response was empty.")
+        : Result.Ok(users);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<IReadOnlyList<UserResponseDto>>(ex, "Error while getting users.")
+        .Log(_logger);
+    }
+  }
+
   public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
   {
     try
@@ -157,14 +153,14 @@ public class ControlrApi(
       using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
       using var response = await _client.SendAsync(request);
       response.EnsureSuccessStatusCode();
-      if (response.Headers.TryGetValues("Content-Hash", out var values) &&
-          values.FirstOrDefault() is { } hashString)
+      if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
+          values.FirstOrDefault() is not { } hashString)
       {
-        var fileHash = Convert.FromHexString(hashString);
-        return Result.Ok(fileHash);
+        return Result.Fail<byte[]>("Failed to get agent file hash.");
       }
 
-      return Result.Fail<byte[]>("Failed to get agent file hash.");
+      var fileHash = Convert.FromHexString(hashString);
+      return Result.Ok(fileHash);
     }
     catch (Exception ex)
     {
@@ -284,15 +280,15 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<List<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
+  public async Task<Result<IReadOnlyList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
     try
     {
-      var tags = await _client.GetFromJsonAsync<List<TagResponseDto>>(
+      var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
         $"{TagsEndpoint}/{userId}?includeLinkedIds={includeLinkedIds}");
       if (tags is null)
       {
-        return Result.Fail<List<TagResponseDto>>("Server response was empty.");
+        return Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.");
       }
 
       return Result.Ok(tags);
@@ -300,7 +296,7 @@ public class ControlrApi(
     catch (Exception ex)
     {
       return Result
-        .Fail<List<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Fail<IReadOnlyList<TagResponseDto>>(ex, "Error while getting user tags.")
         .Log(_logger);
     }
   }

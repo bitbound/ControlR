@@ -6,7 +6,6 @@
 @inject AuthenticationStateProvider AuthState
 @inject ISnackbar Snackbar
 @inject IClipboardManager Clipboard
-@inject IBusyCounter BusyCounter
 @inject IControlrApi ControlrApi
 
 <PageTitle>Deploy</PageTitle>
@@ -33,7 +32,7 @@
                 OnAdornmentClick="CopyWindowsScript"
                 Adornment="Adornment.End"
                 Value="WindowsDeployScript"
-                Class="mb-5" />
+                Class="mb-5"/>
 
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Ubuntu (Bash)
@@ -46,7 +45,7 @@
                 OnAdornmentClick="CopyUbuntuScript"
                 Adornment="Adornment.End"
                 Value="UbuntuDeployScript"
-                Class="mb-5" />
+                Class="mb-5"/>
 
   @*     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
   Mac x64 (zsh)
@@ -80,35 +79,36 @@
 
   <div>
     <MudText Typo="Typo.subtitle2" Color="Color.Info">
-      Device Group
+      Device Tags
     </MudText>
     <MudText Typo="Typo.body1" GutterBottom>
-      If enabled, the device will be added to the specified group during installation.
+      If enabled, the device will be assigned the selected tags upon installation.
+      Tags are used to link devices to users for access control.
     </MudText>
-    <MudCheckBox @bind-Value="_addToDeviceGroup" Label="Add to device group" />
+    <MudCheckBox @bind-Value="_addTags" Label="Add device tags"/>
 
-    <MudSelect T="DeviceGroupDto" @bind-Value="_selectedDeviceGroup" Disabled="!_addToDeviceGroup" Immediate FullWidth="false" Label="Device Group">
-      <MudSelectItem T="DeviceGroupDto" Value="@(null)">
-        None
-      </MudSelectItem>
-
-      @foreach (var group in _deviceGroups)
+    <MudSelect T="TagResponseDto[]?"
+               @bind-Value="_selectedTags"
+               Disabled="!_addTags"
+               Immediate
+               FullWidth="false"
+               Label="Tags">
+      @foreach (var tag in _tags)
       {
-        <MudSelectItem Value="@group">
-          @(group.Name)
+        <MudSelectItem Value="@tag">
+          @(tag.Name)
         </MudSelectItem>
       }
     </MudSelect>
   </div>
-
 </div>
 
 
 @code {
-  private bool _addToDeviceGroup;
-  private DeviceGroupDto? _selectedDeviceGroup;
+  private bool _addTags;
+  private TagResponseDto[]? _selectedTags;
+  private IReadOnlyList<TagResponseDto> _tags = [];
   private Guid? _tenantId;
-  private List<DeviceGroupDto> _deviceGroups = [];
 
   protected override async Task OnInitializedAsync()
   {
@@ -120,18 +120,18 @@
       _tenantId = tenantId;
     }
 
-    var result = await ControlrApi.GetAllDeviceGroups();
+    var result = await ControlrApi.GetAllTags();
     if (result.IsSuccess)
     {
-      _deviceGroups = result.Value;
+      _tags = result.Value;
     }
     else
     {
-      Snackbar.Add("Failed to get device groups", Severity.Error);     
+      Snackbar.Add("Failed to get tags", Severity.Error);
     }
   }
 
-  private string MacArm64DeployScript
+  /*private string MacArm64DeployScript
   {
     get
     {
@@ -142,10 +142,10 @@
         $"sudo chmod +x /tmp/ControlR.Agent && " +
         $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
     }
-  }
+  }*/
 
 
-  private string MacX64DeployScript
+  /*private string MacX64DeployScript
   {
     get
     {
@@ -156,7 +156,7 @@
         $"sudo chmod +x /tmp/ControlR.Agent && " +
         $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
     }
-  }
+  }*/
 
   private string UbuntuDeployScript
   {
@@ -164,10 +164,10 @@
     {
       var downloadUri = new Uri(GetServerUri(), "/downloads/linux-x64/ControlR.Agent");
       return
-          $"sudo rm -f /tmp/ControlR.Agent && " +
-          $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
-          $"sudo chmod +x /tmp/ControlR.Agent && " +
-          $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
     }
   }
 
@@ -177,11 +177,12 @@
     {
       var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
       return "$ProgressPreference = \"SilentlyContinue\"; " +
-          $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
-          $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
+             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+             $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }
 
+  /*
   private async Task CopyMacArm64Script()
   {
     await Clipboard.SetText(MacArm64DeployScript);
@@ -193,15 +194,28 @@
     await Clipboard.SetText(MacX64DeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
+  */
 
   private async Task CopyUbuntuScript()
   {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
     await Clipboard.SetText(UbuntuDeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
 
   private async Task CopyWindowsScript()
   {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
     await Clipboard.SetText(WindowsDeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
@@ -209,11 +223,12 @@
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
-    var args = $"-s {NavMan.Uri} -i {serverUri.Authority}";
-    if (_addToDeviceGroup && _selectedDeviceGroup is not null)
-    {
-      args += $" -g {_selectedDeviceGroup.Id}";
-    }
+    var args = $"-s {NavMan.Uri} -i {serverUri.Authority} -t {_tenantId}";
+
+    if (!_addTags || _selectedTags is null) return args;
+
+    var tags = string.Join(",", _selectedTags.Select(t => t.Id));
+    args += $" -g \"{tags}\"";
 
     return args;
   }
@@ -222,4 +237,5 @@
   {
     return new Uri(NavMan.Uri);
   }
+
 }

@@ -7,6 +7,9 @@ namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
+  UserManager<AppUser> userManager,
+  AppDb appDb,
+  IAuthorizationService authorizationService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IConnectionCounter connectionCounter,
@@ -16,12 +19,15 @@ public class ViewerHub(
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
   private readonly IHubContext<AgentHub, IAgentHubClient> _agentHub = agentHub;
-  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly AppDb _appDb = appDb;
+  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
+  private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly IConnectionCounter _connectionCounter = connectionCounter;
   private readonly IIpApi _ipApi = ipApi;
-  private readonly IWsBridgeApi _wsBridgeApi = wsBridgeApi;
-  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly ILogger<ViewerHub> _logger = logger;
+  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly UserManager<AppUser> _userManager = userManager;
+  private readonly IWsBridgeApi _wsBridgeApi = wsBridgeApi;
 
   public Task<bool> CheckIfServerAdministrator()
   {
@@ -87,7 +93,7 @@ public class ViewerHub(
         return null;
       }
 
-      var ipAddress = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString();
+      var ipAddress = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
       if (string.IsNullOrWhiteSpace(ipAddress))
       {
         return null;
@@ -168,15 +174,17 @@ public class ViewerHub(
           await Clients.Caller.ReceiveServerStats(getResult.Value);
         }
       }
-      
+
       if (Context.User.IsInRole(RoleNames.TenantAdministrator))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
+        await Groups.AddToGroupAsync(Context.ConnectionId,
+          HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
       }
 
       if (Context.User.IsInRole(RoleNames.DeviceSuperUser))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
+        await Groups.AddToGroupAsync(Context.ConnectionId,
+          HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
       }
     }
     catch (Exception ex)
@@ -211,12 +219,14 @@ public class ViewerHub(
 
       if (Context.User.IsInRole(RoleNames.TenantAdministrator))
       {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId,
+          HubGroupNames.GetUserRoleGroupName(RoleNames.TenantAdministrator, tenantId));
       }
 
       if (Context.User.IsInRole(RoleNames.DeviceSuperUser))
       {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
+        await Groups.AddToGroupAsync(Context.ConnectionId,
+          HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, tenantId));
       }
     }
     catch (Exception ex)
@@ -269,13 +279,36 @@ public class ViewerHub(
   {
     using var scope = _logger.BeginMemberScope();
 
-    await _agentHub.Clients.Group(HubGroupNames.GetDeviceGroupName(deviceId)).ReceiveDto(wrapper);
+    if (!TryGetTenantId(out var tenantId))
+    {
+      return;
+    }
+
+    await _agentHub.Clients
+      .Group(HubGroupNames.GetDeviceGroupName(deviceId, tenantId))
+      .ReceiveDto(wrapper);
   }
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
   {
-    // TODO: Implement this.
-    await Task.Yield();
+    if (!TryGetUserId(out var userId))
+    {
+      return;
+    }
+
+    var user = await _userManager
+      .Users
+      .Include(x => x.Tags!)
+      .ThenInclude(x => x.Devices)
+      .FirstOrDefaultAsync(x => x.Id == userId);
+
+    if (user?.Tags is null)
+    {
+      return;
+    }
+
+    var groupNames = user.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
+    await Clients.Groups(groupNames).ReceiveDto(wrapper);
   }
 
   public async Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto)
@@ -288,6 +321,45 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while sending terminal input.");
       return Result.Fail("Agent could not be reached.");
+    }
+  }
+
+  public async Task UninstallAgent(Guid deviceId, string reason)
+  {
+    try
+    {
+      if (Context.User is null)
+      {
+        return;
+      }
+
+      var device = await appDb.Devices.AsNoTracking().FirstOrDefaultAsync(x => x.Id == deviceId);
+      if (device is null)
+      {
+        return;
+      }
+
+      var authResult =
+        await _authorizationService.AuthorizeAsync(Context.User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+      if (authResult.Succeeded)
+      {
+        _logger.LogCritical(
+          "Unauthorized agent uninstall attempted by user: {UserName}.  Device: {DeviceId}",
+          Context.UserIdentifier,
+          deviceId);
+        return;
+      }
+
+      _logger.LogInformation(
+        "Agent uninstall command sent by user: {UserName}.  Device: {DeviceId}",
+        Context.UserIdentifier,
+        deviceId);
+      await _agentHub.Clients.Client(device.ConnectionId).UninstallAgent(reason);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while uninstalling agent.");
     }
   }
 
@@ -313,6 +385,34 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
     }
+  }
+
+  private bool TryGetTenantId(
+    out Guid tenantId,
+    [CallerMemberName] string callerName = "")
+  {
+    tenantId = Guid.Empty;
+    if (Context.User?.TryGetTenantId(out tenantId) == true)
+    {
+      return true;
+    }
+
+    _logger.LogError("TenantId claim is unexpected missing when calling {MemberName}.", callerName);
+    return false;
+  }
+
+  private bool TryGetUserId(
+    out Guid userId,
+    [CallerMemberName] string callerName = "")
+  {
+    userId = Guid.Empty;
+    if (Context.User?.TryGetUserId(out userId) == true)
+    {
+      return true;
+    }
+
+    _logger.LogError("UserId claim is unexpected missing when calling {MemberName}.", callerName);
+    return false;
   }
 
   private bool VerifyIsServerAdmin([CallerMemberName] string callerMember = "")

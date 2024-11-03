@@ -35,6 +35,7 @@ public interface IViewerHubConnection
   Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
+  Task UninstallAgent(Guid deviceId, string reason);
 }
 
 internal class ViewerHubConnection(
@@ -46,13 +47,13 @@ internal class ViewerHubConnection(
   IDelayer delayer,
   ILogger<ViewerHubConnection> logger) : IViewerHubConnection
 {
-  private readonly NavigationManager _navMan = navMan;
-  private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
   private readonly IBusyCounter _busyCounter = busyCounter;
-  private readonly ISettings _settings = settings;
-  private readonly IMessenger _messenger = messenger;
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<ViewerHubConnection> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
+  private readonly NavigationManager _navMan = navMan;
+  private readonly ISettings _settings = settings;
+  private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
 
   public HubConnectionState ConnectionState => _viewerHub.ConnectionState;
   public bool IsConnected => _viewerHub.IsConnected;
@@ -74,8 +75,8 @@ internal class ViewerHubConnection(
     while (true)
     {
       var result = await _viewerHub.Connect(
-        hubEndpoint: new Uri($"{_navMan.BaseUri}hubs/viewer"),
-        autoRetry: true,
+        new Uri($"{_navMan.BaseUri}hubs/viewer"),
+        true,
         cancellationToken: cancellationToken);
 
       if (result)
@@ -91,7 +92,8 @@ internal class ViewerHubConnection(
     await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId)
+  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
+    Guid terminalId)
   {
     return await TryInvoke(
       async () =>
@@ -108,10 +110,7 @@ internal class ViewerHubConnection(
   public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
   {
     return await TryInvoke(
-      async () =>
-      {
-        return await _viewerHub.Server.GetAgentAppSettings(agentConnectionId);
-      },
+      async () => { return await _viewerHub.Server.GetAgentAppSettings(agentConnectionId); },
       () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
   }
 
@@ -234,7 +233,6 @@ internal class ViewerHubConnection(
       async () =>
       {
         var request = new TerminalInputDto(terminalId, input);
-        var wrapper = DtoWrapper.Create(request, DtoType.TerminalInput);
         return await _viewerHub.Server.SendTerminalInput(agentConnectionId, request);
       },
       () => Result.Fail("Failed to send terminal input"));
@@ -250,6 +248,13 @@ internal class ViewerHubConnection(
         await _viewerHub.Server.SendDtoToUserGroups(wrapper);
       });
   }
+
+  public async Task UninstallAgent(Guid deviceId, string reason)
+  {
+    await TryInvoke(
+      async () => { await _viewerHub.Server.UninstallAgent(deviceId, reason); });
+  }
+
   private async Task Connection_Closed(Exception? arg)
   {
     await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
@@ -301,13 +306,5 @@ internal class ViewerHubConnection(
   private async Task WaitForConnection()
   {
     await _delayer.WaitForAsync(() => _viewerHub.IsConnected);
-  }
-
-  private class RetryPolicy : IRetryPolicy
-  {
-    public TimeSpan? NextRetryDelay(RetryContext retryContext)
-    {
-      return TimeSpan.FromSeconds(3);
-    }
   }
 }

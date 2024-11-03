@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿namespace ControlR.Web.Server.Authz;
 
-namespace ControlR.Web.Server.Authz;
-
-public class ServiceProviderRequirement(Func<IServiceProvider, AuthorizationHandlerContext, bool> assertion)
+public class ServiceProviderRequirement(
+  Func<IServiceProvider, AuthorizationHandlerContext, IAuthorizationHandler, bool> assertion)
   : IAuthorizationRequirement
 {
-  public Func<IServiceProvider, AuthorizationHandlerContext, bool> Assertion { get; } = assertion;
+  public Func<IServiceProvider, AuthorizationHandlerContext, IAuthorizationHandler, bool> Assertion { get; } =
+    assertion;
 }

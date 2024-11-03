@@ -11,10 +11,30 @@ namespace ControlR.Agent.Startup;
 
 internal class CommandProvider
 {
+  private static readonly string[] _deviceTagsAlias = ["-g", "--device-tags"];
   private static readonly string[] _instanceIdAlias = ["-i", "--instance-id"];
   private static readonly string[] _pipeNameAlias = ["-p", "--pipe-name"];
   private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
-  private static readonly string[] _deviceGroupAlias = ["-g", "--device-group"];
+  private static readonly string[] _tenantIdAlias = ["-t", "--tenant-id"];
+
+  private static IHost CreateHost(StartupMode startupMode, string[] args, string? instanceId = null)
+  {
+    var host = Host.CreateApplicationBuilder(args);
+    host.AddControlRAgent(startupMode, instanceId);
+    return host.Build();
+  }
+
+  private static void ValidateInstanceId(OptionResult optionResult)
+  {
+    var id = optionResult.GetValueOrDefault<string>();
+    char[] illegalChars = [.. Path.GetInvalidPathChars(), ' '];
+
+    if (id is not null && id.IndexOfAny(illegalChars) >= 0)
+    {
+      optionResult.ErrorMessage =
+        $"The instance ID contains one or more invalid characters: {string.Join(", ", illegalChars)}";
+    }
+  }
 
   internal static Command GetEchoDesktopCommand(string[] args)
   {
@@ -53,9 +73,16 @@ internal class CommandProvider
       "An instance ID for this agent installation, which allows multiple agent installations.  " +
       "This is typically the server origin (e.g. 'example.controlr.app').");
 
-    var deviceGroupOption = new Option<Guid?>(
-      _deviceGroupAlias,
-      "An optional device group GUID to which the agent should be added.");
+    var deviceTagsOption = new Option<string?>(
+      _deviceTagsAlias,
+      "An optional, comma-separated list of tags to which the agent will be assigned.");
+
+    var tenantIdOption = new Option<Guid?>(
+      _tenantIdAlias,
+      "The tenant ID to which the agent will be assigned.")
+    {
+      IsRequired = true
+    };
 
     instanceIdOption.AddValidator(ValidateInstanceId);
 
@@ -63,16 +90,26 @@ internal class CommandProvider
     {
       serverUriOption,
       instanceIdOption,
-      deviceGroupOption,
+      deviceTagsOption
     };
 
-    installCommand.SetHandler(async (serverUri, instanceId, deviceGroupId) =>
+    installCommand.SetHandler(async (serverUri, instanceId, deviceTags, tenantId) =>
     {
+      var tags = deviceTags is null
+        ? []
+        : deviceTags
+          .Split(",")
+          .Select(x => Guid.TryParse(x, out var tagId)
+            ? tagId
+            : Guid.Empty)
+          .Where(x => x != Guid.Empty)
+          .ToArray();
+
       using var host = CreateHost(StartupMode.Install, args, instanceId);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
-      await installer.Install(serverUri, deviceGroupId);
+      await installer.Install(serverUri, tenantId, tags);
       await host.RunAsync();
-    }, serverUriOption, instanceIdOption, deviceGroupOption);
+    }, serverUriOption, instanceIdOption, deviceTagsOption, tenantIdOption);
 
     return installCommand;
   }
@@ -117,24 +154,5 @@ internal class CommandProvider
       await host.RunAsync();
     }, instanceIdOption);
     return unInstallCommand;
-  }
-
-  private static IHost CreateHost(StartupMode startupMode, string[] args, string? instanceId = null)
-  {
-    var host = Host.CreateApplicationBuilder(args);
-    host.AddControlRAgent(startupMode, instanceId);
-    return host.Build();
-  }
-
-  private static void ValidateInstanceId(OptionResult optionResult)
-  {
-    var id = optionResult.GetValueOrDefault<string>();
-    char[] illegalChars = [.. Path.GetInvalidPathChars(), ' '];
-
-    if (id is not null && id.IndexOfAny(illegalChars) >= 0)
-    {
-      optionResult.ErrorMessage =
-        $"The instance ID contains one or more invalid characters: {string.Join(", ", illegalChars)}";
-    }
   }
 }
