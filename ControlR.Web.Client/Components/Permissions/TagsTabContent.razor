@@ -3,7 +3,7 @@
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Tags
     </MudText>
-    
+
     <MudTextField T="string"
                   @bind-Value="_newTagName"
                   Label="Create New Tag"
@@ -20,7 +20,7 @@
                   Validation="@((string x) => ValidateNewTagName(x))">
     </MudTextField>
     <MudPaper>
-      <MudList T="TagResponseDto?"
+      <MudList T="TagResponseDto"
                SelectionMode="SelectionMode.SingleSelection"
                Color="Color.Info"
                @bind-SelectedValue="_selectedTag">

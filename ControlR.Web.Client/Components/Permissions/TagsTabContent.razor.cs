@@ -6,25 +6,25 @@ namespace ControlR.Web.Client.Components.Permissions;
 
 public partial class TagsTabContent : ComponentBase
 {
-  private TagResponseDto? _selectedTag;
   private string? _newTagName;
-  
+  private TagResponseDto? _selectedTag;
+
+  [Inject]
+  public required IControlrApi ControlrApi { get; init; }
+
+  [Inject]
+  public required IDialogService DialogService { get; init; }
+
+  [Parameter]
+  public EventCallback OnTagsChanged { get; set; }
+
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+
   [Parameter]
   [EditorRequired]
   public required ConcurrentList<TagResponseDto> Tags { get; init; }
-  
-  [Parameter]
-  public EventCallback OnTagsChanged { get; set; }
-  
-  [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-  
-  [Inject]
-  public required ISnackbar Snackbar { get; init; }
-  
-  [Inject]
-  public required IDialogService DialogService { get; init; }
-  
+
   private async Task CreateTag()
   {
     if (string.IsNullOrWhiteSpace(_newTagName))
@@ -32,7 +32,7 @@ public partial class TagsTabContent : ComponentBase
       Snackbar.Add("Tag name is required", Severity.Error);
       return;
     }
-    
+
     if (!IsNewTagNameValid())
     {
       return;
@@ -44,7 +44,7 @@ public partial class TagsTabContent : ComponentBase
       Snackbar.Add(createResult.Reason, Severity.Error);
       return;
     }
-    
+
     Snackbar.Add("Tag created", Severity.Success);
     Tags.Add(createResult.Value);
     _newTagName = null;
@@ -57,20 +57,21 @@ public partial class TagsTabContent : ComponentBase
     {
       return;
     }
-    
-    var result = await DialogService.ShowMessageBox("Confirm Deletion", "Are you sure you want to delete this tag?", "Yes", "No");
+
+    var result =
+      await DialogService.ShowMessageBox("Confirm Deletion", "Are you sure you want to delete this tag?", "Yes", "No");
     if (!result.HasValue || !result.Value)
     {
       return;
     }
-    
+
     var deleteResult = await ControlrApi.DeleteTag(_selectedTag.Id);
     if (!deleteResult.IsSuccess)
     {
       Snackbar.Add(deleteResult.Reason, Severity.Error);
       return;
     }
-    
+
     Tags.Remove(_selectedTag);
     Snackbar.Add("Tag deleted", Severity.Success);
     await OnTagsChanged.InvokeAsync();
@@ -85,8 +86,11 @@ public partial class TagsTabContent : ComponentBase
   }
 
   [MemberNotNullWhen(true, nameof(_newTagName))]
-  private bool IsNewTagNameValid() => ValidateNewTagName(_newTagName) == null;
-  
+  private bool IsNewTagNameValid()
+  {
+    return ValidateNewTagName(_newTagName) == null;
+  }
+
   private string? ValidateNewTagName(string? tagName)
   {
     if (string.IsNullOrWhiteSpace(tagName))

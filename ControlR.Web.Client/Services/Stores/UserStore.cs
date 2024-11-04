@@ -3,7 +3,6 @@
 public class UserStore(
   IControlrApi controlrApi,
   ISnackbar snackbar,
-  IMessenger messenger,
   ILogger<UserStore> logger) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger)
 {
   protected override async Task RefreshImpl()

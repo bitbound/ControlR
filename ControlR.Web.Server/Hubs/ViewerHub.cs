@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
@@ -241,9 +242,32 @@ public class ViewerHub(
   {
     try
     {
-      // TODO: Get user name from IUserStore
-      //var name = Context.User?.Identity?.Name;
-      //sessionRequestDto = sessionRequestDto with { ViewerName = name ?? "" };
+      if (!TryGetUserId(out var userId))
+      {
+        return Result.Fail("Failed to get user ID.");
+      }
+
+      var user = await _userManager.Users
+        .AsNoTracking()
+        .Include(x => x.UserPreferences)
+        .FirstOrDefaultAsync(x => x.Id == userId);
+
+      if (user is null)
+      {
+        return Result.Fail("User not found.");
+      }
+
+      var displayName = user.UserPreferences
+        ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
+        ?.Value;
+
+      if (string.IsNullOrWhiteSpace(displayName))
+      {
+        displayName = user.UserName ?? "";
+      }
+
+      // TODO: Convert to record.  Use with.
+      sessionRequestDto.ViewerName = displayName;
 
       var sessionSuccess = await _agentHub.Clients
         .Client(agentConnectionId)
@@ -277,16 +301,29 @@ public class ViewerHub(
 
   public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {
-    using var scope = _logger.BeginMemberScope();
-
-    if (!TryGetTenantId(out var tenantId))
+    try
     {
-      return;
-    }
+      using var scope = _logger.BeginMemberScope();
 
-    await _agentHub.Clients
-      .Group(HubGroupNames.GetDeviceGroupName(deviceId, tenantId))
-      .ReceiveDto(wrapper);
+      if (!TryGetTenantId(out var tenantId))
+      {
+        return;
+      }
+
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return;
+      }
+
+      await _agentHub.Clients
+        .Group(HubGroupNames.GetDeviceGroupName(deviceId, tenantId))
+        .ReceiveDto(wrapper);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending DTO to agent.");
+    }
   }
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
@@ -311,11 +348,19 @@ public class ViewerHub(
     await Clients.Groups(groupNames).ReceiveDto(wrapper);
   }
 
-  public async Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto)
+  public async Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
   {
     try
     {
-      return await _agentHub.Clients.Client(agentConnectionId).ReceiveTerminalInput(dto);
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return Result.Fail("User is not authorized to send terminal input.");
+      }
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .ReceiveTerminalInput(dto);
     }
     catch (Exception ex)
     {
@@ -328,26 +373,9 @@ public class ViewerHub(
   {
     try
     {
-      if (Context.User is null)
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
       {
-        return;
-      }
-
-      var device = await appDb.Devices.AsNoTracking().FirstOrDefaultAsync(x => x.Id == deviceId);
-      if (device is null)
-      {
-        return;
-      }
-
-      var authResult =
-        await _authorizationService.AuthorizeAsync(Context.User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-
-      if (authResult.Succeeded)
-      {
-        _logger.LogCritical(
-          "Unauthorized agent uninstall attempted by user: {UserName}.  Device: {DeviceId}",
-          Context.UserIdentifier,
-          deviceId);
         return;
       }
 
@@ -355,7 +383,7 @@ public class ViewerHub(
         "Agent uninstall command sent by user: {UserName}.  Device: {DeviceId}",
         Context.UserIdentifier,
         deviceId);
-      await _agentHub.Clients.Client(device.ConnectionId).UninstallAgent(reason);
+      await _agentHub.Clients.Client(authResult.Value.ConnectionId).UninstallAgent(reason);
     }
     catch (Exception ex)
     {
@@ -385,6 +413,45 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
     }
+  }
+
+  private async Task<Result<Device>> TryAuthorizeAgainstDevice(
+    Guid deviceId,
+    [CallerMemberName] string? callerName = null)
+  {
+    if (Context.User is null)
+    {
+      _logger.LogCritical("User is null.  Authorize tag should have prevented this.");
+      return Result.Fail<Device>("User is null.  Authorize tag should have prevented this.");
+    }
+
+    var device = await _appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId);
+
+    if (device is null)
+    {
+      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return Result.Fail<Device>("Device not found.");
+    }
+
+    var authResult = await _authorizationService.AuthorizeAsync(
+      Context.User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (authResult.Succeeded)
+    {
+      return Result.Ok(device);
+    }
+
+    _logger.LogCritical(
+      "Unauthorized agent access attempted by user: {UserName}.  Device: {DeviceId}.  Method: {MemberName}.",
+      Context.UserIdentifier,
+      deviceId,
+      callerName);
+
+    return Result.Fail<Device>("Unauthorized.");
   }
 
   private bool TryGetTenantId(

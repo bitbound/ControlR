@@ -1,8 +1,7 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
-using System.Collections.Concurrent;
 
 namespace ControlR.Web.Client.Components;
 
@@ -25,10 +24,12 @@ public partial class Terminal : IAsyncDisposable
   [CascadingParameter]
   public required DeviceContentInstance ContentInstance { get; init; }
 
-  [Parameter, EditorRequired]
+  [Parameter]
+  [EditorRequired]
   public required DeviceResponseDto Device { get; init; }
 
-  [Parameter, EditorRequired]
+  [Parameter]
+  [EditorRequired]
   public required Guid Id { get; init; }
 
   [Inject]
@@ -52,13 +53,9 @@ public partial class Terminal : IAsyncDisposable
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private int InputLineCount
-  {
-    get
-    {
-      return _enableMultiline ? 6 : 1;
-    }
-  }
+  private int InputLineCount => _enableMultiline
+    ? 6
+    : 1;
 
   private ConcurrentQueue<TerminalOutputDto> Output { get; } = [];
 
@@ -89,7 +86,6 @@ public partial class Terminal : IAsyncDisposable
         Snackbar.Add("Failed to start terminal", Severity.Error);
         Logger.LogResult(result);
         WindowStore.Remove(ContentInstance);
-        return;
       }
     }
     catch (Exception ex)
@@ -110,7 +106,7 @@ public partial class Terminal : IAsyncDisposable
     {
       TerminalOutputKind.StandardOutput => "",
       TerminalOutputKind.StandardError => "mud-error-text",
-      _ => "",
+      _ => ""
     };
   }
 
@@ -134,6 +130,7 @@ public partial class Terminal : IAsyncDisposable
     {
       return "";
     }
+
     return _inputHistory.ElementAt(_inputHistoryIndex);
   }
 
@@ -199,7 +196,7 @@ public partial class Terminal : IAsyncDisposable
         _inputHistory.Add(_inputText);
         _inputHistoryIndex = _inputHistory.Count;
 
-        var result = await ViewerHub.SendTerminalInput(Device.ConnectionId, Id, _inputText);
+        var result = await ViewerHub.SendTerminalInput(Device.Id, Id, _inputText);
         if (!result.IsSuccess)
         {
           Snackbar.Add(result.Reason, Severity.Error);

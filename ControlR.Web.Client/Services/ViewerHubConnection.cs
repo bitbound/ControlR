@@ -33,7 +33,7 @@ public interface IViewerHubConnection
 
   Task SendAgentUpdateTrigger(DeviceResponseDto device);
   Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType);
-  Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input);
+  Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
   Task UninstallAgent(Guid deviceId, string reason);
 }
@@ -227,13 +227,13 @@ internal class ViewerHubConnection(
     });
   }
 
-  public async Task<Result> SendTerminalInput(string agentConnectionId, Guid terminalId, string input)
+  public async Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input)
   {
     return await TryInvoke(
       async () =>
       {
         var request = new TerminalInputDto(terminalId, input);
-        return await _viewerHub.Server.SendTerminalInput(agentConnectionId, request);
+        return await _viewerHub.Server.SendTerminalInput(deviceId, request);
       },
       () => Result.Fail("Failed to send terminal input"));
   }

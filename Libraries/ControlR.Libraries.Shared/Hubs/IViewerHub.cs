@@ -23,6 +23,6 @@ public interface IViewerHub
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings signedDto);
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);
-  Task<Result> SendTerminalInput(string agentConnectionId, TerminalInputDto dto);
+  Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto);
   Task UninstallAgent(Guid deviceId, string reason);
 }
