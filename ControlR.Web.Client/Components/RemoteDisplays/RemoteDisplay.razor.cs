@@ -629,7 +629,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-        Session.Device.ConnectionId,
+        Session.Device.Id,
         Session.SessionId,
         websocketUri,
         Session.InitialSystemSession);

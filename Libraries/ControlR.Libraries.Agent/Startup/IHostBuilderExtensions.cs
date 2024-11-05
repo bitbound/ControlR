@@ -25,10 +25,9 @@ internal static class HostApplicationBuilderExtensions
 {
   internal static IHostApplicationBuilder AddControlRAgent(this HostApplicationBuilder builder, StartupMode startupMode, string? instanceId)
   {
+    instanceId = instanceId?.SanitizeForFileSystem();
     var services = builder.Services;
     var configuration = builder.Configuration;
-    var logging = builder.Logging;
-
     services
       .AddWindowsService(config =>
       {
@@ -60,8 +59,7 @@ internal static class HostApplicationBuilderExtensions
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
     services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
-    services.AddHttpClient<IReleasesApi, ReleasesApi>();
-
+    
     services.AddSingleton<ISettingsProvider, SettingsProvider>();
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);

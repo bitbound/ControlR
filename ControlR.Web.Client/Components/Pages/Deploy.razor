@@ -16,7 +16,6 @@
 
 <MudText Typo="Typo.subtitle1" GutterBottom>
   Run these scripts on a remote device to install the agent.
-  It will be configured with your public key, allowing you to access the device.
 </MudText>
 
 
@@ -87,11 +86,13 @@
     </MudText>
     <MudCheckBox @bind-Value="_addTags" Label="Add device tags"/>
 
-    <MudSelect T="TagResponseDto[]"
-               @bind-Value="_selectedTags"
+    <MudSelect T="TagResponseDto"
+               @bind-SelectedValues="_selectedTags"
                Disabled="!_addTags"
                Immediate
+               MultiSelection
                FullWidth="false"
+               Text="@(SelectedTagsText)"
                Label="Tags">
       @foreach (var tag in _tags)
       {
@@ -106,7 +107,7 @@
 
 @code {
   private bool _addTags;
-  private TagResponseDto[]? _selectedTags;
+  private IEnumerable<TagResponseDto>? _selectedTags;
   private IReadOnlyList<TagResponseDto> _tags = [];
   private Guid? _tenantId;
 
@@ -120,6 +121,7 @@
       _tenantId = tenantId;
     }
 
+    // TODO: Get user-tags.
     var result = await ControlrApi.GetAllTags();
     if (result.IsSuccess)
     {
@@ -158,6 +160,10 @@
     }
   }*/
 
+  private string SelectedTagsText => _selectedTags is null
+    ? ""
+    : string.Join(", ", _selectedTags.Select(x => x.Name));
+  
   private string UbuntuDeployScript
   {
     get
@@ -228,14 +234,14 @@
     if (!_addTags || _selectedTags is null) return args;
 
     var tags = string.Join(",", _selectedTags.Select(t => t.Id));
-    args += $" -g \"{tags}\"";
+    args += $" -g {tags}";
 
     return args;
   }
 
   private Uri GetServerUri()
   {
-    return new Uri(NavMan.Uri);
+    var currentUri = new Uri(NavMan.Uri);
+    return new Uri($"{currentUri.Scheme}://{currentUri.Authority}");
   }
-
 }

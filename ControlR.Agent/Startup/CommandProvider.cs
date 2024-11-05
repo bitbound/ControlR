@@ -90,7 +90,8 @@ internal class CommandProvider
     {
       serverUriOption,
       instanceIdOption,
-      deviceTagsOption
+      deviceTagsOption,
+      tenantIdOption
     };
 
     installCommand.SetHandler(async (serverUri, instanceId, deviceTags, tenantId) =>

@@ -24,7 +24,7 @@ public interface IViewerHubConnection
   Task InvokeCtrlAltDel(Guid deviceId);
 
   Task<Result> RequestStreamingSession(
-    string agentConnectionId,
+    Guid deviceId,
     Guid sessionId,
     Uri websocketUri,
     int targetSystemSession);
@@ -164,7 +164,7 @@ internal class ViewerHubConnection(
 
 
   public async Task<Result> RequestStreamingSession(
-    string agentConnectionId,
+    Guid deviceId,
     Guid sessionId,
     Uri websocketUri,
     int targetSystemSession)
@@ -182,10 +182,10 @@ internal class ViewerHubConnection(
         websocketUri,
         targetSystemSession,
         _viewerHub.ConnectionId,
-        agentConnectionId,
+        deviceId,
         notifyUser);
 
-      var result = await _viewerHub.Server.RequestStreamingSession(agentConnectionId, requestDto);
+      var result = await _viewerHub.Server.RequestStreamingSession(deviceId, requestDto);
 
       return result.Log(_logger);
     }

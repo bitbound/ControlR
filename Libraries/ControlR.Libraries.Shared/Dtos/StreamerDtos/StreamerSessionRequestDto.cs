@@ -10,12 +10,12 @@ public class StreamerSessionRequestDto(
   Uri websocketUri,
   int targetSystemSession,
   string viewerConnectionId,
-  string agentConnectionId,
+  Guid deviceId,
   bool notifyUserOnSessionStart,
   string viewerName = "")
 {
   [MsgPackKey]
-  public string AgentConnectionId { get; init; } = agentConnectionId;
+  public Guid DeviceId { get; init; } = deviceId;
 
   [MsgPackKey]
   public bool NotifyUserOnSessionStart { get; init; } = notifyUserOnSessionStart;

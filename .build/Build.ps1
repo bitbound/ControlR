@@ -11,6 +11,8 @@ param (
   [Parameter(Mandatory = $true)]
   [string]$OutputPath,
 
+  [string]$Configuration = "Release",
+
   [switch]$BuildAgent,
 
   [switch]$BuildStreamer,
@@ -62,16 +64,16 @@ New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
 
 if ($BuildAgent) {
 
-  dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+  dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
   Check-LastExitCode
     
-  dotnet publish --configuration Release -p:PublishProfile=linux-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+  dotnet publish --configuration $Configuration -p:PublishProfile=linux-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
   Check-LastExitCode
 
-  #dotnet publish --configuration Release -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+  #dotnet publish --configuration $Configuration -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
   #Check-LastExitCode
 
-  #dotnet publish --configuration Release -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+  #dotnet publish --configuration $Configuration -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
   #Check-LastExitCode
 
   Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
@@ -82,7 +84,7 @@ if ($BuildAgent) {
 }
 
 if ($BuildStreamer) {
-  dotnet publish --configuration Release -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
+  dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
 
   Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
@@ -91,7 +93,7 @@ if ($BuildStreamer) {
   Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 }
 
-dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
+dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
 
 
 if ($BuildWebsite) {

@@ -19,7 +19,7 @@ public interface IViewerHub
   Task<Uri?> GetWebSocketBridgeOrigin();
   Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId);
 
-  Task<Result> RequestStreamingSession(string agentConnectionId, StreamerSessionRequestDto sessionRequestDto);
+  Task<Result> RequestStreamingSession(Guid deviceId, StreamerSessionRequestDto sessionRequestDto);
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings signedDto);
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);

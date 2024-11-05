@@ -237,11 +237,16 @@ public class ViewerHub(
   }
 
   public async Task<Result> RequestStreamingSession(
-    string agentConnectionId,
+    Guid deviceId,
     StreamerSessionRequestDto sessionRequestDto)
   {
     try
     {
+      if (Context.User is null)
+      {
+        return Result.Fail("User is null.");
+      }
+      
       if (!TryGetUserId(out var userId))
       {
         return Result.Fail("Failed to get user ID.");
@@ -251,7 +256,7 @@ public class ViewerHub(
         .AsNoTracking()
         .Include(x => x.UserPreferences)
         .FirstOrDefaultAsync(x => x.Id == userId);
-
+      
       if (user is null)
       {
         return Result.Fail("User not found.");
@@ -260,7 +265,34 @@ public class ViewerHub(
       var displayName = user.UserPreferences
         ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
         ?.Value;
+      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+      
+      _logger.LogInformation(
+        "Starting streaming session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.", 
+        displayName,
+        userId,
+        deviceId,
+        remoteIp);
+      
+      var device = await _appDb.Devices
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == deviceId);
 
+      if (device is null)
+      {
+        return Result.Fail("Device not found.");
+      }
+      
+      var authResult = await _authorizationService.AuthorizeAsync(
+        Context.User, 
+        device, 
+        DeviceAccessByDeviceResourcePolicy.PolicyName);
+      
+      if (!authResult.Succeeded)
+      {
+        return Result.Fail("Unauthorized.");
+      }
+      
       if (string.IsNullOrWhiteSpace(displayName))
       {
         displayName = user.UserName ?? "";
@@ -270,7 +302,7 @@ public class ViewerHub(
       sessionRequestDto.ViewerName = displayName;
 
       var sessionSuccess = await _agentHub.Clients
-        .Client(agentConnectionId)
+        .Client(device.ConnectionId)
         .CreateStreamingSession(sessionRequestDto);
 
       if (!sessionSuccess)

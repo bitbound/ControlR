@@ -18,7 +18,6 @@ internal class StreamerUpdaterWindows(
   IDownloadsApi downloadsApi,
   ISystemEnvironment environmentHelper,
   IControlrApi controlrApi,
-  IReleasesApi releasesApi,
   ISettingsProvider settings,
   IAgentUpdater agentUpdater,
   ILogger<StreamerUpdaterWindows> logger) : BackgroundService, IStreamerUpdater
@@ -112,19 +111,6 @@ internal class StreamerUpdaterWindows(
       if (!result.IsSuccess)
       {
         return false;
-      }
-
-      await using (var tempFs = fileSystem.OpenFileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-      {
-        var updateHash = await SHA256.HashDataAsync(tempFs);
-        var updateHexHash = Convert.ToHexString(updateHash);
-
-        if (settings.IsConnectedToPublicServer &&
-            !await releasesApi.DoesReleaseHashExist(updateHexHash))
-        {
-          logger.LogCritical(
-            "A new streamer version is available, but the hash does not exist in the public releases data.");
-        }
       }
 
       await ReportDownloadProgress(-1, "Extracting streamer archive");

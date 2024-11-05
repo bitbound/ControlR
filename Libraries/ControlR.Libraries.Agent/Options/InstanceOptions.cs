@@ -2,5 +2,11 @@
 public class InstanceOptions
 {
   public const string SectionKey = "InstanceOptions";
-  public string? InstanceId { get; init; }
+  private readonly string? _instanceId;
+
+  public string? InstanceId
+  {
+    get => _instanceId;
+    init => _instanceId = value?.SanitizeForFileSystem();
+  }
 }

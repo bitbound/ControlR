@@ -29,11 +29,11 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("Device does not belong to this tenant.", handlerCtx, authzHandler, logger);
         }
 
-        //if (handlerCtx.User.IsInRole(RoleNames.TenantAdministrator) ||
-        //    handlerCtx.User.IsInRole(RoleNames.DeviceSuperUser))
-        //{
-        //  return true;
-        //}
+        if (handlerCtx.User.IsInRole(RoleNames.TenantAdministrator) ||
+            handlerCtx.User.IsInRole(RoleNames.DeviceSuperUser))
+        {
+          return true;
+        }
 
         if (!handlerCtx.User.TryGetUserId(out var userId))
         {
@@ -54,7 +54,7 @@ public static class DeviceAccessByDeviceResourcePolicy
 
         await db
           .Update(device)
-          .Reference(x => x.Tags)
+          .Collection(x => x.Tags!)
           .LoadAsync();
 
         if (user.Tags is null ||

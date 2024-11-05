@@ -27,12 +27,6 @@ public class AgentHub(
     set => SetItem(value);
   }
 
-  private Guid? TenantId
-  {
-    get => GetItem<Guid?>(null);
-    set => SetItem(value);
-  }
-
   public override async Task OnConnectedAsync()
   {
     try
@@ -58,16 +52,10 @@ public class AgentHub(
       {
         cachedDevice.IsOnline = false;
         cachedDevice.LastSeen = _systemTime.Now;
-        await _viewerHub.Clients
-          .Group(HubGroupNames.ServerAdministrators)
-          .ReceiveDeviceUpdate(cachedDevice);
 
-        await _appDb.AddOrUpdateDevice(cachedDevice);
-
-        await SendDeviceUpdate();
+        var device = await _appDb.AddOrUpdateDevice(cachedDevice);
+        await SendDeviceUpdate(device);
       }
-
-
       await base.OnDisconnectedAsync(exception);
     }
     catch (Exception ex)
@@ -140,17 +128,13 @@ public class AgentHub(
           device.PublicIpV4 = remoteIp.ToString();
         }
       }
-
-
+      
       var deviceEntity = await _appDb.AddOrUpdateDevice(device);
-      TenantId = deviceEntity.TenantId;
       Device = deviceEntity.ToDto();
-
-      Device.ConnectionId = Context.ConnectionId;
 
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id, Device.TenantId));
 
-      await SendDeviceUpdate();
+      await SendDeviceUpdate(deviceEntity);
 
       return Result.Ok(Device);
     }
@@ -161,19 +145,21 @@ public class AgentHub(
     }
   }
 
-  private async Task SendDeviceUpdate()
+  private async Task SendDeviceUpdate(Device device)
   {
-    if (Device is null)
+    var dto = device.ToDto();
+    
+    await _viewerHub.Clients
+      .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
+      .ReceiveDeviceUpdate(dto);
+
+    if (device.Tags is null)
     {
       return;
     }
-
-    if (TenantId.HasValue)
-    {
-      await _viewerHub.Clients
-        .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, TenantId.Value))
-        .ReceiveDeviceUpdate(Device);
-    }
+    
+    var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
+    await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
   private async Task SendUpdatedConnectionCountToAdmins()

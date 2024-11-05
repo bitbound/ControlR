@@ -16,7 +16,6 @@ internal interface IAgentUpdater : IHostedService
 internal class AgentUpdater(
   IControlrApi controlrApi,
   IDownloadsApi downloadsApi,
-  IReleasesApi releasesApi,
   IFileSystem fileSystem,
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
@@ -36,7 +35,6 @@ internal class AgentUpdater(
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<AgentUpdater> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
-  private readonly IReleasesApi _releasesApi = releasesApi;
   private readonly ISettingsProvider _settings = settings;
 
   public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new();
@@ -111,20 +109,6 @@ internal class AgentUpdater(
       {
         _logger.LogCritical("Download failed.  Aborting update.");
         return;
-      }
-
-      await using (var tempFs = _fileSystem.OpenFileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-      {
-        var updateHash = await SHA256.HashDataAsync(tempFs, linkedCts.Token);
-        var updateHexHash = Convert.ToHexString(updateHash);
-
-        if (_settings.IsConnectedToPublicServer &&
-            !await _releasesApi.DoesReleaseHashExist(updateHexHash))
-        {
-          _logger.LogCritical(
-            "A new agent version is available, but the hash does not exist in the public releases data.");
-          return;
-        }
       }
 
       _logger.LogInformation("Launching installer.");

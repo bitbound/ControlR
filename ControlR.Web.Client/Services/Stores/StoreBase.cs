@@ -39,7 +39,7 @@ public abstract class StoreBase<TDto>(
   {
     Cache.Clear();
   }
-
+  
   public async Task Refresh()
   {
     if (!await _refreshLock.WaitAsync(0))

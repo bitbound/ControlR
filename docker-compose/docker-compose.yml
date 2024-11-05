@@ -38,6 +38,10 @@ services:
       
       # Whether to make self-registration publicly available.
       ControlR_AppOptions__EnablePublicRegistration: false
+      
+      # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
+      # and add them to the KnownNetworks list for forwarded headers.
+      ControlR_AppOptions__EnableCloudflareProxySupport: false
 
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:
@@ -72,6 +76,8 @@ services:
       # See the docs for more details:  
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #ControlR_AppOptions__KnownProxies__0:
+      
+      #ControlR_AppOptions__KnownNetworks__0:
 
       # If enabled, ControlR will attempt to use geolocation APIs to determine
       # the closest relay server to the viewer when starting a remote control
