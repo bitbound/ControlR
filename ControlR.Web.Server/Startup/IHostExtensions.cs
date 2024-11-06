@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Server.Extensions;
+﻿namespace ControlR.Web.Server.Startup;
 
 public static class HostExtensions
 {

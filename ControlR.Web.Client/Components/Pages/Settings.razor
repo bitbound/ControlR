@@ -73,6 +73,7 @@
   private async Task CopyTenantId()
   {
     await ClipboardManager.SetText($"{_tenantId}");
+    Snackbar.Add("Copied to clipboard", Severity.Success);
   }
 
   private async Task SetNotifyUser(bool value)
