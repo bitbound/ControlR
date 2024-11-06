@@ -24,7 +24,7 @@
     {
       <MudItem xs="12">
         <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" InputType="InputType.Password"
-                            Label="Password" Placeholder="password" HelperText="Please enter your new password."
+                            Label="Password" Placeholder="password" HelperText="Please enter your password."
                             UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })"/>
       </MudItem>
     }
@@ -39,9 +39,11 @@
   private AppUser _user = default!;
   private bool _requirePassword;
 
-  [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-  [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
   protected override async Task OnInitializedAsync()
   {
@@ -74,7 +76,8 @@
 
   private sealed class InputModel
   {
-    [DataType(DataType.Password)] public string Password { get; set; } = "";
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = "";
   }
 
 }
