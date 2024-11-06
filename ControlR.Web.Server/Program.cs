@@ -148,17 +148,17 @@ if (appOptions.UseHttpLogging)
 {
   builder.Services.AddHttpLogging(options =>
   {
-   options.RequestHeaders.Add("X-Forwarded-For");
-   options.RequestHeaders.Add("X-Forwarded-Proto");
-   options.RequestHeaders.Add("X-Forwarded-Host");
-   options.RequestHeaders.Add("X-Original-For");
-   options.RequestHeaders.Add("X-Original-Proto");
-   options.RequestHeaders.Add("X-Original-Host");
-   options.RequestHeaders.Add("CF-Connecting-IP");
-   options.RequestHeaders.Add("CF-RAY");
-   options.RequestHeaders.Add("CF-IPCountry");
-   options.RequestHeaders.Add("CDN-Loop");
-   options.LoggingFields = HttpLoggingFields.All;
+    options.RequestHeaders.Add("X-Forwarded-For");
+    options.RequestHeaders.Add("X-Forwarded-Proto");
+    options.RequestHeaders.Add("X-Forwarded-Host");
+    options.RequestHeaders.Add("X-Original-For");
+    options.RequestHeaders.Add("X-Original-Proto");
+    options.RequestHeaders.Add("X-Original-Host");
+    options.RequestHeaders.Add("CF-Connecting-IP");
+    options.RequestHeaders.Add("CF-RAY");
+    options.RequestHeaders.Add("CF-IPCountry");
+    options.RequestHeaders.Add("CDN-Loop");
+    options.LoggingFields = HttpLoggingFields.All;
   });
 }
 
@@ -189,6 +189,7 @@ if (appOptions.UseHttpLogging)
     ctx => !ctx.Request.Path.StartsWithSegments("/health"),
     appBuilder => appBuilder.UseHttpLogging());
 }
+
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
@@ -215,6 +216,8 @@ app.UseStaticFiles();
 app.MapWebSocketBridge();
 app.MapHub<AgentHub>("/hubs/agent");
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapControllers();

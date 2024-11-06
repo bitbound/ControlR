@@ -17,7 +17,11 @@
     @foreach (var login in _currentLogins)
     {
       <tr>
-        <td>@login.ProviderDisplayName</td>
+        <td>
+          <MudText Typo="Typo.body1" Color="Color.Primary">
+            @login.LoginProvider
+          </MudText>
+        </td>
         <td>
           @if (_showRemoveButton)
           {
@@ -26,7 +30,9 @@
               <div>
                 <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider"/>
                 <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey"/>
-                <button type="submit" class="btn btn-primary" title="Remove this @login.ProviderDisplayName login from your account">Remove</button>
+                <MudStaticButton ButtonType="@ButtonType.Submit" Variant="Variant.Text" Color="Color.Error" Size="Size.Small" Class="ms-3">
+                  Remove
+                </MudStaticButton>
               </div>
             </form>
           }
@@ -43,20 +49,32 @@
 @if (_otherLogins?.Count > 0)
 {
   <h4>Add another service to log in.</h4>
-  <MudDivider/>
-  <form class="form-horizontal" action="Account/Manage/LinkExternalLogin" method="post">
-    <AntiforgeryToken/>
-    <div>
-      <p>
-        @foreach (var provider in _otherLogins)
-        {
-          <button type="submit" class="btn btn-primary" name="Provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">
-            @provider.DisplayName
-          </button>
-        }
-      </p>
-    </div>
-  </form>
+  <MudDivider Class="my-2"/>
+  @foreach (var provider in _otherLogins)
+  {
+    <form class="form-horizontal" action="Account/Manage/LinkExternalLogin" method="post">
+      <AntiforgeryToken/>
+      <div>
+        <p>
+          <input type="hidden" name="Provider" value="@provider.Name"/>
+          @if (provider.Name == "Microsoft")
+          {
+            <button type="submit">
+              <img src="images/sign-in-microsoft.svg" alt="Sign in with Microsoft"/>
+            </button>
+          }
+          else
+          {
+            <MudStaticButton Variant="Variant.Outlined"
+                             Color="Color.Info"
+                             ButtonType="@ButtonType.Submit">
+              @provider.DisplayName
+            </MudStaticButton>
+          }
+        </p>
+      </div>
+    </form>
+  }
 }
 
 @code {

@@ -1,0 +1,7 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Server + Docker" type="CompoundRunConfigurationType">
+    <toRun name="ControlR.Web.Server: https" type="LaunchSettings" />
+    <toRun name="compose (dev)" type="docker-deploy" />
+    <method v="2" />
+  </configuration>
+</component>
