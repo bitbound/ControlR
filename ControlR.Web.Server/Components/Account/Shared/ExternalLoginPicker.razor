@@ -7,33 +7,44 @@
 }
 else
 {
-  <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
-    <div>
-      <AntiforgeryToken/>
-      <input type="hidden" name="ReturnUrl" value="@ReturnUrl"/>
-      <p>
-        @foreach (var provider in _externalLogins)
-        {
+  @foreach (var provider in _externalLogins)
+  {
+    <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
+      <div class="mt-3">
+        <AntiforgeryToken/>
+        <input type="hidden" name="ReturnUrl" value="@ReturnUrl"/>
+        <p>
           <input type="hidden" name="provider" value="@provider.Name"/>
 
-          @if (provider.Name == "Microsoft")
+          @switch (provider.Name)
           {
-            <button type="submit">
-              <img src="images/sign-in-microsoft.svg" alt="Sign in with Microsoft"/>
-            </button>
+            case "Microsoft":
+              <button type="submit">
+                <img src="images/sign-in-microsoft.svg" alt="Sign in with Microsoft"/>
+              </button>
+              break;
+            case "GitHub":
+              <MudButton ButtonType="ButtonType.Submit"
+                         Color="Color.Info"
+                         StartIcon="@(Icons.Custom.Brands.GitHub)"
+                         Variant="Variant.Outlined">
+                Sign in with GitHub
+              </MudButton>
+              break;
+            default:
+              <MudButton Variant="Variant.Outlined"
+                         Color="Color.Info"
+                         ButtonType="ButtonType.Submit">
+                @provider.DisplayName
+              </MudButton>
+              break;
           }
-          else
-          {
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Info"
-                       ButtonType="ButtonType.Submit">
-              @provider.DisplayName
-            </MudButton>
-          }
-        }
-      </p>
-    </div>
-  </form>
+
+        </p>
+      </div>
+    </form>
+  }
+  
 }
 
 @code {

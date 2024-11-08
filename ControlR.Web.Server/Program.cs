@@ -98,6 +98,16 @@ if (!string.IsNullOrWhiteSpace(appOptions.MicrosoftClientId) &&
   });
 }
 
+if (!string.IsNullOrWhiteSpace(appOptions.GitHubClientId) &&
+    !string.IsNullOrWhiteSpace(appOptions.GitHubClientSecret))
+{
+  authBuilder.AddGitHub(options =>
+  {
+    options.ClientId = appOptions.GitHubClientId;
+    options.ClientSecret = appOptions.GitHubClientSecret;
+  });
+}
+
 authBuilder.AddIdentityCookies();
 
 builder.Services

@@ -10,6 +10,7 @@
 
 
   <ItemGroup>
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="8.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.10" />
     <ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
     <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
@@ -37,10 +38,8 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
-
   <ItemGroup>
     <Folder Include="Data\Entities\Enums\" />
     <Folder Include="Data\Migrations\" />
   </ItemGroup>
-
 </Project>

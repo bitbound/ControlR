@@ -4,9 +4,11 @@ public class AppOptions
 {
   public const string SectionKey = "AppOptions";
   public string? DockerGatewayIp { get; init; }
-  public bool EnablePublicRegistration { get; init; }
   public bool EnableCloudflareProxySupport { get; init; }
+  public bool EnablePublicRegistration { get; init; }
   public IReadOnlyList<ExternalWebSocketHost> ExternalWebSocketHosts { get; init; } = [];
+  public string? GitHubClientId { get; init; }
+  public string? GitHubClientSecret { get; init; }
   public string[] KnownNetworks { get; init; } = [];
   public string[] KnownProxies { get; init; } = [];
   public string? MicrosoftClientId { get; init; }
