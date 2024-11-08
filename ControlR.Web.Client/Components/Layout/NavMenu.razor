@@ -1,0 +1,129 @@
+﻿@implements IDisposable
+
+@inject NavigationManager NavMan
+@inject AuthenticationStateProvider AuthState
+@inject ILogger<NavMenu> Logger
+@inject IControlrApi ControlrApi
+
+<MudNavMenu>
+  <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+    Home
+  </MudNavLink>
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
+    Deploy
+  </MudNavLink>
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+    Settings
+  </MudNavLink>
+
+  <MudNavLink Href="@(RouteNames.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
+    About
+  </MudNavLink>
+
+  <AuthorizeView Roles="@($"{RoleNames.TenantAdministrator}")">
+    <div class="ms-2 mt-5">
+      <MudText Typo="Typo.caption" Color="Color.Default">
+        Tenant Admin
+      </MudText>
+    </div>
+    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+      Permissions
+    </MudNavLink>
+  </AuthorizeView>
+  <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
+    <Authorized>
+      <div class="ms-2 mt-5">
+        <MudText Typo="Typo.caption" Color="Color.Default">
+          Server Admin
+        </MudText>
+      </div>
+      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+        Server Stats
+      </MudNavLink>
+    </Authorized>
+  </AuthorizeView>
+
+  <MudDivider Class="mt-2 mb-2"/>
+
+  <AuthorizeView>
+    <Authorized>
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+        Account
+      </MudNavLink>
+      <form action="Account/Logout" method="post">
+        <AntiforgeryToken/>
+        <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
+        <button type="submit" class="mud-nav-link mud-ripple">
+          <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
+        </button>
+      </form>
+    </Authorized>
+    <NotAuthorized>
+      @if (_isPublicRegistrationEnabled)
+      {
+        <MudNavLink Disabled="@IsDisabled" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+          Register
+        </MudNavLink>
+      }
+      <MudNavLink Disabled="@IsDisabled" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+        Login
+      </MudNavLink>
+    </NotAuthorized>
+  </AuthorizeView>
+</MudNavMenu>
+
+
+@code {
+
+  private string? _currentUrl;
+  private bool _isAuthenticated;
+  private bool _isPublicRegistrationEnabled;
+
+  [Parameter]
+  public bool IsDisabled { get; set; }
+
+
+  public void Dispose()
+  {
+    NavMan.LocationChanged -= OnLocationChanged;
+    AuthState.AuthenticationStateChanged -= HandleAuthStateChanged;
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    var settingsResult = await ControlrApi.GetServerSettings();
+    if (settingsResult.IsSuccess)
+    {
+      _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
+    }
+
+    var state = await AuthState.GetAuthenticationStateAsync();
+    _isAuthenticated = state.User.IsAuthenticated();
+    AuthState.AuthenticationStateChanged += HandleAuthStateChanged;
+    _currentUrl = NavMan.ToBaseRelativePath(NavMan.Uri);
+    NavMan.LocationChanged += OnLocationChanged;
+  }
+
+  private async void HandleAuthStateChanged(Task<AuthenticationState> stateTask)
+  {
+    try
+    {
+      var state = await stateTask;
+      _isAuthenticated = state.User.IsAuthenticated();
+      await InvokeAsync(StateHasChanged);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while handling auth state change.");
+    }
+  }
+
+  private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+  {
+    _currentUrl = NavMan.ToBaseRelativePath(e.Location);
+    StateHasChanged();
+  }
+
+}

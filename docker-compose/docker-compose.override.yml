@@ -1,21 +1,22 @@
-version: '3.4'
-
 services:
   controlr:
-    image: ${DOCKER_REGISTRY-}controlrserver
+    image: ${DOCKER_REGISTRY-}controlrwebserver
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
-      #- ControlR_ApplicationOptions__AdminPublicKeys__0=
-      #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=
-      #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ASPNETCORE_HTTPS_PORTS: 8081
     ports:
-      - 5120:8080
-      - 7031:8081
+      - "5120:8080"
+      - "7031:8081"
     build:
       context: ../
-      dockerfile: ControlR.Server/Dockerfile
+      dockerfile: ControlR.Web.Server/Dockerfile
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+
+  aspire:
+    ports:
+      - "18889:18889"
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true

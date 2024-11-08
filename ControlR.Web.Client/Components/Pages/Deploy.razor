@@ -1,0 +1,247 @@
+﻿@attribute [Route(RouteNames.Deploy)]
+
+@attribute [Authorize]
+
+@inject NavigationManager NavMan
+@inject AuthenticationStateProvider AuthState
+@inject ISnackbar Snackbar
+@inject IClipboardManager Clipboard
+@inject IControlrApi ControlrApi
+
+<PageTitle>Deploy</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  Deploy Scripts
+</MudText>
+
+<MudText Typo="Typo.subtitle1" GutterBottom>
+  Run these scripts on a remote device to install the agent.
+</MudText>
+
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Windows (PowerShell)
+  </MudText>
+
+  <MudTextField T="string"
+                Label="Copy and paste to install agent"
+                Variant="Variant.Filled"
+                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                OnAdornmentClick="CopyWindowsScript"
+                Adornment="Adornment.End"
+                Value="WindowsDeployScript"
+                Class="mb-5"/>
+
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Ubuntu (Bash)
+  </MudText>
+
+  <MudTextField T="string"
+                Label="Copy and paste to install agent"
+                Variant="Variant.Filled"
+                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                OnAdornmentClick="CopyUbuntuScript"
+                Adornment="Adornment.End"
+                Value="UbuntuDeployScript"
+                Class="mb-5"/>
+
+  @*     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+  Mac x64 (zsh)
+  </MudText>
+
+  <MudTextField T="string"
+  Label="Copy and paste to install agent"
+  Variant="Variant.Filled"
+  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+  OnAdornmentClick="CopyMacX64Script"
+  Adornment="Adornment.End"
+  Value="MacX64DeployScript"
+  Class="mb-5" />
+
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+  Mac Arm64 (zsh)
+  </MudText>
+
+  <MudTextField T="string"
+  Label="Copy and paste to install agent"
+  Variant="Variant.Filled"
+  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+  OnAdornmentClick="CopyMacArm64Script"
+  Adornment="Adornment.End"
+  Value="MacArm64DeployScript"
+  Class="mb-5" /> *@
+
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Options
+  </MudText>
+
+  <div>
+    <MudText Typo="Typo.subtitle2" Color="Color.Info">
+      Device Tags
+    </MudText>
+    <MudText Typo="Typo.body1" GutterBottom>
+      If enabled, the device will be assigned the selected tags upon installation.
+      Tags are used to link devices to users for access control.
+    </MudText>
+    <MudCheckBox @bind-Value="_addTags" Label="Add device tags"/>
+
+    <MudSelect T="TagResponseDto"
+               @bind-SelectedValues="_selectedTags"
+               Disabled="!_addTags"
+               Immediate
+               MultiSelection
+               FullWidth="false"
+               Text="@(SelectedTagsText)"
+               Label="Tags">
+      @foreach (var tag in _tags)
+      {
+        <MudSelectItem Value="@tag">
+          @(tag.Name)
+        </MudSelectItem>
+      }
+    </MudSelect>
+  </div>
+</div>
+
+
+@code {
+  private bool _addTags;
+  private IEnumerable<TagResponseDto>? _selectedTags;
+  private IReadOnlyList<TagResponseDto> _tags = [];
+  private Guid? _tenantId;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (state.User.TryGetTenantId(out var tenantId))
+    {
+      _tenantId = tenantId;
+    }
+
+    // TODO: Get user-tags.
+    var result = await ControlrApi.GetAllTags();
+    if (result.IsSuccess)
+    {
+      _tags = result.Value;
+    }
+    else
+    {
+      Snackbar.Add("Failed to get tags", Severity.Error);
+    }
+  }
+
+  /*private string MacArm64DeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/osx-arm64/ControlR.Agent");
+      return
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+    }
+  }*/
+
+
+  /*private string MacX64DeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/osx-x64/ControlR.Agent");
+      return
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+    }
+  }*/
+
+  private string SelectedTagsText => _selectedTags is null
+    ? ""
+    : string.Join(", ", _selectedTags.Select(x => x.Name));
+  
+  private string UbuntuDeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/linux-x64/ControlR.Agent");
+      return
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+    }
+  }
+
+  private string WindowsDeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
+      return "$ProgressPreference = \"SilentlyContinue\"; " +
+             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+             $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
+    }
+  }
+
+  /*
+  private async Task CopyMacArm64Script()
+  {
+    await Clipboard.SetText(MacArm64DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private async Task CopyMacX64Script()
+  {
+    await Clipboard.SetText(MacX64DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+  */
+
+  private async Task CopyUbuntuScript()
+  {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
+    await Clipboard.SetText(UbuntuDeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private async Task CopyWindowsScript()
+  {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
+    await Clipboard.SetText(WindowsDeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private string GetCommonArgs()
+  {
+    var serverUri = GetServerUri();
+    var args = $"-s {NavMan.Uri} -i {serverUri.Authority} -t {_tenantId}";
+
+    if (!_addTags || _selectedTags is null) return args;
+
+    var tags = string.Join(",", _selectedTags.Select(t => t.Id));
+    args += $" -g {tags}";
+
+    return args;
+  }
+
+  private Uri GetServerUri()
+  {
+    var currentUri = new Uri(NavMan.Uri);
+    return new Uri($"{currentUri.Scheme}://{currentUri.Authority}");
+  }
+}

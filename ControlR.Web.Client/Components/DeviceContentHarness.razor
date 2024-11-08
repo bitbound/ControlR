@@ -1,0 +1,45 @@
+﻿@using System.Collections.Specialized
+@implements IDisposable
+@inject ILazyDi<IDeviceContentWindowStore> WindowStore
+@inject ILazyDi<IScreenWake> ScreenWake
+@inject ILazyDi<IMessenger> Messenger
+
+<div class="device-content-window-harness">
+  @foreach (var instance in ContentInstances)
+  {
+    <DeviceContentWindow @key=(instance.WindowId) ContentInstance="@(instance)" />
+  }
+</div>
+
+@code {
+  private IReadOnlyList<DeviceContentInstance> ContentInstances => WindowStore.Maybe?.Windows ?? [];
+
+  public void Dispose()
+  {
+    Messenger.Maybe?.UnregisterAll(this);
+  }
+
+  protected override void OnInitialized()
+  {
+    Messenger.Maybe?.RegisterGenericMessage(this, HandleGenericMessage);
+    base.OnInitializedAsync();
+  }
+
+  private async void OnRemoteSessionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+  {
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task HandleGenericMessage(object subscriber, GenericMessageKind messageKind)
+  {
+    if (ScreenWake.Exists)
+    {
+      await ScreenWake.Value.SetScreenWakeLock(ContentInstances.Count > 0);
+    
+    }
+    if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
+    {
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+}

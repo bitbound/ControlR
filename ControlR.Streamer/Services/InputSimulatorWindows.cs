@@ -1,91 +1,73 @@
-﻿using ControlR.Libraries.Shared.Dtos.SidecarDtos;
-using Microsoft.Extensions.Hosting;
-using System.Collections.Concurrent;
-
-namespace ControlR.Streamer.Services;
+﻿namespace ControlR.Streamer.Services;
 
 public interface IInputSimulator
 {
-    void InvokeKeyEvent(string key, bool isPressed);
-    void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
-    void MovePointer(int x, int y, MovePointerType moveType);
-    void ResetKeyboardState();
-    void ScrollWheel(int x, int y, int scrollY, int scrollX);
-    void TypeText(string text);
+  void InvokeKeyEvent(string key, bool isPressed);
+  void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
+  void MovePointer(int x, int y, MovePointerType moveType);
+  void ResetKeyboardState();
+  void ScrollWheel(int x, int y, int scrollY, int scrollX);
+  void TypeText(string text);
 }
 
 internal class InputSimulatorWindows(
-    IWin32Interop _win32Interop,
-    ILogger<InputSimulatorWindows> _logger) : IInputSimulator
+  IWin32Interop win32Interop,
+  ILogger<InputSimulatorWindows> logger) : IInputSimulator
 {
-    public void InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, bool isPressed)
+  {
+    if (string.IsNullOrEmpty(key))
     {
-        if (string.IsNullOrEmpty(key))
-        {
-            _logger.LogWarning("Key cannot be empty.");
-            return;
-        }
-
-        TryOnInputDesktop(() =>
-        {
-            var result = _win32Interop.InvokeKeyEvent(key, isPressed);
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("Failed to invoke key event. Key: {Key}, IsPressed: {IsPressed}, Reason: {Reason}", key, isPressed, result.Reason);
-            }
-        });
+      logger.LogWarning("Key cannot be empty.");
+      return;
     }
 
-    public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
+    TryOnInputDesktop(() =>
     {
-        TryOnInputDesktop(() =>
-        {
-            _win32Interop.InvokeMouseButtonEvent(x, y, button, isPressed);
-        });
-    }
+      var result = win32Interop.InvokeKeyEvent(key, isPressed);
+      if (!result.IsSuccess)
+      {
+        logger.LogWarning("Failed to invoke key event. Key: {Key}, IsPressed: {IsPressed}, Reason: {Reason}", key,
+          isPressed, result.Reason);
+      }
+    });
+  }
 
-    public void MovePointer(int x, int y, MovePointerType moveType)
-    {
-        TryOnInputDesktop(() =>
-        {
-            _win32Interop.MovePointer(x, y, moveType);
-        });
-    }
+  public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
+  {
+    TryOnInputDesktop(() => { win32Interop.InvokeMouseButtonEvent(x, y, button, isPressed); });
+  }
 
-    public void ResetKeyboardState()
-    {
-        TryOnInputDesktop(() =>
-        {
-            _win32Interop.ResetKeyboardState();
-        });
-    }
+  public void MovePointer(int x, int y, MovePointerType moveType)
+  {
+    TryOnInputDesktop(() => { win32Interop.MovePointer(x, y, moveType); });
+  }
 
-    public void ScrollWheel(int x, int y, int scrollY, int scrollX)
-    {
-        TryOnInputDesktop(() =>
-        {
-            _win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX);
-        });
-    }
+  public void ResetKeyboardState()
+  {
+    TryOnInputDesktop(() => { win32Interop.ResetKeyboardState(); });
+  }
 
-    public void TypeText(string text)
-    {
-        TryOnInputDesktop(() =>
-        {
-            _win32Interop.TypeText(text);
-        });
-    }
+  public void ScrollWheel(int x, int y, int scrollY, int scrollX)
+  {
+    TryOnInputDesktop(() => { win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX); });
+  }
 
-    private void TryOnInputDesktop(Action action)
+  public void TypeText(string text)
+  {
+    TryOnInputDesktop(() => { win32Interop.TypeText(text); });
+  }
+
+  private void TryOnInputDesktop(Action action)
+  {
+    try
     {
-        try
-        {
-            _win32Interop.SwitchToInputDesktop();
-            action.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing input simulator action.");
-        }
+      win32Interop.SwitchToInputDesktop();
+      action.Invoke();
     }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error processing input simulator action.");
+    }
+  }
 }

@@ -1,0 +1,116 @@
+﻿@page "/Account/Manage/Email"
+
+@inject UserManager<AppUser> UserManager
+@inject IEmailSender<AppUser> EmailSender
+@inject IdentityUserAccessor UserAccessor
+@inject NavigationManager NavigationManager
+
+<PageTitle>Manage email</PageTitle>
+
+<MudText Typo="Typo.h6" GutterBottom="true">Manage email</MudText>
+
+<StatusMessage Message="@_message"/>
+
+<form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
+  <AntiforgeryToken />
+</form>
+<EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
+  <DataAnnotationsValidator/>
+
+  <MudGrid>
+
+    @if (_isEmailConfirmed)
+    {
+      <MudItem xs="12">
+        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true" AdornmentIcon="Icons.Material.Filled.Check" AdornmentColor="Color.Success"/>
+      </MudItem>
+    }
+    else
+    {
+      <MudItem xs="12">
+        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true"/>
+      </MudItem>
+      <MudItem xs="12">
+        <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Send verification email</MudStaticButton>
+      </MudItem>
+    }
+
+    <MudItem xs="12">
+      <MudStaticTextField @bind-Value="@Input.NewEmail" For="@(() => Input.NewEmail)" Label="New Email" HelperText="Please enter new email."/>
+    </MudItem>
+
+    <MudItem xs="12">
+      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Change email</MudStaticButton>
+    </MudItem>
+  </MudGrid>
+</EditForm>
+
+@code {
+  private string? _message;
+  private AppUser _user = default!;
+  private string? _email;
+  private bool _isEmailConfirmed;
+
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromForm(FormName = "change-email")]
+  private InputModel Input { get; set; } = new();
+
+  protected override async Task OnInitializedAsync()
+  {
+    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _email = await UserManager.GetEmailAsync(_user);
+    _isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(_user);
+
+    Input.NewEmail ??= _email;
+  }
+
+  private async Task OnValidSubmitAsync()
+  {
+    if (Input.NewEmail is null || Input.NewEmail == _email)
+    {
+      _message = "Your email is unchanged.";
+      return;
+    }
+
+    var userId = await UserManager.GetUserIdAsync(_user);
+    var code = await UserManager.GenerateChangeEmailTokenAsync(_user, Input.NewEmail);
+    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+      NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
+      new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
+
+    await EmailSender.SendConfirmationLinkAsync(_user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
+
+    _message = "Confirmation link to change email sent. Please check your email.";
+  }
+
+  private async Task OnSendEmailVerificationAsync()
+  {
+    if (_email is null)
+    {
+      return;
+    }
+
+    var userId = await UserManager.GetUserIdAsync(_user);
+    var code = await UserManager.GenerateEmailConfirmationTokenAsync(_user);
+    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+      NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+      new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+
+    await EmailSender.SendConfirmationLinkAsync(_user, _email, HtmlEncoder.Default.Encode(callbackUrl));
+
+    _message = "Verification email sent. Please check your email.";
+  }
+
+  private sealed class InputModel
+  {
+    [Required]
+    [EmailAddress]
+    [Display(Name = "New email")]
+    public string? NewEmail { get; set; }
+  }
+
+}

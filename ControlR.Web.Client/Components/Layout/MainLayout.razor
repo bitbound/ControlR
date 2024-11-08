@@ -1,0 +1,243 @@
+﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager NavManager
+@inject ILazyDi<IMessenger> Messenger
+@inject ILazyDi<IBusyCounter> BusyCounter
+@inject ILazyDi<IViewerHubConnection> ViewerHub
+@inject ILazyDi<ISnackbar> Snackbar
+@inject ILazyDi<ILogger<MainLayout>> Logger
+
+<div>
+  <MudThemeProvider IsDarkMode Theme="CustomTheme" />
+  <MudPopoverProvider />
+  <MudDialogProvider />
+  <MudSnackbarProvider />
+
+  <MudLayout>
+    <MudAppBar Elevation="1">
+      <MudIconButton id="nav-drawer-toggle-button"
+                     Icon="@Icons.Material.Filled.Menu"
+                     Color="Color.Inherit"
+                     Edge="Edge.Start"
+                     OnClick="@(_ => DrawerToggle())" />
+
+      <MudImage Src="/icon-192.png" Height="30" Class="mx-2" />
+      <MudLink Href="/" Underline="Underline.None">
+        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+      </MudLink>
+      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3" />
+
+      <MudSpacer />
+
+      @if (!_isBrowser)
+      {
+        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
+      }
+      else if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
+      {
+        <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
+          <MudProgressCircular Indeterminate StrokeWidth="6"
+                               Size="Size.Small"
+                               Color="Color.Success"
+                               Class="mx-3 mt-1" />
+        </MudTooltip>
+      }
+      else
+      {
+        switch (_hubConnectionState)
+        {
+          case HubConnectionState.Connected:
+            <MudTooltip Text="Connected">
+              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+            <MudTooltip Text="Reconnecting">
+              <MudProgressCircular Indeterminate
+                                   StrokeWidth="6"
+                                   Size="Size.Small"
+                                   Color="Color.Warning"
+                                   Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          case HubConnectionState.Disconnected:
+            <MudTooltip Text="Disconnected">
+              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+        }
+      }
+      <MudTooltip Text="GitHub">
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
+                       Color="Color.Inherit"
+                       Href="https://github.com/bitbound/controlr/"
+                       Target="_blank" />
+
+      </MudTooltip>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen"
+               id="nav-drawer"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2">
+
+      <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
+    </MudDrawer>
+    <MudMainContent Class="mt-16 pa-4">
+      @if (_isWaitingForWasmLoad)
+      {
+        <div class="w-100 text-center mt-8">
+          <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+            Loading
+          </MudText>
+          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+        </div>
+      }
+      else
+      {
+        @Body
+      }
+    </MudMainContent>
+  </MudLayout>
+
+  <DeviceContentHarness />
+
+  @if (_isIdentityPage)
+  {
+    <script src="/Components/Layout/MainLayout.razor.js"></script>
+  }
+</div>
+
+
+<div id="blazor-error-ui">
+  An unhandled error has occurred.
+  <a href="" class="reload">Reload</a>
+  <a class="dismiss">🗙</a>
+</div>
+
+@code {
+  private bool _drawerOpen = true;
+  private bool _isIdentityPage;
+  private bool _isAuthenticated;
+  private bool _isBrowser;
+  private bool _isBusy;
+  private bool _isWaitingForWasmLoad = true;
+  private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
+  private MudTheme? _customTheme;
+  private int _pendingOperations;
+
+  private MudTheme CustomTheme
+  {
+    get
+    {
+      return _customTheme ??= new MudTheme
+        {
+          PaletteDark = new PaletteDark
+          {
+            Primary = "#46AA46",
+            Secondary = "#8C6ED2",
+            Tertiary = "#F082D2",
+            Info = "#42A5F5",
+            TextPrimary = "rgb(215, 215, 215)",
+            AppbarText = "rgb(215, 215, 215)",
+            Background = Colors.Gray.Darken4,
+            Surface = "rgb(45, 45, 45)"
+          }
+        };
+    }
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    _isAuthenticated = await AuthState.IsAuthenticated();
+    _isBrowser = OperatingSystem.IsBrowser();
+
+    _isIdentityPage =
+      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
+      currentUri.PathAndQuery.StartsWith("/Account");
+
+    _isWaitingForWasmLoad = !_isBrowser && !_isIdentityPage; ;
+
+    if (_isBrowser)
+    {
+      Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
+      Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+
+      AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
+
+      if (_isAuthenticated)
+      {
+        await ViewerHub.Value.Connect();
+      }
+    }
+  }
+
+  protected override bool ShouldRender()
+  {
+    if (BusyCounter.Exists)
+    {
+      _isBusy = BusyCounter.Value.IsBusy;
+      _pendingOperations = BusyCounter.Value.PendingOperations;
+    }
+
+    if (ViewerHub.Exists)
+    {
+      _hubConnectionState = ViewerHub.Value.ConnectionState;
+    }
+
+    return base.ShouldRender();
+  }
+
+
+  private void DrawerToggle()
+  {
+    _drawerOpen = !_drawerOpen;
+  }
+
+  private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)
+  {
+    try
+    {
+      var state = await taskState;
+      _isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+      await InvokeAsync(StateHasChanged);
+
+      if (_isAuthenticated)
+      {
+        await ViewerHub.Value.Connect();
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.Value.LogError(ex, "Error while handling authentication state change.");
+      Snackbar.Value.Add("Authentication state change error", Severity.Error);
+    }
+  }
+
+  private async Task HandleGeneric(object subscriber, GenericMessageKind kind)
+  {
+    switch (kind)
+    {
+      case GenericMessageKind.PendingOperationsChanged:
+        await InvokeAsync(StateHasChanged);
+        break;
+      default:
+        return;
+    }
+  }
+
+  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    _hubConnectionState = message.NewState;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private Task HandleToastMessage(object subscriber, ToastMessage toast)
+  {
+    Snackbar.Maybe?.Add(toast.Message, toast.Severity);
+    return Task.CompletedTask;
+  }
+
+}

@@ -1,7 +1,6 @@
 ﻿using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.ScreenCapture.Models;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;

@@ -20,7 +20,7 @@ internal static class PathConstants
               Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
               "ControlR");
 
-        if (EnvironmentHelper.Instance.IsDebug)
+        if (SystemEnvironment.Instance.IsDebug)
         {
             settingsDir = Path.Combine(settingsDir, "Debug");
         }

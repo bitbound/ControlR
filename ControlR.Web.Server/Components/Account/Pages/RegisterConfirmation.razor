@@ -1,0 +1,42 @@
+﻿@page "/Account/RegisterConfirmation"
+
+@inject UserManager<AppUser> UserManager
+@inject IEmailSender<AppUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Register confirmation</PageTitle>
+
+<h1>Register confirmation</h1>
+
+<StatusMessage Message="@_statusMessage"/>
+
+<p>Please check your email to confirm your account.</p>
+
+@code {
+  private string? _statusMessage;
+
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromQuery]
+  private string? Email { get; set; }
+
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    if (Email is null)
+    {
+      RedirectManager.RedirectTo("");
+    }
+
+    var user = await UserManager.FindByEmailAsync(Email);
+    if (user is null)
+    {
+      HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+      _statusMessage = "Error finding user for unspecified email";
+    }
+  }
+}

@@ -9,3 +9,4 @@ global using Microsoft.Extensions.Logging;
 global using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.ScreenCapture.Models;
+global using ControlR.Libraries.Clients.Messages;

@@ -3,17 +3,17 @@
 namespace ControlR.Libraries.DevicesCommon.Services;
 
 public class FileLoggerProvider(
-    string _componentVersion,
-    Func<string> _logPathFactory,
-    TimeSpan _logRetention) : ILoggerProvider
+  string componentVersion,
+  Func<string> logPathFactory,
+  TimeSpan logRetention) : ILoggerProvider
 {
-    public ILogger CreateLogger(string categoryName)
-    {
-        return new FileLogger(_componentVersion, categoryName, _logPathFactory, _logRetention);
-    }
+  public ILogger CreateLogger(string categoryName)
+  {
+    return new FileLogger(componentVersion, categoryName, logPathFactory, logRetention);
+  }
 
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
+  public void Dispose()
+  {
+    GC.SuppressFinalize(this);
+  }
 }

@@ -2,12 +2,12 @@
 
 public enum SystemPlatform
 {
-    Unknown,
-    Windows,
-    Linux,
-    MacOS,
-    MacCatalyst,
-    Android,
-    IOS,
-    Browser,
+  Unknown,
+  Windows,
+  Linux,
+  MacOs,
+  MacCatalyst,
+  Android,
+  Ios,
+  Browser
 }

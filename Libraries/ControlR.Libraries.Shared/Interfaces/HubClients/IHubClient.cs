@@ -1,8 +1,8 @@
-﻿using ControlR.Libraries.Shared.Dtos;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
 
 namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 
 public interface IHubClient
 {
-    Task ReceiveDto(SignedPayloadDto dto);
+    Task ReceiveDto(DtoWrapper dtoWrapper);
 }

@@ -1,33 +1,28 @@
-﻿using ControlR.Libraries.Shared.Dtos;
+﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Libraries.Shared.Hubs;
 
 public interface IViewerHub
 {
-    Task<bool> CheckIfServerAdministrator();
+  Task<bool> CheckIfServerAdministrator();
 
-    Task<Result> ClearAlert();
+  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+    string agentConnectionId,
+    TerminalSessionRequest requestDto);
 
-    Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, SignedPayloadDto requestDto);
+  Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
 
-    Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
+  Task<Result<ServerStatsDto>> GetServerStats();
 
-    Task<Result<AlertBroadcastDto>> GetCurrentAlert();
+  Task<Uri?> GetWebSocketBridgeOrigin();
+  Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId);
 
-    Task<Result<ServerStatsDto>> GetServerStats();
-
-    Task<Uri?> GetWebSocketBridgeOrigin();
-    Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId, SignedPayloadDto signedDto);
-
-    Task<Result> RequestStreamingSession(string agentConnectionId, SignedPayloadDto sessionRequestDto);
-    Task<Result> SendAgentAppSettings(string agentConnectionId, SignedPayloadDto signedDto);
-
-    Task<Result> SendAlertBroadcast(SignedPayloadDto signedDto);
-
-    Task SendSignedDtoToAgent(string deviceId, SignedPayloadDto signedDto);
-
-    Task SendSignedDtoToPublicKeyGroup(SignedPayloadDto signedDto);
-    Task<Result> SendTerminalInput(string agentConnectionId, SignedPayloadDto dto);
-
+  Task<Result> RequestStreamingSession(Guid deviceId, StreamerSessionRequestDto sessionRequestDto);
+  Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings signedDto);
+  Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
+  Task SendDtoToUserGroups(DtoWrapper wrapper);
+  Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto);
+  Task UninstallAgent(Guid deviceId, string reason);
 }

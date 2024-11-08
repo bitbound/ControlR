@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Exceptions;
 using System.Diagnostics;
 

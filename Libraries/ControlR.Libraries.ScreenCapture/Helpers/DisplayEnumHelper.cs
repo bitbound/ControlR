@@ -22,94 +22,97 @@
 //  THE SOFTWARE.
 //  ---------------------------------------------------------------------------------
 
-using ControlR.Libraries.ScreenCapture.Models;
 using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Windows.Win32;
-using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Gdi;
+using ControlR.Libraries.ScreenCapture.Models;
 
 namespace ControlR.Libraries.ScreenCapture.Helpers;
 
 internal static class DisplaysEnumerationHelper
 {
-    private const int CCHDEVICENAME = 32;
+  private const int Cchdevicename = 32;
 
-    private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref RECT lprcMonitor, nint dwData);
+  public static IEnumerable<DisplayInfo> GetDisplays()
+  {
+    var displays = new List<DisplayInfo>();
 
-    public static IEnumerable<DisplayInfo> GetDisplays()
-    {
-
-        var displays = new List<DisplayInfo>();
-
-        EnumDisplayMonitors(nint.Zero, nint.Zero,
-            delegate (nint hMonitor, nint hdcMonitor, ref RECT lprcMonitor, nint dwData)
-            {
-                var mi = new MonitorInfoEx();
-                mi.Size = Marshal.SizeOf(mi);
-                bool success = GetMonitorInfo(hMonitor, ref mi);
-                if (success)
-                {
-                    var info = new DisplayInfo
-                    {
-                        ScreenSize = new Vector2(mi.Monitor.Right - mi.Monitor.Left, mi.Monitor.Bottom - mi.Monitor.Top),
-                        MonitorArea = new Rectangle(mi.Monitor.Left, mi.Monitor.Top, mi.Monitor.Right - mi.Monitor.Left, mi.Monitor.Bottom - mi.Monitor.Top),
-                        WorkArea = new Rectangle(mi.WorkArea.Left, mi.WorkArea.Top, mi.WorkArea.Right - mi.WorkArea.Left, mi.WorkArea.Bottom - mi.WorkArea.Top),
-                        IsPrimary = mi.Flags > 0,
-                        Hmon = hMonitor,
-                        DeviceName = mi.DeviceName
-                    };
-                    displays.Add(info);
-                }
-                return true;
-            }, nint.Zero);
-
-        unsafe
+    EnumDisplayMonitors(nint.Zero, nint.Zero,
+      delegate(nint hMonitor, nint _, ref Rect _, nint _)
+      {
+        var mi = new MonitorInfoEx();
+        mi.Size = Marshal.SizeOf(mi);
+        var success = GetMonitorInfo(hMonitor, ref mi);
+        if (success)
         {
-            var devMode = new DEVMODEW
-            {
-                dmSize = (ushort)sizeof(DEVMODEW)
-            };
-
-            for (var i = 0; i < displays.Count; i++)
-            {
-                var display = displays[i];
-                display.DisplayName = $"Screen {i}";
-
-                if (PInvoke.EnumDisplaySettings(display.DeviceName, ENUM_DISPLAY_SETTINGS_MODE.ENUM_CURRENT_SETTINGS, ref devMode))
-                {
-                    display.ScaleFactor = devMode.dmLogPixels / 96.0;
-                }
-            }
+          var info = new DisplayInfo
+          {
+            ScreenSize = new Vector2(mi.Monitor.Right - mi.Monitor.Left, mi.Monitor.Bottom - mi.Monitor.Top),
+            MonitorArea = new Rectangle(mi.Monitor.Left, mi.Monitor.Top, mi.Monitor.Right - mi.Monitor.Left,
+              mi.Monitor.Bottom - mi.Monitor.Top),
+            WorkArea = new Rectangle(mi.WorkArea.Left, mi.WorkArea.Top, mi.WorkArea.Right - mi.WorkArea.Left,
+              mi.WorkArea.Bottom - mi.WorkArea.Top),
+            IsPrimary = mi.Flags > 0,
+            Hmon = hMonitor,
+            DeviceName = mi.DeviceName
+          };
+          displays.Add(info);
         }
 
-        return displays;
-    }
+        return true;
+      }, nint.Zero);
 
-    [DllImport("user32.dll")]
-    private static extern bool EnumDisplayMonitors(nint hdc, nint lprcClip, EnumMonitorsDelegate lpfnEnum, nint dwData);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern bool GetMonitorInfo(nint hMonitor, ref MonitorInfoEx lpmi);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    private struct MonitorInfoEx
+    unsafe
     {
-        public int Size;
-        public RECT Monitor;
-        public RECT WorkArea;
-        public uint Flags;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCHDEVICENAME)]
-        public string DeviceName;
+      var devMode = new DEVMODEW
+      {
+        dmSize = (ushort)sizeof(DEVMODEW)
+      };
+
+      for (var i = 0; i < displays.Count; i++)
+      {
+        var display = displays[i];
+        display.DisplayName = $"Screen {i}";
+
+        if (PInvoke.EnumDisplaySettings(display.DeviceName, ENUM_DISPLAY_SETTINGS_MODE.ENUM_CURRENT_SETTINGS,
+              ref devMode))
+        {
+          display.ScaleFactor = devMode.dmLogPixels / 96.0;
+        }
+      }
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
+    return displays;
+  }
+
+  [DllImport("user32.dll")]
+  private static extern bool EnumDisplayMonitors(nint hdc, nint lprcClip, EnumMonitorsDelegate lpfnEnum, nint dwData);
+
+  [DllImport("user32.dll", CharSet = CharSet.Auto)]
+  private static extern bool GetMonitorInfo(nint hMonitor, ref MonitorInfoEx lpmi);
+
+  private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref Rect lprcMonitor, nint dwData);
+
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+  private struct MonitorInfoEx
+  {
+    public int Size;
+    public Rect Monitor;
+    public Rect WorkArea;
+    public uint Flags;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Cchdevicename)]
+    public string DeviceName;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct Rect
+  {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+  }
 }

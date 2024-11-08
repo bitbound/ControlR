@@ -1,0 +1,73 @@
+﻿@inherits ViewportAwareComponent
+@inject ISnackbar Snackbar
+
+<MudTooltip Text="Clipboard" Class="z9002" Placement="Placement.Right">
+  <MudMenu Variant="Variant.Outlined"
+           StartIcon="@GetStartIcon()"
+           Icon="@GetIcon()"
+           Label="@GetLabel()"
+           PopoverClass="z9002">
+
+    <MudMenuItem Icon="@(Icons.Material.Filled.Send)"
+                 IconColor="@(Color.Default)"
+                 OnClick="SendClipboard"
+                 @ontouchend="SendClipboard">
+      Send
+    </MudMenuItem>
+    <MudMenuItem Icon="@(Icons.Material.Filled.CallReceived)"
+                 IconColor="@(Color.Default)"
+                 OnClick="ReceiveClipboard"
+                 @ontouchend="ReceiveClipboard">
+      Receive
+    </MudMenuItem>
+    <MudMenuItem Icon="@(Icons.Material.Filled.Keyboard)"
+                 IconColor="@(Color.Default)"
+                 OnClick="TypeClipboard"
+                 @ontouchend="TypeClipboard">
+      Type
+    </MudMenuItem>
+
+  </MudMenu>
+</MudTooltip>
+
+@code {
+  [Parameter]
+  public EventCallback OnSendClipboardClicked { get; set; }
+
+  [Parameter]
+  public EventCallback OnReceiveClipboardClicked { get; set; }
+
+  [Parameter]
+  public EventCallback OnTypeClipboardClicked { get; set; }
+
+  private async Task SendClipboard()
+  {
+    await OnSendClipboardClicked.InvokeAsync();
+  }
+
+  private async Task ReceiveClipboard()
+  {
+    await OnReceiveClipboardClicked.InvokeAsync();
+  }
+
+  private async Task TypeClipboard()
+  {
+    await OnTypeClipboardClicked.InvokeAsync();
+  }
+
+  private string GetLabel()
+  {
+    return CurrentBreakpoint >= Breakpoint.Sm ? "Clipboard" : string.Empty;
+  }
+
+  private string GetStartIcon()
+  {
+    return CurrentBreakpoint >= Breakpoint.Sm ? Icons.Material.Filled.ContentPaste : string.Empty;
+  }
+
+  private string GetIcon()
+  {
+    return CurrentBreakpoint < Breakpoint.Sm ? Icons.Material.Filled.ContentPaste : string.Empty;
+  }
+
+}

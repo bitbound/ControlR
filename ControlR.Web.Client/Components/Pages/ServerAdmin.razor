@@ -1,0 +1,89 @@
+﻿@attribute [Route(RouteNames.ServerStats)]
+@attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
+
+@inject IMessenger Messenger;
+@inject IViewerHubConnection ViewerHub;
+@inject ISnackbar Snackbar;
+@inject ILogger<ServerAdmin> Logger;
+
+<PageTitle>Server Stats</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  Server Stats
+</MudText>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Active Connections
+  </MudText>
+
+  <div class="d-flex gap-4">
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Agents
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.AgentCount ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Viewers
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.ViewerCount ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+  </div>
+
+</div>
+
+@code {
+  private ServerStatsDto? _serverStats;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    Messenger.Register<DtoReceivedMessage<ServerStatsDto>>(
+      this,
+      async (_, message) =>
+      {
+        _serverStats = message.Dto;
+        await InvokeAsync(StateHasChanged);
+      }
+    );
+
+    await RefreshServerStats();
+  }
+
+  private async Task RefreshServerStats()
+  {
+    try
+    {
+      var result = await ViewerHub.GetServerStats();
+      if (result.IsSuccess)
+      {
+        _serverStats = result.Value;
+        return;
+      }
+
+      Logger.LogResult(result);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while retrieving server stats.");
+    }
+
+    Snackbar.Add("Failed to retrieve server stats", Severity.Error);
+  }
+
+}

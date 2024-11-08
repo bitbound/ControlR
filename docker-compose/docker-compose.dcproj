@@ -11,11 +11,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Store|AnyCPU'" />
+  <PropertyGroup>
+    <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
+  </PropertyGroup>
   <ItemGroup>
+    <None Include=".env" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="launchSettings.json" />
   </ItemGroup>
 </Project>

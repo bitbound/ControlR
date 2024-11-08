@@ -11,7 +11,7 @@ public interface IWakeOnLanService
     Task WakeDevices(string[] macAddresses);
 }
 
-public class WakeOnLanService(ILogger<WakeOnLanService> _logger) : IWakeOnLanService
+public class WakeOnLanService(ILogger<WakeOnLanService> logger) : IWakeOnLanService
 {
     public async Task WakeDevice(string macAddress)
     {
@@ -36,7 +36,7 @@ public class WakeOnLanService(ILogger<WakeOnLanService> _logger) : IWakeOnLanSer
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Error while attempting to wake device with MAC address {MacAddress}.",
                 macAddress);

@@ -4,33 +4,34 @@ namespace ControlR.Libraries.Shared.Services.Buffers;
 
 public interface IEphemeralBuffer<T> : IDisposable
 {
-    int Size { get; }
-    T[] Value { get; }
+  int Size { get; }
+  T[] Value { get; }
 }
 
-internal class EphemeralBuffer<T>(int _size) : IEphemeralBuffer<T>
+internal sealed class EphemeralBuffer<T>(int size) : IEphemeralBuffer<T>
 {
-    private bool _disposedValue;
+  private bool _disposedValue;
 
-    public int Size { get; } = _size;
-    public T[] Value { get; } = ArrayPool<T>.Shared.Rent(_size);
+  public int Size { get; } = size;
+  public T[] Value { get; } = ArrayPool<T>.Shared.Rent(size);
 
-    public void Dispose()
+  public void Dispose()
+  {
+    Dispose(true);
+  }
+
+  private void Dispose(bool disposing)
+  {
+    if (_disposedValue)
     {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+      return;
     }
 
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposedValue)
-        {
-            if (disposing)
-            {
-                ArrayPool<T>.Shared.Return(Value);
-            }
+    _disposedValue = true;
 
-            _disposedValue = true;
-        }
+    if (disposing)
+    {
+      ArrayPool<T>.Shared.Return(Value);
     }
+  }
 }

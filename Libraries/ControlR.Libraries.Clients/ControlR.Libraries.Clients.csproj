@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.10" />
+    <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

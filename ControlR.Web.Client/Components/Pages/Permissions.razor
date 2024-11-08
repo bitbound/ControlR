@@ -1,0 +1,17 @@
+﻿@attribute [Route(RouteNames.Permissions)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+
+<PageTitle>Permissions</PageTitle>
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  Permissions
+</MudText>
+
+<MudTabs PanelClass="pa-4">
+  <MudTabPanel Text="Tags" Icon="@(Icons.Material.Filled.Label)" IconColor="Color.Secondary">
+    <TagsTabContent Tags="_tags" OnTagsChanged="HandleTagsChanged" />
+  </MudTabPanel>
+  <MudTabPanel Text="Users" Icon="@(Icons.Material.Filled.AccountCircle)" IconColor="Color.Secondary">
+  </MudTabPanel>
+  <MudTabPanel Text="Devices" Icon="@(Icons.Material.Filled.Devices)" IconColor="Color.Secondary">
+  </MudTabPanel>
+</MudTabs>

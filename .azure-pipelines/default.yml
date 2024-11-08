@@ -16,8 +16,6 @@ jobs:
     pool:
       name: Default
       #vmImage: windows-latest
-    variables:
-      AndroidVersionCode: $[counter('AndroidVersion', 2)]
     steps:
       - checkout: self
         clean: true
@@ -73,7 +71,7 @@ jobs:
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -KeystorePath "$(keystore.secureFilePath)" -KeystorePassword "$(KeystorePassword)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -AndroidVersionCode "$(AndroidVersionCode)" -BuildAgent -BuildStreamer -BuildViewer -BuildWebsite
+          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)"-BuildAgent -BuildStreamer -BuildWebsite
           pwsh: true
 
       - task: PublishPipelineArtifact@1

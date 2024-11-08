@@ -1,8 +1,11 @@
 version: '3.4'
 
+x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
+x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
+x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
+
 networks:
   controlr:
-    name: controlr-network
     driver: bridge
     ipam:
       config:
@@ -13,58 +16,115 @@ services:
   controlr:
     image: translucency/controlr:latest
     container_name: controlr
+    profiles: [ production ]
     restart: unless-stopped
+    depends_on:
+      - postgres
+      - aspire
     ports:
-      - 5120:8080
+      - "5120:8080"
     networks:
       - controlr
     volumes:
       - controlr-data:/app/AppData
     environment:
       # ASPNETCORE variables should *not* be changed.
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_HTTP_PORTS=8080
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+
+      ControlR_POSTGRES_USER: *pgUser
+      ControlR_POSTGRES_PASSWORD: *pgPassword
+      ControlR_POSTGRES_HOST: "postgres"
       
+      # Whether to make self-registration publicly available.
+      ControlR_AppOptions__EnablePublicRegistration: false
+      
+      # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
+      # and add them to the KnownNetworks list for forwarded headers.
+      ControlR_AppOptions__EnableCloudflareProxySupport: false
+
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
-      #- ControlR_AzureMonitor__ConnectionString=
+      #ControlR_AzureMonitor__ConnectionString:
       # Add an OTLP endpoint URL to enable exporting of OpenTelemetry data to an OTLP endpoint.
-      #- ControlR_OTLP_ENDPOINT_URL=
+      ControlR_OTLP_ENDPOINT_URL: "http://aspire:18889"
 
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
-      - ControlR_Logging__LogLevel__Default=Information
+      ControlR_Logging__LogLevel__Default: Information
+      
+      # Set the minimum log level for Serilog provider.
+      ControlR_Serilog__MinimumLevel__Default: Information
 
-      # The Gateway IP here must match the IP address in the above controlr-network gateway.
-      - ControlR_ApplicationOptions__DockerGatewayIp=172.29.0.1
+      # The Gateway IP here must match the IP address in the above controlr network gateway.
+      ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
 
-      # How long to keep logs on the file system before deleting them.
-      - ControlR_ApplicationOptions__LogRetentionDays=7
+      ControlR_AppOptions__ServerBaseUri: "http://localhost:8080"
 
-      # Uncomment these variables to control access to your server.
-      # For multiple values in an array, put each item on a new line
-      # with the next consecutive number.  Example:
-      #     - ControlR_ApplicationOptions__AdminPublicKeys__0={first-admin-key}
-      #     - ControlR_ApplicationOptions__AdminPublicKeys__1={second-admin-key}
-      #
-      #- ControlR_ApplicationOptions__AdminPublicKeys__0=
-      #- ControlR_ApplicationOptions__EnableRestrictedUserAccess=false
-      #- ControlR_ApplicationOptions__AuthorizedUserPublicKeys__0=
+
+      ControlR_AppOptions__RequireUserEmailConfirmation: true
+      ControlR_AppOptions__SmtpDisplayName: ""
+      ControlR_AppOptions__SmtpEmail: ""
+      ControlR_AppOptions__SmtpHost: ""
+      ControlR_AppOptions__SmtpLocalDomain: ""
+      ControlR_AppOptions__SmtpCheckCertificateRevocation: true
+      ControlR_AppOptions__SmtpPassword: ""
+      ControlR_AppOptions__SmtpPort: 587
+      ControlR_AppOptions__SmtpUserName: ""
 
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
       # forwarded headers are not in the correct format.
       # See the docs for more details:  
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
-      #- ControlR_ApplicationOptions__KnownProxies__0=
+      #ControlR_AppOptions__KnownProxies__0:
+      
+      #ControlR_AppOptions__KnownNetworks__0:
 
       # If enabled, ControlR will attempt to use geolocation APIs to determine
       # the closest relay server to the viewer when starting a remote control
       # session.  Otherwise, the local server will be used.
-      - ControlR_ApplicationOptions__UseExternalWebSocketBridge=false
-      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Label=
-      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Origin=
-      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Latitude=
-      #- ControlR_ApplicationOptions__ExternalWebSocketHosts__0__Longitude=
+      ControlR_AppOptions__UseExternalWebSocketBridge: false
+      #ControlR_AppOptions__ExternalWebSocketHosts__0__Label:
+      #ControlR_AppOptions__ExternalWebSocketHosts__0__Origin:
+      #ControlR_AppOptions__ExternalWebSocketHosts__0__Latitude:
+      #ControlR_AppOptions__ExternalWebSocketHosts__0__Longitude:
+
+      # Create an App Registration in Azure and set these values to enable Microsoft account authentication.
+      #ControlR_AppOptions__MicrosoftClientId: ""
+      #ControlR_AppOptions__MicrosoftClientSecret: ""
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    profiles: [ development, production ]
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    networks:
+      - controlr
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: *pgUser
+      POSTGRES_PASSWORD: *pgPassword
+      POSTGRES_DB: controlr
+
+  aspire:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:8.1.0
+    container_name: aspire
+    profiles: [ development, production ]
+    restart: unless-stopped
+    ports:
+      - "18888:18888"
+    expose:
+      - "18889"
+    networks:
+      - controlr
+    environment:
+      DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://aspire:18889"
+      Dashboard__Frontend__BrowserToken: *aspireToken
 
 volumes:
+  postgres-data:
+    name: "postgres-data"
   controlr-data:
     name: "controlr-data"

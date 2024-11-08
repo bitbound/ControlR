@@ -1,0 +1,83 @@
+﻿@page "/Account/Manage/DeletePersonalData"
+
+@inject UserManager<AppUser> UserManager
+@inject SignInManager<AppUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<DeletePersonalData> Logger
+
+<PageTitle>Delete Personal Data</PageTitle>
+
+<MudText Typo="Typo.h6" GutterBottom="true">Delete personal data</MudText>
+
+<StatusMessage Message="@_message"/>
+
+<MudAlert Severity="Severity.Error" Variant="Variant.Text">
+  Deleting this data will permanently remove your account, and this cannot be recovered.
+</MudAlert>
+
+<EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
+  <DataAnnotationsValidator/>
+
+  <MudGrid>
+    @if (_requirePassword)
+    {
+      <MudItem xs="12">
+        <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" InputType="InputType.Password"
+                            Label="Password" Placeholder="password" HelperText="Please enter your password."
+                            UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })"/>
+      </MudItem>
+    }
+    <MudItem xs="12">
+      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Delete data and close my account</MudStaticButton>
+    </MudItem>
+  </MudGrid>
+</EditForm>
+
+@code {
+  private string? _message;
+  private AppUser _user = default!;
+  private bool _requirePassword;
+
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
+
+  protected override async Task OnInitializedAsync()
+  {
+    Input ??= new InputModel();
+    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _requirePassword = await UserManager.HasPasswordAsync(_user);
+  }
+
+  private async Task OnValidSubmitAsync()
+  {
+    if (_requirePassword && !await UserManager.CheckPasswordAsync(_user, Input.Password))
+    {
+      _message = "Error: Incorrect password.";
+      return;
+    }
+
+    var result = await UserManager.DeleteAsync(_user);
+    if (!result.Succeeded)
+    {
+      throw new InvalidOperationException("Unexpected error occurred deleting user.");
+    }
+
+    await SignInManager.SignOutAsync();
+
+    var userId = await UserManager.GetUserIdAsync(_user);
+    Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
+
+    RedirectManager.RedirectToCurrentPage();
+  }
+
+  private sealed class InputModel
+  {
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = "";
+  }
+
+}

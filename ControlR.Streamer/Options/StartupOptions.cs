@@ -5,7 +5,6 @@ public class StartupOptions
     private Uri? _serverOrigin;
     private Uri? _webSocketUri;
 
-    public string AuthorizedKey { get; set; } = string.Empty;
     public bool NotifyUser { get; set; }
 
     public Uri ServerOrigin

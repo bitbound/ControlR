@@ -1,38 +1,38 @@
-﻿using ControlR.Libraries.Shared.Dtos;
+﻿using System.Net.Http.Json;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
-using Microsoft.Extensions.Logging;
-using System.Net.Http.Json;
 
 namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IIpApi
 {
-    Task<Result<IpApiResponse>> GetIpInfo(string ipAddress);
+  Task<Result<IpApiResponse>> GetIpInfo(string ipAddress);
 }
+
 public class IpApi(
-    HttpClient _httpClient,
-    ILogger<IpApi> _logger) : IIpApi
+  HttpClient httpClient,
+  ILogger<IpApi> logger) : IIpApi
 {
-    private readonly Uri _baseUri = new("http://ip-api.com/json/");
+  private readonly Uri _baseUri = new("http://ip-api.com/json/");
 
-    public async Task<Result<IpApiResponse>> GetIpInfo(string ipAddress)
+  public async Task<Result<IpApiResponse>> GetIpInfo(string ipAddress)
+  {
+    try
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(ipAddress))
-            {
-                return Result.Fail<IpApiResponse>("No IP address cannot be empty.").Log(_logger);
-            }
+      if (string.IsNullOrWhiteSpace(ipAddress))
+      {
+        return Result.Fail<IpApiResponse>("No IP address cannot be empty.").Log(logger);
+      }
 
-            var response = await _httpClient.GetFromJsonAsync<IpApiResponse>($"{_baseUri}{ipAddress}");
-            Guard.IsNotNull(response);
+      var response = await httpClient.GetFromJsonAsync<IpApiResponse>($"{_baseUri}{ipAddress}");
+      Guard.IsNotNull(response);
 
-            return Result.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errror while getting IP location.");
-            return Result.Fail<IpApiResponse>(ex, "Error while getting IP location.").Log(_logger);
-        }
+      return Result.Ok(response);
     }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Errror while getting IP location.");
+      return Result.Fail<IpApiResponse>(ex, "Error while getting IP location.").Log(logger);
+    }
+  }
 }

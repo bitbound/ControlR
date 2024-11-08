@@ -1,0 +1,23 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="compose (dev)" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value="" />
+        <option name="secondarySourceFiles">
+          <list>
+            <option value="docker-compose/docker-compose.yml" />
+          </list>
+        </option>
+        <option name="services">
+          <list>
+            <option value="postgres" />
+            <option value="aspire" />
+          </list>
+        </option>
+        <option name="sourceFilePath" value="docker-compose/docker-compose.override.yml" />
+      </settings>
+    </deployment>
+    <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
+    <method v="2" />
+  </configuration>
+</component>

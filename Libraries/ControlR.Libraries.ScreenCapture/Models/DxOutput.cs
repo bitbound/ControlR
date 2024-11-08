@@ -5,60 +5,57 @@ using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
 
 namespace ControlR.Libraries.ScreenCapture.Models;
-internal sealed class DxOutput : IDisposable
+
+internal sealed class DxOutput(
+  string deviceName,
+  Rectangle bounds,
+  IDXGIAdapter1 adapter,
+  ID3D11Device device,
+  ID3D11DeviceContext deviceContext,
+  IDXGIOutputDuplication outputDuplication,
+  DXGI_MODE_ROTATION rotation)
+  : IDisposable
 {
-    private bool _isDisposed;
+  public IDXGIAdapter1 Adapter { get; } = adapter;
+  public Rectangle Bounds { get; } = bounds;
+  public ID3D11Device Device { get; } = device;
+  public ID3D11DeviceContext DeviceContext { get; } = deviceContext;
+  public string DeviceName { get; } = deviceName;
+  public bool IsDisposed { get; private set; }
 
-    public DxOutput(
-        string deviceName,
-        Rectangle bounds,
-        IDXGIAdapter1 adapter,
-        ID3D11Device device,
-        ID3D11DeviceContext deviceContext,
-        IDXGIOutputDuplication outputDuplication,
-        DXGI_MODE_ROTATION rotation)
+  public Rectangle LastCursorArea { get; set; }
+  public DateTimeOffset LastSuccessfulCapture { get; set; }
+  public IDXGIOutputDuplication OutputDuplication { get; } = outputDuplication;
+  public DXGI_MODE_ROTATION Rotation { get; } = rotation;
+
+  public void Dispose()
+  {
+    if (IsDisposed)
     {
-        DeviceName = deviceName;
-        Bounds = bounds;
-        Adapter = adapter;
-        Device = device;
-        DeviceContext = deviceContext;
-        OutputDuplication = outputDuplication;
-        Rotation = rotation;
+      return;
     }
 
-    public IDXGIAdapter1 Adapter { get; }
-    public Rectangle Bounds { get; }
-    public ID3D11Device Device { get; }
-    public ID3D11DeviceContext DeviceContext { get; }
-    public string DeviceName { get; }
-    public bool IsDisposed => _isDisposed;
-    public Rectangle LastCursorArea { get; set; }
-    public DateTimeOffset LastSuccessfulCapture { get; set; }
-    public IDXGIOutputDuplication OutputDuplication { get; }
-    public DXGI_MODE_ROTATION Rotation { get; }
-    public void Dispose()
+    IsDisposed = true;
+
+    try
     {
-        if (_isDisposed)
-        {
-            return;
-        }
-
-        _isDisposed = true;
-
-        try
-        {
-            OutputDuplication.ReleaseFrame();
-        }
-        catch { }
-        try
-        {
-            Marshal.FinalReleaseComObject(OutputDuplication);
-            Marshal.FinalReleaseComObject(DeviceContext);
-            Marshal.FinalReleaseComObject(Device);
-            Marshal.FinalReleaseComObject(Adapter);
-        }
-        catch { }
-        GC.SuppressFinalize(this);
+      OutputDuplication.ReleaseFrame();
     }
+    catch
+    {
+    }
+
+    try
+    {
+      Marshal.FinalReleaseComObject(OutputDuplication);
+      Marshal.FinalReleaseComObject(DeviceContext);
+      Marshal.FinalReleaseComObject(Device);
+      Marshal.FinalReleaseComObject(Adapter);
+    }
+    catch
+    {
+    }
+
+    GC.SuppressFinalize(this);
+  }
 }

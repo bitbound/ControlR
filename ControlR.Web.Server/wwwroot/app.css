@@ -1,0 +1,37 @@
+﻿.text-end {
+  text-align: end;
+}
+
+.text-start {
+  text-align: start;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-justify {
+  text-align: justify;
+}
+
+.d-grid {
+  display: grid;
+}
+
+.z9001 {
+  z-index: 9001 !important;
+}
+
+.z9002 {
+  z-index: 9002 !important;
+}
+
+.no-wrap {
+  white-space: nowrap;
+}
+
+
+#mud-snackbar-container {
+  /* Place above content windows. */
+  z-index: 9001 !important;
+}

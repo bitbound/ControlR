@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using Windows.Win32.Foundation;
 
 namespace ControlR.Libraries.ScreenCapture.Models;
 

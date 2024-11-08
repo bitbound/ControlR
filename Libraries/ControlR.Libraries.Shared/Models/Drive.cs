@@ -3,7 +3,7 @@
 namespace ControlR.Libraries.Shared.Models;
 
 [MessagePackObject]
-public class Drive
+public record Drive
 {
     [MsgPackKey]
     [JsonConverter(typeof(JsonStringEnumConverter))]

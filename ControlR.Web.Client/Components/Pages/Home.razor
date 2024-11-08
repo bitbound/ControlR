@@ -1,0 +1,12 @@
+﻿@attribute [Route(RouteNames.Home)]
+
+<PageTitle>Home</PageTitle>
+
+<AuthorizeView>
+  <Authorized>
+    <Dashboard/>
+  </Authorized>
+  <NotAuthorized>
+    <Welcome/>
+  </NotAuthorized>
+</AuthorizeView>

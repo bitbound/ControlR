@@ -1,13 +1,23 @@
 {
   "profiles": {
-    "Docker Compose": {
+    "controlr": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "composeLaunchAction": "LaunchBrowser",
       "composeLaunchServiceName": "controlr",
-      "composeLaunchUrl": "http://localhost:5120/api/health",
+      "composeLaunchUrl": "http://localhost:5120/",
       "serviceActions": {
         "controlr": "StartDebugging"
+      }
+    },
+    "postgres": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "composeLaunchAction": "DoNothing",
+      "composeLaunchServiceName": "postgres",
+      "serviceActions": {
+        "postgres": "StartWithoutDebugging",
+        "controlr":  "DoNotStart"
       }
     }
   }

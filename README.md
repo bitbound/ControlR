@@ -7,20 +7,13 @@ A zero-trust remote control solution built with .NET 8, MAUI, and SignalR.
 
 Website: https://controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
-Feature Requests: https://features.controlr.app/  
-Discussions: https://github.com/bitbound/ControlR/discussions
+Discussions: https://github.com/bitbound/ControlR/discussions  
 
-Microsoft Store: https://www.microsoft.com/store/productId/9NS914B8GR04  
-Play Store: https://play.google.com/apps/testing/dev.jaredg.controlr.viewer
+## Upcoming Changes:
 
-## Testers Needed:
+ControlR is being rewritten with a web front-end, which will replace the native Windows and Android apps.
 
-If you'd like to help to get ControlR on the Play Store, please join the beta test. It needs at least 20 users to stay in the program for at least 14 days before I can publish the app to the Play Store.
-
-Accessing the beta is a two-step process:
-
-- Join the [ControlR Testers](https://groups.google.com/g/controlr-testers/about) Google Group.
-- Install [ControlR (Early Access)](https://play.google.com/store/apps/details?id=dev.jaredg.controlr.viewer) from the Play Store.
+The below readme will change once the transition is complete.
 
 ## Quick Start:
 

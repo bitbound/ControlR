@@ -1,7 +1,6 @@
 ﻿using ControlR.Libraries.ScreenCapture.Primitives;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.Versioning;
 using Windows.Graphics.Imaging;
 
 namespace ControlR.Libraries.ScreenCapture;
