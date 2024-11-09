@@ -10,7 +10,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Store|AnyCPU'" />
   <PropertyGroup>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
   </PropertyGroup>

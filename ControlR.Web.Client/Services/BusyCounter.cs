@@ -22,12 +22,12 @@ internal class BusyCounter(IMessenger messenger) : IBusyCounter
   {
     Interlocked.Increment(ref _busyCounter);
 
-    messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
+    messenger.SendGenericMessage(EventMessageKind.PendingOperationsChanged);
 
     return new CallbackDisposable(() =>
     {
       Interlocked.Decrement(ref _busyCounter);
-      messenger.SendGenericMessage(GenericMessageKind.PendingOperationsChanged);
+      messenger.SendGenericMessage(EventMessageKind.PendingOperationsChanged);
 
       additionalDisposedAction?.Invoke();
     });

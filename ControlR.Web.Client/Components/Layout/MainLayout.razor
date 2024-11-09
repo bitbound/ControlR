@@ -161,7 +161,7 @@
 
     if (_isBrowser)
     {
-      Messenger.Value.RegisterGenericMessage(this, HandleGeneric);
+      Messenger.Value.RegisterEventMessage(this, HandleGeneric);
       Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
@@ -216,11 +216,11 @@
     }
   }
 
-  private async Task HandleGeneric(object subscriber, GenericMessageKind kind)
+  private async Task HandleGeneric(object subscriber, EventMessageKind kind)
   {
     switch (kind)
     {
-      case GenericMessageKind.PendingOperationsChanged:
+      case EventMessageKind.PendingOperationsChanged:
         await InvokeAsync(StateHasChanged);
         break;
       default:

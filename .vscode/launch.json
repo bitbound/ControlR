@@ -21,24 +21,24 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build server",
-      "program": "${workspaceFolder}/ControlR.Server/bin/Debug/net8.0/ControlR.Server.dll",
-      "launchSettingsFilePath": "${workspaceFolder}/ControlR.Server/Properties/launchSettings.json",
+      "program": "${workspaceFolder}/ControlR.Web.Server/bin/Debug/net8.0/ControlR.Web.Server.dll",
+      "launchSettingsFilePath": "${workspaceFolder}/ControlR.Web.Server/Properties/launchSettings.json",
       "launchSettingsProfile": "https",
-      "cwd": "${workspaceFolder}/ControlR.Server",
+      "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
       "console": "internalConsole"
-    },
-    {
-      "name": "Viewer (Debug)",
-      "type": "maui",
-      "request": "launch",
-      "preLaunchTask": "maui: Build"
     }
   ],
   "compounds": [
     {
-      "name": "Server + Agent + Viewer",
-      "configurations": ["Server (https)", "Agent (Run)", "Viewer (Debug)"]
+      "name": "Server + Postgres + Agent",
+      "preLaunchTask": "postgres + aspire",
+      "configurations": ["Server (https)", "Agent (Run)"]
+    },
+    {
+      "name": "Server + Postgres",
+      "preLaunchTask": "postgres + aspire",
+      "configurations": ["Server (https)"]
     }
   ]
 }

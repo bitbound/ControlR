@@ -130,13 +130,13 @@ public partial class Dashboard
   }
 
 
-  private Task HandleGenericMessage(object subscriber, GenericMessageKind kind)
+  private Task HandleGenericMessage(object subscriber, EventMessageKind kind)
   {
     try
     {
       switch (kind)
       {
-        case GenericMessageKind.DeviceStoreUpdated:
+        case EventMessageKind.DeviceStoreUpdated:
         {
           Debouncer.Debounce(
             TimeSpan.FromSeconds(1),
@@ -412,7 +412,7 @@ public partial class Dashboard
 
     await RefreshLatestAgentVersion();
 
-    Messenger.RegisterGenericMessage(this, HandleGenericMessage);
+    Messenger.RegisterEventMessage(this, HandleGenericMessage);
 
     if (DeviceStore.Items.Count == 0)
     {

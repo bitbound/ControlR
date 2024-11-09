@@ -9,7 +9,7 @@ public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : I
   public async Task ReceiveDeviceUpdate(DeviceResponseDto device)
   {
     deviceStore.AddOrUpdate(device);
-    await messenger.SendGenericMessage(GenericMessageKind.DeviceStoreUpdated);
+    await messenger.SendGenericMessage(EventMessageKind.DeviceStoreUpdated);
   }
 
   public async Task ReceiveDto(DtoWrapper dto)

@@ -33,7 +33,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   public void Add(DeviceContentInstance instance)
   {
     _cache.Add(instance);
-    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+    _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }
 
   public void AddContentInstance<T>(
@@ -62,13 +62,13 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
 
     var contentInstance = new DeviceContentInstance(device, RenderComponent, instanceType);
     _cache.Add(contentInstance);
-    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+    _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }
 
   public void Remove(DeviceContentInstance instance)
   {
     _cache.Remove(instance);
-    _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+    _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }
 
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
@@ -76,7 +76,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
     if (message.NewState != HubConnectionState.Connected)
     {
       _cache.RemoveAll(x => x.ContentType != DeviceContentInstanceType.RemoteControl);
-      await _messenger.SendGenericMessage(GenericMessageKind.DeviceContentWindowsChanged);
+      await _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
     }
   }
 }

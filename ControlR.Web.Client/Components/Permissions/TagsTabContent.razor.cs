@@ -30,6 +30,12 @@ public partial class TagsTabContent : ComponentBase
 
   private IOrderedEnumerable<TagResponseDto> SortedTags => TagStore.Items.OrderBy(x => x.Name);
 
+  protected override async Task OnInitializedAsync()
+  {
+    await TagStore.Refresh();
+    await base.OnInitializedAsync();
+  }
+
   private async Task CreateTag()
   {
     if (string.IsNullOrWhiteSpace(_newTagName))
@@ -99,7 +105,6 @@ public partial class TagsTabContent : ComponentBase
     try
     {
       await Task.Yield();
-
       Snackbar.Add(isToggled
         ? "Tag added"
         : "Tag removed", Severity.Success);

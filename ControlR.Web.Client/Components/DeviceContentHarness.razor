@@ -21,7 +21,7 @@
 
   protected override void OnInitialized()
   {
-    Messenger.Maybe?.RegisterGenericMessage(this, HandleGenericMessage);
+    Messenger.Maybe?.RegisterEventMessage(this, HandleGenericMessage);
     base.OnInitializedAsync();
   }
 
@@ -30,14 +30,14 @@
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task HandleGenericMessage(object subscriber, GenericMessageKind messageKind)
+  private async Task HandleGenericMessage(object subscriber, EventMessageKind messageKind)
   {
     if (ScreenWake.Exists)
     {
       await ScreenWake.Value.SetScreenWakeLock(ContentInstances.Count > 0);
     
     }
-    if (messageKind == GenericMessageKind.DeviceContentWindowsChanged)
+    if (messageKind == EventMessageKind.DeviceContentWindowsChanged)
     {
       await InvokeAsync(StateHasChanged);
     }

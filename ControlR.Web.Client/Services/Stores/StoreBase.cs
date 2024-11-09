@@ -38,7 +38,7 @@ public abstract class StoreBase<TDto>(
   {
     Cache.Clear();
   }
-  
+
   public async Task Refresh()
   {
     if (!await _refreshLock.WaitAsync(0))
@@ -47,6 +47,7 @@ public abstract class StoreBase<TDto>(
       // for it to finish, but we don't want to do another refresh.
       await _refreshLock.WaitAsync();
       _refreshLock.Release();
+      return;
     }
 
     try

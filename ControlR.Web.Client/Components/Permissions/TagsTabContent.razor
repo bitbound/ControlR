@@ -51,22 +51,20 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      <MudPaper>
-        <MudList T="UserResponseDto"
-                 Color="Color.Info">
+      <MudList T="UserResponseDto"
+               Color="Color.Info">
 
-          @foreach (var user in UserStore.Items)
-          {
-            <MudListItem T="UserResponseDto" Value="@user">
-              <MudSwitch T="bool" Value="@(_selectedTag.UserIds.Any(x => x == user.Id))"
-                         ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
-                @user.UserName
-              </MudSwitch>
-            </MudListItem>
-          }
+        @foreach (var user in UserStore.Items)
+        {
+          <MudListItem T="UserResponseDto" Value="@user">
+            <MudSwitch T="bool" Value="@(_selectedTag.UserIds.Any(x => x == user.Id))"
+                       ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
+              @user.UserName
+            </MudSwitch>
+          </MudListItem>
+        }
 
-        </MudList>
-      </MudPaper>
+      </MudList>
     }
   </MudItem>
   <MudItem md="4" sm="6" xs="12">

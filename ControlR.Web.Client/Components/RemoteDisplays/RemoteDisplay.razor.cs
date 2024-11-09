@@ -228,7 +228,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     Messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleUnsignedDtoReceived);
-    Messenger.RegisterGenericMessage(this, HandleParameterlessMessage);
+    Messenger.RegisterEventMessage(this, HandleParameterlessMessage);
 
     return base.OnInitializedAsync();
   }
@@ -367,11 +367,12 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async void HandleParameterlessMessage(object sender, GenericMessageKind kind)
+  private async void HandleParameterlessMessage(object sender, EventMessageKind kind)
   {
     switch (kind)
     {
-      case GenericMessageKind.ShuttingDown:
+      // TODO: Implement on agent.
+      case EventMessageKind.RemoteDeviceShuttingDown:
         await DisposeAsync();
         break;
     }
@@ -474,29 +475,29 @@ public partial class RemoteDisplay : IAsyncDisposable
       switch (wrapper.DtoType)
       {
         case DtoType.DisplayData:
-        {
-          var dto = wrapper.GetPayload<DisplayDataDto>();
-          await HandleDisplayDataReceived(dto);
-          break;
-        }
+          {
+            var dto = wrapper.GetPayload<DisplayDataDto>();
+            await HandleDisplayDataReceived(dto);
+            break;
+          }
         case DtoType.ScreenRegion:
-        {
-          var dto = wrapper.GetPayload<ScreenRegionDto>();
-          await DrawRegion(dto);
-          break;
-        }
+          {
+            var dto = wrapper.GetPayload<ScreenRegionDto>();
+            await DrawRegion(dto);
+            break;
+          }
         case DtoType.ClipboardText:
-        {
-          var dto = wrapper.GetPayload<ClipboardTextDto>();
-          await HandleClipboardTextReceived(dto);
-          break;
-        }
+          {
+            var dto = wrapper.GetPayload<ClipboardTextDto>();
+            await HandleClipboardTextReceived(dto);
+            break;
+          }
         case DtoType.CursorChanged:
-        {
-          var dto = wrapper.GetPayload<CursorChangedDto>();
-          await HandleCursorChanged(dto);
-          break;
-        }
+          {
+            var dto = wrapper.GetPayload<CursorChangedDto>();
+            await HandleCursorChanged(dto);
+            break;
+          }
       }
     }
     catch (Exception ex)
@@ -573,7 +574,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       _canvasCssHeight = newHeight;
 
       _lastPinchDistance = pinchDistance;
-      
+
       var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
       var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
 
