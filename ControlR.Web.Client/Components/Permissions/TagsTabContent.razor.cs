@@ -104,6 +104,7 @@ public partial class TagsTabContent : ComponentBase
   {
     try
     {
+      // TODO: Create API endpoint.
       await Task.Yield();
       Snackbar.Add(isToggled
         ? "Tag added"

@@ -1,5 +1,4 @@
-﻿@using ControlR.Web.Client.Services.Stores
-<MudGrid>
+﻿<MudGrid>
   <MudItem md="4" sm="6" xs="12">
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Tags
@@ -51,20 +50,16 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      <MudList T="UserResponseDto"
-               Color="Color.Info">
-
+      <MudPaper Class="pa-3">
         @foreach (var user in UserStore.Items)
         {
-          <MudListItem T="UserResponseDto" Value="@user">
-            <MudSwitch T="bool" Value="@(_selectedTag.UserIds.Any(x => x == user.Id))"
-                       ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
-              @user.UserName
-            </MudSwitch>
-          </MudListItem>
+          <MudSwitch T="bool" 
+                     Value="@(_selectedTag.UserIds.Any(x => x == user.Id))"
+                     ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
+            @user.UserName
+          </MudSwitch>
         }
-
-      </MudList>
+      </MudPaper>
     }
   </MudItem>
   <MudItem md="4" sm="6" xs="12">

@@ -27,6 +27,7 @@ public abstract class StoreBase<TDto>(
   protected ISnackbar Snackbar { get; } = snackbar;
   protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
 
+  // TODO: Add observability.
   public ICollection<TDto> Items => Cache.Values;
 
   public void AddOrUpdate(TDto device)

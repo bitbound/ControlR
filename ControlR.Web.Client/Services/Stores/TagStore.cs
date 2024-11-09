@@ -7,6 +7,7 @@ public interface ITagStore : IStoreBase<TagResponseDto>
 public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagStore> logger)
   : StoreBase<TagResponseDto>(controlrApi, snackbar, logger), ITagStore
 {
+  // TODO: Convert DTO to view model.
   protected override async Task RefreshImpl()
   {
     var getResult = await ControlrApi.GetAllTags();
