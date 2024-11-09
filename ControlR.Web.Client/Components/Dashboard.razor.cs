@@ -53,10 +53,10 @@ public partial class Dashboard
     {
       if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
       {
-        return DeviceStore.Resources;
+        return DeviceStore.Items;
       }
 
-      return DeviceStore.Resources
+      return DeviceStore.Items
         .Where(x => x.IsOnline)
         .ToArray();
     }
@@ -267,7 +267,7 @@ public partial class Dashboard
         return;
       }
 
-      await DeviceStore.Remove(device);
+      _ = DeviceStore.Remove(device);
       Snackbar.Add("Device removed", Severity.Success);
     }
     catch (Exception ex)
@@ -414,7 +414,7 @@ public partial class Dashboard
 
     Messenger.RegisterGenericMessage(this, HandleGenericMessage);
 
-    if (DeviceStore.Resources.Count == 0)
+    if (DeviceStore.Items.Count == 0)
     {
       await DeviceStore.Refresh();
     }

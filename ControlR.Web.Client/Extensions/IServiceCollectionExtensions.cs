@@ -21,7 +21,6 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
     services.AddScoped<IViewerHubConnection, ViewerHubConnection>();
-    services.AddScoped<IDeviceStore, DeviceStore>();
     services.AddScoped<ISystemTime, SystemTime>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
     services.AddScoped<IMemoryProvider, MemoryProvider>();
@@ -32,6 +31,10 @@ public static class ServiceCollectionExtensions
     services.AddTransient<IJsInterop, JsInterop>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddTransient<IViewerStreamingClient, ViewerStreamingClient>();
+
+    services.AddScoped<IDeviceStore, DeviceStore>();
+    services.AddScoped<ITagStore, TagStore>();
+    services.AddScoped<IUserStore, UserStore>();
 
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
 

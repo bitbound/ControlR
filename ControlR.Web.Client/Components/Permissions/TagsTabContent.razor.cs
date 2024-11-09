@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using ControlR.Web.Client.Services.Stores;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -15,15 +16,19 @@ public partial class TagsTabContent : ComponentBase
   [Inject]
   public required IDialogService DialogService { get; init; }
 
-  [Parameter]
-  public EventCallback OnTagsChanged { get; set; }
-
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  [Parameter]
-  [EditorRequired]
-  public required ConcurrentList<TagResponseDto> Tags { get; init; }
+  [Inject]
+  public required ITagStore TagStore { get; init; }
+
+  [Inject]
+  public required ILogger<TagsTabContent> Logger { get; init; }
+
+  [Inject]
+  public required IUserStore UserStore { get; init; }
+
+  private IOrderedEnumerable<TagResponseDto> SortedTags => TagStore.Items.OrderBy(x => x.Name);
 
   private async Task CreateTag()
   {
@@ -46,9 +51,8 @@ public partial class TagsTabContent : ComponentBase
     }
 
     Snackbar.Add("Tag created", Severity.Success);
-    Tags.Add(createResult.Value);
+    TagStore.AddOrUpdate(createResult.Value);
     _newTagName = null;
-    await OnTagsChanged.InvokeAsync();
   }
 
   private async Task DeleteSelectedTag()
@@ -72,9 +76,8 @@ public partial class TagsTabContent : ComponentBase
       return;
     }
 
-    Tags.Remove(_selectedTag);
+    TagStore.Remove(_selectedTag);
     Snackbar.Add("Tag deleted", Severity.Success);
-    await OnTagsChanged.InvokeAsync();
   }
 
   private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
@@ -91,6 +94,24 @@ public partial class TagsTabContent : ComponentBase
     return ValidateNewTagName(_newTagName) == null;
   }
 
+  private async Task SetTag(bool isToggled, TagResponseDto tag, Guid userId)
+  {
+    try
+    {
+      await Task.Yield();
+
+      Snackbar.Add(isToggled
+        ? "Tag added"
+        : "Tag removed", Severity.Success);
+
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while setting tag.");
+      Snackbar.Add("An error occurred while setting tag", Severity.Error);
+    }
+  }
+
   private string? ValidateNewTagName(string? tagName)
   {
     if (string.IsNullOrWhiteSpace(tagName))
@@ -103,7 +124,7 @@ public partial class TagsTabContent : ComponentBase
       return "Tag name must be 100 characters or less.";
     }
 
-    if (Tags.Any(x => x.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
+    if (SortedTags.Any(x => x.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
     {
       return "Tag name already exists.";
     }

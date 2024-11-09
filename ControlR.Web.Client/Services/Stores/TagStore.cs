@@ -1,7 +1,11 @@
 ﻿namespace ControlR.Web.Client.Services.Stores;
 
+public interface ITagStore : IStoreBase<TagResponseDto>
+{
+}
+
 public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagStore> logger)
-  : StoreBase<TagResponseDto>(controlrApi, snackbar, logger)
+  : StoreBase<TagResponseDto>(controlrApi, snackbar, logger), ITagStore
 {
   protected override async Task RefreshImpl()
   {

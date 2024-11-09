@@ -6,11 +6,11 @@ namespace ControlR.Web.Client.Services.Stores;
 public interface IStoreBase<TDto>
   where TDto : IHasPrimaryKey
 {
-  ICollection<TDto> Resources { get; }
+  ICollection<TDto> Items { get; }
   void AddOrUpdate(TDto device);
   void Clear();
   Task Refresh();
-  Task Remove(TDto device);
+  bool Remove(TDto device);
   bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device);
 }
 
@@ -23,12 +23,11 @@ public abstract class StoreBase<TDto>(
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
   protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
-  protected SemaphoreSlim RefreshLock { get; } = new(1, 1);
   protected IControlrApi ControlrApi { get; } = controlrApi;
   protected ISnackbar Snackbar { get; } = snackbar;
   protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
 
-  public ICollection<TDto> Resources => Cache.Values;
+  public ICollection<TDto> Items => Cache.Values;
 
   public void AddOrUpdate(TDto device)
   {
@@ -65,10 +64,9 @@ public abstract class StoreBase<TDto>(
     }
   }
 
-  public Task Remove(TDto device)
+  public bool Remove(TDto device)
   {
-    _ = Cache.Remove(device.Id, out _);
-    return Task.CompletedTask;
+    return Cache.Remove(device.Id, out _);
   }
 
   public bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device)

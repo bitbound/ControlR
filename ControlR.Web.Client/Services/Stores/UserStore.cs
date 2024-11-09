@@ -1,9 +1,13 @@
 ﻿namespace ControlR.Web.Client.Services.Stores;
 
+public interface IUserStore : IStoreBase<UserResponseDto>
+{
+}
+
 public class UserStore(
   IControlrApi controlrApi,
   ISnackbar snackbar,
-  ILogger<UserStore> logger) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger)
+  ILogger<UserStore> logger) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger), IUserStore
 {
   protected override async Task RefreshImpl()
   {
