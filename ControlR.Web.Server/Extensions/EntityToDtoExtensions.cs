@@ -4,9 +4,9 @@ namespace ControlR.Web.Server.Extensions;
 
 public static class EntityToDtoExtensions
 {
-  public static DeviceResponseDto ToDto(this Device device)
+  public static DeviceUpdateResponseDto ToDto(this Device device)
   {
-    return new DeviceResponseDto
+    return new DeviceUpdateResponseDto
     {
       AgentVersion = device.AgentVersion,
       Alias = device.Alias,

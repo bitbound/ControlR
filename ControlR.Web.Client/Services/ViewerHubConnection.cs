@@ -19,7 +19,7 @@ public interface IViewerHubConnection
 
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebsocketBridgeOrigin();
-  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceResponseDto device);
+  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceUpdateResponseDto deviceUpdate);
 
   Task InvokeCtrlAltDel(Guid deviceId);
 
@@ -31,8 +31,8 @@ public interface IViewerHubConnection
 
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
-  Task SendAgentUpdateTrigger(DeviceResponseDto device);
-  Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType);
+  Task SendAgentUpdateTrigger(DeviceUpdateResponseDto deviceUpdate);
+  Task SendPowerStateChange(DeviceUpdateResponseDto deviceUpdate, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
   Task UninstallAgent(Guid deviceId, string reason);
@@ -138,11 +138,11 @@ internal class ViewerHubConnection(
       () => null);
   }
 
-  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceResponseDto device)
+  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceUpdateResponseDto deviceUpdate)
   {
     try
     {
-      var sessions = await _viewerHub.Server.GetWindowsSessions(device.ConnectionId);
+      var sessions = await _viewerHub.Server.GetWindowsSessions(deviceUpdate.ConnectionId);
       return Result.Ok(sessions);
     }
     catch (Exception ex)
@@ -207,23 +207,23 @@ internal class ViewerHubConnection(
       () => Result.Fail("Failed to send app settings"));
   }
 
-  public async Task SendAgentUpdateTrigger(DeviceResponseDto device)
+  public async Task SendAgentUpdateTrigger(DeviceUpdateResponseDto deviceUpdate)
   {
     await TryInvoke(async () =>
     {
       var dto = new TriggerAgentUpdateDto();
       var wrapper = DtoWrapper.Create(dto, DtoType.TriggerAgentUpdate);
-      await _viewerHub.Server.SendDtoToAgent(device.Id, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(deviceUpdate.Id, wrapper);
     });
   }
 
-  public async Task SendPowerStateChange(DeviceResponseDto device, PowerStateChangeType powerStateType)
+  public async Task SendPowerStateChange(DeviceUpdateResponseDto deviceUpdate, PowerStateChangeType powerStateType)
   {
     await TryInvoke(async () =>
     {
       var powerDto = new PowerStateChangeDto(powerStateType);
       var wrapper = DtoWrapper.Create(powerDto, DtoType.PowerStateChange);
-      await _viewerHub.Server.SendDtoToAgent(device.Id, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(deviceUpdate.Id, wrapper);
     });
   }
 

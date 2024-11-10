@@ -9,8 +9,11 @@ public class AgentAppOptions
   public Guid DeviceId { get; set; }
 
   [MsgPackKey]
-  public Guid TenantId { get; set; }
+  public Uri? ServerUri { get; set; }
 
   [MsgPackKey]
-  public Uri? ServerUri { get; set; }
+  public Guid[]? TagIds { get; set; }
+
+  [MsgPackKey]
+  public Guid TenantId { get; set; }
 }

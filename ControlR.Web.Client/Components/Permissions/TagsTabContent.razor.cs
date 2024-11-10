@@ -17,6 +17,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
+  public required IDeviceStore DeviceStore { get; init; }
+
+  [Inject]
   public required IDialogService DialogService { get; init; }
 
   [Inject]
@@ -112,7 +115,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     return ValidateNewTagName(_newTagName) == null;
   }
 
-  private async Task SetTag(bool isToggled, TagViewModel tag, Guid userId)
+  private async Task SetUserTag(bool isToggled, TagViewModel tag, Guid userId)
   {
     try
     {
@@ -128,11 +131,10 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
 
       await TagStore.InvokeItemsChanged();
-      
+
       Snackbar.Add(isToggled
         ? "Tag added"
         : "Tag removed", Severity.Success);
-
     }
     catch (Exception ex)
     {

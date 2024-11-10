@@ -5,6 +5,7 @@ using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.Extensions.Options;
+using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
 
 namespace ControlR.Libraries.Agent.Services.Windows;
 
@@ -18,7 +19,7 @@ internal class DeviceDataGeneratorWin(
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-  public async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceUpdateRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

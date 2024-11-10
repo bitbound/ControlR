@@ -3,7 +3,6 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
-using System.Diagnostics;
 
 namespace ControlR.Libraries.Agent.Services;
 
@@ -17,17 +16,25 @@ public interface IAgentHubConnection : IAsyncDisposable
 }
 
 internal class AgentHubConnection(
-  IHubConnection<IAgentHub> _hubConnection,
-  IHostApplicationLifetime _appLifetime,
-  IDeviceDataGenerator _deviceCreator,
-  ISettingsProvider _settings,
-  ICpuUtilizationSampler _cpuSampler,
-  IStreamerUpdater _streamerUpdater,
-  IAgentUpdater _agentUpdater,
-  ILogger<AgentHubConnection> _logger)
+  IHubConnection<IAgentHub> hubConnection,
+  IHostApplicationLifetime appLifetime,
+  IDeviceDataGenerator deviceCreator,
+  ISettingsProvider settings,
+  ICpuUtilizationSampler cpuSampler,
+  IStreamerUpdater streamerUpdater,
+  IAgentUpdater agentUpdater,
+  ILogger<AgentHubConnection> logger)
   : IAgentHubConnection
 {
-  public HubConnectionState State => _hubConnection?.ConnectionState ?? HubConnectionState.Disconnected;
+  private readonly IAgentUpdater _agentUpdater = agentUpdater;
+  private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
+  private readonly IDeviceDataGenerator _deviceCreator = deviceCreator;
+  private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
+  private readonly ILogger<AgentHubConnection> _logger = logger;
+  private readonly ISettingsProvider _settings = settings;
+  private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
+  public HubConnectionState State => _hubConnection.ConnectionState;
 
   public async Task Connect(CancellationToken cancellationToken)
   {
@@ -72,6 +79,7 @@ internal class AgentHubConnection(
         _logger.LogWarning("Not connected to hub when trying to send device update.");
         return;
       }
+
       var deviceDto = await _deviceCreator.CreateDevice(
         _cpuSampler.CurrentUtilization,
         _settings.DeviceId);
@@ -89,6 +97,8 @@ internal class AgentHubConnection(
         _logger.LogInformation("Device ID changed.  Updating appsettings.");
         await _settings.UpdateId(updateResult.Value.Id);
       }
+
+      await _settings.ClearTags();
     }
     catch (Exception ex)
     {
@@ -112,20 +122,11 @@ internal class AgentHubConnection(
       _logger.LogError(ex, "Error while sending output to viewer.");
     }
   }
+
   private async Task HubConnection_Reconnected(string? arg)
   {
     await SendDeviceHeartbeat();
     await _agentUpdater.CheckForUpdate();
     await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
-  }
-
-
-  private class RetryPolicy : IRetryPolicy
-  {
-    public TimeSpan? NextRetryDelay(RetryContext retryContext)
-    {
-      var waitSeconds = Math.Min(30, Math.Pow(retryContext.PreviousRetryCount, 2));
-      return TimeSpan.FromSeconds(waitSeconds);
-    }
   }
 }

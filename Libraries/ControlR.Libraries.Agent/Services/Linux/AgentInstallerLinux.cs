@@ -17,11 +17,10 @@ internal class AgentInstallerLinux(
   ISystemEnvironment environmentHelper,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
-  IControlrApi controlrApi,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, controlrApi, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;
@@ -79,8 +78,7 @@ internal class AgentInstallerLinux(
       var serviceFile = GetServiceFile().Trim();
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
-      await UpdateAppSettings(serverUri, tenantId);
-      await CreateDeviceOnServer(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId, tags);
       var serviceName = GetServiceName();
 
       var psi = new ProcessStartInfo

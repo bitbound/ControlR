@@ -18,7 +18,7 @@
                Disabled="IsHideOfflineDevicesDisabled"/>
 </div>
 
-<MudDataGrid T="DeviceResponseDto"
+<MudDataGrid T="DeviceUpdateResponseDto"
              RowsPerPage="@(25)"
              Items="FilteredDevices"
              SortMode="SortMode.Multiple"
@@ -54,7 +54,7 @@
 </ToolBarContent>
 
 <Columns>
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   Sortable="false"
                   Filterable="false"
                   ShowColumnOptions="false"
@@ -124,7 +124,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   StickyLeft="true"
                   Sortable="true"
                   Filterable="true"
@@ -141,7 +141,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   Sortable="true"
                   Filterable="true"
                   Title="Online">
@@ -179,7 +179,7 @@
     </CellTemplate>
   </PropertyColumn>
 
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   Title="CPU"
                   Sortable="true"
                   Filterable="true">
@@ -188,7 +188,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   Title="Memory"
                   Sortable="true"
                   Filterable="true">
@@ -197,7 +197,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceResponseDto"
+  <TemplateColumn T="DeviceUpdateResponseDto"
                   Title="Storage"
                   Sortable="true"
                   Filterable="true">
@@ -206,7 +206,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <HierarchyColumn T="DeviceResponseDto"/>
+  <HierarchyColumn T="DeviceUpdateResponseDto"/>
 </Columns>
 <ChildRowContent>
   <div class="child-content-grid">
@@ -261,6 +261,6 @@
   </div>
 </ChildRowContent>
 <PagerContent>
-  <MudDataGridPager T="DeviceResponseDto"/>
+  <MudDataGridPager T="DeviceUpdateResponseDto"/>
 </PagerContent>
 </MudDataGrid>

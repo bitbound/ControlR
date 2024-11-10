@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
-public class DeviceResponseDto : DeviceRequestDto, IHasPrimaryKey
+public class DeviceUpdateResponseDto : DeviceUpdateRequestDto, IHasPrimaryKey
 {
   [MsgPackKey]
   public string Alias { get; set; } = string.Empty;

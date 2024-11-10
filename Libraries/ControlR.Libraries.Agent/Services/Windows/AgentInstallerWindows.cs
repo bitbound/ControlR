@@ -23,10 +23,9 @@ internal class AgentInstallerWindows(
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
   ISettingsProvider settingsProvider,
-  IControlrApi controlrApi,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, controlrApi, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -95,9 +94,7 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      await UpdateAppSettings(serverUri, tenantId);
-
-      await CreateDeviceOnServer(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId, tags);
 
       var serviceName = GetServiceName();
 

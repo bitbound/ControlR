@@ -6,7 +6,7 @@ namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 
 public interface IViewerHubClient : IHubClient
 {
-    Task ReceiveDeviceUpdate(DeviceResponseDto device);
+    Task ReceiveDeviceUpdate(DeviceUpdateResponseDto deviceUpdate);
     Task ReceiveServerStats(ServerStatsDto serverStats);
     Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
     Task ReceiveTerminalOutput(TerminalOutputDto output);

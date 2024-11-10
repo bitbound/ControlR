@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.Extensions.Options;
+using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
 
 namespace ControlR.Libraries.Agent.Services.Base;
 
@@ -57,7 +58,7 @@ internal class DeviceDataGeneratorBase(
     }
   }
 
-  public DeviceRequestDto GetDeviceBase(
+  public DeviceUpdateRequestDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     List<Drive> drives,
@@ -68,10 +69,12 @@ internal class DeviceDataGeneratorBase(
     double cpuUtilization,
     string agentVersion)
   {
-    return new DeviceRequestDto
+   
+    return new DeviceUpdateRequestDto
     {
       Id = deviceId,
       TenantId = _appOptions.CurrentValue.TenantId,
+      TagIds = _appOptions.CurrentValue.TagIds,
       CurrentUsers = currentUsers,
       CpuUtilization = cpuUtilization,
       Drives = drives,

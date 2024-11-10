@@ -2,6 +2,7 @@
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.Extensions.Options;
+using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
 
 namespace ControlR.Libraries.Agent.Services.Mac;
 
@@ -15,7 +16,7 @@ internal class DeviceDataGeneratorMac(
   private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
-  public async Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceUpdateRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {

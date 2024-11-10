@@ -6,9 +6,9 @@ namespace ControlR.Web.Client.Services;
 
 public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : IViewerHubClient
 {
-  public async Task ReceiveDeviceUpdate(DeviceResponseDto device)
+  public async Task ReceiveDeviceUpdate(DeviceUpdateResponseDto deviceUpdate)
   {
-    await deviceStore.AddOrUpdate(device);
+    await deviceStore.AddOrUpdate(deviceUpdate);
     await messenger.SendGenericMessage(EventMessageKind.DeviceStoreUpdated);
   }
 

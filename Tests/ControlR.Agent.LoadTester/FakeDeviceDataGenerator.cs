@@ -23,11 +23,11 @@ internal class FakeDeviceDataGenerator(
   private readonly string _agentVersion = "0.9.15.0";
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
-  private DeviceRequestDto? _device;
+  private DeviceUpdateRequestDto? _device;
 
-  public Task<DeviceRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public Task<DeviceUpdateRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
   {
-    _device ??= new DeviceRequestDto
+    _device ??= new DeviceUpdateRequestDto
     {
       Name = $"Test Device {_deviceNumber}",
       AgentVersion = _agentVersion,

@@ -18,11 +18,10 @@ internal class AgentInstallerMac(
   ISystemEnvironment environmentHelper,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
-  IControlrApi controlrApi,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, controlrApi, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;
@@ -80,8 +79,7 @@ internal class AgentInstallerMac(
 
       _logger.LogInformation("Writing service file.");
       await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
-      await UpdateAppSettings(serverUri, tenantId);
-      await CreateDeviceOnServer(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId, tags);
 
       var psi = new ProcessStartInfo
       {

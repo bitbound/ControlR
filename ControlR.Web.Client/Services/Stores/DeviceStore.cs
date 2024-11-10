@@ -2,12 +2,12 @@
 
 namespace ControlR.Web.Client.Services.Stores;
 
-public interface IDeviceStore : IStoreBase<DeviceResponseDto>
+public interface IDeviceStore : IStoreBase<DeviceUpdateResponseDto>
 {
   Task SetAllOffline();
 }
 
-internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
+internal class DeviceStore : StoreBase<DeviceUpdateResponseDto>, IDeviceStore
 {
   public DeviceStore(
     IControlrApi controlrApi,
@@ -29,21 +29,21 @@ internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
     return Task.CompletedTask;
   }
 
-
-  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
-  {
-    if (message.NewState == HubConnectionState.Connected)
-    {
-      await Refresh();
-    }
-  }
-
   protected override async Task RefreshImpl()
   {
     await SetAllOffline();
     await foreach (var device in ControlrApi.GetAllDevices())
     {
       Cache.AddOrUpdate(device.Id, device, (_, _) => device);
+    }
+  }
+
+
+  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    if (message.NewState == HubConnectionState.Connected)
+    {
+      await Refresh();
     }
   }
 }

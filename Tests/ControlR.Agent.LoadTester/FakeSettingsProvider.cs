@@ -11,6 +11,11 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
 
   public Uri ServerUri { get; } = serverUri;
 
+  public Task ClearTags()
+  {
+   return Task.CompletedTask;
+  }
+
   public string GetAppSettingsPath()
   {
     return string.Empty;

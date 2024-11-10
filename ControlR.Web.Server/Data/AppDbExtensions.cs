@@ -4,7 +4,7 @@ public static class AppDbExtensions
 {
   public static async Task<Device> AddOrUpdateDevice(
     this AppDb db, 
-    DeviceRequestDto dto)
+    DeviceUpdateRequestDto dto)
   {
     var set = db.Set<Device>();
     Device? entity = null;

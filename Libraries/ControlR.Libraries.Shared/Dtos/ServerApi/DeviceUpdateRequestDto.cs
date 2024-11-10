@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
-public class DeviceRequestDto
+public class DeviceUpdateRequestDto
 {
   [MsgPackKey]
   public string AgentVersion { get; set; } = string.Empty;
@@ -57,6 +57,9 @@ public class DeviceRequestDto
 
   [MsgPackKey]
   public string PublicIpV6 { get; set; } = string.Empty;
+
+  [MsgPackKey]
+  public Guid[]? TagIds { get; set; }
 
   [MsgPackKey]
   public Guid TenantId { get; set; }

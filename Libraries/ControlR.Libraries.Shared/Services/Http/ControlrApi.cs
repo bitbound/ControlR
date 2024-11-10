@@ -11,7 +11,7 @@ public interface IControlrApi
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
-  IAsyncEnumerable<DeviceResponseDto> GetAllDevices();
+  IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices();
 
   Task<Result<IReadOnlyList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<IReadOnlyList<UserResponseDto>>> GetAllUsers();
@@ -29,14 +29,6 @@ public class ControlrApi(
   HttpClient httpClient,
   ILogger<ControlrApi> logger) : IControlrApi
 {
-  private const string AgentVersionEndpoint = "/api/version/agent";
-  private const string DeviceGroupsEndpoint = "/api/device-groups";
-  private const string DevicesEndpoint = "/api/devices";
-  private const string ServerSettingsEndpoint = "/api/server-settings";
-  private const string ServerVersionEndpoint = "/api/version/server";
-  private const string TagsEndpoint = "/api/tags";
-  private const string UserPreferencesEndpoint = "/api/user-preferences";
-  private const string UsersEndpoint = "/api/users";
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
 
@@ -45,7 +37,7 @@ public class ControlrApi(
     try
     {
       var request = new TagCreateRequestDto(tagName, tagType);
-      var response = await _client.PostAsJsonAsync(TagsEndpoint, request);
+      var response = await _client.PostAsJsonAsync(HttpConstants.TagsEndpoint, request);
       response.EnsureSuccessStatusCode();
       var dto = await response.Content.ReadFromJsonAsync<TagResponseDto>();
       if (dto is null)
@@ -67,7 +59,7 @@ public class ControlrApi(
   {
     try
     {
-      var response = await _client.DeleteAsync($"{DevicesEndpoint}/{deviceId}");
+      var response = await _client.DeleteAsync($"{HttpConstants.DevicesEndpoint}/{deviceId}");
       response.EnsureSuccessStatusCode();
       return Result.Ok();
     }
@@ -83,7 +75,7 @@ public class ControlrApi(
   {
     try
     {
-      var response = await _client.DeleteAsync($"{TagsEndpoint}/{tagId}");
+      var response = await _client.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}");
       response.EnsureSuccessStatusCode();
       return Result.Ok();
     }
@@ -95,9 +87,9 @@ public class ControlrApi(
     }
   }
 
-  public async IAsyncEnumerable<DeviceResponseDto> GetAllDevices()
+  public async IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices()
   {
-    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(DevicesEndpoint);
+    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceUpdateResponseDto>(HttpConstants.DevicesEndpoint);
     await foreach (var device in stream)
     {
       if (device is null)
@@ -114,7 +106,7 @@ public class ControlrApi(
     try
     {
       var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
-        $"{TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
+        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
 
       return tags is null
         ? Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.")
@@ -132,7 +124,7 @@ public class ControlrApi(
   {
     try
     {
-      var users = await _client.GetFromJsonAsync<IReadOnlyList<UserResponseDto>>(UsersEndpoint);
+      var users = await _client.GetFromJsonAsync<IReadOnlyList<UserResponseDto>>(HttpConstants.UsersEndpoint);
       return users is null
         ? Result.Fail<IReadOnlyList<UserResponseDto>>("Server response was empty.")
         : Result.Ok(users);
@@ -173,7 +165,7 @@ public class ControlrApi(
   {
     try
     {
-      var version = await _client.GetFromJsonAsync<Version>(AgentVersionEndpoint);
+      var version = await _client.GetFromJsonAsync<Version>(HttpConstants.AgentVersionEndpoint);
       _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
       if (version is null)
       {
@@ -194,7 +186,7 @@ public class ControlrApi(
   {
     try
     {
-      var serverVersion = await _client.GetFromJsonAsync<Version>(ServerVersionEndpoint);
+      var serverVersion = await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint);
       if (serverVersion is null)
       {
         return Result.Fail<Version>("Server response was empty.");
@@ -239,7 +231,7 @@ public class ControlrApi(
   {
     try
     {
-      var serverSettings = await _client.GetFromJsonAsync<ServerSettingsDto>(ServerSettingsEndpoint);
+      var serverSettings = await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint);
       if (serverSettings is null)
       {
         return Result.Fail<ServerSettingsDto>("Server settings response was empty.");
@@ -260,7 +252,7 @@ public class ControlrApi(
     try
     {
       var response =
-        await _client.GetFromJsonAsync<UserPreferenceResponseDto>($"{UserPreferencesEndpoint}/{preferenceName}");
+        await _client.GetFromJsonAsync<UserPreferenceResponseDto>($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
       if (response is null)
       {
         return Result.Fail<UserPreferenceResponseDto>("User preference not found.");
@@ -285,7 +277,7 @@ public class ControlrApi(
     try
     {
       var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
-        $"{TagsEndpoint}/{userId}?includeLinkedIds={includeLinkedIds}");
+        $"{HttpConstants.TagsEndpoint}/{userId}?includeLinkedIds={includeLinkedIds}");
       if (tags is null)
       {
         return Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.");
@@ -306,7 +298,7 @@ public class ControlrApi(
     try
     {
       var request = new UserPreferenceRequestDto(preferenceName, preferenceValue);
-      var response = await _client.PostAsJsonAsync(UserPreferencesEndpoint, request);
+      var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       var dto = await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
       if (dto is null)

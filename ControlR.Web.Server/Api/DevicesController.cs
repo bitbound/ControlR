@@ -12,25 +12,6 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class DevicesController : ControllerBase
 {
-  [HttpGet]
-  public async IAsyncEnumerable<DeviceResponseDto> Get(
-    [FromServices] UserManager<AppUser> userManager,
-    [FromServices] AppDb appDb,
-    [FromServices] IAuthorizationService authorizationService)
-  {
-    var deviceStream = appDb.Devices.AsAsyncEnumerable();
-
-    await foreach (var device in deviceStream)
-    {
-      var authResult =
-        await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-      if (authResult.Succeeded)
-      {
-        yield return device.ToDto();
-      }
-    }
-  }
-
   [HttpDelete("{deviceId:guid}")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
@@ -53,5 +34,24 @@ public class DevicesController : ControllerBase
     appDb.Devices.Remove(device);
     await appDb.SaveChangesAsync();
     return NoContent();
+  }
+
+  [HttpGet]
+  public async IAsyncEnumerable<DeviceUpdateResponseDto> Get(
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService)
+  {
+    var deviceStream = appDb.Devices.AsAsyncEnumerable();
+
+    await foreach (var device in deviceStream)
+    {
+      var authResult =
+        await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+      if (authResult.Succeeded)
+      {
+        yield return device.ToDto();
+      }
+    }
   }
 }

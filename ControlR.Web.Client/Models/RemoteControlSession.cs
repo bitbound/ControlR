@@ -1,7 +1,7 @@
 ﻿namespace ControlR.Web.Client.Models;
-public class RemoteControlSession(DeviceResponseDto device, int initialSystemSession)
+public class RemoteControlSession(DeviceUpdateResponseDto deviceUpdate, int initialSystemSession)
 {
-    public DeviceResponseDto Device { get; } = device;
+    public DeviceUpdateResponseDto DeviceUpdate { get; } = deviceUpdate;
     public int InitialSystemSession { get; } = initialSystemSession;
     public Guid SessionId { get; private set; } = Guid.NewGuid();
     public Uri? WebSocketUri { get; internal set; }

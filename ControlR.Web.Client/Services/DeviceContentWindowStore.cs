@@ -11,8 +11,10 @@ public interface IDeviceContentWindowStore
   IReadOnlyList<DeviceContentInstance> Windows { get; }
 
   void Add(DeviceContentInstance instance);
-  void AddContentInstance<T>(DeviceResponseDto device, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
+
+  void AddContentInstance<T>(DeviceUpdateResponseDto deviceUpdate, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
      where T : ComponentBase;
+
   void Remove(DeviceContentInstance instance);
 }
 
@@ -37,7 +39,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   }
 
   public void AddContentInstance<T>(
-    DeviceResponseDto device, 
+    DeviceUpdateResponseDto deviceUpdate, 
     DeviceContentInstanceType instanceType, 
     Dictionary<string, object?>? componentParams = null)
     where T : ComponentBase
@@ -60,7 +62,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
       builder.CloseComponent();
     }
 
-    var contentInstance = new DeviceContentInstance(device, RenderComponent, instanceType);
+    var contentInstance = new DeviceContentInstance(deviceUpdate, RenderComponent, instanceType);
     _cache.Add(contentInstance);
     _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }

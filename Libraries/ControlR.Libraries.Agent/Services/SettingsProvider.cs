@@ -11,9 +11,15 @@ internal interface ISettingsProvider
   Guid DeviceId { get; }
   bool IsConnectedToPublicServer { get; }
   Uri ServerUri { get; }
+
+  /// <summary>
+  /// Tags should only be set on the first successful connection, then cleared.
+  /// </summary>
+  Task ClearTags();
+
   string GetAppSettingsPath();
-  Task UpdateSettings(AgentAppSettings settings);
   Task UpdateId(Guid uid);
+  Task UpdateSettings(AgentAppSettings settings);
 }
 
 internal class SettingsProvider(
@@ -27,17 +33,34 @@ internal class SettingsProvider(
 
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
 
+  public bool IsConnectedToPublicServer =>
+    _appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
+
   public Uri ServerUri =>
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
 
-  public bool IsConnectedToPublicServer =>
-    _appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
+  public async Task ClearTags()
+  {
+    if (_appOptions.CurrentValue.TagIds is null)
+    {
+      return;
+    }
+
+    _appOptions.CurrentValue.TagIds = null;
+    await WriteToDisk(_appOptions.CurrentValue);
+  }
 
   public string GetAppSettingsPath()
   {
     return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
+  }
+
+  public async Task UpdateId(Guid uid)
+  {
+    _appOptions.CurrentValue.DeviceId = uid;
+    await WriteToDisk(_appOptions.CurrentValue);
   }
 
   public async Task UpdateSettings(AgentAppSettings settings)
@@ -55,12 +78,6 @@ internal class SettingsProvider(
     {
       _updateLock.Release();
     }
-  }
-
-  public async Task UpdateId(Guid uid)
-  {
-    _appOptions.CurrentValue.DeviceId = uid;
-    await WriteToDisk(_appOptions.CurrentValue);
   }
 
   private async Task WriteToDisk(AgentAppOptions options)

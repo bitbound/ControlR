@@ -63,7 +63,7 @@
   public required AgentAppSettings AppSettings { get; set; }
 
   [Parameter]
-  public required DeviceResponseDto Device { get; set; }
+  public required DeviceUpdateResponseDto DeviceUpdate { get; set; }
 
   [CascadingParameter]
   public required MudDialogInstance DialogInstance { get; init; }
@@ -103,7 +103,7 @@
     {
       _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
       Guard.IsNotNull(_newAppSettings);
-      var result = await ViewerHub.SendAgentAppSettings(Device.ConnectionId, _newAppSettings);
+      var result = await ViewerHub.SendAgentAppSettings(DeviceUpdate.ConnectionId, _newAppSettings);
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);

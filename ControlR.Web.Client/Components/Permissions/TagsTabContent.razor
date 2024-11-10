@@ -56,7 +56,7 @@
         <MudSwitch T="bool" 
                    Value="@(_selectedTag.UserIds.Contains(user.Id))"
                    Color="Color.Success"
-                   ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
+                   ValueChanged="@(async isToggled => await SetUserTag(isToggled, _selectedTag, user.Id))">
           @user.UserName
         </MudSwitch>
       }
