@@ -1,14 +1,17 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using ControlR.Web.Client.Services.Stores;
+using ControlR.Web.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Permissions;
 
-public partial class TagsTabContent : ComponentBase
+public partial class TagsTabContent : ComponentBase, IDisposable
 {
+  private ImmutableArray<IDisposable>? _changeHandlers;
   private string? _newTagName;
-  private TagResponseDto? _selectedTag;
+  private TagViewModel? _selectedTag;
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -17,23 +20,32 @@ public partial class TagsTabContent : ComponentBase
   public required IDialogService DialogService { get; init; }
 
   [Inject]
+  public required ILogger<TagsTabContent> Logger { get; init; }
+
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
   public required ITagStore TagStore { get; init; }
 
   [Inject]
-  public required ILogger<TagsTabContent> Logger { get; init; }
-
-  [Inject]
   public required IUserStore UserStore { get; init; }
 
-  private IOrderedEnumerable<TagResponseDto> SortedTags => TagStore.Items.OrderBy(x => x.Name);
+  private IOrderedEnumerable<TagViewModel> SortedTags => TagStore.Items.OrderBy(x => x.Name);
+
+  public void Dispose()
+  {
+    _changeHandlers?.DisposeAll();
+    GC.SuppressFinalize(this);
+  }
 
   protected override async Task OnInitializedAsync()
   {
-    await TagStore.Refresh();
     await base.OnInitializedAsync();
+    _changeHandlers =
+    [
+      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
+    ];
   }
 
   private async Task CreateTag()
@@ -57,7 +69,7 @@ public partial class TagsTabContent : ComponentBase
     }
 
     Snackbar.Add("Tag created", Severity.Success);
-    TagStore.AddOrUpdate(createResult.Value);
+    await TagStore.AddOrUpdate(new TagViewModel(createResult.Value));
     _newTagName = null;
   }
 
@@ -82,7 +94,7 @@ public partial class TagsTabContent : ComponentBase
       return;
     }
 
-    TagStore.Remove(_selectedTag);
+    await TagStore.Remove(_selectedTag);
     Snackbar.Add("Tag deleted", Severity.Success);
   }
 
@@ -100,12 +112,23 @@ public partial class TagsTabContent : ComponentBase
     return ValidateNewTagName(_newTagName) == null;
   }
 
-  private async Task SetTag(bool isToggled, TagResponseDto tag, Guid userId)
+  private async Task SetTag(bool isToggled, TagViewModel tag, Guid userId)
   {
     try
     {
       // TODO: Create API endpoint.
       await Task.Yield();
+      if (isToggled)
+      {
+        tag.UserIds.Add(userId);
+      }
+      else
+      {
+        tag.UserIds.Remove(userId);
+      }
+
+      await TagStore.InvokeItemsChanged();
+      
       Snackbar.Add(isToggled
         ? "Tag added"
         : "Tag removed", Severity.Success);

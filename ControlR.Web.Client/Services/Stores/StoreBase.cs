@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ControlR.Web.Client.Services.Stores;
 
@@ -7,10 +9,13 @@ public interface IStoreBase<TDto>
   where TDto : IHasPrimaryKey
 {
   ICollection<TDto> Items { get; }
-  void AddOrUpdate(TDto device);
-  void Clear();
+  Task AddOrUpdate(TDto device);
+  Task Clear();
+  Task InvokeItemsChanged();
   Task Refresh();
-  bool Remove(TDto device);
+  IDisposable RegisterChangeHandler(object subscriber, Func<Task> handler);
+  IDisposable RegisterChangeHandler(object subscriber, Action handler);
+  Task<bool> Remove(TDto device);
   bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device);
 }
 
@@ -20,24 +25,31 @@ public abstract class StoreBase<TDto>(
   ILogger<StoreBase<TDto>> logger) : IStoreBase<TDto>
   where TDto : IHasPrimaryKey
 {
+  private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = new();
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
-
-  protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
-  protected IControlrApi ControlrApi { get; } = controlrApi;
-  protected ISnackbar Snackbar { get; } = snackbar;
-  protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
 
   // TODO: Add observability.
   public ICollection<TDto> Items => Cache.Values;
+  protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
+  protected IControlrApi ControlrApi { get; } = controlrApi;
+  protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
+  protected ISnackbar Snackbar { get; } = snackbar;
 
-  public void AddOrUpdate(TDto device)
+  public async Task AddOrUpdate(TDto device)
   {
     Cache.AddOrUpdate(device.Id, device, (_, _) => device);
+    await InvokeChangeHandlers();
   }
 
-  public void Clear()
+  public async Task Clear()
   {
     Cache.Clear();
+    await InvokeChangeHandlers();
+  }
+
+  public async Task InvokeItemsChanged()
+  {
+    await InvokeChangeHandlers();
   }
 
   public async Task Refresh()
@@ -54,6 +66,7 @@ public abstract class StoreBase<TDto>(
     try
     {
       await RefreshImpl();
+      await InvokeChangeHandlers();
     }
     catch (Exception ex)
     {
@@ -66,9 +79,50 @@ public abstract class StoreBase<TDto>(
     }
   }
 
-  public bool Remove(TDto device)
+  public IDisposable RegisterChangeHandler(object subscriber, Func<Task> handler)
   {
-    return Cache.Remove(device.Id, out _);
+    
+    lock (_changeHandlers)
+    {
+      _changeHandlers.AddOrUpdate(subscriber, handler);
+    }
+
+    return new CallbackDisposable(() =>
+    {
+      lock (_changeHandlers)
+      {
+        _changeHandlers.Remove(subscriber);
+      }
+    });
+  }
+
+  public IDisposable RegisterChangeHandler(object subscriber, Action handler)
+  {
+    lock (_changeHandlers)
+    {
+      _changeHandlers.AddOrUpdate(subscriber, InvokeHandler);
+    }
+
+    return new CallbackDisposable(() =>
+    {
+      lock (_changeHandlers)
+      {
+        _changeHandlers.Remove(subscriber);
+      }
+    });
+
+    Task InvokeHandler()
+    {
+      handler.Invoke();
+      return Task.CompletedTask;
+    }
+  }
+
+  public async Task<bool> Remove(TDto device)
+  {
+    var removed =  Cache.Remove(device.Id, out _);
+    await InvokeChangeHandlers();
+    return removed;
   }
 
   public bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device)
@@ -77,4 +131,29 @@ public abstract class StoreBase<TDto>(
   }
 
   protected abstract Task RefreshImpl();
+
+  private ImmutableArray<Func<Task>> GetChangeHandlers()
+  {
+    lock (_changeHandlers)
+    {
+      return [
+        .._changeHandlers.Select(x => x.Value)
+      ];
+    }
+  }
+
+  private async Task InvokeChangeHandlers()
+  {
+    foreach (var handler in GetChangeHandlers())
+    {
+      try
+      {
+        await handler.Invoke();
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error while invoking change handler.");
+      }
+    }
+  }
 }

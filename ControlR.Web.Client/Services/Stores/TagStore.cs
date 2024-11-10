@@ -1,13 +1,13 @@
-﻿namespace ControlR.Web.Client.Services.Stores;
+﻿using ControlR.Web.Client.ViewModels;
 
-public interface ITagStore : IStoreBase<TagResponseDto>
-{
-}
+namespace ControlR.Web.Client.Services.Stores;
+
+public interface ITagStore : IStoreBase<TagViewModel>
+{}
 
 public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagStore> logger)
-  : StoreBase<TagResponseDto>(controlrApi, snackbar, logger), ITagStore
+  : StoreBase<TagViewModel>(controlrApi, snackbar, logger), ITagStore
 {
-  // TODO: Convert DTO to view model.
   protected override async Task RefreshImpl()
   {
     var getResult = await ControlrApi.GetAllTags();
@@ -19,7 +19,8 @@ public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagS
 
     foreach (var tag in getResult.Value)
     {
-      Cache.AddOrUpdate(tag.Id, tag, (_, _) => tag);
+      var tagVm = new TagViewModel(tag);
+      Cache.AddOrUpdate(tag.Id, tagVm, (_, _) => tagVm);
     }
   }
 }

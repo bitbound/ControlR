@@ -91,6 +91,26 @@ public partial class Dashboard
     return false;
   };
 
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    using var _ = BusyCounter.IncrementBusyCounter();
+
+    _hideOfflineDevices = await Settings.GetHideOfflineDevices();
+
+    await RefreshLatestAgentVersion();
+
+    Messenger.RegisterEventMessage(this, HandleEventMessage);
+
+    if (DeviceStore.Items.Count == 0)
+    {
+      await DeviceStore.Refresh();
+    }
+
+    _loading = false;
+  }
+
   private async Task ConfigureDeviceSettings(DeviceResponseDto device)
   {
     try
@@ -130,7 +150,7 @@ public partial class Dashboard
   }
 
 
-  private Task HandleGenericMessage(object subscriber, EventMessageKind kind)
+  private Task HandleEventMessage(object subscriber, EventMessageKind kind)
   {
     try
     {
@@ -147,7 +167,7 @@ public partial class Dashboard
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling generic message kind {MessageKind}.", kind);
+      Logger.LogError(ex, "Error while handling event message kind {MessageKind}.", kind);
     }
 
     return Task.CompletedTask;
@@ -400,25 +420,5 @@ public partial class Dashboard
     {
       Logger.LogError(ex, "Error while sending wake command.");
     }
-  }
-
-  protected override async Task OnInitializedAsync()
-  {
-    await base.OnInitializedAsync();
-
-    using var _ = BusyCounter.IncrementBusyCounter();
-
-    _hideOfflineDevices = await Settings.GetHideOfflineDevices();
-
-    await RefreshLatestAgentVersion();
-
-    Messenger.RegisterEventMessage(this, HandleGenericMessage);
-
-    if (DeviceStore.Items.Count == 0)
-    {
-      await DeviceStore.Refresh();
-    }
-
-    _loading = false;
   }
 }

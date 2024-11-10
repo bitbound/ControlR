@@ -7,6 +7,12 @@ public class ConcurrentList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnum
     private readonly List<T> _list = [];
 
     private readonly object _lock = new();
+    public ConcurrentList() { }
+
+    public ConcurrentList(IEnumerable<T> initialItems)
+    {
+        _list.AddRange(initialItems);
+    }
 
     public int Count
     {
@@ -135,14 +141,6 @@ public class ConcurrentList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnum
         }
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        lock (_lock)
-        {
-            return _list.ToList().GetEnumerator();
-        }
-    }
-
     public int IndexOf(T item)
     {
         lock (_lock)
@@ -188,6 +186,14 @@ public class ConcurrentList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnum
         lock (_lock)
         {
             _list.RemoveRange(index, count);
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        lock (_lock)
+        {
+            return _list.ToList().GetEnumerator();
         }
     }
 }

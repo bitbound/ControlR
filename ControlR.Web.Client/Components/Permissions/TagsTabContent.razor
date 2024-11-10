@@ -1,4 +1,5 @@
-﻿<MudGrid>
+﻿@using ControlR.Web.Client.ViewModels
+<MudGrid>
   <MudItem md="4" sm="6" xs="12">
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Tags
@@ -20,14 +21,14 @@
                   Validation="@((string x) => ValidateNewTagName(x))">
     </MudTextField>
     <MudPaper>
-      <MudList T="TagResponseDto"
+      <MudList T="TagViewModel"
                SelectionMode="SelectionMode.SingleSelection"
                Color="Color.Info"
                @bind-SelectedValue="_selectedTag">
 
         @foreach (var tag in TagStore.Items)
         {
-          <MudListItem T="TagResponseDto" Value="@tag">
+          <MudListItem T="TagViewModel" Value="@tag">
             @tag.Name
           </MudListItem>
         }
@@ -50,16 +51,15 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      <MudPaper Class="pa-3">
-        @foreach (var user in UserStore.Items)
-        {
-          <MudSwitch T="bool" 
-                     Value="@(_selectedTag.UserIds.Any(x => x == user.Id))"
-                     ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
-            @user.UserName
-          </MudSwitch>
-        }
-      </MudPaper>
+      @foreach (var user in UserStore.Items)
+      {
+        <MudSwitch T="bool" 
+                   Value="@(_selectedTag.UserIds.Contains(user.Id))"
+                   Color="Color.Success"
+                   ValueChanged="@(async isToggled => await SetTag(isToggled, _selectedTag, user.Id))">
+          @user.UserName
+        </MudSwitch>
+      }
     }
   </MudItem>
   <MudItem md="4" sm="6" xs="12">
