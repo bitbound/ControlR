@@ -28,7 +28,6 @@ public abstract class StoreBase<TDto>(
   private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = new();
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-  // TODO: Add observability.
   public ICollection<TDto> Items => Cache.Values;
   protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
   protected IControlrApi ControlrApi { get; } = controlrApi;

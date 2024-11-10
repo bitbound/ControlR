@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -67,7 +66,8 @@ public partial class RemoteDisplay : IAsyncDisposable
   [Inject]
   public required IServiceProvider ServiceProvider { get; init; }
 
-  [Parameter, EditorRequired]
+  [Parameter]
+  [EditorRequired]
   public required RemoteControlSession Session { get; set; }
 
   [Inject]
@@ -104,7 +104,9 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     get
     {
-      var display = _streamStarted ? "display: unset;" : "display: none;";
+      var display = _streamStarted
+        ? "display: unset;"
+        : "display: none;";
 
       return
         $"{display} " +
@@ -128,7 +130,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
     Messenger.UnregisterAll(this);
     await JsModule.InvokeVoidAsync("dispose", _canvasId);
-    _componentClosing.Cancel();
+    await _componentClosing.CancelAsync();
     GC.SuppressFinalize(this);
   }
 
@@ -228,8 +230,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
 
     Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
-    Messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleUnsignedDtoReceived);
-    Messenger.RegisterEventMessage(this, HandleParameterlessMessage);
+    StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
 
     return base.OnInitializedAsync();
   }
@@ -334,7 +335,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       return;
     }
 
-    _displays = dto.Displays ?? [];
+    _displays = dto.Displays;
 
     if (_displays.Length == 0)
     {
@@ -368,16 +369,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async void HandleParameterlessMessage(object sender, EventMessageKind kind)
-  {
-    switch (kind)
-    {
-      // TODO: Implement on agent.
-      case EventMessageKind.RemoteDeviceShuttingDown:
-        await DisposeAsync();
-        break;
-    }
-  }
 
   private async Task HandleReceiveClipboardClicked()
   {
@@ -433,7 +424,8 @@ public partial class RemoteDisplay : IAsyncDisposable
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task HandleStreamerDownloadProgress(object recipient, DtoReceivedMessage<StreamerDownloadProgressDto> message)
+  private async Task HandleStreamerDownloadProgress(object recipient,
+    DtoReceivedMessage<StreamerDownloadProgressDto> message)
   {
     var dto = message.Dto;
 
@@ -446,6 +438,54 @@ public partial class RemoteDisplay : IAsyncDisposable
     _statusMessage = dto.Message;
 
     await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task HandleStreamerMessageReceived(DtoWrapper message)
+  {
+    try
+    {
+      switch (message.DtoType)
+      {
+        case DtoType.DisplayData:
+        {
+          var dto = message.GetPayload<DisplayDataDto>();
+          await HandleDisplayDataReceived(dto);
+          break;
+        }
+        case DtoType.ScreenRegion:
+        {
+          var dto = message.GetPayload<ScreenRegionDto>();
+          await DrawRegion(dto);
+          break;
+        }
+        case DtoType.ClipboardText:
+        {
+          var dto = message.GetPayload<ClipboardTextDto>();
+          await HandleClipboardTextReceived(dto);
+          break;
+        }
+        case DtoType.CursorChanged:
+        {
+          var dto = message.GetPayload<CursorChangedDto>();
+          await HandleCursorChanged(dto);
+          break;
+        }
+        case DtoType.WindowsSessionEnding:
+        {
+          Snackbar.Add("Remote Windows session ending", Severity.Warning);
+          break;
+        }
+        case DtoType.WindowsSessionSwitched:
+        {
+          Snackbar.Add("Remote Windows session switched", Severity.Warning);
+          break;
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", message.DtoType);
+    }
   }
 
   private async Task HandleTypeClipboardClicked()
@@ -466,45 +506,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
       Logger.LogError(ex, "Error while sending clipboard.");
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
-    }
-  }
-
-  private async Task HandleUnsignedDtoReceived(object subscriber, DtoReceivedMessage<DtoWrapper> message)
-  {
-    var wrapper = message.Dto;
-    try
-    {
-      switch (wrapper.DtoType)
-      {
-        case DtoType.DisplayData:
-          {
-            var dto = wrapper.GetPayload<DisplayDataDto>();
-            await HandleDisplayDataReceived(dto);
-            break;
-          }
-        case DtoType.ScreenRegion:
-          {
-            var dto = wrapper.GetPayload<ScreenRegionDto>();
-            await DrawRegion(dto);
-            break;
-          }
-        case DtoType.ClipboardText:
-          {
-            var dto = wrapper.GetPayload<ClipboardTextDto>();
-            await HandleClipboardTextReceived(dto);
-            break;
-          }
-        case DtoType.CursorChanged:
-          {
-            var dto = wrapper.GetPayload<CursorChangedDto>();
-            await HandleCursorChanged(dto);
-            break;
-          }
-      }
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", wrapper.DtoType);
     }
   }
 

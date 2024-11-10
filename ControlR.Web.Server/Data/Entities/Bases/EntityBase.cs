@@ -3,25 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ControlR.Web.Server.Data.Entities.Bases;
 
-public class EntityBase
+public interface IEntityBase
 {
-  private Guid _id;
+  public DateTimeOffset CreatedAt { get; set; }
+  public Guid Id { get; set; }
+}
+
+public class EntityBase : IEntityBase
+{
   private DateTimeOffset _createdAt;
-
-  [Key]
-  public Guid Id
-  {
-    get => _id;
-    set
-    {
-      if (value == Guid.Empty)
-      {
-        return;
-      }
-
-      _id = value;
-    }
-  }
+  private Guid _id;
 
   [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
   public DateTimeOffset CreatedAt
@@ -36,6 +27,21 @@ public class EntityBase
       }
 
       _createdAt = value;
+    }
+  }
+
+  [Key]
+  public Guid Id
+  {
+    get => _id;
+    set
+    {
+      if (value == Guid.Empty)
+      {
+        return;
+      }
+
+      _id = value;
     }
   }
 }

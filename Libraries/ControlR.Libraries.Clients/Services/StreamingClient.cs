@@ -1,4 +1,6 @@
-﻿using System.Net.WebSockets;
+﻿using System.Collections.Immutable;
+using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 
@@ -8,6 +10,7 @@ public interface IStreamingClient : IAsyncDisposable, IClosable
 {
   WebSocketState State { get; }
   Task Connect(Uri websocketUri, CancellationToken cancellationToken);
+  IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler);
   Task Send(DtoWrapper dto, CancellationToken cancellationToken);
   Task WaitForClose(CancellationToken cancellationToken);
 }
@@ -19,14 +22,15 @@ public abstract class StreamingClient(
 {
   private readonly CancellationTokenSource _clientDisposingCts = new();
   private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
+  private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = new();
   private readonly SemaphoreSlim _sendLock = new(1);
   protected readonly IMessenger Messenger = messenger;
   private ClientWebSocket? _client;
 
+  public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+
   protected ClientWebSocket Client => _client ?? throw new Exception("Client not initialized.");
   protected bool IsDisposed { get; private set; }
-
-  public WebSocketState State => _client?.State ?? WebSocketState.Closed;
 
   public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
   {
@@ -47,7 +51,7 @@ public abstract class StreamingClient(
 
       IsDisposed = true;
 
-      _clientDisposingCts.Cancel();
+      await _clientDisposingCts.CancelAsync();
 
       if (State == WebSocketState.Open)
       {
@@ -65,6 +69,22 @@ public abstract class StreamingClient(
     {
       Client.Dispose();
     }
+  }
+
+  public IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler)
+  {
+    lock (_messageHandlers)
+    {
+      _messageHandlers.AddOrUpdate(subscriber, handler);
+    }
+    
+    return new CallbackDisposable(() =>
+    {
+      lock (_messageHandlers)
+      {
+        _messageHandlers.Remove(subscriber);
+      }
+    });
   }
 
   public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
@@ -91,6 +111,36 @@ public abstract class StreamingClient(
       .. header.Delimiter.ToByteArray(),
       .. BitConverter.GetBytes(header.DtoSize)
     ];
+  }
+
+  private ImmutableList<Func<DtoWrapper, Task>> GetMessageHandlers()
+  {
+    lock (_messageHandlers)
+    {
+      return _messageHandlers.Select(x => x.Value).ToImmutableList();
+    }
+  }
+
+  private async Task InvokeMessageHandlers(DtoWrapper dto, CancellationToken cancellationToken)
+  {
+    var handlers = GetMessageHandlers();
+
+    foreach (var handler in handlers)
+    {
+      try
+      {
+        if (cancellationToken.IsCancellationRequested)
+        {
+          break;
+        }
+        
+        await handler(dto);
+      }
+      catch (Exception ex)
+      {
+        logger.LogError(ex, "Error while invoking message handler.");
+      }
+    }
   }
 
   private async Task ReadFromStream()
@@ -146,8 +196,7 @@ public abstract class StreamingClient(
 
         var dto = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(dtoStream,
           cancellationToken: _clientDisposingCts.Token);
-        var message = new DtoReceivedMessage<DtoWrapper>(dto);
-        await Messenger.Send(message);
+        await InvokeMessageHandlers(dto, _clientDisposingCts.Token);
       }
       catch (OperationCanceledException)
       {
@@ -194,7 +243,7 @@ public abstract class StreamingClient(
   [StructLayout(LayoutKind.Explicit)]
   private struct MessageHeader(Guid delimiter, int messageSize)
   {
-    public static readonly int Size = 20;
+    public const int Size = 20;
 
     [FieldOffset(0)] public readonly Guid Delimiter = delimiter;
 

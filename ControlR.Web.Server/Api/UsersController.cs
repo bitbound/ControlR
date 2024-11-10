@@ -13,6 +13,7 @@ public class UsersController : ControllerBase
     [FromServices] AppDb appDb)
   {
     return await appDb.Users
+      .FilterByTenantId(User)
       .Select(x => new UserResponseDto(x.Id, x.UserName, x.Email))
       .ToListAsync();
   }

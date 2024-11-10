@@ -90,16 +90,16 @@ public class AgentHub(
     {
       if (_hostEnvironment.IsDevelopment() && deviceUpdate.TenantId == Guid.Empty)
       {
-        var firstTenant = await _appDb.Tenants
-          .OrderBy(x => x.CreatedAt)
+        var lastTenant = await _appDb.Tenants
+          .OrderByDescending(x => x.CreatedAt)
           .FirstOrDefaultAsync();
 
-        if (firstTenant is null)
+        if (lastTenant is null)
         {
           return Result.Fail<DeviceUpdateResponseDto>("No tenants found.");
         }
 
-        deviceUpdate.TenantId = firstTenant.Id;
+        deviceUpdate.TenantId = lastTenant.Id;
       }
 
       if (deviceUpdate.TenantId == Guid.Empty)

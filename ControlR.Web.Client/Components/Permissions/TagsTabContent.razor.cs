@@ -119,14 +119,24 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   {
     try
     {
-      // TODO: Create API endpoint.
-      await Task.Yield();
       if (isToggled)
       {
+        var addResult = await ControlrApi.AddUserTag(userId, tag.Id);
+        if (!addResult.IsSuccess)
+        {
+          Snackbar.Add(addResult.Reason, Severity.Error);
+          return;
+        }
         tag.UserIds.Add(userId);
       }
       else
       {
+        var removeResult = await ControlrApi.RemoveUserTag(userId, tag.Id);
+        if (!removeResult.IsSuccess)
+        {
+          Snackbar.Add(removeResult.Reason, Severity.Error);
+          return;
+        }
         tag.UserIds.Remove(userId);
       }
 

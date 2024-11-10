@@ -15,6 +15,7 @@ internal class SystemEventHandler(
   {
     SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
     SystemEvents.SessionEnding += SystemEvents_SessionEnding;
+    SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
     SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
     return Task.CompletedTask;
   }
@@ -23,6 +24,7 @@ internal class SystemEventHandler(
   {
     SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
     SystemEvents.SessionEnding -= SystemEvents_SessionEnding;
+    SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
     SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
     return Task.CompletedTask;
   }
@@ -32,23 +34,45 @@ internal class SystemEventHandler(
     messenger.Send(new DisplaySettingsChangedMessage());
   }
 
+  private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+  {
+    if (e.Mode == PowerModes.Suspend)
+    {
+      _ = messenger.Send(new WindowsSessionEndingMessage(SessionEndReasonsEx.SuspendMode));
+    }
+  }
+
   private async void SystemEvents_SessionEnding(object? sender, SessionEndingEventArgs e)
   {
-    logger.LogInformation("Session ending.  Reason: {reason}", e.Reason);
+    try
+    {
+      logger.LogInformation("Session ending.  Reason: {reason}", e.Reason);
 
-    var reason = (SessionEndReasonsEx)e.Reason;
-    await messenger.Send(new WindowsSessionEndingMessage(reason));
+      var reason = (SessionEndReasonsEx)e.Reason;
+      await messenger.Send(new WindowsSessionEndingMessage(reason));
 
-    appLifetime.StopApplication();
+      appLifetime.StopApplication();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error ending session");
+    }
   }
 
   private void SystemEvents_SessionSwitch(object? sender, SessionSwitchEventArgs e)
   {
-    logger.LogInformation("Session changing.  Reason: {reason}", e.Reason);
+    try
+    {
+      logger.LogInformation("Session changing.  Reason: {reason}", e.Reason);
 
-    var reason = (SessionSwitchReasonEx)(int)e.Reason;
-    messenger.Send(new WindowsSessionSwitchedMessage(reason, Process.GetCurrentProcess().SessionId));
+      var reason = (SessionSwitchReasonEx)(int)e.Reason;
+      messenger.Send(new WindowsSessionSwitchedMessage(reason, Process.GetCurrentProcess().SessionId));
 
-    appLifetime.StopApplication();
+      appLifetime.StopApplication();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error changing session");
+    }
   }
 }

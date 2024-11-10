@@ -2,7 +2,6 @@
 
 public enum EventMessageKind
 {
-  RemoteDeviceShuttingDown,
   PendingOperationsChanged,
   DeviceStoreUpdated,
   DeviceContentWindowsChanged,

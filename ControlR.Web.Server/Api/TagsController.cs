@@ -8,31 +8,6 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class TagsController : ControllerBase
 {
-  [HttpGet]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<List<TagResponseDto>>> GetAllTags(
-    [FromServices] AppDb appDb,
-    [FromQuery] bool includeLinkedIds = false)
-  {
-    var query = appDb.Tags.AsNoTracking();
-
-    if (includeLinkedIds)
-    {
-      query = query
-        .Include(x => x.Users)
-        .Include(x => x.Devices);
-    }
-
-    // ReSharper disable once EntityFramework.NPlusOne.IncompleteDataQuery
-    var tags = await query.ToListAsync();
-
-    var dtos = tags
-      .Select(x => x.ToDto())
-      .ToList();
-
-    return Ok(dtos);
-  }
-  
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<TagResponseDto>> CreateTag(
@@ -56,20 +31,16 @@ public class TagsController : ControllerBase
     
     return Ok(tag.ToDto());
   }
-  
+
   [HttpDelete("{tagId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult> DeleteTag(
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return NotFound("User tenant not found.");
-    }
-
     var tag = await appDb.Tags
       .AsNoTracking()
+      .FilterByTenantId(User)
       .FirstOrDefaultAsync(x => x.Id == tagId);
 
     if (tag == null)
@@ -81,5 +52,32 @@ public class TagsController : ControllerBase
     await appDb.SaveChangesAsync();
     
     return NoContent();
+  }
+
+  [HttpGet]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<List<TagResponseDto>>> GetAllTags(
+    [FromServices] AppDb appDb,
+    [FromQuery] bool includeLinkedIds = false)
+  {
+    var query = appDb.Tags
+      .AsNoTracking()
+      .FilterByTenantId(User);
+
+    if (includeLinkedIds)
+    {
+      query = query
+        .Include(x => x.Users)
+        .Include(x => x.Devices);
+    }
+
+    // ReSharper disable once EntityFramework.NPlusOne.IncompleteDataQuery
+    var tags = await query.ToListAsync();
+
+    var dtos = tags
+      .Select(x => x.ToDto())
+      .ToList();
+
+    return Ok(dtos);
   }
 }

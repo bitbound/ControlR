@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Immutable;
+using System.Net;
 using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
@@ -8,20 +9,23 @@ namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IControlrApi
 {
+  Task<Result<TagResponseDto>> AddUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
   IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices();
+  Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags();
 
-  Task<Result<IReadOnlyList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
-  Task<Result<IReadOnlyList<UserResponseDto>>> GetAllUsers();
+  Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
+  Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
-  Task<Result<IReadOnlyList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
 
@@ -31,6 +35,26 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
+
+  public async Task<Result<TagResponseDto>> AddUserTag(Guid userId, Guid tagId)
+  {
+    try
+    {
+      var dto = new UserTagAddRequestDto(userId, tagId);
+      var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
+      response.EnsureSuccessStatusCode();
+      var tag = await response.Content.ReadFromJsonAsync<TagResponseDto>();
+      return tag is null
+        ? Result.Fail<TagResponseDto>("Server response was empty.")
+        : Result.Ok(tag);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<TagResponseDto>(ex, "Error while adding user tag.")
+        .Log(_logger);
+    }
+  }
 
   public async Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType)
   {
@@ -101,38 +125,56 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<IReadOnlyList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
+  public async Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags()
   {
     try
     {
-      var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
-        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
+      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(HttpConstants.UserTagsEndpoint);
 
       return tags is null
-        ? Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.")
+        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
         : Result.Ok(tags);
     }
     catch (Exception ex)
     {
       return Result
-        .Fail<IReadOnlyList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting own tags.")
         .Log(_logger);
     }
   }
 
-  public async Task<Result<IReadOnlyList<UserResponseDto>>> GetAllUsers()
+  public async Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
   {
     try
     {
-      var users = await _client.GetFromJsonAsync<IReadOnlyList<UserResponseDto>>(HttpConstants.UsersEndpoint);
+      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
+        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
+
+      return tags is null
+        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
+        : Result.Ok(tags);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers()
+  {
+    try
+    {
+      var users = await _client.GetFromJsonAsync<ImmutableList<UserResponseDto>>(HttpConstants.UsersEndpoint);
       return users is null
-        ? Result.Fail<IReadOnlyList<UserResponseDto>>("Server response was empty.")
+        ? Result.Fail<ImmutableList<UserResponseDto>>("Server response was empty.")
         : Result.Ok(users);
     }
     catch (Exception ex)
     {
       return Result
-        .Fail<IReadOnlyList<UserResponseDto>>(ex, "Error while getting users.")
+        .Fail<ImmutableList<UserResponseDto>>(ex, "Error while getting users.")
         .Log(_logger);
     }
   }
@@ -252,7 +294,8 @@ public class ControlrApi(
     try
     {
       var response =
-        await _client.GetFromJsonAsync<UserPreferenceResponseDto>($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
+        await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
+          $"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
       if (response is null)
       {
         return Result.Fail<UserPreferenceResponseDto>("User preference not found.");
@@ -272,23 +315,37 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<IReadOnlyList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
+  public async Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
     try
     {
-      var tags = await _client.GetFromJsonAsync<IReadOnlyList<TagResponseDto>>(
-        $"{HttpConstants.TagsEndpoint}/{userId}?includeLinkedIds={includeLinkedIds}");
-      if (tags is null)
-      {
-        return Result.Fail<IReadOnlyList<TagResponseDto>>("Server response was empty.");
-      }
+      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
+        $"{HttpConstants.UserTagsEndpoint}/{userId}");
 
-      return Result.Ok(tags);
+      return tags is null
+        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
+        : Result.Ok(tags);
     }
     catch (Exception ex)
     {
       return Result
-        .Fail<IReadOnlyList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result> RemoveUserTag(Guid userId, Guid tagId)
+  {
+    try
+    {
+      var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
+      response.EnsureSuccessStatusCode();
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Error while removing user tag.")
         .Log(_logger);
     }
   }

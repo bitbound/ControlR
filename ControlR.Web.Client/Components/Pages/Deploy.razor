@@ -120,9 +120,8 @@
     {
       _tenantId = tenantId;
     }
-
-    // TODO: Get user-tags.
-    var result = await ControlrApi.GetAllTags();
+    
+    var result = await ControlrApi.GetAllowedTags();
     if (result.IsSuccess)
     {
       _tags = result.Value;

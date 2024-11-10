@@ -6,7 +6,7 @@ using ControlR.Libraries.Shared.Services.Buffers;
 
 namespace ControlR.Web.Client.Services;
 
-public interface IViewerStreamingClient : IStreamingClient, IClosable
+public interface IViewerStreamingClient : IStreamingClient
 {
   Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);

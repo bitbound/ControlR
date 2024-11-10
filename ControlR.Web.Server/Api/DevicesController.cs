@@ -18,7 +18,9 @@ public class DevicesController : ControllerBase
     [FromServices] IAuthorizationService authorizationService,
     [FromRoute] Guid deviceId)
   {
-    var device = await appDb.Devices.FindAsync(deviceId);
+    var device = await appDb.Devices
+      .FilterByTenantId(User)
+      .FirstOrDefaultAsync(x => x.Id == deviceId);
     if (device is null)
     {
       return NotFound();
@@ -38,11 +40,12 @@ public class DevicesController : ControllerBase
 
   [HttpGet]
   public async IAsyncEnumerable<DeviceUpdateResponseDto> Get(
-    [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService)
   {
-    var deviceStream = appDb.Devices.AsAsyncEnumerable();
+    var deviceStream = appDb.Devices
+      .FilterByTenantId(User)
+      .AsAsyncEnumerable();
 
     await foreach (var device in deviceStream)
     {
