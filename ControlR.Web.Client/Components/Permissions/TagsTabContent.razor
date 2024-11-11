@@ -53,7 +53,7 @@
     {
       @foreach (var user in UserStore.Items)
       {
-        <MudSwitch T="bool" 
+        <MudSwitch T="bool"
                    Value="@(_selectedTag.UserIds.Contains(user.Id))"
                    Color="Color.Success"
                    ValueChanged="@(async isToggled => await SetUserTag(isToggled, _selectedTag, user.Id))">
@@ -66,5 +66,17 @@
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Devices
     </MudText>
+    @if (_selectedTag is not null)
+    {
+      @foreach (var device in DeviceStore.Items)
+      {
+        <MudSwitch T="bool"
+                   Value="@(_selectedTag.DeviceIds.Contains(device.Id))"
+                   Color="Color.Success"
+                   ValueChanged="@(async isToggled => await SetDeviceTag(isToggled, _selectedTag, device.Id))">
+          @device.Name
+        </MudSwitch>
+      }
+    }
   </MudItem>
 </MudGrid>

@@ -11,7 +11,7 @@ public class UserTagsController : ControllerBase
 {
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto>> AddTag(
+  public async Task<IActionResult> AddTag(
     [FromServices] AppDb appDb,
     [FromBody] UserTagAddRequestDto dto)
   {
@@ -51,7 +51,7 @@ public class UserTagsController : ControllerBase
     user.Tags ??= [];
     user.Tags.Add(tag);
     await appDb.SaveChangesAsync();
-    return Ok(tag.ToDto());
+    return NoContent();
   }
 
 

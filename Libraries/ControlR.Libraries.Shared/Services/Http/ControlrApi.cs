@@ -9,7 +9,8 @@ namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IControlrApi
 {
-  Task<Result<TagResponseDto>> AddUserTag(Guid userId, Guid tagId);
+  Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
+  Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
@@ -25,6 +26,7 @@ public interface IControlrApi
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
   Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
@@ -36,22 +38,36 @@ public class ControlrApi(
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
 
-  public async Task<Result<TagResponseDto>> AddUserTag(Guid userId, Guid tagId)
+  public async Task<Result> AddDeviceTag(Guid deviceId, Guid tagId)
+  {
+    try
+    {
+      var dto = new DeviceTagAddRequestDto(deviceId, tagId);
+      var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceTagsEndpoint}", dto);
+      response.EnsureSuccessStatusCode();
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Error while adding device tag.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result> AddUserTag(Guid userId, Guid tagId)
   {
     try
     {
       var dto = new UserTagAddRequestDto(userId, tagId);
       var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
-      var tag = await response.Content.ReadFromJsonAsync<TagResponseDto>();
-      return tag is null
-        ? Result.Fail<TagResponseDto>("Server response was empty.")
-        : Result.Ok(tag);
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       return Result
-        .Fail<TagResponseDto>(ex, "Error while adding user tag.")
+        .Fail(ex, "Error while adding user tag.")
         .Log(_logger);
     }
   }
@@ -330,6 +346,22 @@ public class ControlrApi(
     {
       return Result
         .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting user tags.")
+        .Log(_logger);
+    }
+  }
+
+  public async Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId)
+  {
+    try
+    {
+      var response = await _client.DeleteAsync($"{HttpConstants.DeviceTagsEndpoint}/{deviceId}/{tagId}");
+      response.EnsureSuccessStatusCode();
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, "Error while removing device tag.")
         .Log(_logger);
     }
   }

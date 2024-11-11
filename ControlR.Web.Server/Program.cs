@@ -245,7 +245,10 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
-app.UseOutputCache();
+if (!app.Environment.IsDevelopment())
+{
+  app.UseOutputCache();
+}
 
 await app.ApplyMigrations();
 await app.SetAllDevicesOffline();

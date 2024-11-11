@@ -16,6 +16,6 @@ public static class EntityFilterExtensions
         $"{nameof(FilterByTenantId)} should only be called within the scope of an authenticated request.");
     }
 
-    return query.Where(x => x.Id == tenantId);
+    return query.Where(x => x.TenantId == tenantId);
   }
 }

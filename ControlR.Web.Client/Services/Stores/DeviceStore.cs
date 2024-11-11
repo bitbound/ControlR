@@ -3,9 +3,7 @@
 namespace ControlR.Web.Client.Services.Stores;
 
 public interface IDeviceStore : IStoreBase<DeviceUpdateResponseDto>
-{
-  Task SetAllOffline();
-}
+{}
 
 internal class DeviceStore : StoreBase<DeviceUpdateResponseDto>, IDeviceStore
 {
@@ -19,19 +17,8 @@ internal class DeviceStore : StoreBase<DeviceUpdateResponseDto>, IDeviceStore
     messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
   }
 
-  public Task SetAllOffline()
-  {
-    foreach (var device in Cache.Values)
-    {
-      device.IsOnline = false;
-    }
-
-    return Task.CompletedTask;
-  }
-
   protected override async Task RefreshImpl()
   {
-    await SetAllOffline();
     await foreach (var device in ControlrApi.GetAllDevices())
     {
       Cache.AddOrUpdate(device.Id, device, (_, _) => device);

@@ -115,6 +115,44 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     return ValidateNewTagName(_newTagName) == null;
   }
 
+  private async Task SetDeviceTag(bool isToggled, TagViewModel tag, Guid deviceId)
+  {
+    try
+    {
+      if (isToggled)
+      {
+        var addResult = await ControlrApi.AddDeviceTag(deviceId, tag.Id);
+        if (!addResult.IsSuccess)
+        {
+          Snackbar.Add(addResult.Reason, Severity.Error);
+          return;
+        }
+        tag.DeviceIds.Add(deviceId);
+      }
+      else
+      {
+        var removeResult = await ControlrApi.RemoveDeviceTag(deviceId, tag.Id);
+        if (!removeResult.IsSuccess)
+        {
+          Snackbar.Add(removeResult.Reason, Severity.Error);
+          return;
+        }
+        tag.DeviceIds.Remove(deviceId);
+      }
+
+      await TagStore.InvokeItemsChanged();
+
+      Snackbar.Add(isToggled
+        ? "Tag added"
+        : "Tag removed", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while setting tag.");
+      Snackbar.Add("An error occurred while setting tag", Severity.Error);
+    }
+  }
+
   private async Task SetUserTag(bool isToggled, TagViewModel tag, Guid userId)
   {
     try

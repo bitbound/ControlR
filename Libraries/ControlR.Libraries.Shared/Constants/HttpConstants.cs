@@ -4,6 +4,7 @@ public static class HttpConstants
 {
   public const string AgentVersionEndpoint = "/api/version/agent";
   public const string DevicesEndpoint = "/api/devices";
+  public const string DeviceTagsEndpoint = "/api/device-tags";
   public const string ServerSettingsEndpoint = "/api/server-settings";
   public const string ServerVersionEndpoint = "/api/version/server";
   public const string TagsEndpoint = "/api/tags";
