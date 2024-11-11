@@ -276,7 +276,6 @@ public class ViewerHub(
       
       var device = await _appDb.Devices
         .AsNoTracking()
-        .FilterByTenantId(Context.User)
         .FirstOrDefaultAsync(x => x.Id == deviceId);
 
       if (device is null)
@@ -460,7 +459,6 @@ public class ViewerHub(
 
     var device = await _appDb.Devices
       .AsNoTracking()
-      .FilterByTenantId(Context.User)
       .FirstOrDefaultAsync(x => x.Id == deviceId);
 
     if (device is null)

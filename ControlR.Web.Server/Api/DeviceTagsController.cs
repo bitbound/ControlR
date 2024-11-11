@@ -21,7 +21,6 @@ public class DeviceTagsController : ControllerBase
     }
     
     var device = await appDb.Devices
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == dto.DeviceId);
     
@@ -35,9 +34,7 @@ public class DeviceTagsController : ControllerBase
       return Unauthorized();
     }
     
-    var tag = await appDb.Tags
-      .FilterByTenantId(User)
-      .FirstOrDefaultAsync(x => x.Id == dto.TagId);
+    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
     
     if (tag is null)
     {
@@ -67,7 +64,6 @@ public class DeviceTagsController : ControllerBase
     }
     
     var device = await appDb.Devices
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == deviceId);
     

@@ -1,15 +1,23 @@
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Converters;
+using ControlR.Web.Server.Data.Configuration;
 using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Data;
 
-public class AppDb(DbContextOptions<AppDb> options, IHttpContextAccessor httpContextAccessor)
-  : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
+public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
 {
-  private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+  private readonly Guid? _tenantId;
+  private readonly Guid? _userId;
+
+  public AppDb(DbContextOptions<AppDb> options) : base(options)
+  {
+    var extension = options.FindExtension<ClaimsDbContextOptionsExtension>();
+    _tenantId = extension?.Options.TenantId;
+    _userId = extension?.Options.UserId;
+  }
 
   public DbSet<Device> Devices { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
@@ -20,76 +28,71 @@ public class AppDb(DbContextOptions<AppDb> options, IHttpContextAccessor httpCon
   {
     base.OnModelCreating(builder);
 
-    var tenantId = Guid.Empty;
-    var userId = Guid.Empty;
-    _ = _httpContextAccessor.HttpContext?.User.TryGetTenantId(out tenantId);
-    _ = _httpContextAccessor.HttpContext?.User.TryGetUserId(out userId);
-    
     SeedDatabase(builder);
 
-    AddDeviceConfig(builder, tenantId);
+    AddDeviceConfig(builder);
 
-    AddTagsConfig(builder, tenantId);
+    AddTagsConfig(builder);
     
-    AddUsersConfig(builder, tenantId);
+    AddUsersConfig(builder);
 
-    AddUserPreferenceConfig(builder, userId);
+    AddUserPreferenceConfig(builder);
 
     ApplyReflectionBasedConfiguration(builder);
   }
 
-  private static void AddUsersConfig(ModelBuilder builder, Guid tenantId)
+  private void AddUsersConfig(ModelBuilder builder)
   {
-    if (tenantId != Guid.Empty)
+    if (_tenantId is not null)
     {
       builder
         .Entity<AppUser>()
-        .HasQueryFilter(x => x.TenantId == tenantId);
+        .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
   
-  private static void AddDeviceConfig(ModelBuilder builder, Guid tenantId)
+  private void AddDeviceConfig(ModelBuilder builder)
   {
     builder
       .Entity<Device>()
       .OwnsMany(x => x.Drives)
       .ToJson();
 
-    if (tenantId != Guid.Empty)
+    if (_tenantId is not null)
     {
       builder
         .Entity<Device>()
-        .HasQueryFilter(x => x.TenantId == tenantId);
+        .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
 
-  private static void AddTagsConfig(ModelBuilder builder, Guid tenantId)
+  private void AddTagsConfig(ModelBuilder builder)
   {
     builder
       .Entity<Tag>()
       .HasIndex(x => new { x.Name, x.TenantId })
       .IsUnique();
-    
-    if (tenantId != Guid.Empty)
+
+    if (_tenantId is not null)
     {
       builder
         .Entity<Tag>()
-        .HasQueryFilter(x => x.TenantId == tenantId);
+        .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
 
-  private static void AddUserPreferenceConfig(ModelBuilder builder, Guid userId)
+  private void AddUserPreferenceConfig(ModelBuilder builder)
   {
     builder
       .Entity<UserPreference>()
       .HasIndex(x => new { x.Name, x.UserId })
       .IsUnique();
 
-    if (userId != Guid.Empty)
+    if (_userId is not null)
     {
       builder
         .Entity<UserPreference>()
-        .HasQueryFilter(x => x.UserId == userId);
+        .HasQueryFilter(x => x.UserId == _userId);
     }
   }
   

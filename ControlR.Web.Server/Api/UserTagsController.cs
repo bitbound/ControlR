@@ -21,7 +21,6 @@ public class UserTagsController : ControllerBase
     }
     
     var user = await appDb.Users
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == dto.UserId);
     
@@ -35,9 +34,7 @@ public class UserTagsController : ControllerBase
       return Unauthorized();
     }
     
-    var tag = await appDb.Tags
-      .FilterByTenantId(User)
-      .FirstOrDefaultAsync(x => x.Id == dto.TagId);
+    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
     
     if (tag is null)
     {
@@ -62,7 +59,6 @@ public class UserTagsController : ControllerBase
     if (User.IsInRole(RoleNames.TenantAdministrator))
     {
       var tags = await appDb.Tags
-        .FilterByTenantId(User)
         .AsNoTracking()
         .ToListAsync();
       
@@ -78,7 +74,6 @@ public class UserTagsController : ControllerBase
 
     var user = await appDb.Users
       .AsNoTracking()
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
     
@@ -107,7 +102,6 @@ public class UserTagsController : ControllerBase
   {
     var user = await appDb.Users
       .AsNoTracking()
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
     
@@ -141,7 +135,6 @@ public class UserTagsController : ControllerBase
     }
     
     var user = await appDb.Users
-      .FilterByTenantId(User)
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
     

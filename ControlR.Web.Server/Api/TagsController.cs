@@ -40,7 +40,6 @@ public class TagsController : ControllerBase
   {
     var tag = await appDb.Tags
       .AsNoTracking()
-      .FilterByTenantId(User)
       .FirstOrDefaultAsync(x => x.Id == tagId);
 
     if (tag == null)
@@ -60,9 +59,7 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromQuery] bool includeLinkedIds = false)
   {
-    var query = appDb.Tags
-      .AsNoTracking()
-      .FilterByTenantId(User);
+    var query = appDb.Tags.AsNoTracking();
 
     if (includeLinkedIds)
     {

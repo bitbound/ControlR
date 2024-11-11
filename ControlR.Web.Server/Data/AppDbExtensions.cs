@@ -11,7 +11,9 @@ public static class AppDbExtensions
     
     if (dto.Id != Guid.Empty)
     {
-      entity = await db.Devices.FirstOrDefaultAsync(x => x.Id == dto.Id);
+      entity = await db.Devices
+        .IgnoreQueryFilters()
+        .FirstOrDefaultAsync(x => x.Id == dto.Id);
     }
 
     var entityState = entity is null ? EntityState.Added : EntityState.Modified;

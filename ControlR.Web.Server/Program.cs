@@ -4,6 +4,7 @@ using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
+using ControlR.Web.Server.Data.Configuration;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
@@ -11,6 +12,7 @@ using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
@@ -56,8 +58,18 @@ var pgBuilder = new NpgsqlConnectionStringBuilder
   Host = pgHost
 };
 
-builder.Services.AddDbContext<AppDb>(options =>
-  options.UseNpgsql(pgBuilder.ConnectionString));
+builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
+{
+  options.UseNpgsql(pgBuilder.ConnectionString);
+  var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+  if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
+  {
+    options.UseUserClaims(user);
+  }
+}, lifetime: ServiceLifetime.Transient);
+
+//builder.Services.AddDbContext<AppDb>(options =>
+//  options.UseNpgsql(pgBuilder.ConnectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

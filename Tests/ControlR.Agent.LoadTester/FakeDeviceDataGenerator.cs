@@ -29,6 +29,7 @@ internal class FakeDeviceDataGenerator(
   {
     _device ??= new DeviceUpdateRequestDto
     {
+      Id = deviceId,
       Name = $"Test Device {_deviceNumber}",
       AgentVersion = _agentVersion,
       TenantId = _tenantId,
