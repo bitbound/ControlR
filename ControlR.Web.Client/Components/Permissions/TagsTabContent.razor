@@ -1,5 +1,5 @@
 ﻿@using ControlR.Web.Client.ViewModels
-<MudGrid>
+<MudGrid Justify="Justify.Center">
   <MudItem md="4" sm="6" xs="12">
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Tags
@@ -20,13 +20,23 @@
                   Class="mb-2"
                   Validation="@((string x) => ValidateNewTagName(x))">
     </MudTextField>
-    <MudPaper>
-      <MudList T="TagViewModel"
-               SelectionMode="SelectionMode.SingleSelection"
-               Color="Color.Info"
-               @bind-SelectedValue="_selectedTag">
 
-        @foreach (var tag in TagStore.Items)
+    <MudTextField T="string" 
+                  @bind-Value="_tagSearchPattern"
+                  Label="Search"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true"
+                  Class="my-2"
+                  Clearable="true" />
+
+    <MudPaper MaxHeight="500px" Class="overflow-y-auto">
+      <MudList T="TagViewModel"
+               @bind-SelectedValue="_selectedTag"
+               SelectionMode="SelectionMode.SingleSelection"
+               Color="Color.Info">
+
+        @foreach (var tag in FilteredTags)
         {
           <MudListItem T="TagViewModel" Value="@tag">
             @tag.Name
@@ -51,15 +61,25 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      @foreach (var user in UserStore.Items)
-      {
-        <MudSwitch T="bool"
-                   Value="@(_selectedTag.UserIds.Contains(user.Id))"
-                   Color="Color.Success"
-                   ValueChanged="@(async isToggled => await SetUserTag(isToggled, _selectedTag, user.Id))">
-          @user.UserName
-        </MudSwitch>
-      }
+      <MudTextField T="string" 
+                    @bind-Value="_userSearchPattern"
+                    Label="Search"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    Immediate="true"
+                    Class="my-2"
+                    Clearable="true" />
+      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
+        @foreach (var user in FilteredUsers)
+        {
+          <MudSwitch T="bool"
+                     Value="@(_selectedTag.UserIds.Contains(user.Id))"
+                     Color="Color.Success"
+                     ValueChanged="@(async isToggled => await SetUserTag(isToggled, _selectedTag, user.Id))">
+            @user.UserName
+          </MudSwitch>
+        }
+      </MudPaper>
     }
   </MudItem>
   <MudItem md="4" sm="6" xs="12">
@@ -68,15 +88,25 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      @foreach (var device in DeviceStore.Items)
-      {
-        <MudSwitch T="bool"
-                   Value="@(_selectedTag.DeviceIds.Contains(device.Id))"
-                   Color="Color.Success"
-                   ValueChanged="@(async isToggled => await SetDeviceTag(isToggled, _selectedTag, device.Id))">
-          @device.Name
-        </MudSwitch>
-      }
+      <MudTextField T="string" 
+                    @bind-Value="_deviceSearchPattern"
+                    Label="Search"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    Immediate="true"
+                    Class="my-2"
+                    Clearable="true" />
+      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
+        @foreach (var device in FilteredDevices)
+        {
+          <MudSwitch T="bool"
+                     Value="@(_selectedTag.DeviceIds.Contains(device.Id))"
+                     Color="Color.Success"
+                     ValueChanged="@(async isToggled => await SetDeviceTag(isToggled, _selectedTag, device.Id))">
+            @device.Name
+          </MudSwitch>
+        }
+      </MudPaper>
     }
   </MudItem>
 </MudGrid>

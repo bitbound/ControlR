@@ -10,8 +10,11 @@ namespace ControlR.Web.Client.Components.Permissions;
 public partial class TagsTabContent : ComponentBase, IDisposable
 {
   private ImmutableArray<IDisposable>? _changeHandlers;
+  private string _deviceSearchPattern = string.Empty;
   private string? _newTagName;
   private TagViewModel? _selectedTag;
+  private string _tagSearchPattern = string.Empty;
+  private string _userSearchPattern = string.Empty;
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -34,7 +37,20 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   [Inject]
   public required IUserStore UserStore { get; init; }
 
-  private IOrderedEnumerable<TagViewModel> SortedTags => TagStore.Items.OrderBy(x => x.Name);
+  private IOrderedEnumerable<DeviceUpdateResponseDto> FilteredDevices =>
+    DeviceStore.Items
+      .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
+      .OrderBy(x => x.Name);
+
+  private IOrderedEnumerable<TagViewModel> FilteredTags => 
+    TagStore.Items
+      .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
+      .OrderBy(x => x.Name);
+
+  private IOrderedEnumerable<UserResponseDto> FilteredUsers =>
+    UserStore.Items
+      .Where(x => x.UserName?.Contains(_userSearchPattern, StringComparison.OrdinalIgnoreCase) == true)
+      .OrderBy(x => x.UserName);
 
   public void Dispose()
   {
@@ -203,7 +219,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return "Tag name must be 100 characters or less.";
     }
 
-    if (SortedTags.Any(x => x.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
+    if (FilteredTags.Any(x => x.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
     {
       return "Tag name already exists.";
     }
