@@ -37,6 +37,53 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.ToTable("AppUserTag");
                 });
 
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex");
+
+                    b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("8ad85243-aa78-7539-0bf7-0cd6f27bcaa5"),
+                            Name = "Server Administrator",
+                            NormalizedName = "SERVER ADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = new Guid("ed0dddf2-c2b2-4160-9ece-4a9e03b2e828"),
+                            Name = "Tenant Administrator",
+                            NormalizedName = "TENANT ADMINISTRATOR"
+                        },
+                        new
+                        {
+                            Id = new Guid("98aecfed-4095-42fd-e4b8-556d5b723bb6"),
+                            Name = "Device Superuser",
+                            NormalizedName = "DEVICE SUPERUSER"
+                        });
+                });
+
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -320,53 +367,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.ToTable("DeviceTag");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex");
-
-                    b.ToTable("AspNetRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("8ad85243-aa78-7539-0bf7-0cd6f27bcaa5"),
-                            Name = "ServerAdministrator",
-                            NormalizedName = "SERVERADMINISTRATOR"
-                        },
-                        new
-                        {
-                            Id = new Guid("ed0dddf2-c2b2-4160-9ece-4a9e03b2e828"),
-                            Name = "TenantAdministrator",
-                            NormalizedName = "TENANTADMINISTRATOR"
-                        },
-                        new
-                        {
-                            Id = new Guid("98aecfed-4095-42fd-e4b8-556d5b723bb6"),
-                            Name = "DeviceSuperUser",
-                            NormalizedName = "DEVICESUPERUSER"
-                        });
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
@@ -600,7 +600,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+                    b.HasOne("ControlR.Web.Server.Data.Entities.AppRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -627,14 +627,14 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
-                        .WithMany()
+                    b.HasOne("ControlR.Web.Server.Data.Entities.AppRole", null)
+                        .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("ControlR.Web.Server.Data.Entities.AppUser", null)
-                        .WithMany()
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -649,9 +649,16 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
+                {
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
                     b.Navigation("UserPreferences");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>

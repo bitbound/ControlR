@@ -1,14 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
 [Route("api/[controller]")]
 [ApiController]
-[OutputCache(Duration = 60)]
 [Authorize]
 public class DevicesController : ControllerBase
 {

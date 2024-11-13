@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Constants;
@@ -10,13 +11,14 @@ namespace ControlR.Libraries.Shared.Services.Http;
 public interface IControlrApi
 {
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
+  Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
   IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices();
   Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags();
-
+  Task<Result<ImmutableList<RoleResponseDto>>> GetAllRoles();
   Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
@@ -27,6 +29,7 @@ public interface IControlrApi
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
   Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
+  Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
@@ -40,91 +43,61 @@ public class ControlrApi(
 
   public async Task<Result> AddDeviceTag(Guid deviceId, Guid tagId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var dto = new DeviceTagAddRequestDto(deviceId, tagId);
       var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceTagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
+    });
+  }
+
+  public async Task<Result> AddUserRole(Guid userId, Guid roleId)
+  {
+    return await TryCallApi(async () =>
     {
-      return Result
-        .Fail(ex, "Error while adding device tag.")
-        .Log(_logger);
-    }
+      var dto = new UserRoleAddRequestDto(userId, roleId);
+      var response = await _client.PostAsJsonAsync($"{HttpConstants.UserRolesEndpoint}", dto);
+      response.EnsureSuccessStatusCode();
+    });
   }
 
   public async Task<Result> AddUserTag(Guid userId, Guid tagId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var dto = new UserTagAddRequestDto(userId, tagId);
       var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while adding user tag.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var request = new TagCreateRequestDto(tagName, tagType);
       var response = await _client.PostAsJsonAsync(HttpConstants.TagsEndpoint, request);
       response.EnsureSuccessStatusCode();
-      var dto = await response.Content.ReadFromJsonAsync<TagResponseDto>();
-      if (dto is null)
-      {
-        return Result.Fail<TagResponseDto>("Server response was empty.");
-      }
-
-      return Result.Ok(dto);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<TagResponseDto>(ex, "Error while creating tag.")
-        .Log(_logger);
-    }
+      return await response.Content.ReadFromJsonAsync<TagResponseDto>();
+    });
   }
 
   public async Task<Result> DeleteDevice(Guid deviceId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var response = await _client.DeleteAsync($"{HttpConstants.DevicesEndpoint}/{deviceId}");
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while deleting device.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result> DeleteTag(Guid tagId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var response = await _client.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}");
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while deleting tag.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices()
@@ -143,39 +116,27 @@ public class ControlrApi(
 
   public async Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags()
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(HttpConstants.UserTagsEndpoint);
+      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(HttpConstants.UserTagsEndpoint);
+    });
+  }
 
-      return tags is null
-        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
-        : Result.Ok(tags);
-    }
-    catch (Exception ex)
+  public async Task<Result<ImmutableList<RoleResponseDto>>> GetAllRoles()
+  {
+    return await TryCallApi(async () =>
     {
-      return Result
-        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting own tags.")
-        .Log(_logger);
-    }
+      return await _client.GetFromJsonAsync<ImmutableList<RoleResponseDto>>(HttpConstants.RolesEndpoint);
+    });
   }
 
   public async Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
+      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
         $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
-
-      return tags is null
-        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
-        : Result.Ok(tags);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting user tags.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers()
@@ -221,43 +182,20 @@ public class ControlrApi(
 
   public async Task<Result<Version>> GetCurrentAgentVersion()
   {
-    try
+    return await TryCallApi(async () =>
     {
       var version = await _client.GetFromJsonAsync<Version>(HttpConstants.AgentVersionEndpoint);
       _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
-      if (version is null)
-      {
-        return Result.Fail<Version>("Server response was empty.");
-      }
-
-      return Result.Ok(version);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<Version>(ex, "Error while checking for new agent version.")
-        .Log(_logger);
-    }
+      return version;
+    });
   }
 
   public async Task<Result<Version>> GetCurrentServerVersion()
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var serverVersion = await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint);
-      if (serverVersion is null)
-      {
-        return Result.Fail<Version>("Server response was empty.");
-      }
-
-      return Result.Ok(serverVersion);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<Version>(ex, "Error while getting server version.")
-        .Log(_logger);
-    }
+      return await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint);
+    });
   }
 
   public async Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime)
@@ -287,120 +225,109 @@ public class ControlrApi(
 
   public async Task<Result<ServerSettingsDto>> GetServerSettings()
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var serverSettings = await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint);
-      if (serverSettings is null)
-      {
-        return Result.Fail<ServerSettingsDto>("Server settings response was empty.");
-      }
-
-      return Result.Ok(serverSettings);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<ServerSettingsDto>(ex, "Error while getting server settings.")
-        .Log(_logger);
-    }
+      return await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint);
+    });
   }
 
   public async Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName)
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var response =
-        await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
+      return await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
           $"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
-      if (response is null)
-      {
-        return Result.Fail<UserPreferenceResponseDto>("User preference not found.");
-      }
-
-      return Result.Ok(response);
-    }
-    catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-    {
-      return Result.Fail<UserPreferenceResponseDto>(ex);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<UserPreferenceResponseDto>(ex, "Error while getting user preference.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
-    try
+    return await TryCallApi(async () =>
     {
-      var tags = await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
+      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
         $"{HttpConstants.UserTagsEndpoint}/{userId}");
-
-      return tags is null
-        ? Result.Fail<ImmutableList<TagResponseDto>>("Server response was empty.")
-        : Result.Ok(tags);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<ImmutableList<TagResponseDto>>(ex, "Error while getting user tags.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var response = await _client.DeleteAsync($"{HttpConstants.DeviceTagsEndpoint}/{deviceId}/{tagId}");
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while removing device tag.")
-        .Log(_logger);
-    }
+    });
   }
+
+  public async Task<Result> RemoveUserRole(Guid userId, Guid roleId)
+  {
+    return await TryCallApi(async () =>
+    {
+      var response = await _client.DeleteAsync($"{HttpConstants.UserRolesEndpoint}/{userId}/{roleId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
 
   public async Task<Result> RemoveUserTag(Guid userId, Guid tagId)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
       response.EnsureSuccessStatusCode();
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail(ex, "Error while removing user tag.")
-        .Log(_logger);
-    }
+    });
   }
 
   public async Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue)
   {
-    try
+    return await TryCallApi(async () =>
     {
       var request = new UserPreferenceRequestDto(preferenceName, preferenceValue);
       var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
-      var dto = await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
-      if (dto is null)
-      {
-        return Result.Fail<UserPreferenceResponseDto>("Server response was empty.");
-      }
+      return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
+  }
 
-      return Result.Ok(dto);
+  private async Task<Result> TryCallApi(Func<Task> func)
+  {
+    try
+    {
+      await func.Invoke();
+      return Result.Ok();
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail(ex, ex.Message)
+        .Log(_logger);
     }
     catch (Exception ex)
     {
       return Result
-        .Fail<UserPreferenceResponseDto>(ex, "Error while setting user preference.")
+        .Fail(ex, "The request to the server failed.")
+        .Log(_logger);
+    }
+  }
+
+  private async Task<Result<T>> TryCallApi<T>(Func<Task<T?>> func)
+  {
+    try
+    {
+      var resultValue = await func.Invoke() ??
+        throw new HttpRequestException("The server response was empty.");
+
+      return Result.Ok(resultValue);
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail<T>(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<T>(ex, "The request to the server failed.")
         .Log(_logger);
     }
   }

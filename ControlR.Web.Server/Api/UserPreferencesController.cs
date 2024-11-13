@@ -89,7 +89,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
     user.UserPreferences ??= [];
 
     var index = user.UserPreferences.FindIndex(x => x.Name == preference.Name);
-
+    
     if (index >= 0)
     {
       user.UserPreferences[index] = entity;

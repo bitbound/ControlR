@@ -35,6 +35,19 @@ public static class EntityToDtoExtensions
     };
   }
 
+  public static RoleResponseDto ToDto(this AppRole role)
+  {
+    var userIds = role
+      .UserRoles
+      ?.Select(x => x.UserId)
+      ?.ToImmutableList() ?? [];
+
+    return new RoleResponseDto(
+      role.Id,
+      role.Name ?? string.Empty,
+      userIds);
+  }
+
   public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
   {
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);

@@ -25,6 +25,8 @@ public class AppUser : IdentityUser<Guid>, ITenantEntityBase
     }
   }
 
+  public List<IdentityUserRole<Guid>>? UserRoles { get; set; }
+
   public List<Tag>? Tags { get; set; }
   public Tenant? Tenant { get; set; }
   public Guid TenantId { get; set; }

@@ -67,6 +67,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -322,9 +323,9 @@ namespace ControlR.Web.Server.Data.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { new Guid("8ad85243-aa78-7539-0bf7-0cd6f27bcaa5"), null, "ServerAdministrator", "SERVERADMINISTRATOR" },
-                    { new Guid("98aecfed-4095-42fd-e4b8-556d5b723bb6"), null, "DeviceSuperUser", "DEVICESUPERUSER" },
-                    { new Guid("ed0dddf2-c2b2-4160-9ece-4a9e03b2e828"), null, "TenantAdministrator", "TENANTADMINISTRATOR" }
+                    { new Guid("8ad85243-aa78-7539-0bf7-0cd6f27bcaa5"), null, "Server Administrator", "SERVER ADMINISTRATOR" },
+                    { new Guid("98aecfed-4095-42fd-e4b8-556d5b723bb6"), null, "Device Superuser", "DEVICE SUPERUSER" },
+                    { new Guid("ed0dddf2-c2b2-4160-9ece-4a9e03b2e828"), null, "Tenant Administrator", "TENANT ADMINISTRATOR" }
                 });
 
             migrationBuilder.CreateIndex(

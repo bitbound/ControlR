@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Data;
 
-public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
+public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
 {
   private readonly Guid? _tenantId;
   private readonly Guid? _userId;
@@ -32,6 +32,8 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
 
     AddDeviceConfig(builder);
 
+    AddRoleConfig(builder);
+
     AddTagsConfig(builder);
     
     AddUsersConfig(builder);
@@ -43,6 +45,12 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
 
   private void AddUsersConfig(ModelBuilder builder)
   {
+    builder
+      .Entity<AppUser>()
+      .HasMany(x => x.UserRoles)
+      .WithOne()
+      .HasForeignKey(x => x.UserId);
+
     if (_tenantId is not null)
     {
       builder
@@ -95,7 +103,16 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
         .HasQueryFilter(x => x.UserId == _userId);
     }
   }
-  
+
+  private void AddRoleConfig(ModelBuilder builder)
+  {
+    builder
+      .Entity<AppRole>()
+      .HasMany(x => x.UserRoles)
+      .WithOne()
+      .HasForeignKey(x => x.RoleId);
+  }
+
   private static void ApplyReflectionBasedConfiguration(ModelBuilder builder)
   {
     foreach (var entityType in builder.Model.GetEntityTypes())
@@ -133,9 +150,9 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
   private static void SeedDatabase(ModelBuilder builder)
   {
     builder
-      .Entity<IdentityRole<Guid>>()
+      .Entity<AppRole>()
       .HasData(
-        new IdentityRole<Guid>
+        new AppRole
         {
           Id = DeterministicGuid.Create(1),
           Name = RoleNames.ServerAdministrator,
@@ -143,9 +160,9 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
         });
 
     builder
-      .Entity<IdentityRole<Guid>>()
+      .Entity<AppRole>()
       .HasData(
-        new IdentityRole<Guid>
+        new AppRole
         {
           Id = DeterministicGuid.Create(2),
           Name = RoleNames.TenantAdministrator,
@@ -153,9 +170,9 @@ public class AppDb : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
         });
 
     builder
-      .Entity<IdentityRole<Guid>>()
+      .Entity<AppRole>()
       .HasData(
-        new IdentityRole<Guid>
+        new AppRole
         {
           Id = DeterministicGuid.Create(3),
           Name = RoleNames.DeviceSuperUser,

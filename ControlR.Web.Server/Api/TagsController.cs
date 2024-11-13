@@ -55,7 +55,7 @@ public class TagsController : ControllerBase
 
   [HttpGet]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<List<TagResponseDto>>> GetAllTags(
+  public async Task<ActionResult<TagResponseDto[]>> GetAllTags(
     [FromServices] AppDb appDb,
     [FromQuery] bool includeLinkedIds = false)
   {
@@ -73,7 +73,7 @@ public class TagsController : ControllerBase
 
     var dtos = tags
       .Select(x => x.ToDto())
-      .ToList();
+      .ToArray();
 
     return Ok(dtos);
   }

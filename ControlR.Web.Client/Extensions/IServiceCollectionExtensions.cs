@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IDeviceStore, DeviceStore>();
     services.AddScoped<ITagStore, TagStore>();
     services.AddScoped<IUserStore, UserStore>();
+    services.AddScoped<IRoleStore, RoleStore>();
 
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
 

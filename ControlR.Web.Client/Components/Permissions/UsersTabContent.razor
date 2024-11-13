@@ -1,0 +1,86 @@
+﻿<MudGrid>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Users
+    </MudText>
+
+    <MudTextField T="string"
+                  @bind-Value="_userSearchPattern"
+                  Label="Search"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true"
+                  Class="my-2"
+                  Clearable="true" />
+
+    <MudPaper MaxHeight="500px" Class="overflow-y-auto">
+      <MudList T="UserResponseDto"
+               @bind-SelectedValue="_selectedUser"
+               SelectionMode="SelectionMode.SingleSelection"
+               Color="Color.Info">
+
+        @foreach (var user in FilteredUsers)
+        {
+          <MudListItem T="UserResponseDto" Value="@user">
+            @user.UserName
+          </MudListItem>
+        }
+
+      </MudList>
+    </MudPaper>
+  </MudItem>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Roles
+    </MudText>
+    @if (_selectedUser is not null)
+    {
+      <MudTextField T="string"
+                    @bind-Value="_roleSearchPattern"
+                    Label="Search"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    Immediate="true"
+                    Class="my-2"
+                    Clearable="true" />
+      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
+        @foreach (var role in FilteredRoles)
+        {
+          <MudSwitch T="bool"
+                     Value="@(role.UserIds.Contains(_selectedUser.Id))"
+                     Color="Color.Success"
+                     ValueChanged="@(async isToggled => await SetUserRole(isToggled, _selectedUser, role))">
+            @role.Name
+          </MudSwitch>
+        }
+      </MudPaper>
+    }
+  </MudItem>
+  <MudItem md="4" sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Tags
+    </MudText>
+    @if (_selectedUser is not null)
+    {
+      <MudTextField T="string"
+                    @bind-Value="_tagSearchPattern"
+                    Label="Search"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    Immediate="true"
+                    Class="my-2"
+                    Clearable="true" />
+      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
+        @foreach (var tag in FilteredTags)
+        {
+          <MudSwitch T="bool"
+                     Value="@(tag.UserIds.Contains(_selectedUser.Id))"
+                     Color="Color.Success"
+                     ValueChanged="@(async isToggled => await SetUserTag(isToggled, _selectedUser, tag))">
+            @tag.Name
+          </MudSwitch>
+        }
+      </MudPaper>
+    }
+  </MudItem>
+</MudGrid>

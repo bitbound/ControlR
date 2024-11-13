@@ -25,6 +25,9 @@ public partial class Permissions : ComponentBase
   [Inject]
   public required IUserStore UserStore { get; init; }
 
+  [Inject]
+  public required IRoleStore RoleStore { get; init; }
+
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -37,5 +40,6 @@ public partial class Permissions : ComponentBase
     await DeviceStore.Refresh();
     await TagStore.Refresh();
     await UserStore.Refresh();
+    await RoleStore.Refresh();
   }
 }

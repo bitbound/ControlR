@@ -12,7 +12,6 @@ using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using Npgsql;
@@ -138,7 +137,7 @@ builder.Services
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
   })
-  .AddRoles<IdentityRole<Guid>>()
+  .AddRoles<AppRole>()
   .AddEntityFrameworkStores<AppDb>()
   .AddSignInManager()
   .AddDefaultTokenProviders();

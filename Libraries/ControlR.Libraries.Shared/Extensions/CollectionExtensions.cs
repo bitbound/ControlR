@@ -28,6 +28,20 @@ public static class CollectionExtensions
     }
   }
 
+  public static int FindIndex<T>(this IEnumerable<T> collection, Predicate<T> predicate)
+  {
+    var count = 0;
+    foreach (var item in collection)
+    {
+      if (predicate.Invoke(item))
+      {
+        return count;
+      }
+      count++;
+    }
+    return -1;
+  }
+
   public static void RemoveAll<T>(this ObservableCollection<T> self, Predicate<T> predicate)
   {
     var items = self

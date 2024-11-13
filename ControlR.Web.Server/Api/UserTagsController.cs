@@ -53,7 +53,7 @@ public class UserTagsController : ControllerBase
 
 
   [HttpGet]
-  public async Task<ActionResult<ImmutableList<TagResponseDto>>> GetAllowedTags(
+  public async Task<ActionResult<TagResponseDto[]>> GetAllowedTags(
     [FromServices] AppDb appDb)
   {
     if (User.IsInRole(RoleNames.TenantAdministrator))
@@ -84,19 +84,19 @@ public class UserTagsController : ControllerBase
     
     if (user.Tags is not { Count: > 0 })
     {
-      return Ok(ImmutableList<TagResponseDto>.Empty);
+      return Ok(Array.Empty<TagResponseDto>());
     }
     
     var userTags = user.Tags
       .Select(x => x.ToDto())
-      .ToImmutableList();
+      .ToArray();
     
     return Ok(userTags);
   }
 
   [HttpGet("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<ImmutableList<TagResponseDto>>> GetOwnTags(
+  public async Task<ActionResult<TagResponseDto[]>> GetUserTags(
     [FromRoute]Guid userId,
     [FromServices] AppDb appDb)
   {
@@ -112,12 +112,12 @@ public class UserTagsController : ControllerBase
     
     if (user.Tags is not { Count: > 0 })
     {
-      return Ok(ImmutableList<TagResponseDto>.Empty);
+      return Ok(Array.Empty<TagResponseDto>());
     }
     
     var userTags = user.Tags
       .Select(x => x.ToDto())
-      .ToImmutableList();
+      .ToArray();
     
     return Ok(userTags);
   }
