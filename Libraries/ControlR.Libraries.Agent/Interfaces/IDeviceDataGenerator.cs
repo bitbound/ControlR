@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Dtos.ServerApi;
+﻿using System.Collections.Immutable;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
 
 namespace ControlR.Libraries.Agent.Interfaces;
@@ -9,12 +10,12 @@ public interface IDeviceDataGenerator
 
   string GetAgentVersion();
 
-  List<Drive> GetAllDrives();
+  IReadOnlyList<Drive> GetAllDrives();
 
   DeviceUpdateRequestDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
-    List<Drive> drives,
+    IReadOnlyList<Drive> drives,
     double usedStorage,
     double totalStorage,
     double usedMemory,

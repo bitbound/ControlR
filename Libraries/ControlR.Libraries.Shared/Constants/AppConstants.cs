@@ -6,10 +6,18 @@ namespace ControlR.Libraries.Shared.Constants;
 
 public static class AppConstants
 {
-  public static Uri DevServerUri { get; } = new("http://localhost:5120");
-  public static Uri ProdServerUri { get; } = new("https://app.controlr.app");
+  public static Uri? ServerUri
+  {
+    get
+    {
+      if (OperatingSystem.IsWindows() && Debugger.IsAttached)
+      {
+        return DevServerUri;
+      }
 
-  public static string ExternalDownloadsUri => "https://controlr.app";
+      return null;
+    }
+  }
 
   public static string StreamerFileName
   {
@@ -36,18 +44,7 @@ public static class AppConstants
     }
   }
 
-  public static Uri ServerUri
-  {
-    get
-    {
-      if (OperatingSystem.IsWindows() && Debugger.IsAttached)
-      {
-        return DevServerUri;
-      }
-
-      return ProdServerUri;
-    }
-  }
+  private static Uri DevServerUri { get; } = new("http://localhost:5120");
 
   public static string GetAgentFileDownloadPath(RuntimeId runtime)
   {

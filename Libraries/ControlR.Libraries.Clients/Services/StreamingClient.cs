@@ -113,11 +113,11 @@ public abstract class StreamingClient(
     ];
   }
 
-  private ImmutableList<Func<DtoWrapper, Task>> GetMessageHandlers()
+  private List<Func<DtoWrapper, Task>> GetMessageHandlers()
   {
     lock (_messageHandlers)
     {
-      return _messageHandlers.Select(x => x.Value).ToImmutableList();
+      return _messageHandlers.Select(x => x.Value).ToList();
     }
   }
 

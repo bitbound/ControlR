@@ -229,7 +229,7 @@ else
 }
 
 app.UseWhen(
-  ctx => ctx.Request.Method == HttpMethods.Head && ctx.Request.Path.StartsWithSegments("/downloads"),
+  ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
 app.UseStaticFiles();

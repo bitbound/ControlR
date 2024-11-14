@@ -1,6 +1,4 @@
 ﻿using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.Services.Stores;
-using ControlR.Web.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Collections.Immutable;
@@ -9,22 +7,22 @@ namespace ControlR.Web.Client.Components.Permissions;
 
 public partial class UsersTabContent : ComponentBase, IDisposable
 {
-  private string _tagSearchPattern = string.Empty;
-  private string _userSearchPattern = string.Empty;
+  private ImmutableArray<IDisposable>? _changeHandlers;
+  private Guid _currentUserId;
+  private bool _isServerAdmin;
   private string _roleSearchPattern = string.Empty;
   private UserResponseDto? _selectedUser;
-  private bool _isServerAdmin;
-  private Guid _currentUserId;
-
-  private ImmutableArray<IDisposable>? _changeHandlers;
+  private string _tagSearchPattern = string.Empty;
+  private string _userSearchPattern = string.Empty;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
+
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  public required ILogger<TagsTabContent> Logger { get; init; }
+  public required ILogger<UsersTabContent> Logger { get; init; }
 
   [Inject]
   public required IRoleStore RoleStore { get; init; }
@@ -53,7 +51,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       if (_selectedUser?.Id == _currentUserId)
       {
         query = query.Where(x => 
-          x.Name is not RoleNames.ServerAdministrator and not RoleNames.TenantAdministrator);
+          x.Name != RoleNames.ServerAdministrator && x.Name != RoleNames.TenantAdministrator);
       }
 
       return query.OrderBy(x => x.Name);
@@ -86,44 +84,12 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       _currentUserId = userId;
     }
     _isServerAdmin = state.User.IsInRole(RoleNames.ServerAdministrator);
-  }
-
-  private async Task SetUserTag(bool isToggled, UserResponseDto user, TagViewModel tag)
-  {
-    try
-    {
-      if (isToggled)
-      {
-        var addResult = await ControlrApi.AddUserTag(user.Id, tag.Id);
-        if (!addResult.IsSuccess)
-        {
-          Snackbar.Add(addResult.Reason, Severity.Error);
-          return;
-        }
-        tag.UserIds.Add(user.Id);
-      }
-      else
-      {
-        var removeResult = await ControlrApi.RemoveUserTag(user.Id, tag.Id);
-        if (!removeResult.IsSuccess)
-        {
-          Snackbar.Add(removeResult.Reason, Severity.Error);
-          return;
-        }
-        tag.UserIds.Remove(user.Id);
-      }
-
-      await TagStore.InvokeItemsChanged();
-
-      Snackbar.Add(isToggled
-        ? "Tag added"
-        : "Tag removed", Severity.Success);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while setting tag.");
-      Snackbar.Add("An error occurred while setting tag", Severity.Error);
-    }
+    _changeHandlers =
+    [
+      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged)),
+      UserStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged)),
+      RoleStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
+    ];
   }
 
   private async Task SetUserRole(bool isToggled, UserResponseDto user, RoleViewModel role)
@@ -161,6 +127,44 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     {
       Logger.LogError(ex, "Error while setting role.");
       Snackbar.Add("An error occurred while setting role", Severity.Error);
+    }
+  }
+
+  private async Task SetUserTag(bool isToggled, UserResponseDto user, TagViewModel tag)
+  {
+    try
+    {
+      if (isToggled)
+      {
+        var addResult = await ControlrApi.AddUserTag(user.Id, tag.Id);
+        if (!addResult.IsSuccess)
+        {
+          Snackbar.Add(addResult.Reason, Severity.Error);
+          return;
+        }
+        tag.UserIds.Add(user.Id);
+      }
+      else
+      {
+        var removeResult = await ControlrApi.RemoveUserTag(user.Id, tag.Id);
+        if (!removeResult.IsSuccess)
+        {
+          Snackbar.Add(removeResult.Reason, Severity.Error);
+          return;
+        }
+        tag.UserIds.Remove(user.Id);
+      }
+
+      await TagStore.InvokeItemsChanged();
+
+      Snackbar.Add(isToggled
+        ? "Tag added"
+        : "Tag removed", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while setting tag.");
+      Snackbar.Add("An error occurred while setting tag", Severity.Error);
     }
   }
 }

@@ -3,19 +3,14 @@
 namespace ControlR.Web.Client.Services.Stores;
 
 public interface IRoleStore : IStoreBase<RoleViewModel>
-{ }
+{}
 
-internal class RoleStore : StoreBase<RoleViewModel>, IRoleStore
+internal class RoleStore(
+  IControlrApi controlrApi,
+  ISnackbar snackbar,
+  ILogger<RoleStore> logger)
+  : StoreBase<RoleViewModel>(controlrApi, snackbar, logger), IRoleStore
 {
-  public RoleStore(
-    IControlrApi controlrApi,
-    ISnackbar snackbar,
-    ILogger<RoleStore> logger)
-    : base(controlrApi, snackbar, logger)
-  {
-
-  }
-
   protected override async Task RefreshImpl()
   {
     var getResult = await ControlrApi.GetAllRoles();

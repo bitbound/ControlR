@@ -174,7 +174,7 @@ public class ViewerStreamingClient(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while invoking hub method.");
+      logger.LogError(ex, "Error while sending message via websocket stream..");
     }
   }
 

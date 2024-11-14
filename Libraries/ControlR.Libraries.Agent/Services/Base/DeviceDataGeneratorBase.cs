@@ -1,4 +1,5 @@
-﻿using System.Net.NetworkInformation;
+﻿using System.Collections.Immutable;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
@@ -28,7 +29,7 @@ internal class DeviceDataGeneratorBase(
     return "0.0.0.0";
   }
 
-  public List<Drive> GetAllDrives()
+  public IReadOnlyList<Drive> GetAllDrives()
   {
     try
     {
@@ -61,7 +62,7 @@ internal class DeviceDataGeneratorBase(
   public DeviceUpdateRequestDto GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
-    List<Drive> drives,
+    IReadOnlyList<Drive> drives,
     double usedStorage,
     double totalStorage,
     double usedMemory,

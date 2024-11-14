@@ -1,7 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
@@ -17,17 +14,17 @@ public interface IControlrApi
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
   IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices();
-  Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags();
-  Task<Result<ImmutableList<RoleResponseDto>>> GetAllRoles();
-  Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false);
-  Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers();
+  Task<Result<TagResponseDto[]>> GetAllowedTags();
+  Task<Result<RoleResponseDto[]>> GetAllRoles();
+  Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
+  Task<Result<UserResponseDto[]>> GetAllUsers();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
-  Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
@@ -114,46 +111,29 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<ImmutableList<TagResponseDto>>> GetAllowedTags()
+  public async Task<Result<TagResponseDto[]>> GetAllowedTags()
   {
     return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(HttpConstants.UserTagsEndpoint);
-    });
+      await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
 
-  public async Task<Result<ImmutableList<RoleResponseDto>>> GetAllRoles()
+  public async Task<Result<RoleResponseDto[]>> GetAllRoles()
+  {
+    return await TryCallApi(async () => 
+      await _client.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.RolesEndpoint));
+  }
+
+  public async Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false)
   {
     return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<ImmutableList<RoleResponseDto>>(HttpConstants.RolesEndpoint);
-    });
+      await _client.GetFromJsonAsync<TagResponseDto[]>(
+        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}"));
   }
 
-  public async Task<Result<ImmutableList<TagResponseDto>>> GetAllTags(bool includeLinkedIds = false)
+  public async Task<Result<UserResponseDto[]>> GetAllUsers()
   {
-    return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
-        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}");
-    });
-  }
-
-  public async Task<Result<ImmutableList<UserResponseDto>>> GetAllUsers()
-  {
-    try
-    {
-      var users = await _client.GetFromJsonAsync<ImmutableList<UserResponseDto>>(HttpConstants.UsersEndpoint);
-      return users is null
-        ? Result.Fail<ImmutableList<UserResponseDto>>("Server response was empty.")
-        : Result.Ok(users);
-    }
-    catch (Exception ex)
-    {
-      return Result
-        .Fail<ImmutableList<UserResponseDto>>(ex, "Error while getting users.")
-        .Log(_logger);
-    }
+    return await TryCallApi(async () => 
+      await _client.GetFromJsonAsync<UserResponseDto[]>(HttpConstants.UsersEndpoint));
   }
 
   public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
@@ -193,9 +173,7 @@ public class ControlrApi(
   public async Task<Result<Version>> GetCurrentServerVersion()
   {
     return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint);
-    });
+      await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
   }
 
   public async Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime)
@@ -225,28 +203,22 @@ public class ControlrApi(
 
   public async Task<Result<ServerSettingsDto>> GetServerSettings()
   {
-    return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint);
-    });
+    return await TryCallApi(async () => 
+      await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint));
   }
 
   public async Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName)
   {
-    return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
-          $"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
-    });
+    return await TryCallApi(async () => 
+      await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
+        $"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}"));
   }
 
-  public async Task<Result<ImmutableList<TagResponseDto>>> GetUserTags(Guid userId, bool includeLinkedIds = false)
+  public async Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
-    return await TryCallApi(async () =>
-    {
-      return await _client.GetFromJsonAsync<ImmutableList<TagResponseDto>>(
-        $"{HttpConstants.UserTagsEndpoint}/{userId}");
-    });
+    return await TryCallApi(async () => 
+      await _client.GetFromJsonAsync<TagResponseDto[]>(
+        $"{HttpConstants.UserTagsEndpoint}/{userId}"));
   }
 
   public async Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId)

@@ -23,6 +23,12 @@ namespace ControlR.Libraries.Agent.Startup;
 
 internal static class HostApplicationBuilderExtensions
 {
+  private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
+  {
+    var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
+    client.BaseAddress = options.CurrentValue.ServerUri;
+  }
+
   internal static IHostApplicationBuilder AddControlRAgent(this HostApplicationBuilder builder, StartupMode startupMode, string? instanceId)
   {
     instanceId = instanceId?.SanitizeForFileSystem();
@@ -84,11 +90,11 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-      services.AddHostedService(services => services.GetRequiredService<IAgentUpdater>());
-      services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
+      services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
+      services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService<AgentHeartbeatTimer>();
-      services.AddHostedService(services => services.GetRequiredService<IStreamerUpdater>());
+      services.AddHostedService(s => s.GetRequiredService<IStreamerUpdater>());
       services.AddHostedService<DtoHandler>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
@@ -150,11 +156,5 @@ internal static class HostApplicationBuilderExtensions
     builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));
 
     return builder;
-  }
-
-  private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
-  {
-    var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
-    client.BaseAddress = options.CurrentValue.ServerUri;
   }
 }

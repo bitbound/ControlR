@@ -228,7 +228,7 @@
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
-    var args = $"-s {NavMan.Uri} -i {serverUri.Authority} -t {_tenantId}";
+    var args = $"-s {serverUri} -i {serverUri.Authority} -t {_tenantId}";
 
     if (!_addTags || _selectedTags is null) return args;
 

@@ -5,7 +5,6 @@ using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Agent.Options;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
@@ -53,7 +52,7 @@ internal class AgentInstallerWindows(
 
       Logger.LogInformation("Install started.");
 
-      if (!_elevationChecker.IsElevated())
+      if (!_environmentHelper.IsDebug && !_elevationChecker.IsElevated())
       {
         Logger.LogError("Install command must be run as administrator.");
         return;
@@ -72,7 +71,6 @@ internal class AgentInstallerWindows(
 
       var installDir = GetInstallDirectory();
       var exePath = _environmentHelper.StartupExePath;
-      var fileName = Path.GetFileName(exePath);
       var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
       FileSystem.CreateDirectory(installDir);
 
@@ -191,7 +189,7 @@ internal class AgentInstallerWindows(
       }
 
       // Remove Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-      var subkey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
+      using var subkey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
       subkey?.DeleteValue("SoftwareSASGeneration", false);
 
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
@@ -211,12 +209,11 @@ internal class AgentInstallerWindows(
 
   private static RegistryKey GetRegistryBaseKey()
   {
-    if (Environment.Is64BitOperatingSystem)
-    {
-      return RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-    }
-
-    return RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+    return RegistryKey.OpenBaseKey(
+      RegistryHive.LocalMachine, 
+      Environment.Is64BitOperatingSystem
+        ? RegistryView.Registry64
+        : RegistryView.Registry32);
   }
 
   private void CreateUninstallKey()

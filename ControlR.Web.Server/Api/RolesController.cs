@@ -9,7 +9,7 @@ namespace ControlR.Web.Server.Api;
 public class RolesController : ControllerBase
 {
   [HttpGet]
-  public async Task<ActionResult<ImmutableList<RoleResponseDto>>> GetAll(
+  public async Task<ActionResult<RoleResponseDto[]>> GetAll(
     [FromServices]AppDb appDb,
     [FromServices]RoleManager<AppRole> roleManager)
   {
@@ -24,7 +24,7 @@ public class RolesController : ControllerBase
         })
       .ToListAsync();
 
-    var dtos = roles.Select(x => new RoleResponseDto(x.Id, x.Name, x.UserIds.ToImmutableList()));
+    var dtos = roles.Select(x => new RoleResponseDto(x.Id, x.Name, x.UserIds.ToList()));
     return Ok(dtos);
   }
 }

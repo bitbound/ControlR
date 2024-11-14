@@ -1,7 +1,5 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using ControlR.Web.Client.Services.Stores;
-using ControlR.Web.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -63,7 +61,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     await base.OnInitializedAsync();
     _changeHandlers =
     [
-      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
+      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged)),
+      UserStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged)),
+      DeviceStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
     ];
   }
 

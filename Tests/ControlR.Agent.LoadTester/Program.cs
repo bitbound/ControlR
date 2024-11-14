@@ -26,9 +26,9 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
-var agentCount = 100;
+var agentCount = 50;
 var serverUri = new Uri("https://localhost:7033");
-var tenantId = Guid.Parse("4d36b15f-8795-4d85-92a2-b533b6f897fc");
+var tenantId = Guid.Parse("3a20b5ac-a2ff-48a3-a4c5-b44d1574a938");
 //var serverUri = new Uri("http://192.168.0.2:5003/");
 //var tenantId = Guid.Parse("941842e5-5836-4e44-af44-f35e6f73b2e7");
 
@@ -109,7 +109,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   await Delayer.Default.WaitForAsync(
     () =>
     {
-      return hosts.All(x => { return x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected; });
+      return hosts.All(x => x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected);
     },
     TimeSpan.FromSeconds(1),
     () =>

@@ -1,4 +1,37 @@
 ﻿class State {
+    /** @type {CanvasRenderingContext2D} */
+    canvas2dContext;
+    /** @type {HTMLCanvasElement} */
+    canvasElement;
+    /** @type {string} */
+    canvasId;
+    /** @type {any} */
+    componentRef;
+    /** @type {"touch" | "mouse"} */
+    currentPointerType;
+    /** @type {boolean} */
+    isDragging;
+    /** @type {number} */
+    lastMouseMove;
+    /** @type {boolean} */
+    longPressStarted;
+    /** @type {number} */
+    longPressStartOffsetX;
+    /** @type {number} */
+    longPressStartOffsetY;
+    /** @type {number} */
+    mouseMoveTimeout;
+    /** @type {PointerEvent} */
+    pointerDownEvent;
+    /** @type {number} */
+    previousPinchDistance;
+    /** @type {number} */
+    touchClickTimeout;
+    /** @type {TouchList} */
+    touchList;
+    /** @type {WindowEventHandler[]} */
+    windowEventHandlers;
+
     constructor() {
         this.windowEventHandlers = [];
         this.touchList = { length: 0 };
@@ -7,55 +40,6 @@
         this.touchClickTimeout = -1;
         this.lastMouseMove = Date.now();
     }
-
-    /** @type {CanvasRenderingContext2D} */
-    canvas2dContext;
-
-    /** @type {HTMLCanvasElement} */
-    canvasElement;
-
-    /** @type {string} */
-    canvasId;
-
-    /** @type {any} */
-    componentRef;
-
-    /** @type {"touch" | "mouse"} */
-    currentPointerType;
-
-    /** @type {boolean} */
-    isDragging;
-
-    /** @type {number} */
-    lastMouseMove;
-
-    /** @type {boolean} */
-    longPressStarted;
-
-    /** @type {number} */
-    longPressStartOffsetX;
-
-    /** @type {number} */
-    longPressStartOffsetY;
-
-    /** @type {number} */
-    mouseMoveTimeout;
-
-    /** @type {PointerEvent} */
-    pointerDownEvent;
-
-    /** @type {number} */
-    previousPinchDistance;
-
-    /** @type {number} */
-    touchClickTimeout;
-
-    /** @type {TouchList} */
-    touchList;
-
-    /** @type {WindowEventHandler[]} */
-    windowEventHandlers;
-
 
     /**
      * @param {string} methodName
@@ -68,6 +52,11 @@
 }
 
 class WindowEventHandler {
+    /** @type {keyof WindowEventMap} */
+    type;
+    /** @type {EventListener} */
+    handler;
+
     /**
      * 
      * @param {keyof WindowEventMap} type
@@ -77,12 +66,6 @@ class WindowEventHandler {
         this.type = type;
         this.handler = handler;
     }
-
-    /** @type {keyof WindowEventMap} */
-    type;
-
-    /** @type {EventListener} */
-    handler;
 }
 
 
@@ -379,7 +362,7 @@ export async function initialize(componentRef, canvasId) {
         await state.invokeDotNet("SendKeyboardStateReset");
     }
     window.addEventListener("blur", onBlur);
-    state.windowEventHandlers.push("blur", onBlur);
+    state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
 }
 
 

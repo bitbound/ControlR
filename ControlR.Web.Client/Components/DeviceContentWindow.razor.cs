@@ -12,6 +12,9 @@ public partial class DeviceContentWindow : IAsyncDisposable
   public required ISystemEnvironment EnvironmentHelper { get; init; }
 
   [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
   public required IJSRuntime JsRuntime { get; init; }
 
   [Inject]
@@ -38,16 +41,16 @@ public partial class DeviceContentWindow : IAsyncDisposable
     return ValueTask.CompletedTask;
   }
 
-  protected override Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
   {
-    if (EnvironmentHelper.IsMobileDevice)
+    if (await JsInterop.IsTouchScreen())
     {
       WindowState = WindowState.Maximized;
     }
 
     Messenger.Register<DeviceContentWindowStateMessage>(this, HandleDeviceContentWindowStateChanged);
 
-    return base.OnInitializedAsync();
+    await base.OnInitializedAsync();
   }
 
   private async Task Close()

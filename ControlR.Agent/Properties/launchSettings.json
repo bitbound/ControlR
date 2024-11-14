@@ -19,7 +19,7 @@
     },
     "Install": {
       "commandName": "Project",
-      "commandLineArgs": "install -i localhost -s http://localhost:5120",
+      "commandLineArgs": "install -s http://localhost:5120 -i localhost_5120 -t 3a20b5ac-a2ff-48a3-a4c5-b44d1574a938 -g 509935ea-1387-466f-a74e-34312f34284a,4cc68f13-ad35-495b-9b45-d21a19dbabed",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

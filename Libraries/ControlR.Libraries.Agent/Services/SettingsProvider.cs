@@ -9,7 +9,7 @@ namespace ControlR.Libraries.Agent.Services;
 internal interface ISettingsProvider
 {
   Guid DeviceId { get; }
-  bool IsConnectedToPublicServer { get; }
+  string InstanceId { get; }
   Uri ServerUri { get; }
 
   /// <summary>
@@ -23,18 +23,21 @@ internal interface ISettingsProvider
 }
 
 internal class SettingsProvider(
-  IOptionsMonitor<AgentAppOptions> _appOptions,
-  IFileSystem _fileSystem,
-  IOptions<InstanceOptions> _instanceOptions,
-  ILogger<SettingsProvider> _logger) : ISettingsProvider
+  IOptionsMonitor<AgentAppOptions> appOptions,
+  IFileSystem fileSystem,
+  IOptions<InstanceOptions> instanceOptions,
+  ILogger<SettingsProvider> logger) : ISettingsProvider
 {
+  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
+  private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+  private readonly ILogger<SettingsProvider> _logger = logger;
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
 
-  public bool IsConnectedToPublicServer =>
-    _appOptions.CurrentValue.ServerUri?.Authority == AppConstants.ProdServerUri.Authority;
+  public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
 
   public Uri ServerUri =>
     _appOptions.CurrentValue.ServerUri ??

@@ -1,7 +1,5 @@
 ﻿using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Libraries.Agent.Services;
@@ -16,15 +14,24 @@ internal class DtoHandler(
   IAgentUpdater agentUpdater,
   ILogger<DtoHandler> logger) : IHostedService
 {
+  private readonly IAgentHubConnection _agentHub = agentHub;
+  private readonly IAgentUpdater _agentUpdater = agentUpdater;
+  private readonly ILogger<DtoHandler> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
+  private readonly IPowerControl _powerControl = powerControl;
+  private readonly ITerminalStore _terminalStore = terminalStore;
+  private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
+  private readonly IWin32Interop _win32Interop = win32Interop;
+
   public Task StartAsync(CancellationToken cancellationToken)
   {
-    messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleDtoReceivedMessage);
+    _messenger.Register<DtoReceivedMessage<DtoWrapper>>(this, HandleDtoReceivedMessage);
     return Task.CompletedTask;
   }
 
   public Task StopAsync(CancellationToken cancellationToken)
   {
-    messenger.Unregister<DtoReceivedMessage<DtoWrapper>>(this);
+    _messenger.Unregister<DtoReceivedMessage<DtoWrapper>>(this);
     return Task.CompletedTask;
   }
 
@@ -32,68 +39,68 @@ internal class DtoHandler(
   {
     try
     {
-      using var logScope = logger.BeginMemberScope();
+      using var logScope = _logger.BeginMemberScope();
       var wrapper = message.Dto;
-
+      _logger.LogInformation("Received DTO of type {DtoType}", wrapper.DtoType);
+      
       switch (wrapper.DtoType)
       {
         case DtoType.DeviceUpdateRequest:
-          {
-            var dto = wrapper.GetPayload<DeviceUpdateRequestDto>();
-            await agentHub.SendDeviceHeartbeat();
-            break;
-          }
+        {
+          await _agentHub.SendDeviceHeartbeat();
+          break;
+        }
 
         case DtoType.PowerStateChange:
-          {
-            var powerDto = wrapper.GetPayload<PowerStateChangeDto>();
-            await powerControl.ChangeState(powerDto.Type);
-            break;
-          }
+        {
+          var powerDto = wrapper.GetPayload<PowerStateChangeDto>();
+          await _powerControl.ChangeState(powerDto.Type);
+          break;
+        }
 
         case DtoType.CloseTerminalRequest:
-          {
-            var closeSessionRequest = wrapper.GetPayload<CloseTerminalRequestDto>();
-            // Underyling process is killed/disposed upon eviction from the MemoryCache.
-            _ = terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
-            break;
-          }
+        {
+          var closeSessionRequest = wrapper.GetPayload<CloseTerminalRequestDto>();
+          // Underlying process is killed/disposed upon eviction from the MemoryCache.
+          _ = _terminalStore.TryRemove(closeSessionRequest.TerminalId, out _);
+          break;
+        }
 
         case DtoType.WakeDevice:
-          {
-            var wakeDto = wrapper.GetPayload<WakeDeviceDto>();
-            await wakeOnLan.WakeDevices(wakeDto.MacAddresses);
-            break;
-          }
+        {
+          var wakeDto = wrapper.GetPayload<WakeDeviceDto>();
+          await _wakeOnLan.WakeDevices(wakeDto.MacAddresses);
+          break;
+        }
 
         case DtoType.InvokeCtrlAltDel:
+        {
+          var payload = wrapper.GetPayload<InvokeCtrlAltDelRequestDto>();
+          payload.VerifyType(DtoType.InvokeCtrlAltDel);
+
+          if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
           {
-            var payload = wrapper.GetPayload<InvokeCtrlAltDelRequestDto>();
-            payload.VerifyType(DtoType.InvokeCtrlAltDel);
-
-            if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
-            {
-              win32Interop.InvokeCtrlAltDel();
-            }
-
-            break;
+            _win32Interop.InvokeCtrlAltDel();
           }
+
+          break;
+        }
         case DtoType.TriggerAgentUpdate:
-          {
-            var payload = wrapper.GetPayload<TriggerAgentUpdateDto>();
-            payload.VerifyType(DtoType.TriggerAgentUpdate);
+        {
+          var payload = wrapper.GetPayload<TriggerAgentUpdateDto>();
+          payload.VerifyType(DtoType.TriggerAgentUpdate);
 
-            await agentUpdater.CheckForUpdate();
-            break;
-          }
+          await _agentUpdater.CheckForUpdate();
+          break;
+        }
         default:
-          logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
+          _logger.LogWarning("Unhandled DTO type: {DtoType}", wrapper.DtoType);
           break;
       }
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while handling signed DTO.");
+      _logger.LogError(ex, "Error while handling signed DTO.");
     }
   }
 }

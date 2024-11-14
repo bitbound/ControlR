@@ -6,8 +6,6 @@ namespace ControlR.Web.Server.Data.Configuration;
 
 public static class DbContextOptionsBuilderExtensions
 {
-  private static readonly string OptionsKey = "TenantOptions";
-
   public static DbContextOptionsBuilder UseUserClaims(
       this DbContextOptionsBuilder builder,
       ClaimsPrincipal user)

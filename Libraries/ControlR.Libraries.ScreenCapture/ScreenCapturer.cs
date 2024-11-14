@@ -143,6 +143,87 @@ internal sealed class ScreenCapturer(
     return new Rectangle(left, top, width, height);
   }
 
+  private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
+  {
+    var rectSize = (uint)sizeof(RECT);
+    uint bufferSizeNeeded = 0;
+
+    try
+    {
+      outputDuplication.GetFrameDirtyRects(0, out _, out bufferSizeNeeded);
+    }
+    catch
+    {
+    }
+
+    if (bufferSizeNeeded == 0)
+    {
+      return [];
+    }
+
+    var numRects = (int)(bufferSizeNeeded / rectSize);
+    var dirtyRects = new Rectangle[numRects];
+
+    var dirtyRectsPtr = stackalloc RECT[numRects];
+    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
+
+    for (var i = 0; i < numRects; i++)
+    {
+      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
+    }
+
+    return dirtyRects;
+  }
+
+  private bool IsDxOutputHealthy(DxOutput dxOutput)
+  {
+    return systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
+  }
+
+  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+  {
+    try
+    {
+      // Get cursor information to draw on the screenshot.
+      var ci = new CURSORINFO();
+      ci.cbSize = (uint)Marshal.SizeOf(ci);
+      PInvoke.GetCursorInfo(ref ci);
+
+      if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+      {
+        return Rectangle.Empty;
+      }
+
+      using var icon = Icon.FromHandle(ci.hCursor);
+
+      uint hotspotX = 0;
+      uint hotspotY = 0;
+      var hicon = new HICON(icon.Handle);
+      var iconInfoPtr = stackalloc ICONINFO[1];
+      if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
+      {
+        hotspotX = iconInfoPtr->xHotspot;
+        hotspotY = iconInfoPtr->yHotspot;
+        PInvoke.DestroyIcon(hicon);
+      }
+
+      var virtualScreen = GetVirtualScreenBounds();
+      var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
+      var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
+      if (x >= 0 && y >= 0)
+      {
+        graphics.DrawIcon(icon, x, y);
+      }
+
+      return new Rectangle(x, y, icon.Width, icon.Height);
+    }
+    catch (Exception ex)
+    {
+      logger.LogDebug(ex, "Error while drawing cursor.");
+      return Rectangle.Empty;
+    }
+  }
+
   internal CaptureResult GetBitBltCapture(Rectangle captureArea, bool captureCursor)
   {
     var hwnd = HWND.Null;
@@ -334,84 +415,6 @@ internal sealed class ScreenCapturer(
       catch
       {
       }
-    }
-  }
-
-  private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
-  {
-    var rectSize = (uint)sizeof(RECT);
-    uint bufferSizeNeeded = 0;
-
-    try
-    {
-      outputDuplication.GetFrameDirtyRects(0, out _, out bufferSizeNeeded);
-    }
-    catch
-    {
-    }
-
-    if (bufferSizeNeeded == 0)
-    {
-      return [];
-    }
-
-    var numRects = (int)(bufferSizeNeeded / rectSize);
-    var dirtyRects = new Rectangle[numRects];
-
-    var dirtyRectsPtr = stackalloc RECT[numRects];
-    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
-
-    for (var i = 0; i < numRects; i++)
-    {
-      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
-    }
-
-    return dirtyRects;
-  }
-
-  private bool IsDxOutputHealthy(DxOutput dxOutput)
-  {
-    return systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
-  }
-
-  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
-  {
-    try
-    {
-      // Get cursor information to draw on the screenshot.
-      var ci = new CURSORINFO();
-      ci.cbSize = (uint)Marshal.SizeOf(ci);
-      PInvoke.GetCursorInfo(ref ci);
-
-      if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
-      {
-        return Rectangle.Empty;
-      }
-
-      using var icon = Icon.FromHandle(ci.hCursor);
-
-      uint hotspotX = 0;
-      uint hotspotY = 0;
-      var hicon = new HICON(icon.Handle);
-      var iconInfoPtr = stackalloc ICONINFO[1];
-      if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
-      {
-        hotspotX = iconInfoPtr->xHotspot;
-        hotspotY = iconInfoPtr->yHotspot;
-        PInvoke.DestroyIcon(hicon);
-      }
-
-      var virtualScreen = GetVirtualScreenBounds();
-      var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
-      var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
-      graphics.DrawIcon(icon, x, y);
-
-      return new Rectangle(x, y, icon.Width, icon.Height);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while drawing cursor.");
-      return Rectangle.Empty;
     }
   }
 }

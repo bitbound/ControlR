@@ -4,8 +4,6 @@ using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

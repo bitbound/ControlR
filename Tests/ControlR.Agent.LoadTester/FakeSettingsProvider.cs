@@ -6,6 +6,7 @@ namespace ControlR.Agent.LoadTester;
 internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsProvider
 {
   public Guid DeviceId => deviceId;
+  public string InstanceId { get; } = string.Empty;
 
   public bool IsConnectedToPublicServer => false;
 

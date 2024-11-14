@@ -25,9 +25,6 @@
 
 <MudGrid>
   <MudItem md="4">
-    <MudForm Model="@Input">
-
-    </MudForm>
     <EditForm Model="@Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation">
       <DataAnnotationsValidator />
       <div class="mb-3">
@@ -45,8 +42,11 @@
   public const string LoginCallbackAction = "LoginCallback";
 
   private string? _message;
+
+  private ExternalLoginInfo? _externalLoginInfo;
   
-  private ExternalLoginInfo _externalLoginInfo = default!;
+  [Inject]
+  public required IUserRegistrationProvider UserRegistrationProvider { get; init; }
 
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
@@ -60,13 +60,16 @@
   [SupplyParameterFromQuery]
   private string? ReturnUrl { get; set; }
 
+
   [SupplyParameterFromQuery]
   private string? Action { get; set; }
 
-  private string? ProviderDisplayName => _externalLoginInfo.ProviderDisplayName;
+  private string? ProviderDisplayName => _externalLoginInfo?.ProviderDisplayName;
 
   protected override async Task OnInitializedAsync()
   {
+    await base.OnInitializedAsync();
+    
     if (RemoteError is not null)
     {
       RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
@@ -96,6 +99,10 @@
 
   private async Task OnLoginCallbackAsync()
   {
+    if (_externalLoginInfo is null)
+    {
+      RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login providers.", HttpContext);
+    }
     // Sign in the user with this external login provider if the user already has a login.
     var result = await SignInManager.ExternalLoginSignInAsync(
       _externalLoginInfo.LoginProvider,
@@ -125,6 +132,16 @@
 
   private async Task OnValidSubmitAsync()
   {
+    if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
+    {
+      RedirectManager.RedirectToWithStatus("Account/Login", "Error: Public registration is disabled.", HttpContext);
+    }
+    
+    if (_externalLoginInfo is null)
+    {
+      RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login providers.", HttpContext);
+    }
+    
     var createUserResult = await UserCreator.CreateUser(Input.Email, _externalLoginInfo, ReturnUrl);
     if (!createUserResult.Succeeded)
     {

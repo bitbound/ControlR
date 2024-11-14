@@ -52,6 +52,9 @@ public partial class RemoteDisplay : IAsyncDisposable
   public required ISystemEnvironment EnvironmentHelper { get; init; }
 
   [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
   [Inject]
@@ -221,9 +224,11 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  protected override Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
   {
-    if (EnvironmentHelper.Platform is SystemPlatform.Android or SystemPlatform.Ios)
+    var isTouchScreen = await JsInterop.IsTouchScreen();
+    
+    if (isTouchScreen)
     {
       _controlMode = ControlMode.Touch;
       _viewMode = ViewMode.Original;
@@ -232,7 +237,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
 
-    return base.OnInitializedAsync();
+    await base.OnInitializedAsync();
   }
 
   private async Task ChangeDisplays(DisplayDto display)
@@ -519,7 +524,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   private async Task InvokeCtrlAltDel()
   {
-    await ViewerHub.InvokeCtrlAltDel(Session.DeviceUpdate.Id);
+    await ViewerHub.InvokeCtrlAltDel(Session.DeviceDto.Id);
   }
 
   private void OnTouchCancel(TouchEventArgs ev)
@@ -631,7 +636,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-        Session.DeviceUpdate.Id,
+        Session.DeviceDto.Id,
         Session.SessionId,
         websocketUri,
         Session.InitialSystemSession);

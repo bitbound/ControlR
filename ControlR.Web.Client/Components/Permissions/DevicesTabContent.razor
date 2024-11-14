@@ -1,0 +1,59 @@
+﻿<MudGrid>
+  <MudItem sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Devices
+    </MudText>
+
+    <MudTextField T="string"
+                  @bind-Value="_deviceSearchPattern"
+                  Label="Search"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true"
+                  Class="my-2"
+                  Clearable="true" />
+
+    <MudPaper MaxHeight="500px" Class="overflow-y-auto">
+      <MudList T="DeviceUpdateResponseDto"
+               @bind-SelectedValue="_selectedDevice"
+               SelectionMode="SelectionMode.SingleSelection"
+               Color="Color.Info">
+
+        @foreach (var device in FilteredDevices)
+        {
+          <MudListItem T="DeviceUpdateResponseDto" Value="@device">
+            @device.Name
+          </MudListItem>
+        }
+
+      </MudList>
+    </MudPaper>
+  </MudItem>
+  <MudItem sm="6" xs="12">
+    <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
+      Tags
+    </MudText>
+    @if (_selectedDevice is not null)
+    {
+      <MudTextField T="string"
+                    @bind-Value="_tagSearchPattern"
+                    Label="Search"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    Immediate="true"
+                    Class="my-2"
+                    Clearable="true" />
+      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
+        @foreach (var tag in FilteredTags)
+        {
+          <MudSwitch T="bool"
+                     Value="@(tag.DeviceIds.Contains(_selectedDevice.Id))"
+                     Color="Color.Success"
+                     ValueChanged="@(async isToggled => await SetDeviceTag(isToggled, _selectedDevice.Id, tag))">
+            @tag.Name
+          </MudSwitch>
+        }
+      </MudPaper>
+    }
+  </MudItem>
+</MudGrid>

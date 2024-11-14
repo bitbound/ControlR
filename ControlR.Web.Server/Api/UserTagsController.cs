@@ -64,7 +64,7 @@ public class UserTagsController : ControllerBase
       
       return Ok(tags
         .Select(x => x.ToDto())
-        .ToImmutableList());
+        .ToArray());
     }
     
     if (!User.TryGetUserId(out var userId))

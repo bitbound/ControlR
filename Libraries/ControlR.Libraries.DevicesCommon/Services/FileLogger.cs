@@ -115,7 +115,7 @@ public class FileLogger(
           return;
         }
 
-        File.AppendAllText(logPathFactory(), outputBuilder.ToString());
+        await File.AppendAllTextAsync(logPathFactory(), outputBuilder.ToString());
 
         await Task.Delay(_writeInterval);
       }

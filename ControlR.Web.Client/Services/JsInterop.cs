@@ -36,6 +36,7 @@ public interface IJsInterop
   ValueTask StartDraggingY(ElementReference element, double clientY);
   ValueTask SetClipboardText(string? text);
   ValueTask<string> GetClipboardText();
+  ValueTask<bool> IsTouchScreen();
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -63,6 +64,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask<string> GetClipboardText()
   {
     return jsRuntime.InvokeAsync<string>("getClipboardText");
+  }
+
+  public ValueTask<bool> IsTouchScreen()
+  {
+    return jsRuntime.InvokeAsync<bool>("isTouchScreen");
   }
 
   public ValueTask<int> GetCursorIndex(ElementReference inputElement)

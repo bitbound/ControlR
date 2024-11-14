@@ -13,7 +13,6 @@ public static class EntityToDtoExtensions
       ConnectionId = device.ConnectionId,
       CpuUtilization = device.CpuUtilization,
       CurrentUsers = device.CurrentUsers,
-      DeviceGroupId = device.DeviceGroupId,
       Drives = device.Drives,
       Id = device.Id,
       Is64Bit = device.Is64Bit,
@@ -40,7 +39,7 @@ public static class EntityToDtoExtensions
     var userIds = role
       .UserRoles
       ?.Select(x => x.UserId)
-      ?.ToImmutableList() ?? [];
+      ?.ToList() ?? [];
 
     return new RoleResponseDto(
       role.Id,
@@ -58,12 +57,12 @@ public static class EntityToDtoExtensions
     var userIds = tag
       .Users?
       .Select(x => x.Id)
-      .ToImmutableList() ?? [];
+      .ToList() ?? [];
 
     var deviceIds = tag
       .Devices?
       .Select(x => x.Id)
-      .ToImmutableList() ?? [];
+      .ToList() ?? [];
 
     return new TagResponseDto(
       tag.Id,

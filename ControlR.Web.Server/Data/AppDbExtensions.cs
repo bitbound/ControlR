@@ -23,7 +23,18 @@ public static class AppDbExtensions
     await entry.Collection(x => x.Tags!).LoadAsync();
     entry.State = entityState;
     entry.CurrentValues.SetValues(dto);
-    entity.Drives = dto.Drives;
+    
+    entity.Drives = dto.Drives.ToList();
+    
+    // If we're adding a new device, associate it with any tags passed in.
+    if (entityState == EntityState.Added && dto.TagIds is { Length: > 0 })
+    {
+      var tags = await db.Tags
+        .Where(x => dto.TagIds.Contains(x.Id))
+        .ToListAsync();
+      
+      entity.Tags = tags;
+    }
 
     await db.SaveChangesAsync();
     return entity;

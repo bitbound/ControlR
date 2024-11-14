@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Enums;
+﻿using System.Collections.Immutable;
+using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using System.Runtime.InteropServices;
 
@@ -20,7 +21,7 @@ public class DeviceUpdateRequestDto
   public string[] CurrentUsers { get; set; } = [];
 
   [MsgPackKey]
-  public List<Drive> Drives { get; set; } = [];
+  public IReadOnlyList<Drive> Drives { get; set; } = [];
 
   [MsgPackKey]
   public Guid Id { get; set; }

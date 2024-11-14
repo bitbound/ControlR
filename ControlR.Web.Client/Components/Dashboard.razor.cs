@@ -1,5 +1,5 @@
-﻿using ControlR.Web.Client.Services.Stores;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components;
 
@@ -94,7 +94,7 @@ public partial class Dashboard
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
-
+    
     using var _ = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
@@ -102,6 +102,7 @@ public partial class Dashboard
     await RefreshLatestAgentVersion();
 
     Messenger.RegisterEventMessage(this, HandleEventMessage);
+    Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
 
     if (DeviceStore.Items.Count == 0)
     {
@@ -171,6 +172,14 @@ public partial class Dashboard
     }
 
     return Task.CompletedTask;
+  }
+
+  private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    if (message.NewState == HubConnectionState.Connected)
+    {
+      await RefreshLatestAgentVersion();
+    }
   }
 
   private async Task HandleRefreshClicked()
@@ -390,12 +399,12 @@ public partial class Dashboard
     }
   }
 
-  private async Task UpdateDevice(DeviceUpdateResponseDto deviceUpdate)
+  private async Task UpdateDevice(Guid deviceId)
   {
     try
     {
       Snackbar.Add("Sending update request", Severity.Success);
-      await ViewerHub.SendAgentUpdateTrigger(deviceUpdate);
+      await ViewerHub.SendAgentUpdateTrigger(deviceId);
     }
     catch (Exception ex)
     {

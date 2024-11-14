@@ -1,4 +1,5 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Diagnostics;
+using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
@@ -20,10 +21,9 @@ internal class AgentHubClient(
   IHostApplicationLifetime appLifetime,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ISettingsProvider settings,
-  IAgentInstaller agentInstaller,
+  IProcessManager processManager,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
-  private readonly IAgentInstaller _agentInstaller = agentInstaller;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly IDelayer _delayer = delayer;
@@ -31,6 +31,7 @@ internal class AgentHubClient(
   private readonly IAgentHubConnection _hubConnection = hubConnection;
   private readonly ILogger<AgentHubClient> _logger = logger;
   private readonly IMessenger _messenger = messenger;
+  private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settings = settings;
   private readonly IStreamerLauncher _streamerLauncher = streamerLauncher;
   private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
@@ -160,16 +161,24 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task UninstallAgent(string reason)
+  public Task UninstallAgent(string reason)
   {
     try
     {
       _logger.LogInformation("Uninstall command received.  Reason: {reason}", reason);
-      await _agentInstaller.Uninstall();
+      var psi = new ProcessStartInfo
+      {
+        FileName = _environmentHelper.StartupExePath,
+        Arguments = $"uninstall -i {_settings.InstanceId}",
+        UseShellExecute = true
+      };
+      _ = _processManager.Start(psi);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while uninstalling agent.");
     }
+
+    return Task.CompletedTask;
   }
 }

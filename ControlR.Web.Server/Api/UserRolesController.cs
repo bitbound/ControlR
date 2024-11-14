@@ -136,7 +136,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     
     var userRoles = user.Roles
       .Select(x => x.ToDto())
-      .ToImmutableList();
+      .ToArray();
     
     return Ok(userRoles);
   }

@@ -9,9 +9,6 @@ public class DeviceUpdateResponseDto : DeviceUpdateRequestDto, IHasPrimaryKey
   [MsgPackKey]
   public string Alias { get; set; } = string.Empty;
 
-  [MsgPackKey]
-  public Guid? DeviceGroupId { get; set; }
-
   [IgnoreDataMember]
   [JsonIgnore]
   public double UsedMemoryPercent => UsedMemory / TotalMemory;

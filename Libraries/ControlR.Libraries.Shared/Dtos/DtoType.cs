@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿namespace ControlR.Libraries.Shared.Dtos;
 
 public enum DtoType
 {

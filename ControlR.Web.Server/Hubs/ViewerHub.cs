@@ -131,11 +131,17 @@ public class ViewerHub(
     }
   }
 
-  public async Task<WindowsSession[]> GetWindowsSessions(string agentConnectionId)
+  public async Task<WindowsSession[]> GetWindowsSessions(Guid deviceId)
   {
     try
     {
-      return await _agentHub.Clients.Client(agentConnectionId).GetWindowsSessions();
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return [];
+      }
+
+      var device = authResult.Value;
+      return await _agentHub.Clients.Client(device.ConnectionId).GetWindowsSessions();
     }
     catch (Exception ex)
     {
@@ -246,7 +252,7 @@ public class ViewerHub(
       {
         return Result.Fail("User is null.");
       }
-      
+
       if (!TryGetUserId(out var userId))
       {
         return Result.Fail("Failed to get user ID.");
@@ -256,7 +262,7 @@ public class ViewerHub(
         .AsNoTracking()
         .Include(x => x.UserPreferences)
         .FirstOrDefaultAsync(x => x.Id == userId);
-      
+
       if (user is null)
       {
         return Result.Fail("User not found.");
@@ -266,32 +272,20 @@ public class ViewerHub(
         ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
         ?.Value;
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
-      
+
       _logger.LogInformation(
-        "Starting streaming session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.", 
+        "Starting streaming session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.",
         displayName,
         userId,
         deviceId,
         remoteIp);
-      
-      var device = await _appDb.Devices
-        .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.Id == deviceId);
 
-      if (device is null)
-      {
-        return Result.Fail("Device not found.");
-      }
-      
-      var authResult = await _authorizationService.AuthorizeAsync(
-        Context.User, 
-        device, 
-        DeviceAccessByDeviceResourcePolicy.PolicyName);
-      
-      if (!authResult.Succeeded)
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
         return Result.Fail("Unauthorized.");
       }
+
+      var device = authResult.Value;
       
       if (string.IsNullOrWhiteSpace(displayName))
       {
@@ -342,14 +336,13 @@ public class ViewerHub(
         return;
       }
 
-      var authResult = await TryAuthorizeAgainstDevice(deviceId);
-      if (!authResult.IsSuccess)
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
         return;
       }
 
       await _agentHub.Clients
-        .Group(HubGroupNames.GetDeviceGroupName(deviceId, tenantId))
+        .Client(authResult.Value.ConnectionId)
         .ReceiveDto(wrapper);
     }
     catch (Exception ex)

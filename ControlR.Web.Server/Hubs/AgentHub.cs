@@ -132,7 +132,7 @@ public class AgentHub(
       
       var deviceEntity = await _appDb.AddOrUpdateDevice(deviceUpdate);
       Device = deviceEntity.ToDto();
-
+      
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id, Device.TenantId));
 
       await SendDeviceUpdate(deviceEntity);

@@ -6,7 +6,6 @@ namespace ControlR.Libraries.Shared.Services;
 public interface ISystemEnvironment
 {
   bool IsDebug { get; }
-  bool IsMobileDevice { get; }
   bool IsWindows { get; }
   SystemPlatform Platform { get; }
   RuntimeId Runtime { get; }
@@ -30,7 +29,6 @@ internal class SystemEnvironment : ISystemEnvironment
     }
   }
 
-  public bool IsMobileDevice => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
   public bool IsWindows => OperatingSystem.IsWindows();
 
   public SystemPlatform Platform

@@ -69,8 +69,8 @@ public abstract class StoreBase<TDto>(
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while refreshing {ResourceName} store.", nameof(TDto));
-      Snackbar.Add($"Failed to load {nameof(TDto)} store", Severity.Error);
+      Logger.LogError(ex, "Error while refreshing {ResourceName} store.", typeof(TDto).Name);
+      Snackbar.Add($"Failed to load {typeof(TDto).Name} store", Severity.Error);
     }
     finally
     {

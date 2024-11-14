@@ -24,6 +24,10 @@ window.invokePrompt = async (message) => {
   return prompt(message);
 }
 
+window.isTouchScreen = async () => {
+    return navigator.maxTouchPoints > 0 && navigator.maxTouchPoints !== 256;
+}
+
 window.log = async (category, message) => {
   console.log("Got: ", category, message);
 }
