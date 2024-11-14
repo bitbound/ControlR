@@ -26,7 +26,7 @@ public partial class Terminal : IAsyncDisposable
 
   [Parameter]
   [EditorRequired]
-  public required DeviceUpdateResponseDto DeviceUpdate { get; init; }
+  public required DeviceDto DeviceUpdate { get; init; }
 
   [Parameter]
   [EditorRequired]

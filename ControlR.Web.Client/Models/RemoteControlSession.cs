@@ -1,7 +1,7 @@
 ﻿namespace ControlR.Web.Client.Models;
-public class RemoteControlSession(DeviceUpdateResponseDto deviceDto, int initialSystemSession)
+public class RemoteControlSession(DeviceDto deviceDto, int initialSystemSession)
 {
-  public DeviceUpdateResponseDto DeviceDto { get; } = deviceDto;
+  public DeviceDto DeviceDto { get; } = deviceDto;
   public int InitialSystemSession { get; } = initialSystemSession;
   public Guid SessionId { get; private set; } = Guid.NewGuid();
 

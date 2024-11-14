@@ -1,4 +1,6 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Models;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -80,11 +82,13 @@ internal class AgentHubConnection(
         return;
       }
 
-      var deviceDto = await _deviceCreator.CreateDevice(
+      var device = await _deviceCreator.CreateDevice(
         _cpuSampler.CurrentUtilization,
         _settings.DeviceId);
 
-      var updateResult = await _hubConnection.Server.UpdateDevice(deviceDto);
+      var dto = device.CloneAs<DeviceModel, DeviceDto>();
+
+      var updateResult = await _hubConnection.Server.UpdateDevice(dto);
 
       if (!updateResult.IsSuccess)
       {
@@ -92,7 +96,7 @@ internal class AgentHubConnection(
         return;
       }
 
-      if (updateResult.Value.Id != deviceDto.Id)
+      if (updateResult.Value.Id != device.Id)
       {
         _logger.LogInformation("Device ID changed.  Updating appsettings.");
         await _settings.UpdateId(updateResult.Value.Id);

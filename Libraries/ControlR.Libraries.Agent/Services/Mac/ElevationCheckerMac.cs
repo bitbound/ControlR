@@ -1,5 +1,5 @@
-﻿using ControlR.Devices.Native.Linux;
-using ControlR.Libraries.Agent.Interfaces;
+﻿using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.DevicesNative.Linux;
 
 namespace ControlR.Libraries.Agent.Services.Mac;
 

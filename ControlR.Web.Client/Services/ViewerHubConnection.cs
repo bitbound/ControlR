@@ -19,7 +19,7 @@ public interface IViewerHubConnection
 
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebsocketBridgeOrigin();
-  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceUpdateResponseDto deviceDto);
+  Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto deviceDto);
 
   Task InvokeCtrlAltDel(Guid deviceId);
 
@@ -32,7 +32,7 @@ public interface IViewerHubConnection
   Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
 
   Task SendAgentUpdateTrigger(Guid deviceId);
-  Task SendPowerStateChange(DeviceUpdateResponseDto deviceUpdate, PowerStateChangeType powerStateType);
+  Task SendPowerStateChange(DeviceDto deviceDto, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
   Task UninstallAgent(Guid deviceId, string reason);
@@ -138,7 +138,7 @@ internal class ViewerHubConnection(
       () => null);
   }
 
-  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceUpdateResponseDto deviceDto)
+  public async Task<Result<WindowsSession[]>> GetWindowsSessions(DeviceDto deviceDto)
   {
     try
     {
@@ -217,13 +217,13 @@ internal class ViewerHubConnection(
     });
   }
 
-  public async Task SendPowerStateChange(DeviceUpdateResponseDto deviceUpdate, PowerStateChangeType powerStateType)
+  public async Task SendPowerStateChange(DeviceDto deviceDto, PowerStateChangeType powerStateType)
   {
     await TryInvoke(async () =>
     {
       var powerDto = new PowerStateChangeDto(powerStateType);
       var wrapper = DtoWrapper.Create(powerDto, DtoType.PowerStateChange);
-      await _viewerHub.Server.SendDtoToAgent(deviceUpdate.Id, wrapper);
+      await _viewerHub.Server.SendDtoToAgent(deviceDto.Id, wrapper);
     });
   }
 

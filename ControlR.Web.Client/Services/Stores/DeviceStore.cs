@@ -2,10 +2,10 @@
 
 namespace ControlR.Web.Client.Services.Stores;
 
-public interface IDeviceStore : IStoreBase<DeviceUpdateResponseDto>
+public interface IDeviceStore : IStoreBase<DeviceDto>
 {}
 
-internal class DeviceStore : StoreBase<DeviceUpdateResponseDto>, IDeviceStore
+internal class DeviceStore : StoreBase<DeviceDto>, IDeviceStore
 {
   public DeviceStore(
     IControlrApi controlrApi,

@@ -1,8 +1,8 @@
 ﻿using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Agent.Services.Base;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.Extensions.Options;
-using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
+using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
 
 namespace ControlR.Libraries.Agent.Services.Linux;
 
@@ -16,7 +16,7 @@ internal class DeviceDataGeneratorLinux(
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceUpdateRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId)
   {
     try
     {
@@ -102,6 +102,7 @@ internal class DeviceDataGeneratorLinux(
       return result.Value
         .Split()
         .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
         .ToArray();
     }
 

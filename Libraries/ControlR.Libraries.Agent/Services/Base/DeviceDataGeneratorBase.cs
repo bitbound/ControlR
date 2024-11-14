@@ -1,10 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Net.NetworkInformation;
+﻿using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Agent.Models;
 using Microsoft.Extensions.Options;
-using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
 
 namespace ControlR.Libraries.Agent.Services.Base;
 
@@ -59,7 +57,7 @@ internal class DeviceDataGeneratorBase(
     }
   }
 
-  public DeviceUpdateRequestDto GetDeviceBase(
+  public DeviceModel GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     IReadOnlyList<Drive> drives,
@@ -71,7 +69,7 @@ internal class DeviceDataGeneratorBase(
     string agentVersion)
   {
    
-    return new DeviceUpdateRequestDto
+    return new DeviceModel
     {
       Id = deviceId,
       TenantId = _appOptions.CurrentValue.TenantId,

@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Client.Components;
-using ControlR.Web.Client.Enums;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -12,7 +10,7 @@ public interface IDeviceContentWindowStore
 
   void Add(DeviceContentInstance instance);
 
-  void AddContentInstance<T>(DeviceUpdateResponseDto deviceUpdate, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
+  void AddContentInstance<T>(DeviceDto deviceDto, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
      where T : ComponentBase;
 
   void Remove(DeviceContentInstance instance);
@@ -39,7 +37,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   }
 
   public void AddContentInstance<T>(
-    DeviceUpdateResponseDto deviceUpdate, 
+    DeviceDto deviceDto, 
     DeviceContentInstanceType instanceType, 
     Dictionary<string, object?>? componentParams = null)
     where T : ComponentBase
@@ -62,7 +60,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
       builder.CloseComponent();
     }
 
-    var contentInstance = new DeviceContentInstance(deviceUpdate, RenderComponent, instanceType);
+    var contentInstance = new DeviceContentInstance(deviceDto, RenderComponent, instanceType);
     _cache.Add(contentInstance);
     _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }

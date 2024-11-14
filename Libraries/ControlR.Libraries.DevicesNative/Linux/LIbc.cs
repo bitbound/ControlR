@@ -1,12 +1,16 @@
-﻿using System.Runtime.InteropServices;
+﻿#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
+#pragma warning disable CA1401 // P/Invokes should not be visible
+using System.Runtime.InteropServices;
 
-namespace ControlR.Devices.Native.Linux;
+namespace ControlR.Libraries.DevicesNative.Linux;
 
-public partial class Libc
+public static class Libc
 {
-  [LibraryImport("libc", SetLastError = true)]
-  public static partial uint Geteuid();
+  [DllImport("libc", EntryPoint = "geteuid", SetLastError = true)]
+  public static extern uint Geteuid();
 
-  [LibraryImport("libc", SetLastError = true)]
-  public static partial int Setsid();
+
+  [DllImport("libc", EntryPoint = "setsid", SetLastError = true)]
+  public static extern int Setsid();
 }

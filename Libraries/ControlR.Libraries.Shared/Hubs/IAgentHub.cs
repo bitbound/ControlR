@@ -1,12 +1,12 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
+using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
 
 namespace ControlR.Libraries.Shared.Hubs;
 public interface IAgentHub
 {
     Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
     Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
-    Task<Result<DeviceUpdateResponseDto>> UpdateDevice(DeviceUpdateRequestDto deviceUpdate);
+    Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto);
 }

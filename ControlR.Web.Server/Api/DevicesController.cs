@@ -32,7 +32,7 @@ public class DevicesController : ControllerBase
   }
 
   [HttpGet]
-  public async IAsyncEnumerable<DeviceUpdateResponseDto> Get(
+  public async IAsyncEnumerable<DeviceDto> Get(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService)
   {

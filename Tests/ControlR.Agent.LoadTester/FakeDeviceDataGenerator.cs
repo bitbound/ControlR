@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Agent.Interfaces;
+using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Agent.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
@@ -23,11 +24,11 @@ internal class FakeDeviceDataGenerator(
   private readonly string _agentVersion = "0.9.15.0";
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
-  private DeviceUpdateRequestDto? _device;
+  private DeviceModel? _device;
 
-  public Task<DeviceUpdateRequestDto> CreateDevice(double cpuUtilization, Guid deviceId)
+  public Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId)
   {
-    _device ??= new DeviceUpdateRequestDto
+    _device ??= new DeviceModel
     {
       Id = deviceId,
       Name = $"Test Device {_deviceNumber}",

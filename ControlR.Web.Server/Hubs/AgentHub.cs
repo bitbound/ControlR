@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.SignalR;
-using DeviceUpdateRequestDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceUpdateRequestDto;
+using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -22,9 +22,9 @@ public class AgentHub(
   private readonly ISystemTime _systemTime = systemTime;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
-  private DeviceUpdateResponseDto? Device
+  private DeviceDto? Device
   {
-    get => GetItem<DeviceUpdateResponseDto?>(null);
+    get => GetItem<DeviceDto?>(null);
     set => SetItem(value);
   }
 
@@ -84,11 +84,11 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result<DeviceUpdateResponseDto>> UpdateDevice(DeviceUpdateRequestDto deviceUpdate)
+  public async Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto)
   {
     try
     {
-      if (_hostEnvironment.IsDevelopment() && deviceUpdate.TenantId == Guid.Empty)
+      if (_hostEnvironment.IsDevelopment() && deviceDto.TenantId == Guid.Empty)
       {
         var lastTenant = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
@@ -96,41 +96,41 @@ public class AgentHub(
 
         if (lastTenant is null)
         {
-          return Result.Fail<DeviceUpdateResponseDto>("No tenants found.");
+          return Result.Fail<DeviceDto>("No tenants found.");
         }
 
-        deviceUpdate.TenantId = lastTenant.Id;
+        deviceDto.TenantId = lastTenant.Id;
       }
 
-      if (deviceUpdate.TenantId == Guid.Empty)
+      if (deviceDto.TenantId == Guid.Empty)
       {
-        return Result.Fail<DeviceUpdateResponseDto>("Invalid tenant ID.");
+        return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      if (!await _appDb.Tenants.AnyAsync(x => x.Id == deviceUpdate.TenantId))
+      if (!await _appDb.Tenants.AnyAsync(x => x.Id == deviceDto.TenantId))
       {
         await Clients.Client(Context.ConnectionId).UninstallAgent("Invalid tenant ID.");
-        return Result.Fail<DeviceUpdateResponseDto>("Invalid tenant ID.");
+        return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      deviceUpdate.IsOnline = true;
-      deviceUpdate.LastSeen = _systemTime.Now;
-      deviceUpdate.ConnectionId = Context.ConnectionId;
+      deviceDto.IsOnline = true;
+      deviceDto.LastSeen = _systemTime.Now;
+      deviceDto.ConnectionId = Context.ConnectionId;
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
       if (remoteIp is not null)
       {
         if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
         {
-          deviceUpdate.PublicIpV6 = remoteIp.ToString();
+          deviceDto.PublicIpV6 = remoteIp.ToString();
         }
         else
         {
-          deviceUpdate.PublicIpV4 = remoteIp.ToString();
+          deviceDto.PublicIpV4 = remoteIp.ToString();
         }
       }
       
-      var deviceEntity = await _appDb.AddOrUpdateDevice(deviceUpdate);
+      var deviceEntity = await _appDb.AddOrUpdateDevice(deviceDto);
       Device = deviceEntity.ToDto();
       
       await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id, Device.TenantId));
@@ -142,7 +142,7 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating device.");
-      return Result.Fail<DeviceUpdateResponseDto>("An error occurred while updating the device.");
+      return Result.Fail<DeviceDto>("An error occurred while updating the device.");
     }
   }
 

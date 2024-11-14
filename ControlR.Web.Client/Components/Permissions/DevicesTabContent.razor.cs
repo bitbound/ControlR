@@ -7,7 +7,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
 {
   private ImmutableArray<IDisposable>? _changeHandlers;
   private string _deviceSearchPattern = string.Empty;
-  private DeviceUpdateResponseDto? _selectedDevice;
+  private DeviceDto? _selectedDevice;
   private string _tagSearchPattern = string.Empty;
 
   [Inject]
@@ -25,7 +25,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   [Inject]
   public required ITagStore TagStore { get; init; }
 
-  private IOrderedEnumerable<DeviceUpdateResponseDto> FilteredDevices =>
+  private IOrderedEnumerable<DeviceDto> FilteredDevices =>
     DeviceStore.Items
       .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
       .OrderBy(x => x.Name);

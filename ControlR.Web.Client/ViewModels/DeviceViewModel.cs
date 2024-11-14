@@ -1,79 +1,62 @@
-﻿using System.Collections.Immutable;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Models;
+﻿using ControlR.Libraries.Shared.Serialization;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
-namespace ControlR.Libraries.Shared.Dtos.ServerApi;
+namespace ControlR.Web.Client.ViewModels;
 
-[MessagePackObject]
-public class DeviceUpdateRequestDto
+public class DeviceViewModel
 {
-  [MsgPackKey]
   public string AgentVersion { get; set; } = string.Empty;
 
-  [MsgPackKey]
+  public string Alias { get; set; } = string.Empty;
+
   public string ConnectionId { get; set; } = string.Empty;
 
-  [MsgPackKey]
   public double CpuUtilization { get; set; }
 
-  [MsgPackKey]
   public string[] CurrentUsers { get; set; } = [];
 
-  [MsgPackKey]
   public IReadOnlyList<Drive> Drives { get; set; } = [];
 
-  [MsgPackKey]
   public Guid Id { get; set; }
 
-  [MsgPackKey]
   public bool Is64Bit { get; set; }
 
-  [MsgPackKey]
   public bool IsOnline { get; set; }
 
-  [MsgPackKey]
+  public bool IsVisible { get; set; }
+
   public DateTimeOffset LastSeen { get; set; }
 
-  [MsgPackKey]
   public string[] MacAddresses { get; set; } = [];
 
-  [MsgPackKey]
   public string Name { get; set; } = string.Empty;
 
-  [MsgPackKey]
   public Architecture OsArchitecture { get; set; }
 
-  [MsgPackKey]
   public string OsDescription { get; set; } = string.Empty;
 
-  [MsgPackKey]
   public SystemPlatform Platform { get; set; }
 
-  [MsgPackKey]
   public int ProcessorCount { get; set; }
 
-  [MsgPackKey]
   public string PublicIpV4 { get; set; } = string.Empty;
 
-  [MsgPackKey]
   public string PublicIpV6 { get; set; } = string.Empty;
 
-  [MsgPackKey]
   public Guid[]? TagIds { get; set; }
 
-  [MsgPackKey]
   public Guid TenantId { get; set; }
 
-  [MsgPackKey]
   public double TotalMemory { get; set; }
 
-  [MsgPackKey]
   public double TotalStorage { get; set; }
 
-  [MsgPackKey]
   public double UsedMemory { get; set; }
 
-  [MsgPackKey]
+  public double UsedMemoryPercent => UsedMemory / TotalMemory;
+
   public double UsedStorage { get; set; }
+  public double UsedStoragePercent => UsedStorage / TotalStorage;
 }

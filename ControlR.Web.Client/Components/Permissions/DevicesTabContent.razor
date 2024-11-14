@@ -14,14 +14,14 @@
                   Clearable="true" />
 
     <MudPaper MaxHeight="500px" Class="overflow-y-auto">
-      <MudList T="DeviceUpdateResponseDto"
+      <MudList T="DeviceDto"
                @bind-SelectedValue="_selectedDevice"
                SelectionMode="SelectionMode.SingleSelection"
                Color="Color.Info">
 
         @foreach (var device in FilteredDevices)
         {
-          <MudListItem T="DeviceUpdateResponseDto" Value="@device">
+          <MudListItem T="DeviceDto" Value="@device">
             @device.Name
           </MudListItem>
         }

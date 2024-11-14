@@ -1,4 +1,6 @@
-﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -89,6 +91,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
+
   private string CanvasClasses
   {
     get
@@ -134,6 +137,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     Messenger.UnregisterAll(this);
     await JsModule.InvokeVoidAsync("dispose", _canvasId);
     await _componentClosing.CancelAsync();
+    _componentRef?.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -226,8 +230,10 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   protected override async Task OnInitializedAsync()
   {
-    var isTouchScreen = await JsInterop.IsTouchScreen();
+    await base.OnInitializedAsync();
     
+    var isTouchScreen = await JsInterop.IsTouchScreen();
+
     if (isTouchScreen)
     {
       _controlMode = ControlMode.Touch;
@@ -236,8 +242,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
-
-    await base.OnInitializedAsync();
   }
 
   private async Task ChangeDisplays(DisplayDto display)
@@ -268,7 +272,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       {
         return;
       }
-
+      
       await JsModule.InvokeVoidAsync(
         "drawFrame",
         _canvasId,
@@ -452,39 +456,40 @@ public partial class RemoteDisplay : IAsyncDisposable
       switch (message.DtoType)
       {
         case DtoType.DisplayData:
-        {
-          var dto = message.GetPayload<DisplayDataDto>();
-          await HandleDisplayDataReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<DisplayDataDto>();
+            await HandleDisplayDataReceived(dto);
+            break;
+          }
         case DtoType.ScreenRegion:
-        {
-          var dto = message.GetPayload<ScreenRegionDto>();
-          await DrawRegion(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ScreenRegionDto>();
+            await DrawRegion(dto);
+            break;
+          }
         case DtoType.ClipboardText:
-        {
-          var dto = message.GetPayload<ClipboardTextDto>();
-          await HandleClipboardTextReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ClipboardTextDto>();
+            await HandleClipboardTextReceived(dto);
+            break;
+          }
         case DtoType.CursorChanged:
-        {
-          var dto = message.GetPayload<CursorChangedDto>();
-          await HandleCursorChanged(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<CursorChangedDto>();
+            await HandleCursorChanged(dto);
+            break;
+          }
         case DtoType.WindowsSessionEnding:
-        {
-          Snackbar.Add("Remote Windows session ending", Severity.Warning);
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session ending", Severity.Warning);
+            await Close();
+            break;
+          }
         case DtoType.WindowsSessionSwitched:
-        {
-          Snackbar.Add("Remote Windows session switched", Severity.Warning);
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session switched", Severity.Warning);
+            break;
+          }
       }
     }
     catch (Exception ex)

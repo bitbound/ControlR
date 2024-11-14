@@ -3,6 +3,5 @@
 public enum EventMessageKind
 {
   PendingOperationsChanged,
-  DeviceStoreUpdated,
   DeviceContentWindowsChanged,
 }

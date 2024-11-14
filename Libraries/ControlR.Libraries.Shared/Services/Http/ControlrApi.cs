@@ -13,7 +13,7 @@ public interface IControlrApi
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
-  IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices();
+  IAsyncEnumerable<DeviceDto> GetAllDevices();
   Task<Result<TagResponseDto[]>> GetAllowedTags();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
@@ -97,9 +97,9 @@ public class ControlrApi(
     });
   }
 
-  public async IAsyncEnumerable<DeviceUpdateResponseDto> GetAllDevices()
+  public async IAsyncEnumerable<DeviceDto> GetAllDevices()
   {
-    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceUpdateResponseDto>(HttpConstants.DevicesEndpoint);
+    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceDto>(HttpConstants.DevicesEndpoint);
     await foreach (var device in stream)
     {
       if (device is null)

@@ -35,7 +35,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   [Inject]
   public required IUserStore UserStore { get; init; }
 
-  private IOrderedEnumerable<DeviceUpdateResponseDto> FilteredDevices =>
+  private IOrderedEnumerable<DeviceDto> FilteredDevices =>
     DeviceStore.Items
       .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
       .OrderBy(x => x.Name);

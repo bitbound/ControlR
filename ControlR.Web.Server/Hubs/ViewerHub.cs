@@ -292,7 +292,6 @@ public class ViewerHub(
         displayName = user.UserName ?? "";
       }
 
-      // TODO: Convert to record.  Use with.
       sessionRequestDto.ViewerName = displayName;
 
       var sessionSuccess = await _agentHub.Clients
