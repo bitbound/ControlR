@@ -8,6 +8,7 @@ using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR.Client;
+using ControlR.Libraries.DevicesCommon.Extensions;
 
 var sessionIdOption = new Option<Guid>(
     ["-s", "--session-id"],
@@ -85,7 +86,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
   services.AddSingleton(WeakReferenceMessenger.Default);
   services.AddSingleton<IWin32Interop, Win32Interop>();
   services.AddSingleton<IToaster, Toaster>();
-  services.AddSingleton<IDisplayManager, DisplayManager>();
+  services.AddSingleton<IDesktopCapturer, DisplayManager>();
   services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
   services.AddSingleton<IMemoryProvider, MemoryProvider>();
   services.AddSingleton<ISystemTime, SystemTime>();

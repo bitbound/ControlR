@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 namespace ControlR.Streamer.Services;
 
 internal class DtoHandler(
-  IDisplayManager displayManager,
+  IDesktopCapturer desktopCapturer,
   IClipboardManager clipboardManager,
   IInputSimulator inputSimulator,
   IHostApplicationLifetime appLifetime,
@@ -13,7 +13,7 @@ internal class DtoHandler(
   IStreamerStreamingClient streamingClient,
   ILogger<DtoHandler> logger) : IHostedService
 {
-  private readonly IDisplayManager _displayManager = displayManager;
+  private readonly IDesktopCapturer _desktopCapturer = desktopCapturer;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
@@ -53,13 +53,13 @@ internal class DtoHandler(
         case DtoType.ChangeDisplays:
           {
             var payload = wrapper.GetPayload<ChangeDisplaysDto>();
-            await _displayManager.ChangeDisplays(payload.DisplayId);
+            await _desktopCapturer.ChangeDisplays(payload.DisplayId);
             break;
           }
         case DtoType.WheelScroll:
           {
             var payload = wrapper.GetPayload<WheelScrollDto>();
-            var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
             _inputSimulator.ScrollWheel(point.X, point.Y, (int)payload.ScrollY, (int)payload.ScrollX);
             break;
           }
@@ -98,14 +98,14 @@ internal class DtoHandler(
         case DtoType.MovePointer:
           {
             var payload = wrapper.GetPayload<MovePointerDto>();
-            var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
             _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
             break;
           }
         case DtoType.MouseButtonEvent:
           {
             var payload = wrapper.GetPayload<MouseButtonEventDto>();
-            var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
             _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
             _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, payload.IsPressed);
             break;
@@ -113,7 +113,7 @@ internal class DtoHandler(
         case DtoType.MouseClick:
           {
             var payload = wrapper.GetPayload<MouseClickDto>();
-            var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
             _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
             _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, true);
             _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, false);

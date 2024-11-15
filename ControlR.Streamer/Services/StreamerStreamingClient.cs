@@ -18,7 +18,7 @@ internal sealed class StreamerStreamingClient(
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
-  IDisplayManager displayManager,
+  IDesktopCapturer displayManager,
   IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
@@ -28,7 +28,7 @@ internal sealed class StreamerStreamingClient(
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
-  private readonly IDisplayManager _displayManager = displayManager;
+  private readonly IDesktopCapturer _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly ILogger<StreamerStreamingClient> _logger = logger;
   private readonly IOptions<StartupOptions> _startupOptions = startupOptions;

@@ -38,7 +38,6 @@ public class BitmapUtility : IBitmapUtility
     //using var encoderParams = new EncoderParameters(1);
     //encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
     //bitmap.Save(ms, _jpegEncoder, encoderParams);
-    bitmap.Save(ms, ImageFormat.Jpeg);
     return ms.ToArray();
   }
 

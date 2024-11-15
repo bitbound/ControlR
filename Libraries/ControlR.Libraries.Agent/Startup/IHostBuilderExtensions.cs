@@ -7,6 +7,7 @@ using ControlR.Libraries.Agent.Services.Fakes;
 using ControlR.Libraries.Agent.Services.Linux;
 using ControlR.Libraries.Agent.Services.Mac;
 using ControlR.Libraries.Agent.Services.Windows;
+using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesNative.Services;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;

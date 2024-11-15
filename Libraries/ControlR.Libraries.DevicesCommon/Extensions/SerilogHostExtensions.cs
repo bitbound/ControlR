@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Serilog;
 
-namespace ControlR.Libraries.Shared.Extensions;
+namespace ControlR.Libraries.DevicesCommon.Extensions;
 
 public static class SerilogHostExtensions
 {

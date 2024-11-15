@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.Streamer.Services;
 
-internal interface IDisplayManager
+internal interface IDesktopCapturer
 {
   Task ChangeDisplays(string displayId);
   Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY);
@@ -24,7 +24,7 @@ internal interface IDisplayManager
   Task StartCapturingChanges();
 }
 
-internal class DisplayManager : IDisplayManager
+internal class DisplayManager : IDesktopCapturer
 {
   private const int DefaultImageQuality = 75;
   private const int MinimumQuality = 20;
