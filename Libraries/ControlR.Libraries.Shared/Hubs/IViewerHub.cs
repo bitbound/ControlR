@@ -9,10 +9,10 @@ public interface IViewerHub
   Task<bool> CheckIfServerAdministrator();
 
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
-    string agentConnectionId,
+    Guid deviceId,
     TerminalSessionRequest requestDto);
 
-  Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
+  Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId);
 
   Task<Result<ServerStatsDto>> GetServerStats();
 
@@ -20,7 +20,7 @@ public interface IViewerHub
   Task<WindowsSession[]> GetWindowsSessions(Guid deviceId);
 
   Task<Result> RequestStreamingSession(Guid deviceId, StreamerSessionRequestDto sessionRequestDto);
-  Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings signedDto);
+  Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings signedDto);
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);
   Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto);

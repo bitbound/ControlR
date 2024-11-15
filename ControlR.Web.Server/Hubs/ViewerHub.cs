@@ -2,6 +2,7 @@
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -36,13 +37,18 @@ public class ViewerHub(
   }
 
   public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
-    string agentConnectionId,
+    Guid deviceId,
     TerminalSessionRequest requestDto)
   {
     try
     {
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail<TerminalSessionRequestResult>("Forbidden.");
+      }
+
       return await _agentHub.Clients
-        .Client(agentConnectionId)
+        .Client(authResult.Value.ConnectionId)
         .CreateTerminalSession(requestDto);
     }
     catch (Exception ex)
@@ -52,11 +58,16 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
+  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId)
   {
     try
     {
-      return await _agentHub.Clients.Client(agentConnectionId).GetAgentAppSettings();
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail<AgentAppSettings>("Forbidden.");
+      }
+
+      return await _agentHub.Clients.Client(authResult.Value.ConnectionId).GetAgentAppSettings();
     }
     catch (Exception ex)
     {
@@ -311,11 +322,16 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings appSettings)
+  public async Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings appSettings)
   {
     try
     {
-      return await _agentHub.Clients.Client(agentConnectionId).ReceiveAgentAppSettings(appSettings);
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail("Forbidden.");
+      }
+
+      return await _agentHub.Clients.Client(authResult.Value.ConnectionId).ReceiveAgentAppSettings(appSettings);
     }
     catch (Exception ex)
     {

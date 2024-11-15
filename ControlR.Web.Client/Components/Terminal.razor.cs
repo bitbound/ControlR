@@ -80,7 +80,7 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await ViewerHub.CreateTerminalSession(Device.ConnectionId, Id);
+      var result = await ViewerHub.CreateTerminalSession(Device.Id, Id);
       if (!result.IsSuccess)
       {
         Snackbar.Add("Failed to start terminal", Severity.Error);

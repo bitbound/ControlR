@@ -50,17 +50,20 @@ public partial class UsersTabContent : ComponentBase, IDisposable
 
       if (_selectedUser?.Id == _currentUserId)
       {
-        query = query.Where(x => 
-          x.Name != RoleNames.ServerAdministrator && x.Name != RoleNames.TenantAdministrator);
+        query = query.Where(x =>
+          x.Name is not RoleNames.ServerAdministrator and not RoleNames.TenantAdministrator);
       }
 
-      return query.OrderBy(x => x.Name);
+      return query
+        .Select(x => new RoleViewModel(x))
+        .OrderBy(x => x.Name);
     }
   }
 
   private IOrderedEnumerable<TagViewModel> FilteredTags =>
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
+      .Select(x => new TagViewModel(x))
       .OrderBy(x => x.Name);
 
   private IOrderedEnumerable<UserResponseDto> FilteredUsers =>

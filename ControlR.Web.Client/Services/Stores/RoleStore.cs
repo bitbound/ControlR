@@ -2,14 +2,14 @@
 
 namespace ControlR.Web.Client.Services.Stores;
 
-public interface IRoleStore : IStoreBase<RoleViewModel>
+public interface IRoleStore : IStoreBase<RoleResponseDto>
 {}
 
 internal class RoleStore(
   IControlrApi controlrApi,
   ISnackbar snackbar,
   ILogger<RoleStore> logger)
-  : StoreBase<RoleViewModel>(controlrApi, snackbar, logger), IRoleStore
+  : StoreBase<RoleResponseDto>(controlrApi, snackbar, logger), IRoleStore
 {
   protected override async Task RefreshImpl()
   {
@@ -22,8 +22,7 @@ internal class RoleStore(
 
     foreach (var role in getResult.Value)
     {
-      var vm = new RoleViewModel(role);
-      Cache.AddOrUpdate(vm.Id, vm, (_, _) => vm);
+      Cache.AddOrUpdate(role.Id, role, (_, _) => role);
     }
   }
 }

@@ -9,14 +9,15 @@ public interface IStoreBase<TDto>
   where TDto : IHasPrimaryKey
 {
   ICollection<TDto> Items { get; }
-  Task AddOrUpdate(TDto device);
+  Task AddOrUpdate(TDto dto);
   Task Clear();
   Task InvokeItemsChanged();
   Task Refresh();
   IDisposable RegisterChangeHandler(object subscriber, Func<Task> handler);
   IDisposable RegisterChangeHandler(object subscriber, Action handler);
-  Task<bool> Remove(TDto device);
-  bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device);
+  Task<bool> Remove(TDto dto);
+  Task<bool> Remove(Guid id);
+  bool TryGet(Guid id, [NotNullWhen(true)] out TDto? dto);
 }
 
 public abstract class StoreBase<TDto>(
@@ -25,7 +26,7 @@ public abstract class StoreBase<TDto>(
   ILogger<StoreBase<TDto>> logger) : IStoreBase<TDto>
   where TDto : IHasPrimaryKey
 {
-  private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = new();
+  private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = [];
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
   public ICollection<TDto> Items => Cache.Values;
@@ -34,9 +35,9 @@ public abstract class StoreBase<TDto>(
   protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
   protected ISnackbar Snackbar { get; } = snackbar;
 
-  public async Task AddOrUpdate(TDto device)
+  public async Task AddOrUpdate(TDto dto)
   {
-    Cache.AddOrUpdate(device.Id, device, (_, _) => device);
+    Cache.AddOrUpdate(dto.Id, dto, (_, _) => dto);
     await InvokeChangeHandlers();
   }
 
@@ -117,16 +118,23 @@ public abstract class StoreBase<TDto>(
     }
   }
 
-  public async Task<bool> Remove(TDto device)
+  public async Task<bool> Remove(TDto dto)
   {
-    var removed =  Cache.Remove(device.Id, out _);
+    var removed =  Cache.Remove(dto.Id, out _);
     await InvokeChangeHandlers();
     return removed;
   }
 
-  public bool TryGet(Guid deviceId, [NotNullWhen(true)] out TDto? device)
+  public async Task<bool> Remove(Guid id)
   {
-    return Cache.TryGetValue(deviceId, out device);
+    var removed = Cache.Remove(id, out _);
+    await InvokeChangeHandlers();
+    return removed;
+  }
+
+  public bool TryGet(Guid id, [NotNullWhen(true)] out TDto? dto)
+  {
+    return Cache.TryGetValue(id, out dto);
   }
 
   protected abstract Task RefreshImpl();

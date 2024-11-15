@@ -103,7 +103,7 @@
     {
       _newAppSettings = JsonSerializer.Deserialize<AgentAppSettings>(_appSettingsJson);
       Guard.IsNotNull(_newAppSettings);
-      var result = await ViewerHub.SendAgentAppSettings(DeviceViewModel.ConnectionId, _newAppSettings);
+      var result = await ViewerHub.SendAgentAppSettings(DeviceViewModel.Id, _newAppSettings);
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);

@@ -119,7 +119,7 @@ public partial class Dashboard
   {
     try
     {
-      var settingsResult = await ViewerHub.GetAgentAppSettings(device.ConnectionId);
+      var settingsResult = await ViewerHub.GetAgentAppSettings(device.Id);
       if (!settingsResult.IsSuccess)
       {
         Snackbar.Add(settingsResult.Reason, Severity.Error);

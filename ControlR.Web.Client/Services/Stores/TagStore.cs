@@ -2,11 +2,11 @@
 
 namespace ControlR.Web.Client.Services.Stores;
 
-public interface ITagStore : IStoreBase<TagViewModel>
+public interface ITagStore : IStoreBase<TagResponseDto>
 {}
 
 public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagStore> logger)
-  : StoreBase<TagViewModel>(controlrApi, snackbar, logger), ITagStore
+  : StoreBase<TagResponseDto>(controlrApi, snackbar, logger), ITagStore
 {
   protected override async Task RefreshImpl()
   {
@@ -19,8 +19,7 @@ public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagS
 
     foreach (var tag in getResult.Value)
     {
-      var tagVm = new TagViewModel(tag);
-      Cache.AddOrUpdate(tag.Id, tagVm, (_, _) => tagVm);
+      Cache.AddOrUpdate(tag.Id, tag, (_, _) => tag);
     }
   }
 }

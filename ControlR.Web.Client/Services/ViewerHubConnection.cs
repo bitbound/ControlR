@@ -13,9 +13,9 @@ public interface IViewerHubConnection
 
   Task Connect(CancellationToken cancellationToken = default);
 
-  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId, Guid terminalId);
+  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(Guid deviceId, Guid terminalId);
 
-  Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId);
+  Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId);
 
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebsocketBridgeOrigin();
@@ -29,7 +29,7 @@ public interface IViewerHubConnection
     Uri websocketUri,
     int targetSystemSession);
 
-  Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings);
+  Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings agentAppSettings);
 
   Task SendAgentUpdateTrigger(Guid deviceId);
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType);
@@ -92,25 +92,26 @@ internal class ViewerHubConnection(
     await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(string agentConnectionId,
+  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+    Guid deviceId,
     Guid terminalId)
   {
     return await TryInvoke(
       async () =>
       {
-        Guard.IsNotNull(_viewerHub.ConnectionId);
+        Guard.IsNotNullOrWhiteSpace(_viewerHub.ConnectionId);
 
         var request = new TerminalSessionRequest(terminalId, _viewerHub.ConnectionId);
 
-        return await _viewerHub.Server.CreateTerminalSession(agentConnectionId, request);
+        return await _viewerHub.Server.CreateTerminalSession(deviceId, request);
       },
       () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
   }
 
-  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(string agentConnectionId)
+  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId)
   {
     return await TryInvoke(
-      async () => await _viewerHub.Server.GetAgentAppSettings(agentConnectionId),
+      async () => await _viewerHub.Server.GetAgentAppSettings(deviceId),
       () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
   }
 
@@ -205,13 +206,13 @@ internal class ViewerHubConnection(
     }
   }
 
-  public async Task<Result> SendAgentAppSettings(string agentConnectionId, AgentAppSettings agentAppSettings)
+  public async Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings agentAppSettings)
   {
     return await TryInvoke(
       async () =>
       {
         await WaitForConnection();
-        return await _viewerHub.Server.SendAgentAppSettings(agentConnectionId, agentAppSettings);
+        return await _viewerHub.Server.SendAgentAppSettings(deviceId, agentAppSettings);
       },
       () => Result.Fail("Failed to send app settings"));
   }

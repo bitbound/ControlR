@@ -43,6 +43,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   private IOrderedEnumerable<TagViewModel> FilteredTags => 
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
+      .Select(x => new TagViewModel(x))
       .OrderBy(x => x.Name);
 
   private IOrderedEnumerable<UserResponseDto> FilteredUsers =>
@@ -88,7 +89,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     Snackbar.Add("Tag created", Severity.Success);
-    await TagStore.AddOrUpdate(new TagViewModel(createResult.Value));
+    await TagStore.AddOrUpdate(createResult.Value);
     _newTagName = null;
   }
 
@@ -113,7 +114,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    await TagStore.Remove(_selectedTag);
+    await TagStore.Remove(_selectedTag.Id);
     Snackbar.Add("Tag deleted", Severity.Success);
   }
 
