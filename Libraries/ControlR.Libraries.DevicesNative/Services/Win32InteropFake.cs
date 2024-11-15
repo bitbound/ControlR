@@ -9,17 +9,17 @@ using System.Diagnostics;
 namespace ControlR.Libraries.DevicesNative.Services;
 public class Win32InteropFake : IWin32Interop
 {
-    public bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool forceConsoleSession, string desktopName, bool hiddenWindow, out Process? startedProcess)
+    public bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool hiddenWindow, out Process? startedProcess)
     {
         throw new NotImplementedException();
     }
 
-    public IEnumerable<WindowsSession> GetActiveSessions()
+    public List<WindowsSession> GetActiveSessions()
     {
         throw new NotImplementedException();
     }
 
-    public IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
+    public List<WindowsSession> GetActiveSessionsCsWin32()
     {
         throw new NotImplementedException();
     }

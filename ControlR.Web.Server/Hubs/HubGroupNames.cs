@@ -14,6 +14,10 @@ public static class HubGroupNames
     return $"tenant-{tenantId}-tag-{tagId}";
   }
 
+  public static string GetTenantDevicesGroupName(Guid tenantId)
+  {
+    return $"tenant-{tenantId}-devices";
+  }
   public static string GetUserRoleGroupName(string roleName, Guid tenantId)
   {
     return $"tenant-{tenantId}-user-role-{roleName}";

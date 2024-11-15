@@ -22,16 +22,20 @@ using WTS_CONNECTSTATE_CLASS = Windows.Win32.System.RemoteDesktop.WTS_CONNECTSTA
 using WTS_INFO_CLASS = Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using Windows.Win32.UI.Shell;
 
 namespace ControlR.Devices.Native.Services;
 
 public interface IWin32Interop
 {
-  bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool forceConsoleSession,
-    string desktopName, bool hiddenWindow, out Process? startedProcess);
+  bool CreateInteractiveSystemProcess(
+    string commandLine, 
+    int targetSessionId,
+    bool hiddenWindow,
+    out Process? startedProcess);
 
-  IEnumerable<WindowsSession> GetActiveSessions();
-  IEnumerable<WindowsSession> GetActiveSessionsCsWin32();
+  List<WindowsSession> GetActiveSessions();
+  List<WindowsSession> GetActiveSessionsCsWin32();
   string? GetClipboardText();
   WindowsCursor GetCurrentCursor();
 
@@ -68,8 +72,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   public bool CreateInteractiveSystemProcess(
     string commandLine,
     int targetSessionId,
-    bool forceConsoleSession,
-    string desktopName,
     bool hiddenWindow,
     out Process? startedProcess)
   {
@@ -78,9 +80,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       uint winLogonPid = 0;
 
-      // If not force console, find target session.  If not present,
-      // use last active session.
-      var sessionId = GetTargetSessionId(targetSessionId, forceConsoleSession);
+      var sessionId = ResolveWindowsSession(targetSessionId);
 
       var winLogonProcs = Process.GetProcessesByName("winlogon");
       foreach (var p in winLogonProcs)
@@ -131,6 +131,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       {
         cb = (uint)sizeof(STARTUPINFOW)
       };
+
+      var desktopName = ResolveDesktopName(sessionId);
       var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
       startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
@@ -189,7 +191,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  public IEnumerable<WindowsSession> GetActiveSessions()
+  public List<WindowsSession> GetActiveSessions()
   {
     var sessions = new List<WindowsSession>();
     var consoleSessionId = PInvoke.WTSGetActiveConsoleSessionId();
@@ -239,7 +241,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return sessions;
   }
 
-  public IEnumerable<WindowsSession> GetActiveSessionsCsWin32()
+  public List<WindowsSession> GetActiveSessionsCsWin32()
   {
     var sessions = new List<WindowsSession>();
 
@@ -1145,28 +1147,48 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }.ToFrozenDictionary();
   }
 
-  private uint GetTargetSessionId(int initialTarget, bool forceConsoleSession)
+  private string ResolveDesktopName(uint targetSessionId)
   {
-    // If not force console, find target session.  If not present,
-    // use last active session.
-    var sessionId = PInvoke.WTSGetActiveConsoleSessionId();
-    if (forceConsoleSession)
+    var isLogonScreenVisible = Process
+        .GetProcessesByName("LogonUI")
+        .Any(x => x.SessionId == targetSessionId);
+
+    var isSecureDesktopVisible = Process
+        .GetProcessesByName("consent")
+        .Any(x => x.SessionId == targetSessionId);
+
+    if (isLogonScreenVisible || isSecureDesktopVisible)
     {
-      return sessionId;
+      return "Winlogon";
     }
 
-    var activeSessions = GetActiveSessions();
-    if (activeSessions.Any(x => x.Id == initialTarget))
-    {
-      sessionId = (uint)initialTarget;
-    }
-    else
-    {
-      sessionId = activeSessions.Last().Id;
-    }
-
-    return sessionId;
+    return "Default";
   }
+
+  private uint ResolveWindowsSession(int targetSessionId)
+  {
+    var activeSessions = GetActiveSessions();
+    if (activeSessions.Any(x => x.Id == targetSessionId))
+    {
+      // If exact match is found, return that session.
+      return (uint)targetSessionId;
+    }
+    if (PInvoke.IsOS(OS.OS_ANYSERVER))
+    {
+      // If Windows Server, default to console session.
+      return PInvoke.WTSGetActiveConsoleSessionId();
+    }
+
+    // If consumer version and there's an RDP session active, return that.
+    if (activeSessions.Find(x => x.Type == WindowsSessionType.Rdp) is { } rdSession)
+    {
+      return rdSession.Id;
+    }
+
+    // Otherwise, return the console session.
+    return PInvoke.WTSGetActiveConsoleSessionId();
+  }
+
 
   private void InvokeWheelScroll(int x, int y, int delta, bool isVertical)
   {

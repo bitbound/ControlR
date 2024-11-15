@@ -26,7 +26,7 @@ public partial class Terminal : IAsyncDisposable
 
   [Parameter]
   [EditorRequired]
-  public required DeviceDto Device { get; init; }
+  public required DeviceViewModel Device { get; init; }
 
   [Parameter]
   [EditorRequired]

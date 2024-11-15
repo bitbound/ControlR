@@ -137,9 +137,20 @@ public class AgentHub(
       }
       
       var deviceEntity = await _appDb.AddOrUpdateDevice(deviceDto);
+      if (Device is null)
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTenantDevicesGroupName(deviceEntity.TenantId));
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(deviceEntity.Id, deviceEntity.TenantId));
+        if (deviceEntity.Tags is { Count: > 0 } tags)
+        {
+          foreach (var tag in tags)
+          {
+            await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTagGroupName(tag.Id, deviceEntity.TenantId));
+          }
+        }
+      }
+
       Device = deviceEntity.ToDto();
-      
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(Device.Id, Device.TenantId));
 
       await SendDeviceUpdate(deviceEntity);
 

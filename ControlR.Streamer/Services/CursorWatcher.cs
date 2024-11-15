@@ -10,27 +10,36 @@ internal class CursorWatcher(
   IDelayer delayer,
   ILogger<ClipboardManager> logger) : BackgroundService
 {
+  private readonly IMessenger _messenger = messenger;
+  private readonly IWin32Interop _win32Interop = win32Interop;
+  private readonly IDelayer _delayer = delayer;
+  private readonly ILogger<ClipboardManager> _logger = logger;
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    var currentCursor = win32Interop.GetCurrentCursor();
+    var currentCursor = _win32Interop.GetCurrentCursor();
 
     while (!stoppingToken.IsCancellationRequested)
     {
       try
       {
-        var nextCursor = win32Interop.GetCurrentCursor();
+        var nextCursor = _win32Interop.GetCurrentCursor();
         if (currentCursor != nextCursor)
         {
           currentCursor = nextCursor;
-          await messenger.Send(new CursorChangedMessage(currentCursor));
+          await _messenger.Send(new CursorChangedMessage(currentCursor));
         }
+      }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("Cursor watch aborted.  Application shutting down.");
       }
       catch (Exception ex)
       {
-        logger.LogError(ex, "Error while getting mouse cursor.");
+        _logger.LogError(ex, "Error while getting mouse cursor.");
       }
 
-      await delayer.Delay(TimeSpan.FromMilliseconds(50), stoppingToken);
+      await _delayer.Delay(TimeSpan.FromMilliseconds(50), stoppingToken);
     }
   }
 }

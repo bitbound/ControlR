@@ -26,11 +26,9 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
-var agentCount = 50;
+var agentCount = 1;
 var serverUri = new Uri("https://localhost:7033");
-var tenantId = Guid.Parse("3a20b5ac-a2ff-48a3-a4c5-b44d1574a938");
-//var serverUri = new Uri("http://192.168.0.2:5003/");
-//var tenantId = Guid.Parse("941842e5-5836-4e44-af44-f35e6f73b2e7");
+var tenantId = Guid.Empty;
 
 var cts = new CancellationTokenSource();
 var cancellationToken = cts.Token;

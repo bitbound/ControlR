@@ -39,16 +39,16 @@ internal class StreamerLauncherWindows(
 
     try
     {
-      var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
+      //var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
 
-      if (!echoResult.IsSuccess)
-      {
-        logger.LogResult(echoResult);
-        return Result.Fail("Failed to determine initial input desktop.");
-      }
+      //if (!echoResult.IsSuccess)
+      //{
+      //  logger.LogResult(echoResult);
+      //  return Result.Fail("Failed to determine initial input desktop.");
+      //}
 
-      var targetDesktop = echoResult.Value.Trim();
-      logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
+      //var targetDesktop = echoResult.Value.Trim();
+      //logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
 
       var session = new StreamingSession(viewerConnectionId);
 
@@ -69,12 +69,10 @@ internal class StreamerLauncherWindows(
         var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
 
         win32Interop.CreateInteractiveSystemProcess(
-          $"\"{binaryPath}\" {args}",
-          targetWindowsSession,
-          false,
-          targetDesktop,
-          true,
-          out var process);
+          commandLine: $"\"{binaryPath}\" {args}",
+          targetSessionId: targetWindowsSession,
+          hiddenWindow: true,
+          startedProcess: out var process);
 
         if (process is null || process.Id == -1)
         {
@@ -184,12 +182,10 @@ internal class StreamerLauncherWindows(
     else
     {
       win32Interop.CreateInteractiveSystemProcess(
-        $"\"{environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
-        targetWindowsSession,
-        false,
-        "Default",
-        true,
-        out process);
+        commandLine: $"\"{environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
+        targetSessionId: targetWindowsSession,
+        hiddenWindow: true,
+        startedProcess: out process);
     }
 
     if (process is null || process.HasExited)

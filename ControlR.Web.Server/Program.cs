@@ -67,9 +67,6 @@ builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
   }
 }, lifetime: ServiceLifetime.Transient);
 
-//builder.Services.AddDbContext<AppDb>(options =>
-//  options.UseNpgsql(pgBuilder.ConnectionString));
-
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // Add MudBlazor services

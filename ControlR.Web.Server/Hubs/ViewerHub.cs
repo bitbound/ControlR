@@ -352,8 +352,18 @@ public class ViewerHub(
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
   {
-    if (!TryGetUserId(out var userId))
+    if (!TryGetUserId(out var userId) ||
+        !TryGetTenantId(out var tenantId))
     {
+      return;
+    }
+
+    if (Context.User!.IsInRole(RoleNames.DeviceSuperUser))
+    {
+      await _agentHub
+        .Clients
+        .Group(HubGroupNames.GetTenantDevicesGroupName(tenantId))
+        .ReceiveDto(wrapper);
       return;
     }
 
@@ -369,7 +379,7 @@ public class ViewerHub(
     }
 
     var groupNames = user.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
-    await Clients.Groups(groupNames).ReceiveDto(wrapper);
+    await _agentHub.Clients.Groups(groupNames).ReceiveDto(wrapper);
   }
 
   public async Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
