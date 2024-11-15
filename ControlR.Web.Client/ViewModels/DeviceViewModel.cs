@@ -1,11 +1,8 @@
-﻿using ControlR.Libraries.Shared.Serialization;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Text.Json.Serialization;
+﻿using System.Runtime.InteropServices;
 
 namespace ControlR.Web.Client.ViewModels;
 
-public class DeviceViewModel
+public class DeviceViewModel : IEquatable<DeviceViewModel>
 {
   public string AgentVersion { get; set; } = string.Empty;
 
@@ -59,4 +56,23 @@ public class DeviceViewModel
 
   public double UsedStorage { get; set; }
   public double UsedStoragePercent => UsedStorage / TotalStorage;
+
+  public bool Equals(DeviceViewModel? other)
+  {
+    return Id == other?.Id;
+  }
+
+  public override bool Equals(object? obj)
+  {
+    if (obj is DeviceViewModel other)
+    {
+      return Equals(other);
+    }
+    return false;
+  }
+
+  public override int GetHashCode()
+  {
+    return Id.GetHashCode();
+  }
 }

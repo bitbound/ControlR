@@ -75,17 +75,4 @@ public static class CollectionExtensions
     return list;
   }
 
-  public static bool TryFindIndex<T>(this ObservableCollection<T> self, Predicate<T> predicate, out int index)
-  {
-    index = -1;
-    var item = self.FirstOrDefault(x => predicate(x));
-
-    if (item is null)
-    {
-      return false;
-    }
-
-    index = self.IndexOf(item);
-    return index > -1;
-  }
 }

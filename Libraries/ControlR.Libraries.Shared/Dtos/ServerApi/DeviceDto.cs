@@ -7,83 +7,39 @@ using System.Text.Json.Serialization;
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
-public class DeviceDto : IHasPrimaryKey
+public record DeviceDto(
+  [property: MsgPackKey] string Name,
+  [property: MsgPackKey] string AgentVersion,
+  [property: MsgPackKey] double CpuUtilization,
+  [property: MsgPackKey] Guid Id,
+  [property: MsgPackKey] bool Is64Bit,
+  [property: MsgPackKey] bool IsOnline,
+  [property: MsgPackKey] DateTimeOffset LastSeen,
+  [property: MsgPackKey] Architecture OsArchitecture,
+  [property: MsgPackKey] SystemPlatform Platform,
+  [property: MsgPackKey] int ProcessorCount,
+  [property: MsgPackKey] string ConnectionId,
+  [property: MsgPackKey] string OsDescription,
+  [property: MsgPackKey] Guid TenantId,
+  [property: MsgPackKey] double TotalMemory,
+  [property: MsgPackKey] double TotalStorage,
+  [property: MsgPackKey] double UsedMemory,
+  [property: MsgPackKey] double UsedStorage,
+  [property: MsgPackKey] string[] CurrentUsers,
+  [property: MsgPackKey] string[] MacAddresses,
+  [property: MsgPackKey] string PublicIpV4,
+  [property: MsgPackKey] string PublicIpV6,
+  [property: MsgPackKey] IReadOnlyList<Drive> Drives) : IHasPrimaryKey
 {
-  [MsgPackKey]
-  public string AgentVersion { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public string Alias { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public string ConnectionId { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public double CpuUtilization { get; set; }
-
-  [MsgPackKey]
-  public string[] CurrentUsers { get; set; } = [];
-
-  [MsgPackKey]
-  public IReadOnlyList<Drive> Drives { get; set; } = [];
-
-  [MsgPackKey]
-  public Guid Id { get; set; }
-
-  [MsgPackKey]
-  public bool Is64Bit { get; set; }
-
-  [MsgPackKey]
-  public bool IsOnline { get; set; }
-
-  [MsgPackKey]
-  public DateTimeOffset LastSeen { get; set; }
-
-  [MsgPackKey]
-  public string[] MacAddresses { get; set; } = [];
-
-  [MsgPackKey]
-  public string Name { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public Architecture OsArchitecture { get; set; }
-
-  [MsgPackKey]
-  public string OsDescription { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public SystemPlatform Platform { get; set; }
-
-  [MsgPackKey]
-  public int ProcessorCount { get; set; }
-
-  [MsgPackKey]
-  public string PublicIpV4 { get; set; } = string.Empty;
-
-  [MsgPackKey]
-  public string PublicIpV6 { get; set; } = string.Empty;
-
   [MsgPackKey]
   public Guid[]? TagIds { get; set; }
 
   [MsgPackKey]
-  public Guid TenantId { get; set; }
-
-  [MsgPackKey]
-  public double TotalMemory { get; set; }
-
-  [MsgPackKey]
-  public double TotalStorage { get; set; }
-
-  [MsgPackKey]
-  public double UsedMemory { get; set; }
+  public string? Alias { get; init; }
 
   [IgnoreDataMember]
   [JsonIgnore]
   public double UsedMemoryPercent => UsedMemory / TotalMemory;
-
-  [MsgPackKey]
-  public double UsedStorage { get; set; }
 
   [IgnoreDataMember]
   [JsonIgnore]

@@ -11,6 +11,7 @@ public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : I
   public async Task ReceiveDeviceUpdate(DeviceDto deviceDto)
   {
     await _deviceStore.AddOrUpdate(deviceDto);
+    await _messenger.Send(new DtoReceivedMessage<DeviceDto>(deviceDto));
   }
 
   public async Task ReceiveDto(DtoWrapper dto)

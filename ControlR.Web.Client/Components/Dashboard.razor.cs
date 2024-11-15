@@ -6,13 +6,14 @@ namespace ControlR.Web.Client.Components;
 
 public partial class Dashboard
 {
-  private readonly Dictionary<string, SortDefinition<DeviceDto>> _sortDefinitions = new()
+  private readonly Dictionary<string, SortDefinition<DeviceViewModel>> _sortDefinitions = new()
   {
-    ["IsOnline"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.IsOnline), true, 0, x => x.IsOnline),
-    ["Name"] = new SortDefinition<DeviceDto>(nameof(DeviceDto.Name), false, 1, x => x.Name)
+    ["IsOnline"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.IsOnline), true, 0, x => x.IsOnline),
+    ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Name), false, 1, x => x.Name)
   };
 
   private Version? _agentReleaseVersion;
+  private ObservableCollection<DeviceViewModel> _devices = [];
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
@@ -47,18 +48,16 @@ public partial class Dashboard
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
 
-  private ICollection<DeviceDto> FilteredDevices
+  private ICollection<DeviceViewModel> FilteredDevices
   {
     get
     {
-      var query = DeviceStore.Items.OrderBy(x => x.Name);
-
       if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
       {
-        return [.. query];
+        return _devices;
       }
 
-      return query
+      return _devices
         .Where(x => x.IsOnline)
         .ToArray();
     }
@@ -67,7 +66,7 @@ public partial class Dashboard
   private bool IsHideOfflineDevicesDisabled =>
     !string.IsNullOrWhiteSpace(_searchText);
 
-  private Func<DeviceDto, bool> QuickFilter => x =>
+  private Func<DeviceViewModel, bool> QuickFilter => x =>
   {
     if (string.IsNullOrWhiteSpace(_searchText))
     {
@@ -104,22 +103,23 @@ public partial class Dashboard
     await RefreshLatestAgentVersion();
 
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
-    DeviceStore.RegisterChangeHandler(this, HandleDeviceStoreChanged);
+    Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
 
     if (DeviceStore.Items.Count == 0)
     {
       await DeviceStore.Refresh();
     }
 
+    LoadDevicesFromStore();
+
     _loading = false;
   }
 
-
-  private async Task ConfigureDeviceSettings(DeviceDto deviceDto)
+  private async Task ConfigureDeviceSettings(DeviceViewModel device)
   {
     try
     {
-      var settingsResult = await ViewerHub.GetAgentAppSettings(deviceDto.ConnectionId);
+      var settingsResult = await ViewerHub.GetAgentAppSettings(device.ConnectionId);
       if (!settingsResult.IsSuccess)
       {
         Snackbar.Add(settingsResult.Reason, Severity.Error);
@@ -136,7 +136,7 @@ public partial class Dashboard
       var parameters = new DialogParameters
       {
         { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-        { nameof(AppSettingsEditorDialog.DeviceUpdate), deviceDto }
+        { nameof(AppSettingsEditorDialog.DeviceViewModel), device }
       };
       var dialogRef =
         await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
@@ -152,13 +152,21 @@ public partial class Dashboard
       Snackbar.Add("Failed to get device settings", Severity.Error);
     }
   }
-  private void HandleDeviceStoreChanged()
-  {
-    Debouncer.Debounce(
-      TimeSpan.FromSeconds(1),
-      async () => { await InvokeAsync(StateHasChanged); });
-  }
 
+  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
+  {
+    var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
+    var index = _devices.FindIndex(x => x.Id == viewModel.Id);
+    if (index > -1)
+    {
+      _devices[index] = viewModel;
+    }
+    else
+    {
+      _devices.Add(viewModel);
+    }
+    await InvokeAsync(StateHasChanged);
+  }
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
   {
     if (message.NewState == HubConnectionState.Connected)
@@ -180,11 +188,16 @@ public partial class Dashboard
     await InvokeAsync(StateHasChanged);
   }
 
-  private bool IsAgentOutdated(DeviceDto deviceDto)
+  private bool IsAgentOutdated(DeviceViewModel device)
   {
     return _agentReleaseVersion is not null &&
-           Version.TryParse(deviceDto.AgentVersion, out var agentVersion) &&
+           Version.TryParse(device.AgentVersion, out var agentVersion) &&
            !agentVersion.Equals(_agentReleaseVersion);
+  }
+
+  private void LoadDevicesFromStore()
+  {
+    _devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
   }
 
   private async Task RefreshDevices()
@@ -196,6 +209,7 @@ public partial class Dashboard
       await InvokeAsync(StateHasChanged);
       await RefreshLatestAgentVersion();
       await DeviceStore.Refresh();
+      LoadDevicesFromStore();
     }
     catch (Exception ex)
     {
@@ -218,12 +232,12 @@ public partial class Dashboard
     }
   }
 
-  private async Task RemoteControlClicked(DeviceDto deviceDto)
+  private async Task RemoteControlClicked(DeviceViewModel device)
   {
-    switch (deviceDto.Platform)
+    switch (device.Platform)
     {
       case SystemPlatform.Windows:
-        var sessionResult = await ViewerHub.GetWindowsSessions(deviceDto);
+        var sessionResult = await ViewerHub.GetWindowsSessions(device.Id);
         if (!sessionResult.IsSuccess)
         {
           Logger.LogResult(sessionResult);
@@ -231,7 +245,7 @@ public partial class Dashboard
           return;
         }
 
-        var dialogParams = new DialogParameters { ["DeviceName"] = deviceDto.Name, ["Sessions"] = sessionResult.Value };
+        var dialogParams = new DialogParameters { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
         var dialogRef =
           await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
         var result = await dialogRef.Result;
@@ -242,9 +256,9 @@ public partial class Dashboard
 
         if (result.Data is uint sessionId)
         {
-          var remoteControlSession = new RemoteControlSession(deviceDto, (int)sessionId);
+          var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
           WindowStore.AddContentInstance<RemoteDisplay>(
-            deviceDto,
+            device,
             DeviceContentInstanceType.RemoteControl,
             new Dictionary<string, object?>
             {
@@ -259,7 +273,7 @@ public partial class Dashboard
     }
   }
 
-  private async Task RemoveDevice(DeviceDto deviceDto)
+  private async Task RemoveDevice(DeviceViewModel device)
   {
     try
     {
@@ -274,14 +288,18 @@ public partial class Dashboard
         return;
       }
 
-      var deleteResult = await ControlrApi.DeleteDevice(deviceDto.Id);
+      var deleteResult = await ControlrApi.DeleteDevice(device.Id);
       if (!deleteResult.IsSuccess)
       {
         Snackbar.Add(deleteResult.Reason, Severity.Error);
         return;
       }
 
-      _ = DeviceStore.Remove(deviceDto);
+      _devices.Remove(device);
+      if (DeviceStore.TryGet(device.Id, out var dto))
+      {
+        _ = DeviceStore.Remove(dto);
+      }
       Snackbar.Add("Device removed", Severity.Success);
     }
     catch (Exception ex)
@@ -290,13 +308,13 @@ public partial class Dashboard
     }
   }
 
-  private async Task RestartDevice(DeviceDto deviceDto)
+  private async Task RestartDevice(DeviceViewModel device)
   {
     try
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Restart",
-        $"Are you sure you want to restart {deviceDto.Name}?",
+        $"Are you sure you want to restart {device.Name}?",
         "Yes",
         "No");
 
@@ -305,7 +323,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.SendPowerStateChange(deviceDto, PowerStateChangeType.Restart);
+      await ViewerHub.SendPowerStateChange(device.Id, PowerStateChangeType.Restart);
       Snackbar.Add("Restart command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -314,13 +332,13 @@ public partial class Dashboard
     }
   }
 
-  private async Task ShutdownDevice(DeviceDto deviceDto)
+  private async Task ShutdownDevice(DeviceViewModel device)
   {
     try
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Shutdown",
-        $"Are you sure you want to shut down {deviceDto.Name}?",
+        $"Are you sure you want to shut down {device.Name}?",
         "Yes",
         "No");
 
@@ -329,7 +347,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.SendPowerStateChange(deviceDto, PowerStateChangeType.Shutdown);
+      await ViewerHub.SendPowerStateChange(device.Id, PowerStateChangeType.Shutdown);
       Snackbar.Add("Shutdown command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -338,19 +356,19 @@ public partial class Dashboard
     }
   }
 
-  private void StartTerminal(DeviceDto deviceDto)
+  private void StartTerminal(DeviceViewModel device)
   {
     try
     {
       var terminalId = Guid.NewGuid();
 
       WindowStore.AddContentInstance<Terminal>(
-        deviceDto,
+        device,
         DeviceContentInstanceType.Terminal,
         new Dictionary<string, object?>
         {
           [nameof(Terminal.Id)] = terminalId,
-          [nameof(Terminal.DeviceUpdate)] = deviceDto
+          [nameof(Terminal.Device)] = device
         });
     }
     catch (Exception ex)
@@ -360,13 +378,13 @@ public partial class Dashboard
     }
   }
 
-  private async Task UninstallAgent(DeviceDto deviceDto)
+  private async Task UninstallAgent(DeviceViewModel device)
   {
     try
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Uninstall",
-        $"Are you sure you want to uninstall the agent from {deviceDto.Name}?",
+        $"Are you sure you want to uninstall the agent from {device.Name}?",
         "Yes",
         "No");
 
@@ -375,7 +393,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.UninstallAgent(deviceDto.Id, "Manually uninstalled.");
+      await ViewerHub.UninstallAgent(device.Id, "Manually uninstalled.");
       Snackbar.Add("Uninstall command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -397,17 +415,17 @@ public partial class Dashboard
     }
   }
 
-  private async Task WakeDevice(DeviceDto deviceDto)
+  private async Task WakeDevice(DeviceViewModel device)
   {
     try
     {
-      if (deviceDto.MacAddresses.Length == 0)
+      if (device.MacAddresses.Length == 0)
       {
         Snackbar.Add("No MAC addresses on device", Severity.Warning);
         return;
       }
 
-      await ViewerHub.SendWakeDevice(deviceDto.MacAddresses);
+      await ViewerHub.SendWakeDevice(device.MacAddresses);
       Snackbar.Add("Wake command sent", Severity.Success);
     }
     catch (Exception ex)

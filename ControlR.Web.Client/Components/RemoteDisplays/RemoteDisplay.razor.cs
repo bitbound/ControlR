@@ -529,7 +529,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   private async Task InvokeCtrlAltDel()
   {
-    await ViewerHub.InvokeCtrlAltDel(Session.DeviceDto.Id);
+    await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
   }
 
   private void OnTouchCancel(TouchEventArgs ev)
@@ -641,7 +641,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-        Session.DeviceDto.Id,
+        Session.Device.Id,
         Session.SessionId,
         websocketUri,
         Session.InitialSystemSession);

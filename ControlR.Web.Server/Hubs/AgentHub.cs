@@ -51,10 +51,13 @@ public class AgentHub(
 
       if (Device is { } cachedDevice)
       {
-        cachedDevice.IsOnline = false;
-        cachedDevice.LastSeen = _systemTime.Now;
+        var updated = cachedDevice with
+        {
+          IsOnline = false,
+          LastSeen = _systemTime.Now
+        };
 
-        var device = await _appDb.AddOrUpdateDevice(cachedDevice);
+        var device = await _appDb.AddOrUpdateDevice(updated);
         await SendDeviceUpdate(device);
       }
       await base.OnDisconnectedAsync(exception);
@@ -99,7 +102,7 @@ public class AgentHub(
           return Result.Fail<DeviceDto>("No tenants found.");
         }
 
-        deviceDto.TenantId = lastTenant.Id;
+        deviceDto = deviceDto with { TenantId = lastTenant.Id };
       }
 
       if (deviceDto.TenantId == Guid.Empty)
@@ -113,20 +116,23 @@ public class AgentHub(
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      deviceDto.IsOnline = true;
-      deviceDto.LastSeen = _systemTime.Now;
-      deviceDto.ConnectionId = Context.ConnectionId;
+      deviceDto = deviceDto with
+      {
+        IsOnline = true,
+        LastSeen = _systemTime.Now,
+        ConnectionId = Context.ConnectionId
+      };
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
       if (remoteIp is not null)
       {
         if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
         {
-          deviceDto.PublicIpV6 = remoteIp.ToString();
+          deviceDto = deviceDto with { PublicIpV6 = remoteIp.ToString() };
         }
         else
         {
-          deviceDto.PublicIpV4 = remoteIp.ToString();
+          deviceDto = deviceDto with { PublicIpV4 = remoteIp.ToString() };
         }
       }
       

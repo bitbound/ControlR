@@ -18,7 +18,7 @@
                Disabled="IsHideOfflineDevicesDisabled"/>
 </div>
 
-<MudDataGrid T="DeviceDto"
+<MudDataGrid T="DeviceViewModel"
              RowsPerPage="@(25)"
              Items="FilteredDevices"
              SortMode="SortMode.Multiple"
@@ -54,7 +54,7 @@
 </ToolBarContent>
 
 <Columns>
-  <TemplateColumn T="DeviceDto"
+  <TemplateColumn T="DeviceViewModel"
                   Sortable="false"
                   Filterable="false"
                   ShowColumnOptions="false"
@@ -124,7 +124,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceDto"
+  <TemplateColumn T="DeviceViewModel"
                   StickyLeft="true"
                   Sortable="true"
                   Filterable="true"
@@ -141,7 +141,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceViewModel"
                   Sortable="true"
                   Filterable="true"
                   Title="Online">
@@ -179,7 +179,7 @@
     </CellTemplate>
   </PropertyColumn>
 
-  <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceViewModel"
                   Title="CPU"
                   Sortable="true"
                   Filterable="true">
@@ -188,7 +188,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceViewModel"
                   Title="Memory"
                   Sortable="true"
                   Filterable="true">
@@ -197,7 +197,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <TemplateColumn T="DeviceDto"
+    <TemplateColumn T="DeviceViewModel"
                   Title="Storage"
                   Sortable="true"
                   Filterable="true">
@@ -206,7 +206,7 @@
     </CellTemplate>
   </TemplateColumn>
 
-  <HierarchyColumn T="DeviceDto"/>
+    <HierarchyColumn T="DeviceViewModel" />
 </Columns>
 <ChildRowContent>
   <div class="child-content-grid">

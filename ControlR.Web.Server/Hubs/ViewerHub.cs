@@ -292,7 +292,7 @@ public class ViewerHub(
         displayName = user.UserName ?? "";
       }
 
-      sessionRequestDto.ViewerName = displayName;
+      sessionRequestDto = sessionRequestDto with { ViewerName = displayName };
 
       var sessionSuccess = await _agentHub.Clients
         .Client(device.ConnectionId)

@@ -10,7 +10,7 @@ public interface IDeviceContentWindowStore
 
   void Add(DeviceContentInstance instance);
 
-  void AddContentInstance<T>(DeviceDto deviceDto, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
+  void AddContentInstance<T>(DeviceViewModel device, DeviceContentInstanceType instanceType, Dictionary<string, object?> componentParams)
      where T : ComponentBase;
 
   void Remove(DeviceContentInstance instance);
@@ -37,7 +37,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   }
 
   public void AddContentInstance<T>(
-    DeviceDto deviceDto, 
+    DeviceViewModel device, 
     DeviceContentInstanceType instanceType, 
     Dictionary<string, object?>? componentParams = null)
     where T : ComponentBase
@@ -60,7 +60,7 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
       builder.CloseComponent();
     }
 
-    var contentInstance = new DeviceContentInstance(deviceDto, RenderComponent, instanceType);
+    var contentInstance = new DeviceContentInstance(device, RenderComponent, instanceType);
     _cache.Add(contentInstance);
     _messenger.SendGenericMessage(EventMessageKind.DeviceContentWindowsChanged);
   }

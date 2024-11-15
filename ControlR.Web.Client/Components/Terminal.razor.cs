@@ -26,7 +26,7 @@ public partial class Terminal : IAsyncDisposable
 
   [Parameter]
   [EditorRequired]
-  public required DeviceDto DeviceUpdate { get; init; }
+  public required DeviceDto Device { get; init; }
 
   [Parameter]
   [EditorRequired]
@@ -64,7 +64,7 @@ public partial class Terminal : IAsyncDisposable
     try
     {
       GC.SuppressFinalize(this);
-      await ViewerHub.CloseTerminalSession(DeviceUpdate.Id, Id);
+      await ViewerHub.CloseTerminalSession(Device.Id, Id);
     }
     catch (Exception ex)
     {
@@ -80,7 +80,7 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await ViewerHub.CreateTerminalSession(DeviceUpdate.ConnectionId, Id);
+      var result = await ViewerHub.CreateTerminalSession(Device.ConnectionId, Id);
       if (!result.IsSuccess)
       {
         Snackbar.Add("Failed to start terminal", Severity.Error);
@@ -196,7 +196,7 @@ public partial class Terminal : IAsyncDisposable
         _inputHistory.Add(_inputText);
         _inputHistoryIndex = _inputHistory.Count;
 
-        var result = await ViewerHub.SendTerminalInput(DeviceUpdate.Id, Id, _inputText);
+        var result = await ViewerHub.SendTerminalInput(Device.Id, Id, _inputText);
         if (!result.IsSuccess)
         {
           Snackbar.Add(result.Reason, Severity.Error);

@@ -6,31 +6,31 @@ public static class EntityToDtoExtensions
 {
   public static DeviceDto ToDto(this Device device)
   {
-    return new DeviceDto
-    {
-      AgentVersion = device.AgentVersion,
+    return new DeviceDto(
+      device.Name,
+      device.AgentVersion,
+      device.CpuUtilization,
+      device.Id,
+      device.Is64Bit,
+      device.IsOnline,
+      device.LastSeen,
+      device.OsArchitecture,
+      device.Platform,
+      device.ProcessorCount,
+      device.ConnectionId,
+      device.OsDescription,
+      device.TenantId,
+      device.TotalMemory,
+      device.TotalStorage,
+      device.UsedMemory,
+      device.UsedStorage,
+      device.CurrentUsers,
+      device.MacAddresses,
+      device.PublicIpV4,
+      device.PublicIpV6,
+      device.Drives)
+    { 
       Alias = device.Alias,
-      ConnectionId = device.ConnectionId,
-      CpuUtilization = device.CpuUtilization,
-      CurrentUsers = device.CurrentUsers,
-      Drives = device.Drives,
-      Id = device.Id,
-      Is64Bit = device.Is64Bit,
-      IsOnline = device.IsOnline,
-      LastSeen = device.LastSeen,
-      MacAddresses = device.MacAddresses,
-      Name = device.Name,
-      OsArchitecture = device.OsArchitecture,
-      OsDescription = device.OsDescription,
-      Platform = device.Platform,
-      ProcessorCount = device.ProcessorCount,
-      PublicIpV4 = device.PublicIpV4,
-      PublicIpV6 = device.PublicIpV6,
-      TenantId = device.TenantId,
-      TotalMemory = device.TotalMemory,
-      TotalStorage = device.TotalStorage,
-      UsedMemory = device.UsedMemory,
-      UsedStorage = device.UsedStorage
     };
   }
 
