@@ -2,23 +2,16 @@
 using System.Runtime.Versioning;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Agent.IpcDtos;
 using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Primitives;
-using Microsoft.Extensions.Hosting;
-using SimpleIpc;
 using Result = ControlR.Libraries.Shared.Primitives.Result;
 
 namespace ControlR.Libraries.Agent.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
 internal class StreamerLauncherWindows(
-  IHostApplicationLifetime appLifetime,
   IWin32Interop win32Interop,
   IProcessManager processes,
-  IIpcRouter ipcRouter,
   ISystemEnvironment environment,
   IStreamingSessionCache streamingSessionCache,
   ISettingsProvider settings,
@@ -39,17 +32,6 @@ internal class StreamerLauncherWindows(
 
     try
     {
-      //var echoResult = await GetCurrentInputDesktop(targetWindowsSession);
-
-      //if (!echoResult.IsSuccess)
-      //{
-      //  logger.LogResult(echoResult);
-      //  return Result.Fail("Failed to determine initial input desktop.");
-      //}
-
-      //var targetDesktop = echoResult.Value.Trim();
-      //logger.LogInformation("Starting streamer in desktop: {Desktop}", targetDesktop);
-
       var session = new StreamingSession(viewerConnectionId);
 
       var serverUri = settings.ServerUri.ToString().TrimEnd('/');
@@ -106,20 +88,22 @@ internal class StreamerLauncherWindows(
             throw new FileNotFoundException("Streamer binary not found.", streamerPath);
           }
 
-          var psi = new ProcessStartInfo
-          {
-            FileName = streamerPath,
-            Arguments = args,
-            WorkingDirectory = Path.GetDirectoryName(streamerPath),
-            UseShellExecute = true
-          };
-          //var psi = new ProcessStartInfo()
-          //{
-          //    FileName = "cmd.exe",
-          //    Arguments = $"/k {streamerPath} {args}",
-          //    WorkingDirectory = Path.GetDirectoryName(streamerPath),
-          //    UseShellExecute = true
-          //};
+          var psi = environment.IsDebug
+            ? new ProcessStartInfo()
+              {
+                FileName = "cmd.exe",
+                Arguments = $"/k {streamerPath} {args}",
+                WorkingDirectory = Path.GetDirectoryName(streamerPath),
+                UseShellExecute = true
+              }
+            : new ProcessStartInfo
+              {
+                FileName = streamerPath,
+                Arguments = args,
+                WorkingDirectory = Path.GetDirectoryName(streamerPath),
+                UseShellExecute = true
+              };
+
           session.StreamerProcess = processes.Start(psi);
         }
 
@@ -164,55 +148,5 @@ internal class StreamerLauncherWindows(
     }
 
     return Result.Fail<string>("Not found.");
-  }
-
-  private async Task<Result<string>> GetCurrentInputDesktop(int targetWindowsSession)
-  {
-    var pipeName = Guid.NewGuid().ToString();
-    using var ipcServer = await ipcRouter.CreateServer(pipeName);
-
-    Process? process = null;
-
-    if (Environment.UserInteractive)
-    {
-      process = processes.Start(
-        environment.StartupExePath,
-        $"echo-desktop --pipe-name {pipeName}");
-    }
-    else
-    {
-      win32Interop.CreateInteractiveSystemProcess(
-        commandLine: $"\"{environment.StartupExePath}\" echo-desktop --pipe-name {pipeName}",
-        targetSessionId: targetWindowsSession,
-        hiddenWindow: true,
-        startedProcess: out process);
-    }
-
-    if (process is null || process.HasExited)
-    {
-      return Result.Fail<string>("Failed to start echo-desktop process.");
-    }
-
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(appLifetime.ApplicationStopping, cts.Token);
-    process.Exited += (_, _) => linkedCts.Cancel();
-    if (!await ipcServer.WaitForConnection(linkedCts.Token))
-    {
-      return Result.Fail<string>("Failed to connect to echo-desktop process.");
-    }
-
-    ipcServer.BeginRead(appLifetime.ApplicationStopping);
-    logger.LogInformation("Desktop echoer connected to pipe server.");
-    var desktopResult = await ipcServer.Invoke<DesktopRequestDto, DesktopResponseDto>(new DesktopRequestDto());
-    if (desktopResult.IsSuccess)
-    {
-      logger.LogInformation("Received current input desktop from echoer: {CurrentDesktop}",
-        desktopResult.Value.DesktopName);
-      await ipcServer.Send(new ShutdownRequestDto());
-      return Result.Ok(desktopResult.Value.DesktopName);
-    }
-
-    logger.LogError("Failed to get initial desktop from desktop echo.");
-    return Result.Fail<string>(desktopResult.Error);
   }
 }

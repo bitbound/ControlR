@@ -22,7 +22,7 @@ public interface IViewerHubConnection
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
 
   Task InvokeCtrlAltDel(Guid deviceId);
-
+  Task RefreshDeviceInfo(Guid deviceId);
   Task<Result> RequestStreamingSession(
     Guid deviceId,
     Guid sessionId,
@@ -162,6 +162,15 @@ internal class ViewerHubConnection(
     });
   }
 
+  public async Task RefreshDeviceInfo(Guid deviceId)
+  {
+    await TryInvoke(async () =>
+    {
+      var dto = new RefreshDeviceInfoRequestDto();
+      var wrapper = DtoWrapper.Create(dto, DtoType.RefreshDeviceInfoRequest);
+      await _viewerHub.Server.SendDtoToAgent(deviceId, wrapper);
+    });
+  }
 
   public async Task<Result> RequestStreamingSession(
     Guid deviceId,

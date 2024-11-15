@@ -19,10 +19,10 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
     _userId = extension?.Options.UserId;
   }
 
-  public DbSet<Device> Devices { get; init; }
-  public DbSet<Tenant> Tenants { get; init; }
-  public DbSet<Tag> Tags { get; init; }
-  public DbSet<UserPreference> UserPreferences { get; init; }
+  public required DbSet<Device> Devices { get; init; }
+  public required DbSet<Tenant> Tenants { get; init; }
+  public required DbSet<Tag> Tags { get; init; }
+  public required DbSet<UserPreference> UserPreferences { get; init; }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
@@ -104,7 +104,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
     }
   }
 
-  private void AddRoleConfig(ModelBuilder builder)
+  private static void AddRoleConfig(ModelBuilder builder)
   {
     builder
       .Entity<AppRole>()

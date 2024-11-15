@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Streamer.Services;
 
-internal class CursorWatcher(
+internal partial class CursorWatcher(
   IMessenger messenger,
   IWin32Interop win32Interop,
   IDelayer delayer,

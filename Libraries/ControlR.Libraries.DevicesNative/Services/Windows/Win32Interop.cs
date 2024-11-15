@@ -69,8 +69,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private FrozenDictionary<string, ushort>? _keyMap;
   private HDESK _lastInputDesktop;
 
+  [Flags]
+  private enum ShiftState : byte
+  {
+    None = 0,
+    ShiftPressed = 1 << 0,
+    CtrlPressed = 1 << 1,
+    AltPressed = 1 << 2,
+    HankakuPressed = 1 << 3,
+    Reserved1 = 1 << 4,
+    Reserved2 = 1 << 5
+  }
+
   public bool CreateInteractiveSystemProcess(
-    string commandLine,
+      string commandLine,
     int targetSessionId,
     bool hiddenWindow,
     out Process? startedProcess)
@@ -217,22 +229,24 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     for (var i = 0; i < count; i++)
     {
-      var wtsInfoObj = Marshal.PtrToStructure(current, typeof(WtsApi32.WtsSessionInfo));
-      if (wtsInfoObj is not WtsApi32.WtsSessionInfo sessionInfo)
+      try
       {
-        continue;
-      }
-
-      current += dataSize;
-      if (sessionInfo.State == WtsApi32.WtsConnectstateClass.WtsActive && sessionInfo.SessionID != consoleSessionId)
-      {
-        sessions.Add(new WindowsSession
+        var sessionInfo = Marshal.PtrToStructure<WtsApi32.WtsSessionInfo>(current);
+        current += dataSize;
+        if (sessionInfo.State == WtsApi32.WtsConnectstateClass.WtsActive && sessionInfo.SessionID != consoleSessionId)
         {
-          Id = sessionInfo.SessionID,
-          Name = sessionInfo.pWinStationName,
-          Type = WindowsSessionType.Rdp,
-          Username = GetUsernameFromSessionId(sessionInfo.SessionID)
-        });
+          sessions.Add(new WindowsSession
+          {
+            Id = sessionInfo.SessionID,
+            Name = sessionInfo.pWinStationName,
+            Type = WindowsSessionType.Rdp,
+            Username = GetUsernameFromSessionId(sessionInfo.SessionID)
+          });
+        }
+      }
+      catch (Exception ex)
+      {
+        logger.LogError(ex, "Failed to marshal active session.");
       }
     }
 
@@ -727,40 +741,25 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  private FrozenDictionary<HCURSOR, WindowsCursor> GetCursorMap()
-  {
-    return _cursorMap ??= new Dictionary<HCURSOR, WindowsCursor>
-    {
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = WindowsCursor.NormalArrow,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = WindowsCursor.Ibeam,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = WindowsCursor.Wait,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = WindowsCursor.SizeNwse,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = WindowsCursor.SizeNesw,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = WindowsCursor.SizeWe,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = WindowsCursor.SizeNs,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = WindowsCursor.Hand
-    }.ToFrozenDictionary();
-  }
-
   private static void AddShiftInput(List<INPUT> inputs, ShiftState shiftState, bool isPressed)
   {
     switch (shiftState)
     {
       case ShiftState.ShiftPressed:
-      {
-        inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_SHIFT, isPressed));
-        break;
-      }
+        {
+          inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_SHIFT, isPressed));
+          break;
+        }
       case ShiftState.CtrlPressed:
-      {
-        inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_CONTROL, isPressed));
-        break;
-      }
+        {
+          inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_CONTROL, isPressed));
+          break;
+        }
       case ShiftState.AltPressed:
-      {
-        inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_MENU, isPressed));
-        break;
-      }
+        {
+          inputs.Add(CreateKeyboardInput(VIRTUAL_KEY.VK_MENU, isPressed));
+          break;
+        }
       case ShiftState.HankakuPressed:
       case ShiftState.None:
       case ShiftState.Reserved1:
@@ -865,6 +864,34 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return new Point((int)(x / width * 65535), (int)(y / height * 65535));
   }
 
+  private static INPUT GetPointerMoveInput(int x, int y, MovePointerType moveType)
+  {
+    var extraInfo = PInvoke.GetMessageExtraInfo();
+    var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
+
+    if (moveType == MovePointerType.Absolute)
+    {
+      mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
+    }
+
+    var normalizedPoint = GetNormalizedPoint(x, y);
+
+    var mouseInput = new MOUSEINPUT
+    {
+      dx = normalizedPoint.X,
+      dy = normalizedPoint.Y,
+      dwFlags = mouseEventFlags,
+      mouseData = 0,
+      dwExtraInfo = new nuint(extraInfo.Value.ToPointer())
+    };
+
+    return new INPUT
+    {
+      type = INPUT_TYPE.INPUT_MOUSE,
+      Anonymous = { mi = mouseInput }
+    };
+  }
+
   [return: MarshalAs(UnmanagedType.Bool)]
   [LibraryImport("kernel32.dll", SetLastError = true)]
   private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
@@ -895,6 +922,24 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         VIRTUAL_KEY.VK_RETURN => true,
       _ => false
     };
+  }
+
+  private static string ResolveDesktopName(uint targetSessionId)
+  {
+    var isLogonScreenVisible = Process
+        .GetProcessesByName("LogonUI")
+        .Any(x => x.SessionId == targetSessionId);
+
+    var isSecureDesktopVisible = Process
+        .GetProcessesByName("consent")
+        .Any(x => x.SessionId == targetSessionId);
+
+    if (isLogonScreenVisible || isSecureDesktopVisible)
+    {
+      return "Winlogon";
+    }
+
+    return "Default";
   }
 
   private bool ConvertJavaScriptKeyToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
@@ -957,34 +1002,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return true;
   }
 
-  private INPUT GetPointerMoveInput(int x, int y, MovePointerType moveType)
+  private FrozenDictionary<HCURSOR, WindowsCursor> GetCursorMap()
   {
-    var extraInfo = PInvoke.GetMessageExtraInfo();
-    var mouseEventFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_VIRTUALDESK;
-
-    if (moveType == MovePointerType.Absolute)
+    return _cursorMap ??= new Dictionary<HCURSOR, WindowsCursor>
     {
-      mouseEventFlags |= MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE;
-    }
-
-    var normalizedPoint = GetNormalizedPoint(x, y);
-
-    var mouseInput = new MOUSEINPUT
-    {
-      dx = normalizedPoint.X,
-      dy = normalizedPoint.Y,
-      dwFlags = mouseEventFlags,
-      mouseData = 0,
-      dwExtraInfo = new nuint(extraInfo.Value.ToPointer())
-    };
-
-    return new INPUT
-    {
-      type = INPUT_TYPE.INPUT_MOUSE,
-      Anonymous = { mi = mouseInput }
-    };
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = WindowsCursor.NormalArrow,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = WindowsCursor.Ibeam,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = WindowsCursor.Wait,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = WindowsCursor.SizeNwse,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = WindowsCursor.SizeNesw,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = WindowsCursor.SizeWe,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = WindowsCursor.SizeNs,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = WindowsCursor.Hand
+    }.ToFrozenDictionary();
   }
-
   private FrozenDictionary<string, ushort> GetScanCodeKeyMap()
   {
     return _keyMap ??= new Dictionary<string, ushort>
@@ -1146,50 +1177,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       ["MediaSelect"] = 0xe06d
     }.ToFrozenDictionary();
   }
-
-  private string ResolveDesktopName(uint targetSessionId)
-  {
-    var isLogonScreenVisible = Process
-        .GetProcessesByName("LogonUI")
-        .Any(x => x.SessionId == targetSessionId);
-
-    var isSecureDesktopVisible = Process
-        .GetProcessesByName("consent")
-        .Any(x => x.SessionId == targetSessionId);
-
-    if (isLogonScreenVisible || isSecureDesktopVisible)
-    {
-      return "Winlogon";
-    }
-
-    return "Default";
-  }
-
-  private uint ResolveWindowsSession(int targetSessionId)
-  {
-    var activeSessions = GetActiveSessions();
-    if (activeSessions.Any(x => x.Id == targetSessionId))
-    {
-      // If exact match is found, return that session.
-      return (uint)targetSessionId;
-    }
-    if (PInvoke.IsOS(OS.OS_ANYSERVER))
-    {
-      // If Windows Server, default to console session.
-      return PInvoke.WTSGetActiveConsoleSessionId();
-    }
-
-    // If consumer version and there's an RDP session active, return that.
-    if (activeSessions.Find(x => x.Type == WindowsSessionType.Rdp) is { } rdSession)
-    {
-      return rdSession.Id;
-    }
-
-    // Otherwise, return the console session.
-    return PInvoke.WTSGetActiveConsoleSessionId();
-  }
-
-
   private void InvokeWheelScroll(int x, int y, int delta, bool isVertical)
   {
     var extraInfo = PInvoke.GetMessageExtraInfo();
@@ -1240,6 +1227,29 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       lastErrMessage);
   }
 
+  private uint ResolveWindowsSession(int targetSessionId)
+  {
+    var activeSessions = GetActiveSessions();
+    if (activeSessions.Any(x => x.Id == targetSessionId))
+    {
+      // If exact match is found, return that session.
+      return (uint)targetSessionId;
+    }
+    if (PInvoke.IsOS(OS.OS_ANYSERVER))
+    {
+      // If Windows Server, default to console session.
+      return PInvoke.WTSGetActiveConsoleSessionId();
+    }
+
+    // If consumer version and there's an RDP session active, return that.
+    if (activeSessions.Find(x => x.Type == WindowsSessionType.Rdp) is { } rdSession)
+    {
+      return rdSession.Id;
+    }
+
+    // Otherwise, return the console session.
+    return PInvoke.WTSGetActiveConsoleSessionId();
+  }
   private bool TryGetExplorerDuplicateToken(uint sessionId, [NotNullWhen(true)] out SafeFileHandle? primaryToken)
   {
     primaryToken = null;
@@ -1347,19 +1357,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     return true;
   }
-
-  [Flags]
-  private enum ShiftState : byte
-  {
-    None = 0,
-    ShiftPressed = 1 << 0,
-    CtrlPressed = 1 << 1,
-    AltPressed = 1 << 2,
-    HankakuPressed = 1 << 3,
-    Reserved1 = 1 << 4,
-    Reserved2 = 1 << 5
-  }
-
   [StructLayout(LayoutKind.Explicit)]
   private struct ShortHelper(short value)
   {

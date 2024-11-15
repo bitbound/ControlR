@@ -140,6 +140,8 @@ internal class DeviceDataGeneratorMac(
       return result.Value
         .Split()
         .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
         .ToArray();
     }
 

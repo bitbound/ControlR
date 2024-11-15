@@ -229,11 +229,8 @@ app.UseWhen(
   ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
-var staticFileOptions = new StaticFileOptions()
-{
-  ServeUnknownFileTypes = true
-};
-app.UseStaticFiles(staticFileOptions);
+
+app.MapStaticAssets();
 
 app.MapWebSocketBridge();
 app.MapHub<AgentHub>("/hubs/agent");

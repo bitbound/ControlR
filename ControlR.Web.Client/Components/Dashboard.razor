@@ -15,7 +15,7 @@
                Value="_hideOfflineDevices"
                ValueChanged="HideOfflineDevicesChanged"
                Label="Hide Offline Devices"
-               Disabled="IsHideOfflineDevicesDisabled"/>
+               Disabled="IsHideOfflineDevicesDisabled" />
 </div>
 
 <MudDataGrid T="DeviceViewModel"
@@ -29,238 +29,242 @@
              ShowColumnOptions="true"
              Filterable="true">
 
-<ToolBarContent>
-  <MudSpacer/>
-  <MudTextField
-    T="string"
-    @bind-Value="_searchText"
-    Placeholder="Search"
-    Clearable
-    Adornment="Adornment.Start"
-    Immediate
-    DebounceInterval="500"
-    AdornmentIcon="@Icons.Material.Filled.Search"
-    IconSize="Size.Medium"
-    Class="mt-0">
-  </MudTextField>
+  <ToolBarContent>
+    <MudSpacer />
+    <MudTextField T="string"
+                  @bind-Value="_searchText"
+                  Placeholder="Search"
+                  Clearable
+                  Adornment="Adornment.Start"
+                  Immediate
+                  DebounceInterval="500"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium"
+                  Class="mt-0">
+    </MudTextField>
 
-  <MudTooltip Text="Refresh">
-    <MudIconButton Variant="Variant.Outlined"
-                   Color="Color.Info"
-                   Class="ml-4"
-                   Icon="@(Icons.Material.Filled.Refresh)"
-                   OnClick="HandleRefreshClicked"/>
-  </MudTooltip>
-</ToolBarContent>
+    <MudTooltip Text="Refresh">
+      <MudIconButton Variant="Variant.Outlined"
+                     Color="Color.Info"
+                     Class="ml-4"
+                     Icon="@(Icons.Material.Filled.Refresh)"
+                     OnClick="HandleRefreshClicked" />
+    </MudTooltip>
+  </ToolBarContent>
 
-<Columns>
-  <TemplateColumn T="DeviceViewModel"
-                  Sortable="false"
-                  Filterable="false"
-                  ShowColumnOptions="false"
-                  Title="Actions">
+  <Columns>
+    <TemplateColumn T="DeviceViewModel"
+                    Sortable="false"
+                    Filterable="false"
+                    ShowColumnOptions="false"
+                    Title="Actions">
 
-    <CellTemplate>
-      <MudTooltip Text="Actions">
-        <MudMenu Variant="Variant.Outlined" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
-          @if (context.Item.IsOnline)
-          {
-            <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                         IconColor="Color.Info"
-                         OnClick="@(() => RemoteControlClicked(context.Item))">
-              Remote Control
-            </MudMenuItem>
-            <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
-                         IconColor="Color.Info"
-                         OnClick="@(() => StartTerminal(context.Item))">
-              Terminal
-            </MudMenuItem>
-            <MudMenuItem Icon="@(Icons.Material.Filled.Settings)"
-                         IconColor="Color.Info"
-                         OnClick="@(() => ConfigureDeviceSettings(context.Item))">
-              Configure
-            </MudMenuItem>
-
-            @if (IsAgentOutdated(context.Item))
+      <CellTemplate>
+        <MudTooltip Text="Actions">
+          <MudMenu Variant="Variant.Outlined" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
+            @if (context.Item.IsOnline)
             {
-              <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
-                           IconColor="Color.Warning"
-                           OnClick="@(() => UpdateDevice(context.Item.Id))">
-                Update
+              <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
+                           IconColor="Color.Info"
+                           OnClick="@(() => RemoteControlClicked(context.Item))">
+                Remote Control
+              </MudMenuItem>
+              <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
+                           IconColor="Color.Info"
+                           OnClick="@(() => StartTerminal(context.Item))">
+                Terminal
+              </MudMenuItem>
+              <MudMenuItem Icon="@(Icons.Material.Filled.Settings)"
+                           IconColor="Color.Info"
+                           OnClick="@(() => ConfigureDeviceSettings(context.Item))">
+                Configure
+              </MudMenuItem>
+
+              <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)"
+                           IconColor="Color.Success"
+                           OnClick="@(() => RefreshDeviceInfo(context.Item))">
+                Refresh
+              </MudMenuItem>
+
+              @if (IsAgentOutdated(context.Item))
+              {
+                <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
+                             IconColor="Color.Warning"
+                             OnClick="@(() => UpdateDevice(context.Item.Id))">
+                  Update
+                </MudMenuItem>
+              }
+
+              <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
+                           IconColor="Color.Error"
+                           OnClick="@(() => ShutdownDevice(context.Item))">
+                Shutdown
+              </MudMenuItem>
+              <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
+                           IconColor="Color.Error"
+                           OnClick="@(() => RestartDevice(context.Item))">
+                Restart
+              </MudMenuItem>
+              <MudMenuItem Icon="@(Icons.Material.Filled.DeleteForever)"
+                           IconColor="Color.Error"
+                           OnClick="@(() => UninstallAgent(context.Item))">
+                Delete
               </MudMenuItem>
             }
-
-            <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
-                         IconColor="Color.Error"
-                         OnClick="@(() => ShutdownDevice(context.Item))">
-              Shutdown
-            </MudMenuItem>
-            <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
-                         IconColor="Color.Error"
-                         OnClick="@(() => RestartDevice(context.Item))">
-              Restart
-            </MudMenuItem>
-            <MudMenuItem Icon="@(Icons.Material.Filled.DeleteForever)"
-                         IconColor="Color.Error"
-                         OnClick="@(() => UninstallAgent(context.Item))">
-              Delete
-            </MudMenuItem>
-          }
-          else
-          {
-            <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)"
-                         IconColor="Color.Success"
-                         OnClick="@(() => WakeDevice(context.Item))">
-              Wake
-            </MudMenuItem>
-            <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
-                         IconColor="Color.Error"
-                         OnClick="@(() => RemoveDevice(context.Item))">
-              Remove
-            </MudMenuItem>
-          }
-        </MudMenu>
-      </MudTooltip>
-    </CellTemplate>
-  </TemplateColumn>
-
-  <TemplateColumn T="DeviceViewModel"
-                  StickyLeft="true"
-                  Sortable="true"
-                  Filterable="true"
-                  Title="Name">
-    <CellTemplate>
-      @if (string.IsNullOrWhiteSpace(context.Item.Alias))
-      {
-        @(context.Item.Name)
-      }
-      else
-      {
-        @($"{context.Item.Name} ({context.Item.Alias})")
-      }
-    </CellTemplate>
-  </TemplateColumn>
+            else
+            {
+              <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)"
+                           IconColor="Color.Success"
+                           OnClick="@(() => WakeDevice(context.Item))">
+                Wake
+              </MudMenuItem>
+              <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
+                           IconColor="Color.Error"
+                           OnClick="@(() => RemoveDevice(context.Item))">
+                Remove
+              </MudMenuItem>
+            }
+          </MudMenu>
+        </MudTooltip>
+      </CellTemplate>
+    </TemplateColumn>
 
     <TemplateColumn T="DeviceViewModel"
-                  Sortable="true"
-                  Filterable="true"
-                  Title="Online">
-    <CellTemplate>
-      @if (context.Item.IsOnline)
-      {
-        if (IsAgentOutdated(context.Item))
+                    StickyLeft="true"
+                    Sortable="true"
+                    Filterable="true"
+                    Title="Name">
+      <CellTemplate>
+        @if (string.IsNullOrWhiteSpace(context.Item.Alias))
         {
-          <MudTooltip Text="Online (Outdated)">
-            <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)"/>
-          </MudTooltip>
+          @(context.Item.Name)
         }
         else
         {
-          <MudTooltip Text="Online">
-            <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)"/>
+          @($"{context.Item.Name} ({context.Item.Alias})")
+        }
+      </CellTemplate>
+    </TemplateColumn>
+
+    <TemplateColumn T="DeviceViewModel"
+                    Sortable="true"
+                    Filterable="true"
+                    Title="Online">
+      <CellTemplate>
+        @if (context.Item.IsOnline)
+        {
+          if (IsAgentOutdated(context.Item))
+          {
+            <MudTooltip Text="Online (Outdated)">
+              <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)" />
+            </MudTooltip>
+          }
+          else
+          {
+            <MudTooltip Text="Online">
+              <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
+            </MudTooltip>
+          }
+        }
+        else
+        {
+          <MudTooltip Text="Offline">
+            <MudIcon Icon="@(Icons.Material.Filled.Cancel)" Color="@(Color.Error)" />
           </MudTooltip>
         }
-      }
-      else
-      {
-        <MudTooltip Text="Offline">
-          <MudIcon Icon="@(Icons.Material.Filled.Cancel)" Color="@(Color.Error)"/>
-        </MudTooltip>
-      }
-    </CellTemplate>
-  </TemplateColumn>
+      </CellTemplate>
+    </TemplateColumn>
 
-  <PropertyColumn Property="x => x!.CurrentUsers"
-                  Title="Current Users"
-                  Sortable="true"
-                  Filterable="true">
-    <CellTemplate>
-      @(string.Join(", ", context.Item.CurrentUsers))
-    </CellTemplate>
-  </PropertyColumn>
+    <PropertyColumn Property="x => x!.CurrentUsers"
+                    Title="Current Users"
+                    Sortable="true"
+                    Filterable="true">
+      <CellTemplate>
+        @(string.Join(", ", context.Item.CurrentUsers))
+      </CellTemplate>
+    </PropertyColumn>
 
     <TemplateColumn T="DeviceViewModel"
-                  Title="CPU"
-                  Sortable="true"
-                  Filterable="true">
-    <CellTemplate>
-      @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
-    </CellTemplate>
-  </TemplateColumn>
+                    Title="CPU"
+                    Sortable="true"
+                    Filterable="true">
+      <CellTemplate>
+        @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
+      </CellTemplate>
+    </TemplateColumn>
 
     <TemplateColumn T="DeviceViewModel"
-                  Title="Memory"
-                  Sortable="true"
-                  Filterable="true">
-    <CellTemplate>
-      @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
-    </CellTemplate>
-  </TemplateColumn>
+                    Title="Memory"
+                    Sortable="true"
+                    Filterable="true">
+      <CellTemplate>
+        @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
+      </CellTemplate>
+    </TemplateColumn>
 
     <TemplateColumn T="DeviceViewModel"
-                  Title="Storage"
-                  Sortable="true"
-                  Filterable="true">
-    <CellTemplate>
-      @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
-    </CellTemplate>
-  </TemplateColumn>
-
+                    Title="Storage"
+                    Sortable="true"
+                    Filterable="true">
+      <CellTemplate>
+        @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
+      </CellTemplate>
+    </TemplateColumn>
     <HierarchyColumn T="DeviceViewModel" />
-</Columns>
-<ChildRowContent>
-  <div class="child-content-grid">
-    <div>
-      Total Memory:
+  </Columns>
+  <ChildRowContent>
+    <div class="child-content-grid">
+      <div>
+        Total Memory:
+      </div>
+      <div>
+        @($"{context.Item.TotalMemory:N2}") GB
+      </div>
+      <div>
+        Total Storage:
+      </div>
+      <div>
+        @($"{context.Item.TotalStorage:N0}") GB
+      </div>
+      <div>
+        Agent Version:
+      </div>
+      <div>
+        @(context.Item.AgentVersion)
+      </div>
+      <div>
+        Last Seen:
+      </div>
+      <div>
+        @(context.Item.LastSeen)
+      </div>
+      <div>
+        Platform:
+      </div>
+      <div>
+        @(context.Item.Platform)
+      </div>
+      <div>
+        OS Description:
+      </div>
+      <div>
+        @(context.Item.OsDescription)
+      </div>
+      <div>
+        OS Architecture:
+      </div>
+      <div>
+        @(context.Item.OsArchitecture)
+      </div>
+      <div>
+        MAC Addresses:
+      </div>
+      <div>
+        @(string.Join(", ", context.Item.MacAddresses))
+      </div>
     </div>
-    <div>
-      @($"{context.Item.TotalMemory:N2}") GB
-    </div>
-    <div>
-      Total Storage:
-    </div>
-    <div>
-      @($"{context.Item.TotalStorage:N0}") GB
-    </div>
-    <div>
-      Agent Version:
-    </div>
-    <div>
-      @(context.Item.AgentVersion)
-    </div>
-    <div>
-      Last Seen:
-    </div>
-    <div>
-      @(context.Item.LastSeen)
-    </div>
-    <div>
-      Platform:
-    </div>
-    <div>
-      @(context.Item.Platform)
-    </div>
-    <div>
-      OS Description:
-    </div>
-    <div>
-      @(context.Item.OsDescription)
-    </div>
-    <div>
-      OS Architecture:
-    </div>
-    <div>
-      @(context.Item.OsArchitecture)
-    </div>
-    <div>
-      MAC Addresses:
-    </div>
-    <div>
-      @(string.Join(", ", context.Item.MacAddresses))
-    </div>
-  </div>
-</ChildRowContent>
-<PagerContent>
-  <MudDataGridPager T="DeviceViewModel"/>
-</PagerContent>
+  </ChildRowContent>
+  <PagerContent>
+    <MudDataGridPager T="DeviceViewModel" />
+  </PagerContent>
 </MudDataGrid>

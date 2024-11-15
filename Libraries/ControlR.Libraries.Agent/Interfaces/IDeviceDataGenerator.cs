@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using ControlR.Libraries.Agent.Models;
+﻿using ControlR.Libraries.Agent.Models;
 
 namespace ControlR.Libraries.Agent.Interfaces;
 

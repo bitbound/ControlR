@@ -356,6 +356,18 @@ public partial class Dashboard
     }
   }
 
+  private async Task RefreshDeviceInfo(DeviceViewModel device)
+  {
+    try
+    {
+      await ViewerHub.RefreshDeviceInfo(device.Id);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while refreshing device info.");
+      Snackbar.Add("An error occurred while refreshing device info", Severity.Error);
+    }
+  }
   private void StartTerminal(DeviceViewModel device)
   {
     try

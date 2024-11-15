@@ -103,6 +103,7 @@ internal class DeviceDataGeneratorLinux(
         .Split()
         .Select(x => x.Trim())
         .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
         .ToArray();
     }
 

@@ -487,7 +487,7 @@ public partial class RemoteDisplay : IAsyncDisposable
           }
         case DtoType.WindowsSessionSwitched:
           {
-            Snackbar.Add("Remote Windows session switched", Severity.Warning);
+            Snackbar.Add("Remote Windows session switched", Severity.Info);
             break;
           }
       }

@@ -78,6 +78,11 @@ internal class Settings(
         return defaultValue;
       }
 
+      if (getResult.Value is null)
+      {
+        return defaultValue;
+      }
+
       if (Convert.ChangeType(getResult.Value.Value, typeof(T)) is not T typedResult)
       {
         return defaultValue;

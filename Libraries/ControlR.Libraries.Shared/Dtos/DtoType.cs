@@ -30,4 +30,5 @@ public enum DtoType
   RequestClipboardText = 35,
   WindowsSessionEnding = 36,
   WindowsSessionSwitched = 37,
+  RefreshDeviceInfoRequest = 38,
 }

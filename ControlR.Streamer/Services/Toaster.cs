@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using Windows.UI.Notifications;
 
 namespace ControlR.Streamer.Services;
 
@@ -26,7 +27,7 @@ internal class Toaster(
         Arguments = $"-EncodedCommand {base64}",
         UseShellExecute = true,
         CreateNoWindow = true,
-        WindowStyle = ProcessWindowStyle.Hidden
+        WindowStyle = ProcessWindowStyle.Hidden,
       };
       processManager.Start(psi);
     }
@@ -49,6 +50,7 @@ internal class Toaster(
     };
 
     return $@"
+$Host.UI.RawUI.WindowTitle = ""ControlR""
 [System.Reflection.Assembly]::LoadWithPartialName(""System.Windows.Forms"")
 [System.Reflection.Assembly]::LoadWithPartialName(""System.Drawing"")
 $Notify = New-Object System.Windows.Forms.NotifyIcon

@@ -23,7 +23,7 @@ public interface IControlrApi
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<ServerSettingsDto>> GetServerSettings();
-  Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName);
+  Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
@@ -207,11 +207,17 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint));
   }
 
-  public async Task<Result<UserPreferenceResponseDto>> GetUserPreference(string preferenceName)
+  public async Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName)
   {
-    return await TryCallApi(async () => 
-      await _client.GetFromJsonAsync<UserPreferenceResponseDto>(
-        $"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}"));
+    return  await TryGetNullableResponse(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
+      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+      {
+        return null;
+      }
+      return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
   }
 
   public async Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false)
@@ -300,6 +306,27 @@ public class ControlrApi(
     {
       return Result
         .Fail<T>(ex, "The request to the server failed.")
+        .Log(_logger);
+    }
+  }
+
+  private async Task<Result<T?>> TryGetNullableResponse<T>(Func<Task<T?>> func)
+  {
+    try
+    {
+      var resultValue = await func.Invoke();
+      return Result.Ok(resultValue);
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail<T?>(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<T?>(ex, "The request to the server failed.")
         .Log(_logger);
     }
   }

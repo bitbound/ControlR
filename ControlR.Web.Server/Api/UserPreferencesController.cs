@@ -33,7 +33,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
   }
 
   [HttpGet("{name}")]
-  public async Task<ActionResult<UserPreferenceResponseDto>> GetPreference(string name)
+  public async Task<ActionResult<UserPreferenceResponseDto?>> GetPreference(string name)
   {
     if (User.Identity is null)
     {
@@ -55,7 +55,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
 
     if (preference is null)
     {
-      return NotFound();
+      return NoContent();
     }
 
     return preference.ToDto();
