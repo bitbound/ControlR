@@ -1,12 +1,21 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Web.Client.Extensions;
 
 namespace ControlR.Web.Client.Services;
 
 public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : IViewerHubClient
 {
-  private readonly IMessenger _messenger = messenger;
   private readonly IDeviceStore _deviceStore = deviceStore;
+  private readonly IMessenger _messenger = messenger;
+  public async Task InvokeToast(ToastInfo toastInfo)
+  {
+    var toastMessage = new ToastMessage(
+      toastInfo.Message, 
+      toastInfo.MessageSeverity.ToMudSeverity());
+
+    await _messenger.Send(toastMessage);
+  }
 
   public async Task ReceiveDeviceUpdate(DeviceDto deviceDto)
   {

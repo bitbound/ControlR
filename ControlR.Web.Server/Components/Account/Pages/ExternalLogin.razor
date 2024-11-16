@@ -139,7 +139,7 @@
     
     if (_externalLoginInfo is null)
     {
-      RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login providers.", HttpContext);
+      RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login information during confirmation.", HttpContext);
     }
     
     var createUserResult = await UserCreator.CreateUser(Input.Email, _externalLoginInfo, ReturnUrl);

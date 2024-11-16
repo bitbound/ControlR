@@ -8,6 +8,13 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Data\Entities\Enums\**" />
+    <Content Remove="Data\Entities\Enums\**" />
+    <EmbeddedResource Remove="Data\Entities\Enums\**" />
+    <None Remove="Data\Entities\Enums\**" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="9.0.0" />
@@ -40,7 +47,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\Entities\Enums\" />
     <Folder Include="Data\Migrations\" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,78 @@
+﻿@attribute [Route(ClientRoutes.Invite)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+@inject ILogger<Invite> Logger
+@inject IInviteStore InviteStore
+
+<PageTitle>Invite</PageTitle>
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  Invite
+</MudText>
+
+<MudDataGrid T="TenantInviteResponseDto"
+             RowsPerPage="@(25)"
+             Items="InviteStore.Items"
+             SortMode="SortMode.Multiple"
+             QuickFilter="JsonValueFilter.GetQuickFilter<TenantInviteResponseDto>(_searchText, Logger)"
+             Loading="_loading"
+             SortDefinitions="_sortDefinitions"
+             ShowColumnOptions="true"
+             Filterable="true">
+  <ToolBarContent>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">
+      Pending Invites
+    </MudText>
+    <MudSpacer />
+    <MudTextField T="string"
+                  @bind-Value="_searchText"
+                  Placeholder="Search"
+                  Clearable
+                  Adornment="Adornment.Start"
+                  Immediate
+                  DebounceInterval="500"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium"
+                  Class="mt-0">
+    </MudTextField>
+
+    <MudTooltip Text="Refresh">
+      <MudIconButton Variant="Variant.Outlined"
+                     Color="Color.Info"
+                     Class="ml-4"
+                     Icon="@(Icons.Material.Filled.Refresh)"
+                     OnClick="HandleRefreshClicked" />
+    </MudTooltip>
+  </ToolBarContent>
+</MudDataGrid>
+
+@code {
+  private bool _loading = true;
+  private string _searchText = string.Empty;
+  private ObservableCollection<TenantInviteResponseDto> Invitations { get; } = [];
+
+  private readonly Dictionary<string, SortDefinition<TenantInviteResponseDto>> _sortDefinitions = new()
+    {
+      ["CreatedAt"] = new SortDefinition<TenantInviteResponseDto>(
+            SortBy: nameof(TenantInviteResponseDto.CreatedAt),
+          Descending: false,
+          Index: 1,
+          SortFunc: x => x.CreatedAt)
+    };
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    await InviteStore.Refresh();
+    InviteStore.RegisterChangeHandler(this, HandleInviteStoreChanged);
+  }
+
+  private async Task HandleInviteStoreChanged()
+  {
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task HandleRefreshClicked()
+  {
+    await InviteStore.Refresh();
+  }
+}

@@ -2,7 +2,6 @@
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Web.Client.Extensions;
-using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -17,6 +16,7 @@ public class ViewerHub(
   IConnectionCounter connectionCounter,
   IIpApi ipApi,
   IWsBridgeApi wsBridgeApi,
+  IStreamStore streamStore,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
@@ -30,6 +30,7 @@ public class ViewerHub(
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IWsBridgeApi _wsBridgeApi = wsBridgeApi;
+  private readonly IStreamStore _streamStore = streamStore;
 
   public Task<bool> CheckIfServerAdministrator()
   {
@@ -531,6 +532,44 @@ public class ViewerHub(
     _logger.LogError("UserId claim is unexpected missing when calling {MemberName}.", callerName);
     return false;
   }
+
+  public async IAsyncEnumerable<byte[]> GetStream(Guid streamId)
+  {
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    var sessionResult = await _streamStore.WaitForStreamSession(
+        streamId,
+        Context.ConnectionId,
+        cts.Token);
+
+    if (!sessionResult.IsSuccess)
+    {
+      var toastInfo = new ToastInfo(sessionResult.Reason, MessageSeverity.Error);
+      await Clients.Caller.InvokeToast(toastInfo);
+      yield break;
+    }
+
+    var signaler = sessionResult.Value;
+
+    if (signaler.Stream is null)
+    {
+      _logger.LogError("Stream was null.");
+      yield break;
+    }
+
+    try
+    {
+      await foreach (var chunk in signaler.Stream)
+      {
+        yield return chunk;
+      }
+    }
+    finally
+    {
+      signaler.EndSignal.Set();
+      _logger.LogInformation("Streaming session ended for {sessionId}.", streamId);
+    }
+  }
+
 
   private bool VerifyIsServerAdmin([CallerMemberName] string callerMember = "")
   {

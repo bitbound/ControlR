@@ -213,6 +213,8 @@
       </TemplateColumn>
       <HierarchyColumn T="DeviceViewModel" />
     </Columns>
+
+
     <ChildRowContent>
       <MudGrid>
         <MudItem xs="12" sm="6" md="4" Class="text-center">
@@ -221,17 +223,17 @@
           </MudText>
           <div class="child-content-grid">
             <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Id:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.Id
-            </MudText>
-
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
               Name:
             </MudText>
             <MudText Typo="Typo.body1">
               @context.Item.Name
+            </MudText>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Id:
+            </MudText>
+            <MudText Typo="Typo.body1">
+              @context.Item.Id
             </MudText>
 
             <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
@@ -249,7 +251,6 @@
             </MudText>
           </div>
         </MudItem>
-
 
         <MudItem xs="12" sm="6" md="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">

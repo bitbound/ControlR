@@ -49,9 +49,16 @@
           <MudSwitch T="bool"
                      Value="@(role.UserIds.Contains(_selectedUser.Id))"
                      Color="Color.Success"
+                     Disabled="@ShouldPreventSelfLockout(role)"
                      ValueChanged="@(async isToggled => await SetUserRole(isToggled, _selectedUser, role))">
             @role.Name
           </MudSwitch>
+          if (ShouldPreventSelfLockout(role))
+          {
+            <MudText Typo="Typo.caption" Color="Color.Warning">
+              Changes are disabled to prevent self-lockout.
+            </MudText>
+          }
         }
       </MudPaper>
     }

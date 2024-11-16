@@ -20,8 +20,9 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
   }
 
   public required DbSet<Device> Devices { get; init; }
-  public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<Tag> Tags { get; init; }
+  public required DbSet<TenantInvite> TenantInvites { get; init; }
+  public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
 
   protected override void OnModelCreating(ModelBuilder builder)
@@ -30,81 +31,36 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
 
     SeedDatabase(builder);
 
-    AddDeviceConfig(builder);
+    ConfigureDevices(builder);
 
-    AddRoleConfig(builder);
+    ConfigureRoles(builder);
 
-    AddTagsConfig(builder);
+    ConfigureTags(builder);
     
-    AddUsersConfig(builder);
+    ConfigureUsers(builder);
 
-    AddUserPreferenceConfig(builder);
+    ConfigureUserPreferences(builder);
+
+    ConfigureTenantInvites(builder);
 
     ApplyReflectionBasedConfiguration(builder);
   }
 
-  private void AddUsersConfig(ModelBuilder builder)
+  private void ConfigureTenantInvites(ModelBuilder builder)
   {
     builder
-      .Entity<AppUser>()
-      .HasMany(x => x.UserRoles)
-      .WithOne()
-      .HasForeignKey(x => x.UserId);
+      .Entity<TenantInvite>()
+      .HasIndex(x => x.ActivationCode);
 
     if (_tenantId is not null)
     {
       builder
-        .Entity<AppUser>()
-        .HasQueryFilter(x => x.TenantId == _tenantId);
-    }
-  }
-  
-  private void AddDeviceConfig(ModelBuilder builder)
-  {
-    builder
-      .Entity<Device>()
-      .OwnsMany(x => x.Drives)
-      .ToJson();
-
-    if (_tenantId is not null)
-    {
-      builder
-        .Entity<Device>()
+        .Entity<TenantInvite>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
 
-  private void AddTagsConfig(ModelBuilder builder)
-  {
-    builder
-      .Entity<Tag>()
-      .HasIndex(x => new { x.Name, x.TenantId })
-      .IsUnique();
-
-    if (_tenantId is not null)
-    {
-      builder
-        .Entity<Tag>()
-        .HasQueryFilter(x => x.TenantId == _tenantId);
-    }
-  }
-
-  private void AddUserPreferenceConfig(ModelBuilder builder)
-  {
-    builder
-      .Entity<UserPreference>()
-      .HasIndex(x => new { x.Name, x.UserId })
-      .IsUnique();
-
-    if (_userId is not null)
-    {
-      builder
-        .Entity<UserPreference>()
-        .HasQueryFilter(x => x.UserId == _userId);
-    }
-  }
-
-  private static void AddRoleConfig(ModelBuilder builder)
+  private static void ConfigureRoles(ModelBuilder builder)
   {
     builder
       .Entity<AppRole>()
@@ -146,7 +102,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
       }
     }
   }
-  
+
   private static void SeedDatabase(ModelBuilder builder)
   {
     builder
@@ -178,5 +134,66 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
           Name = RoleNames.DeviceSuperUser,
           NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
         });
+  }
+
+  private void ConfigureDevices(ModelBuilder builder)
+  {
+    builder
+      .Entity<Device>()
+      .OwnsMany(x => x.Drives)
+      .ToJson();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<Device>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureTags(ModelBuilder builder)
+  {
+    builder
+      .Entity<Tag>()
+      .HasIndex(x => new { x.Name, x.TenantId })
+      .IsUnique();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<Tag>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureUserPreferences(ModelBuilder builder)
+  {
+    builder
+      .Entity<UserPreference>()
+      .HasIndex(x => new { x.Name, x.UserId })
+      .IsUnique();
+
+    if (_userId is not null)
+    {
+      builder
+        .Entity<UserPreference>()
+        .HasQueryFilter(x => x.UserId == _userId);
+    }
+  }
+
+  private void ConfigureUsers(ModelBuilder builder)
+  {
+    builder
+      .Entity<AppUser>()
+      .HasMany(x => x.UserRoles)
+      .WithOne()
+      .HasForeignKey(x => x.UserId);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<AppUser>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
   }
 }

@@ -48,16 +48,9 @@ public partial class UsersTabContent : ComponentBase, IDisposable
         query = query.Where(x => x.Name != RoleNames.ServerAdministrator);
       }
 
-      if (_selectedUser?.Id == _currentUserId)
-      {
-        query = query.Where(x =>
-          x.Name is not RoleNames.ServerAdministrator and not RoleNames.TenantAdministrator);
-      }
-
       return query.OrderBy(x => x.Name);
     }
   }
-
   private IOrderedEnumerable<TagViewModel> FilteredTags =>
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
@@ -67,7 +60,6 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     UserStore.Items
       .Where(x => x.UserName?.Contains(_userSearchPattern, StringComparison.OrdinalIgnoreCase) == true)
       .OrderBy(x => x.UserName);
-
 
   public void Dispose()
   {
@@ -166,5 +158,20 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       Logger.LogError(ex, "Error while setting tag.");
       Snackbar.Add("An error occurred while setting tag", Severity.Error);
     }
+  }
+
+  private bool ShouldPreventSelfLockout(RoleViewModel role)
+  {
+    if (role.Name is not RoleNames.ServerAdministrator and not RoleNames.TenantAdministrator)
+    {
+      return false;
+    }
+
+    if (_selectedUser?.Id == _currentUserId)
+    {
+      return true;
+    }
+
+    return false;
   }
 }

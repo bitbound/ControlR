@@ -10,14 +10,14 @@
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
     Home
   </MudNavLink>
-  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
-  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(RouteNames.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+  <MudNavLink Disabled="IsDisabled || !_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
     Settings
   </MudNavLink>
 
-  <MudNavLink Href="@(RouteNames.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
+  <MudNavLink Href="@(ClientRoutes.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
     About
   </MudNavLink>
 
@@ -27,8 +27,11 @@
         Tenant Admin
       </MudText>
     </div>
-    <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+    <MudNavLink Disabled="IsDisabled" Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
       Permissions
+    </MudNavLink>
+    <MudNavLink Disabled="IsDisabled" Href="@(ClientRoutes.Invite)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">
+      Invite
     </MudNavLink>
   </AuthorizeView>
   <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
@@ -38,7 +41,7 @@
           Server Admin
         </MudText>
       </div>
-      <MudNavLink Disabled="IsDisabled" Href="@(RouteNames.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+      <MudNavLink Disabled="IsDisabled" Href="@(ClientRoutes.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
         Server Stats
       </MudNavLink>
     </Authorized>

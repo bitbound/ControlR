@@ -130,6 +130,7 @@ builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequiremen
 builder.Services
   .AddIdentityCore<AppUser>(options =>
   {
+    options.User.RequireUniqueEmail = true;
     options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
@@ -196,6 +197,7 @@ builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvide
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
 builder.Services.AddWebSocketBridge();
+builder.Services.AddSingleton<IStreamStore, StreamStore>();
 
 builder.Host.UseSystemd();
 

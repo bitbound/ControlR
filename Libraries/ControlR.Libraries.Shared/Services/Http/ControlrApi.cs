@@ -22,6 +22,8 @@ public interface IControlrApi
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
+  Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
+  Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
@@ -77,6 +79,17 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.TagsEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<TagResponseDto>();
+    });
+  }
+
+  public async Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail)
+  {
+    return await TryCallApi(async () =>
+    {
+      var request = new TenantInviteRequestDto(invteeEmail);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.InvitesEndpoint, request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>();
     });
   }
 
@@ -200,6 +213,12 @@ public class ControlrApi(
       _logger.LogError(ex, "Error while checking for new streamer hash.");
       return Result.Fail<byte[]>(ex);
     }
+  }
+
+  public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint));
   }
 
   public async Task<Result<ServerSettingsDto>> GetServerSettings()
