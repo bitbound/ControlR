@@ -22,3 +22,4 @@ global using Microsoft.AspNetCore.Identity;
 global using Microsoft.AspNetCore.Authorization;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Options;
+global using ControlR.Web.Server.Hubs;

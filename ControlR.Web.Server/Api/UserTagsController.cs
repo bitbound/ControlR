@@ -33,7 +33,7 @@ public class UserTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+   
     var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
     
     if (tag is null)
