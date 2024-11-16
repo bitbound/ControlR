@@ -1,11 +1,18 @@
-﻿@attribute [Route(ClientRoutes.Invite)]
+﻿@using System.ComponentModel.DataAnnotations
+@attribute [Route(ClientRoutes.Invite)]
 @attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
 @inject ILogger<Invite> Logger
 @inject IInviteStore InviteStore
+@inject IControlrApi ControlrApi
+@inject ISnackbar Snackbar
 
 <PageTitle>Invite</PageTitle>
 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
   Invite
+</MudText>
+
+<MudText Typo="Typo.subtitle1" GutterBottom>
+  Add new users to your tenant, and manage pending invitations.
 </MudText>
 
 <MudDataGrid T="TenantInviteResponseDto"
@@ -16,12 +23,38 @@
              Loading="_loading"
              SortDefinitions="_sortDefinitions"
              ShowColumnOptions="true"
+             Class="mt-4"
              Filterable="true">
   <ToolBarContent>
-    <MudText Typo="Typo.body1" Color="Color.Secondary">
-      Pending Invites
-    </MudText>
-    <MudSpacer />
+
+    <EditForm @ref="_inviteForm"
+              Model="@_inputModel"
+              OnValidSubmit="HandleValidSubmit"
+              OnInvalidSubmit="HandleInvalidSubmit"
+              class="flex-grow-0">
+
+      <DataAnnotationsValidator />
+      <MudTextField T="string"
+                    @bind-Value="_inputModel.Email"
+                    For="@(() => _inputModel.Email)"
+                    Label="Invite New User"
+                    InputType="InputType.Email"
+                    Immediate
+                    Placeholder="Enter the email of the new user"
+                    AdornmentIcon="@(Icons.Material.Filled.PersonAdd)"
+                    OnAdornmentClick="InvokeSubmit"
+                    UserAttributes="_inputAttributes"
+                    AdornmentColor="Color.Success"
+                    AdornmentAriaLabel="Create Tag"
+                    Adornment="Adornment.End"
+                    FullWidth="true"
+                    Class="flex-grow-0"
+                    OnlyValidateIfDirty
+                    OnKeyDown="HandleNewInviteKeyDown">
+      </MudTextField>
+    </EditForm>
+
+
     <MudTextField T="string"
                   @bind-Value="_searchText"
                   Placeholder="Search"
@@ -31,7 +64,7 @@
                   DebounceInterval="500"
                   AdornmentIcon="@Icons.Material.Filled.Search"
                   IconSize="Size.Medium"
-                  Class="mt-0">
+                  Class="flex-grow-0">
     </MudTextField>
 
     <MudTooltip Text="Refresh">
@@ -45,17 +78,26 @@
 </MudDataGrid>
 
 @code {
+  private EditForm _inviteForm = default!;
+  private InputModel _inputModel = new();
   private bool _loading = true;
   private string _searchText = string.Empty;
+  private readonly Dictionary<string, object> _inputAttributes = new()
+    {
+      ["autocapitalize"] = "off",
+      ["spellcheck"] = "false",
+      ["autocomplete"] = "off"
+    };
+
   private ObservableCollection<TenantInviteResponseDto> Invitations { get; } = [];
 
   private readonly Dictionary<string, SortDefinition<TenantInviteResponseDto>> _sortDefinitions = new()
     {
       ["CreatedAt"] = new SortDefinition<TenantInviteResponseDto>(
-            SortBy: nameof(TenantInviteResponseDto.CreatedAt),
-          Descending: false,
-          Index: 1,
-          SortFunc: x => x.CreatedAt)
+                SortBy: nameof(TenantInviteResponseDto.CreatedAt),
+              Descending: false,
+              Index: 0,
+              SortFunc: x => x.CreatedAt)
     };
 
   protected override async Task OnInitializedAsync()
@@ -64,15 +106,71 @@
 
     await InviteStore.Refresh();
     InviteStore.RegisterChangeHandler(this, HandleInviteStoreChanged);
+    _loading = false;
   }
+
 
   private async Task HandleInviteStoreChanged()
   {
     await InvokeAsync(StateHasChanged);
   }
 
+  private async Task HandleNewInviteKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter")
+    {
+      await InvokeSubmit();
+    }
+  }
+
+  private async Task HandleInvalidSubmit(EditContext context)
+  {
+    await InvokeAsync(StateHasChanged);
+  }
+
+
+  private async Task HandleValidSubmit(EditContext context)
+  {
+    if (string.IsNullOrWhiteSpace(_inputModel.Email))
+    {
+      return;
+    }
+    var createResult = await ControlrApi.CreateTenantInvite(_inputModel.Email);
+    if (!createResult.IsSuccess)
+    {
+      Snackbar.Add(createResult.Reason, Severity.Error);
+      return;
+    }
+
+    _inputModel.Email = string.Empty;
+    await InviteStore.Refresh();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task InvokeSubmit()
+  {
+    await _inviteForm.OnSubmit.InvokeAsync();
+  }
+
   private async Task HandleRefreshClicked()
   {
     await InviteStore.Refresh();
+  }
+
+  private string? ValidateEmail(string input)
+  {
+    if (string.IsNullOrWhiteSpace(input))
+    {
+      return "Email is required.";
+    }
+
+    return null;
+  }
+
+  private class InputModel
+  {
+    [Required]
+    [EmailAddress]
+    public string? Email { get; set; }
   }
 }

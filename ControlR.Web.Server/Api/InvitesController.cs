@@ -42,10 +42,12 @@ public class InvitesController : ControllerBase
       return Conflict("Invitee already has a pending invite.");
     }
 
-    if (await appDb.Users.AnyAsync(x => x.Email!.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase)))
+#pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
+    if (await appDb.Users.AnyAsync(x => x.Email!.ToLower() == normalizedEmail))
     {
       return Conflict("User already exists in the database.");
     }
+#pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
     var randomPassword = RandomGenerator.GenerateString(64);
     var createResult = await userCreator.CreateUser(dto.InviteeEmail, randomPassword, returnUrl: null);

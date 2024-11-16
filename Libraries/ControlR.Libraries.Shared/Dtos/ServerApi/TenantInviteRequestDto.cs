@@ -1,3 +1,7 @@
-﻿namespace ControlR.Libraries.Shared.Dtos.ServerApi;
+﻿using System.ComponentModel.DataAnnotations;
 
-public record TenantInviteRequestDto(string InviteeEmail);
+namespace ControlR.Libraries.Shared.Dtos.ServerApi;
+
+public record TenantInviteRequestDto(
+  [EmailAddress]
+  string InviteeEmail);
