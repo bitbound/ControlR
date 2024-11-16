@@ -4,6 +4,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
+@inject ISnackbar Snackbar
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -43,20 +44,29 @@
     </Authorized>
   </AuthorizeView>
 
-  <MudDivider Class="mt-2 mb-2"/>
+  <MudDivider Class="mt-2 mb-2" />
 
   <AuthorizeView>
     <Authorized>
       <MudNavLink Disabled="@IsDisabled" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
-      <form action="Account/Logout" method="post">
-        <AntiforgeryToken/>
-        <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
-        <button type="submit" class="mud-nav-link mud-ripple">
+      @if (RendererInfo.IsInteractive)
+      {
+        <button type="button" class="mud-nav-link mud-ripple" @onclick="HandleLogoutClicked">
           <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
         </button>
-      </form>
+      }
+      else
+      {
+        <form action="Account/Logout" method="post">
+          <AntiforgeryToken />
+          <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
+          <button type="submit" class="mud-nav-link mud-ripple">
+            <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
+          </button>
+        </form>
+      }
     </Authorized>
     <NotAuthorized>
       @if (_isPublicRegistrationEnabled)
@@ -118,6 +128,17 @@
     {
       Logger.LogError(ex, "Error while handling auth state change.");
     }
+  }
+
+  private async Task HandleLogoutClicked()
+  {
+    var result = await ControlrApi.LogOut();
+    if (!result.IsSuccess) {
+      Snackbar.Add("Logout failed", Severity.Error);
+      return;
+    }
+
+    NavMan.NavigateTo("/", true);
   }
 
   private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

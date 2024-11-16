@@ -54,16 +54,13 @@ public partial class UsersTabContent : ComponentBase, IDisposable
           x.Name is not RoleNames.ServerAdministrator and not RoleNames.TenantAdministrator);
       }
 
-      return query
-        .Select(x => new RoleViewModel(x))
-        .OrderBy(x => x.Name);
+      return query.OrderBy(x => x.Name);
     }
   }
 
   private IOrderedEnumerable<TagViewModel> FilteredTags =>
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
-      .Select(x => new TagViewModel(x))
       .OrderBy(x => x.Name);
 
   private IOrderedEnumerable<UserResponseDto> FilteredUsers =>

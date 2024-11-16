@@ -25,6 +25,7 @@ public interface IControlrApi
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result> LogOut();
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
@@ -43,7 +44,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var dto = new DeviceTagAddRequestDto(deviceId, tagId);
-      var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceTagsEndpoint}", dto);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceTagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
     });
   }
@@ -53,7 +54,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var dto = new UserRoleAddRequestDto(userId, roleId);
-      var response = await _client.PostAsJsonAsync($"{HttpConstants.UserRolesEndpoint}", dto);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UserRolesEndpoint}", dto);
       response.EnsureSuccessStatusCode();
     });
   }
@@ -63,7 +64,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var dto = new UserTagAddRequestDto(userId, tagId);
-      var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
     });
   }
@@ -73,7 +74,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var request = new TagCreateRequestDto(tagName, tagType);
-      var response = await _client.PostAsJsonAsync(HttpConstants.TagsEndpoint, request);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.TagsEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<TagResponseDto>();
     });
@@ -83,7 +84,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.DeleteAsync($"{HttpConstants.DevicesEndpoint}/{deviceId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.DevicesEndpoint}/{deviceId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -92,7 +93,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -227,11 +228,20 @@ public class ControlrApi(
         $"{HttpConstants.UserTagsEndpoint}/{userId}"));
   }
 
+  public async Task<Result> LogOut()
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.LogoutEndpoint, new { });
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
   public async Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId)
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.DeleteAsync($"{HttpConstants.DeviceTagsEndpoint}/{deviceId}/{tagId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.DeviceTagsEndpoint}/{deviceId}/{tagId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -240,7 +250,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.DeleteAsync($"{HttpConstants.UserRolesEndpoint}/{userId}/{roleId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.UserRolesEndpoint}/{userId}/{roleId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -250,7 +260,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -260,7 +270,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var request = new UserPreferenceRequestDto(preferenceName, preferenceValue);
-      var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
     });

@@ -2,7 +2,6 @@
 using ControlR.Libraries.Agent.Models;
 using ControlR.Libraries.Agent.Services.Base;
 using Microsoft.Extensions.Options;
-using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
 
 namespace ControlR.Libraries.Agent.Services.Linux;
 

@@ -33,7 +33,6 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   private IOrderedEnumerable<TagViewModel> FilteredTags => 
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
-      .Select(x => new TagViewModel(x))
       .OrderBy(x => x.Name);
 
   public void Dispose()

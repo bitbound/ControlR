@@ -30,6 +30,13 @@
   white-space: nowrap;
 }
 
+.ellipsis-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
 
 #mud-snackbar-container {
   /* Place above content windows. */

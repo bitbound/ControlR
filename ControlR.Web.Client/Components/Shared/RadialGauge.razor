@@ -1,0 +1,83 @@
+﻿@using System.Drawing
+@using Microsoft.AspNetCore.Components.Rendering
+
+<div style="@OuterDivStyle" class="@Class">
+  <svg viewBox="0 0 42 42" width="100%" height="100%">
+    <circle class="gauge-base"
+            cx="21"
+            cy="21"
+            r="15.91549431"
+            fill="none"
+            stroke="gray"
+            stroke-width="4" />
+    <circle class="gauge-progress"
+            cx="21"
+            cy="21"
+            r="15.91549431"
+            fill="none"
+            stroke="@GaugeColor"
+            stroke-width="@StrokeWidth"
+            stroke-dasharray="@(Percent * 100) 100"
+            stroke-linecap="butt" />
+  </svg>
+  <div class="center-value">
+    @ChildContent
+  </div>
+</div>
+
+@code {
+  [Parameter]
+  [EditorRequired]
+  public required double Value { get; set; }
+
+  [Parameter]
+  [EditorRequired]
+  public required double MaxValue { get; set; }
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+  [Parameter]
+  public string? Class { get; set; }
+
+  [Parameter]
+  public uint StrokeWidth { get; set; } = 4;
+
+  [Parameter]
+  public string? Height { get; set; }
+
+  [Parameter]
+  public string? Width { get; set; }
+
+  private string GaugeColor => Percent switch
+  {
+    var v when v >= .9 => "rgba(246,78,98,1)",
+    var v when v >= .8 => "rgba(255,168,0,1)",
+    _ => "rgba(11,186,131,1)"
+  };
+
+  private string OuterDivStyle
+  {
+    get
+    {
+      var style = "position: relative; margin: auto;";
+      if (!string.IsNullOrWhiteSpace(Width) && !string.IsNullOrWhiteSpace(Height))
+      {
+        style += $" width: {Width}; height: {Height};";
+      }
+      return style;
+    }
+  }
+
+  private double Percent
+  {
+    get
+    {
+      if (MaxValue == 0)
+      {
+        return 0;
+      }
+      return Value / MaxValue;
+    }
+  }
+}

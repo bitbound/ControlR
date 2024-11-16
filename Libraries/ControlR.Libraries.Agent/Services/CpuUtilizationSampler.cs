@@ -12,7 +12,8 @@ internal interface ICpuUtilizationSampler : IHostedService
 internal class CpuUtilizationSampler(IElevationChecker elevationChecker, ILogger<CpuUtilizationSampler> logger)
     : BackgroundService, ICpuUtilizationSampler
 {
-  private readonly HashSet<int> _ignoredProcesses = new();
+  private readonly HashSet<int> _ignoredProcesses = [];
+  
   private double _currentUtilization;
 
   public double CurrentUtilization => _currentUtilization;

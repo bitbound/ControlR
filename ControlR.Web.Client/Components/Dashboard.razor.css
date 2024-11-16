@@ -1,9 +1,13 @@
 .child-content-grid {
     display: grid;
     grid-template-columns: min-content auto;
+    text-align: left;
     column-gap: 20px;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
 }
 
-.child-content-grid > div:nth-child(odd) {
-    white-space: nowrap;
-}
+  ::deep .child-content-grid > :nth-child(odd) {
+    white-space: nowrap !important;
+  }
+
