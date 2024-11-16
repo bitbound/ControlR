@@ -1,0 +1,5 @@
+﻿::deep .mud-table-toolbar {
+  flex-wrap: wrap !important;
+  column-gap: 20px;
+  margin-bottom: 20px;
+}

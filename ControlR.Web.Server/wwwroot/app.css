@@ -27,7 +27,7 @@
 }
 
 .no-wrap {
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 .ellipsis-text {

@@ -6,80 +6,102 @@
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
 
-<PageTitle>Invite</PageTitle>
-<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
-  Invite
-</MudText>
+<div>
 
-<MudText Typo="Typo.subtitle1" GutterBottom>
-  Add new users to your tenant, and manage pending invitations.
-</MudText>
+  <PageTitle>Invite</PageTitle>
+  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Invite
+  </MudText>
 
-<MudDataGrid T="TenantInviteResponseDto"
-             RowsPerPage="@(25)"
-             Items="InviteStore.Items"
-             SortMode="SortMode.Multiple"
-             QuickFilter="JsonValueFilter.GetQuickFilter<TenantInviteResponseDto>(_searchText, Logger)"
-             Loading="_loading"
-             SortDefinitions="_sortDefinitions"
-             ShowColumnOptions="true"
-             Class="mt-4"
-             Filterable="true">
-  <ToolBarContent>
+  <MudText Typo="Typo.subtitle1" GutterBottom>
+    Add new users to your tenant, and manage pending invitations.
+  </MudText>
 
-    <EditForm @ref="_inviteForm"
-              Model="@_inputModel"
-              OnValidSubmit="HandleValidSubmit"
-              OnInvalidSubmit="HandleInvalidSubmit"
-              class="flex-grow-0">
+  <MudDataGrid T="TenantInviteResponseDto"
+               RowsPerPage="@(25)"
+               Items="InviteStore.Items"
+               SortMode="SortMode.Multiple"
+               QuickFilter="JsonValueFilter.GetQuickFilter<TenantInviteResponseDto>(_searchText, Logger)"
+               Loading="_loading"
+               SortDefinitions="_sortDefinitions"
+               ShowColumnOptions="true"
+               Class="mt-4"
+               Filterable="true">
+    <ToolBarContent>
+      <EditForm EditContext="@_editContext" class="flex-grow-1">
 
-      <DataAnnotationsValidator />
+        <DataAnnotationsValidator />
+        <MudTextField T="string"
+                      @bind-Value="_inputModel.Email"
+                      For="@(() => _inputModel.Email)"
+                      Label="Invite New User"
+                      InputType="InputType.Email"
+                      Immediate
+                      Placeholder="Enter the email of the new user"
+                      AdornmentIcon="@(Icons.Material.Filled.PersonAdd)"
+                      OnAdornmentClick="InvokeSubmit"
+                      UserAttributes="_inputAttributes"
+                      AdornmentColor="Color.Success"
+                      AdornmentAriaLabel="Create Tag"
+                      Adornment="Adornment.End"
+                      FullWidth="true"
+                      OnKeyDown="HandleNewInviteKeyDown">
+        </MudTextField>
+      </EditForm>
+
       <MudTextField T="string"
-                    @bind-Value="_inputModel.Email"
-                    For="@(() => _inputModel.Email)"
-                    Label="Invite New User"
-                    InputType="InputType.Email"
+                    @bind-Value="_searchText"
+                    Placeholder="Search"
+                    Clearable
+                    Adornment="Adornment.Start"
                     Immediate
-                    Placeholder="Enter the email of the new user"
-                    AdornmentIcon="@(Icons.Material.Filled.PersonAdd)"
-                    OnAdornmentClick="InvokeSubmit"
-                    UserAttributes="_inputAttributes"
-                    AdornmentColor="Color.Success"
-                    AdornmentAriaLabel="Create Tag"
-                    Adornment="Adornment.End"
-                    FullWidth="true"
-                    Class="flex-grow-0"
-                    OnlyValidateIfDirty
-                    OnKeyDown="HandleNewInviteKeyDown">
+                    DebounceInterval="500"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    IconSize="Size.Medium"
+                    Class="flex-grow-1">
       </MudTextField>
-    </EditForm>
 
+      <MudTooltip Text="Refresh">
+        <MudIconButton Variant="Variant.Outlined"
+                       Color="Color.Info"
+                       Icon="@(Icons.Material.Filled.Refresh)"
+                       OnClick="HandleRefreshClicked" />
+      </MudTooltip>
+    </ToolBarContent>
 
-    <MudTextField T="string"
-                  @bind-Value="_searchText"
-                  Placeholder="Search"
-                  Clearable
-                  Adornment="Adornment.Start"
-                  Immediate
-                  DebounceInterval="500"
-                  AdornmentIcon="@Icons.Material.Filled.Search"
-                  IconSize="Size.Medium"
-                  Class="flex-grow-0">
-    </MudTextField>
+    <Columns>
+      <PropertyColumn T="TenantInviteResponseDto"
+                      TProperty="string"
+                      Sortable="true"
+                      Filterable="true"
+                      Title="Invitee Email"
+                      Property="@(x => x.InviteeEmail)">
+      </PropertyColumn>
 
-    <MudTooltip Text="Refresh">
-      <MudIconButton Variant="Variant.Outlined"
-                     Color="Color.Info"
-                     Class="ml-4"
-                     Icon="@(Icons.Material.Filled.Refresh)"
-                     OnClick="HandleRefreshClicked" />
-    </MudTooltip>
-  </ToolBarContent>
-</MudDataGrid>
+      <TemplateColumn T="TenantInviteResponseDto"
+                      Sortable="true"
+                      Filterable="true"
+                      Title="Created At">
+        <CellTemplate>
+                        @(context.Item.CreatedAt)
+        </CellTemplate>
+      </TemplateColumn>
 
+      <TemplateColumn T="TenantInviteResponseDto"
+                      Sortable="true"
+                      Filterable="true"
+                      Title="Invite URL">
+        <CellTemplate>
+          @(context.Item.InviteUrl)
+        </CellTemplate>
+      </TemplateColumn>
+    </Columns>
+  </MudDataGrid>
+
+</div>
 @code {
-  private EditForm _inviteForm = default!;
   private InputModel _inputModel = new();
+  private EditContext? _editContext;
   private bool _loading = true;
   private string _searchText = string.Empty;
   private readonly Dictionary<string, object> _inputAttributes = new()
@@ -94,16 +116,17 @@
   private readonly Dictionary<string, SortDefinition<TenantInviteResponseDto>> _sortDefinitions = new()
     {
       ["CreatedAt"] = new SortDefinition<TenantInviteResponseDto>(
-                SortBy: nameof(TenantInviteResponseDto.CreatedAt),
-              Descending: false,
-              Index: 0,
-              SortFunc: x => x.CreatedAt)
+                    SortBy: nameof(TenantInviteResponseDto.CreatedAt),
+                  Descending: false,
+                  Index: 0,
+                  SortFunc: x => x.CreatedAt)
     };
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
 
+    _editContext = new EditContext(_inputModel);
     await InviteStore.Refresh();
     InviteStore.RegisterChangeHandler(this, HandleInviteStoreChanged);
     _loading = false;
@@ -123,14 +146,14 @@
     }
   }
 
-  private async Task HandleInvalidSubmit(EditContext context)
-  {
-    await InvokeAsync(StateHasChanged);
-  }
 
-
-  private async Task HandleValidSubmit(EditContext context)
+  private async Task InvokeSubmit()
   {
+    if (_editContext?.Validate() == false)
+    {
+      return;
+    }
+
     if (string.IsNullOrWhiteSpace(_inputModel.Email))
     {
       return;
@@ -147,24 +170,9 @@
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task InvokeSubmit()
-  {
-    await _inviteForm.OnSubmit.InvokeAsync();
-  }
-
   private async Task HandleRefreshClicked()
   {
     await InviteStore.Refresh();
-  }
-
-  private string? ValidateEmail(string input)
-  {
-    if (string.IsNullOrWhiteSpace(input))
-    {
-      return "Email is required.";
-    }
-
-    return null;
   }
 
   private class InputModel
