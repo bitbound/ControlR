@@ -17,10 +17,7 @@ public interface IBitmapUtility
 
 public class BitmapUtility : IBitmapUtility
 {
-  // TODO: This is throwing in .NET 9.  Maybe need to replace with SkiaSharp.
-  //private readonly ImageCodecInfo _jpegEncoder = ImageCodecInfo
-  //  .GetImageEncoders()
-  //  .First(x => x.FormatID == ImageFormat.Jpeg.Guid);
+  private ImageCodecInfo? _jpegEncoder;
 
   public Bitmap CropBitmap(Bitmap bitmap, Rectangle cropArea)
   {
@@ -36,11 +33,18 @@ public class BitmapUtility : IBitmapUtility
 
   public byte[] EncodeJpeg(Bitmap bitmap, int quality)
   {
+    if (_jpegEncoder is null)
+    {
+      // HACK: Temporary workaround for https://github.com/dotnet/winforms/issues/12494#issuecomment-2481430723
+      _ = Pens.Black;
+      _jpegEncoder = ImageCodecInfo
+        .GetImageEncoders()
+        .First(x => x.FormatID == ImageFormat.Jpeg.Guid);
+    }
     using var ms = new MemoryStream();
     using var encoderParams = new EncoderParameters(1);
     encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-    //bitmap.Save(ms, _jpegEncoder, encoderParams);
-    bitmap.Save(ms, ImageFormat.Jpeg);
+    bitmap.Save(ms, _jpegEncoder, encoderParams);
     return ms.GetBuffer();
   }
 
