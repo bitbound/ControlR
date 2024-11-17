@@ -50,9 +50,20 @@ public class InvitesController : ControllerBase
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
     var randomPassword = RandomGenerator.GenerateString(64);
-    var createResult = await userCreator.CreateUser(dto.InviteeEmail, randomPassword, returnUrl: null);
+    var createResult = await userCreator.CreateUser(
+      dto.InviteeEmail, 
+      password: randomPassword, 
+      tenantId: tenantId);
+
     if (!createResult.Succeeded)
     {
+      var firstError = createResult.IdentityResult.Errors.FirstOrDefault();
+      
+      if (firstError is { Code: nameof(IdentityErrorDescriber.DuplicateUserName) } idError)
+      {
+        return Conflict("User already exists.");
+      }
+
       return Problem("Failed to create user.");
     }
 
@@ -63,10 +74,34 @@ public class InvitesController : ControllerBase
       TenantId = tenantId,
     };
     await appDb.TenantInvites.AddAsync(invite);
+    await appDb.SaveChangesAsync();
     var newUser = createResult.User;
     var origin = Request.ToOrigin();
     var inviteUrl = new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{invite.ActivationCode}");
     var retDto = new TenantInviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
     return Ok(retDto);
+  }
+
+  [HttpDelete("{inviteId:guid}")]
+  public async Task<IActionResult> Delete(
+    [FromRoute] Guid inviteId,
+    [FromServices] AppDb appDb,
+    [FromServices]UserManager<AppUser> userManager)
+  {
+    var invite = await appDb.TenantInvites.FindAsync(inviteId);
+    if (invite is null)
+    {
+      return NotFound();
+    }
+
+    var user = await userManager.FindByEmailAsync(invite.InviteeEmail);
+    appDb.TenantInvites.Remove(invite);
+    await appDb.SaveChangesAsync();
+
+    if (user is not null)
+    {
+      await userManager.DeleteAsync(user);
+    }
+    return NoContent();
   }
 }

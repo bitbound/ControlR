@@ -9,59 +9,96 @@ namespace ControlR.Web.Server.Services;
 
 public interface IUserCreator
 {
-  Task<CreateUserResult> CreateUser(string emailAddress, string password, string? returnUrl);
+  Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    string? returnUrl);
 
   Task<CreateUserResult> CreateUser(
-    string emailAddress, 
+    string emailAddress,
+    string password,
+    Guid tenantId);
+
+  Task<CreateUserResult> CreateUser(
+    string emailAddress,
     ExternalLoginInfo externalLoginInfo,
     string? returnUrl);
 }
 
 public class UserCreator(
+  AppDb appDb,
   UserManager<AppUser> userManager,
   NavigationManager navigationManager,
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
   ILogger<UserCreator> logger) : IUserCreator
 {
+  private readonly AppDb _appDb = appDb;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
 
-  public async Task<CreateUserResult> CreateUser(string emailAddress, string password, string? returnUrl)
+  public async Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    string? returnUrl)
   {
-    return await CreateUserImpl(emailAddress, returnUrl, password);
+    return await CreateUserImpl(
+      emailAddress,
+      returnUrl: returnUrl,
+      password: password);
   }
 
   public async Task<CreateUserResult> CreateUser(
-    string emailAddress, 
+    string emailAddress,
     ExternalLoginInfo externalLoginInfo,
     string? returnUrl)
   {
-    return await CreateUserImpl(emailAddress, returnUrl, password: null, externalLoginInfo);
+    return await CreateUserImpl(
+      emailAddress,
+      returnUrl: returnUrl,
+      externalLoginInfo: externalLoginInfo);
+  }
+
+  public async Task<CreateUserResult> CreateUser(string emailAddress, string password, Guid tenantId)
+  {
+    return await CreateUserImpl(
+      emailAddress,
+      password: password,
+      tenantId: tenantId);
   }
 
   private async Task<CreateUserResult> CreateUserImpl(
     string emailAddress,
-    string? returnUrl,
     string? password = null,
-    ExternalLoginInfo? externalLoginInfo = null)
+    ExternalLoginInfo? externalLoginInfo = null,
+    string? returnUrl = null,
+    Guid? tenantId = null)
   {
     try
     {
-      var tenant = new Tenant();
-      var user = new AppUser
+
+      var user = new AppUser();
+
+      if (tenantId is not null)
       {
-        Tenant = tenant
-      };
+        user.TenantId = tenantId.Value;
+      }
+      else
+      {
+        var tenant = new Tenant();
+        user.Tenant = tenant;
+      }
+
       await _userStore.SetUserNameAsync(user, emailAddress, CancellationToken.None);
+
       if (_userStore is not IUserEmailStore<AppUser> userEmailStore)
       {
         throw new InvalidOperationException("The user store does not implement the IUserEmailStore<AppUser>.");
       }
-      
+
       await userEmailStore.SetEmailAsync(user, emailAddress, CancellationToken.None);
 
       var identityResult = string.IsNullOrWhiteSpace(password)
@@ -85,8 +122,8 @@ public class UserCreator(
 
       await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.UserId, $"{user.Id}"));
       _logger.LogInformation("Added user's ID claim.");
-      
-      await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{tenant.Id}"));
+
+      await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{user.TenantId}"));
       _logger.LogInformation("Added user's tenant ID claim.");
 
       await _userManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
@@ -115,12 +152,21 @@ public class UserCreator(
 
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-      code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-      var callbackUrl = _navigationManager.GetUriWithQueryParameters(
-        _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-        new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
 
-      await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+      if (tenantId is not null)
+      {
+        await _userManager.ConfirmEmailAsync(user, code);
+      }
+      else
+      {
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = _navigationManager.GetUriWithQueryParameters(
+          _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+          new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
+
+        await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+      }
+
       return new CreateUserResult(true, identityResult, user);
     }
     catch (Exception ex)

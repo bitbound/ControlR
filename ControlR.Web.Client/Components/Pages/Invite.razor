@@ -5,6 +5,8 @@
 @inject IInviteStore InviteStore
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
+@inject IClipboardManager ClipboardManager
+@inject IDialogService DialogService
 
 <div>
 
@@ -83,7 +85,7 @@
                       Filterable="true"
                       Title="Created At">
         <CellTemplate>
-                        @(context.Item.CreatedAt)
+          @(context.Item.CreatedAt)
         </CellTemplate>
       </TemplateColumn>
 
@@ -92,7 +94,30 @@
                       Filterable="true"
                       Title="Invite URL">
         <CellTemplate>
-          @(context.Item.InviteUrl)
+          <MudTextField T="Uri"
+                        Label="Copy to share URL"
+                        ReadOnly="true"
+                        Variant="Variant.Filled"
+                        InputType="InputType.Password"
+                        AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
+                        OnAdornmentClick="@(() => CopyInviteUrl(context.Item.InviteUrl))"
+                        AdornmentColor="Color.Secondary"
+                        Adornment="Adornment.End"
+                        Value="context.Item.InviteUrl" />
+        </CellTemplate>
+      </TemplateColumn>
+      <TemplateColumn T="TenantInviteResponseDto"
+                      Sortable="false"
+                      Filterable="false"
+                      ShowColumnOptions="false"
+                      Title="Delete Invite">
+        <CellTemplate>
+          <MudTooltip Text="Delete Invitation">
+            <MudIconButton Icon="@(Icons.Material.Filled.DeleteForever)"
+                           ButtonType="ButtonType.Button"
+                           Color="Color.Error"
+                           OnClick="@(() => DeleteInvite(context.Item))" />
+          </MudTooltip>
         </CellTemplate>
       </TemplateColumn>
     </Columns>
@@ -116,10 +141,10 @@
   private readonly Dictionary<string, SortDefinition<TenantInviteResponseDto>> _sortDefinitions = new()
     {
       ["CreatedAt"] = new SortDefinition<TenantInviteResponseDto>(
-                    SortBy: nameof(TenantInviteResponseDto.CreatedAt),
-                  Descending: false,
-                  Index: 0,
-                  SortFunc: x => x.CreatedAt)
+                        SortBy: nameof(TenantInviteResponseDto.CreatedAt),
+                      Descending: false,
+                      Index: 0,
+                      SortFunc: x => x.CreatedAt)
     };
 
   protected override async Task OnInitializedAsync()
@@ -132,6 +157,44 @@
     _loading = false;
   }
 
+  private async Task CopyInviteUrl(Uri inviteUrl)
+  {
+    try
+    {
+      await ClipboardManager.SetText(inviteUrl.ToString());
+      Snackbar.Add("Copied to clipboard", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while copying invite URL to clipboard.");
+      Snackbar.Add("Error while copying invite URL to clipboard", Severity.Error);
+    }
+  }
+
+  private async Task DeleteInvite(TenantInviteResponseDto dto)
+  {
+    var result = await DialogService.ShowMessageBox(
+      "Confirm Delete",
+      "Are you sure you want to delete this invitaiton and user?",
+      yesText: "Yes",
+      noText: "No");
+
+    if (!result.HasValue || !result.Value)
+    {
+      return;
+    }
+
+    var deleteResult = await ControlrApi.DeleteTenantInvite(dto.Id);
+    if (!deleteResult.IsSuccess)
+    {
+      Snackbar.Add(deleteResult.Reason, Severity.Error);
+      return;
+    }
+
+    await InviteStore.Remove(dto.Id);
+    await InvokeAsync(StateHasChanged);
+    Snackbar.Add("Invite deleted", Severity.Success);
+  }
 
   private async Task HandleInviteStoreChanged()
   {
@@ -145,7 +208,6 @@
       await InvokeSubmit();
     }
   }
-
 
   private async Task InvokeSubmit()
   {
@@ -168,6 +230,7 @@
     _inputModel.Email = string.Empty;
     await InviteStore.Refresh();
     await InvokeAsync(StateHasChanged);
+    Snackbar.Add("Invite created", Severity.Success);
   }
 
   private async Task HandleRefreshClicked()

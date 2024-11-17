@@ -11,8 +11,11 @@ public interface IControlrApi
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
+  Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
+
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
+  Task<Result> DeleteTenantInvite(Guid inviteId);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
   Task<Result<TagResponseDto[]>> GetAllowedTags();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
@@ -23,7 +26,6 @@ public interface IControlrApi
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
-  Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
   Task<Result<ServerSettingsDto>> GetServerSettings();
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
@@ -88,8 +90,22 @@ public class ControlrApi(
     {
       var request = new TenantInviteRequestDto(invteeEmail);
       using var response = await _client.PostAsJsonAsync(HttpConstants.InvitesEndpoint, request);
+      if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+      {
+        var content = await response.Content.ReadAsStringAsync();
+        if (!string.IsNullOrWhiteSpace(content))
+        {
+          return Result.Fail<TenantInviteResponseDto>(content);
+        }
+      }
       response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>();
+      var inviteDto = await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>();
+      if (inviteDto is null)
+      {
+        return Result.Fail<TenantInviteResponseDto>("Server response was empty.");
+      }
+
+      return Result.Ok(inviteDto);
     });
   }
 
@@ -107,6 +123,15 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result> DeleteTenantInvite(Guid inviteId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.DeleteAsync($"{HttpConstants.InvitesEndpoint}/{inviteId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -324,6 +349,26 @@ public class ControlrApi(
         throw new HttpRequestException("The server response was empty.");
 
       return Result.Ok(resultValue);
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail<T>(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<T>(ex, "The request to the server failed.")
+        .Log(_logger);
+    }
+  }
+
+  private async Task<Result<T>> TryCallApi<T>(Func<Task<Result<T>>> func)
+  {
+    try
+    {
+      return await func.Invoke();
     }
     catch (HttpRequestException ex)
     {
