@@ -10,6 +10,7 @@ public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagS
 {
   protected override async Task RefreshImpl()
   {
+    Cache.Clear();
     var getResult = await ControlrApi.GetAllTags(includeLinkedIds: true);
     if (!getResult.IsSuccess)
     {

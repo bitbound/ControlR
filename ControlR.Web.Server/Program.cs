@@ -5,7 +5,6 @@ using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Data.Configuration;
-using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
