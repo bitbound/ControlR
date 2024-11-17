@@ -3,6 +3,7 @@
     <!-- These API calls take forever. -->
     <NuGetAudit>false</NuGetAudit>
 
+    <WarningsAsErrors>true</WarningsAsErrors>
     <Authors>Jared Goodwin</Authors>
     <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
     <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
