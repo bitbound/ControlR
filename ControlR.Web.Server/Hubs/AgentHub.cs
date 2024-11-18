@@ -57,7 +57,7 @@ public class AgentHub(
           LastSeen = _systemTime.Now
         };
 
-        var device = await _appDb.AddOrUpdateDevice(updated);
+        var device = await AddOrUpdateDeviceEntity(updated);
         await SendDeviceUpdate(device);
       }
       await base.OnDisconnectedAsync(exception);
@@ -116,39 +116,11 @@ public class AgentHub(
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      deviceDto = deviceDto with
-      {
-        IsOnline = true,
-        LastSeen = _systemTime.Now,
-        ConnectionId = Context.ConnectionId
-      };
+      deviceDto = UpdateDeviceState(deviceDto);
 
-      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
-      if (remoteIp is not null)
-      {
-        if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-          deviceDto = deviceDto with { PublicIpV6 = remoteIp.ToString() };
-        }
-        else
-        {
-          deviceDto = deviceDto with { PublicIpV4 = remoteIp.ToString() };
-        }
-      }
-      
-      var deviceEntity = await _appDb.AddOrUpdateDevice(deviceDto);
-      if (Device is null)
-      {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTenantDevicesGroupName(deviceEntity.TenantId));
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(deviceEntity.Id, deviceEntity.TenantId));
-        if (deviceEntity.Tags is { Count: > 0 } tags)
-        {
-          foreach (var tag in tags)
-          {
-            await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTagGroupName(tag.Id, deviceEntity.TenantId));
-          }
-        }
-      }
+      var deviceEntity = await AddOrUpdateDeviceEntity(deviceDto);
+
+      await AddToGroups(deviceEntity);
 
       Device = deviceEntity.ToDto();
 
@@ -163,10 +135,68 @@ public class AgentHub(
     }
   }
 
+  private async Task<Device> AddOrUpdateDeviceEntity(DeviceDto dto)
+  {
+    var set = _appDb.Set<Device>();
+    Device? entity = null;
+
+    if (dto.Id != Guid.Empty)
+    {
+      entity = await _appDb.Devices
+        .IgnoreQueryFilters()
+        .FirstOrDefaultAsync(x => x.Id == dto.Id);
+    }
+
+    var entityState = entity is null ? EntityState.Added : EntityState.Modified;
+    entity ??= new Device();
+    var entry = set.Entry(entity);
+    await entry.Reference(x => x.Tenant).LoadAsync();
+    await entry.Collection(x => x.Tags!).LoadAsync();
+    entry.State = entityState;
+
+    entry.CurrentValues.SetValuesExcept(
+      dto,
+      nameof(DeviceDto.Alias),
+      nameof(DeviceDto.TagIds));
+
+    entity.Drives = [.. dto.Drives];
+
+    // If we're adding a new device, associate it with any tags passed in.
+    if (entityState == EntityState.Added && dto.TagIds is { Length: > 0 })
+    {
+      var tags = await _appDb.Tags
+        .Where(x => dto.TagIds.Contains(x.Id))
+        .ToListAsync();
+
+      entity.Tags = tags;
+    }
+
+    await _appDb.SaveChangesAsync();
+    return entity;
+  }
+
+  private async Task AddToGroups(Device deviceEntity)
+  {
+    if (Device is not null)
+    {
+      return;
+    }
+
+    await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTenantDevicesGroupName(deviceEntity.TenantId));
+    await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetDeviceGroupName(deviceEntity.Id, deviceEntity.TenantId));
+    if (deviceEntity.Tags is { Count: > 0 } tags)
+    {
+      foreach (var tag in tags)
+      {
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTagGroupName(tag.Id, deviceEntity.TenantId));
+      }
+    }
+  }
+
   private async Task SendDeviceUpdate(Device device)
   {
     var dto = device.ToDto();
-    
+
     await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
@@ -175,7 +205,7 @@ public class AgentHub(
     {
       return;
     }
-    
+
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
@@ -196,5 +226,29 @@ public class AgentHub(
     {
       _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
     }
+  }
+
+  private DeviceDto UpdateDeviceState(DeviceDto deviceDto)
+  {
+    deviceDto = deviceDto with
+    {
+      IsOnline = true,
+      LastSeen = _systemTime.Now,
+      ConnectionId = Context.ConnectionId
+    };
+
+    var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
+    if (remoteIp is not null)
+    {
+      if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
+      {
+        deviceDto = deviceDto with { PublicIpV6 = remoteIp.ToString() };
+      }
+      else
+      {
+        deviceDto = deviceDto with { PublicIpV4 = remoteIp.ToString() };
+      }
+    }
+    return deviceDto;
   }
 }
