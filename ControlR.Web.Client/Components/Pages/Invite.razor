@@ -38,13 +38,12 @@
                       For="@(() => _inputModel.Email)"
                       Label="Invite New User"
                       InputType="InputType.Email"
-                      Immediate
                       Placeholder="Enter the email of the new user"
                       AdornmentIcon="@(Icons.Material.Filled.PersonAdd)"
                       OnAdornmentClick="InvokeSubmit"
                       UserAttributes="_inputAttributes"
                       AdornmentColor="Color.Success"
-                      AdornmentAriaLabel="Create Tag"
+                      AdornmentAriaLabel="Invite User"
                       Adornment="Adornment.End"
                       FullWidth="true"
                       OnKeyDown="HandleNewInviteKeyDown">

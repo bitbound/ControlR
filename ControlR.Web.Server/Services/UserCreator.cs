@@ -79,7 +79,7 @@ public class UserCreator(
   {
     try
     {
-
+      var isNewTenant = tenantId is null;
       var user = new AppUser();
 
       if (tenantId is not null)
@@ -118,7 +118,14 @@ public class UserCreator(
         return new CreateUserResult(false, identityResult, user);
       }
 
-      _logger.LogInformation("User created a new account with password.");
+      _logger.LogInformation("Created new account: {Email}.", emailAddress);
+
+      if (await _userManager.Users.CountAsync() == 1)
+      {
+        _logger.LogInformation("First user created. User: {UserName}. Assigning server administrator role.",
+          user.UserName);
+        await _userManager.AddToRoleAsync(user, RoleNames.ServerAdministrator);
+      }
 
       await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.UserId, $"{user.Id}"));
       _logger.LogInformation("Added user's ID claim.");
@@ -126,17 +133,13 @@ public class UserCreator(
       await _userManager.AddClaimAsync(user, new Claim(UserClaimTypes.TenantId, $"{user.TenantId}"));
       _logger.LogInformation("Added user's tenant ID claim.");
 
-      await _userManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
-      _logger.LogInformation("Assigned user role TenantAdministrator for newly-created tenant.");
-
-      await _userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-      _logger.LogInformation("Assigned user role DeviceSuperUser for newly-created tenant.");
-
-      if (await _userManager.Users.CountAsync() == 1)
+      if (isNewTenant)
       {
-        _logger.LogInformation("First user created. User: {UserName}. Assigning server administrator role.",
-          user.UserName);
-        await _userManager.AddToRoleAsync(user, RoleNames.ServerAdministrator);
+        await _userManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
+        _logger.LogInformation("Assigned user role TenantAdministrator for newly-created tenant.");
+
+        await _userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
+        _logger.LogInformation("Assigned user role DeviceSuperUser for newly-created tenant.");
       }
 
       if (externalLoginInfo is not null)
@@ -153,11 +156,7 @@ public class UserCreator(
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-      if (tenantId is not null)
-      {
-        await _userManager.ConfirmEmailAsync(user, code);
-      }
-      else
+      if (isNewTenant)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = _navigationManager.GetUriWithQueryParameters(
@@ -165,6 +164,10 @@ public class UserCreator(
           new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
 
         await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+      }
+      else
+      {
+        await _userManager.ConfirmEmailAsync(user, code);
       }
 
       return new CreateUserResult(true, identityResult, user);

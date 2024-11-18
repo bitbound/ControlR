@@ -7,6 +7,11 @@ namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IControlrApi
 {
+  Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
+      string activationCode,
+      string emailAddress,
+      string password);
+
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
@@ -42,6 +47,20 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
+
+  public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
+    string activationCode,
+    string emailAddress,
+    string password)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new AcceptInvitationRequestDto(activationCode, emailAddress, password);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.InvitesEndpoint}/accept", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>();
+    });
+  }
 
   public async Task<Result> AddDeviceTag(Guid deviceId, Guid tagId)
   {

@@ -11,6 +11,7 @@ public class UserStore(
 {
   protected override async Task RefreshImpl()
   {
+    Cache.Clear();
     var getResult = await ControlrApi.GetAllUsers();
     if (!getResult.IsSuccess)
     {

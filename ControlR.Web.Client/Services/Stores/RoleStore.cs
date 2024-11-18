@@ -13,6 +13,7 @@ internal class RoleStore(
 {
   protected override async Task RefreshImpl()
   {
+    Cache.Clear();
     var getResult = await ControlrApi.GetAllRoles();
     if (!getResult.IsSuccess)
     {

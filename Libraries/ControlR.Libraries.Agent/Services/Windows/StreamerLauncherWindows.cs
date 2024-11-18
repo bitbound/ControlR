@@ -81,7 +81,7 @@ internal class StreamerLauncherWindows(
 
           var streamerPath = fileSystem
             .GetFiles(streamerBin, AppConstants.StreamerFileName, SearchOption.AllDirectories)
-            .FirstOrDefault();
+            .LastOrDefault();
 
           if (string.IsNullOrWhiteSpace(streamerPath))
           {

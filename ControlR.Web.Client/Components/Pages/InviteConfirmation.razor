@@ -1,10 +1,184 @@
 ﻿@attribute [Route(ClientRoutes.InviteConfirmation)]
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager NavMan
+@inject IControlrApi ControlrApi
+@inject ISnackbar Snackbar
 
 <PageTitle>Invite</PageTitle>
-<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
-  Confirm Invite
-</MudText>
+
+@if (_tenantJoinSuccessful)
+{
+  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Tenant Joined Successfully
+  </MudText>
+}
+else
+{
+  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Confirm Tenant Invititation
+  </MudText>
+}
+
+@if (_isAuthenticated)
+{
+  <MudAlert Severity="Severity.Warning">
+    You must be logged out to accept an invitation.
+  </MudAlert>
+}
+else if (string.IsNullOrWhiteSpace(ActivationCode))
+{
+  <MudAlert Severity="Severity.Warning">
+    Activation code is missing from the URL.
+  </MudAlert>
+}
+else if (_tenantJoinSuccessful)
+{
+  <MudText Typo="Typo.h6" Color="Color.Info" Class="my-4" GutterBottom>
+    You can now log in with your new password.
+  </MudText>
+
+  <MudButton Href="/Account/Login"
+             Color="Color.Info"
+             Variant="Variant.Outlined">
+    Log In
+  </MudButton>
+}
+else
+{
+  <MudGrid>
+    <MudItem xs="12" sm="6">
+      <EditForm EditContext="@_editContext">
+        <DataAnnotationsValidator />
+
+        <MudTextField T="string"
+                      @bind-Value="_inputModel.Email"
+                      For="@(() => _inputModel.Email)"
+                      Label="Your Email Address"
+                      InputType="InputType.Email"
+                      Placeholder="The email for which the invitation was created"
+                      AdornmentColor="Color.Success"
+                      AdornmentAriaLabel="User Email"
+                      Class="mb-4"
+                      OnKeyDown="HandleKeyDown">
+        </MudTextField>
+
+        <MudTextField T="string"
+                      @bind-Value="_inputModel.Password"
+                      For="@(() => _inputModel.Password)"
+                      Label="Your New Password"
+                      InputType="InputType.Password"
+                      Placeholder="The new password to use for your account"
+                      AdornmentColor="Color.Success"
+                      AdornmentAriaLabel="New Password"
+                      Class="mb-4"
+                      OnKeyDown="HandleKeyDown">
+        </MudTextField>
+
+
+        <MudTextField T="string"
+                      @bind-Value="_inputModel.ConfirmPassword"
+                      For="@(() => _inputModel.ConfirmPassword)"
+                      Label="Confirm Password"
+                      InputType="InputType.Password"
+                      Placeholder="Confirm the above password"
+                      AdornmentColor="Color.Success"
+                      AdornmentAriaLabel="Confirm Password"
+                      Class="mb-4"
+                      OnKeyDown="HandleKeyDown">
+        </MudTextField>
+        <div class="d-flex flex-row-reverse">
+          <MudButton ButtonType="ButtonType.Button"
+                     Variant="Variant.Outlined"
+                     Color="Color.Primary"
+                     OnClick="InvokeSubmit">
+            Submit
+          </MudButton>
+        </div>
+      </EditForm>
+    </MudItem>
+  </MudGrid>
+}
 
 @code {
 
+  private bool _isAuthenticated;
+  private bool _tenantJoinSuccessful;
+  private EditContext _editContext = default!;
+  private InputModel _inputModel = new();
+
+  [Parameter]
+  public string? ActivationCode { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    _editContext = new(_inputModel);
+    _editContext.OnFieldChanged += (_, _) => _editContext.Validate();
+    var authState = await AuthState.GetAuthenticationStateAsync();
+    _isAuthenticated = authState.User.IsAuthenticated();
+  }
+
+
+  private async Task HandleKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter")
+    {
+      await InvokeSubmit();
+    }
+  }
+
+  private async Task InvokeSubmit()
+  {
+    if (_editContext?.Validate() == false)
+    {
+      return;
+    }
+
+    if (string.IsNullOrWhiteSpace(ActivationCode) ||
+        string.IsNullOrWhiteSpace(_inputModel.Email) ||
+        string.IsNullOrWhiteSpace(_inputModel.Password))
+    {
+      return;
+    }
+
+    var acceptResult = await ControlrApi.AcceptInvitation(
+      ActivationCode,
+      _inputModel.Email,
+      _inputModel.Password);
+
+    if (!acceptResult.IsSuccess)
+    {
+      Snackbar.Add(acceptResult.Reason, Severity.Error);
+      return;
+    }
+
+    if (!acceptResult.Value.IsSuccessful)
+    {
+      Snackbar.Add(acceptResult.Value.ErrorMessage, Severity.Error);
+      return;
+    }
+
+    Snackbar.Add("Successfully joined the tenant", Severity.Success);
+    _tenantJoinSuccessful = true;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private class InputModel
+  {
+    [Required]
+    [EmailAddress]
+    public string? Email { get; set; }
+
+    [Required]
+    [EqualTo(nameof(ConfirmPassword))]
+    [MinLength(8)]
+    public string? Password { get; set; }
+
+    [Required]
+    [MinLength(8)]
+    [EqualTo(nameof(Password))]
+    public string? ConfirmPassword { get; set; }
+
+  }
 }

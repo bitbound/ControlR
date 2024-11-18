@@ -14,6 +14,7 @@ public class InviteStore(
   private readonly IControlrApi _controlrApi = controlrApi;
   protected override async Task RefreshImpl()
   {
+    Cache.Clear();
     var getResult = await _controlrApi.GetPendingTenantInvites();
     if (!getResult.IsSuccess)
     {

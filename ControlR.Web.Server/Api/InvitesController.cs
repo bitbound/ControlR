@@ -10,6 +10,42 @@ namespace ControlR.Web.Server.Api;
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class InvitesController : ControllerBase
 {
+  [HttpPost("accept")]
+  [AllowAnonymous]
+  public async Task<ActionResult<AcceptInvitationResponseDto>> AcceptInvite(
+    [FromBody]AcceptInvitationRequestDto dto,
+    [FromServices] AppDb appDb,
+    [FromServices]UserManager<AppUser> userManager)
+  {
+    var invite = await appDb.TenantInvites
+      .IgnoreQueryFilters()
+      .FirstOrDefaultAsync(x => x.ActivationCode == dto.ActivationCode);
+
+    if (invite is null)
+    {
+      return new AcceptInvitationResponseDto(false, "Invititation not found.");
+    }
+
+    var invitee = await userManager.FindByEmailAsync(dto.Email);
+    if (invitee is null)
+    {
+      return new AcceptInvitationResponseDto(false, "Invitee user account not found.");
+    }
+
+    var resetCode = await userManager.GeneratePasswordResetTokenAsync(invitee);
+    var idResult = await userManager.ResetPasswordAsync(invitee, resetCode, dto.Password);
+    if (!idResult.Succeeded)
+    {
+      return new AcceptInvitationResponseDto(false, "Failed to set new password");
+    }
+    appDb.Update(invitee);
+    invitee.TenantId = invite.TenantId;
+    appDb.TenantInvites.Remove(invite);
+    await appDb.SaveChangesAsync();
+
+    return new AcceptInvitationResponseDto(true);
+  }
+
   [HttpGet]
   public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
     [FromServices]AppDb appDb)
@@ -69,7 +105,7 @@ public class InvitesController : ControllerBase
 
     var invite = new TenantInvite()
     {
-      ActivationCode = RandomGenerator.GenerateString(32),
+      ActivationCode = RandomGenerator.GenerateString(64),
       InviteeEmail = normalizedEmail,
       TenantId = tenantId,
     };
