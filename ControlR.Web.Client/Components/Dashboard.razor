@@ -348,7 +348,7 @@
                       Width="250px"
                       Height="250px"
                       InputData="@(new double[]{ drive.TotalSize - drive.FreeSpace, drive.FreeSpace})"
-                      InputLabels='@(new string[]{"Used Space", "Free Space" })'>
+                      InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
               <CustomGraphics>
                 <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica" font-size="2">
                   Total

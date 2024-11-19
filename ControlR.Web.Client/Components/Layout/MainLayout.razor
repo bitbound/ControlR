@@ -20,16 +20,11 @@
                      Color="Color.Inherit"
                      Edge="Edge.Start"
                      OnClick="@(_ => DrawerToggle())" />
-
-      <MudImage Src="/icon-192.png" Height="30" Class="mx-2" />
-      <MudLink Href="/" Underline="Underline.None">
-        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-      </MudLink>
       <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3" />
 
       <MudSpacer />
 
-      @if (!_isBrowser)
+      @if (!RendererInfo.IsInteractive)
       {
         <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
       }
@@ -80,6 +75,13 @@
                ClipMode="DrawerClipMode.Always"
                Elevation="2">
 
+      <MudDrawerHeader Class="ps-4">
+        <MudImage Src="/icon-192.png" Height="30" Class="me-2" />
+        <MudLink Href="/" Underline="Underline.None">
+          <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+        </MudLink>
+      </MudDrawerHeader>
+
       <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
@@ -118,7 +120,6 @@
   private bool _drawerOpen = true;
   private bool _isIdentityPage;
   private bool _isAuthenticated;
-  private bool _isBrowser;
   private bool _isBusy;
   private bool _isWaitingForWasmLoad = true;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
@@ -151,15 +152,14 @@
     await base.OnInitializedAsync();
 
     _isAuthenticated = await AuthState.IsAuthenticated();
-    _isBrowser = OperatingSystem.IsBrowser();
 
     _isIdentityPage =
       Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
       currentUri.PathAndQuery.StartsWith("/Account");
 
-    _isWaitingForWasmLoad = !_isBrowser && !_isIdentityPage; ;
+    _isWaitingForWasmLoad = !RendererInfo.IsInteractive && !_isIdentityPage;
 
-    if (_isBrowser)
+    if (RendererInfo.IsInteractive)
     {
       Messenger.Value.RegisterEventMessage(this, HandleGeneric);
       Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
