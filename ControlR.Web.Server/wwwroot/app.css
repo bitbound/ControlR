@@ -36,6 +36,10 @@
   text-overflow: ellipsis;
 }
 
+.validation-error {
+  color: red;
+}
+
 
 
 #mud-snackbar-container {

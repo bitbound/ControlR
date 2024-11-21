@@ -7,27 +7,37 @@
 
 <PageTitle>Recovery code verification</PageTitle>
 
-<h1>Recovery code verification</h1>
-<MudDivider/>
-<StatusMessage Message="@_message"/>
-<p>
+<MudText Typo="Typo.h3" GutterBottom>
+  Recovery code verification
+</MudText>
+
+<MudDivider Class="mb-2" />
+
+<StatusMessage Message="@_message" />
+
+<MudText Typo="Typo.body1" GutterBottom Class="mb-3">
   You have requested to log in with a recovery code. This login will not be remembered until you provide
   an authenticator app code at log in or disable 2FA and log in again.
-</p>
-<div class="row">
-  <div class="col-md-4">
-    <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
-      <DataAnnotationsValidator/>
-      <ValidationSummary class="text-danger" role="alert"/>
-      <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="RecoveryCode"/>
-        <label for="recovery-code" class="form-label">Recovery Code</label>
-        <ValidationMessage For="() => Input.RecoveryCode" class="text-danger"/>
+</MudText>
+
+<MudGrid>
+  <MudItem xs=12 sm="6">
+    <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
+      <DataAnnotationsValidator />
+      <ValidationSummary class="validation-error" role="alert" />
+      <div class="mb-3">
+        <MudStaticTextField @bind-Value="Input.RecoveryCode" Label="Recovery Code" Placeholder="Recovery Code" />
+        <ValidationMessage For="() => Input.RecoveryCode" class="validation-error" />
       </div>
-      <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+      <div>
+        <MudStaticButton Color="Color.Primary" Size="Size.Large" Variant="Variant.Outlined">
+          Log in
+        </MudStaticButton>
+      </div>
     </EditForm>
-  </div>
-</div>
+  </MudItem>
+</MudGrid>
+
 
 @code {
   private string? _message;
