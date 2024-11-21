@@ -7,11 +7,15 @@
 
 <PageTitle>Register confirmation</PageTitle>
 
-<h1>Register confirmation</h1>
+<MudText Typo="Typo.h3" GutterBottom>
+  Register confirmation
+</MudText>
 
 <StatusMessage Message="@_statusMessage"/>
 
-<p>Please check your email to confirm your account.</p>
+<MudText Typo="Typo.body1" GutterBottom Class="mt-2">
+  Please check your email to confirm your account.
+</MudText>
 
 @code {
   private string? _statusMessage;

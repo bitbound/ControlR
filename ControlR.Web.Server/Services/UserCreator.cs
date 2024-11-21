@@ -26,14 +26,12 @@ public interface IUserCreator
 }
 
 public class UserCreator(
-  AppDb appDb,
   UserManager<AppUser> userManager,
   NavigationManager navigationManager,
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
   ILogger<UserCreator> logger) : IUserCreator
 {
-  private readonly AppDb _appDb = appDb;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
@@ -120,9 +118,11 @@ public class UserCreator(
 
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
-      if (await _userManager.Users.CountAsync() == 1)
+      var isServerAdmin = await _userManager.Users.CountAsync() == 1;
+      if (isServerAdmin)
       {
-        _logger.LogInformation("First user created. User: {UserName}. Assigning server administrator role.",
+        _logger.LogInformation(
+          "First user created. User: {UserName}. Assigning server administrator role.",
           user.UserName);
         await _userManager.AddToRoleAsync(user, RoleNames.ServerAdministrator);
       }
@@ -156,7 +156,7 @@ public class UserCreator(
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-      if (isNewTenant)
+      if (isNewTenant && !isServerAdmin)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = _navigationManager.GetUriWithQueryParameters(

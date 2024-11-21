@@ -16,7 +16,6 @@ services:
   controlr:
     image: translucency/controlr:latest
     container_name: controlr
-    profiles: [ production ]
     restart: unless-stopped
     depends_on:
       - postgres
@@ -95,7 +94,6 @@ services:
   postgres:
     image: postgres:latest
     container_name: postgres
-    profiles: [ development, production ]
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -109,9 +107,8 @@ services:
       POSTGRES_DB: controlr
 
   aspire:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:8.1.0
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
     container_name: aspire
-    profiles: [ development, production ]
     restart: unless-stopped
     ports:
       - "18888:18888"
