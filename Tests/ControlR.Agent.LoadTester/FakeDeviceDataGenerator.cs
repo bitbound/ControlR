@@ -31,7 +31,7 @@ internal class FakeDeviceDataGenerator(
     _device ??= new DeviceModel
     {
       Id = deviceId,
-      Name = $"Test Device {_deviceNumber}",
+      Name = $"Test Device {_deviceNumber.ToString().PadLeft(2, '0')}",
       AgentVersion = _agentVersion,
       TenantId = _tenantId,
       IsOnline = true,
@@ -39,7 +39,12 @@ internal class FakeDeviceDataGenerator(
       ProcessorCount = Environment.ProcessorCount,
       OsArchitecture = RuntimeInformation.OSArchitecture,
       OsDescription = RuntimeInformation.OSDescription,
-      Is64Bit = Environment.Is64BitOperatingSystem
+      Is64Bit = Environment.Is64BitOperatingSystem,
+      TotalMemory = 32,
+      UsedMemory = 16,
+      TotalStorage = 128,
+      UsedStorage = 120,
+      CpuUtilization = .1
     };
     return _device.AsTaskResult();
   }
@@ -51,6 +56,6 @@ internal class FakeDeviceDataGenerator(
 
   public Task<(double usedGB, double totalGB)> GetMemoryInGb()
   {
-    return (0d, 0d).AsTaskResult();
+    return (50d, 128d).AsTaskResult();
   }
 }

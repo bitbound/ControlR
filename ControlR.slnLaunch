@@ -51,6 +51,11 @@
         "Path": "docker-compose\\docker-compose.dcproj",
         "Action": "StartWithoutDebugging",
         "DebugTarget": "postgres"
+      },
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
       }
     ]
   },

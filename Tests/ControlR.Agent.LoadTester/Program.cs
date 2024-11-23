@@ -26,7 +26,7 @@ if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
-var agentCount = 1;
+var agentCount = 15;
 var serverUri = new Uri("https://localhost:7033");
 var tenantId = Guid.Empty;
 
