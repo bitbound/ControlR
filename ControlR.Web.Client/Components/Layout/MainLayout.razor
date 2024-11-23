@@ -16,10 +16,10 @@
   <MudLayout>
     <MudAppBar Elevation="1">
       <MudIconButton id="nav-drawer-toggle-button"
-                     Icon="@Icons.Material.Filled.Menu"
-                     Color="Color.Inherit"
-                     Edge="Edge.Start"
-                     OnClick="@(_ => DrawerToggle())" />
+      Icon="@Icons.Material.Filled.Menu"
+      Color="Color.Inherit"
+      Edge="Edge.Start"
+      OnClick="@(_ => DrawerToggle())" />
       <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3" />
 
       <MudSpacer />
@@ -32,9 +32,9 @@
       {
         <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
           <MudProgressCircular Indeterminate StrokeWidth="6"
-                               Size="Size.Small"
-                               Color="Color.Success"
-                               Class="mx-3 mt-1" />
+          Size="Size.Small"
+          Color="Color.Success"
+          Class="mx-3 mt-1" />
         </MudTooltip>
       }
       else
@@ -49,10 +49,10 @@
           case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
             <MudTooltip Text="Reconnecting">
               <MudProgressCircular Indeterminate
-                                   StrokeWidth="6"
-                                   Size="Size.Small"
-                                   Color="Color.Warning"
-                                   Class="mx-3 mt-1" />
+              StrokeWidth="6"
+              Size="Size.Small"
+              Color="Color.Warning"
+              Class="mx-3 mt-1" />
             </MudTooltip>
             break;
           case HubConnectionState.Disconnected:
@@ -64,16 +64,16 @@
       }
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
-                       Color="Color.Inherit"
-                       Href="https://github.com/bitbound/controlr/"
-                       Target="_blank" />
+        Color="Color.Inherit"
+        Href="https://github.com/bitbound/controlr/"
+        Target="_blank" />
 
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen"
-               id="nav-drawer"
-               ClipMode="DrawerClipMode.Always"
-               Elevation="2">
+    id="nav-drawer"
+    ClipMode="DrawerClipMode.Always"
+    Elevation="2">
 
       <MudDrawerHeader Class="ps-4">
         <MudImage Src="/icon-192.png" Height="30" Class="me-2" />

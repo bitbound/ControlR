@@ -1,4 +1,14 @@
-﻿window.addClassName = (element, className) => {
+﻿/** 
+ * @type {WakeLockSentinel}
+ */
+var _wakeLock = null;
+
+/**
+ * @type {boolean}
+ */
+var _wakeEnabled = false;
+
+window.addClassName = (element, className) => {
   element.classList.add(className);
 }
 window.getClipboardText = async () => {
@@ -59,6 +69,31 @@ window.setClipboardText = async (text) => {
   await navigator.clipboard.writeText(text);
 }
 
+/**
+ * Try to acquire a wake lock to keep the screen from going to sleep.
+ * @param {boolean} isWakeEnabled
+ */
+window.setScreenWakeLock = async (isWakeEnabled) => {
+  _wakeEnabled = isWakeEnabled;
+
+  if (!navigator.wakeLock) {
+    console.warn("Wake Lock API is not supported on this browser.");
+    return;
+  }
+
+  if (isWakeEnabled) {
+    console.log("Requesting screen wake lock.");
+    _wakeLock?.release();
+    _wakeLock ??= await navigator.wakeLock.request("screen");
+    console.log("Wake lock acquired.");
+    return;
+  }
+
+  console.log("Releasing screen wake lock.");
+  _wakeLock?.release();
+  _wakeLock = null;
+}
+
 window.setStyleProperty = (element, propertyName, value) => {
   element.style[propertyName] = value;
 }
@@ -96,3 +131,9 @@ window.startDraggingY = (element, clientY) => {
 window.openWindow = (url, target) => {
   window.open(url, target);
 }
+
+document.addEventListener("visibilitychange", async ev => {
+  if (_wakeEnabled && document.visibilityState == "visible") {
+    await window.setScreenWakeLock(true);
+  }
+});

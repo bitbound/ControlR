@@ -37,6 +37,7 @@ public interface IJsInterop
   ValueTask SetClipboardText(string? text);
   ValueTask<string> GetClipboardText();
   ValueTask<bool> IsTouchScreen();
+  ValueTask SetScreenWakeLock(bool isWakeEnabled);
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -129,5 +130,10 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask StartDraggingY(ElementReference element, double clientY)
   {
     return jsRuntime.InvokeVoidAsync("startDraggingY", element, clientY);
+  }
+
+  public ValueTask SetScreenWakeLock(bool isWakeEnabled)
+  {
+    return jsRuntime.InvokeVoidAsync("setScreenWakeLock", isWakeEnabled);
   }
 }

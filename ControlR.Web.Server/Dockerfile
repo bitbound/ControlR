@@ -4,8 +4,6 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 RUN apt update
 RUN apt -y install curl
-RUN mkdir -p /app/AppData
-RUN chown app:app -R /app/AppData
 USER app
 WORKDIR /app
 EXPOSE 8080

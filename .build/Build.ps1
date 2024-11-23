@@ -15,9 +15,7 @@ param (
 
   [switch]$BuildAgent,
 
-  [switch]$BuildStreamer,
-
-  [switch]$BuildWebsite
+  [switch]$BuildStreamer
 )
 
 
@@ -94,14 +92,3 @@ if ($BuildStreamer) {
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
-
-
-if ($BuildWebsite) {
-  [System.IO.Directory]::CreateDirectory("$Root\ControlR.Website\public\downloads\")
-  Get-ChildItem -Path "$OutputPath\wwwroot\downloads" | Copy-Item -Destination "$Root\ControlR.Website\public\downloads\" -Recurse -Force
-  Push-Location "$Root\ControlR.Website"
-  npm install
-  npm run build
-  Pop-Location
-  Check-LastExitCode
-}
