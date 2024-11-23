@@ -7,7 +7,8 @@ Open-source, self-hostable remote control and remote access.
 
 Website: https://controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
-Discussions: https://github.com/bitbound/ControlR/discussions
+Discussions: https://github.com/bitbound/ControlR/discussions  
+Project Board: https://github.com/users/bitbound/projects/1
 
 ## Project Goal:
 
