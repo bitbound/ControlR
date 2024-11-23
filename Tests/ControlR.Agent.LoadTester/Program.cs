@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.Agent.LoadTester;
-using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Agent.Models;
-using ControlR.Libraries.Agent.Services;
-using ControlR.Libraries.Agent.Services.Windows;
-using ControlR.Libraries.Agent.Startup;
+using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Models;
+using ControlR.Agent.Common.Services;
+using ControlR.Agent.Common.Services.Windows;
+using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Libraries.Shared.Models;

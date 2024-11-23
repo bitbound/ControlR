@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("ControlR.Libraries.Agent")]
+[assembly: InternalsVisibleTo("ControlR.Agent.Common")]
 [assembly: InternalsVisibleTo("ControlR.Devices.Common")]
 [assembly: InternalsVisibleTo("ControlR.Streamer")]
 [assembly: InternalsVisibleTo("ControlR.Web.Server")]

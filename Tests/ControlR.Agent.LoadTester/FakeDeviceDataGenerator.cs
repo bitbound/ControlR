@@ -1,8 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using ControlR.Libraries.Agent.Interfaces;
-using ControlR.Libraries.Agent.Models;
-using ControlR.Libraries.Agent.Services.Base;
+using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Models;
+using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Models;

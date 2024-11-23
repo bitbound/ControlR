@@ -1,5 +1,5 @@
 ﻿<div>
-  @if (DeviceStore.Items.Count == 0)
+  @if (!_loading && DeviceStore.Items.Count == 0)
   {
     <MudAlert Severity="Severity.Info">
       No devices found. Head over to the <MudLink Color="Color.Tertiary" Href="/deploy">Deploy Page</MudLink>
@@ -243,11 +243,19 @@
               @context.Item.Alias
             </MudText>
 
+
             <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Arch:
+              Agent Version:
             </MudText>
             <MudText Typo="Typo.body1">
-              @context.Item.OsArchitecture
+              @context.Item.AgentVersion
+            </MudText>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Last Seen:
+            </MudText>
+            <MudText Typo="Typo.body1">
+              @context.Item.LastSeen.ToLocalTime()
             </MudText>
           </div>
         </MudItem>
@@ -262,6 +270,13 @@
             </MudText>
             <MudText Typo="Typo.body1">
               @context.Item.ProcessorCount
+            </MudText>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Architecture:
+            </MudText>
+            <MudText Typo="Typo.body1">
+              @context.Item.OsArchitecture
             </MudText>
 
             <MudText Typo="Typo.subtitle1" Color="Color.Secondary">

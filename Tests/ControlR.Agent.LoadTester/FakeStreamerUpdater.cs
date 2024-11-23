@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Agent.Interfaces;
+﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.Extensions.Hosting;
 

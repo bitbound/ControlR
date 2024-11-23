@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Agent.Interfaces;
+﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using System;

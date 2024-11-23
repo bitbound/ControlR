@@ -63,6 +63,7 @@ builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
   if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
   {
     options.UseUserClaims(user);
+    options.EnableDetailedErrors(builder.Environment.IsDevelopment());
   }
 }, lifetime: ServiceLifetime.Transient);
 

@@ -27,7 +27,7 @@
                Loading="_loading"
                SortDefinitions="_sortDefinitions"
                ShowColumnOptions="true"
-               Class="mt-4"
+               Class="invite-data-grid mt-4"
                Filterable="true">
     <ToolBarContent>
       <EditForm EditContext="@_editContext" class="flex-grow-1">
@@ -46,6 +46,7 @@
                       AdornmentAriaLabel="Invite User"
                       Adornment="Adornment.End"
                       FullWidth="true"
+                      Class="mt-2"
                       OnKeyDown="HandleNewInviteKeyDown">
         </MudTextField>
       </EditForm>
@@ -59,7 +60,7 @@
                     DebounceInterval="500"
                     AdornmentIcon="@Icons.Material.Filled.Search"
                     IconSize="Size.Medium"
-                    Class="flex-grow-1">
+                    Class="flex-grow-1 mt-2">
       </MudTextField>
 
       <MudTooltip Text="Refresh">
@@ -235,6 +236,7 @@
   private async Task HandleRefreshClicked()
   {
     await InviteStore.Refresh();
+    Snackbar.Add("Invites refreshed", Severity.Success);
   }
 
   private class InputModel

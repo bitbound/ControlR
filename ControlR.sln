@@ -67,7 +67,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Signalr.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent.LoadTester", "Tests\ControlR.Agent.LoadTester\ControlR.Agent.LoadTester.csproj", "{475BDB0D-06C2-4C45-BD1F-7039CA14856A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.Agent", "Libraries\ControlR.Libraries.Agent\ControlR.Libraries.Agent.csproj", "{0BF63213-693A-44FE-AEAE-FF1D97521B30}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Agent.Common", "ControlR.Agent.Common\ControlR.Agent.Common.csproj", "{0BF63213-693A-44FE-AEAE-FF1D97521B30}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -180,7 +180,6 @@ Global
 		{E36620C7-2D12-4956-BF31-A82258A7C656} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{CFF4CEB7-C437-44F2-BA4C-7AE5171A5E94} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 		{475BDB0D-06C2-4C45-BD1F-7039CA14856A} = {6A8B754D-F60A-42FB-9C3F-E19A6BBD0987}
-		{0BF63213-693A-44FE-AEAE-FF1D97521B30} = {5E522C75-6FF4-4ADF-99F4-F8DBFF7F5D13}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {078E947A-B1A3-491E-BA80-0370172FB5F9}

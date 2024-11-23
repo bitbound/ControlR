@@ -8,22 +8,27 @@
 <PageTitle>Disable two-factor authentication (2FA)</PageTitle>
 
 <StatusMessage/>
-<h3>Disable two-factor authentication (2FA)</h3>
 
-<div class="alert alert-warning" role="alert">
-  <p>
+<MudText Typo="Typo.h6" GutterBottom>
+  Disable two-factor authentication (2FA)
+</MudText>
+
+<MudAlert Severity="Severity.Warning">
+  <MudText GutterBottom>
     <strong>This action only disables 2FA.</strong>
-  </p>
-  <p>
+  </MudText>
+  <MudText>
     Disabling 2FA does not change the keys used in authenticator apps. If you wish to change the key
     used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
-  </p>
-</div>
+  </MudText>
+</MudAlert>
 
 <div>
   <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
     <AntiforgeryToken/>
-    <button class="btn btn-danger" type="submit">Disable 2FA</button>
+    <MudStaticButton Color="Color.Error" Variant="Variant.Outlined">
+      Disable 2FA
+    </MudStaticButton>
   </form>
 </div>
 
@@ -54,7 +59,7 @@
     Logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", userId);
     RedirectManager.RedirectToWithStatus(
       "Account/Manage/TwoFactorAuthentication",
-      "2fa has been disabled. You can reenable 2fa when you setup an authenticator app",
+      "2FA has been disabled. You can reenable 2FA when you set up an authenticator app.",
       HttpContext);
   }
 

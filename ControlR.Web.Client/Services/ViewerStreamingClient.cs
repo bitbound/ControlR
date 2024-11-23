@@ -180,7 +180,7 @@ public class ViewerStreamingClient(
 
   private async Task WaitForConnection()
   {
-    if (Client.State == WebSocketState.Open)
+    if (State == WebSocketState.Open)
     {
       return;
     }
@@ -189,7 +189,7 @@ public class ViewerStreamingClient(
     cts.CancelAfter(TimeSpan.FromSeconds(30));
 
     await delayer.WaitForAsync(
-      condition: () => Client.State == WebSocketState.Open || IsDisposed,
+      condition: () => State == WebSocketState.Open || IsDisposed,
       pollingDelay: TimeSpan.FromMilliseconds(100),
       cancellationToken: cts.Token);
   }

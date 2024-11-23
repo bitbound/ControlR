@@ -3,3 +3,7 @@
   column-gap: 20px;
   margin-bottom: 20px;
 }
+
+::deep .invite-data-grid {
+  min-height: 150px;
+}

@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Agent\ControlR.Libraries.Agent.csproj" />
+    <ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
   </ItemGroup>
 
 </Project>
