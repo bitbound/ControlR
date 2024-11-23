@@ -43,6 +43,18 @@ See the comments in the compose file for additional configuration info.
 
 Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/api/health` should return "Healthy".
 
+## Agent OS Support:
+
+### Windows (10/11)
+
+- Remote control
+- Terminal uses PowerShell 7+ (pwsh.exe) if detected, otherwise PowerShell 5.1 (powershell.exe)
+
+### Ubuntu (latest LTS)
+
+- No remote control
+- Terminal uses Bash
+
 ## Metrics
 
 Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface
