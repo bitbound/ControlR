@@ -83,14 +83,6 @@ jobs:
           artifactName: Server
 
       - task: PublishPipelineArtifact@1
-        displayName: Publish Website
-        inputs:
-          path: ControlR.Website\dist
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: Website
-
-      - task: PublishPipelineArtifact@1
         displayName: Publish Build Scripts
         inputs:
           path: .build\
