@@ -71,7 +71,7 @@ jobs:
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)"-BuildAgent -BuildStreamer -BuildWebsite
+          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
           pwsh: true
 
       - task: PublishPipelineArtifact@1
