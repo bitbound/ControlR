@@ -38,12 +38,6 @@ jobs:
           pwsh: true
 
       - task: DownloadSecureFile@1
-        name: keystore
-        displayName: Download Keystore
-        inputs:
-          secureFile: 73f2c586-c865-4602-9e2b-5dc7e56bb496
-
-      - task: DownloadSecureFile@1
         name: signtool
         displayName: Download Signtool
         inputs:
@@ -56,18 +50,6 @@ jobs:
           projects: "**/Tests/**/*.csproj"
 
       - task: PowerShell@2
-        displayName: Viewer workload restore
-        enabled: False
-        inputs:
-          targetType: inline
-          script: >-
-            Push-Location "$(Build.SourcesDirectory)\ControlR.Viewer"
-
-            dotnet workload restore
-
-            Pop-Location
-
-      - task: PowerShell@2
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
@@ -77,23 +59,20 @@ jobs:
       - task: PublishPipelineArtifact@1
         displayName: Publish Server
         inputs:
-          path: ControlR.Server\bin\publish
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: Server
-
+          targetPath: ControlR.Server\bin\publish
+          artifact: Server
+          publishLocation: pipeline
+      
       - task: PublishPipelineArtifact@1
         displayName: Publish Build Scripts
         inputs:
-          path: .build\
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: BuildScripts
+          targetPath: .build\
+          publishLocation: pipeline
+          artifact: BuildScripts
 
       - task: PublishPipelineArtifact@1
         displayName: Publish docker-compose.yml
         inputs:
-          path: docker-compose\
-          publishLocation: filepath
-          fileSharePath: $(ArtifactsShare)\build
-          artifactName: DockerCompose
+          targetPath: docker-compose\
+          publishLocation: pipeline
+          artifact: DockerCompose
