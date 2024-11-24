@@ -1,9 +1,10 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[BUG]"
-labels: bug
+title: "[BUG] - Title Here"
+labels: bug, enhancement
 assignees: bitbound
+
 ---
 
 ### Issue Checklist
