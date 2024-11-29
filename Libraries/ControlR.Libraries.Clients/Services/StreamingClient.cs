@@ -1,8 +1,6 @@
-﻿using System.Collections.Immutable;
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 
 namespace ControlR.Libraries.Clients.Services;
 
@@ -22,7 +20,7 @@ public abstract class StreamingClient(
 {
   private readonly CancellationTokenSource _clientDisposingCts = new();
   private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
-  private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = new();
+  private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
   protected readonly IMessenger Messenger = messenger;
   private ClientWebSocket? _client;
