@@ -171,7 +171,7 @@ public partial class Dashboard
   {
     if (message.NewState == HubConnectionState.Connected)
     {
-      await RefreshLatestAgentVersion();
+      await RefreshDevices();
     }
   }
 
