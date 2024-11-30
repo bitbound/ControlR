@@ -1,13 +1,13 @@
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Converters;
 using ControlR.Web.Server.Data.Configuration;
 using ControlR.Web.Server.Data.Entities.Bases;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Data;
 
-public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
+public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionKeyContext
 {
   private readonly Guid? _tenantId;
   private readonly Guid? _userId;
@@ -24,6 +24,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
+  public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
