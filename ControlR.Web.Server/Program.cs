@@ -9,6 +9,7 @@ using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
@@ -141,6 +142,11 @@ builder.Services
   .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IUserCreator, UserCreator>();
+
+// Configure DataProtection.
+builder.Services
+  .AddDataProtection()
+  .PersistKeysToDbContext<AppDb>();
 
 // Add SignalR.
 builder.Services
