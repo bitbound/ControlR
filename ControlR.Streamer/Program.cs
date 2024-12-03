@@ -37,13 +37,6 @@ var notifyUserOption = new Option<bool>(
     ["-n", "--notify-user"],
     "Whether to notify the user when a remote control session starts.");
 
-var viewerIdOption = new Option<string>(
-    ["-vi", "--viewer-id"],
-    "The connection ID of the viewer who is requesting the streaming session.")
-{
-  IsRequired = true
-};
-
 var viewerNameOption = new Option<string?>(
     ["-vn", "--viewer-name"],
     "The name of the viewer requesting the session.");
@@ -52,13 +45,12 @@ var rootCommand = new RootCommand("The remote control desktop streamer and input
 {
     originUriOption,
     websocketUriOption,
-    viewerIdOption,
     notifyUserOption,
     sessionIdOption,
     viewerNameOption,
 };
 
-rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notifyUser, sessionId, viewerName) =>
+rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, viewerName) =>
 {
   var builder = Host.CreateApplicationBuilder(args);
   var configuration = builder.Configuration;
@@ -73,10 +65,8 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
 
   services.Configure<StartupOptions>(options =>
   {
-    options.ServerOrigin = originUri;
     options.WebSocketUri = websocketUri;
     options.NotifyUser = notifyUser;
-    options.ViewerConnectionId = viewerConnectionId;
     options.ViewerName = viewerName;
     options.SessionId = sessionId;
   });
@@ -86,7 +76,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
   services.AddSingleton(WeakReferenceMessenger.Default);
   services.AddSingleton<IWin32Interop, Win32Interop>();
   services.AddSingleton<IToaster, Toaster>();
-  services.AddSingleton<IDesktopCapturer, DisplayManager>();
+  services.AddSingleton<IDesktopCapturer, DesktopCapturer>();
   services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
   services.AddSingleton<IMemoryProvider, MemoryProvider>();
   services.AddSingleton<ISystemTime, SystemTime>();
@@ -108,7 +98,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, viewerConnectionId, notif
   var host = builder.Build();
   await host.RunAsync();
 
-}, originUriOption, websocketUriOption, viewerIdOption, notifyUserOption, sessionIdOption, viewerNameOption);
+}, originUriOption, websocketUriOption, notifyUserOption, sessionIdOption, viewerNameOption);
 
 var exitCode = await rootCommand.InvokeAsync(args);
 Environment.Exit(exitCode);

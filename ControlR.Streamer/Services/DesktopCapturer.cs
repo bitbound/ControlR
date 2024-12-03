@@ -24,7 +24,7 @@ internal interface IDesktopCapturer
   Task StartCapturingChanges();
 }
 
-internal class DisplayManager : IDesktopCapturer
+internal class DesktopCapturer : IDesktopCapturer
 {
   private const int DefaultImageQuality = 75;
   private const int MinimumQuality = 20;
@@ -36,7 +36,7 @@ internal class DisplayManager : IDesktopCapturer
   private readonly IDelayer _delayer;
   private readonly AutoResetEventAsync _frameReadySignal = new();
   private readonly AutoResetEventAsync _frameRequestedSignal = new(true);
-  private readonly ILogger<DisplayManager> _logger;
+  private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
   private readonly IMessenger _messenger;
   private readonly Stopwatch _metricsBroadcastTimer = Stopwatch.StartNew();
@@ -60,7 +60,7 @@ internal class DisplayManager : IDesktopCapturer
   private DisplayInfo? _selectedDisplay;
 
 
-  public DisplayManager(
+  public DesktopCapturer(
     IMessenger messenger,
     IScreenCapturer screenCapturer,
     IBitmapUtility bitmapUtility,
@@ -70,7 +70,7 @@ internal class DisplayManager : IDesktopCapturer
     IDelayer delayer,
     IHostApplicationLifetime appLifetime,
     IOptions<StartupOptions> startupOptions,
-    ILogger<DisplayManager> logger)
+    ILogger<DesktopCapturer> logger)
   {
     _messenger = messenger;
     _screenCapturer = screenCapturer;

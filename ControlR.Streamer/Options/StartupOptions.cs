@@ -15,8 +15,6 @@ public class StartupOptions
 
     public Guid SessionId { get; set; }
 
-    public string ViewerConnectionId { get; set; } = string.Empty;
-
     public string? ViewerName { get; set; }
 
     public Uri WebSocketUri
