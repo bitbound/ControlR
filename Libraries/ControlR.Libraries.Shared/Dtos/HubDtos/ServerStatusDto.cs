@@ -2,5 +2,5 @@
 
 [MessagePackObject]
 public record ServerStatsDto(
-    [property: MsgPackKey] int AgentCount,
-    [property: MsgPackKey] int ViewerCount);
+    [property: Key(0)] int AgentCount,
+    [property: Key(1)] int ViewerCount);

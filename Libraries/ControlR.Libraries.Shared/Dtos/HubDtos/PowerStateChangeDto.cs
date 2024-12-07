@@ -8,6 +8,6 @@ namespace ControlR.Libraries.Shared.Dtos.HubDtos;
 [method: JsonConstructor]
 public class PowerStateChangeDto(PowerStateChangeType type)
 {
-    [MsgPackKey]
-    public PowerStateChangeType Type { get; init; } = type;
+    [Key(nameof(Type))]
+    public PowerStateChangeType Type { get; set; } = type;
 }

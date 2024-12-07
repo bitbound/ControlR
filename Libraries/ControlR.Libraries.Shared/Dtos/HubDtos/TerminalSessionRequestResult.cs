@@ -3,4 +3,4 @@
 namespace ControlR.Libraries.Shared.Dtos.HubDtos;
 
 [MessagePackObject]
-public record TerminalSessionRequestResult([property: MsgPackKey] TerminalSessionKind SessionKind);
+public record TerminalSessionRequestResult([property: Key(0)] TerminalSessionKind SessionKind);

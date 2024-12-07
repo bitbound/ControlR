@@ -53,11 +53,11 @@ public class Result
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool HadException => Exception is not null;
 
-    [MsgPackKey]
+    [Key(nameof(IsSuccess))]
     [MemberNotNullWhen(false, nameof(Reason))]
     public bool IsSuccess { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Reason))]
     public string Reason { get; init; } = string.Empty;
 
     public static Result Fail(string reason)
@@ -174,15 +174,15 @@ public class Result<T>
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool HadException => Exception is not null;
 
-    [MsgPackKey]
+    [Key(nameof(IsSuccess))]
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(false, nameof(Reason))]
     public bool IsSuccess { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Reason))]
     public string Reason { get; init; } = string.Empty;
 
-    [MsgPackKey]
+    [Key(nameof(Value))]
     public T? Value { get; init; }
 
     public Result<T> Log<TLogger>(ILogger<TLogger> logger)

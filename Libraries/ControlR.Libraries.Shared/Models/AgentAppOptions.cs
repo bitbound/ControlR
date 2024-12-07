@@ -5,15 +5,15 @@ public class AgentAppOptions
 {
   public const string SectionKey = "AppOptions";
 
-  [MsgPackKey]
+  [Key(0)]
   public Guid DeviceId { get; set; }
 
-  [MsgPackKey]
+  [Key(1)]
   public Uri? ServerUri { get; set; }
 
-  [MsgPackKey]
+  [Key(2)]
   public Guid[]? TagIds { get; set; }
 
-  [MsgPackKey]
+  [Key(3)]
   public Guid TenantId { get; set; }
 }

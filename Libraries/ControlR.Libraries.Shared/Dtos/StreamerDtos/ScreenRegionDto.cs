@@ -2,9 +2,9 @@
 
 [MessagePackObject]
 public record ScreenRegionDto(
-    [property: MsgPackKey] Guid SessionId,
-    [property: MsgPackKey] int X,
-    [property: MsgPackKey] int Y,
-    [property: MsgPackKey] int Width,
-    [property: MsgPackKey] int Height,
-    [property: MsgPackKey] byte[] EncodedImage);
+    [property: Key(0)] Guid SessionId,
+    [property: Key(1)] int X,
+    [property: Key(2)] int Y,
+    [property: Key(3)] int Width,
+    [property: Key(4)] int Height,
+    [property: Key(5)] byte[] EncodedImage);

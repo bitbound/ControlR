@@ -3,5 +3,5 @@ namespace ControlR.Libraries.Shared.Models;
 
 [MessagePackObject]
 public record ToastInfo(
-  [property: MsgPackKey] string Message, 
-  [property: MsgPackKey] MessageSeverity MessageSeverity);
+  [property: Key(0)] string Message, 
+  [property: Key(1)] MessageSeverity MessageSeverity);

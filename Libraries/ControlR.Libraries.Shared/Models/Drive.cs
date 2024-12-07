@@ -5,26 +5,26 @@ namespace ControlR.Libraries.Shared.Models;
 [MessagePackObject]
 public record Drive
 {
-  [MsgPackKey]
   [JsonConverter(typeof(JsonStringEnumConverter))]
+  [Key(nameof(DriveType))]
   public DriveType DriveType { get; set; }
 
-  [MsgPackKey]
+  [Key(nameof(RootDirectory))]
   public string RootDirectory { get; set; } = string.Empty;
 
-  [MsgPackKey]
+  [Key(nameof(Name))]
   public string Name { get; set; } = string.Empty;
 
-  [MsgPackKey]
+  [Key(nameof(DriveFormat))]
   public string DriveFormat { get; set; } = string.Empty;
 
-  [MsgPackKey]
+  [Key(nameof(FreeSpace))]
   public double FreeSpace { get; set; }
 
-  [MsgPackKey]
+  [Key(nameof(TotalSize))]
   public double TotalSize { get; set; }
 
-  [MsgPackKey]
+  [Key(nameof(VolumeLabel))]
   public string VolumeLabel { get; set; } = string.Empty;
 
   [IgnoreMember]

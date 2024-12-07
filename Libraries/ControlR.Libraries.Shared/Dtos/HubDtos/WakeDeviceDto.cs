@@ -2,4 +2,4 @@
 
 [MessagePackObject]
 public record WakeDeviceDto(
-    [property: MsgPackKey] string[] MacAddresses);
+    [property: Key(0)] string[] MacAddresses);
