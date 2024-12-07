@@ -1,7 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.Interfaces;
-using ControlR.Libraries.Shared.Serialization;
-using MessagePack;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace ControlR.Agent.Common.Models;
 

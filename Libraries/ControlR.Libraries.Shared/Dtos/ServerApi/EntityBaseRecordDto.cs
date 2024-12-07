@@ -1,9 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace ControlR.Libraries.Shared.Dtos.ServerApi;
+﻿namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject]
 public record EntityBaseRecordDto(
-  [property: MsgPackKey]
-  [property: Display(Name = "Id")]
-  Guid Id);
+  [property: Key(0)] Guid Id);

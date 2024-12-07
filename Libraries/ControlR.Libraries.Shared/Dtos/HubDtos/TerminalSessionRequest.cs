@@ -2,5 +2,5 @@
 
 [MessagePackObject]
 public record TerminalSessionRequest(
-    [property: MsgPackKey] Guid TerminalId,
-    [property: MsgPackKey] string ViewerConnectionId);
+    [property: Key(0)] Guid TerminalId,
+    [property: Key(1)] string ViewerConnectionId);

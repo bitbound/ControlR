@@ -4,7 +4,7 @@ namespace ControlR.Libraries.Shared.Dtos.HubDtos;
 
 [MessagePackObject]
 public record TerminalOutputDto(
-    [property: MsgPackKey] Guid TerminalId,
-    [property: MsgPackKey] string Output,
-    [property: MsgPackKey] TerminalOutputKind OutputKind,
-    [property: MsgPackKey] DateTimeOffset Timestamp);
+    [property: Key(0)] Guid TerminalId,
+    [property: Key(1)] string Output,
+    [property: Key(2)] TerminalOutputKind OutputKind,
+    [property: Key(3)] DateTimeOffset Timestamp);

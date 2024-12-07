@@ -3,6 +3,6 @@
 [MessagePackObject]
 public class AgentAppSettings
 {
-    [MsgPackKey]
-    public AgentAppOptions AppOptions { get; init; } = new();
+    [Key(nameof(AppOptions))]
+    public AgentAppOptions AppOptions { get; set; } = new();
 }

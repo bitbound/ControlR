@@ -4,5 +4,5 @@ namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
 [MessagePackObject]
 public record CursorChangedDto(
-    [property: MsgPackKey] WindowsCursor Cursor,
-    [property: MsgPackKey] Guid SessionId);
+    [property: Key(0)] WindowsCursor Cursor,
+    [property: Key(1)] Guid SessionId);

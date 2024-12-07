@@ -2,5 +2,5 @@
 
 [MessagePackObject]
 public record KeyEventDto(
-    [property: MsgPackKey] string Key,
-    [property: MsgPackKey] bool IsPressed);
+    [property: Key(0)] string Key,
+    [property: Key(1)] bool IsPressed);

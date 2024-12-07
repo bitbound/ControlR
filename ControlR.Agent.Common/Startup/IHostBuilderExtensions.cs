@@ -24,12 +24,6 @@ namespace ControlR.Agent.Common.Startup;
 
 internal static class HostApplicationBuilderExtensions
 {
-  private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
-  {
-    var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
-    client.BaseAddress = options.CurrentValue.ServerUri;
-  }
-
   internal static IHostApplicationBuilder AddControlRAgent(this HostApplicationBuilder builder, StartupMode startupMode, string? instanceId)
   {
     instanceId = instanceId?.SanitizeForFileSystem();
@@ -158,5 +152,11 @@ internal static class HostApplicationBuilderExtensions
     builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));
 
     return builder;
+  }
+
+  private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
+  {
+    var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
+    client.BaseAddress = options.CurrentValue.ServerUri;
   }
 }

@@ -1,7 +1,6 @@
-﻿using ControlR.Libraries.Shared.Serialization;
-using MessagePack;
+﻿using MessagePack;
 
 namespace ControlR.Agent.Common.IpcDtos;
 
 [MessagePackObject]
-public record DesktopResponseDto([property: MsgPackKey] string DesktopName);
+public record DesktopResponseDto([property: Key(0)] string DesktopName);

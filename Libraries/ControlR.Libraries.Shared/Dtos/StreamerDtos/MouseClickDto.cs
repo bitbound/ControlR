@@ -2,7 +2,7 @@
 
 [MessagePackObject]
 public record MouseClickDto(
-    [property: MsgPackKey] int Button,
-    [property: MsgPackKey] bool IsDoubleClick,
-    [property: MsgPackKey] double PercentX,
-    [property: MsgPackKey] double PercentY);
+    [property: Key(0)] int Button,
+    [property: Key(1)] bool IsDoubleClick,
+    [property: Key(2)] double PercentX,
+    [property: Key(3)] double PercentY);

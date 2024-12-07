@@ -6,10 +6,10 @@ namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 [method: JsonConstructor]
 [method: SerializationConstructor]
 public record StreamerSessionRequestDto(
-  [property: MsgPackKey] Guid SessionId,
-  [property: MsgPackKey] Uri WebsocketUri,
-  [property: MsgPackKey] int TargetSystemSession,
-  [property: MsgPackKey] string ViewerConnectionId,
-  [property: MsgPackKey] Guid DeviceId,
-  [property: MsgPackKey] bool NotifyUserOnSessionStart,
-  [property: MsgPackKey] string ViewerName = "");
+  [property: Key(0)] Guid SessionId,
+  [property: Key(1)] Uri WebsocketUri,
+  [property: Key(2)] int TargetSystemSession,
+  [property: Key(3)] string ViewerConnectionId,
+  [property: Key(4)] Guid DeviceId,
+  [property: Key(5)] bool NotifyUserOnSessionStart,
+  [property: Key(6)] string ViewerName = "");

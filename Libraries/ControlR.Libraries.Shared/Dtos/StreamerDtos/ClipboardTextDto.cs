@@ -2,5 +2,5 @@
 
 [MessagePackObject]
 public record ClipboardTextDto(
-    [property: MsgPackKey] string? Text,
-    [property: MsgPackKey] Guid SessionId);
+    [property: Key(0)] string? Text,
+    [property: Key(1)] Guid SessionId);

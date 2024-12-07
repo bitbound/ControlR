@@ -2,7 +2,7 @@
 
 [MessagePackObject]
 public record MouseButtonEventDto(
-    [property: MsgPackKey] int Button,
-    [property: MsgPackKey] bool IsPressed,
-    [property: MsgPackKey] double PercentX,
-    [property: MsgPackKey] double PercentY);
+    [property: Key(0)] int Button,
+    [property: Key(1)] bool IsPressed,
+    [property: Key(2)] double PercentX,
+    [property: Key(3)] double PercentY);

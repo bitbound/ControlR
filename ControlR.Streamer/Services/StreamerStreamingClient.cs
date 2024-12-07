@@ -121,8 +121,6 @@ internal sealed class StreamerStreamingClient(
       {
         case DtoType.CloseStreamingSession:
         {
-          var payload = wrapper.GetPayload<CloseStreamingSessionRequestDto>();
-          payload.VerifyType(DtoType.CloseStreamingSession);
           _logger.LogInformation("Received request to close streaming session.");
           _appLifetime.StopApplication();
           break;
@@ -148,8 +146,6 @@ internal sealed class StreamerStreamingClient(
         }
         case DtoType.ResetKeyboardState:
         {
-          var payload = wrapper.GetPayload<ResetKeyboardStateDto>();
-          payload.VerifyType(DtoType.ResetKeyboardState);
           _inputSimulator.ResetKeyboardState();
           break;
         }

@@ -4,26 +4,27 @@
 public class DisplayDto
 {
 
-    [MsgPackKey]
-    public string DisplayId { get; init; } = string.Empty;
+    [Key(nameof(DisplayId))]
+    public required string DisplayId { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Height))]
     public double Height { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(IsPrimary))]
     public bool IsPrimary { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Left))]
     public double Left { get; init; }
 
-    [MsgPackKey]
-    public string Name { get; init; } = string.Empty;
-    [MsgPackKey]
+    [Key(nameof(Name))]
+    public required string Name { get; init; }
+
+    [Key(nameof(ScaleFactor))]
     public double ScaleFactor { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Top))]
     public double Top { get; init; }
 
-    [MsgPackKey]
+    [Key(nameof(Width))]
     public double Width { get; init; }
 }
