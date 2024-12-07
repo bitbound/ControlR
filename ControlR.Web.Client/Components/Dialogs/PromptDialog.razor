@@ -4,23 +4,26 @@
             <MudText Typo="Typo.h5" Color="Color.Primary">
                 @Title
             </MudText>
-            <MudText Typo="Typo.subtitle1">
-                @Subtitle
-            </MudText>
+            @if (!string.IsNullOrWhiteSpace(Subtitle)) 
+            {
+              <MudText Typo="Typo.subtitle1">
+                  @Subtitle
+              </MudText>
+            }
         </TitleContent>
         <DialogContent>
             <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
-                <MudCard>
+                <MudCard Elevation="0">
                     <MudCardContent>
                         <MudTextField T="string"
-                                      @bind-Value="_passphrase"
-                                      Label="Passphrase"
-                                      HelperText="Enter your passphrase to decrypt the private key."
+                                      @bind-Value="_input"
+                                      Label="Response"
+                                      HelperText="@InputHintText"
                                       Immediate="true"
-                                      InputType="InputType.Password"
+                                      InputType="InputType.Text"
                                       OnKeyDown="InputKeyDown"
                                       Required
-                                      Validation="(string e) => ValidatePassphrase(e)" />
+                                      Validation="(string e) => ValidateInput(e)" />
 
                     </MudCardContent>
                     <MudCardActions Class="justify-end">
@@ -47,7 +50,7 @@
 </div>
 
 @code {
-    private string? _passphrase;
+    private string? _input;
     private bool _formIsValid;
     private MudForm? _form;
 
@@ -55,7 +58,10 @@
     public required MudDialogInstance MudDialog { get; init; }
 
     [Parameter]
-    public required string Subtitle { get; set; }
+    public string InputHintText { get; set; } = "Enter your response here.";
+
+    [Parameter]
+    public string? Subtitle { get; set; }
 
     [Parameter]
     public required string Title { get; set; }
@@ -77,21 +83,17 @@
     {
         if (_formIsValid)
         {
-            MudDialog.Close(_passphrase);
+            MudDialog.Close(_input);
         }
     }
 
-    private string? ValidatePassphrase(string input)
+    private string? ValidateInput(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            return "Passphrase is required.";
+            return "Value is required.";
         }
 
-        if (input is null || input.Length < 8)
-        {
-            return "Passphrase must be at least 8 characters.";
-        }
         return null;
     }
 }

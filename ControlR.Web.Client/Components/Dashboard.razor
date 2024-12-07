@@ -134,6 +134,7 @@
                       StickyLeft="true"
                       Sortable="true"
                       Filterable="true"
+                      SortBy="@(x => x.Name)"
                       Title="Name">
         <CellTemplate>
           @if (string.IsNullOrWhiteSpace(context.Item.Alias))
@@ -149,6 +150,7 @@
 
       <TemplateColumn T="DeviceViewModel"
                       Sortable="true"
+                      SortBy="@(x => x.IsOnline)"
                       Filterable="true"
                       Title="Online">
         <CellTemplate>
@@ -188,6 +190,7 @@
       <TemplateColumn T="DeviceViewModel"
                       Title="CPU"
                       Sortable="true"
+                      SortBy="@(x => x.CpuUtilization)"
                       Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
@@ -197,6 +200,7 @@
       <TemplateColumn T="DeviceViewModel"
                       Title="Memory"
                       Sortable="true"
+                      SortBy="@(x => x.UsedMemoryPercent)"
                       Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
@@ -206,6 +210,7 @@
       <TemplateColumn T="DeviceViewModel"
                       Title="Storage"
                       Sortable="true"
+                      SortBy="@(x => x.UsedStoragePercent)"
                       Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")

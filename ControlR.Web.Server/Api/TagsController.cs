@@ -28,7 +28,7 @@ public class TagsController : ControllerBase
 
     await appDb.Tags.AddAsync(tag);
     await appDb.SaveChangesAsync();
-    
+
     return Ok(tag.ToDto());
   }
 
@@ -49,7 +49,7 @@ public class TagsController : ControllerBase
 
     appDb.Tags.Remove(tag);
     await appDb.SaveChangesAsync();
-    
+
     return NoContent();
   }
 
@@ -76,5 +76,22 @@ public class TagsController : ControllerBase
       .ToArray();
 
     return Ok(dtos);
+  }
+
+  [HttpPut]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<TagResponseDto>> RenameTag(
+    [FromServices] AppDb appDb,
+    [FromBody] TagRenameRequestDto dto)
+  {
+    var tag = await appDb.Tags.FindAsync(dto.TagId);
+    if (tag is null)
+    {
+      return NotFound();
+    }
+
+    tag.Name = dto.NewTagName;
+    await appDb.SaveChangesAsync();
+    return tag.ToDto();
   }
 }

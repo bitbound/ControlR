@@ -38,6 +38,7 @@ public interface IControlrApi
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
+  Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
 
@@ -325,6 +326,17 @@ public class ControlrApi(
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
       response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new TagRenameRequestDto(tagId, newTagName);
+      using var response = await _client.PutAsJsonAsync($"{HttpConstants.TagsEndpoint}", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<TagResponseDto>();
     });
   }
 

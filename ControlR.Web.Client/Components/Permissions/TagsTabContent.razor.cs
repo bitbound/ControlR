@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -116,6 +117,40 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     await TagStore.Remove(_selectedTag.Id);
     Snackbar.Add("Tag deleted", Severity.Success);
   }
+  private async Task RenameSelectedTag()
+  {
+    if (_selectedTag is null)
+    {
+      return;
+    }
+
+    var response = await DialogService.ShowPrompt(
+      "Rename Tag",
+      $"Rename the {_selectedTag.Name} tag.",
+      "Enter a new tag name.");
+
+    if (string.IsNullOrWhiteSpace(response))
+    {
+      Logger.LogInformation("Tag renamed cancelled.");
+      return;
+    }
+
+    if (ValidateNewTagName(response) is string { Length: > 0 } error)
+    {
+      Snackbar.Add(error, Severity.Error);
+      return;
+    }
+
+    var renameResult = await ControlrApi.RenameTag(_selectedTag.Id, response);
+    if (!renameResult.IsSuccess)
+    {
+      Snackbar.Add(renameResult.Reason, Severity.Error);
+      return;
+    }
+
+    await TagStore.AddOrUpdate(new TagViewModel(renameResult.Value));
+    Snackbar.Add("Tag renamed", Severity.Success);
+  }
 
   private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
   {
@@ -214,9 +249,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return null;
     }
 
-    if (tagName.Length > 100)
+    if (tagName.Length > 50)
     {
-      return "Tag name must be 100 characters or less.";
+      return "Tag name must be 50 characters or less.";
     }
 
     if (FilteredTags.Any(x => x.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))

@@ -45,6 +45,13 @@
       </MudList>
     </MudPaper>
     <div class="d-flex justify-end">
+      <MudTooltip Text="Rename Tag">
+        <MudIconButton Color="Color.Info"
+                       ButtonType="ButtonType.Button"
+                       Icon="@(Icons.Material.Filled.EditNote)"
+                       Disabled="@(_selectedTag == null)"
+                       OnClick="RenameSelectedTag" />
+      </MudTooltip>
       <MudTooltip Text="Delete Tag">
         <MudIconButton Color="Color.Error"
                        ButtonType="ButtonType.Button"
