@@ -178,8 +178,8 @@
 
       <PropertyColumn Property="x => x!.CurrentUsers"
                       Title="Current Users"
-                      Sortable="true"
-                      Filterable="true">
+                      Sortable="false"
+                      Filterable="false">
         <CellTemplate>
           @(string.Join(", ", context.Item.CurrentUsers))
         </CellTemplate>
