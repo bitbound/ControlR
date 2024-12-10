@@ -41,7 +41,7 @@ At minimum, you will need to supply values for the variables at the top of the c
 
 See the comments in the compose file for additional configuration info.
 
-Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/api/health` should return "Healthy".
+Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy".
 
 ## Agent OS Support:
 
