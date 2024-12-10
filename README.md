@@ -66,14 +66,9 @@ You can also add a connection string for Azure Monitor to see your data there. T
 
 ## Relay Servers
 
-On the public server (https://controlr.app), when you start a remote control session, the main server will attempt to transfer the session to the relay server that's closest to you. These relay servers use another of my projects ([WebSocketBridge](https://github.com/bitbound/WebSocketBridge)) to stream the remote control data.
+ControlR has the ability to integrate with another of my projects ([WebSocketBridge](https://github.com/bitbound/WebSocketBridge)) and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
 
-Currently, there are servers deployed in the following locations:
-
-- Phoenix, Arizona, United States
-- St. Louis, Missouri, United States
-
-I may add or remove servers in the future, depending on sponsorships/donations.
+Relay servers are currently disabled on the public server (https://controlr.app), which is located in Seattle, WA.
 
 ## Screenshots
 
