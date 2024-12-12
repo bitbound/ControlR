@@ -1,0 +1,157 @@
+﻿@attribute [Route(ClientRoutes.ServerStats)]
+@attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
+
+@inject IMessenger Messenger;
+@inject IViewerHubConnection ViewerHub;
+@inject ISnackbar Snackbar;
+@inject ILogger<ServerStats> Logger;
+
+<PageTitle>Server Stats</PageTitle>
+
+<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  Server Stats
+  <MudIconButton Icon="@(Icons.Material.Filled.Refresh)"
+                 Color="Color.Info"
+                 Class="ms-2"
+                 OnClick="HandleRefreshClicked" />
+</MudText>
+
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Tenants
+  </MudText>
+
+  <div class="d-flex gap-4">
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        <CardHeaderContent>
+          Total
+        </CardHeaderContent>
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.TotalTenants ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+  </div>
+</div>
+
+<div class="mt-5">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Agents
+  </MudText>
+
+  <div class="d-flex gap-4">
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Online
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.OnlineAgents ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Total
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.TotalAgents ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+  </div>
+</div>
+
+<div class="mt-5">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Users
+  </MudText>
+
+  <div class="d-flex gap-4">
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Online
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.OnlineUsers ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+    <MudCard>
+      <MudCardHeader Class="py-2 px-4">
+        Total
+      </MudCardHeader>
+      <MudCardContent Class="py-2 px-4">
+        <MudText Align="Align.Center">
+          <b>
+            @(_serverStats?.TotalUsers ?? 0)
+          </b>
+        </MudText>
+      </MudCardContent>
+    </MudCard>
+  </div>
+</div>
+
+@code {
+  private ServerStatsDto? _serverStats;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    Messenger.Register<DtoReceivedMessage<ServerStatsDto>>(
+    this,
+    async (_, message) =>
+    {
+      _serverStats = message.Dto;
+      await InvokeAsync(StateHasChanged);
+    }
+    );
+
+    _ = await RefreshServerStats();
+  }
+
+  private async Task HandleRefreshClicked()
+  {
+    if (await RefreshServerStats())
+    {
+      Snackbar.Add("Server stats refreshed", Severity.Success);
+    }
+  }
+
+  private async Task<bool> RefreshServerStats()
+  {
+    try
+    {
+      var result = await ViewerHub.GetServerStats();
+      if (result.IsSuccess)
+      {
+        _serverStats = result.Value;
+        return true;
+      }
+
+      Logger.LogResult(result);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while retrieving server stats.");
+    }
+
+    Snackbar.Add("Failed to retrieve server stats", Severity.Error);
+    return false;
+  }
+}

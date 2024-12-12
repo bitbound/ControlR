@@ -87,7 +87,7 @@
                   Refresh
                 </MudMenuItem>
 
-                @if (IsAgentOutdated(context.Item))
+                @if (context.Item.IsOutdated)
                 {
                   <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
                                IconColor="Color.Warning"
@@ -156,7 +156,7 @@
         <CellTemplate>
           @if (context.Item.IsOnline)
           {
-            if (IsAgentOutdated(context.Item))
+            if (context.Item.IsOutdated)
             {
               <MudTooltip Text="Online (Outdated)">
                 <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)" />

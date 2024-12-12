@@ -8,25 +8,47 @@ public interface IServerStatsProvider
 }
 
 public class ServerStatsProvider(
-  IConnectionCounter connectionCounter,
+  AppDb appDb,
   ILogger<ServerStatsProvider> logger) : IServerStatsProvider
 {
-  public Task<Result<ServerStatsDto>> GetServerStats()
+  private readonly AppDb _appDb = appDb;
+
+  public async Task<Result<ServerStatsDto>> GetServerStats()
   {
     try
     {
-      var dto = new ServerStatsDto(
-        connectionCounter.AgentConnectionCount,
-        connectionCounter.ViewerConnectionCount);
+      var totalTenants = await _appDb.Tenants.CountAsync();
 
-      return Result.Ok(dto).AsTaskResult();
+      var agents = await _appDb.Devices
+        .AsNoTracking()
+        .Select(x => new { x.IsOnline })
+        .ToListAsync();
+
+      var totalAgents = agents.Count;
+      var onlineAgents = agents.Count(x => x.IsOnline);
+
+      var users = await _appDb.Users
+        .AsNoTracking()
+        .Select(x => new { x.IsOnline })
+        .ToListAsync();
+
+      var totalUsers = users.Count;
+      var onlineUsers = users.Count(x => x.IsOnline);
+
+      var dto = new ServerStatsDto(
+        totalTenants,
+        onlineAgents,
+        totalAgents,
+        onlineUsers,
+        totalUsers);
+
+      return Result.Ok(dto);
     }
     catch (Exception ex)
     {
       return Result
         .Fail<ServerStatsDto>(ex, "Error while getting server stats.")
-        .Log(logger)
-        .AsTaskResult();
+        .Log(logger);
     }
   }
 }

@@ -100,8 +100,6 @@ public partial class Dashboard
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
 
-    await RefreshLatestAgentVersion();
-
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
 
@@ -110,7 +108,7 @@ public partial class Dashboard
       await DeviceStore.Refresh();
     }
 
-    LoadDevicesFromStore();
+    await LoadDevicesFromStore();
 
     _loading = false;
   }
@@ -188,16 +186,24 @@ public partial class Dashboard
     await InvokeAsync(StateHasChanged);
   }
 
-  private bool IsAgentOutdated(DeviceViewModel device)
+  private async Task LoadDevicesFromStore()
   {
-    return _agentReleaseVersion is not null &&
-           Version.TryParse(device.AgentVersion, out var agentVersion) &&
-           !agentVersion.Equals(_agentReleaseVersion);
-  }
+    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
+    if (agentVerResult.IsSuccess)
+    {
+      _agentReleaseVersion = agentVerResult.Value;
+    }
 
-  private void LoadDevicesFromStore()
-  {
-    _devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
+    var devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
+    foreach (var device in devices)
+    {
+      device.IsOutdated = 
+        _agentReleaseVersion is not null &&
+        Version.TryParse(device.AgentVersion, out var agentVersion) &&
+        !agentVersion.Equals(_agentReleaseVersion);
+    }
+
+    _devices = devices;
   }
 
   private async Task RefreshDevices()
@@ -207,9 +213,8 @@ public partial class Dashboard
       _loading = true;
       using var _ = BusyCounter.IncrementBusyCounter();
       await InvokeAsync(StateHasChanged);
-      await RefreshLatestAgentVersion();
       await DeviceStore.Refresh();
-      LoadDevicesFromStore();
+      await LoadDevicesFromStore();
     }
     catch (Exception ex)
     {
@@ -223,14 +228,6 @@ public partial class Dashboard
     }
   }
 
-  private async Task RefreshLatestAgentVersion()
-  {
-    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
-    if (agentVerResult.IsSuccess)
-    {
-      _agentReleaseVersion = agentVerResult.Value;
-    }
-  }
 
   private async Task RemoteControlClicked(DeviceViewModel device)
   {

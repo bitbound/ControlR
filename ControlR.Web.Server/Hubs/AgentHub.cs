@@ -9,16 +9,12 @@ public class AgentHub(
   AppDb appDb,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   ISystemTime systemTime,
-  IServerStatsProvider serverStatsProvider,
-  IConnectionCounter connectionCounter,
   IWebHostEnvironment hostEnvironment,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
-  private readonly IConnectionCounter _connectionCounter = connectionCounter;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
-  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly ISystemTime _systemTime = systemTime;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
@@ -28,27 +24,11 @@ public class AgentHub(
     set => SetItem(value);
   }
 
-  public override async Task OnConnectedAsync()
-  {
-    try
-    {
-      _connectionCounter.IncrementAgentCount();
-      await SendUpdatedConnectionCountToAdmins();
-      await base.OnConnectedAsync();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error during device connect.");
-    }
-  }
 
   public override async Task OnDisconnectedAsync(Exception? exception)
   {
     try
     {
-      _connectionCounter.DecrementAgentCount();
-      await SendUpdatedConnectionCountToAdmins();
-
       if (Device is { } cachedDevice)
       {
         var updated = cachedDevice with
@@ -208,24 +188,6 @@ public class AgentHub(
 
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
-  }
-
-  private async Task SendUpdatedConnectionCountToAdmins()
-  {
-    try
-    {
-      var statsResult = await _serverStatsProvider.GetServerStats();
-      if (statsResult.IsSuccess)
-      {
-        await _viewerHub.Clients
-          .Group(HubGroupNames.ServerAdministrators)
-          .ReceiveServerStats(statsResult.Value);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
-    }
   }
 
   private DeviceDto UpdateDeviceState(DeviceDto deviceDto)

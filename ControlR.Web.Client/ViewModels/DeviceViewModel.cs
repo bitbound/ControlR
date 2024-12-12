@@ -22,6 +22,7 @@ public class DeviceViewModel : IEquatable<DeviceViewModel>
 
   public bool IsOnline { get; set; }
 
+  public bool IsOutdated { get; set; }
   public bool IsVisible { get; set; }
 
   public DateTimeOffset LastSeen { get; set; }
@@ -56,7 +57,6 @@ public class DeviceViewModel : IEquatable<DeviceViewModel>
 
   public double UsedStorage { get; set; }
   public double UsedStoragePercent => UsedStorage / TotalStorage;
-
   public bool Equals(DeviceViewModel? other)
   {
     return Id == other?.Id;

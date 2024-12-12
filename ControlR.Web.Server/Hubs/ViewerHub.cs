@@ -13,7 +13,6 @@ public class ViewerHub(
   IAuthorizationService authorizationService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
-  IConnectionCounter connectionCounter,
   IIpApi ipApi,
   IWsBridgeApi wsBridgeApi,
   IStreamStore streamStore,
@@ -24,7 +23,6 @@ public class ViewerHub(
   private readonly AppDb _appDb = appDb;
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IAuthorizationService _authorizationService = authorizationService;
-  private readonly IConnectionCounter _connectionCounter = connectionCounter;
   private readonly IIpApi _ipApi = ipApi;
   private readonly ILogger<ViewerHub> _logger = logger;
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
@@ -168,8 +166,6 @@ public class ViewerHub(
     {
       await base.OnConnectedAsync();
 
-      _connectionCounter.IncrementViewerCount();
-      await SendUpdatedConnectionCountToAdmins();
 
       if (Context.User is null)
       {
@@ -182,6 +178,17 @@ public class ViewerHub(
         _logger.LogCritical("Failed to get tenant ID.");
         return;
       }
+
+      var user = await _userManager.GetUserAsync(Context.User);
+
+      if (user is null)
+      {
+        _logger.LogCritical("Failed to find user from UserManager.");
+        return;
+      }
+
+      user.IsOnline = true;
+      await _userManager.UpdateAsync(user);
 
       if (Context.User.IsInRole(RoleNames.ServerAdministrator))
       {
@@ -218,13 +225,21 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
-      _connectionCounter.DecrementViewerCount();
-      await SendUpdatedConnectionCountToAdmins();
-
       if (Context.User is null)
       {
         return;
       }
+      
+      var user = await _userManager.GetUserAsync(Context.User);
+
+      if (user is null)
+      {
+        _logger.LogCritical("Failed to find user from UserManager.");
+        return;
+      }
+
+      user.IsOnline = false;
+      await _userManager.UpdateAsync(user);
 
       if (Context.User.IsInRole(RoleNames.ServerAdministrator))
       {
@@ -447,24 +462,6 @@ public class ViewerHub(
     return Context.User?.IsInRole(RoleNames.ServerAdministrator) ?? false;
   }
 
-  private async Task SendUpdatedConnectionCountToAdmins()
-  {
-    try
-    {
-      var getResult = await _serverStatsProvider.GetServerStats();
-
-      if (getResult.IsSuccess)
-      {
-        await Clients
-          .Group(HubGroupNames.ServerAdministrators)
-          .ReceiveServerStats(getResult.Value);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending updated agent connection count to admins.");
-    }
-  }
 
   private async Task<Result<Device>> TryAuthorizeAgainstDevice(
     Guid deviceId,

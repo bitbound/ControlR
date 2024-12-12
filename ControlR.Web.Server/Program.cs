@@ -201,7 +201,6 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-builder.Services.AddSingleton<IConnectionCounter, ConnectionCounter>();
 builder.Services.AddWebSocketBridge();
 builder.Services.AddSingleton<IStreamStore, StreamStore>();
 

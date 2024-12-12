@@ -2,5 +2,8 @@
 
 [MessagePackObject]
 public record ServerStatsDto(
-    [property: Key(0)] int AgentCount,
-    [property: Key(1)] int ViewerCount);
+    [property: Key(0)] int TotalTenants,
+    [property: Key(1)] int OnlineAgents,
+    [property: Key(2)] int TotalAgents,
+    [property: Key(3)] int OnlineUsers,
+    [property: Key(4)] int TotalUsers);
