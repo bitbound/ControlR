@@ -1,8 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
@@ -77,14 +73,24 @@ internal class TerminalStore(
   {
     try
     {
-      if (_sessionCache.TryGetValue(terminalId, out var cacheItem) &&
-          cacheItem is TerminalSession session)
+      if (!_sessionCache.TryGetValue(terminalId, out var cachedItem))
       {
-        await session.WriteInput(input, TimeSpan.FromSeconds(5));
-        return Result.Ok();
+        return Result.Fail("Terminal session not found.");
       }
 
-      return Result.Fail("Failed to write terminal input.");
+      if (cachedItem is not TerminalSession session)
+      {
+        _sessionCache.Remove(terminalId);
+        return Result.Fail("Terminal session not found.");
+      }
+
+      if (session.IsDisposed)
+      {
+        _sessionCache.Remove(terminalId);
+        return Result.Fail("Terminal session has ended.");
+      }
+
+      return await session.WriteInput(input, TimeSpan.FromSeconds(5));
     }
     catch (Exception ex)
     {

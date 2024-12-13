@@ -36,7 +36,6 @@ internal class TerminalSession(
 
   public void Dispose()
   {
-    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
     Dispose(true);
     GC.SuppressFinalize(this);
   }
@@ -66,6 +65,7 @@ internal class TerminalSession(
         _inputBuilder.Clear();
       }
 
+      // If the input was not empty, add a newline.
       if (!string.IsNullOrWhiteSpace(input))
       {
         await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
@@ -73,13 +73,15 @@ internal class TerminalSession(
 
       return Result.Ok();
     }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogError(ex, "Timed out while writing input to command shell.");
+      return Result.Fail("Input command timed out.");
+    }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while writing input to command shell.");
-
-      // Something's wrong.  Let the next command start a new session.
-      Dispose();
-      return Result.Fail("An error occurred.");
+      return Result.Fail("An error occurred during input.");
     }
     finally
     {
