@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace ControlR.Web.Server.Data.Migrations
-{
-    /// <inheritdoc />
-    public partial class Add_UserIsOnline : Migration
-    {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsOnline",
-                table: "AspNetUsers",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-        }
+namespace ControlR.Web.Server.Data.Migrations;
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "IsOnline",
-                table: "AspNetUsers");
-        }
-    }
+/// <inheritdoc />
+public partial class Add_UserIsOnline : Migration
+{
+  /// <inheritdoc />
+  protected override void Up(MigrationBuilder migrationBuilder)
+  {
+    migrationBuilder.AddColumn<bool>(
+        name: "IsOnline",
+        table: "AspNetUsers",
+        type: "boolean",
+        nullable: false,
+        defaultValue: false);
+  }
+
+  /// <inheritdoc />
+  protected override void Down(MigrationBuilder migrationBuilder)
+  {
+    migrationBuilder.DropColumn(
+        name: "IsOnline",
+        table: "AspNetUsers");
+  }
 }

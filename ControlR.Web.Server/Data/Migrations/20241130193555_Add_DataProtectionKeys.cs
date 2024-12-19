@@ -3,34 +3,33 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ControlR.Web.Server.Data.Migrations
-{
-    /// <inheritdoc />
-    public partial class Add_DataProtectionKeys : Migration
-    {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
-                name: "DataProtectionKeys",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    FriendlyName = table.Column<string>(type: "text", nullable: true),
-                    Xml = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DataProtectionKeys", x => x.Id);
-                });
-        }
+namespace ControlR.Web.Server.Data.Migrations;
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
+/// <inheritdoc />
+public partial class Add_DataProtectionKeys : Migration
+{
+  /// <inheritdoc />
+  protected override void Up(MigrationBuilder migrationBuilder)
+  {
+    migrationBuilder.CreateTable(
+        name: "DataProtectionKeys",
+        columns: table => new
         {
-            migrationBuilder.DropTable(
-                name: "DataProtectionKeys");
-        }
-    }
+          Id = table.Column<int>(type: "integer", nullable: false)
+                .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+          FriendlyName = table.Column<string>(type: "text", nullable: true),
+          Xml = table.Column<string>(type: "text", nullable: true)
+        },
+        constraints: table =>
+        {
+          table.PrimaryKey("PK_DataProtectionKeys", x => x.Id);
+        });
+  }
+
+  /// <inheritdoc />
+  protected override void Down(MigrationBuilder migrationBuilder)
+  {
+    migrationBuilder.DropTable(
+        name: "DataProtectionKeys");
+  }
 }

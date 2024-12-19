@@ -1,8 +1,7 @@
 ﻿using ControlR.Agent.Common.IpcDtos;
 using ControlR.Devices.Native.Services;
-using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
-using SimpleIpc;
+using Bitbound.SimpleIpc;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
