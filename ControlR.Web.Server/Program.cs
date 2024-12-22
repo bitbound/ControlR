@@ -193,7 +193,7 @@ builder.Services.AddLazyDi();
 builder.Services.AddOutputCache();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<ISystemTime, SystemTime>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
 builder.Services.AddSingleton<IRetryer, Retryer>();

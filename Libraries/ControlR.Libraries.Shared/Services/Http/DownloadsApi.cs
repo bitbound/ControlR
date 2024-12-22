@@ -2,7 +2,7 @@
 
 namespace ControlR.Libraries.Shared.Services.Http;
 
-internal interface IDownloadsApi
+public interface IDownloadsApi
 {
   Task<Result> DownloadFile(string downloadUri, string destinationPath);
   Task<Result> DownloadFile(Uri downloadUri, string destinationPath);
@@ -11,7 +11,7 @@ internal interface IDownloadsApi
 
 }
 
-internal class DownloadsApi(
+public class DownloadsApi(
     HttpClient client,
     ILogger<DownloadsApi> logger) : IDownloadsApi
 {

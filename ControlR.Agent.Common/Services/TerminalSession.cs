@@ -14,19 +14,27 @@ public interface ITerminalSession : IDisposable
 }
 
 internal class TerminalSession(
-  Guid _terminalId,
-  string _viewerConnectionId,
-  IFileSystem _fileSystem,
-  IProcessManager _processManager,
+  Guid terminalId,
+  string viewerConnectionId,
+  TimeProvider timeProvider,
+  IFileSystem fileSystem,
+  IProcessManager processManager,
   ISystemEnvironment _environment,
-  ISystemTime _systemTime,
-  IHubConnection<IAgentHub> _hubConnection,
-  ILogger<TerminalSession> _logger) : ITerminalSession
+  IHubConnection<IAgentHub> hubConnection,
+  ILogger<TerminalSession> logger) : ITerminalSession
 {
   private readonly StringBuilder _inputBuilder = new();
   private readonly Process _shellProcess = new();
   private readonly SemaphoreSlim _writeLock = new(1, 1);
-  public Guid TerminalId { get; } = _terminalId;
+  private readonly string _viewerConnectionId = viewerConnectionId;
+  private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IProcessManager _processManager = processManager;
+  private readonly ISystemEnvironment _environment = _environment;
+  private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
+  private readonly ILogger<TerminalSession> _logger = logger;
+
+  public Guid TerminalId { get; } = terminalId;
 
   public event EventHandler? ProcessExited;
 
@@ -185,7 +193,7 @@ internal class TerminalSession(
         TerminalId,
         e.Data ?? string.Empty,
         TerminalOutputKind.StandardError,
-        _systemTime.Now);
+        _timeProvider.GetLocalNow());
 
       await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
     }
@@ -208,7 +216,7 @@ internal class TerminalSession(
         TerminalId,
         e.Data ?? string.Empty,
         TerminalOutputKind.StandardOutput,
-        _systemTime.Now);
+        _timeProvider.GetLocalNow());
 
       await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
     }

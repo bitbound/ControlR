@@ -97,7 +97,7 @@ internal static class HubProxyGenerator
     methodIL.Emit(OpCodes.Ldc_I4, parameters.Length);
     methodIL.Emit(OpCodes.Newarr, typeof(object));
 
-    for (int i = 0; i < parameters.Length; i++)
+    for (var i = 0; i < parameters.Length; i++)
     {
       methodIL.Emit(OpCodes.Dup);
       methodIL.Emit(OpCodes.Ldc_I4, i);

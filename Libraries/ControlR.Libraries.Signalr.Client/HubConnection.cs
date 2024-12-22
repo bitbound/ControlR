@@ -23,6 +23,50 @@ public interface IHubConnection<out THub> : IAsyncDisposable
   where THub : class
 {
   /// <summary>
+  /// <para>
+  ///   Occurs when the connection is closed. The connection could be closed due to an
+  ///   error or due to either the server or client intentionally closing the connection
+  ///   without error.
+  /// </para>
+  /// <para>
+  ///   If this event was triggered from a connection error, the System.Exception that
+  ///   occurred will be passed in as the sole argument to this handler. If this event
+  ///   was triggered intentionally by either the client or server, then the argument
+  ///   will be null.
+  /// </para>
+  /// </summary>
+  event Func<Exception?, Task>? Closed;
+
+  /// <summary>
+  ///  Occurs when an exception is thrown inside the Connect method.
+  /// </summary>
+  event Func<Exception, Task>? ConnectThrew;
+
+  ///<summary>
+  ///<para>
+  ///  Occurs when the Microsoft.AspNetCore.SignalR.Client.HubConnection successfully
+  ///  reconnects after losing its underlying connection.
+  ///</para>
+  ///<para>
+  ///  The System.String parameter will be the Microsoft.AspNetCore.SignalR.Client.HubConnection's
+  ///  new ConnectionId or null if negotiation was skipped.
+  ///</para>
+  /// </summary>
+  event Func<string?, Task>? Reconnected;
+
+  /// <summary>
+  /// <para>
+  ///   Occurs when the Microsoft.AspNetCore.SignalR.Client.HubConnection starts reconnecting
+  ///   after losing its underlying connection.
+  /// </para>
+  ///<para>
+  ///   The System.Exception that occurred will be passed in as the sole argument to
+  ///   this handler.
+  ///</para>
+  ///</summary>
+  event Func<Exception?, Task>? Reconnecting;
+
+  /// <summary>
   /// The current connection ID.
   /// </summary>
   string? ConnectionId { get; }
@@ -86,50 +130,6 @@ public interface IHubConnection<out THub> : IAsyncDisposable
   /// <param name="cancellationToken"></param>
   /// <returns></returns>
   Task WaitForConnected(CancellationToken cancellationToken);
-
-  /// <summary>
-  /// <para>
-  ///   Occurs when the connection is closed. The connection could be closed due to an
-  ///   error or due to either the server or client intentionally closing the connection
-  ///   without error.
-  /// </para>
-  /// <para>
-  ///   If this event was triggered from a connection error, the System.Exception that
-  ///   occurred will be passed in as the sole argument to this handler. If this event
-  ///   was triggered intentionally by either the client or server, then the argument
-  ///   will be null.
-  /// </para>
-  /// </summary>
-  event Func<Exception?, Task>? Closed;
-
-  /// <summary>
-  ///  Occurs when an exception is thrown inside the Connect method.
-  /// </summary>
-  event Func<Exception, Task>? ConnectThrew;
-
-  ///<summary>
-  ///<para>
-  ///  Occurs when the Microsoft.AspNetCore.SignalR.Client.HubConnection successfully
-  ///  reconnects after losing its underlying connection.
-  ///</para>
-  ///<para>
-  ///  The System.String parameter will be the Microsoft.AspNetCore.SignalR.Client.HubConnection's
-  ///  new ConnectionId or null if negotiation was skipped.
-  ///</para>
-  /// </summary>
-  event Func<string?, Task>? Reconnected;
-
-  /// <summary>
-  /// <para>
-  ///   Occurs when the Microsoft.AspNetCore.SignalR.Client.HubConnection starts reconnecting
-  ///   after losing its underlying connection.
-  /// </para>
-  ///<para>
-  ///   The System.Exception that occurred will be passed in as the sole argument to
-  ///   this handler.
-  ///</para>
-  ///</summary>
-  event Func<Exception?, Task>? Reconnecting;
 }
 
 /// <inheritdoc />
@@ -154,14 +154,24 @@ internal sealed class HubConnection<THub, TClient>(
   private HubConnection? _connection;
   private dynamic? _hubProxy;
 
+  public event Func<Exception?, Task>? Closed;
+
+  public event Func<Exception, Task>? ConnectThrew;
+
+  public event Func<string?, Task>? Reconnected;
+
+  public event Func<Exception?, Task>? Reconnecting;
+
   public string? ConnectionId => _connection?.ConnectionId;
   public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
   public bool IsConnected => ConnectionState == HubConnectionState.Connected;
   public THub Server => _hubProxy ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
 
+  internal HubConnection Connection => _connection ?? throw new InvalidOperationException("Hub connection has not been initialized.");
+
   public async Task<bool> Connect(
-    Uri hubEndpoint,
+      Uri hubEndpoint,
     bool autoRetry,
     Action<HttpConnectionOptions>? configure = null,
     CancellationToken cancellationToken = default)
@@ -282,10 +292,24 @@ internal sealed class HubConnection<THub, TClient>(
     }
   }
 
+  private static List<MethodInfo> GetMethodsRecursively(Type type, List<MethodInfo>? methods = null)
+  {
+    methods ??= [];
+    methods.AddRange(type.GetMethods(BindingFlags));
+
+    foreach (var interfaceType in type.GetInterfaces())
+    {
+      HubConnection<THub, TClient>.GetMethodsRecursively(interfaceType, methods);
+    }
+
+    return methods;
+
+  }
+
   private async Task BindClientInterface(HubConnection connection)
   {
     var client = _serviceProvider.GetRequiredService<TClient>();
-    var clientMethods = GetMethodsRecursively(typeof(TClient));
+    var clientMethods = HubConnection<THub, TClient>.GetMethodsRecursively(typeof(TClient));
 
     await foreach (var method in clientMethods.ToAsyncEnumerable())
     {
@@ -344,21 +368,6 @@ internal sealed class HubConnection<THub, TClient>(
     connection.Reconnecting += HandleReconnecting;
     return connection;
   }
-
-  private List<MethodInfo> GetMethodsRecursively(Type type, List<MethodInfo>? methods = null)
-  {
-    methods ??= [];
-    methods.AddRange(type.GetMethods(BindingFlags));
-
-    foreach (var interfaceType in type.GetInterfaces())
-    {
-      GetMethodsRecursively(interfaceType, methods);
-    }
-    
-    return methods;
-    
-  }
-
   private TimeSpan GetNextRetryDelay(long retryCount)
   {
     var waitSeconds = Math.Min(Math.Pow(retryCount, 2), _maxReconnectDelay.TotalSeconds);
@@ -439,15 +448,6 @@ internal sealed class HubConnection<THub, TClient>(
     }
     return null;
   }
-
-
-  public event Func<Exception?, Task>? Closed;
-
-  internal HubConnection Connection => _connection ?? throw new InvalidOperationException("Hub connection has not been initialized.");
-  public event Func<Exception, Task>? ConnectThrew;
-  public event Func<string?, Task>? Reconnected;
-  public event Func<Exception?, Task>? Reconnecting;
-
   private sealed class RetryPolicy(
     HubConnection<THub, TClient> hubConnection,
     ILogger<HubConnection<THub, TClient>> logger) : IRetryPolicy

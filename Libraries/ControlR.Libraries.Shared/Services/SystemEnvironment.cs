@@ -13,7 +13,7 @@ public interface ISystemEnvironment
   string StartupExePath { get; }
 }
 
-internal class SystemEnvironment : ISystemEnvironment
+public class SystemEnvironment : ISystemEnvironment
 {
   public static SystemEnvironment Instance { get; } = new();
 
@@ -24,7 +24,7 @@ internal class SystemEnvironment : ISystemEnvironment
 #if DEBUG
       return true;
 #else
-            return false;
+      return false;
 #endif
     }
   }

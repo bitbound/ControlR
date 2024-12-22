@@ -31,17 +31,17 @@ internal class TerminalStore(
       var fileSystem = serviceProvider.GetRequiredService<IFileSystem>();
       var processManager = serviceProvider.GetRequiredService<IProcessManager>();
       var environment = serviceProvider.GetRequiredService<ISystemEnvironment>();
-      var systemTime = serviceProvider.GetRequiredService<ISystemTime>();
+      var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
       var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
       var logger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
 
       var terminalSession = new TerminalSession(
         terminalId,
         viewerConnectionId,
+        timeProvider,
         fileSystem,
         processManager,
         environment,
-        systemTime,
         hubConnection,
         logger);
 
