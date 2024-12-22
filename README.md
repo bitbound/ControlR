@@ -10,20 +10,6 @@ Docker: https://hub.docker.com/r/translucency/controlr
 Discussions: https://github.com/bitbound/ControlR/discussions  
 Project Board: https://github.com/users/bitbound/projects/1
 
-## Project Goal:
-
-First, thank you for checking out my project! I hope you find it useful. Since I'm using this for my own family's computers, the project will be supported for the foreseeable future.
-
-Second, I want to be completely transparent about the goals for this project. Hopefully this will help you decide whether you want to use it and provide clarity about why some feature requests might get denied.
-
-The primary goal for ControlR is to provide a simple, mobile-friendly tool for controlling a small number of computers. It's basically a tool I'm designing for myself and sharing freely.
-
-In order to avoid some of the mistakes (and burnout) I experienced with Remotely (my previous project), I usually won't work on any features that I wouldn't personally use. Or if I feel like the required development time isn't worth it. These requests will likely be closed as `won't do`.
-
-Please understand this isn't intended to sound rude. I just want to be clear with my intentions. Software development is an extremely time-consuming process, and I won't be committing the same amount of time or energy as I did with Remotely.
-
-On the positive side, keeping the feature scope narrowly-defined ensures my ability to continue supporting the project.
-
 ## Quick Start:
 
 ### Public Server
@@ -42,6 +28,20 @@ At minimum, you will need to supply values for the variables at the top of the c
 See the comments in the compose file for additional configuration info.
 
 Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy".
+
+## Reverse Proxy Configuration:
+
+Some ControlR features require [forwarded headers](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer). These concepts are not unique to ASP.NET Core, so it's important to understand them when self-hosting.
+
+When using a reverse proxy, including Cloudflare proxying, the proxy IPs must be trusted by the service receiving the forwarded traffic. By default, ControlR will trust the Docker gateway IP. If `EnableCloudflareProxySupport` option is enabled, the [Cloudflare IP ranges](https://www.cloudflare.com/ips/) will automatically be trusted too.
+
+Every proxy server IP needs to be added to the `X-Forwarded-For` header, creating a chain of all hops until it reaches the service that handles the request. Each proxy server in the chain needs to trust all IPs that came before it. When the request reaches the servce, the header should have a complete chain of all proxy servers.
+
+If you have another reverse proxy in front of Docker (e.g. Nginx, Caddy, etc.), it must trust the IPs of any proxies that came before it (e.g. Cloudflare). Likewise, your service in Docker (i.e. ControlR) must also trust the IP of your reverse proxy. If the reverse proxy is on the same machine as the service, and is forwarding to localhost, the service will automatically trust it.
+
+Additional proxy IPs can be added to the `KnownProxies` list in the compose file.
+
+If the public IP for your connected devices are not showing correctly, the problem is likely due to a misconfiguration here.
 
 ## Agent OS Support:
 
