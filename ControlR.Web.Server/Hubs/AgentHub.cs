@@ -10,7 +10,6 @@ public class AgentHub(
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IServerStatsProvider serverStatsProvider,
-  IConnectionCounter connectionCounter,
   IWebHostEnvironment hostEnvironment,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
