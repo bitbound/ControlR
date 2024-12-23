@@ -9,14 +9,12 @@ public class AgentHub(
   AppDb appDb,
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
-  IServerStatsProvider serverStatsProvider,
   IWebHostEnvironment hostEnvironment,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
-  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
