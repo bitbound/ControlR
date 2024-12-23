@@ -67,11 +67,16 @@ public interface IScreenCapturer
 }
 
 internal sealed class ScreenCapturer(
+  TimeProvider timeProvider,
   IBitmapUtility bitmapUtility,
   IDxOutputGenerator dxOutputGenerator,
-  ISystemTime systemTime,
   ILogger<ScreenCapturer> logger) : IScreenCapturer
 {
+  private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IBitmapUtility _bitmapUtility = bitmapUtility;
+  private readonly IDxOutputGenerator _dxOutputGenerator = dxOutputGenerator;
+  private readonly ILogger<ScreenCapturer> _logger = logger;
+
   public CaptureResult Capture(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -105,7 +110,7 @@ internal sealed class ScreenCapturer(
         return GetBitBltCapture(display.MonitorArea, captureCursor);
       }
 
-      if (!result.IsSuccess || result.Bitmap is null || bitmapUtility.IsEmpty(result.Bitmap))
+      if (!result.IsSuccess || result.Bitmap is null || _bitmapUtility.IsEmpty(result.Bitmap))
       {
         if (!allowFallbackToBitBlt)
         {
@@ -119,7 +124,7 @@ internal sealed class ScreenCapturer(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error grabbing screen.");
+      _logger.LogError(ex, "Error grabbing screen.");
       return CaptureResult.Fail(ex);
     }
   }
@@ -177,7 +182,7 @@ internal sealed class ScreenCapturer(
 
   private bool IsDxOutputHealthy(DxOutput dxOutput)
   {
-    return systemTime.Now - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
+    return _timeProvider.GetLocalNow() - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
   }
 
   private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
@@ -219,7 +224,7 @@ internal sealed class ScreenCapturer(
     }
     catch (Exception ex)
     {
-      logger.LogDebug(ex, "Error while drawing cursor.");
+      _logger.LogDebug(ex, "Error while drawing cursor.");
       return Rectangle.Empty;
     }
   }
@@ -257,7 +262,7 @@ internal sealed class ScreenCapturer(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error getting capture with BitBlt.");
+      _logger.LogError(ex, "Error getting capture with BitBlt.");
       return CaptureResult.Fail(ex);
     }
     finally
@@ -268,7 +273,7 @@ internal sealed class ScreenCapturer(
 
   internal CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
-    var dxOutput = dxOutputGenerator.GetDxOutput(display.DeviceName);
+    var dxOutput = _dxOutputGenerator.GetDxOutput(display.DeviceName);
 
     if (dxOutput is null)
     {
@@ -360,7 +365,7 @@ internal sealed class ScreenCapturer(
           break;
       }
 
-      dxOutput.LastSuccessfulCapture = DateTimeOffset.Now;
+      dxOutput.LastSuccessfulCapture = _timeProvider.GetLocalNow();
 
       if (captureCursor)
       {
@@ -396,14 +401,14 @@ internal sealed class ScreenCapturer(
     }
     catch (COMException ex)
     {
-      dxOutputGenerator.MarkFaulted(dxOutput);
-      logger.LogWarning("DirectX outputs need to be refreshed.");
+      _dxOutputGenerator.MarkFaulted(dxOutput);
+      _logger.LogWarning("DirectX outputs need to be refreshed.");
       return CaptureResult.Fail(ex);
     }
     catch (Exception ex)
     {
-      dxOutputGenerator.MarkFaulted(dxOutput);
-      logger.LogError(ex, "Error while capturing with DirectX.");
+      _dxOutputGenerator.MarkFaulted(dxOutput);
+      _logger.LogError(ex, "Error while capturing with DirectX.");
       return CaptureResult.Fail(ex);
     }
     finally

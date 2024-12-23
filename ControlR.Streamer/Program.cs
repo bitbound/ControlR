@@ -74,12 +74,12 @@ rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, vi
   services.AddSingleton<IProcessManager, ProcessManager>();
   services.AddSingleton<IStreamerStreamingClient, StreamerStreamingClient>();
   services.AddSingleton(WeakReferenceMessenger.Default);
+  services.AddSingleton(TimeProvider.System);
   services.AddSingleton<IWin32Interop, Win32Interop>();
   services.AddSingleton<IToaster, Toaster>();
   services.AddSingleton<IDesktopCapturer, DesktopCapturer>();
   services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
   services.AddSingleton<IMemoryProvider, MemoryProvider>();
-  services.AddSingleton<ISystemTime, SystemTime>();
   services.AddSingleton<IClipboardManager, ClipboardManager>();
   services.AddSingleton<IDelayer, Delayer>();
   services.AddScreenCapturer();

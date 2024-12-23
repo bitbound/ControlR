@@ -7,15 +7,18 @@ namespace ControlR.Web.Server.Hubs;
 
 public class AgentHub(
   AppDb appDb,
+  TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
-  ISystemTime systemTime,
+  IServerStatsProvider serverStatsProvider,
+  IConnectionCounter connectionCounter,
   IWebHostEnvironment hostEnvironment,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
-  private readonly ISystemTime _systemTime = systemTime;
+  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
   private DeviceDto? Device
@@ -34,7 +37,7 @@ public class AgentHub(
         var updated = cachedDevice with
         {
           IsOnline = false,
-          LastSeen = _systemTime.Now
+          LastSeen = _timeProvider.GetLocalNow()
         };
 
         var device = await AddOrUpdateDeviceEntity(updated);
@@ -195,7 +198,7 @@ public class AgentHub(
     deviceDto = deviceDto with
     {
       IsOnline = true,
-      LastSeen = _systemTime.Now,
+      LastSeen = _timeProvider.GetLocalNow(),
       ConnectionId = Context.ConnectionId
     };
 

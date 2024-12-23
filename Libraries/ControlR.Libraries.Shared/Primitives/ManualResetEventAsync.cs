@@ -2,7 +2,7 @@
 
 public sealed class ManualResetEventAsync : IDisposable
 {
-    private readonly object _taskLock = new();
+    private readonly Lock _taskLock = new();
     private TaskCompletionSource _tcs = new();
 
     public ManualResetEventAsync(bool isSet = false)

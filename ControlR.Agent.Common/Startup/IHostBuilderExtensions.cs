@@ -67,7 +67,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
     services.AddSingleton(WeakReferenceMessenger.Default);
-    services.AddSingleton<ISystemTime, SystemTime>();
+    services.AddSingleton(TimeProvider.System);
     services.AddSingleton<IMemoryProvider, MemoryProvider>();
     services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
     services.AddSingleton<IWakeOnLanService, WakeOnLanService>();

@@ -24,7 +24,7 @@ public class SystemEnvironment : ISystemEnvironment
 #if DEBUG
       return true;
 #else
-            return false;
+      return false;
 #endif
     }
   }

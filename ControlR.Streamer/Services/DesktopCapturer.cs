@@ -43,7 +43,7 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly IScreenCapturer _screenCapturer;
   private readonly ConcurrentQueue<SentFrame> _sentRegions = new();
   private readonly IOptions<StartupOptions> _startupOptions;
-  private readonly ISystemTime _systemTime;
+  private readonly TimeProvider _timeProvider;
   private readonly IWin32Interop _win32Interop;
   private volatile int _cpuFrames;
   private double _currentMbps;
@@ -61,12 +61,12 @@ internal class DesktopCapturer : IDesktopCapturer
 
 
   public DesktopCapturer(
+    TimeProvider timeProvider,
     IMessenger messenger,
     IScreenCapturer screenCapturer,
     IBitmapUtility bitmapUtility,
     IMemoryProvider memoryProvider,
     IWin32Interop win32Interop,
-    ISystemTime systemTime,
     IDelayer delayer,
     IHostApplicationLifetime appLifetime,
     IOptions<StartupOptions> startupOptions,
@@ -77,7 +77,7 @@ internal class DesktopCapturer : IDesktopCapturer
     _bitmapUtility = bitmapUtility;
     _memoryProvider = memoryProvider;
     _win32Interop = win32Interop;
-    _systemTime = systemTime;
+    _timeProvider = timeProvider;
     _delayer = delayer;
     _startupOptions = startupOptions;
     _appLifetime = appLifetime;
@@ -257,7 +257,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
       if (!isKeyFrame)
       {
-        _sentRegions.Enqueue(new SentFrame(imageData.Length, _systemTime.Now));
+        _sentRegions.Enqueue(new SentFrame(imageData.Length, _timeProvider.GetLocalNow()));
       }
     }
     finally
@@ -385,7 +385,7 @@ internal class DesktopCapturer : IDesktopCapturer
     // Keep only frames in our sample window.
     while (
       _sentRegions.TryPeek(out var frame) &&
-      frame.Timestamp.AddSeconds(3) < _systemTime.Now)
+      frame.Timestamp.AddSeconds(3) < _timeProvider.GetLocalNow())
     {
       _sentRegions.TryDequeue(out _);
     }

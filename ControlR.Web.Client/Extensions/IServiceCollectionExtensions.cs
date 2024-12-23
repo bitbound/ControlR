@@ -16,12 +16,12 @@ public static class ServiceCollectionExtensions
     
     services.AddLazyDi();
 
+    services.AddSingleton(TimeProvider.System);
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<ISettings, Settings>();
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
     services.AddScoped<IViewerHubConnection, ViewerHubConnection>();
-    services.AddScoped<ISystemTime, SystemTime>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
     services.AddScoped<IMemoryProvider, MemoryProvider>();
     services.AddScoped<IDelayer, Delayer>();

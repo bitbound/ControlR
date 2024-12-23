@@ -1,7 +1,6 @@
 ﻿using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Clients.Services;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Messages;
 using Microsoft.Extensions.Hosting;
@@ -18,7 +17,7 @@ internal sealed class StreamerStreamingClient(
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
-  IDesktopCapturer displayManager,
+  IDesktopCapturer desktopCapturer,
   IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
@@ -28,7 +27,7 @@ internal sealed class StreamerStreamingClient(
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
-  private readonly IDesktopCapturer _displayManager = displayManager;
+  private readonly IDesktopCapturer _desktopCapturer = desktopCapturer;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly ILogger<StreamerStreamingClient> _logger = logger;
   private readonly IOptions<StartupOptions> _startupOptions = startupOptions;
@@ -107,7 +106,7 @@ internal sealed class StreamerStreamingClient(
 
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
   {
-    _displayManager.ResetDisplays();
+    _desktopCapturer.ResetDisplays();
     await SendDisplayData();
   }
 
@@ -128,13 +127,13 @@ internal sealed class StreamerStreamingClient(
         case DtoType.ChangeDisplays:
         {
           var payload = wrapper.GetPayload<ChangeDisplaysDto>();
-          await _displayManager.ChangeDisplays(payload.DisplayId);
+          await _desktopCapturer.ChangeDisplays(payload.DisplayId);
           break;
         }
         case DtoType.WheelScroll:
         {
           var payload = wrapper.GetPayload<WheelScrollDto>();
-          var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+          var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
           _inputSimulator.ScrollWheel(point.X, point.Y, (int)payload.ScrollY, (int)payload.ScrollX);
           break;
         }
@@ -171,14 +170,14 @@ internal sealed class StreamerStreamingClient(
         case DtoType.MovePointer:
         {
           var payload = wrapper.GetPayload<MovePointerDto>();
-          var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+          var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
           _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
           break;
         }
         case DtoType.MouseButtonEvent:
         {
           var payload = wrapper.GetPayload<MouseButtonEventDto>();
-          var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+          var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
           _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
           _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, payload.IsPressed);
           break;
@@ -186,7 +185,7 @@ internal sealed class StreamerStreamingClient(
         case DtoType.MouseClick:
         {
           var payload = wrapper.GetPayload<MouseClickDto>();
-          var point = await _displayManager.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
+          var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
           _inputSimulator.MovePointer(point.X, point.Y, MovePointerType.Absolute);
           _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, true);
           _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, payload.Button, false);
@@ -243,7 +242,7 @@ internal sealed class StreamerStreamingClient(
   {
     try
     {
-      var displays = _displayManager.GetDisplays().ToArray();
+      var displays = _desktopCapturer.GetDisplays().ToArray();
       var dto = new DisplayDataDto(
         _startupOptions.Value.SessionId,
         displays);
@@ -263,13 +262,13 @@ internal sealed class StreamerStreamingClient(
 
   private async Task StreamScreenToViewer()
   {
-    await _displayManager.StartCapturingChanges();
+    await _desktopCapturer.StartCapturingChanges();
 
     while (State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
     {
       try
       {
-        await foreach (var region in _displayManager.GetChangedRegions())
+        await foreach (var region in _desktopCapturer.GetChangedRegions())
         {
           var wrapper = DtoWrapper.Create(region, DtoType.ScreenRegion);
           await Send(wrapper, _appLifetime.ApplicationStopping);
