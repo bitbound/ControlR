@@ -21,6 +21,7 @@ public class ServerStatsProvider(
 
       var agents = await _appDb.Devices
         .AsNoTracking()
+        .IgnoreQueryFilters()
         .Select(x => new { x.IsOnline })
         .ToListAsync();
 
@@ -29,6 +30,7 @@ public class ServerStatsProvider(
 
       var users = await _appDb.Users
         .AsNoTracking()
+        .IgnoreQueryFilters()
         .Select(x => new { x.IsOnline })
         .ToListAsync();
 
