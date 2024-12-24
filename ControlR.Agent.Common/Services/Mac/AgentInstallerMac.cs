@@ -17,11 +17,13 @@ internal class AgentInstallerMac(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
   IRetryer retryer,
+  IControlrApi controlrApi,
+  IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;

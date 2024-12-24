@@ -4,6 +4,7 @@ using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesNative.Linux;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -14,12 +15,14 @@ internal class AgentInstallerLinux(
   IFileSystem fileSystem,
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
+  IControlrApi controlrApi,
+  IDeviceDataGenerator deviceDataGenerator,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;

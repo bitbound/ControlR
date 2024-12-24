@@ -12,13 +12,14 @@ namespace ControlR.Agent.Common.Services.Windows;
 internal class DeviceDataGeneratorWin(
   IWin32Interop win32Interop,
   ISystemEnvironment environmentHelper,
+  ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<DeviceDataGeneratorWin> logger)
-  : DeviceDataGeneratorBase(environmentHelper, appOptions, logger), IDeviceDataGenerator
+  : DeviceDataGeneratorBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
 
-  public async Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceModel> CreateDevice(Guid deviceId)
   {
     try
     {
@@ -41,7 +42,6 @@ internal class DeviceDataGeneratorWin(
         totalStorage,
         usedMemory,
         totalMemory,
-        cpuUtilization,
         agentVersion);
     }
     catch (Exception ex)

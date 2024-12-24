@@ -8,14 +8,15 @@ namespace ControlR.Agent.Common.Services.Linux;
 internal class DeviceDataGeneratorLinux(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
+  ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<DeviceDataGeneratorLinux> logger)
-  : DeviceDataGeneratorBase(environmentHelper, appOptions, logger), IDeviceDataGenerator
+  : DeviceDataGeneratorBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId)
+  public async Task<DeviceModel> CreateDevice( Guid deviceId)
   {
     try
     {
@@ -34,7 +35,6 @@ internal class DeviceDataGeneratorLinux(
         totalStorage,
         usedMemory,
         totalMemory,
-        cpuUtilization,
         agentVersion);
     }
     catch (Exception ex)

@@ -22,7 +22,6 @@ internal class AgentHubConnection(
   IHostApplicationLifetime appLifetime,
   IDeviceDataGenerator deviceCreator,
   ISettingsProvider settings,
-  ICpuUtilizationSampler cpuSampler,
   IStreamerUpdater streamerUpdater,
   IAgentUpdater agentUpdater,
   ILogger<AgentHubConnection> logger)
@@ -30,7 +29,6 @@ internal class AgentHubConnection(
 {
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
   private readonly IDeviceDataGenerator _deviceCreator = deviceCreator;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<AgentHubConnection> _logger = logger;
@@ -82,9 +80,7 @@ internal class AgentHubConnection(
         return;
       }
 
-      var device = await _deviceCreator.CreateDevice(
-        _cpuSampler.CurrentUtilization,
-        _settings.DeviceId);
+      var device = await _deviceCreator.CreateDevice(_settings.DeviceId);
 
       var dto = device.CloneAs<DeviceModel, DeviceDto>();
 
@@ -101,8 +97,6 @@ internal class AgentHubConnection(
         _logger.LogInformation("Device ID changed.  Updating appsettings.");
         await _settings.UpdateId(updateResult.Value.Id);
       }
-
-      await _settings.ClearTags();
     }
     catch (Exception ex)
     {

@@ -12,8 +12,5 @@ public class AgentAppOptions
   public Uri? ServerUri { get; set; }
 
   [Key(2)]
-  public Guid[]? TagIds { get; set; }
-
-  [Key(3)]
   public Guid TenantId { get; set; }
 }

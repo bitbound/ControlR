@@ -96,6 +96,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
       i,
       tenantId,
       sp.GetRequiredService<ISystemEnvironment>(),
+      sp.GetRequiredService<ICpuUtilizationSampler>(),
       sp.GetRequiredService<IOptionsMonitor<AgentAppOptions>>(),
       sp.GetRequiredService<ILogger<FakeDeviceDataGenerator>>());
   });

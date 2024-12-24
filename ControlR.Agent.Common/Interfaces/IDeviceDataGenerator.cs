@@ -4,7 +4,7 @@ namespace ControlR.Agent.Common.Interfaces;
 
 public interface IDeviceDataGenerator
 {
-  Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId);
+  Task<DeviceModel> CreateDevice(Guid deviceId);
 
   string GetAgentVersion();
 
@@ -18,7 +18,6 @@ public interface IDeviceDataGenerator
     double totalStorage,
     double usedMemory,
     double totalMemory,
-    double cpuUtilization,
     string agentVersion);
 
   Task<(double usedGB, double totalGB)> GetMemoryInGb();

@@ -11,12 +11,6 @@ internal interface ISettingsProvider
   Guid DeviceId { get; }
   string InstanceId { get; }
   Uri ServerUri { get; }
-
-  /// <summary>
-  /// Tags should only be set on the first successful connection, then cleared.
-  /// </summary>
-  Task ClearTags();
-
   string GetAppSettingsPath();
   Task UpdateId(Guid uid);
   Task UpdateSettings(AgentAppSettings settings);
@@ -43,17 +37,6 @@ internal class SettingsProvider(
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
-
-  public async Task ClearTags()
-  {
-    if (_appOptions.CurrentValue.TagIds is null)
-    {
-      return;
-    }
-
-    _appOptions.CurrentValue.TagIds = null;
-    await WriteToDisk(_appOptions.CurrentValue);
-  }
 
   public string GetAppSettingsPath()
   {

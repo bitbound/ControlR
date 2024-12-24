@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
@@ -7,6 +9,42 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class DevicesController : ControllerBase
 {
+  [HttpPost]
+  [AllowAnonymous]
+  public async Task<ActionResult<DeviceDto>> CreateDevice(
+    [FromServices] AppDb appDb,
+    [FromBody] CreateDeviceRequestDto requestDto)
+  {
+    var deviceDto = requestDto.Device;
+
+    if (deviceDto.Id == Guid.Empty)
+    {
+      return BadRequest();
+    }
+
+    if (await appDb.Devices.AnyAsync(x => x.Id == deviceDto.Id))
+    {
+      return BadRequest();
+    }
+
+    var entity = new Device();
+    var entry = appDb.Entry(entity);
+    entry.State = EntityState.Added;
+    entry.CurrentValues.SetValues(deviceDto);
+
+    if (deviceDto.TagIds is { Length: > 0 } tagIds)
+    {
+      var tags = await appDb.Tags
+        .Where(x => tagIds.Contains(x.Id))
+        .ToListAsync();
+
+      entity.Tags = tags;
+    }
+
+    await appDb.SaveChangesAsync();
+    return entity.ToDto();
+  }
+
   [HttpDelete("{deviceId:guid}")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,

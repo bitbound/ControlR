@@ -5,6 +5,7 @@ using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
@@ -18,13 +19,15 @@ internal class AgentInstallerWindows(
   ISystemEnvironment environmentHelper,
   IElevationChecker elevationChecker,
   IRetryer retryer,
+  IControlrApi controlrApi,
+  IDeviceDataGenerator deviceDataGenerator,
   IRegistryAccessor registryAccessor,
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IElevationChecker _elevationChecker = elevationChecker;

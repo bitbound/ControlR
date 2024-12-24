@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
+using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
@@ -17,16 +18,17 @@ internal class FakeDeviceDataGenerator(
   int deviceNumber,
   Guid tenantId,
   ISystemEnvironment systemEnvironment,
+  ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<FakeDeviceDataGenerator> logger)
-  : DeviceDataGeneratorBase(systemEnvironment, appOptions, logger), IDeviceDataGenerator
+  : DeviceDataGeneratorBase(systemEnvironment, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
   private readonly string _agentVersion = "0.9.15.0";
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
   private DeviceModel? _device;
 
-  public Task<DeviceModel> CreateDevice(double cpuUtilization, Guid deviceId)
+  public Task<DeviceModel> CreateDevice(Guid deviceId)
   {
     _device ??= new DeviceModel
     {

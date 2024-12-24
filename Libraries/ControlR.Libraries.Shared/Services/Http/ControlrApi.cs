@@ -15,6 +15,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
+  Task<Result> CreateDevice(DeviceDto device);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
 
@@ -89,6 +90,15 @@ public class ControlrApi(
     {
       var dto = new UserTagAddRequestDto(userId, tagId);
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", dto);
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result> CreateDevice(DeviceDto device)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, device);
       response.EnsureSuccessStatusCode();
     });
   }

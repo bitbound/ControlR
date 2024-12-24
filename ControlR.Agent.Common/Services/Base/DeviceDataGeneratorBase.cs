@@ -8,10 +8,12 @@ namespace ControlR.Agent.Common.Services.Base;
 
 internal class DeviceDataGeneratorBase(
   ISystemEnvironment environmentHelper,
+  ICpuUtilizationSampler cpuSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<DeviceDataGeneratorBase> logger)
 {
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
+  private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly ILogger<DeviceDataGeneratorBase> _logger = logger;
 
@@ -66,7 +68,6 @@ internal class DeviceDataGeneratorBase(
     double totalStorage,
     double usedMemory,
     double totalMemory,
-    double cpuUtilization,
     string agentVersion)
   {
 
@@ -74,9 +75,8 @@ internal class DeviceDataGeneratorBase(
     {
       Id = deviceId,
       TenantId = _appOptions.CurrentValue.TenantId,
-      TagIds = _appOptions.CurrentValue.TagIds,
       CurrentUsers = currentUsers,
-      CpuUtilization = cpuUtilization,
+      CpuUtilization = _cpuSampler.CurrentUtilization,
       Drives = drives,
       AgentVersion = agentVersion,
       UsedStorage = usedStorage,

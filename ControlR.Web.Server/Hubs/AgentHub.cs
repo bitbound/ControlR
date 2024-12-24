@@ -37,8 +37,11 @@ public class AgentHub(
           LastSeen = _timeProvider.GetLocalNow()
         };
 
-        var device = await AddOrUpdateDeviceEntity(updated);
-        await SendDeviceUpdate(device);
+        var updateResult = await UpdateDeviceEntity(updated);
+        if (updateResult.IsSuccess)
+        {
+          await SendDeviceUpdate(updateResult.Value);
+        }
       }
       await base.OnDisconnectedAsync(exception);
     }
@@ -98,8 +101,14 @@ public class AgentHub(
 
       deviceDto = UpdateDeviceState(deviceDto);
 
-      var deviceEntity = await AddOrUpdateDeviceEntity(deviceDto);
+      var updateResult = await UpdateDeviceEntity(deviceDto);
 
+      if (!updateResult.IsSuccess)
+      {
+        return Result.Fail<DeviceDto>("An error occurred while updating the device.");
+      }
+
+      var deviceEntity = updateResult.Value;
       await AddToGroups(deviceEntity);
 
       Device = deviceEntity.ToDto();
@@ -115,16 +124,17 @@ public class AgentHub(
     }
   }
 
-  private async Task<Device> AddOrUpdateDeviceEntity(DeviceDto dto)
+  private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
   {
     var set = _appDb.Set<Device>();
-    Device? entity = null;
-
-    if (dto.Id != Guid.Empty)
-    {
-      entity = await _appDb.Devices
+    var entity = await _appDb.Devices
         .IgnoreQueryFilters()
         .FirstOrDefaultAsync(x => x.Id == dto.Id);
+
+    if (entity is null)
+    {
+      await Clients.Caller.UninstallAgent("Device does not exist in database.");
+      return Result.Fail<Device>("Device not found.");
     }
 
     var entityState = entity is null ? EntityState.Added : EntityState.Modified;
@@ -152,7 +162,7 @@ public class AgentHub(
     }
 
     await _appDb.SaveChangesAsync();
-    return entity;
+    return Result.Ok(entity);
   }
 
   private async Task AddToGroups(Device deviceEntity)
