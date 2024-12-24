@@ -289,7 +289,6 @@ internal class DesktopCapturer : IDesktopCapturer
 
         if (captureResult.HadNoChanges)
         {
-          _logger.LogDebug("DirectX output had no changes.");
           await _delayer.Delay(_afterFailureDelay, stoppingToken);
           continue;
         }
@@ -385,14 +384,14 @@ internal class DesktopCapturer : IDesktopCapturer
     // Keep only frames in our sample window.
     while (
       _sentRegions.TryPeek(out var frame) &&
-      frame.Timestamp.AddSeconds(3) < _timeProvider.GetLocalNow())
+      frame.Timestamp.AddSeconds(20) < _timeProvider.GetLocalNow())
     {
       _sentRegions.TryDequeue(out _);
     }
 
     if (_sentRegions.Count >= 2)
     {
-      var sampleSpan = _sentRegions.Last().Timestamp - _sentRegions.First().Timestamp;
+      var sampleSpan = _timeProvider.GetLocalNow() - _sentRegions.First().Timestamp;
       _currentMbps = _sentRegions.Sum(x => x.Size) / 1024.0 / 1024.0 / sampleSpan.TotalSeconds * 8;
     }
     else if (_sentRegions.Count == 1)

@@ -21,9 +21,10 @@ internal sealed class StreamerStreamingClient(
   IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
+  IDelayer delayer,
   IOptions<StartupOptions> startupOptions,
   ILogger<StreamerStreamingClient> logger)
-  : StreamingClient(messenger, memoryProvider, logger), IStreamerStreamingClient
+  : StreamingClient(messenger, memoryProvider, delayer, logger), IStreamerStreamingClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;

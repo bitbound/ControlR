@@ -33,9 +33,12 @@ public class ViewerStreamingClient(
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IDelayer delayer,
-  ILogger<ViewerStreamingClient> logger,
-  ILogger<StreamingClient> baseLogger) : StreamingClient(messenger, memoryProvider, baseLogger), IViewerStreamingClient
+  ILogger<ViewerStreamingClient> logger) 
+  : StreamingClient(messenger, memoryProvider, delayer, logger), IViewerStreamingClient
 {
+  private readonly IDelayer _delayer = delayer;
+  private readonly ILogger<ViewerStreamingClient> _logger = logger;
+
   public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -168,13 +171,13 @@ public class ViewerStreamingClient(
   {
     try
     {
-      using var _ = logger.BeginScope(callerName);
+      using var _ = _logger.BeginScope(callerName);
       await WaitForConnection();
       await func.Invoke();
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while sending message via websocket stream..");
+      _logger.LogError(ex, "Error while sending message via websocket stream..");
     }
   }
 
@@ -188,7 +191,7 @@ public class ViewerStreamingClient(
     using var cts = new CancellationTokenSource();
     cts.CancelAfter(TimeSpan.FromSeconds(30));
 
-    await delayer.WaitForAsync(
+    await _delayer.WaitForAsync(
       condition: () => State == WebSocketState.Open || IsDisposed,
       pollingDelay: TimeSpan.FromMilliseconds(100),
       cancellationToken: cts.Token);
