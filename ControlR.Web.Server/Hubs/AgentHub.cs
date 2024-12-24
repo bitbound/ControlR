@@ -137,12 +137,10 @@ public class AgentHub(
       return Result.Fail<Device>("Device not found.");
     }
 
-    var entityState = entity is null ? EntityState.Added : EntityState.Modified;
-    entity ??= new Device();
     var entry = set.Entry(entity);
     await entry.Reference(x => x.Tenant).LoadAsync();
     await entry.Collection(x => x.Tags!).LoadAsync();
-    entry.State = entityState;
+    entry.State = EntityState.Modified;
 
     entry.CurrentValues.SetValuesExcept(
       dto,
@@ -150,16 +148,6 @@ public class AgentHub(
       nameof(DeviceDto.TagIds));
 
     entity.Drives = [.. dto.Drives];
-
-    // If we're adding a new device, associate it with any tags passed in.
-    if (entityState == EntityState.Added && dto.TagIds is { Length: > 0 })
-    {
-      var tags = await _appDb.Tags
-        .Where(x => dto.TagIds.Contains(x.Id))
-        .ToListAsync();
-
-      entity.Tags = tags;
-    }
 
     await _appDb.SaveChangesAsync();
     return Result.Ok(entity);
