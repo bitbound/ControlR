@@ -3,6 +3,7 @@
 public class AppOptions
 {
   public const string SectionKey = "AppOptions";
+  public TimeSpan AgentInstallerKeyExpiration { get; init; } = TimeSpan.FromDays(1);
   public string? DockerGatewayIp { get; init; }
   public bool EnableCloudflareProxySupport { get; init; }
   public bool EnablePublicRegistration { get; init; }

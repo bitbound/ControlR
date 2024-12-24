@@ -1,4 +1,4 @@
-version: '3.4'
+version: "3.4"
 
 x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
@@ -32,23 +32,26 @@ services:
       ControlR_POSTGRES_USER: *pgUser
       ControlR_POSTGRES_PASSWORD: *pgPassword
       ControlR_POSTGRES_HOST: "postgres"
-      
+
       # Whether to make self-registration publicly available.
       ControlR_AppOptions__EnablePublicRegistration: false
-      
+
       # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
 
+      # Set the expiration timespan for agent installer keys.  Default is 1 day.
+      ControlR_AppOptions__AgentInstallerKeyExpiration: "01:00:00"
+
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:
-      
+
       # Add an OTLP endpoint URL to enable exporting of OpenTelemetry data to an OTLP endpoint.
       ControlR_OTLP_ENDPOINT_URL: "http://aspire:18889"
 
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
       ControlR_Logging__LogLevel__Default: Information
-      
+
       # Set the minimum log level for Serilog provider.
       ControlR_Serilog__MinimumLevel__Default: Information
 
@@ -56,7 +59,6 @@ services:
       ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
 
       ControlR_AppOptions__ServerBaseUri: "http://localhost:8080"
-
 
       ControlR_AppOptions__RequireUserEmailConfirmation: true
       ControlR_AppOptions__SmtpDisplayName: ""
@@ -71,10 +73,10 @@ services:
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
       # forwarded headers are not in the correct format.
-      # See the docs for more details:  
+      # See the docs for more details:
       # https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer
       #ControlR_AppOptions__KnownProxies__0:
-      
+
       #ControlR_AppOptions__KnownNetworks__0:
 
       # If enabled, ControlR will attempt to use geolocation APIs to determine
@@ -86,14 +88,14 @@ services:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Latitude:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Longitude:
 
-      # To enable Microsoft account login, create an App Registration in Azure and 
-      # set the values below. Instructions can be found here: 
+      # To enable Microsoft account login, create an App Registration in Azure and
+      # set the values below. Instructions can be found here:
       # https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/microsoft-logins
       #ControlR_AppOptions__MicrosoftClientId: ""
       #ControlR_AppOptions__MicrosoftClientSecret: ""
 
       # To enable GitHub login, create an OAuth app in GitHub set the values below.
-      # Instructions can be found here: 
+      # Instructions can be found here:
       # https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
       #ControlR_AppOptions__GitHubClientId: ""
       #ControlR_AppOptions__MicrosoftClientSecret: ""

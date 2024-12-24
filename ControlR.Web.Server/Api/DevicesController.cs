@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
@@ -26,6 +24,13 @@ public class DevicesController : ControllerBase
     {
       return BadRequest();
     }
+
+    // TODO: Validate requestDto.InstallationKey by injecting another
+    // service named IInstallationKeyManager.  This service should use
+    // a MemoryCache to hold valid installation keys for lookup.
+    // The keys should be generated on the Deploy.razor page when it loads.
+    // The page will make an API call to an authenticated endpoint
+    // that creates a new key, puts it in the cache, and returns it.
 
     var entity = new Device();
     var entry = appDb.Entry(entity);

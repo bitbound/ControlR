@@ -203,6 +203,7 @@ builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvide
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddWebSocketBridge();
 builder.Services.AddSingleton<IStreamStore, StreamStore>();
+builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
 
 builder.Host.UseSystemd();
 
