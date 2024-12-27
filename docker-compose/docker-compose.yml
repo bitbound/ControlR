@@ -52,8 +52,9 @@ services:
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
       ControlR_Logging__LogLevel__Default: Information
 
-      # Set the minimum log level for Serilog provider.
-      ControlR_Serilog__MinimumLevel__Default: Information
+      # Whether to add HTTP logging services.
+      # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
+      ControlR_AppOptions__UseHttpLogging: false
 
       # The Gateway IP here must match the IP address in the above controlr network gateway.
       ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
