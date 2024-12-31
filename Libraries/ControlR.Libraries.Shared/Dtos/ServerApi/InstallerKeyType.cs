@@ -8,7 +8,7 @@ public enum InstallerKeyType
   [EnumMember]
   Unknown = 0,
   [EnumMember]
-  SingleUse = 1,
+  UsageBased = 1,
   [EnumMember]
-  AbsoluteExpiration = 2
+  TimeBased = 2
 }

@@ -5,4 +5,6 @@ public record AgentInstallerKey(
   Guid CreatorId,
   string AccessToken,
   InstallerKeyType KeyType,
-  DateTimeOffset? Expiration);
+  uint? AllowedUses,
+  DateTimeOffset? Expiration,
+  uint CurrentUses = 0);

@@ -5,8 +5,8 @@ namespace ControlR.Web.Server.Services;
 
 public interface IAgentInstallerKeyManager
 {
-  Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId, InstallerKeyType keyType, DateTimeOffset? expiration);
-  Task<bool> ValidateKey(string token);
+  Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId, InstallerKeyType keyType, uint? allowedUses, DateTimeOffset? expiration);
+  Task<bool> ValidateKey(string key);
 }
 
 public class AgentInstallerKeyManager(
@@ -27,24 +27,39 @@ public class AgentInstallerKeyManager(
     Guid tenantId,
     Guid creatorId,
     InstallerKeyType keyType,
+    uint? allowedUses,
     DateTimeOffset? expiration)
   {
-    var token = RandomGenerator.CreateAccessToken();
-    var installerKey = new AgentInstallerKey(tenantId, creatorId, token, keyType, expiration);
-    if (expiration.HasValue)
+    var key = RandomGenerator.CreateAccessToken();
+    var installerKey = new AgentInstallerKey(tenantId, creatorId, key, keyType, allowedUses, expiration);
+
+    switch (keyType)
     {
-      _keyCache.Set(token, installerKey, expiration.Value);
+      case InstallerKeyType.UsageBased:
+        {
+          _keyCache.Set(key, installerKey);
+          break;
+        }
+      case InstallerKeyType.TimeBased:
+        {
+          if (!expiration.HasValue)
+          {
+            throw new ArgumentNullException(nameof(expiration));
+          }
+          _keyCache.Set(key, installerKey, expiration.Value);
+          break;
+        }
+      case InstallerKeyType.Unknown:
+      default:
+        throw new ArgumentOutOfRangeException(nameof(keyType), "Unknown installer key type.");
     }
-    else
-    {
-      _keyCache.Set(token, installerKey);
-    }
+
     return installerKey.AsTaskResult();
   }
 
-  public Task<bool> ValidateKey(string token)
+  public Task<bool> ValidateKey(string key)
   {
-    if (!_keyCache.TryGetValue(token, out var cachedObject))
+    if (!_keyCache.TryGetValue(key, out var cachedObject))
     {
       return false.AsTaskResult();
     }
@@ -58,12 +73,31 @@ public class AgentInstallerKeyManager(
     {
       case InstallerKeyType.Unknown:
         break;
-      case InstallerKeyType.SingleUse:
-        _keyCache.Remove(installerKey);
-        return true.AsTaskResult();
-      case InstallerKeyType.AbsoluteExpiration:
-        var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
-        return isValid.AsTaskResult();
+      case InstallerKeyType.UsageBased:
+        {
+          // This operation has a race condition if multiple validations are being
+          // performed on the same key concurrently.  But the risk/impact is so
+          // small that it's not worth locking the resource.
+
+          var isValid = installerKey.CurrentUses < installerKey.AllowedUses;
+          installerKey = installerKey with { CurrentUses = installerKey.CurrentUses + 1 };
+
+          if (installerKey.CurrentUses >= installerKey.AllowedUses)
+          {
+            _keyCache.Remove(key);
+          }
+
+          return isValid.AsTaskResult();
+        }
+      case InstallerKeyType.TimeBased:
+        {
+          var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
+          if (!isValid)
+          {
+            _keyCache.Remove(key);
+          }
+          return isValid.AsTaskResult();
+        }
       default:
         _logger.LogError("Unknown installer key type: {KeyType}", installerKey.KeyType);
         break;

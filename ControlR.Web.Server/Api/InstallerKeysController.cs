@@ -29,13 +29,18 @@ public class InstallerKeysController : ControllerBase
       return BadRequest("Invalid key type.");
     }
 
-    if (requestDto.KeyType == InstallerKeyType.AbsoluteExpiration &&
+    if (requestDto.KeyType == InstallerKeyType.TimeBased &&
        (!requestDto.Expiration.HasValue || requestDto.Expiration.Value < timeProvider.GetLocalNow()))
     {
       return BadRequest("Expiration date must be in the future.");
     }
 
-    var key = await keyManager.CreateKey(tenantId, userId, requestDto.KeyType, requestDto.Expiration);
-    return new CreateInstallerKeyResponseDto(requestDto.KeyType, key.AccessToken, requestDto.Expiration);
+    if (requestDto.KeyType == InstallerKeyType.UsageBased && requestDto.AllowedUses < 1)
+    {
+      return BadRequest("Allowed uses must be more than 0.");
+    }
+
+    var key = await keyManager.CreateKey(tenantId, userId, requestDto.KeyType, requestDto.AllowedUses, requestDto.Expiration);
+    return new CreateInstallerKeyResponseDto(requestDto.KeyType, key.AccessToken, requestDto.AllowedUses, requestDto.Expiration);
   }
 }

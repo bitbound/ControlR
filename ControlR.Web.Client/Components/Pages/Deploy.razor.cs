@@ -15,6 +15,7 @@ public partial class Deploy
   private DateTime? _inputExpirationDate;
   private TimeSpan? _inputExpirationTime;
   private string? _keyExpiration;
+  private uint? _totalUsesAllowed;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -138,28 +139,26 @@ public partial class Deploy
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
 
-  private async Task GenerateToken()
+  private async Task GenerateKey()
   {
     switch (_installerKeyType)
     {
       case InstallerKeyType.Unknown:
         Snackbar.Add("Token type is required", Severity.Error);
         return;
-      case InstallerKeyType.SingleUse:
-        await GenerateSingleUseToken();
+      case InstallerKeyType.UsageBased:
+        await GenerateUsageBasedKey();
         break;
-      case InstallerKeyType.AbsoluteExpiration:
-        await GenerateExpiringToken();
+      case InstallerKeyType.TimeBased:
+        await GenerateTimeBasedKey();
         break;
       default:
         break;
     }
-
   }
 
-  private async Task GenerateExpiringToken()
+  private async Task GenerateTimeBasedKey()
   {
-
     if (_inputExpirationDate is null || _inputExpirationTime is null)
     {
       Snackbar.Add("Expiration date and time is required", Severity.Error);
@@ -177,7 +176,7 @@ public partial class Deploy
       return;
     }
 
-    var dto = new CreateInstallerKeyRequestDto(InstallerKeyType.AbsoluteExpiration, expirationDate);
+    var dto = new CreateInstallerKeyRequestDto(InstallerKeyType.TimeBased, expirationDate);
     var createResult = await ControlrApi.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
@@ -191,9 +190,15 @@ public partial class Deploy
     }
   }
 
-  private async Task GenerateSingleUseToken()
+  private async Task GenerateUsageBasedKey()
   {
-    var dto = new CreateInstallerKeyRequestDto(InstallerKeyType.SingleUse);
+    if (_totalUsesAllowed is null or < 1)
+    {
+      Snackbar.Add("Total uses must be greater than 0");
+      return;
+    }
+
+    var dto = new CreateInstallerKeyRequestDto(InstallerKeyType.UsageBased, AllowedUses: _totalUsesAllowed);
     var createResult = await ControlrApi.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
@@ -212,6 +217,7 @@ public partial class Deploy
   //  await Clipboard.SetText(MacArm64DeployScript);
   //  Snackbar.Add("Install script copied to clipboard", Severity.Success);
   //}
+
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();

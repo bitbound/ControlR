@@ -5,4 +5,5 @@ namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 [DataContract]
 public record CreateInstallerKeyRequestDto(
   [property: DataMember] InstallerKeyType KeyType,
-  [property: DataMember] DateTimeOffset? Expiration = null);
+  [property: DataMember] DateTimeOffset? Expiration = null,
+  [property: DataMember] uint? AllowedUses = null);

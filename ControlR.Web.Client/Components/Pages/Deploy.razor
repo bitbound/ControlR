@@ -13,32 +13,39 @@
     You must first generate an expirable installer token.
   </MudText>
 
-  <MudGrid>
+  <MudGrid Class="mt-2">
     <MudItem xs="12" sm="6">
 
-      <MudInputLabel>
+      <MudText Color="Color.Info">
         Token Type
-      </MudInputLabel>
+      </MudText>
       <MudRadioGroup T="@InstallerKeyType" @bind-Value="@_installerKeyType">
-        <MudRadio Value="@InstallerKeyType.SingleUse">
-          Single Use
+        <MudRadio Value="@InstallerKeyType.UsageBased">
+          Usage-Based
         </MudRadio>
-        <MudRadio Value="@InstallerKeyType.AbsoluteExpiration">
-          Absolute Expiration
+        <MudRadio Value="@InstallerKeyType.TimeBased">
+          Time-Based
         </MudRadio>
       </MudRadioGroup>
 
-      @if (_installerKeyType == InstallerKeyType.AbsoluteExpiration)
+      @if (_installerKeyType == InstallerKeyType.UsageBased)
       {
-        <div class="mt-4">
+        <div class="mt-2">
+          <MudNumericField T="uint?" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
+        </div>
+      }
+
+      @if (_installerKeyType == InstallerKeyType.TimeBased)
+      {
+        <div class="mt-2">
           <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now" Required />
         </div>
         <div class="mt-2">
           <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" Required />
         </div>
       }
-      <div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="@GenerateToken">
+      <div class="mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GenerateKey">
           Generate Token
         </MudButton>
       </div>
@@ -51,13 +58,12 @@ else
     Run these scripts on a remote device to install the agent.
   </MudText>
 
-  @if (_keyExpiration is {} keyExpiration)
+  @if (_keyExpiration is { } keyExpiration)
   {
     <MudAlert Severity="Severity.Info">
       Installation scripts will expire at @(keyExpiration).
     </MudAlert>
   }
-
 
   <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
