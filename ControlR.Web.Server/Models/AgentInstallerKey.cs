@@ -3,4 +3,6 @@
 public record AgentInstallerKey(
   Guid TenantId,
   Guid CreatorId,
-  string AccessToken);
+  string AccessToken,
+  InstallerKeyType KeyType,
+  DateTimeOffset? Expiration);

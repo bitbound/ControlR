@@ -40,9 +40,6 @@ services:
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
 
-      # Set the expiration timespan for agent installer keys.  Default is 1 hour.
-      ControlR_AppOptions__AgentInstallerKeyExpiration: "01:00:00"
-
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:
 

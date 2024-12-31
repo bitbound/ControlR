@@ -16,6 +16,7 @@ public interface IControlrApi
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result> CreateDevice(DeviceDto device);
+  Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
 
@@ -100,6 +101,16 @@ public class ControlrApi(
     {
       using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, device);
       response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.InstallerKeysEndpoint, dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<CreateInstallerKeyResponseDto>();
     });
   }
 
@@ -188,7 +199,7 @@ public class ControlrApi(
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
   {
-    return await TryCallApi(async () => 
+    return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.RolesEndpoint));
   }
 
@@ -201,7 +212,7 @@ public class ControlrApi(
 
   public async Task<Result<UserResponseDto[]>> GetAllUsers()
   {
-    return await TryCallApi(async () => 
+    return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<UserResponseDto[]>(HttpConstants.UsersEndpoint));
   }
 
@@ -278,13 +289,13 @@ public class ControlrApi(
 
   public async Task<Result<ServerSettingsDto>> GetServerSettings()
   {
-    return await TryCallApi(async () => 
+    return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint));
   }
 
   public async Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName)
   {
-    return  await TryGetNullableResponse(async () =>
+    return await TryGetNullableResponse(async () =>
     {
       using var response = await _client.GetAsync($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
       if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
@@ -297,7 +308,7 @@ public class ControlrApi(
 
   public async Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
-    return await TryCallApi(async () => 
+    return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TagResponseDto[]>(
         $"{HttpConstants.UserTagsEndpoint}/{userId}"));
   }

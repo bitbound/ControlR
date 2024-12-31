@@ -5,42 +5,70 @@ namespace ControlR.Web.Server.Services;
 
 public interface IAgentInstallerKeyManager
 {
-  Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId);
-  Task<bool> ValidateKey(Guid tenantId, Guid creatorId, string token);
+  Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId, InstallerKeyType keyType, DateTimeOffset? expiration);
+  Task<bool> ValidateKey(string token);
 }
 
-public class AgentInstallerKeyManager(IOptionsMonitor<AppOptions> appOptions) : IAgentInstallerKeyManager
+public class AgentInstallerKeyManager(
+  TimeProvider timeProvider,
+  IOptionsMonitor<AppOptions> appOptions,
+  ILogger<AgentInstallerKeyManager> logger) : IAgentInstallerKeyManager
 {
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
+  private readonly ILogger<AgentInstallerKeyManager> _logger = logger;
 
   // We can use a HybridCache here later, if we keep this.  Installer
   // keys will probably go into the database, though, with a management
   // UI for them.
   private readonly MemoryCache _keyCache = new(new MemoryCacheOptions());
 
-  public Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId)
+  public Task<AgentInstallerKey> CreateKey(
+    Guid tenantId,
+    Guid creatorId,
+    InstallerKeyType keyType,
+    DateTimeOffset? expiration)
   {
     var token = RandomGenerator.CreateAccessToken();
-    var installerKey = new AgentInstallerKey(tenantId, creatorId, token);
-    _keyCache.Set(token, installerKey, _appOptions.CurrentValue.AgentInstallerKeyExpiration);
+    var installerKey = new AgentInstallerKey(tenantId, creatorId, token, keyType, expiration);
+    if (expiration.HasValue)
+    {
+      _keyCache.Set(token, installerKey, expiration.Value);
+    }
+    else
+    {
+      _keyCache.Set(token, installerKey);
+    }
     return installerKey.AsTaskResult();
   }
 
-  public Task<bool> ValidateKey(Guid tenantId, Guid creatorId, string token)
+  public Task<bool> ValidateKey(string token)
   {
-    var isValid = _keyCache.TryGetValue(token, out var cachedObject) &&
-      cachedObject is AgentInstallerKey installerKey &&
-      installerKey.TenantId == tenantId &&
-      installerKey.CreatorId == creatorId;
-
-    return isValid.AsTaskResult();
-  }
-
-  private MemoryCacheEntryOptions GetEntryOptions()
-  {
-    return new MemoryCacheEntryOptions()
+    if (!_keyCache.TryGetValue(token, out var cachedObject))
     {
-      SlidingExpiration = _appOptions.CurrentValue.AgentInstallerKeyExpiration
-    };
+      return false.AsTaskResult();
+    }
+
+    if (cachedObject is not AgentInstallerKey installerKey)
+    {
+      return false.AsTaskResult();
+    }
+
+    switch (installerKey.KeyType)
+    {
+      case InstallerKeyType.Unknown:
+        break;
+      case InstallerKeyType.SingleUse:
+        _keyCache.Remove(installerKey);
+        return true.AsTaskResult();
+      case InstallerKeyType.AbsoluteExpiration:
+        var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
+        return isValid.AsTaskResult();
+      default:
+        _logger.LogError("Unknown installer key type: {KeyType}", installerKey.KeyType);
+        break;
+    }
+
+    return false.AsTaskResult();
   }
 }
