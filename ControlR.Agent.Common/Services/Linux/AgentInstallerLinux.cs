@@ -31,7 +31,11 @@ internal class AgentInstallerLinux(
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task Install(Uri? serverUri = null, Guid? tenantId = null, Guid[]? tags = null)
+  public async Task Install(
+    Uri? serverUri = null, 
+    Guid? tenantId = null, 
+    string? installerKey = null, 
+    Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -80,7 +84,14 @@ internal class AgentInstallerLinux(
       var serviceFile = GetServiceFile().Trim();
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
-      await UpdateAppSettings(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId);
+
+      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      if (!createResult.IsSuccess)
+      {
+        return;
+      }
+
       var serviceName = GetServiceName();
 
       var psi = new ProcessStartInfo

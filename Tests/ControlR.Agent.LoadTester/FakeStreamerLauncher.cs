@@ -1,11 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ControlR.Agent.LoadTester;
 internal class FakeStreamerLauncher : IStreamerLauncher

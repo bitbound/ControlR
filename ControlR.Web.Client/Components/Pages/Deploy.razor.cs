@@ -221,7 +221,7 @@ public partial class Deploy
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
-    var args = $"-s {serverUri} -i {serverUri.Authority} -t {_tenantId}";
+    var args = $"-s {serverUri} -i {serverUri.Authority} -t {_tenantId} -k {_installerKey}";
 
     if (!_addTags || _selectedTags is null) return args;
 

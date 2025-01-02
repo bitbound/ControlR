@@ -1,5 +1,4 @@
 ﻿using ControlR.Agent.Common.Services;
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Agent.LoadTester;

@@ -11,6 +11,7 @@ public class DevicesController : ControllerBase
   [AllowAnonymous]
   public async Task<ActionResult<DeviceDto>> CreateDevice(
     [FromServices] AppDb appDb,
+    [FromServices] IAgentInstallerKeyManager keyManager,
     [FromBody] CreateDeviceRequestDto requestDto)
   {
     var deviceDto = requestDto.Device;
@@ -25,13 +26,11 @@ public class DevicesController : ControllerBase
       return BadRequest();
     }
 
-    // TODO: Validate requestDto.InstallationKey by injecting another
-    // service named IInstallationKeyManager.  This service should use
-    // a MemoryCache to hold valid installation keys for lookup.
-    // The keys should be generated on the Deploy.razor page when it loads.
-    // The page will make an API call to an authenticated endpoint
-    // that creates a new key, puts it in the cache, and returns it.
-
+    if (!await keyManager.ValidateKey(requestDto.InstallerKey))
+    {
+      return BadRequest();
+    }
+    
     var entity = new Device();
     var entry = appDb.Entry(entity);
     entry.State = EntityState.Added;

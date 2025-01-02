@@ -24,7 +24,10 @@ namespace ControlR.Agent.Common.Startup;
 
 internal static class HostApplicationBuilderExtensions
 {
-  internal static IHostApplicationBuilder AddControlRAgent(this HostApplicationBuilder builder, StartupMode startupMode, string? instanceId)
+  internal static IHostApplicationBuilder AddControlRAgent(
+    this HostApplicationBuilder builder, 
+    StartupMode startupMode, 
+    string? instanceId)
   {
     instanceId = instanceId?.SanitizeForFileSystem();
     var services = builder.Services;

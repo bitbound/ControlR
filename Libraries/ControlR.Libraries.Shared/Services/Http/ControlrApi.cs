@@ -15,7 +15,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result> CreateDevice(DeviceDto device);
+  Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
@@ -95,10 +95,11 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> CreateDevice(DeviceDto device)
+  public async Task<Result> CreateDevice(DeviceDto device, string installerKey)
   {
     return await TryCallApi(async () =>
     {
+      var requestDto = new CreateDeviceRequestDto(device, installerKey);
       using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, device);
       response.EnsureSuccessStatusCode();
     });

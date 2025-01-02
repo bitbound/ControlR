@@ -32,7 +32,11 @@ internal class AgentInstallerMac(
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task Install(Uri? serverUri = null, Guid? tenantId = null, Guid[]? tags = null)
+  public async Task Install(
+    Uri? serverUri = null,
+    Guid? tenantId = null,
+    string? installerKey = null,
+    Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -81,7 +85,13 @@ internal class AgentInstallerMac(
 
       _logger.LogInformation("Writing service file.");
       await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
-      await UpdateAppSettings(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId);
+
+      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      if (!createResult.IsSuccess)
+      {
+        return;
+      }
 
       var psi = new ProcessStartInfo
       {
@@ -227,10 +237,5 @@ internal class AgentInstallerMac(
     }
 
     return $"/Library/LaunchDaemons/controlr-agent-{instanceOptions.Value.InstanceId}.plist";
-  }
-
-  private string GetServiceName()
-  {
-    return Path.GetFileName(GetServiceFilePath());
   }
 }

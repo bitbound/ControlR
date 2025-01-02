@@ -4,7 +4,6 @@ using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;

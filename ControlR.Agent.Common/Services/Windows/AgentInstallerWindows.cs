@@ -35,7 +35,11 @@ internal class AgentInstallerWindows(
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly IProcessManager _processes = processes;
 
-  public async Task Install(Uri? serverUri = null, Guid? tenantId = null, Guid[]? tags = null)
+  public async Task Install(
+    Uri? serverUri = null, 
+    Guid? tenantId = null, 
+    string? installerKey = null, 
+    Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -95,7 +99,13 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      await UpdateAppSettings(serverUri, tenantId, tags);
+      await UpdateAppSettings(serverUri, tenantId);
+
+      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      if (!createResult.IsSuccess)
+      {
+        return;
+      }
 
       var serviceName = GetServiceName();
 

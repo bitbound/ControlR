@@ -11,11 +11,9 @@ public interface IAgentInstallerKeyManager
 
 public class AgentInstallerKeyManager(
   TimeProvider timeProvider,
-  IOptionsMonitor<AppOptions> appOptions,
   ILogger<AgentInstallerKeyManager> logger) : IAgentInstallerKeyManager
 {
   private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly ILogger<AgentInstallerKeyManager> _logger = logger;
 
   // We can use a HybridCache here later, if we keep this.  Installer
@@ -57,7 +55,17 @@ public class AgentInstallerKeyManager(
     return installerKey.AsTaskResult();
   }
 
-  public Task<bool> ValidateKey(string key)
+  public async Task<bool> ValidateKey(string key)
+  {
+    var isValid = await ValidateKeyImpl(key);
+    if (!isValid)
+    {
+      _logger.LogError("Installer key validation failed.  Key: {Key}", key);
+    }
+    return isValid;
+  }
+
+  private Task<bool> ValidateKeyImpl(string key)
   {
     if (!_keyCache.TryGetValue(key, out var cachedObject))
     {

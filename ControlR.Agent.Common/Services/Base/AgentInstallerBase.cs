@@ -24,7 +24,7 @@ internal abstract class AgentInstallerBase(
   protected IFileSystem FileSystem { get; } = fileSystem;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
 
-  protected async Task UpdateAppSettings(Uri? serverUri, Guid? tenantId, Guid[]? tagIds)
+  protected async Task UpdateAppSettings(Uri? serverUri, Guid? tenantId)
   {
     using var _ = Logger.BeginMemberScope();
     var currentOptions = AppOptions.CurrentValue;
@@ -48,30 +48,40 @@ internal abstract class AgentInstallerBase(
     {
       Logger.LogInformation("DeviceId is empty.  Generating new one.");
       currentOptions.DeviceId = Guid.NewGuid();
-
-      if (tagIds is { Length: > 0 } tags)
-      {
-        var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
-        device.TenantId = updatedTenantId;
-        device.TagIds = tags;
-        var dto = device.CloneAs<DeviceModel, DeviceDto>();
-
-        Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-        var result = await _controlrApi.CreateDevice(dto);
-        if (result.IsSuccess)
-        {
-          Logger.LogInformation("Device created successfully.");
-        }
-        else
-        {
-          Logger.LogError(result.Exception, "Device creation failed.  Reason: {Reason}", result.Reason);
-        }
-      }
     }
 
     Logger.LogInformation("Writing results to disk.");
     var appSettings = new AgentAppSettings { AppOptions = currentOptions };
     var appSettingsJson = JsonSerializer.Serialize(appSettings, _jsonOptions);
     await FileSystem.WriteAllTextAsync(_settingsProvider.GetAppSettingsPath(), appSettingsJson);
+  }
+
+  protected async Task<Result> CreateDeviceOnServer(string? installerKey, Guid[]? tagIds)
+  {
+    if (installerKey is null)
+    {
+      return Result.Ok();
+    }
+
+    var currentOptions = AppOptions.CurrentValue;
+    tagIds ??= [];
+
+    var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
+    device.TenantId = currentOptions.TenantId;
+    device.TagIds = tagIds;
+    var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
+
+    Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
+    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKey);
+    if (createResult.IsSuccess)
+    {
+      Logger.LogInformation("Device created successfully.");
+    }
+    else
+    {
+      Logger.LogError(createResult.Exception, "Device creation failed.  Reason: {Reason}", createResult.Reason);
+    }
+
+    return createResult;
   }
 }
