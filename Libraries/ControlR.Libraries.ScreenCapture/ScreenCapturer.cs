@@ -12,7 +12,6 @@ using Windows.Win32.UI.WindowsAndMessaging;
 using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.ScreenCapture.Helpers;
 using ControlR.Libraries.ScreenCapture.Models;
-using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.ScreenCapture;
@@ -22,9 +21,9 @@ public interface IScreenCapturer
   /// <summary>
   ///   Gets a capture of a specific display.
   /// </summary>
-  /// <param name="display">The display to capture.  Retrieve current displays from <see cref="GetDisplays" />. </param>
+  /// <param name="targetDisplay">The display to capture.  Retrieve current displays from <see cref="GetDisplays" />. </param>
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
-  /// <param name="tryUseDirectX">Whether to attempt using DirecX (DXGI) for getting the capture.</param>
+  /// <param name="tryUseDirectX">Whether to attempt using DirectX (DXGI) for getting the capture.</param>
   /// <param name="directXTimeout">
   ///   The amount of time, in milliseconds, to allow DirectX to attempt to capture the screen.
   ///   If no screen changes have occurred within this time, the capture will time out.
@@ -159,6 +158,7 @@ internal sealed class ScreenCapturer(
     }
     catch
     {
+      // This can throw transiently.  Ignore.  Buffer size will be 0.
     }
 
     if (bufferSizeNeeded == 0)
@@ -229,7 +229,7 @@ internal sealed class ScreenCapturer(
     }
   }
 
-  internal CaptureResult GetBitBltCapture(Rectangle captureArea, bool captureCursor)
+  private CaptureResult GetBitBltCapture(Rectangle captureArea, bool captureCursor)
   {
     var hwnd = HWND.Null;
     var screenDc = new HDC();
@@ -241,12 +241,10 @@ internal sealed class ScreenCapturer(
 
       var bitmap = new Bitmap(captureArea.Width, captureArea.Height);
       using var graphics = Graphics.FromImage(bitmap);
-      var targetDc = graphics.GetHdc();
+      using var targetDc = graphics.GetDisposableHdc();
 
-      var bitBltResult = PInvoke.BitBlt(new HDC(targetDc), 0, 0, captureArea.Width, captureArea.Height,
+      var bitBltResult = PInvoke.BitBlt(new HDC(targetDc.Value), 0, 0, captureArea.Width, captureArea.Height,
         screenDc, captureArea.X, captureArea.Y, ROP_CODE.SRCCOPY);
-
-      graphics.ReleaseHdc(targetDc);
 
       if (!bitBltResult)
       {
@@ -271,7 +269,7 @@ internal sealed class ScreenCapturer(
     }
   }
 
-  internal CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
+  private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.GetDxOutput(display.DeviceName);
 
@@ -297,14 +295,12 @@ internal sealed class ScreenCapturer(
         }
         catch
         {
+          // No-op;
         }
 
-        if (IsDxOutputHealthy(dxOutput))
-        {
-          return CaptureResult.NoChanges();
-        }
-
-        return CaptureResult.NoAccumulatedFrames();
+        return IsDxOutputHealthy(dxOutput)
+          ? CaptureResult.NoChanges()
+          : CaptureResult.NoAccumulatedFrames();
       }
 
       var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
@@ -327,6 +323,7 @@ internal sealed class ScreenCapturer(
           return CaptureResult.Fail("Failed to create DirectX Texture.");
         }
 
+        // ReSharper disable once SuspiciousTypeConversion.Global
         deviceContext.CopyResource(texture2d, (ID3D11Texture2D)screenResource);
 
         var subResource = new D3D11_MAPPED_SUBRESOURCE();
@@ -367,37 +364,36 @@ internal sealed class ScreenCapturer(
 
       dxOutput.LastSuccessfulCapture = _timeProvider.GetLocalNow();
 
-      if (captureCursor)
+      if (!captureCursor)
       {
-        if (!dxOutput.LastCursorArea.IsEmpty)
-        {
-          dirtyRects = [..dirtyRects, dxOutput.LastCursorArea];
-        }
+        return CaptureResult.Ok(bitmap, true, dirtyRects);
+      }
 
-        using var graphics = Graphics.FromImage(bitmap);
+      if (!dxOutput.LastCursorArea.IsEmpty)
+      {
+        dirtyRects = [..dirtyRects, dxOutput.LastCursorArea];
+      }
 
-        var iconArea = TryDrawCursor(graphics, display.MonitorArea);
-        if (!iconArea.IsEmpty)
-        {
-          dirtyRects = [..dirtyRects, iconArea];
-          dxOutput.LastCursorArea = iconArea;
-        }
-        else
-        {
-          dxOutput.LastCursorArea = Rectangle.Empty;
-        }
+      using var graphics = Graphics.FromImage(bitmap);
+
+      var iconArea = TryDrawCursor(graphics, display.MonitorArea);
+      if (!iconArea.IsEmpty)
+      {
+        dirtyRects = [..dirtyRects, iconArea];
+        dxOutput.LastCursorArea = iconArea;
+      }
+      else
+      {
+        dxOutput.LastCursorArea = Rectangle.Empty;
       }
 
       return CaptureResult.Ok(bitmap, true, dirtyRects);
     }
     catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
     {
-      if (IsDxOutputHealthy(dxOutput))
-      {
-        return CaptureResult.NoChanges();
-      }
-
-      return CaptureResult.TimedOut();
+      return IsDxOutputHealthy(dxOutput)
+        ? CaptureResult.NoChanges()
+        : CaptureResult.TimedOut();
     }
     catch (COMException ex)
     {
@@ -419,6 +415,7 @@ internal sealed class ScreenCapturer(
       }
       catch
       {
+        // Ignore.
       }
     }
   }

@@ -15,7 +15,7 @@ public partial class Deploy
   private DateTime? _inputExpirationDate;
   private TimeSpan? _inputExpirationTime;
   private string? _keyExpiration;
-  private uint? _totalUsesAllowed;
+  private uint _totalUsesAllowed = 1;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -161,13 +161,12 @@ public partial class Deploy
   {
     if (_inputExpirationDate is null || _inputExpirationTime is null)
     {
-      Snackbar.Add("Expiration date and time is required", Severity.Error);
+      Snackbar.Add("Expiration date and time are required", Severity.Error);
       return;
     }
 
     var expirationDate = _inputExpirationDate.Value
       .Add(_inputExpirationTime.Value)
-      .ToUniversalTime()
       .ToDateTimeOffset();
 
     if (expirationDate < TimeProvider.GetLocalNow())
@@ -183,16 +182,13 @@ public partial class Deploy
       Snackbar.Add("Failed to create installer key", Severity.Error);
       return;
     }
+    _keyExpiration = expirationDate.ToString("g");
     _installerKey = createResult.Value.AccessKey;
-    if (createResult.Value.Expiration.HasValue)
-    {
-      _keyExpiration = createResult.Value.Expiration.Value.ToLocalTime().ToString("g");
-    }
   }
 
   private async Task GenerateUsageBasedKey()
   {
-    if (_totalUsesAllowed is null or < 1)
+    if (_totalUsesAllowed < 1)
     {
       Snackbar.Add("Total uses must be greater than 0");
       return;
@@ -208,7 +204,7 @@ public partial class Deploy
     _installerKey = createResult.Value.AccessKey;
     if (createResult.Value.Expiration.HasValue)
     {
-        _keyExpiration = createResult.Value.Expiration.Value.ToLocalTime().ToString("g");
+      _keyExpiration = createResult.Value.Expiration.Value.ToLocalTime().ToString("g");
     }
   }
 

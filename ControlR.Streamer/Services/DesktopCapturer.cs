@@ -292,7 +292,7 @@ internal class DesktopCapturer : IDesktopCapturer
           await _delayer.Delay(_afterFailureDelay, stoppingToken);
           continue;
         }
-
+        
         if (captureResult.DxTimedOut)
         {
           _logger.LogDebug("DirectX capture timed out. BitBlt fallback used.");

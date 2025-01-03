@@ -31,17 +31,17 @@
       @if (_installerKeyType == InstallerKeyType.UsageBased)
       {
         <div class="mt-2">
-          <MudNumericField T="uint?" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
+          <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
         </div>
       }
 
       @if (_installerKeyType == InstallerKeyType.TimeBased)
       {
         <div class="mt-2">
-          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now" Required />
+          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date" Required />
         </div>
         <div class="mt-2">
-          <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" Required />
+          <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required />
         </div>
       }
       <div class="mt-4">
@@ -58,10 +58,17 @@ else
     Run these scripts on a remote device to install the agent.
   </MudText>
 
-  @if (_keyExpiration is { } keyExpiration)
+  @if (_installerKeyType == InstallerKeyType.TimeBased)
   {
     <MudAlert Severity="Severity.Info">
-      Installation scripts will expire at @(keyExpiration).
+      Installation scripts will expire at @(_keyExpiration).
+    </MudAlert>
+  }
+
+  if (_installerKeyType == InstallerKeyType.UsageBased)
+  {
+    <MudAlert Severity="Severity.Info">
+      Installation scripts will expire after @(_totalUsesAllowed) uses.
     </MudAlert>
   }
 
@@ -70,27 +77,17 @@ else
       Windows (PowerShell)
     </MudText>
 
-    <MudTextField T="string"
-                  Label="Copy and paste to install agent"
-                  Variant="Variant.Filled"
-                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                  OnAdornmentClick="CopyWindowsScript"
-                  Adornment="Adornment.End"
-                  Value="WindowsDeployScript"
-                  Class="mb-5" />
+    <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
+      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsScript" Adornment="Adornment.End"
+      Value="WindowsDeployScript" Class="mb-5" />
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
       Ubuntu (Bash)
     </MudText>
 
-    <MudTextField T="string"
-                  Label="Copy and paste to install agent"
-                  Variant="Variant.Filled"
-                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                  OnAdornmentClick="CopyUbuntuScript"
-                  Adornment="Adornment.End"
-                  Value="UbuntuDeployScript"
-                  Class="mb-5" />
+    <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
+      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUbuntuScript" Adornment="Adornment.End"
+      Value="UbuntuDeployScript" Class="mb-5" />
 
     @*<MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Mac x64 (zsh)
@@ -132,14 +129,8 @@ else
       </MudText>
       <MudCheckBox @bind-Value="_addTags" Label="Add device tags" />
 
-      <MudSelect T="TagResponseDto"
-                 @bind-SelectedValues="_selectedTags"
-                 Disabled="!_addTags"
-                 Immediate
-                 MultiSelection
-                 FullWidth="false"
-                 Text="@(SelectedTagsText)"
-                 Label="Tags">
+      <MudSelect T="TagResponseDto" @bind-SelectedValues="_selectedTags" Disabled="!_addTags" Immediate MultiSelection
+        FullWidth="false" Text="@(SelectedTagsText)" Label="Tags">
         @foreach (var tag in _tags)
         {
           <MudSelectItem Value="@tag">

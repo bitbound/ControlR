@@ -78,6 +78,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IRetryer, Retryer>();
     services.AddSimpleIpc();
     services.AddHostedService<HostLifetimeEventResponder>();
+    services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
 
     if (startupMode == StartupMode.Run)
     {
@@ -87,7 +88,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
-      services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
+
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService<AgentHeartbeatTimer>();
       services.AddHostedService(s => s.GetRequiredService<IStreamerUpdater>());
@@ -95,20 +96,18 @@ internal static class HostApplicationBuilderExtensions
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {
-        services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
         services.AddSingleton<IStreamerLauncher, StreamerLauncherWindows>();
         services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
         services.AddHostedService<StreamingSessionWatcher>();
       }
       else if (OperatingSystem.IsLinux())
       {
-        services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
         services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
         services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
       }
       else if (OperatingSystem.IsMacOS())
       {
-        services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+
         services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
         services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
       }
@@ -127,6 +126,7 @@ internal static class HostApplicationBuilderExtensions
     {
       services.AddSingleton<IWin32Interop, Win32Interop>();
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
       services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
       services.AddSingleton<IPowerControl, PowerControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
@@ -134,6 +134,7 @@ internal static class HostApplicationBuilderExtensions
     else if (OperatingSystem.IsLinux())
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
@@ -142,6 +143,7 @@ internal static class HostApplicationBuilderExtensions
     else if (OperatingSystem.IsMacOS())
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();

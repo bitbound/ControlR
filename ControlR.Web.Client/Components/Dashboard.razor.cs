@@ -154,6 +154,8 @@ public partial class Dashboard
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
+    viewModel.IsOutdated = IsOutdated(viewModel);
+
     var index = _devices.FindIndex(x => x.Id == viewModel.Id);
     if (index > -1)
     {
@@ -186,6 +188,14 @@ public partial class Dashboard
     await InvokeAsync(StateHasChanged);
   }
 
+  private bool IsOutdated(DeviceViewModel device)
+  {
+    return
+      _agentReleaseVersion is not null &&
+      Version.TryParse(device.AgentVersion, out var agentVersion) &&
+      !agentVersion.Equals(_agentReleaseVersion);
+  }
+
   private async Task LoadDevicesFromStore()
   {
     var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
@@ -197,13 +207,22 @@ public partial class Dashboard
     var devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
     foreach (var device in devices)
     {
-      device.IsOutdated = 
-        _agentReleaseVersion is not null &&
-        Version.TryParse(device.AgentVersion, out var agentVersion) &&
-        !agentVersion.Equals(_agentReleaseVersion);
+      device.IsOutdated = IsOutdated(device);
     }
 
     _devices = devices;
+  }
+  private async Task RefreshDeviceInfo(DeviceViewModel device)
+  {
+    try
+    {
+      await ViewerHub.RefreshDeviceInfo(device.Id);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while refreshing device info.");
+      Snackbar.Add("An error occurred while refreshing device info", Severity.Error);
+    }
   }
 
   private async Task RefreshDevices()
@@ -350,19 +369,6 @@ public partial class Dashboard
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while shutting down device.");
-    }
-  }
-
-  private async Task RefreshDeviceInfo(DeviceViewModel device)
-  {
-    try
-    {
-      await ViewerHub.RefreshDeviceInfo(device.Id);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while refreshing device info.");
-      Snackbar.Add("An error occurred while refreshing device info", Severity.Error);
     }
   }
   private void StartTerminal(DeviceViewModel device)
