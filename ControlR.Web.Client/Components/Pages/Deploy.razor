@@ -10,14 +10,14 @@
 @if (_installerKey is null)
 {
   <MudText Typo="Typo.subtitle1" GutterBottom>
-    You must first generate an installer token.
+    You must first generate an installer access key.
   </MudText>
 
   <MudGrid Class="mt-2">
     <MudItem xs="12" sm="6">
 
       <MudText Color="Color.Info">
-        Token Type
+        Key Type
       </MudText>
       <MudRadioGroup T="@InstallerKeyType" @bind-Value="@_installerKeyType">
         <MudRadio Value="@InstallerKeyType.UsageBased">
@@ -47,7 +47,7 @@
       }
       <div class="mt-4">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GenerateKey">
-          Generate Token
+          Generate Key
         </MudButton>
       </div>
     </MudItem>
