@@ -47,7 +47,7 @@ jobs:
         displayName: Run Tests
         inputs:
           command: test
-          projects: "**/Tests/**/*.csproj"
+          projects: "**/Tests/**/*Tests.csproj"
 
       - task: PowerShell@2
         displayName: Invoke Build.ps1
