@@ -1,5 +1,7 @@
 version: "3.4"
 
+# These values need to be set.  You can either define these environment variables
+# on the host or supply them here directly as string literals.
 x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}

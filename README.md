@@ -43,11 +43,13 @@ Additional proxy IPs can be added to the `KnownProxies` list in the compose file
 
 If the public IP for your connected devices are not showing correctly, the problem is likely due to a misconfiguration here.
 
-## Multitenancy
+## Multi-tenancy
 
 By default, the server is single-tenant.  The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
 
+Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the compose file will allow anyone to create a new account on the server.  A new tenant is created for each account that is created this way.
 
+The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/en-us/ef/core/querying/filters) feature to isolate tenant data (devices, users, etc.);
 
 ## Agent OS Support:
 
@@ -67,7 +69,15 @@ Permissions are implemented via a combination of role-based and resource-based a
 To access a device, a user must have either the `DeviceSuperuser` role or a matching tag.  Tags can be assigned to both users and devices to grant access.
 
 Role Descriptions:
-- `DeviceSuperuser` - Full access to all devices for the tenant
+- `AgentInstaller`
+  - Able to deploy/install the agent on new devices
+- `DeviceSuperuser`
+  - Able to access all devices
+- `TenantAdministrator`
+  - Able manage users and permissions for the tenant
+- `ServerAdministrator`
+  - Able to manage and see stats for the server
+  - This does not allow access to other tenants' devices or users
 
 ## Metrics
 
