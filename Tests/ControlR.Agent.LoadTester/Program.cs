@@ -50,7 +50,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   }
 
   var builder = Host.CreateApplicationBuilder(args);
-  builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}");
+  builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}", serverUri);
 
   var deviceId = DeterministicGuid.Create(i);
 

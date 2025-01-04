@@ -3,7 +3,7 @@
 public record AgentInstallerKey(
   Guid TenantId,
   Guid CreatorId,
-  string AccessToken,
+  string KeySecret,
   InstallerKeyType KeyType,
   uint? AllowedUses,
   DateTimeOffset? Expiration,

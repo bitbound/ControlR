@@ -100,7 +100,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var requestDto = new CreateDeviceRequestDto(device, installerKey);
-      using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, device);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
       response.EnsureSuccessStatusCode();
     });
   }

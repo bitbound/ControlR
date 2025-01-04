@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Api;
 
 [Route("api/installer-keys")]
 [ApiController]
-[Authorize]
+[Authorize(Roles = RoleNames.AgentInstaller)]
 public class InstallerKeysController : ControllerBase
 {
   public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
@@ -48,6 +48,6 @@ public class InstallerKeysController : ControllerBase
 
     logger.LogInformation("Installer key created.  Request DTO: {@Dto}", requestDto);
     var key = await keyManager.CreateKey(tenantId, userId, requestDto.KeyType, requestDto.AllowedUses, requestDto.Expiration);
-    return new CreateInstallerKeyResponseDto(requestDto.KeyType, key.AccessToken, requestDto.AllowedUses, requestDto.Expiration);
+    return new CreateInstallerKeyResponseDto(requestDto.KeyType, key.KeySecret, requestDto.AllowedUses, requestDto.Expiration);
   }
 }

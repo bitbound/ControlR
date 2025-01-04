@@ -135,6 +135,16 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           Name = RoleNames.DeviceSuperUser,
           NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
         });
+    
+    builder
+      .Entity<AppRole>()
+      .HasData(
+        new AppRole
+        {
+          Id = DeterministicGuid.Create(4),
+          Name = RoleNames.AgentInstaller,
+          NormalizedName = RoleNames.AgentInstaller.ToUpper()
+        });
   }
 
   private void ConfigureDevices(ModelBuilder builder)

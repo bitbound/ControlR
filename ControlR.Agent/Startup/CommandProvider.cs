@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Startup;
 
-internal class CommandProvider
+internal static class CommandProvider
 {
   private static readonly string[] _deviceTagsAlias = ["-g", "--device-tags"];
   private static readonly string[] _installerKeyAlias = ["-k", "--installer-key"];
@@ -48,7 +48,7 @@ internal class CommandProvider
     var serverUriOption = new Option<Uri?>(
       _serverUriAlias,
       "The fully-qualified server URI to which the agent will connect " +
-      "(e.g. 'https://my.example.com' or 'http://my.example.com:8080').");
+      "(e.g. 'https://my.example.com' or 'https://my.example.com:8080').");
 
     var instanceIdOption = new Option<string>(
       _instanceIdAlias,
@@ -94,7 +94,7 @@ internal class CommandProvider
           .Where(x => x != Guid.Empty)
           .ToArray();
 
-      using var host = CreateHost(StartupMode.Install, args, instanceId);
+      using var host = CreateHost(StartupMode.Install, args, instanceId, serverUri);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
       await installer.Install(serverUri, tenantId, installerKey, tags);
       await host.RunAsync();
@@ -145,10 +145,15 @@ internal class CommandProvider
     return unInstallCommand;
   }
 
-  private static IHost CreateHost(StartupMode startupMode, string[] args, string? instanceId = null)
+  private static IHost CreateHost(
+    StartupMode startupMode, 
+    string[] args, 
+    string? instanceId = null,
+    Uri? serverUri = null)
   {
     var host = Host.CreateApplicationBuilder(args);
-    host.AddControlRAgent(startupMode, instanceId);
+   
+    host.AddControlRAgent(startupMode, instanceId, serverUri);
     return host.Build();
   }
 

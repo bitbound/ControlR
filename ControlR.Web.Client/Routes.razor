@@ -2,7 +2,9 @@
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
-                <RedirectToLogin />
+                <MudAlert Severity="Severity.Warning">
+                    You are not authorized to access this page.
+                </MudAlert>
             </NotAuthorized>
         </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

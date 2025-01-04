@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
@@ -10,42 +11,57 @@ public class DevicesController : ControllerBase
   [HttpPost]
   [AllowAnonymous]
   public async Task<ActionResult<DeviceDto>> CreateDevice(
+    [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentInstallerKeyManager keyManager,
-    [FromBody] CreateDeviceRequestDto requestDto)
+    [FromServices] IDeviceManager deviceManager,
+    [FromServices] ILogger<DevicesController> logger)
   {
+    using var logScope = logger.BeginScope(requestDto);
     var deviceDto = requestDto.Device;
 
     if (deviceDto.Id == Guid.Empty)
     {
+      logger.LogWarning("Invalid device ID.");
       return BadRequest();
     }
 
-    if (await appDb.Devices.AnyAsync(x => x.Id == deviceDto.Id))
+    if (!keyManager.TryGetKey(requestDto.InstallerKey, out var installerKey))
     {
+      logger.LogWarning("Installer key not found.");
       return BadRequest();
+    }
+
+    var existingDevice = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceDto.Id);
+    if (existingDevice is not null)
+    {
+      logger.LogInformation("Device already exists.  Verifying user authorization.");
+
+      var keyCreator = await userManager.FindByIdAsync($"{installerKey.CreatorId}");
+      if (keyCreator is null)
+      {
+        logger.LogWarning("User not found.");
+        return BadRequest();
+      }
+
+      var authResult = await deviceManager.CanInstallAgentOnDevice(keyCreator,  existingDevice);
+
+      if (!authResult)
+      {
+        logger.LogCritical("User is not authorized to install an agent on this device.");
+        return Unauthorized();
+      }
     }
 
     if (!await keyManager.ValidateKey(requestDto.InstallerKey))
     {
+      logger.LogWarning("Invalid installer key.");
       return BadRequest();
     }
-    
-    var entity = new Device();
-    var entry = appDb.Entry(entity);
-    entry.State = EntityState.Added;
-    entry.CurrentValues.SetValues(deviceDto);
 
-    if (deviceDto.TagIds is { Length: > 0 } tagIds)
-    {
-      var tags = await appDb.Tags
-        .Where(x => tagIds.Contains(x.Id))
-        .ToListAsync();
-
-      entity.Tags = tags;
-    }
-
-    await appDb.SaveChangesAsync();
+    var entity = await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
     return entity.ToDto();
   }
 

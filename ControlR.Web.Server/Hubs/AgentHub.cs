@@ -10,12 +10,14 @@ public class AgentHub(
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IWebHostEnvironment hostEnvironment,
+  IDeviceManager deviceManager,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
   private DeviceDto? Device
@@ -23,8 +25,7 @@ public class AgentHub(
     get => GetItem<DeviceDto?>(null);
     set => SetItem(value);
   }
-
-
+  
   public override async Task OnDisconnectedAsync(Exception? exception)
   {
     try
@@ -126,31 +127,12 @@ public class AgentHub(
 
   private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
   {
-    var set = _appDb.Set<Device>();
-    var entity = await _appDb.Devices
-        .IgnoreQueryFilters()
-        .FirstOrDefaultAsync(x => x.Id == dto.Id);
-
-    if (entity is null)
+    var updateResult = await _deviceManager.UpdateDevice(dto, addTagIds: false);
+    if (!updateResult.IsSuccess)
     {
       await Clients.Caller.UninstallAgent("Device does not exist in database.");
-      return Result.Fail<Device>("Device not found.");
     }
-
-    var entry = set.Entry(entity);
-    await entry.Reference(x => x.Tenant).LoadAsync();
-    await entry.Collection(x => x.Tags!).LoadAsync();
-    entry.State = EntityState.Modified;
-
-    entry.CurrentValues.SetValuesExcept(
-      dto,
-      nameof(DeviceDto.Alias),
-      nameof(DeviceDto.TagIds));
-
-    entity.Drives = [.. dto.Drives];
-
-    await _appDb.SaveChangesAsync();
-    return Result.Ok(entity);
+    return updateResult;
   }
 
   private async Task AddToGroups(Device deviceEntity)

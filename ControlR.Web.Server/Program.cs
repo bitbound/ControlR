@@ -204,6 +204,7 @@ builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddWebSocketBridge();
 builder.Services.AddSingleton<IStreamStore, StreamStore>();
 builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
+builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
 builder.Host.UseSystemd();
 

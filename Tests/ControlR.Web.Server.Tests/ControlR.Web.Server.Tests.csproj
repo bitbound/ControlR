@@ -1,13 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
-
-    <Configurations>Debug;Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,11 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\..\ControlR.Web.Server\ControlR.Web.Server.csproj" />
+    <ProjectReference Include="..\ControlR.Tests.TestingUtilities\ControlR.Tests.TestingUtilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ControlR.Agent\ControlR.Agent.csproj" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
 </Project>

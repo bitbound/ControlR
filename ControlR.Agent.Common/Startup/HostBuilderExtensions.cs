@@ -24,10 +24,11 @@ namespace ControlR.Agent.Common.Startup;
 
 internal static class HostApplicationBuilderExtensions
 {
-  internal static IHostApplicationBuilder AddControlRAgent(
+  internal static HostApplicationBuilder AddControlRAgent(
     this HostApplicationBuilder builder, 
     StartupMode startupMode, 
-    string? instanceId)
+    string? instanceId,
+    Uri? serverUri)
   {
     instanceId = instanceId?.SanitizeForFileSystem();
     var services = builder.Services;
@@ -45,12 +46,13 @@ internal static class HostApplicationBuilderExtensions
     }
 
     builder.Configuration
-      .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
-      .AddEnvironmentVariables()
       .AddInMemoryCollection(new Dictionary<string, string?>
       {
-        { "InstanceOptions:InstanceId", instanceId }
-      });
+        { $"{InstanceOptions.SectionKey}:{nameof(InstanceOptions.InstanceId)}", instanceId },
+        { $"{AgentAppOptions.SectionKey}:{nameof(AgentAppOptions.ServerUri)}", serverUri?.ToString() },
+      })
+      .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
+      .AddEnvironmentVariables();
 
     services
       .AddOptions<AgentAppOptions>()

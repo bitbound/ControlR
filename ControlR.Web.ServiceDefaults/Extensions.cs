@@ -55,35 +55,32 @@ public static class Extensions
     });
 
     builder.Services.AddOpenTelemetry()
-        .ConfigureResource(resourceBuilder =>
-        {
-          resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
-        })
-        .WithMetrics(metrics =>
-        {
-          metrics
-                  .AddAspNetCoreInstrumentation()
-                  .AddHttpClientInstrumentation()
-                  .AddRuntimeInstrumentation();
-        })
-        .WithTracing(tracing =>
-        {
-          tracing
-                  .AddAspNetCoreInstrumentation(options =>
-                  {
-                    options.Filter = (httpContext) =>
-                    {
-                      return httpContext.Request.Path.Value?.StartsWith("/health") != true;
-                    };
-                  })
-                  .AddHttpClientInstrumentation(options =>
-                  {
-                    options.FilterHttpWebRequest = (request) =>
-                    {
-                      return !request.RequestUri.PathAndQuery.StartsWith("/health");
-                    };
-                  });
-        });
+      .ConfigureResource(resourceBuilder => { resourceBuilder.AddService(serviceName, serviceNamespace: "controlr"); })
+      .WithMetrics(metrics =>
+      {
+        metrics
+          .AddAspNetCoreInstrumentation()
+          .AddHttpClientInstrumentation()
+          .AddRuntimeInstrumentation();
+      })
+      .WithTracing(tracing =>
+      {
+        tracing
+          .AddAspNetCoreInstrumentation(options =>
+          {
+            options.Filter = (httpContext) =>
+            {
+              return httpContext.Request.Path.Value?.StartsWith("/health") != true;
+            };
+          })
+          .AddHttpClientInstrumentation(options =>
+          {
+            options.FilterHttpWebRequest = (request) =>
+            {
+              return !request.RequestUri.PathAndQuery.StartsWith("/health");
+            };
+          });
+      });
 
     builder.AddOpenTelemetryExporters();
 
@@ -91,7 +88,7 @@ public static class Extensions
   }
 
   private static IHostApplicationBuilder AddOpenTelemetryExporters(
-      this IHostApplicationBuilder builder)
+    this IHostApplicationBuilder builder)
   {
     var otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
     var azureMonitorConnectionString = builder.Configuration["AzureMonitor:ConnectionString"];
@@ -99,18 +96,15 @@ public static class Extensions
     if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))
     {
       builder.Services
-          .AddOpenTelemetry()
-          .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpUri);
+        .AddOpenTelemetry()
+        .UseOtlpExporter(OtlpExportProtocol.Grpc, otlpUri);
     }
 
     if (!string.IsNullOrWhiteSpace(azureMonitorConnectionString))
     {
       builder.Services
-          .AddOpenTelemetry()
-          .UseAzureMonitor(options =>
-          {
-            options.ConnectionString = azureMonitorConnectionString;
-          });
+        .AddOpenTelemetry()
+        .UseAzureMonitor(options => { options.ConnectionString = azureMonitorConnectionString; });
     }
 
     return builder;
@@ -132,10 +126,7 @@ public static class Extensions
     app
       .MapHealthChecks("/health")
       .WithRequestTimeout(TimeSpan.FromSeconds(5))
-      .CacheOutput(policy =>
-      {
-        policy.Expire(TimeSpan.FromSeconds(5));
-      });
+      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
 
     // Only health checks tagged with the "live" tag must pass for app to be considered alive
     app
@@ -144,10 +135,7 @@ public static class Extensions
         Predicate = r => r.Tags.Contains("live")
       })
       .WithRequestTimeout(TimeSpan.FromSeconds(5))
-      .CacheOutput(policy =>
-      {
-        policy.Expire(TimeSpan.FromSeconds(5));
-      });
+      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
 
     return app;
   }

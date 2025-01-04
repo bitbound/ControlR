@@ -1,5 +1,5 @@
 ﻿@attribute [Route(ClientRoutes.Deploy)]
-@attribute [Authorize]
+@attribute [Authorize(Roles = RoleNames.AgentInstaller)]
 
 <PageTitle>Deploy</PageTitle>
 
@@ -10,7 +10,7 @@
 @if (_installerKey is null)
 {
   <MudText Typo="Typo.subtitle1" GutterBottom>
-    You must first generate an expirable installer token.
+    You must first generate an installer token.
   </MudText>
 
   <MudGrid Class="mt-2">
@@ -31,17 +31,18 @@
       @if (_installerKeyType == InstallerKeyType.UsageBased)
       {
         <div class="mt-2">
-          <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
+          <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required/>
         </div>
       }
 
       @if (_installerKeyType == InstallerKeyType.TimeBased)
       {
         <div class="mt-2">
-          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date" Required />
+          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date"
+                         Required/>
         </div>
         <div class="mt-2">
-          <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required />
+          <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required/>
         </div>
       }
       <div class="mt-4">
@@ -78,16 +79,18 @@ else
     </MudText>
 
     <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsScript" Adornment="Adornment.End"
-      Value="WindowsDeployScript" Class="mb-5" />
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsScript"
+                  Adornment="Adornment.End"
+                  Value="WindowsDeployScript" Class="mb-5"/>
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
       Ubuntu (Bash)
     </MudText>
 
     <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUbuntuScript" Adornment="Adornment.End"
-      Value="UbuntuDeployScript" Class="mb-5" />
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUbuntuScript"
+                  Adornment="Adornment.End"
+                  Value="UbuntuDeployScript" Class="mb-5"/>
 
     @*<MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Mac x64 (zsh)
@@ -127,10 +130,16 @@ else
         If enabled, the device will be assigned the selected tags upon installation.
         Tags are used to link devices to users for access control.
       </MudText>
-      <MudCheckBox @bind-Value="_addTags" Label="Add device tags" />
+      <MudCheckBox @bind-Value="_addTags" Label="Add device tags"/>
 
-      <MudSelect T="TagResponseDto" @bind-SelectedValues="_selectedTags" Disabled="!_addTags" Immediate MultiSelection
-        FullWidth="false" Text="@(SelectedTagsText)" Label="Tags">
+      <MudSelect T="TagResponseDto"
+                 @bind-SelectedValues="_selectedTags"
+                 Disabled="!_addTags" 
+                 Immediate 
+                 MultiSelection
+                 FullWidth="false" 
+                 Text="@(SelectedTagsText)" 
+                 Label="Tags">
         @foreach (var tag in _tags)
         {
           <MudSelectItem Value="@tag">
