@@ -13,7 +13,7 @@ public sealed class CaptureTests
     private readonly LoggerFactory _loggerFactory;
     private readonly BitmapUtility _bitmapUtility;
     private readonly DxOutputGenerator _dxGenerator;
-    private readonly ScreenCapturer _capturer;
+    private readonly ScreenGrabber _grabber;
     private readonly IEnumerable<DisplayInfo> _displays;
 
     public CaptureTests()
@@ -21,8 +21,8 @@ public sealed class CaptureTests
         _loggerFactory = new LoggerFactory();
         _bitmapUtility = new BitmapUtility();
         _dxGenerator = new DxOutputGenerator(_loggerFactory.CreateLogger<DxOutputGenerator>());
-        _capturer = new ScreenCapturer(TimeProvider.System, _bitmapUtility, _dxGenerator, _loggerFactory.CreateLogger<ScreenCapturer>());
-        _displays = _capturer.GetDisplays();
+        _grabber = new ScreenGrabber(TimeProvider.System, _bitmapUtility, _dxGenerator, _loggerFactory.CreateLogger<ScreenGrabber>());
+        _displays = _grabber.GetDisplays();
     }
 
 
@@ -36,7 +36,7 @@ public sealed class CaptureTests
 
         for (var i = 0; i < count; i++)
         {
-            var result = _capturer.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: true);
+            var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: true);
             if (!result.IsSuccess)
             {
                 continue;
@@ -90,7 +90,7 @@ public sealed class CaptureTests
 
         for (var i = 0; i < count; i++)
         {
-            using var result = _capturer.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
+            using var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
         }
 
         var fps = Math.Round(count / sw.Elapsed.TotalSeconds);
@@ -112,7 +112,7 @@ public sealed class CaptureTests
 
         for (var i = 0; i < count; i++)
         {
-            var result = _capturer.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
+            var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
             if (!result.IsSuccess)
             {
                 continue;
@@ -137,7 +137,7 @@ public sealed class CaptureTests
 
         for (var i = 0; i < count; i++)
         {
-            var result = _capturer.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
+            var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: false);
             if (!result.IsSuccess)
             {
                 continue;
@@ -179,7 +179,7 @@ public sealed class CaptureTests
     {
         var count = 300;
         var display1 = _displays.First(x => x.DeviceName == "\\\\.\\DISPLAY1");
-        using var result = _capturer.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: true);
+        using var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: true);
         if (!result.IsSuccess)
         {
             throw new Exception("Capture failed.");
@@ -197,7 +197,7 @@ public sealed class CaptureTests
     public void DoSaveToDesktop()
     {
         var display1 = _displays.First(x => x.DeviceName == "\\\\.\\DISPLAY1");
-        using var result = _capturer.Capture(display1);
+        using var result = _grabber.Capture(display1);
         if (!result.IsSuccess)
         {
             throw new Exception("Capture failed.");
@@ -215,7 +215,7 @@ public sealed class CaptureTests
     {
         var iterations = 300;
         var display1 = _displays.First(x => x.DeviceName == "\\\\.\\DISPLAY1");
-        using var result = _capturer.Capture(display1);
+        using var result = _grabber.Capture(display1);
         if (!result.IsSuccess)
         {
             throw new Exception("Capture failed.");

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.ScreenCapture;
 
-public interface IScreenCapturer
+public interface IScreenGrabber
 {
   /// <summary>
   ///   Gets a capture of a specific display.
@@ -65,16 +65,16 @@ public interface IScreenCapturer
   Rectangle GetVirtualScreenBounds();
 }
 
-internal sealed class ScreenCapturer(
+internal sealed class ScreenGrabber(
   TimeProvider timeProvider,
   IBitmapUtility bitmapUtility,
   IDxOutputGenerator dxOutputGenerator,
-  ILogger<ScreenCapturer> logger) : IScreenCapturer
+  ILogger<ScreenGrabber> logger) : IScreenGrabber
 {
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IBitmapUtility _bitmapUtility = bitmapUtility;
   private readonly IDxOutputGenerator _dxOutputGenerator = dxOutputGenerator;
-  private readonly ILogger<ScreenCapturer> _logger = logger;
+  private readonly ILogger<ScreenGrabber> _logger = logger;
 
   public CaptureResult Capture(
     DisplayInfo targetDisplay,

@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
   ///   Adds the following services with the specified lifetimes:
   ///   <list type="bullet">
   ///     <item>
-  ///       <see cref="IScreenCapturer" /> as Singleton
+  ///       <see cref="IScreenGrabber" /> as Singleton
   ///     </item>
   ///     <item>
   ///       <see cref="IBitmapUtility" /> as Singleton
@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
   {
     return services
       .AddSingleton<IBitmapUtility, BitmapUtility>()
-      .AddSingleton<IScreenCapturer, ScreenCapturer>()
+      .AddSingleton<IScreenGrabber, ScreenGrabber>()
       .AddSingleton<IDxOutputGenerator, DxOutputGenerator>();
   }
 }
