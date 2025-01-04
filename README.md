@@ -43,6 +43,12 @@ Additional proxy IPs can be added to the `KnownProxies` list in the compose file
 
 If the public IP for your connected devices are not showing correctly, the problem is likely due to a misconfiguration here.
 
+## Multitenancy
+
+By default, the server is single-tenant.  The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
+
+
+
 ## Agent OS Support:
 
 ### Windows (10/11)
@@ -55,10 +61,17 @@ If the public IP for your connected devices are not showing correctly, the probl
 - No remote control
 - Terminal uses Bash
 
+## Permissions
+Permissions are implemented via a combination of role-based and resource-based authorization.  When the first account is created, all roles are assigned.  Subsequent accounts must be explicitly assigned roles.
+
+To access a device, a user must have either the `DeviceSuperuser` role or a matching tag.  Tags can be assigned to both users and devices to grant access.
+
+Role Descriptions:
+- `DeviceSuperuser` - Full access to all devices for the tenant
+
 ## Metrics
 
-Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface
-is exposed on port 18888, and it's secured by the `aspireToken` value.
+Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface is exposed on port 18888, and it's secured by the `aspireToken` value.
 
 The dashboard also supports OpenIdConnect authentication. See their [readme](https://github.com/dotnet/aspire/tree/main/src/Aspire.Dashboard) for more information.
 
