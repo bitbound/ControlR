@@ -270,5 +270,6 @@ if (!app.Environment.IsDevelopment())
 
 await app.ApplyMigrations();
 await app.SetAllDevicesOffline();
+await app.SetAllUsersOffline();
 
 await app.RunAsync();

@@ -18,4 +18,11 @@ public static class HostExtensions
     await using var context = scope.ServiceProvider.GetRequiredService<AppDb>();
     await context.Devices.ExecuteUpdateAsync(calls => calls.SetProperty(d => d.IsOnline, false));
   }
+  
+  public static async Task SetAllUsersOffline(this IHost host)
+  {
+    await using var scope = host.Services.CreateAsyncScope();
+    await using var context = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await context.Users.ExecuteUpdateAsync(calls => calls.SetProperty(d => d.IsOnline, false));
+  }
 }
