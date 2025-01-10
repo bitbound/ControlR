@@ -391,14 +391,14 @@ internal class DesktopCapturer : IDesktopCapturer
 
         _win32Interop.SwitchToInputDesktop();
 
-        using var captureResult = _screenGrabber.Capture(selectedDisplay, tryUseDirectX: false);
+        using var captureResult = _screenGrabber.Capture(selectedDisplay);
 
         if (captureResult.HadNoChanges)
         {
           await _delayer.Delay(_afterFailureDelay, stoppingToken);
           continue;
         }
-        
+
         if (captureResult.DxTimedOut)
         {
           _logger.LogDebug("DirectX capture timed out. BitBlt fallback used.");
