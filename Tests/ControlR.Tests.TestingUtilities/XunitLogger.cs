@@ -4,10 +4,10 @@ using Xunit.Abstractions;
 
 namespace ControlR.Tests.TestingUtilities;
 
-public class XunitLogger<T>(ITestOutputHelper testOutput, string categoryName) : ILogger<T>
+public class XunitLogger<T>(ITestOutputHelper testOutput) : ILogger<T>
 {
   private readonly ConcurrentStack<string> _scopeStack = new();
-  private readonly string _categoryName = categoryName;
+  private readonly string _categoryName = nameof(T);
 
   public IDisposable BeginScope<TState>(TState state) where TState : notnull
   {

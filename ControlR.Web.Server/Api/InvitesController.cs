@@ -23,7 +23,7 @@ public class InvitesController : ControllerBase
 
     if (invite is null)
     {
-      return new AcceptInvitationResponseDto(false, "Invititation not found.");
+      return new AcceptInvitationResponseDto(false, "Invitation not found.");
     }
 
     var invitee = await userManager.FindByEmailAsync(dto.Email);

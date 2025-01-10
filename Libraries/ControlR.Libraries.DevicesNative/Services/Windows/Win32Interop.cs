@@ -29,7 +29,7 @@ namespace ControlR.Devices.Native.Services;
 public interface IWin32Interop
 {
   bool CreateInteractiveSystemProcess(
-    string commandLine, 
+    string commandLine,
     int targetSessionId,
     bool hiddenWindow,
     out Process? startedProcess);
@@ -858,10 +858,17 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   private static Point GetNormalizedPoint(int x, int y)
   {
+    var left = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
+    var top = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
     var width = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
     var height = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
+    var right = left + width;
+    var bottom = top + height;
 
-    return new Point((int)(x / width * 65535), (int)(y / height * 65535));
+    var normalizedX = (int)((x - left) / (right - left) * 65535);
+    var normalizedY = (int)((y - top) / (bottom - top) * 65535);
+
+    return new Point(normalizedX, normalizedY);
   }
 
   private static INPUT GetPointerMoveInput(int x, int y, MovePointerType moveType)

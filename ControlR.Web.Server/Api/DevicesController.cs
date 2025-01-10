@@ -14,7 +14,6 @@ public class DevicesController : ControllerBase
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
-    [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentInstallerKeyManager keyManager,
     [FromServices] IDeviceManager deviceManager,
     [FromServices] ILogger<DevicesController> logger)

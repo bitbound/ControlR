@@ -142,7 +142,7 @@ internal class DesktopCapturer : IDesktopCapturer
         Width = x.MonitorArea.Width,
         Name = x.DisplayName,
         Left = x.MonitorArea.Left,
-        ScaleFactor = x.ScaleFactor
+        ScaleFactor = x.ScaleFactor,
       });
   }
 
@@ -219,13 +219,13 @@ internal class DesktopCapturer : IDesktopCapturer
         continue;
       }
 
-      if (!bitmapArea.Contains(region))
+      var intersect = Rectangle.Intersect(region, bitmapArea);
+      if (intersect.IsEmpty)
       {
-        _logger.LogDebug("Skipping region that is outside the bitmap area.");
         continue;
       }
 
-      EncodeRegion(captureResult.Bitmap, region);
+      EncodeRegion(captureResult.Bitmap, intersect);
     }
 
     Interlocked.Increment(ref _gpuFrames);
@@ -391,7 +391,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
         _win32Interop.SwitchToInputDesktop();
 
-        using var captureResult = _screenGrabber.Capture(selectedDisplay);
+        using var captureResult = _screenGrabber.Capture(selectedDisplay, tryUseDirectX: false);
 
         if (captureResult.HadNoChanges)
         {

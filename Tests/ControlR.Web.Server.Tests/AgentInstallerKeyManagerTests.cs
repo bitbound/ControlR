@@ -15,7 +15,7 @@ public class AgentInstallerKeyManagerTests
   public AgentInstallerKeyManagerTests(ITestOutputHelper testOutput)
   {
     _timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
-    var logger = new XunitLogger<AgentInstallerKeyManager>(testOutput, nameof(AgentInstallerKeyManagerTests));
+    var logger = new XunitLogger<AgentInstallerKeyManager>(testOutput);
 
     _keyManager = new AgentInstallerKeyManager(
       _timeProvider,

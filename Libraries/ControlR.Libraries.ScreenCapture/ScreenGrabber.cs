@@ -241,14 +241,16 @@ internal sealed class ScreenGrabber(
 
       var bitmap = new Bitmap(captureArea.Width, captureArea.Height);
       using var graphics = Graphics.FromImage(bitmap);
-      using var targetDc = graphics.GetDisposableHdc();
 
-      var bitBltResult = PInvoke.BitBlt(new HDC(targetDc.Value), 0, 0, captureArea.Width, captureArea.Height,
-        screenDc, captureArea.X, captureArea.Y, ROP_CODE.SRCCOPY);
-
-      if (!bitBltResult)
+      using (var targetDc = graphics.GetDisposableHdc())
       {
-        return CaptureResult.Fail("BitBlt function failed.");
+        var bitBltResult = PInvoke.BitBlt(new HDC(targetDc.Value), 0, 0, captureArea.Width, captureArea.Height,
+          screenDc, captureArea.X, captureArea.Y, ROP_CODE.SRCCOPY);
+
+        if (!bitBltResult)
+        {
+          return CaptureResult.Fail("BitBlt function failed.");
+        }
       }
 
       if (captureCursor)
@@ -371,7 +373,7 @@ internal sealed class ScreenGrabber(
 
       if (!dxOutput.LastCursorArea.IsEmpty)
       {
-        dirtyRects = [..dirtyRects, dxOutput.LastCursorArea];
+        dirtyRects = [.. dirtyRects, dxOutput.LastCursorArea];
       }
 
       using var graphics = Graphics.FromImage(bitmap);
@@ -379,7 +381,7 @@ internal sealed class ScreenGrabber(
       var iconArea = TryDrawCursor(graphics, display.MonitorArea);
       if (!iconArea.IsEmpty)
       {
-        dirtyRects = [..dirtyRects, iconArea];
+        dirtyRects = [.. dirtyRects, iconArea];
         dxOutput.LastCursorArea = iconArea;
       }
       else
