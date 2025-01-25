@@ -110,7 +110,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         winLogonPid);
 
       // Obtain a handle to the access token of the winlogon process.
-      using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle.Value, true);
+      using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle, true);
       if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
       {
         logger.LogWarning("Failed to open winlogon process.");
@@ -316,7 +316,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
 
       var data = PInvoke.GetClipboardData(1);
-      return Marshal.PtrToStringAnsi(data.Value);
+      return Marshal.PtrToStringAnsi(data);
     }
     catch (Exception ex)
     {
@@ -550,7 +550,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   public nint OpenInputDesktop()
   {
-    return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u).Value;
+    return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
   }
 
   public void ResetKeyboardState()
@@ -1286,7 +1286,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         explorerPid);
 
       // Obtain a handle to the access token of the winlogon process.
-      using var explorerSafeProcHandle = new SafeProcessHandle(explorerProcessHandle.Value, true);
+      using var explorerSafeProcHandle = new SafeProcessHandle(explorerProcessHandle, true);
       if (!PInvoke.OpenProcessToken(
             explorerSafeProcHandle,
             TOKEN_ACCESS_MASK.TOKEN_DUPLICATE,

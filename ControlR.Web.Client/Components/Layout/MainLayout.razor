@@ -8,33 +8,31 @@
 @inject ILazyDi<ILogger<MainLayout>> Logger
 
 <div>
-  <MudThemeProvider IsDarkMode Theme="CustomTheme" />
-  <MudPopoverProvider />
-  <MudDialogProvider />
-  <MudSnackbarProvider />
+  <MudThemeProvider IsDarkMode Theme="CustomTheme"/>
+  <MudPopoverProvider/>
+  <MudDialogProvider/>
+  <MudSnackbarProvider/>
 
   <MudLayout>
     <MudAppBar Elevation="1">
-      <MudIconButton id="nav-drawer-toggle-button"
-      Icon="@Icons.Material.Filled.Menu"
-      Color="Color.Inherit"
-      Edge="Edge.Start"
-      OnClick="@(_ => DrawerToggle())" />
-      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3" />
+      <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                Edge="Edge.Start"/>
 
-      <MudSpacer />
+      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3"/>
+
+      <MudSpacer/>
 
       @if (!RendererInfo.IsInteractive)
       {
-        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
+        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled"/>
       }
       else if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
       {
         <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
           <MudProgressCircular Indeterminate StrokeWidth="6"
-          Size="Size.Small"
-          Color="Color.Success"
-          Class="mx-3 mt-1" />
+                               Size="Size.Small"
+                               Color="Color.Success"
+                               Class="mx-3 mt-1"/>
         </MudTooltip>
       }
       else
@@ -43,46 +41,46 @@
         {
           case HubConnectionState.Connected:
             <MudTooltip Text="Connected">
-              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1"/>
             </MudTooltip>
             break;
           case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
             <MudTooltip Text="Reconnecting">
               <MudProgressCircular Indeterminate
-              StrokeWidth="6"
-              Size="Size.Small"
-              Color="Color.Warning"
-              Class="mx-3 mt-1" />
+                                   StrokeWidth="6"
+                                   Size="Size.Small"
+                                   Color="Color.Warning"
+                                   Class="mx-3 mt-1"/>
             </MudTooltip>
             break;
           case HubConnectionState.Disconnected:
             <MudTooltip Text="Disconnected">
-              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1"/>
             </MudTooltip>
             break;
         }
       }
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
-        Color="Color.Inherit"
-        Href="https://github.com/bitbound/controlr/"
-        Target="_blank" />
+                       Color="Color.Inherit"
+                       Href="https://github.com/bitbound/controlr/"
+                       Target="_blank"/>
 
       </MudTooltip>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen"
-    id="nav-drawer"
-    ClipMode="DrawerClipMode.Always"
-    Elevation="2">
+               id="nav-drawer"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2">
 
       <MudDrawerHeader Class="ps-4">
-        <MudImage Src="/icon-192.png" Height="30" Class="me-2" />
+        <MudImage Src="/icon-192.png" Height="30" Class="me-2"/>
         <MudLink Href="/" Underline="Underline.None">
           <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
         </MudLink>
       </MudDrawerHeader>
 
-      <NavMenu IsDisabled="@_isWaitingForWasmLoad" />
+      <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
       @if (_isWaitingForWasmLoad)
@@ -91,7 +89,7 @@
           <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
             Loading
           </MudText>
-          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large"/>
         </div>
       }
       else
@@ -101,7 +99,7 @@
     </MudMainContent>
   </MudLayout>
 
-  <DeviceContentHarness />
+  <DeviceContentHarness/>
 
   @if (_isIdentityPage)
   {
@@ -131,19 +129,19 @@
     get
     {
       return _customTheme ??= new MudTheme
+      {
+        PaletteDark = new PaletteDark
         {
-          PaletteDark = new PaletteDark
-          {
-            Primary = "#46AA46",
-            Secondary = "#8C6ED2",
-            Tertiary = "#F082D2",
-            Info = "#42A5F5",
-            TextPrimary = "rgb(215, 215, 215)",
-            AppbarText = "rgb(215, 215, 215)",
-            Background = Colors.Gray.Darken4,
-            Surface = "rgb(45, 45, 45)"
-          }
-        };
+          Primary = "#46AA46",
+          Secondary = "#8C6ED2",
+          Tertiary = "#F082D2",
+          Info = "#42A5F5",
+          TextPrimary = "rgb(215, 215, 215)",
+          AppbarText = "rgb(215, 215, 215)",
+          Background = Colors.Gray.Darken4,
+          Surface = "rgb(45, 45, 45)"
+        }
+      };
     }
   }
 
@@ -188,12 +186,6 @@
     }
 
     return base.ShouldRender();
-  }
-
-
-  private void DrawerToggle()
-  {
-    _drawerOpen = !_drawerOpen;
   }
 
   private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)

@@ -1,29 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net9.0-windows10.0.20348.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<Configurations>Debug;Release</Configurations>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0-windows10.0.20348.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Configurations>Debug;Release</Configurations>
+    </PropertyGroup>
 
-	<ItemGroup>
-	  <Compile Remove="Properties\PublishProfiles\**" />
-	  <EmbeddedResource Remove="Properties\PublishProfiles\**" />
-	  <None Remove="Properties\PublishProfiles\**" />
-	</ItemGroup>
-	
-	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
-		<PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.106">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
-	</ItemGroup>
-	
-	<ItemGroup>
-	  <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <Compile Remove="Properties\PublishProfiles\**"/>
+        <EmbeddedResource Remove="Properties\PublishProfiles\**"/>
+        <None Remove="Properties\PublishProfiles\**"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.1"/>
+        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.162">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="System.Drawing.Common" Version="9.0.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj"/>
+    </ItemGroup>
 </Project>

@@ -66,7 +66,7 @@
   public required DeviceViewModel DeviceViewModel { get; set; }
 
   [CascadingParameter]
-  public required MudDialogInstance DialogInstance { get; init; }
+  public required IMudDialogInstance DialogInstance { get; init; }
 
   [Inject]
   public required ILogger<AppSettingsEditorDialog> Logger { get; init; }

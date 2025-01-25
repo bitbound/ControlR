@@ -55,7 +55,7 @@
     private MudForm? _form;
 
     [CascadingParameter]
-    public required MudDialogInstance MudDialog { get; init; }
+    public required IMudDialogInstance MudDialog { get; init; }
 
     [Parameter]
     public string InputHintText { get; set; } = "Enter your response here.";

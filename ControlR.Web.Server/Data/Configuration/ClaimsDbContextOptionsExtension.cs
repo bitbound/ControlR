@@ -1,5 +1,4 @@
-﻿using Google.Protobuf;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ControlR.Web.Server.Data.Configuration;
 
@@ -13,7 +12,6 @@ public class ClaimsDbContextOptionsExtension(ClaimsDbContextOptions options) : I
 
   public void Validate(IDbContextOptions options) { }
 
-  // Getter for your options
   public ClaimsDbContextOptions Options => _options;
 
   private sealed class ExtensionInfo(ClaimsDbContextOptionsExtension extension) : DbContextOptionsExtensionInfo(extension)
