@@ -19,13 +19,16 @@ var web = builder
     .WithEnvironment("POSTGRES_USER", pgUser)
     .WithEnvironment("POSTGRES_PASSWORD", pgPassword)
     .WithEnvironment("ControlR_POSTGRES_HOST", pgHost)
-    .WithReference(postgres);
+    .WithReference(postgres)
+    .WaitFor(postgres);
 
 var webEndpoint = web.GetEndpoint("http");
 
 builder
   .AddProject<Projects.ControlR_Agent>(ServiceNames.ControlrAgent, "Run")
+  .WithArgs("run", "-i", "localhost")
   .WithEnvironment("AppOptions__ServerUri", webEndpoint)
+  .WaitFor(web)
   .ExcludeFromManifest();
 
 builder.Build().Run();
