@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Bitbound.SimpleIpc;
+using ControlR.Web.ServiceDefaults;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -30,6 +31,8 @@ internal static class HostApplicationBuilderExtensions
     string? instanceId,
     Uri? serverUri)
   {
+    builder.AddServiceDefaults(ServiceNames.ControlrAgent);
+    
     instanceId = instanceId?.SanitizeForFileSystem();
     var services = builder.Services;
     var configuration = builder.Configuration;
