@@ -13,6 +13,7 @@ using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.ScreenCapture.Helpers;
 using ControlR.Libraries.ScreenCapture.Models;
 using Microsoft.Extensions.Logging;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Libraries.ScreenCapture;
 
@@ -231,13 +232,11 @@ internal sealed class ScreenGrabber(
 
   private CaptureResult GetBitBltCapture(Rectangle captureArea, bool captureCursor)
   {
-    var hwnd = HWND.Null;
-    var screenDc = new HDC();
-
     try
     {
-      hwnd = PInvoke.GetDesktopWindow();
-      screenDc = PInvoke.GetWindowDC(hwnd);
+      var hwnd = PInvoke.GetDesktopWindow();
+      var screenDc = PInvoke.GetWindowDC(hwnd);
+      using var callback = new CallbackDisposable(() => _ = PInvoke.ReleaseDC(hwnd, screenDc));
 
       var bitmap = new Bitmap(captureArea.Width, captureArea.Height);
       using var graphics = Graphics.FromImage(bitmap);
@@ -262,12 +261,11 @@ internal sealed class ScreenGrabber(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error getting capture with BitBlt.");
+      _logger.LogError(
+        ex, 
+        "Error getting capture with BitBlt. Capture Area: {@CaptureArea}",
+        captureArea);
       return CaptureResult.Fail(ex);
-    }
-    finally
-    {
-      _ = PInvoke.ReleaseDC(hwnd, screenDc);
     }
   }
 

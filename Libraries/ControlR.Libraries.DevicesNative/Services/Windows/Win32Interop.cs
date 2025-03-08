@@ -340,7 +340,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       if (!PInvoke.GetCursorInfo(ref cursorInfo) || cursorInfo.hCursor == default)
       {
-        logger.LogError("Failed to get cursor info.  Last pinvoke error: {LastError}",
+        logger.LogDebug("Failed to get cursor info.  Last p/invoke error: {LastError}",
           Marshal.GetLastPInvokeErrorMessage());
         return WindowsCursor.Unknown;
       }

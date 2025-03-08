@@ -82,7 +82,7 @@ internal class DesktopCapturer : IDesktopCapturer
     _startupOptions = startupOptions;
     _appLifetime = appLifetime;
     _logger = logger;
-    _displays = _screenGrabber.GetDisplays().ToArray();
+    _displays = [.. _screenGrabber.GetDisplays()];
     _selectedDisplay =
       _displays.FirstOrDefault(x => x.IsPrimary) ??
       _displays.FirstOrDefault();
@@ -148,12 +148,13 @@ internal class DesktopCapturer : IDesktopCapturer
 
   public void ResetDisplays()
   {
-    _displays = _screenGrabber.GetDisplays().ToArray();
+    _displays = [.. _screenGrabber.GetDisplays()];
     _selectedDisplay =
       _displays.FirstOrDefault(x => x.IsPrimary) ??
       _displays.FirstOrDefault();
     _lastCpuBitmap?.Dispose();
     _lastCpuBitmap = null;
+    _lastMonitorArea = null;
     _forceKeyFrame = true;
   }
 
@@ -408,8 +409,7 @@ internal class DesktopCapturer : IDesktopCapturer
         {
           _logger.LogWarning(captureResult.Exception, "Failed to capture latest frame.  Reason: {ResultReason}",
             captureResult.FailureReason);
-          _lastCpuBitmap = null;
-          _forceKeyFrame = true;
+          ResetDisplays();
           await _delayer.Delay(_afterFailureDelay, stoppingToken);
           continue;
         }
