@@ -8,22 +8,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Remove="Properties\PublishProfiles\**"/>
-        <EmbeddedResource Remove="Properties\PublishProfiles\**"/>
-        <None Remove="Properties\PublishProfiles\**"/>
+        <Compile Remove="Properties\PublishProfiles\**" />
+        <EmbeddedResource Remove="Properties\PublishProfiles\**" />
+        <None Remove="Properties\PublishProfiles\**" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.1"/>
-        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.162">
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.2" />
+        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.Drawing.Common" Version="9.0.1"/>
+        <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj"/>
+        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
     </ItemGroup>
 </Project>

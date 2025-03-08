@@ -8,12 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.1"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1"/>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.2" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj"/>
+        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
     </ItemGroup>
 
 </Project>
