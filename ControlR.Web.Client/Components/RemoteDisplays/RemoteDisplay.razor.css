@@ -2,6 +2,8 @@
     overflow: auto;
     position: relative;
     overscroll-behavior: contain;
+    scrollbar-color: auto;
+    scrollbar-width: auto;
 }
 
 .display-grid {
