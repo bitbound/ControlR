@@ -1,4 +1,4 @@
-using Bitbound.WebSocketBridge.Common.Extensions;
+using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authz;

@@ -11,8 +11,8 @@ trigger:
   batch: True
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
-  - job: Windows_Build
-    displayName: Build
+  - job: ControlR_Build
+    displayName: ControlR Build
     pool:
       name: Default
       #vmImage: windows-latest

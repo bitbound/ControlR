@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Title>WebSocket Bridge</Title>
+    <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+    <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+    <Description>An ASP.NET Core Native AOT library for bridging client websocket connections.</Description>
+    <PackageIcon>appicon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+    <Version>1.0.3</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

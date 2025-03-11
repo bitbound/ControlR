@@ -1,0 +1,11 @@
+@ControlR.Web.WebSocketRelay_HostAddress = http://localhost:5172
+
+GET {{ControlR.Web.WebSocketRelay_HostAddress}}/api/status/
+Accept: application/json
+
+###
+
+GET {{ControlR.Web.WebSocketRelay_HostAddress}}/api/status/
+Accept: application/json
+
+###
