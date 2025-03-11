@@ -80,7 +80,7 @@ services:
       # If enabled, ControlR will attempt to use geolocation APIs to determine
       # the closest relay server to the viewer when starting a remote control
       # session.  Otherwise, the local server will be used.
-      ControlR_AppOptions__UseExternalWebSocketBridge: false
+      ControlR_AppOptions__UseExternalWebSocketRelay: false
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Label:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Origin:
       #ControlR_AppOptions__ExternalWebSocketHosts__0__Latitude:

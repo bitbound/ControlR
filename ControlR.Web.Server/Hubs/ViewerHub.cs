@@ -14,7 +14,7 @@ public class ViewerHub(
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IIpApi ipApi,
-  IWsBridgeApi wsBridgeApi,
+  IWsRelayApi wsRelayApi,
   IStreamStore streamStore,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
@@ -27,7 +27,7 @@ public class ViewerHub(
   private readonly ILogger<ViewerHub> _logger = logger;
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
-  private readonly IWsBridgeApi _wsBridgeApi = wsBridgeApi;
+  private readonly IWsRelayApi _wsRelayApi = wsRelayApi;
   private readonly IStreamStore _streamStore = streamStore;
 
   public Task<bool> CheckIfServerAdministrator()
@@ -76,11 +76,11 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Uri?> GetWebSocketBridgeOrigin()
+  public async Task<Uri?> GetWebSocketRelayOrigin()
   {
     try
     {
-      if (!_appOptions.CurrentValue.UseExternalWebSocketBridge ||
+      if (!_appOptions.CurrentValue.UseExternalWebSocketRelay ||
           _appOptions.CurrentValue.ExternalWebSocketHosts.Count == 0)
       {
         return null;
@@ -109,7 +109,7 @@ public class ViewerHub(
 
       var location = new Coordinate(ipInfo.Lat, ipInfo.Lon);
       var closest = CoordinateHelper.FindClosestCoordinate(location, _appOptions.CurrentValue.ExternalWebSocketHosts);
-      if (closest.Origin is null || !await _wsBridgeApi.IsHealthy(closest.Origin))
+      if (closest.Origin is null || !await _wsRelayApi.IsHealthy(closest.Origin))
       {
         return null;
       }
@@ -118,7 +118,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting WebSocket bridge URI.");
+      _logger.LogError(ex, "Error while getting websocket relay URI.");
       return null;
     }
   }

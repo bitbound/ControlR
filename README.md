@@ -89,7 +89,7 @@ You can also add a connection string for Azure Monitor to see your data there. T
 
 ## Relay Servers
 
-ControlR has the ability to integrate with another of my projects ([WebSocketBridge](https://github.com/bitbound/WebSocketBridge)) and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
+ControlR has the ability to integrate with geographically-distributed relay servers and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
 
 Relay servers are currently disabled on the public server (https://controlr.app), which is located in Seattle, WA.
 

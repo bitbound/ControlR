@@ -1,13 +1,13 @@
 ﻿namespace ControlR.Libraries.Shared.Services.Http;
 
-public interface IWsBridgeApi
+public interface IWsRelayApi
 {
   Task<bool> IsHealthy(Uri origin);
 }
 
-internal class WsBridgeApi(
+internal class WsRelayApi(
   HttpClient client,
-  ILogger<WsBridgeApi> logger) : IWsBridgeApi
+  ILogger<WsRelayApi> logger) : IWsRelayApi
 {
   public async Task<bool> IsHealthy(Uri origin)
   {

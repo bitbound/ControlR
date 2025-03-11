@@ -23,6 +23,6 @@ public class AppOptions
   public string? SmtpPassword { get; init; }
   public int SmtpPort { get; init; } = 587;
   public string? SmtpUserName { get; init; }
-  public bool UseExternalWebSocketBridge { get; init; }
+  public bool UseExternalWebSocketRelay { get; init; }
   public bool UseHttpLogging { get; init; }
 }

@@ -16,7 +16,7 @@ public interface IViewerHubConnection
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(Guid deviceId, Guid terminalId);
 
   Task<Result<ServerStatsDto>> GetServerStats();
-  Task<Uri?> GetWebsocketBridgeOrigin();
+  Task<Uri?> GetWebSocketRelayOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
 
   Task InvokeCtrlAltDel(Guid deviceId);
@@ -121,10 +121,10 @@ internal class ViewerHubConnection(
       () => Result.Fail<ServerStatsDto>("Failed to get server stats."));
   }
 
-  public async Task<Uri?> GetWebsocketBridgeOrigin()
+  public async Task<Uri?> GetWebSocketRelayOrigin()
   {
     return await TryInvoke(
-      _viewerHub.Server.GetWebSocketBridgeOrigin,
+      _viewerHub.Server.GetWebSocketRelayOrigin,
       () => null);
   }
 

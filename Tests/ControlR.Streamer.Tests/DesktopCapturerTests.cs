@@ -52,7 +52,7 @@ public class DesktopCapturerTests
       ServerOrigin = new Uri("http://localhost:5120"),
       SessionId = sessionId,
       ViewerName = "Test Viewer",
-      WebSocketUri = new Uri($"ws://localhost:5120/bridge/{sessionId}/{accessKey}")
+      WebSocketUri = new Uri($"ws://localhost:5120/relay/{sessionId}/{accessKey}")
     };
 
     _screenGrabber = new ScreenGrabber(

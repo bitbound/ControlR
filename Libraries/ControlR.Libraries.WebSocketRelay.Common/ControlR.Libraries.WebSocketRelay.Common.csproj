@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <Title>WebSocket Bridge</Title>
+    <Title>WebSocket Relay</Title>
     <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
     <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
     <Description>An ASP.NET Core Native AOT library for bridging client websocket connections.</Description>

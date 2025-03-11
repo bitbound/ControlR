@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices.JavaScript;
-using System.Runtime.Versioning;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -629,16 +627,16 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
       Logger.LogInformation("Creating streaming session.");
 
-      var bridgeOrigin = await ViewerHub.GetWebsocketBridgeOrigin();
+      var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
       var accessKey = RandomGenerator.CreateAccessToken();
 
       var serverUri = new Uri(NavManager.BaseUri);
 
-      var websocketUri = bridgeOrigin is not null
-        ? new Uri(bridgeOrigin, $"/bridge/{Session.SessionId}/{accessKey}")
-        : new Uri(serverUri, $"bridge/{Session.SessionId}/{accessKey}").ToWebsocketUri();
+      var websocketUri = relayOrigin is not null
+        ? new Uri(relayOrigin, $"/relay/{Session.SessionId}/{accessKey}")
+        : new Uri(serverUri, $"relay/{Session.SessionId}/{accessKey}").ToWebsocketUri();
 
-      Logger.LogInformation("Resolved WS bridge origin: {BridgeOrigin}", websocketUri.Authority);
+      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", websocketUri.Authority);
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
         Session.Device.Id,

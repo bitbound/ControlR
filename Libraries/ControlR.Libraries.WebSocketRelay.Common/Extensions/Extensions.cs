@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ControlR.Libraries.WebSocketRelay.Common.Extensions;
 public static class Extensions
 {
-    public static IServiceCollection AddWebSocketBridge(
+    public static IServiceCollection AddWebSocketRelay(
         this IServiceCollection services)
     {
         services.AddWebSockets(_ => { });
@@ -13,14 +13,14 @@ public static class Extensions
         return services;
     }
 
-    public static IApplicationBuilder MapWebSocketBridge(
+    public static IApplicationBuilder MapWebSocketRelay(
         this IApplicationBuilder app, 
-        string websocketPath = "/bridge")
+        string websocketPath = "/relay")
     {
         app.UseWhen(x => x.Request.Path.StartsWithSegments(websocketPath), x =>
         {
             x.UseWebSockets();
-            x.UseMiddleware<WebSocketBridgeMiddleware>();
+            x.UseMiddleware<WebSocketRelayMiddleware>();
         });
         return app;
     }

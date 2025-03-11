@@ -5,11 +5,11 @@ using System.Net.WebSockets;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Middleware;
 
-internal class WebSocketBridgeMiddleware(
+internal class WebSocketRelayMiddleware(
     RequestDelegate _next,
     IHostApplicationLifetime _appLifetime,
     ISessionStore _streamStore,
-    ILogger<WebSocketBridgeMiddleware> _logger)
+    ILogger<WebSocketRelayMiddleware> _logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -82,7 +82,7 @@ internal class WebSocketBridgeMiddleware(
     {
         _logger.LogWarning("Bad request.  Path: {RequestPath}", context.Request.Path);
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        var body = $"{message}\n\nPath should be in the form of '/bridge/{{session-id (Guid)}}'.";
+        var body = $"{message}\n\nPath should be in the form of '/relay/{{session-id (Guid)}}'.";
         context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
     }
 
@@ -93,7 +93,7 @@ internal class WebSocketBridgeMiddleware(
             ArgumentNullException.ThrowIfNull(signaler.Websocket1);
             ArgumentNullException.ThrowIfNull(signaler.Websocket2);
 
-            _logger.LogInformation("Starting stream bridge.  Request ID: {RequestId}", callerRequestId);
+            _logger.LogInformation("Starting stream relay.  Request ID: {RequestId}", callerRequestId);
 
             var partnerWebsocket = signaler.GetPartnerWebsocket(callerRequestId);
             var callerWebsocket = signaler.GetCallerWebsocket(callerRequestId);

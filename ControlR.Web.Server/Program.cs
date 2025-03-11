@@ -167,7 +167,7 @@ builder.Services.AddControlrWebClient(string.Empty);
 // Add HTTP clients.
 builder.Services.AddHttpClient<IIpApi, IpApi>();
 builder.Services.AddHttpClient<IControlrApi, ControlrApi>(HttpClientConfigurer.ConfigureHttpClient);
-builder.Services.AddHttpClient<IWsBridgeApi, WsBridgeApi>();
+builder.Services.AddHttpClient<IWsRelayApi, WsRelayApi>();
 
 if (appOptions.UseHttpLogging)
 {
@@ -201,7 +201,7 @@ builder.Services.AddSingleton<IDelayer, Delayer>();
 builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
 builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-builder.Services.AddWebSocketBridge();
+builder.Services.AddWebSocketRelay();
 builder.Services.AddSingleton<IStreamStore, StreamStore>();
 builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();
@@ -241,7 +241,7 @@ app.UseWhen(
 
 app.MapStaticAssets();
 
-app.MapWebSocketBridge();
+app.MapWebSocketRelay();
 app.MapHub<AgentHub>("/hubs/agent");
 
 app.UseAuthentication();
