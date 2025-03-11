@@ -17,7 +17,7 @@ public interface IBitmapUtility
 
 public class BitmapUtility : IBitmapUtility
 {
-  private static ImageCodecInfo _jpegEncoder = ImageCodecInfo
+  private static readonly ImageCodecInfo _jpegEncoder = ImageCodecInfo
     .GetImageEncoders()
     .First(x => x.FormatID == ImageFormat.Jpeg.Guid);
 
