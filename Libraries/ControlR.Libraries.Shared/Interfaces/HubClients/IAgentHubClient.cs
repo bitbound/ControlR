@@ -9,9 +9,7 @@ public interface IAgentHubClient : IHubClient
   Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto);
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto);
 
-  Task<Result<AgentAppSettings>> GetAgentAppSettings();
   Task<WindowsSession[]> GetWindowsSessions();
-  Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings);
   Task<Result> ReceiveTerminalInput(TerminalInputDto dto);
   Task UninstallAgent(string reason);
 }

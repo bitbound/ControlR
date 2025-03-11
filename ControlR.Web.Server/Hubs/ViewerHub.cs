@@ -57,24 +57,6 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
-      {
-        return Result.Fail<AgentAppSettings>("Forbidden.");
-      }
-
-      return await _agentHub.Clients.Client(authResult.Value.ConnectionId).GetAgentAppSettings();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting agent appsettings.");
-      return Result.Fail<AgentAppSettings>("Failed to get agent app settings.");
-    }
-  }
-
 
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
@@ -229,7 +211,7 @@ public class ViewerHub(
       {
         return;
       }
-      
+
       var user = await _userManager.GetUserAsync(Context.User);
 
       if (user is null)
@@ -313,7 +295,7 @@ public class ViewerHub(
       }
 
       var device = authResult.Value;
-      
+
       if (string.IsNullOrWhiteSpace(displayName))
       {
         displayName = user.UserName ?? "";
@@ -335,24 +317,6 @@ public class ViewerHub(
     catch (Exception ex)
     {
       return Result.Fail(ex);
-    }
-  }
-
-  public async Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings appSettings)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
-      {
-        return Result.Fail("Forbidden.");
-      }
-
-      return await _agentHub.Clients.Client(authResult.Value.ConnectionId).ReceiveAgentAppSettings(appSettings);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending agent appsettings.");
-      return Result.Fail("Failed to send agent app settings.");
     }
   }
 

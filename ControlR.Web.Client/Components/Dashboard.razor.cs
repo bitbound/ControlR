@@ -113,36 +113,38 @@ public partial class Dashboard
     _loading = false;
   }
 
-  private async Task ConfigureDeviceSettings(DeviceViewModel device)
+  private async Task EditDevice(DeviceViewModel device)
   {
     try
     {
-      var settingsResult = await ViewerHub.GetAgentAppSettings(device.Id);
-      if (!settingsResult.IsSuccess)
-      {
-        Snackbar.Add(settingsResult.Reason, Severity.Error);
-        return;
-      }
+      // TODO: Implement EditDevice.
+      await Task.Yield();
+      //var settingsResult = await ControlrApi.GetDeviceDetails(device.Id);
+      //if (!settingsResult.IsSuccess)
+      //{
+      //  Snackbar.Add(settingsResult.Reason, Severity.Error);
+      //  return;
+      //}
 
-      var dialogOptions = new DialogOptions
-      {
-        BackdropClick = false,
-        FullWidth = true,
-        MaxWidth = MaxWidth.Medium
-      };
+      //var dialogOptions = new DialogOptions
+      //{
+      //  BackdropClick = false,
+      //  FullWidth = true,
+      //  MaxWidth = MaxWidth.Medium
+      //};
 
-      var parameters = new DialogParameters
-      {
-        { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-        { nameof(AppSettingsEditorDialog.DeviceViewModel), device }
-      };
-      var dialogRef =
-        await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
-      var result = await dialogRef.Result;
-      if (result?.Data is true)
-      {
-        Snackbar.Add("Settings saved on device", Severity.Success);
-      }
+      //var parameters = new DialogParameters
+      //{
+      //  { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
+      //  { nameof(AppSettingsEditorDialog.DeviceViewModel), device }
+      //};
+      //var dialogRef =
+      //  await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
+      //var result = await dialogRef.Result;
+      //if (result?.Data is true)
+      //{
+      //  Snackbar.Add("Settings saved on device", Severity.Success);
+      //}
     }
     catch (Exception ex)
     {

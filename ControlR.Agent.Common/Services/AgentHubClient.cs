@@ -92,23 +92,6 @@ internal class AgentHubClient(
     }
   }
 
-  public Task<Result<AgentAppSettings>> GetAgentAppSettings()
-  {
-    try
-    {
-      var agentOptions = _appOptions.CurrentValue;
-      var settings = new AgentAppSettings
-      {
-        AppOptions = agentOptions
-      };
-      return Result.Ok(settings).AsTaskResult();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting agent appsettings.");
-      return Result.Fail<AgentAppSettings>("Failed to get agent app settings.").AsTaskResult();
-    }
-  }
 
   [SupportedOSPlatform("windows6.0.6000")]
   public Task<WindowsSession[]> GetWindowsSessions()
@@ -116,29 +99,6 @@ internal class AgentHubClient(
     return _environmentHelper.Platform == SystemPlatform.Windows
       ? _win32Interop.GetActiveSessions().ToArray().AsTaskResult()
       : Array.Empty<WindowsSession>().AsTaskResult();
-  }
-
-  public Task<Result> ReceiveAgentAppSettings(AgentAppSettings appSettings)
-  {
-    try
-    {
-      // Perform the update in a background thread after a short delay,
-      // allowing the RPC call to complete okay.
-      Task.Run(async () =>
-      {
-        await _delayer.Delay(TimeSpan.FromSeconds(1), _appLifetime.ApplicationStopping);
-        await _settings.UpdateSettings(appSettings);
-        // Device heartbeat will sync authorized keys with current ones.
-        await _hubConnection.SendDeviceHeartbeat();
-      }).Forget();
-
-      return Result.Ok().AsTaskResult();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while saving app settings to disk.");
-      return Result.Fail("Failed to save settings to disk.").AsTaskResult();
-    }
   }
 
   public Task ReceiveDto(DtoWrapper dto)

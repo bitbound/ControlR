@@ -30,6 +30,7 @@
     {
       "type": "docker-compose",
       "dockerCompose": {
+        "projectName": "controlr",
         "up": {
           "detached": true,
           "build": true,

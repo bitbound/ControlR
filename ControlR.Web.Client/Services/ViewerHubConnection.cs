@@ -15,8 +15,6 @@ public interface IViewerHubConnection
 
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(Guid deviceId, Guid terminalId);
 
-  Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId);
-
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebsocketBridgeOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
@@ -28,8 +26,6 @@ public interface IViewerHubConnection
     Guid sessionId,
     Uri websocketUri,
     int targetSystemSession);
-
-  Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings agentAppSettings);
 
   Task SendAgentUpdateTrigger(Guid deviceId);
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType);
@@ -106,13 +102,6 @@ internal class ViewerHubConnection(
         return await _viewerHub.Server.CreateTerminalSession(deviceId, request);
       },
       () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
-  }
-
-  public async Task<Result<AgentAppSettings>> GetAgentAppSettings(Guid deviceId)
-  {
-    return await TryInvoke(
-      async () => await _viewerHub.Server.GetAgentAppSettings(deviceId),
-      () => Result.Fail<AgentAppSettings>("Failed to get agent settings"));
   }
 
   public async Task<Result<ServerStatsDto>> GetServerStats()
@@ -204,17 +193,6 @@ internal class ViewerHubConnection(
       _logger.LogError(ex, "Error while getting remote streaming session.");
       return Result.Fail(ex);
     }
-  }
-
-  public async Task<Result> SendAgentAppSettings(Guid deviceId, AgentAppSettings agentAppSettings)
-  {
-    return await TryInvoke(
-      async () =>
-      {
-        await WaitForConnection();
-        return await _viewerHub.Server.SendAgentAppSettings(deviceId, agentAppSettings);
-      },
-      () => Result.Fail("Failed to send app settings"));
   }
 
   public async Task SendAgentUpdateTrigger(Guid deviceId)

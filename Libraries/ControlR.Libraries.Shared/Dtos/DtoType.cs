@@ -10,7 +10,6 @@ public enum DtoType
   CloseTerminalRequest = 7,
   PowerStateChange = 8,
   TerminalInput = 9,
-  GetAgentAppSettings = 11,
   WakeDevice = 13,
   ChangeDisplays = 17,
   CloseStreamingSession = 19,
