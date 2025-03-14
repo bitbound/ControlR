@@ -47,6 +47,9 @@ public partial class RemoteDisplay : IAsyncDisposable
     int height,
     byte[] encodedImage);
 
+  [JSImport("sendKeyPress", "RemoteDisplay")]
+  public static partial Task SendKeyPress(string key, string canvasId);
+
   [Inject]
   public required IBusyCounter AppState { get; init; }
 
@@ -230,8 +233,8 @@ public partial class RemoteDisplay : IAsyncDisposable
     {
       _componentRef = DotNetObjectReference.Create(this);
 
-      await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
       await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
+      await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
       await SetStatusMessage("Creating streaming session");
       await RequestStreamingSessionFromAgent();
     }
@@ -621,7 +624,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     if (args.Key is "Enter" or "Backspace")
     {
-      await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
+      await SendKeyPress(args.Key, _canvasId);
     }
   }
 
