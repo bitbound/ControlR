@@ -31,14 +31,16 @@
   ],
   "compounds": [
     {
-      "name": "Server + Postgres + Agent",
-      "preLaunchTask": "postgres + aspire",
-      "configurations": ["Server (https)", "Agent (Run)"]
+      "name": "Server + Compose + Agent",
+      "preLaunchTask": "compose",
+      "configurations": ["Server (https)", "Agent (Run)"],
+      "stopAll": true
     },
     {
-      "name": "Server + Postgres",
-      "preLaunchTask": "postgres + aspire",
-      "configurations": ["Server (https)"]
+      "name": "Server + Compose",
+      "preLaunchTask": "compose",
+      "configurations": ["Server (https)"],
+      "stopAll": true
     }
   ]
 }

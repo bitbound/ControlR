@@ -426,20 +426,14 @@ internal class DesktopCapturer : IDesktopCapturer
           continue;
         }
 
-        // Bypass for now, as having too many small changes can
-        // result in worse performance on the front-end when
-        // drawing to the canvas.  Might need to find the break-even
-        // point on number of regions.
-        //if (captureResult.IsUsingGpu)
-        //{
-        //  await EncodeGpuCaptureResult(captureResult);
-        //}
-        //else
-        //{
-        //  await EncodeCpuCaptureResult(captureResult, stoppingToken);
-        //}
-
-        await EncodeCpuCaptureResult(captureResult, stoppingToken);
+        if (captureResult.IsUsingGpu)
+        {
+          await EncodeGpuCaptureResult(captureResult);
+        }
+        else
+        {
+          await EncodeCpuCaptureResult(captureResult, stoppingToken);
+        }
 
         await ReportMetrics();
       }

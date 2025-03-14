@@ -2,32 +2,34 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "dotnet: build",
       "type": "dotnet",
       "task": "build",
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": [],
-      "label": "dotnet: build"
+      "problemMatcher": []
     },
     {
+      "label": "build agent",
       "type": "dotnet",
       "task": "build",
       "group": "build",
       "problemMatcher": [],
-      "label": "build agent",
+      "dependsOn": ["dotnet: build"],
       "file": "ControlR.Agent/ControlR.Agent.csproj"
     },
     {
+      "label": "build server",
       "type": "dotnet",
       "task": "build",
       "group": "build",
       "problemMatcher": [],
-      "label": "build server",
       "file": "ControlR.Web.Server/ControlR.Web.Server.csproj"
     },
     {
+      "label": "compose",
       "type": "docker-compose",
       "dockerCompose": {
         "projectName": "controlr",
@@ -42,8 +44,7 @@
         ]
       },
       "group": "build",
-      "problemMatcher": [],
-      "label": "postgres + aspire"
+      "problemMatcher": []
     }
   ]
 }

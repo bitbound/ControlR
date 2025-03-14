@@ -1,4 +1,6 @@
-﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -8,6 +10,7 @@ using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 
+[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : IAsyncDisposable
 {
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
@@ -35,6 +38,14 @@ public partial class RemoteDisplay : IAsyncDisposable
   private ElementReference _virtualKeyboard;
   private bool _virtualKeyboardToggled;
 
+  [JSImport("drawFrame", "RemoteDisplay")]
+  public static partial Task DrawFrame(
+    string canvasId,
+    int x,
+    int y,
+    int width,
+    int height,
+    byte[] encodedImage);
 
   [Inject]
   public required IBusyCounter AppState { get; init; }
@@ -220,7 +231,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       _componentRef = DotNetObjectReference.Create(this);
 
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
-
+      await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
       await SetStatusMessage("Creating streaming session");
       await RequestStreamingSessionFromAgent();
     }
@@ -229,7 +240,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
-    
+
     var isTouchScreen = await JsInterop.IsTouchScreen();
 
     if (isTouchScreen)
@@ -270,15 +281,8 @@ public partial class RemoteDisplay : IAsyncDisposable
       {
         return;
       }
-      
-      await JsModule.InvokeVoidAsync(
-        "drawFrame",
-        _canvasId,
-        dto.X,
-        dto.Y,
-        dto.Width,
-        dto.Height,
-        dto.EncodedImage);
+
+      await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
     }
     catch (Exception ex)
     {
