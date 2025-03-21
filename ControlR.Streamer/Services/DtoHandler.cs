@@ -129,7 +129,7 @@ internal class DtoHandler(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while handling signed DTO.");
+      _logger.LogError(ex, "Error while handling DTO.");
     }
   }
 }

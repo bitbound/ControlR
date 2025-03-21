@@ -48,7 +48,7 @@ public class DeviceManager(
 
     if (entity is null)
     {
-      return Result.Fail<Device>("Device not found.");
+      return Result.Fail<Device>("Device does not exist in the database.");
     }
 
     await UpdateDeviceEntity(entity, deviceDto, EntityState.Modified, addTagIds);

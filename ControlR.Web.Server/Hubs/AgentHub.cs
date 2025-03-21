@@ -106,7 +106,7 @@ public class AgentHub(
 
       if (!updateResult.IsSuccess)
       {
-        return Result.Fail<DeviceDto>("An error occurred while updating the device.");
+        return Result.Fail<DeviceDto>(updateResult.Reason);
       }
 
       var deviceEntity = updateResult.Value;
@@ -127,10 +127,16 @@ public class AgentHub(
 
   private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
   {
+    if (_hostEnvironment.IsDevelopment())
+    {
+      var device = await _deviceManager.AddOrUpdate(dto, addTagIds: false);
+      return Result.Ok(device);
+    }
+
     var updateResult = await _deviceManager.UpdateDevice(dto, addTagIds: false);
     if (!updateResult.IsSuccess)
     {
-      await Clients.Caller.UninstallAgent("Device does not exist in database.");
+      await Clients.Caller.UninstallAgent(updateResult.Reason);
     }
     return updateResult;
   }
