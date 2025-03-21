@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components;
 
@@ -14,7 +13,9 @@ public partial class Terminal : IAsyncDisposable
   };
 
   private readonly ConcurrentList<string> _inputHistory = [];
+  private readonly string _inputElementId = $"terminal-input-{Guid.NewGuid()}";
   private bool _enableMultiline;
+  private bool _taboutPrevented;
   private MudTextField<string>? _inputElement;
   private int _inputHistoryIndex;
   private string _inputText = string.Empty;
@@ -36,9 +37,6 @@ public partial class Terminal : IAsyncDisposable
   public required IJsInterop JsInterop { get; init; }
 
   [Inject]
-  public required IJSRuntime JsRuntime { get; init; }
-
-  [Inject]
   public required ILogger<Terminal> Logger { get; init; }
 
   [Inject]
@@ -53,9 +51,7 @@ public partial class Terminal : IAsyncDisposable
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private int InputLineCount => _enableMultiline
-    ? 6
-    : 1;
+  private int InputLineCount => _enableMultiline ? 6 : 1;
 
   private ConcurrentQueue<TerminalOutputDto> Output { get; } = [];
 
@@ -97,6 +93,17 @@ public partial class Terminal : IAsyncDisposable
     finally
     {
       _loading = false;
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+
+    if (_inputElement is not null && !_taboutPrevented)
+    {
+      _taboutPrevented = true;
+      await JsInterop.PreventTabOut(_inputElementId);
     }
   }
 
@@ -154,7 +161,7 @@ public partial class Terminal : IAsyncDisposable
     await JsInterop.ScrollToEnd(_terminalOutputContainer);
   }
 
-  private async Task OnInputKeyDown(KeyboardEventArgs args)
+  private async Task OnInputKeyUp(KeyboardEventArgs args)
   {
     if (_inputElement is null)
     {

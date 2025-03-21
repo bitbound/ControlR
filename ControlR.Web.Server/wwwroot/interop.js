@@ -49,6 +49,11 @@ window.preventTabOut = (element) => {
     }
   })
 }
+
+window.preventTabOutById = (elementId) => {
+  window.preventTabOut(document.getElementById(elementId));
+}
+
 window.reload = () => {
   window.location.reload();
 }

@@ -21,8 +21,8 @@ public interface IJsInterop
 
   ValueTask OpenWindow(string url, string target);
 
-  ValueTask PreventTabOut(ElementReference terminalInput);
-
+  ValueTask PreventTabOut(ElementReference inputElement);
+  ValueTask PreventTabOut(string inputElementId);
   ValueTask<string> Prompt(string message);
 
   ValueTask Reload();
@@ -92,9 +92,14 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     return jsRuntime.InvokeVoidAsync("openWindow", url, target);
   }
 
-  public ValueTask PreventTabOut(ElementReference terminalInput)
+  public ValueTask PreventTabOut(ElementReference inputElement)
   {
-    return jsRuntime.InvokeVoidAsync("preventTabOut", terminalInput);
+    return jsRuntime.InvokeVoidAsync("preventTabOut", inputElement);
+  }
+
+  public ValueTask PreventTabOut(string inputElementId)
+  {
+    return jsRuntime.InvokeVoidAsync("preventTabOutById", inputElementId);
   }
 
   public ValueTask<string> Prompt(string message)

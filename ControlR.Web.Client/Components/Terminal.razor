@@ -24,6 +24,7 @@ else
         <div>
             <MudTextField T="string"
                           @ref="@(_inputElement)"
+                          InputId="@(_inputElementId)"
                           @bind-Value="@_inputText"
                           @bind-Text="@_inputText"
                           Label="Enter a command"
@@ -34,7 +35,7 @@ else
                           AutoFocus="true"
                           Immediate="true"
                           UserAttributes="_inputAttributes"
-                          OnKeyUp="@OnInputKeyDown"
+                          OnKeyUp="@OnInputKeyUp"
                           Class="mt-2" />
         </div>
         <div>
