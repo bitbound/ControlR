@@ -7,14 +7,7 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
   public Guid DeviceId => deviceId;
   public string InstanceId { get; } = string.Empty;
 
-  public bool IsConnectedToPublicServer => false;
-
   public Uri ServerUri { get; } = serverUri;
-
-  public Task ClearTags()
-  {
-   return Task.CompletedTask;
-  }
 
   public string GetAppSettingsPath()
   {

@@ -1,2 +1,2 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.ServerApi;
-public record class TagRenameRequestDto(Guid TagId, string NewTagName);
+public record TagRenameRequestDto(Guid TagId, string NewTagName);

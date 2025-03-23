@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using Windows.Graphics.Imaging;
+using ControlR.Libraries.ScreenCapture.Helpers;
 
 namespace ControlR.Libraries.ScreenCapture;
 
@@ -10,7 +11,7 @@ public interface IBitmapUtility
   byte[] Encode(Bitmap bitmap, ImageFormat format);
   byte[] EncodeJpeg(Bitmap bitmap, int quality);
   Bitmap CropBitmap(Bitmap bitmap, Rectangle cropArea);
-  Result<Rectangle> GetChangedArea(Bitmap currentFrame, Bitmap? previousFrame, bool forceFullscreen = false);
+  Result<Rectangle> GetChangedArea(Bitmap? currentFrame, Bitmap? previousFrame, bool forceFullscreen = false);
   Task<byte[]> EncodeJpegWinRt(SoftwareBitmap bitmap, double quality);
   public bool IsEmpty(Bitmap bitmap);
 }
@@ -59,9 +60,9 @@ public class BitmapUtility : IBitmapUtility
     return ms.ToArray();
   }
 
-  public Result<Rectangle> GetChangedArea(Bitmap currentFrame, Bitmap? previousFrame, bool forceFullscreen = false)
+  public Result<Rectangle> GetChangedArea(Bitmap? currentFrame, Bitmap? previousFrame, bool forceFullscreen = false)
   {
-    if (currentFrame == null || previousFrame == null)
+    if (currentFrame is null || previousFrame is null)
     {
       return Result.Ok(Rectangle.Empty);
     }
@@ -97,8 +98,7 @@ public class BitmapUtility : IBitmapUtility
       bd2 = currentFrame.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, previousFrame.PixelFormat);
 
       var bytesPerPixel = Image.GetPixelFormatSize(currentFrame.PixelFormat) / 8;
-      var totalSize = bd1.Height * bd1.Width * bytesPerPixel;
-
+      
       unsafe
       {
         var scan1 = (byte*)bd1.Scan0.ToPointer();
@@ -160,15 +160,12 @@ public class BitmapUtility : IBitmapUtility
     }
     finally
     {
-      try
-      {
-        currentFrame.UnlockBits(bd1);
-        previousFrame.UnlockBits(bd2);
-      }
-      catch { }
+      TryHelper.TryAll(
+        () => currentFrame.UnlockBits(bd1),
+        () => previousFrame.UnlockBits(bd2)
+      );
     }
   }
-
   public bool IsEmpty(Bitmap bitmap)
   {
     var bounds = new Rectangle(Point.Empty, bitmap.Size);
@@ -182,7 +179,6 @@ public class BitmapUtility : IBitmapUtility
       bd = bitmap.LockBits(bounds, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
 
       var bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
-      var totalSize = bd.Height * bd.Width * bytesPerPixel;
 
       unsafe
       {
@@ -224,7 +220,10 @@ public class BitmapUtility : IBitmapUtility
           bitmap.UnlockBits(bd);
         }
       }
-      catch { }
+      catch
+      {
+        // Ignore.
+      }
     }
   }
 }

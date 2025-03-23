@@ -3,7 +3,7 @@
 namespace ControlR.Libraries.Shared.Primitives;
 public sealed class AutoResetEventAsync : IDisposable
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly ConcurrentQueue<TaskCompletionSource> _queue = new();
     private bool _isDisposed;
     private bool _isSet;

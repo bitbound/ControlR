@@ -1,3 +1,5 @@
+namespace ControlR.Libraries.Shared.Enums;
+
 public enum RuntimeId {
     WinX86,
     WinX64,

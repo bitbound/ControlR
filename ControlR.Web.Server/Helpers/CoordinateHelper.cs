@@ -12,12 +12,12 @@ public static class CoordinateHelper
             throw new ArgumentException("Hosts can't be empty.");
         }
 
-        double minDistance = double.MaxValue;
+        var minDistance = double.MaxValue;
         var closestHost = coordinates[0];
 
         foreach (var host in coordinates)
         {
-            double distance = CalculateDistance(host, target);
+            var distance = CalculateDistance(host, target);
             if (distance < minDistance)
             {
                 minDistance = distance;

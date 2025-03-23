@@ -29,7 +29,7 @@ internal class TerminalStore(
       var environment = serviceProvider.GetRequiredService<ISystemEnvironment>();
       var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
       var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
-      var logger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
+      var sessionLogger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
 
       var terminalSession = new TerminalSession(
         terminalId,
@@ -39,7 +39,7 @@ internal class TerminalStore(
         processManager,
         environment,
         hubConnection,
-        logger);
+        sessionLogger);
 
       await terminalSession.Initialize();
 
@@ -117,10 +117,9 @@ internal class TerminalStore(
 
     entryOptions.RegisterPostEvictionCallback((_, value, _, _) =>
     {
-      if (value is TerminalSession terminalSession &&
-          !terminalSession.IsDisposed)
+      if (value is TerminalSession { IsDisposed: false } session)
       {
-        terminalSession.Dispose();
+        session.Dispose();
       }
     });
 

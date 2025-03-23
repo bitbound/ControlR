@@ -21,7 +21,7 @@ internal class SessionSignaler : IAsyncDisposable
         _accessToken = accessToken;
         _signalQueue.Enqueue(new TaskCompletionSource());
         _signalQueue.Enqueue(new TaskCompletionSource());
-        _signalTasks = _signalQueue.Select(x => x.Task).ToArray();
+        _signalTasks = [.. _signalQueue.Select(x => x.Task)];
     }
 
     public WebSocket? Websocket1

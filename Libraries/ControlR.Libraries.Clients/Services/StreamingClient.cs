@@ -162,7 +162,7 @@ public abstract class StreamingClient(
   {
     lock (_messageHandlers)
     {
-      return _messageHandlers.Select(x => x.Value).ToList();
+      return [.. _messageHandlers.Select(x => x.Value)];
     }
   }
 

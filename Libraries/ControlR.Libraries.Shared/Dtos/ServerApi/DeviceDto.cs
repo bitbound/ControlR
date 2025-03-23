@@ -3,6 +3,7 @@ using ControlR.Libraries.Shared.Models;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using System.Collections.Immutable;
 
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
@@ -32,7 +33,7 @@ public record DeviceDto(
   [property: Key(22)] IReadOnlyList<Drive> Drives) : IHasPrimaryKey
 {
   [Key(23)]
-  public Guid[]? TagIds { get; set; }
+  public ImmutableArray<Guid>? TagIds { get; set; }
 
   [Key(24)]
   public string? Alias { get; init; }

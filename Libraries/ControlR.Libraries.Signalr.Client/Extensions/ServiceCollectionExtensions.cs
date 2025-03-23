@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ControlR.Libraries.Signalr.Client.Extensions;
-public static class IServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
   /// <summary>
   /// <para>
@@ -11,10 +11,10 @@ public static class IServiceCollectionExtensions
   ///   that resolves to <typeparamref name="TClient"/>.
   /// </para>
   /// <para>
-  ///   Creates a scoped registration in DI for <see cref="IHubConnection{THub, TClient}"/>.
+  ///   Creates a scoped registration in DI for <see cref="IHubConnection{THub}"/>.
   /// </para>
   /// <para>
-  ///   Consumers should use the <see cref="IHubConnection{THub, TClient}"/> interface for
+  ///   Consumers should use the <see cref="IHubConnection{THub}"/> interface for
   ///   connecting to and interacting with the server.
   /// </para>
   /// </summary>

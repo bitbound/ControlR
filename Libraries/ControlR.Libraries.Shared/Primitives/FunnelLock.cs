@@ -6,10 +6,10 @@
 ///   count has reached 0 (i.e. spills over the funnel).  The inner lock will
 ///   wait until cancelled or timed out.
 /// </summary>
-/// <param name="_outerInitialCount"></param>
-/// <param name="_outerMaxCount"></param>
-/// <param name="_innerInitialCount"></param>
-/// <param name="_innerMaxCount"></param>
+/// <param name="outerInitialCount"></param>
+/// <param name="outerMaxCount"></param>
+/// <param name="innerInitialCount"></param>
+/// <param name="innerMaxCount"></param>
 public class FunnelLock(
   int outerInitialCount,
   int outerMaxCount,

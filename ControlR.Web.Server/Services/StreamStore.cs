@@ -14,15 +14,10 @@ public interface IStreamStore
   Task<Result<StreamSignaler>> WaitForStreamSession(Guid streamId, string viewerConnectionId, CancellationToken cancellationToken);
 }
 
-public class StreamStore : IStreamStore
+public class StreamStore(ILogger<StreamStore> logger) : IStreamStore
 {
   private static readonly ConcurrentDictionary<Guid, StreamSignaler> _streamingSessions = new();
-  private readonly ILogger<StreamStore> _logger;
-
-  public StreamStore(ILogger<StreamStore> logger)
-  {
-    _logger = logger;
-  }
+  private readonly ILogger<StreamStore> _logger = logger;
 
   public void AddOrUpdate(Guid streamId, StreamSignaler signaler, Func<Guid, StreamSignaler, StreamSignaler> updateFactory)
   {

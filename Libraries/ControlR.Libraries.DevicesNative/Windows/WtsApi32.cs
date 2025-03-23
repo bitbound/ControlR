@@ -60,7 +60,7 @@ public static class WtsApi32
   [DllImport("wtsapi32.dll", SetLastError = false)]
   public static extern void WTSFreeMemory(nint memory);
 
-  [DllImport("wtsapi32.dll", SetLastError = true)]
+  [DllImport("wtsapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
   public static extern nint WTSOpenServer(string pServerName);
 
   [DllImport("Wtsapi32.dll")]

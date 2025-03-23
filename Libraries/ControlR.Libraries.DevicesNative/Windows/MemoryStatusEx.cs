@@ -14,7 +14,7 @@ public struct MemoryStatusEx
     /// </summary>
     public MemoryStatusEx()
     {
-        dwLength = (uint)Marshal.SizeOf(typeof(MemoryStatusEx));
+        dwLength = (uint)Marshal.SizeOf<MemoryStatusEx>();
     }
 
     /// <summary>

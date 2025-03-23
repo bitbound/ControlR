@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.ObjectModel;
+using System.Runtime.Versioning;
 
 namespace ControlR.Web.Client.Components;
 
+[SupportedOSPlatform("browser")]
 public partial class Dashboard
 {
   private readonly Dictionary<string, SortDefinition<DeviceViewModel>> _sortDefinitions = new()
@@ -57,9 +59,7 @@ public partial class Dashboard
         return _devices;
       }
 
-      return _devices
-        .Where(x => x.IsOnline)
-        .ToArray();
+      return [.. _devices.Where(x => x.IsOnline)];
     }
   }
 

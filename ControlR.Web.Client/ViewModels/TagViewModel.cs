@@ -2,7 +2,7 @@
 
 public class TagViewModel(TagResponseDto dto) : IHasPrimaryKey
 {
-  public ConcurrentHashSet<Guid> DeviceIds { get; } = new(dto.DeviceIds);
+  public ConcurrentHashSet<Guid> DeviceIds { get; } = [.. dto.DeviceIds];
 
   public Guid Id { get; } = dto.Id;
 
@@ -10,5 +10,5 @@ public class TagViewModel(TagResponseDto dto) : IHasPrimaryKey
 
   public TagType Type { get; set; } = dto.Type;
 
-  public ConcurrentHashSet<Guid> UserIds { get; } = new(dto.UserIds);
+  public ConcurrentHashSet<Guid> UserIds { get; } = [.. dto.UserIds];
 }

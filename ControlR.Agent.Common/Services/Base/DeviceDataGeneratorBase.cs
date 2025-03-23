@@ -33,7 +33,7 @@ internal class DeviceDataGeneratorBase(
   {
     try
     {
-      return DriveInfo.GetDrives()
+      return [.. DriveInfo.GetDrives()
         .Where(x => x.IsReady)
         .Where(x => x.DriveType == DriveType.Fixed)
         .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
@@ -51,7 +51,7 @@ internal class DeviceDataGeneratorBase(
             ? Math.Round((double)(x.TotalSize / 1024 / 1024 / 1024), 2)
             : 0,
           VolumeLabel = x.VolumeLabel
-        }).ToList();
+        })];
     }
     catch (Exception ex)
     {

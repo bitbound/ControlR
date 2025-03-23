@@ -147,6 +147,7 @@ public class Result<T>
     /// Returns an unsuccessful result with the given exception and reason.
     /// </summary>
     /// <param name="exception"></param>
+    /// <param name="reason"></param>
     public Result(Exception exception, string reason)
     {
         IsSuccess = false;
@@ -154,11 +155,10 @@ public class Result<T>
         Reason = reason;
     }
 
-    /// <summary>
-    /// Returns an unsuccessful result with the given reason.
-    /// </summary>
-    /// <param name="errorMessage"></param>
-    /// <exception cref="ArgumentException"></exception>
+   /// <summary>
+   ///  Returns an unsuccessful result with the given reason.
+   /// </summary>
+   /// <param name="reason"></param>
     public Result(string reason)
     {
         IsSuccess = false;

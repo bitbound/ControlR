@@ -5,11 +5,14 @@ public static class Disposer
     {
         foreach (var disposable in disposables)
         {
-            try
-            {
-                disposable?.Dispose();
-            }
-            catch { }
+          try
+          {
+            disposable?.Dispose();
+          }
+          catch
+          {
+            // Intentionally ignored.
+          }
         }
     }
 }

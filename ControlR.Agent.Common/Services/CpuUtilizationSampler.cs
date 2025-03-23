@@ -52,7 +52,7 @@ internal class CpuUtilizationSampler(IElevationChecker elevationChecker, ILogger
     if (OperatingSystem.IsWindows() &&
         !elevationChecker.IsElevated())
     {
-      processes = processes.Where(x => x.SessionId != 0).ToArray();
+      processes = [.. processes.Where(x => x.SessionId != 0)];
     }
 
     foreach (var proc in processes)

@@ -134,7 +134,7 @@ public class FileLogger(
     }
   }
 
-  private string FormatLogEntry(LogLevel logLevel, string categoryName, string state, Exception? exception,
+  private string FormatLogEntry(LogLevel logLevel, string category, string state, Exception? exception,
     string[] scopeStack)
   {
     var ex = exception;
@@ -158,8 +158,8 @@ public class FileLogger(
       $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]  ");
 
     entry.Append(scopeStack.Length != 0
-      ? $"[{categoryName} => {string.Join(" => ", scopeStack)}]  "
-      : $"[{categoryName}]  ");
+      ? $"[{category} => {string.Join(" => ", scopeStack)}]  "
+      : $"[{category}]  ");
 
     entry.Append($"{state} ");
 

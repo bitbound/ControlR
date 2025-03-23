@@ -6,7 +6,7 @@ public class ConcurrentList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnum
 {
     private readonly List<T> _list = [];
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     public ConcurrentList() { }
 
     public ConcurrentList(IEnumerable<T> initialItems)

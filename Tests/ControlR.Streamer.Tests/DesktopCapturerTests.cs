@@ -23,13 +23,13 @@ public class DesktopCapturerTests
   private readonly DesktopCapturer _capturer;
   private readonly Delayer _delayer;
   private readonly DxOutputGenerator _dxOutputs;
+  private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly XunitLogger<DesktopCapturer> _logger;
   private readonly MemoryProvider _memoryProvider;
   private readonly ScreenGrabber _screenGrabber;
   private readonly StartupOptions _startupOptions;
   private readonly FakeTimeProvider _timeProvider;
   private readonly Win32Interop _win32Interop;
-  private JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
   public DesktopCapturerTests(ITestOutputHelper outputHelper)
   {

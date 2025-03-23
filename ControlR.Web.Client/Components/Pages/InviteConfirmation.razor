@@ -103,7 +103,7 @@ else
 
   private bool _isAuthenticated;
   private bool _tenantJoinSuccessful;
-  private EditContext _editContext = default!;
+  private EditContext? _editContext;
   private InputModel _inputModel = new();
 
   [Parameter]

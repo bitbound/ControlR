@@ -18,7 +18,7 @@ internal interface IDxOutputGenerator
 internal class DxOutputGenerator : IDxOutputGenerator
 {
     private readonly ILogger<DxOutputGenerator> _logger;
-    private readonly HashSet<string> _faultedDevices = new();
+    private readonly HashSet<string> _faultedDevices = [];
     private DxOutput? _currentOutput;
 
     public DxOutputGenerator(ILogger<DxOutputGenerator> logger)

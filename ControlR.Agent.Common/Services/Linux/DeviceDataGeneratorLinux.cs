@@ -98,12 +98,11 @@ internal class DeviceDataGeneratorLinux(
     var result = await _processInvoker.GetProcessOutput("users", "");
     if (result.IsSuccess)
     {
-      return result.Value
+      return [.. result.Value
         .Split()
         .Select(x => x.Trim())
         .Where(x => !string.IsNullOrWhiteSpace(x))
-        .Distinct()
-        .ToArray();
+        .Distinct()];
     }
 
     _logger.LogResult(result);

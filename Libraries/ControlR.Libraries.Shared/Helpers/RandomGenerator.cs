@@ -18,6 +18,6 @@ public class RandomGenerator
     public static string GenerateString(int length)
     {
         var bytes = RandomNumberGenerator.GetBytes(length);
-        return new string(bytes.Select(x => AllowableCharacters[x % AllowableCharacters.Length]).ToArray());
+        return new string([.. bytes.Select(x => AllowableCharacters[x % AllowableCharacters.Length])]);
     }
 }

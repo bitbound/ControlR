@@ -320,7 +320,7 @@ public partial class Initial : Migration
 
     migrationBuilder.InsertData(
         table: "AspNetRoles",
-        columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+        columns: ["Id", "ConcurrencyStamp", "Name", "NormalizedName"],
         values: new object[,]
         {
                   { new Guid("8ad85243-aa78-7539-0bf7-0cd6f27bcaa5"), null, "Server Administrator", "SERVER ADMINISTRATOR" },
@@ -388,7 +388,7 @@ public partial class Initial : Migration
     migrationBuilder.CreateIndex(
         name: "IX_Tags_Name_TenantId",
         table: "Tags",
-        columns: new[] { "Name", "TenantId" },
+        columns: ["Name", "TenantId"],
         unique: true);
 
     migrationBuilder.CreateIndex(
@@ -399,7 +399,7 @@ public partial class Initial : Migration
     migrationBuilder.CreateIndex(
         name: "IX_UserPreferences_Name_UserId",
         table: "UserPreferences",
-        columns: new[] { "Name", "UserId" },
+        columns: ["Name", "UserId"],
         unique: true);
 
     migrationBuilder.CreateIndex(
