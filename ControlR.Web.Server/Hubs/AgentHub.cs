@@ -30,18 +30,18 @@ public class AgentHub(
   {
     try
     {
-      if (Device is { } cachedDevice)
+      if (Device is { } cachedDeviceDto)
       {
-        var updated = cachedDevice with
+        var dto = cachedDeviceDto with
         {
           IsOnline = false,
           LastSeen = _timeProvider.GetLocalNow()
         };
 
-        var updateResult = await UpdateDeviceEntity(updated);
+        var updateResult = await UpdateDeviceEntity(dto);
         if (updateResult.IsSuccess)
         {
-          await SendDeviceUpdate(updateResult.Value);
+          await SendDeviceUpdate(updateResult.Value, dto);
         }
       }
       await base.OnDisconnectedAsync(exception);
@@ -100,7 +100,7 @@ public class AgentHub(
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      deviceDto = UpdateDeviceState(deviceDto);
+      deviceDto = UpdateDtoState(deviceDto);
 
       var updateResult = await UpdateDeviceEntity(deviceDto);
 
@@ -114,7 +114,7 @@ public class AgentHub(
 
       Device = deviceEntity.ToDto();
 
-      await SendDeviceUpdate(deviceEntity);
+      await SendDeviceUpdate(deviceEntity, Device);
 
       return Result.Ok(Device);
     }
@@ -127,6 +127,7 @@ public class AgentHub(
 
   private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
   {
+    // In dev, we can create the device to bootstrap it.
     if (_hostEnvironment.IsDevelopment())
     {
       var device = await _deviceManager.AddOrUpdate(dto, addTagIds: false);
@@ -159,10 +160,8 @@ public class AgentHub(
     }
   }
 
-  private async Task SendDeviceUpdate(Device device)
+  private async Task SendDeviceUpdate(Device device, DeviceDto dto)
   {
-    var dto = device.ToDto();
-
     await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
@@ -176,7 +175,7 @@ public class AgentHub(
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
-  private DeviceDto UpdateDeviceState(DeviceDto deviceDto)
+  private DeviceDto UpdateDtoState(DeviceDto deviceDto)
   {
     deviceDto = deviceDto with
     {
