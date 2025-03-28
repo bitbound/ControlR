@@ -4,7 +4,7 @@ using Windows.Win32.Graphics.Direct3D11;
 using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
 
-namespace ControlR.Libraries.ScreenCapture.Models;
+namespace ControlR.Streamer.Models;
 
 internal sealed class DxOutput(
   string deviceName,

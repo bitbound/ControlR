@@ -2,10 +2,11 @@
 using System.Diagnostics;
 using System.Drawing;
 using Bitbound.SimpleMessenger;
-using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Streamer.Extensions;
 using ControlR.Streamer.Messages;
+using ControlR.Streamer.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 

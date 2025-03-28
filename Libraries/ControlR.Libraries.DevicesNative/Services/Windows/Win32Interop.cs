@@ -64,8 +64,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private const uint Xbutton1 = 0x0001;
   private const uint Xbutton2 = 0x0002;
 
+  private readonly ILogger<Win32Interop> _logger = logger;
   private FrozenDictionary<HCURSOR, WindowsCursor>? _cursorMap;
-
   private FrozenDictionary<string, ushort>? _keyMap;
   private HDESK _lastInputDesktop;
 
@@ -113,7 +113,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle, true);
       if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
       {
-        logger.LogWarning("Failed to open winlogon process.");
+        _logger.LogWarning("Failed to open winlogon process.");
         PInvoke.CloseHandle(winLogonProcessHandle);
         return false;
       }
@@ -187,7 +187,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       if (!createResult)
       {
         var lastWin32 = Marshal.GetLastWin32Error();
-        logger.LogError("CreateProcessAsUser failed.  Last Win32 error: {LastWin32Error}", lastWin32);
+        _logger.LogError("CreateProcessAsUser failed.  Last Win32 error: {LastWin32Error}", lastWin32);
         return false;
       }
 
@@ -197,7 +197,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     catch (Exception ex)
     {
       var lastWin32 = Marshal.GetLastWin32Error();
-      logger.LogError(ex, "Error while starting interactive system process.  Last Win32 error: {LastWin32Error}",
+      _logger.LogError(ex, "Error while starting interactive system process.  Last Win32 error: {LastWin32Error}",
         lastWin32);
       return false;
     }
@@ -246,7 +246,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
       catch (Exception ex)
       {
-        logger.LogError(ex, "Failed to marshal active session.");
+        _logger.LogError(ex, "Failed to marshal active session.");
       }
     }
 
@@ -310,7 +310,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       if (!PInvoke.OpenClipboard(HWND.Null))
       {
-        logger.LogError("Failed to open clipboard.");
+        _logger.LogError("Failed to open clipboard.");
         LogWin32Error();
         return null;
       }
@@ -320,7 +320,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting clipboard text.");
+      _logger.LogError(ex, "Error while getting clipboard text.");
       return null;
     }
     finally
@@ -340,7 +340,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       if (!PInvoke.GetCursorInfo(ref cursorInfo) || cursorInfo.hCursor == default)
       {
-        logger.LogDebug("Failed to get cursor info.  Last p/invoke error: {LastError}",
+        _logger.LogDebug("Failed to get cursor info.  Last p/invoke error: {LastError}",
           Marshal.GetLastPInvokeErrorMessage());
         return WindowsCursor.Unknown;
       }
@@ -352,7 +352,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting current cursor.");
+      _logger.LogError(ex, "Error while getting current cursor.");
     }
 
     return WindowsCursor.Unknown;
@@ -426,7 +426,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (result == 0)
     {
-      logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
+      _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
       return Result.Fail("Failed to send key input.");
     }
 
@@ -520,7 +520,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var result = PInvoke.SendInput([input], sizeof(INPUT));
     if (result == 0)
     {
-      logger.LogWarning("Failed to send mouse input: {MouseInput}.", mouseInput);
+      _logger.LogWarning("Failed to send mouse input: {MouseInput}.", mouseInput);
     }
   }
 
@@ -544,7 +544,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var result = PInvoke.SendInput([input], sizeof(INPUT));
     if (result == 0)
     {
-      logger.LogWarning("Failed to send pointer move input: {@MouseInput}.", input);
+      _logger.LogWarning("Failed to send pointer move input: {@MouseInput}.", input);
     }
   }
 
@@ -604,7 +604,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       var result = PInvoke.SendInput([input], sizeof(INPUT));
       if (result != 1)
       {
-        logger.LogWarning("Failed to reset key state.");
+        _logger.LogWarning("Failed to reset key state.");
       }
 
       Thread.Sleep(1);
@@ -620,7 +620,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (!PInvoke.OpenClipboard(HWND.Null))
     {
-      logger.LogError("Failed to open clipboard.");
+      _logger.LogError("Failed to open clipboard.");
       LogWin32Error();
       return;
     }
@@ -629,7 +629,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       if (!PInvoke.EmptyClipboard())
       {
-        logger.LogError("Empty clipboard failed when trying to set text.");
+        _logger.LogError("Empty clipboard failed when trying to set text.");
         LogWin32Error();
         return;
       }
@@ -640,19 +640,19 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       if (result == default)
       {
         LogWin32Error();
-        logger.LogError("Failed to set clipboard text.  Last Win32 Error: {Win32Error}", Marshal.GetLastPInvokeError());
+        _logger.LogError("Failed to set clipboard text.  Last Win32 Error: {Win32Error}", Marshal.GetLastPInvokeError());
         Marshal.FreeHGlobal(pointer);
       }
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while setting clipboard text.");
+      _logger.LogError(ex, "Error while setting clipboard text.");
     }
     finally
     {
       if (!PInvoke.CloseClipboard())
       {
-        logger.LogError("Failed to close clipboard.");
+        _logger.LogError("Failed to close clipboard.");
         LogWin32Error();
       }
     }
@@ -677,8 +677,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       _lastInputDesktop = inputDesktop;
       return result;
     }
-    catch
+    catch (Exception ex)
     {
+      _logger.LogError(ex, "Error while switching to input desktop.");
+      LogWin32Error();
       return false;
     }
   }
@@ -734,7 +736,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       var result = PInvoke.SendInput([input], sizeof(INPUT));
       if (result != 1)
       {
-        logger.LogWarning("Failed to type character in text.");
+        _logger.LogWarning("Failed to type character in text.");
       }
 
       Thread.Sleep(1);
@@ -1002,7 +1004,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (result is null)
     {
-      logger.LogWarning("Unable to parse key input: {key}.", key);
+      _logger.LogWarning("Unable to parse key input: {key}.", key);
       return false;
     }
 
@@ -1218,7 +1220,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var result = PInvoke.SendInput([input], sizeof(INPUT));
     if (result == 0)
     {
-      logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);
+      _logger.LogWarning("Failed to send mouse wheel input: {MouseInput}.", mouseInput);
     }
   }
 
@@ -1226,7 +1228,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   {
     var lastErrMessage = Marshal.GetLastPInvokeErrorMessage();
     var lastErrCode = Marshal.GetLastPInvokeError();
-    logger.LogError(
+    _logger.LogError(
       "Win32 error while calling {MemberName}.  " +
       "Error Code: {ErrorCode}.  Error Message: {ErrorMessage}",
       caller,
@@ -1311,7 +1313,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Failed to duplicate Explorer token.  Last Win32 Error: {LastWin32Error}",
+      _logger.LogError(ex, "Failed to duplicate Explorer token.  Last Win32 Error: {LastWin32Error}",
         Marshal.GetLastWin32Error());
       return false;
     }
@@ -1320,20 +1322,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private bool TryGetTokenInformation(SafeFileHandle token, TOKEN_INFORMATION_CLASS tokenClass, out nint infoPtr,
     out uint ptrSize)
   {
-    logger.LogInformation("Getting token information for class: {TokenInformationClass}", tokenClass);
+    _logger.LogInformation("Getting token information for class: {TokenInformationClass}", tokenClass);
 
     _ = PInvoke.GetTokenInformation(token, tokenClass, null, 0, out var neededLength);
-    logger.LogInformation("Token information length needed: {NeededLength}.", neededLength);
+    _logger.LogInformation("Token information length needed: {NeededLength}.", neededLength);
 
     infoPtr = Marshal.AllocHGlobal((int)neededLength);
     if (!PInvoke.GetTokenInformation(token, tokenClass, infoPtr.ToPointer(), neededLength, out ptrSize))
     {
-      logger.LogWarning("Failed to get token information.  Last Win32 Error: {LastWin32Error}",
+      _logger.LogWarning("Failed to get token information.  Last Win32 Error: {LastWin32Error}",
         Marshal.GetLastWin32Error());
       return false;
     }
 
-    logger.LogInformation("Successfully got token information.");
+    _logger.LogInformation("Successfully got token information.");
     return true;
   }
 
@@ -1344,7 +1346,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (!PInvoke.WTSQueryUserToken(sessionId, ref userToken))
     {
-      logger.LogWarning("Failed to query user token.");
+      _logger.LogWarning("Failed to query user token.");
       return false;
     }
 
@@ -1358,7 +1360,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
           TOKEN_TYPE.TokenPrimary,
           out primaryToken))
     {
-      logger.LogWarning("Failed to duplicate primary token.");
+      _logger.LogWarning("Failed to duplicate primary token.");
       return false;
     }
 

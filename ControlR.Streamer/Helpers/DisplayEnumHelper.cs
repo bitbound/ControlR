@@ -26,10 +26,10 @@ using System.Drawing;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Windows.Win32;
+using ControlR.Streamer.Models;
 using Windows.Win32.Graphics.Gdi;
-using ControlR.Libraries.ScreenCapture.Models;
 
-namespace ControlR.Libraries.ScreenCapture.Helpers;
+namespace ControlR.Streamer.Helpers;
 
 internal static class DisplaysEnumerationHelper
 {

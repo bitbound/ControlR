@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 
-namespace ControlR.Libraries.ScreenCapture.Models;
+namespace ControlR.Streamer.Models;
 
 public sealed class CaptureResult : IDisposable
 {

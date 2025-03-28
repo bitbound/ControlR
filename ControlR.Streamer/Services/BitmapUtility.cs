@@ -1,10 +1,9 @@
-﻿using ControlR.Libraries.Shared.Primitives;
-using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System.Drawing;
 using Windows.Graphics.Imaging;
-using ControlR.Libraries.ScreenCapture.Helpers;
+using ControlR.Streamer.Helpers;
+using System.Drawing.Imaging;
 
-namespace ControlR.Libraries.ScreenCapture;
+namespace ControlR.Streamer.Services;
 
 public interface IBitmapUtility
 {

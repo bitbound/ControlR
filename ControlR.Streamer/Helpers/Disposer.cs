@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.ScreenCapture.Helpers;
+﻿namespace ControlR.Streamer.Helpers;
 public static class Disposer
 {
     public static void TryDispose(params IDisposable?[] disposables)

@@ -1,7 +1,6 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.Devices.Native.Services;
-using ControlR.Libraries.ScreenCapture;
-using ControlR.Libraries.ScreenCapture.Helpers;
+using ControlR.Streamer.Helpers;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -59,6 +58,7 @@ public class DesktopCapturerTests
       timeProvider: _timeProvider,
       bitmapUtility: _bitmapUtility,
       dxOutputGenerator: _dxOutputs,
+      win32Interop: _win32Interop,
       new XunitLogger<ScreenGrabber>(outputHelper));
 
     _capturer = new DesktopCapturer(

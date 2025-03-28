@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.ScreenCapture\ControlR.Libraries.ScreenCapture.csproj" />
+    <ProjectReference Include="..\..\ControlR.Streamer\ControlR.Streamer.csproj" />
   </ItemGroup>
 
 </Project>

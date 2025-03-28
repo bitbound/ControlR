@@ -1,13 +1,12 @@
-﻿using ControlR.Libraries.ScreenCapture.Extensions;
-using ControlR.Libraries.ScreenCapture.Models;
-using Microsoft.Extensions.Logging;
+﻿using ControlR.Streamer.Extensions;
+using ControlR.Streamer.Models;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Direct3D;
 using Windows.Win32.Graphics.Dxgi;
 
-namespace ControlR.Libraries.ScreenCapture.Helpers;
+namespace ControlR.Streamer.Helpers;
 
 internal interface IDxOutputGenerator
 {

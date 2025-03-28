@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using System.Numerics;
 
-namespace ControlR.Libraries.ScreenCapture.Models;
+namespace ControlR.Streamer.Models;
 
 public class DisplayInfo
 {

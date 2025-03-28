@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
-using ControlR.Libraries.Shared.Primitives;
 
-namespace ControlR.Libraries.ScreenCapture.Extensions;
+namespace ControlR.Streamer.Extensions;
 
 public static class GraphicsExtensions
 {

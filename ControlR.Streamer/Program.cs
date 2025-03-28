@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
 using ControlR.Streamer;
-using ControlR.Libraries.ScreenCapture.Extensions;
 using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR.Client;
+using ControlR.Streamer.Extensions;
 using ControlR.Libraries.DevicesCommon.Extensions;
 
 var sessionIdOption = new Option<Guid>(
@@ -59,8 +59,8 @@ rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, vi
 
   var appsettingsFile = SystemEnvironment.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
   configuration
-    .AddJsonFile(PathConstants.GetAppSettingsPath(originUri), true, true)
     .AddJsonFile(appsettingsFile, true, true)
+    .AddJsonFile(PathConstants.GetAppSettingsPath(originUri), true, true)
     .AddEnvironmentVariables();
 
   services.Configure<StartupOptions>(options =>

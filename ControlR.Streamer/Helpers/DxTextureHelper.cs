@@ -1,7 +1,6 @@
 ﻿using Windows.Win32.Graphics.Direct3D11;
 using Windows.Win32.Graphics.Dxgi.Common;
 
-namespace ControlR.Libraries.ScreenCapture.Helpers;
 internal static class DxTextureHelper
 {
     public static D3D11_TEXTURE2D_DESC Create2dTextureDescription(int width, int height)

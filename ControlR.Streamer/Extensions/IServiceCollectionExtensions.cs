@@ -1,7 +1,8 @@
-﻿using ControlR.Libraries.ScreenCapture.Helpers;
+﻿using ControlR.Streamer.Helpers;
+using ControlR.Streamer.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ControlR.Libraries.ScreenCapture.Extensions;
+namespace ControlR.Streamer.Extensions;
 
 public static class ServiceCollectionExtensions
 {

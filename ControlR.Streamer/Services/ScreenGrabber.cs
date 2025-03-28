@@ -9,13 +9,11 @@ using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
 using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ControlR.Libraries.ScreenCapture.Extensions;
-using ControlR.Libraries.ScreenCapture.Helpers;
-using ControlR.Libraries.ScreenCapture.Models;
-using Microsoft.Extensions.Logging;
-using ControlR.Libraries.Shared.Primitives;
+using ControlR.Streamer.Extensions;
+using ControlR.Streamer.Helpers;
+using ControlR.Streamer.Models;
 
-namespace ControlR.Libraries.ScreenCapture;
+namespace ControlR.Streamer.Services;
 
 public interface IScreenGrabber
 {
@@ -70,10 +68,12 @@ internal sealed class ScreenGrabber(
   TimeProvider timeProvider,
   IBitmapUtility bitmapUtility,
   IDxOutputGenerator dxOutputGenerator,
+  IWin32Interop win32Interop,
   ILogger<ScreenGrabber> logger) : IScreenGrabber
 {
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IBitmapUtility _bitmapUtility = bitmapUtility;
+  private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly IDxOutputGenerator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabber> _logger = logger;
 
@@ -94,6 +94,12 @@ internal sealed class ScreenGrabber(
       }
 
       if (!tryUseDirectX)
+      {
+        return GetBitBltCapture(display.MonitorArea, captureCursor);
+      }
+
+      if (_win32Interop.GetCurrentThreadDesktop(out var desktopName) &&
+          desktopName.Equals("Winlogon", StringComparison.OrdinalIgnoreCase))
       {
         return GetBitBltCapture(display.MonitorArea, captureCursor);
       }
@@ -216,12 +222,17 @@ internal sealed class ScreenGrabber(
       var virtualScreen = GetVirtualScreenBounds();
       var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
       var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
-      if (x >= 0 && y >= 0)
+
+      var targetArea = new Rectangle(x, y, icon.Width, icon.Height);
+      if (!captureArea.Contains(targetArea))
       {
-        graphics.DrawIcon(icon, x, y);
+        _logger.LogDebug("Cursor is outside of capture area. Skipping.");
+        return Rectangle.Empty;
       }
 
-      return new Rectangle(x, y, icon.Width, icon.Height);
+      graphics.DrawIcon(icon, x, y);
+
+      return targetArea;
     }
     catch (Exception ex)
     {
@@ -398,7 +409,7 @@ internal sealed class ScreenGrabber(
     catch (COMException ex)
     {
       _dxOutputGenerator.MarkFaulted(dxOutput);
-      _logger.LogWarning("DirectX outputs need to be refreshed.");
+      _logger.LogWarning(ex, "DirectX outputs need to be refreshed.");
       return CaptureResult.Fail(ex);
     }
     catch (Exception ex)

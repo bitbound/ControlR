@@ -3,7 +3,7 @@ using Windows.Graphics.Imaging;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace ControlR.Libraries.ScreenCapture.Extensions;
+namespace ControlR.Streamer.Extensions;
 public static class BitmapExtensions
 {
     public static Rectangle ToRectangle(this Bitmap bitmap)

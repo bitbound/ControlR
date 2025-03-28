@@ -6,157 +6,164 @@ namespace ControlR.Libraries.DevicesCommon.Services;
 
 public interface IProcessManager
 {
-    Process GetCurrentProcess();
+  Process GetCurrentProcess();
+  int GetCurrentSessionId();
+  Process GetProcessById(int processId);
 
-    Process GetProcessById(int processId);
+  Process[] GetProcesses();
 
-    Process[] GetProcesses();
+  Process[] GetProcessesByName(string processName);
 
-    Process[] GetProcessesByName(string processName);
+  Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
 
-    Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
+  Process? LaunchUri(Uri uri);
 
-    Process? LaunchUri(Uri uri);
+  Process Start(string fileName);
 
-    Process Start(string fileName);
+  Process Start(string fileName, string arguments);
 
-    Process Start(string fileName, string arguments);
+  Process? Start(string fileName, string arguments, bool useShellExec);
 
-    Process? Start(string fileName, string arguments, bool useShellExec);
+  Process? Start(ProcessStartInfo startInfo);
 
-    Process? Start(ProcessStartInfo startInfo);
+  Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
 
-    Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
-
-    Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout);
-    Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken);
+  Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout);
+  Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken);
 }
 
 public class ProcessManager : IProcessManager
 {
-    public Process GetCurrentProcess()
+  private int? _currentSessionId;
+
+  public Process GetCurrentProcess()
+  {
+    return Process.GetCurrentProcess();
+  }
+
+  public int GetCurrentSessionId()
+  {
+    return _currentSessionId ??= Process.GetCurrentProcess().SessionId;
+  }
+
+  public Process GetProcessById(int processId)
+  {
+    return Process.GetProcessById(processId);
+  }
+
+  public Process[] GetProcesses()
+  {
+    return Process.GetProcesses();
+  }
+
+  public Process[] GetProcessesByName(string processName)
+  {
+    return Process.GetProcessesByName(processName);
+  }
+
+  public async Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000)
+  {
+    try
     {
-        return Process.GetCurrentProcess();
-    }
+      var psi = new ProcessStartInfo(command, arguments)
+      {
+        WindowStyle = ProcessWindowStyle.Hidden,
+        UseShellExecute = false,
+        RedirectStandardOutput = true
+      };
 
-    public Process GetProcessById(int processId)
+      var proc = Process.Start(psi);
+
+      if (proc is null)
+      {
+        return Result.Fail<string>("Process failed to start.");
+      }
+
+      using var cts = new CancellationTokenSource(timeoutMs);
+      await proc.WaitForExitAsync(cts.Token);
+
+      var output = await proc.StandardOutput.ReadToEndAsync();
+      return Result.Ok(output);
+    }
+    catch (OperationCanceledException)
     {
-        return Process.GetProcessById(processId);
+      return Result.Fail<string>($"Timed out while waiting for command to finish.  " +
+          $"Command: {command}.  Arguments: {arguments}");
     }
-
-    public Process[] GetProcesses()
+    catch (Exception ex)
     {
-        return Process.GetProcesses();
+      return Result.Fail<string>(ex);
     }
+  }
 
-    public Process[] GetProcessesByName(string processName)
+  public Process? LaunchUri(Uri uri)
+  {
+    var psi = new ProcessStartInfo()
     {
-        return Process.GetProcessesByName(processName);
-    }
+      FileName = $"{uri}",
+      UseShellExecute = true
+    };
+    return Process.Start(psi);
+  }
 
-    public async Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000)
+  public Process Start(string fileName)
+  {
+    return Process.Start(fileName);
+  }
+
+  public Process Start(string fileName, string arguments)
+  {
+    return Process.Start(fileName, arguments);
+  }
+
+  public Process? Start(ProcessStartInfo startInfo)
+  {
+    Guard.IsNotNull(startInfo);
+    return Process.Start(startInfo);
+  }
+
+  public Process? Start(string fileName, string arguments, bool useShellExec)
+  {
+    var psi = new ProcessStartInfo()
     {
-        try
-        {
-            var psi = new ProcessStartInfo(command, arguments)
-            {
-                WindowStyle = ProcessWindowStyle.Hidden,
-                UseShellExecute = false,
-                RedirectStandardOutput = true
-            };
+      FileName = fileName,
+      Arguments = arguments,
+      UseShellExecute = useShellExec
+    };
+    return Process.Start(psi);
+  }
 
-            var proc = Process.Start(psi);
+  public async Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout)
+  {
+    using var process = Process.Start(startInfo);
+    Guard.IsNotNull(process);
 
-            if (proc is null)
-            {
-                return Result.Fail<string>("Process failed to start.");
-            }
+    using var cts = new CancellationTokenSource(timeout);
+    await process.WaitForExitAsync(cts.Token);
 
-            using var cts = new CancellationTokenSource(timeoutMs);
-            await proc.WaitForExitAsync(cts.Token);
-
-            var output = await proc.StandardOutput.ReadToEndAsync();
-            return Result.Ok(output);
-        }
-        catch (OperationCanceledException)
-        {
-            return Result.Fail<string>($"Timed out while waiting for command to finish.  " +
-                $"Command: {command}.  Arguments: {arguments}");
-        }
-        catch (Exception ex)
-        {
-            return Result.Fail<string>(ex);
-        }
-    }
-
-    public Process? LaunchUri(Uri uri)
+    if (process.ExitCode != 0)
     {
-        var psi = new ProcessStartInfo()
-        {
-            FileName = $"{uri}",
-            UseShellExecute = true
-        };
-        return Process.Start(psi);
+      throw new ProcessStatusException(process.ExitCode);
     }
+  }
 
-    public Process Start(string fileName)
+  public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout)
+  {
+    using var cts = new CancellationTokenSource(timeout);
+    await StartAndWaitForExit(fileName, arguments, useShellExec, cts.Token);
+  }
+
+  public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken)
+  {
+    var psi = new ProcessStartInfo()
     {
-        return Process.Start(fileName);
-    }
+      FileName = fileName,
+      Arguments = arguments,
+      UseShellExecute = useShellExec,
+    };
 
-    public Process Start(string fileName, string arguments)
-    {
-        return Process.Start(fileName, arguments);
-    }
-
-    public Process? Start(ProcessStartInfo startInfo)
-    {
-        Guard.IsNotNull(startInfo);
-        return Process.Start(startInfo);
-    }
-
-    public Process? Start(string fileName, string arguments, bool useShellExec)
-    {
-        var psi = new ProcessStartInfo()
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            UseShellExecute = useShellExec
-        };
-        return Process.Start(psi);
-    }
-
-    public async Task StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout)
-    {
-        using var process = Process.Start(startInfo);
-        Guard.IsNotNull(process);
-
-        using var cts = new CancellationTokenSource(timeout);
-        await process.WaitForExitAsync(cts.Token);
-
-        if (process.ExitCode != 0)
-        {
-            throw new ProcessStatusException(process.ExitCode);
-        }
-    }
-
-    public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout)
-    {
-        using var cts = new CancellationTokenSource(timeout);
-        await StartAndWaitForExit(fileName, arguments, useShellExec, cts.Token);
-    }
-
-    public async Task StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken)
-    {
-        var psi = new ProcessStartInfo()
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            UseShellExecute = useShellExec,
-        };
-
-        using var process = Process.Start(psi);
-        Guard.IsNotNull(process);
-        await process.WaitForExitAsync(cancellationToken);
-    }
+    using var process = Process.Start(psi);
+    Guard.IsNotNull(process);
+    await process.WaitForExitAsync(cancellationToken);
+  }
 }

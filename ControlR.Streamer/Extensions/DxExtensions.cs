@@ -2,7 +2,7 @@
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dxgi;
 
-namespace ControlR.Libraries.ScreenCapture.Extensions;
+namespace ControlR.Streamer.Extensions;
 internal static class DxExtensions
 {
     public static List<IDXGIAdapter1> GetAdapters(this IDXGIFactory1 factory)

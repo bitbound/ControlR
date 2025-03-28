@@ -1,5 +1,4 @@
 ﻿using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Streamer.Services;
