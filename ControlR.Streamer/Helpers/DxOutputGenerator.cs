@@ -10,63 +10,57 @@ namespace ControlR.Streamer.Helpers;
 
 internal interface IDxOutputGenerator
 {
-    DxOutput? GetDxOutput(string deviceName);
-    void MarkFaulted(DxOutput dxOutput);
+  DxOutput? GetDxOutput(string deviceName);
+  void RefreshOutput();
 }
 
 internal class DxOutputGenerator : IDxOutputGenerator
 {
-    private readonly ILogger<DxOutputGenerator> _logger;
-    private readonly HashSet<string> _faultedDevices = [];
-    private DxOutput? _currentOutput;
+  private readonly ILogger<DxOutputGenerator> _logger;
+  private DxOutput? _currentOutput;
 
-    public DxOutputGenerator(ILogger<DxOutputGenerator> logger)
-    {
-        _logger = logger;
-        AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
-    }
+  public DxOutputGenerator(ILogger<DxOutputGenerator> logger)
+  {
+    _logger = logger;
+    AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+  }
 
-    public DxOutput? GetDxOutput(string deviceName)
+  public DxOutput? GetDxOutput(string deviceName)
+  {
+    try
     {
-        try
+      if (_currentOutput?.DeviceName == deviceName)
+      {
+        return _currentOutput;
+      }
+
+      _currentOutput?.Dispose();
+      _currentOutput = null;
+
+      var factoryGuid = typeof(IDXGIFactory1).GUID;
+      var factoryResult = PInvoke.CreateDXGIFactory1(factoryGuid, out var factoryObj);
+
+      var factory = (IDXGIFactory1)factoryObj;
+      var adapters = factory.GetAdapters();
+
+      foreach (var adapter in adapters)
+      {
+        foreach (var output in adapter.GetOutputs())
         {
-            if (_faultedDevices.Contains(deviceName))
+          unsafe
+          {
+            var outputDescription = output.GetDesc();
+            var outputDeviceName = outputDescription.DeviceName.ToString();
+
+            if (outputDescription.DeviceName.ToString() != deviceName)
             {
-                return null;
+              continue;
             }
 
-            if (_currentOutput?.DeviceName == deviceName)
+            var bounds = outputDescription.DesktopCoordinates.ToRectangle();
+
+            var featureLevelArray = new[]
             {
-                return _currentOutput;
-            }
-
-            _currentOutput?.Dispose();
-            _currentOutput = null;
-
-            var factoryGuid = typeof(IDXGIFactory1).GUID;
-            var factoryResult = PInvoke.CreateDXGIFactory1(factoryGuid, out var factoryObj);
-
-            var factory = (IDXGIFactory1)factoryObj;
-            var adapters = factory.GetAdapters();
-
-            foreach (var adapter in adapters)
-            {
-                foreach (var output in adapter.GetOutputs())
-                {
-                    unsafe
-                    {
-                        var outputDescription = output.GetDesc();
-                        var outputDeviceName = outputDescription.DeviceName.ToString();
-
-                        if (outputDescription.DeviceName.ToString() != deviceName)
-                        {
-                            continue;
-                        }
-
-                        var bounds = outputDescription.DesktopCoordinates.ToRectangle();
-
-                        var featureLevelArray = new[]
-                        {
                             D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
                             D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
                             D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
@@ -76,60 +70,61 @@ internal class DxOutputGenerator : IDxOutputGenerator
                             D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_1
                         };
 
-                        fixed (D3D_FEATURE_LEVEL* featureLevelArrayRef = featureLevelArray)
-                        {
-                            PInvoke.D3D11CreateDevice(
-                                pAdapter: adapter,
-                                DriverType: 0,
-                                Software: HMODULE.Null,
-                                Flags: 0,
-                                pFeatureLevels: featureLevelArrayRef,
-                                FeatureLevels: 7,
-                                SDKVersion: 7,
-                                ppDevice: out var device,
-                                pFeatureLevel: null,
-                                ppImmediateContext: out var deviceContext);
-
-                            var texture2d = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
-
-                            output.DuplicateOutput(device, out var outputDuplication);
-
-                            _currentOutput = new DxOutput(
-                                deviceName,
-                                bounds,
-                                adapter,
-                                device,
-                                deviceContext,
-                                outputDuplication,
-                                outputDescription.Rotation);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            Marshal.FinalReleaseComObject(factoryObj);
-            foreach (var adapter in adapters)
+            fixed (D3D_FEATURE_LEVEL* featureLevelArrayRef = featureLevelArray)
             {
-                Marshal.FinalReleaseComObject(adapter);
+              PInvoke.D3D11CreateDevice(
+                  pAdapter: adapter,
+                  DriverType: 0,
+                  Software: HMODULE.Null,
+                  Flags: 0,
+                  pFeatureLevels: featureLevelArrayRef,
+                  FeatureLevels: 7,
+                  SDKVersion: 7,
+                  ppDevice: out var device,
+                  pFeatureLevel: null,
+                  ppImmediateContext: out var deviceContext);
+
+              var texture2d = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
+
+              output.DuplicateOutput(device, out var outputDuplication);
+
+              _currentOutput = new DxOutput(
+                  deviceName,
+                  bounds,
+                  adapter,
+                  device,
+                  deviceContext,
+                  outputDuplication,
+                  outputDescription.Rotation);
+              break;
             }
-
-            return _currentOutput;
+          }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting DxOutput for device name {DeviceName}.", deviceName);
-            return null;
-        }
-    }
+      }
 
-    public void MarkFaulted(DxOutput dxOutput)
-    {
-        _faultedDevices.Add(dxOutput.DeviceName);
-    }
+      Marshal.FinalReleaseComObject(factoryObj);
+      foreach (var adapter in adapters)
+      {
+        Marshal.FinalReleaseComObject(adapter);
+      }
 
-    private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
-    {
-        Disposer.TryDispose([_currentOutput]);
+      return _currentOutput;
     }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting DxOutput for device name {DeviceName}.", deviceName);
+      return null;
+    }
+  }
+
+  public void RefreshOutput()
+  {
+    Disposer.TryDispose(_currentOutput);
+    _currentOutput = null;
+  }
+
+  private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
+  {
+    Disposer.TryDispose([_currentOutput]);
+  }
 }

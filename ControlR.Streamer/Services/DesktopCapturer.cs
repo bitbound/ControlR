@@ -393,7 +393,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
         _win32Interop.SwitchToInputDesktop();
 
-        using var captureResult = _screenGrabber.Capture(selectedDisplay);
+        using var captureResult = _screenGrabber.Capture(selectedDisplay, captureCursor: false);
 
         if (captureResult.HadNoChanges)
         {

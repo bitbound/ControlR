@@ -11,9 +11,10 @@ public interface IDelayer
       CancellationToken cancellationToken = default);
 }
 
-public class Delayer : IDelayer
+public class Delayer(TimeProvider timeProvider) : IDelayer
 {
-  public static Delayer Default { get; } = new();
+  private readonly TimeProvider _timeProvider = timeProvider;
+  public static Delayer Default { get; } = new(TimeProvider.System);
 
   public async Task<bool> WaitForAsync(
     Func<bool> condition,
@@ -33,7 +34,7 @@ public class Delayer : IDelayer
           await conditionFailedCallback();
         }
 
-        await Task.Delay(pollingDelay.Value, cancellationToken);
+        await Task.Delay(pollingDelay.Value, _timeProvider, cancellationToken);
       }
       catch (OperationCanceledException)
       {
@@ -49,6 +50,6 @@ public class Delayer : IDelayer
 
   public async Task Delay(TimeSpan delay, CancellationToken cancellationToken = default)
   {
-    await Task.Delay(delay, cancellationToken);
+    await Task.Delay(delay, _timeProvider, cancellationToken);
   }
 }
