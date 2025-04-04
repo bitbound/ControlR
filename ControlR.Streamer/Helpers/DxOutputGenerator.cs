@@ -1,5 +1,6 @@
 ﻿using ControlR.Streamer.Extensions;
 using ControlR.Streamer.Models;
+using Microsoft.Extensions.Caching.Memory;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -18,6 +19,7 @@ internal class DxOutputGenerator : IDxOutputGenerator
 {
   private readonly ILogger<DxOutputGenerator> _logger;
   private DxOutput? _currentOutput;
+  private readonly MemoryCache _faultedDevices = new(new MemoryCacheOptions());
 
   public DxOutputGenerator(ILogger<DxOutputGenerator> logger)
   {
@@ -29,6 +31,16 @@ internal class DxOutputGenerator : IDxOutputGenerator
   {
     try
     {
+      // Fall back to BitBlt for faulted DX devices. After the
+      // cached item expires, we will try to create a new DX device.
+      // This prevents going into a continual loop of trying to
+      // create DX devices in situations like when the laptop lid
+      // is closed.
+      if (_faultedDevices.TryGetValue(deviceName, out var _))
+      {
+        return null;
+      }
+
       if (_currentOutput?.DeviceName == deviceName)
       {
         return _currentOutput;
@@ -61,14 +73,14 @@ internal class DxOutputGenerator : IDxOutputGenerator
 
             var featureLevelArray = new[]
             {
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_3,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_2,
-                            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_1
-                        };
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_3,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_2,
+              D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_9_1
+            };
 
             fixed (D3D_FEATURE_LEVEL* featureLevelArrayRef = featureLevelArray)
             {
@@ -119,6 +131,16 @@ internal class DxOutputGenerator : IDxOutputGenerator
 
   public void RefreshOutput()
   {
+    if (_currentOutput is null)
+    {
+      return;
+    }
+
+    _faultedDevices.Set(
+      _currentOutput.DeviceName, 
+      _currentOutput.DeviceName, 
+      TimeSpan.FromSeconds(10));
+
     Disposer.TryDispose(_currentOutput);
     _currentOutput = null;
   }

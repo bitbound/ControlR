@@ -6,6 +6,7 @@ using ControlR.Libraries.DevicesNative.Linux;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Exceptions;
 using ControlR.Libraries.Shared.Services.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 

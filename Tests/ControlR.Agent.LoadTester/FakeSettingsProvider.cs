@@ -14,12 +14,12 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
     return string.Empty;
   }
 
-  public Task UpdateId(Guid uid)
+  public Task UpdateAppOptions(AgentAppOptions options)
   {
     return Task.CompletedTask;
   }
 
-  public Task UpdateSettings(AgentAppSettings settings)
+  public Task UpdateId(Guid uid)
   {
     return Task.CompletedTask;
   }

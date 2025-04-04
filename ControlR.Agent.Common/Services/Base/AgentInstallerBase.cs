@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using ControlR.Agent.Common.Interfaces;
+﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
@@ -16,7 +15,6 @@ internal abstract class AgentInstallerBase(
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerBase> logger)
 {
-  private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
@@ -51,9 +49,7 @@ internal abstract class AgentInstallerBase(
     }
 
     Logger.LogInformation("Writing results to disk.");
-    var appSettings = new AgentAppSettings { AppOptions = currentOptions };
-    var appSettingsJson = JsonSerializer.Serialize(appSettings, _jsonOptions);
-    await FileSystem.WriteAllTextAsync(_settingsProvider.GetAppSettingsPath(), appSettingsJson);
+    await _settingsProvider.UpdateAppOptions(currentOptions);
   }
 
   protected async Task<Result> CreateDeviceOnServer(string? installerKey, Guid[]? tagIds)

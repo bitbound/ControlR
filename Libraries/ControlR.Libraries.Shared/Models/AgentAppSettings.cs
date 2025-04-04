@@ -1,8 +1,9 @@
-﻿namespace ControlR.Libraries.Shared.Models;
+﻿using System.Text.Json.Nodes;
 
-[MessagePackObject]
+namespace ControlR.Libraries.Shared.Models;
+
 public class AgentAppSettings
 {
-    [Key(nameof(AppOptions))]
-    public AgentAppOptions AppOptions { get; set; } = new();
+  public AgentAppOptions? AppOptions { get; set; }
+  public JsonNode? Serilog { get; set; }
 }

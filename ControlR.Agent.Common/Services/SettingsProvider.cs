@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Constants;
@@ -12,8 +13,8 @@ internal interface ISettingsProvider
   string InstanceId { get; }
   Uri ServerUri { get; }
   string GetAppSettingsPath();
+  Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
-  Task UpdateSettings(AgentAppSettings settings);
 }
 
 internal class SettingsProvider(
@@ -43,22 +44,20 @@ internal class SettingsProvider(
     return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
   }
 
-  public async Task UpdateId(Guid uid)
-  {
-    _appOptions.CurrentValue.DeviceId = uid;
-    await WriteToDisk(_appOptions.CurrentValue);
-  }
-
-  public async Task UpdateSettings(AgentAppSettings settings)
+  public async Task UpdateAppOptions(AgentAppOptions options)
   {
     await _updateLock.WaitAsync();
     try
     {
-      await WriteToDisk(settings);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Failed to update settings.");
+      var path = GetAppSettingsPath();
+      var contents = await _fileSystem.ReadAllTextAsync(path);
+
+      var json = JsonNode.Parse(contents) ?? 
+        throw new InvalidOperationException("Failed to parse app settings JSON.");
+
+      json[AgentAppOptions.SectionKey] = JsonSerializer.SerializeToNode(options);
+      contents = JsonSerializer.Serialize(json, _jsonOptions);
+      await _fileSystem.WriteAllTextAsync(path, contents);
     }
     finally
     {
@@ -66,14 +65,9 @@ internal class SettingsProvider(
     }
   }
 
-  private async Task WriteToDisk(AgentAppOptions options)
+  public async Task UpdateId(Guid uid)
   {
-    await WriteToDisk(new AgentAppSettings { AppOptions = options });
-  }
-
-  private async Task WriteToDisk(AgentAppSettings settings)
-  {
-    var content = JsonSerializer.Serialize(settings, _jsonOptions);
-    await _fileSystem.WriteAllTextAsync(GetAppSettingsPath(), content);
+    _appOptions.CurrentValue.DeviceId = uid;
+    await UpdateAppOptions(_appOptions.CurrentValue);
   }
 }
