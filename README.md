@@ -1,3 +1,5 @@
+> Note: Under my current employment contract, all code I write (even on my own time) will be owned by the company.  As such, I can no longer contribute to open-source.
+
 # ControlR
 
 Open-source, self-hostable remote control and remote access.
