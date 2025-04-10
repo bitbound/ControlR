@@ -281,20 +281,21 @@ internal class DesktopCapturer : IDesktopCapturer
     return _needsKeyFrame && _captureMetrics.Mbps < CaptureMetrics.TargetMbps * .5;
   }
 
-  private async Task StartCapturingChangesImpl(CancellationToken stoppingToken)
+  private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
   {
-    while (!stoppingToken.IsCancellationRequested)
+    while (!cancellationToken.IsCancellationRequested)
     {
       try
       {
-        await _frameRequestedSignal.Wait(stoppingToken);
+        await _frameRequestedSignal.Wait(cancellationToken);
+        await ThrottleCapturing(cancellationToken);
 
         _captureMetrics.MarkIteration();
 
         if (_selectedDisplay is not { } selectedDisplay)
         {
           _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
@@ -304,7 +305,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
         if (captureResult.HadNoChanges)
         {
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
@@ -318,7 +319,7 @@ internal class DesktopCapturer : IDesktopCapturer
           _logger.LogWarning(captureResult.Exception, "Failed to capture latest frame.  Reason: {ResultReason}",
             captureResult.FailureReason);
           ResetDisplays();
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
@@ -344,11 +345,10 @@ internal class DesktopCapturer : IDesktopCapturer
         }
         else
         {
-          await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, stoppingToken);
+          await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
         }
 
         await _captureMetrics.BroadcastMetrics();
-        await ThrottleCapturing(stoppingToken);
       }
       catch (OperationCanceledException)
       {
@@ -377,11 +377,6 @@ internal class DesktopCapturer : IDesktopCapturer
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-
-    //await _delayer.WaitForAsync(
-    //  condition: () => _captureMetrics.Fps < 20,
-    //  pollingDelay: TimeSpan.FromMilliseconds(10),
-    //  cancellationToken: linkedCts.Token);
 
     await _delayer.WaitForAsync(
       condition: () => _captureMetrics.Mbps < CaptureMetrics.MaxMbps,

@@ -65,6 +65,7 @@ public class DesktopCapturerTests
       new XunitLogger<ScreenGrabber>(outputHelper));
 
     _capturer = new DesktopCapturer(
+      timeProvider: _timeProvider,
       screenGrabber: _screenGrabber,
       bitmapUtility: _bitmapUtility,
       memoryProvider: _memoryProvider,

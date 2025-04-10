@@ -32,7 +32,7 @@ internal sealed class CaptureMetrics(
 {
   public const int DefaultImageQuality = 75;
   public const double MaxMbps = 15;
-  public const int MinimumQuality = 10;
+  public const int MinimumQuality = 15;
   public const double TargetMbps = 3;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(1);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
@@ -59,9 +59,10 @@ internal sealed class CaptureMetrics(
   public double Mbps => _mbps;
   public int Quality => _quality;
 
+
   public async Task BroadcastMetrics()
   {
-    if (_metricsBroadcastTimer.Elapsed.TotalSeconds > 1)
+    if (_metricsBroadcastTimer.Elapsed > _metricsWindow)
     {
       _metricsBroadcastTimer.Restart();
       _logger.LogDebug(
