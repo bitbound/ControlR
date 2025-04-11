@@ -50,9 +50,14 @@ internal class SettingsProvider(
     try
     {
       var path = GetAppSettingsPath();
-      var contents = await _fileSystem.ReadAllTextAsync(path);
 
-      var json = JsonNode.Parse(contents) ?? 
+      if (!_fileSystem.FileExists(path))
+      {
+        await _fileSystem.WriteAllTextAsync(path, "{}");
+      }
+
+      var contents = await _fileSystem.ReadAllTextAsync(path);
+      var json = JsonNode.Parse(contents) ??
         throw new InvalidOperationException("Failed to parse app settings JSON.");
 
       json[AgentAppOptions.SectionKey] = JsonSerializer.SerializeToNode(options);
