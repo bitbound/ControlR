@@ -16,13 +16,14 @@ namespace ControlR.Agent.LoadTester;
 internal class FakeDeviceDataGenerator(
   int deviceNumber,
   Guid tenantId,
+  Version agentVersion,
   ISystemEnvironment systemEnvironment,
   ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<FakeDeviceDataGenerator> logger)
   : DeviceDataGeneratorBase(systemEnvironment, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
-  private readonly string _agentVersion = "0.9.15.0";
+  private readonly Version _agentVersion = agentVersion;
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
   private DeviceModel? _device;
@@ -33,7 +34,7 @@ internal class FakeDeviceDataGenerator(
     {
       Id = deviceId,
       Name = $"Test Device {_deviceNumber.ToString().PadLeft(2, '0')}",
-      AgentVersion = _agentVersion,
+      AgentVersion = $"{_agentVersion}",
       TenantId = _tenantId,
       IsOnline = true,
       Platform = SystemEnvironment.Instance.Platform,
@@ -52,7 +53,7 @@ internal class FakeDeviceDataGenerator(
 
   public new string GetAgentVersion()
   {
-    return _agentVersion;
+    return $"{_agentVersion}";
   }
 
   public Task<(double usedGB, double totalGB)> GetMemoryInGb()

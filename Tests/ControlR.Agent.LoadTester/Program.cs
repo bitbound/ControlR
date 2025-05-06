@@ -16,21 +16,18 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using ControlR.Agent.LoadTester.Helpers;
 
-var startCount = 0;
-
-if (args.Length > 0 && int.TryParse(args.Last(), out var lastArg))
-{
-  startCount = lastArg;
-}
+var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
+var startCount = ArgsParser.GetArgValue<int>("--start-count");
+var serverUriArg = ArgsParser.GetArgValue<string>("--server-uri");
+var serverUri = new Uri(serverUriArg);
+var agentVersion = await GetAgentVersion(serverUri);
+var tenantId = Guid.Empty;
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
-var agentCount = 15;
-var serverUri = new Uri("https://localhost:7033");
-var tenantId = Guid.Empty;
-
-var cts = new CancellationTokenSource();
+using var cts = new CancellationTokenSource();
 var cancellationToken = cts.Token;
 
 Console.CancelKeyPress += (s, e) => { cts.Cancel(); };
@@ -40,7 +37,6 @@ Console.WriteLine($"Connecting to {serverUri}");
 var hosts = new ConcurrentBag<IHost>();
 
 _ = ReportHosts(hosts, cancellationToken);
-
 
 await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
 {
@@ -64,37 +60,19 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
       { "Serilog:MinimumLevel:Default", "Warning" }
     });
 
-  builder.Services.Remove(
-    builder.Services.First(x => x.ServiceType == typeof(IAgentUpdater)));
-  builder.Services.AddSingleton<IAgentUpdater, FakeAgentUpdater>();
+  builder.Services.ReplaceImplementation<IAgentUpdater, FakeAgentUpdater>();
+  builder.Services.ReplaceImplementation<IStreamerUpdater, FakeStreamerUpdater>();
+  builder.Services.ReplaceImplementation<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
+  builder.Services.ReplaceImplementation<ISettingsProvider, FakeSettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
+  builder.Services.RemoveImplementation<StreamingSessionWatcher>();
+  builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
 
-  builder.Services.Remove(
-    builder.Services.First(x => x.ServiceType == typeof(IStreamerUpdater)));
-  builder.Services.AddSingleton<IStreamerUpdater, FakeStreamerUpdater>();
-
-  builder.Services.Remove(
-    builder.Services.First(x => x.ServiceType == typeof(ICpuUtilizationSampler)));
-  builder.Services.AddSingleton<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
-
-  builder.Services.Remove(
-    builder.Services.First(x => x.ServiceType == typeof(ISettingsProvider)));
-  builder.Services.AddSingleton<ISettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
-
-  builder.Services.Remove(
-    builder.Services.First(x => x.ImplementationType == typeof(StreamingSessionWatcher)));
-
-  builder.Services.Remove(
-    builder.Services.First(x => x.ImplementationType == typeof(AgentHeartbeatTimer)));
-
-  builder.Services.Remove(
-    builder.Services.First(x => x.ServiceType == typeof(IDeviceDataGenerator)));
-
-
-  builder.Services.AddSingleton<IDeviceDataGenerator>(sp =>
+  builder.Services.ReplaceImplementation<IDeviceDataGenerator, FakeDeviceDataGenerator>(sp =>
   {
     return new FakeDeviceDataGenerator(
       i,
       tenantId,
+      agentVersion,
       sp.GetRequiredService<ISystemEnvironment>(),
       sp.GetRequiredService<ICpuUtilizationSampler>(),
       sp.GetRequiredService<IOptionsMonitor<AgentAppOptions>>(),
@@ -136,6 +114,25 @@ static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken canc
     foreach (var group in groups)
     {
       Console.WriteLine($"{group.Key}: {group.Count()}");
+    }
+  }
+}
+
+static async Task<Version> GetAgentVersion(Uri serverUri)
+{
+  using var client = new HttpClient();
+  while (true)
+  {
+    try
+    {
+      var version = await client.GetStringAsync(new Uri(serverUri, "/downloads/AgentVersion.txt"));
+      return Version.Parse(version.Trim());
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Error getting agent version: {ex.Message}");
+      Console.WriteLine("Waiting for backend to be available.");
+      await Task.Delay(TimeSpan.FromSeconds(3));
     }
   }
 }

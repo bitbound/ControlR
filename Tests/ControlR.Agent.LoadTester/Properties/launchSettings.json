@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "local": {
+      "commandName": "Project",
+      "commandLineArgs": "--server-uri https://localhost:7033 --agent-count 1000 --start-count 0"
+    }
+  }
+}
