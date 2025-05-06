@@ -1,11 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Drawing;
 using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Extensions;
-using ControlR.Streamer.Messages;
 using ControlR.Streamer.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -27,33 +25,21 @@ internal interface IDesktopCapturer
 
 internal class DesktopCapturer : IDesktopCapturer
 {
-  private const int DefaultImageQuality = 75;
-  private const int MinimumQuality = 20;
-  private const double TargetMbps = 5;
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
   private readonly IHostApplicationLifetime _appLifetime;
   private readonly IBitmapUtility _bitmapUtility;
   private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
   private readonly IDelayer _delayer;
+  private readonly ICaptureMetrics _captureMetrics;
   private readonly AutoResetEventAsync _frameReadySignal = new();
   private readonly AutoResetEventAsync _frameRequestedSignal = new(true);
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
-  private readonly IMessenger _messenger;
-  private readonly Stopwatch _metricsBroadcastTimer = Stopwatch.StartNew();
   private readonly IScreenGrabber _screenGrabber;
-  private readonly ConcurrentQueue<SentFrame> _sentRegions = new();
   private readonly IOptions<StartupOptions> _startupOptions;
-  private readonly TimeProvider _timeProvider;
   private readonly IWin32Interop _win32Interop;
-  private volatile int _cpuFrames;
-  private double _currentMbps;
-  private int _currentQuality = DefaultImageQuality;
   private DisplayInfo[] _displays;
   private bool _forceKeyFrame = true;
-  private long _frameCount;
-  private volatile int _gpuFrames;
-  private int _iterations;
   private Bitmap? _lastCpuBitmap;
   private string? _lastDisplayId;
   private Rectangle? _lastMonitorArea;
@@ -62,24 +48,22 @@ internal class DesktopCapturer : IDesktopCapturer
 
 
   public DesktopCapturer(
-    TimeProvider timeProvider,
-    IMessenger messenger,
     IScreenGrabber screenGrabber,
     IBitmapUtility bitmapUtility,
     IMemoryProvider memoryProvider,
     IWin32Interop win32Interop,
     IDelayer delayer,
+    ICaptureMetrics captureMetrics,
     IHostApplicationLifetime appLifetime,
     IOptions<StartupOptions> startupOptions,
     ILogger<DesktopCapturer> logger)
   {
-    _messenger = messenger;
     _screenGrabber = screenGrabber;
     _bitmapUtility = bitmapUtility;
     _memoryProvider = memoryProvider;
     _win32Interop = win32Interop;
-    _timeProvider = timeProvider;
     _delayer = delayer;
+    _captureMetrics = captureMetrics;
     _startupOptions = startupOptions;
     _appLifetime = appLifetime;
     _logger = logger;
@@ -121,10 +105,12 @@ internal class DesktopCapturer : IDesktopCapturer
     try
     {
       await _frameReadySignal.Wait(_appLifetime.ApplicationStopping);
+
       while (_changedRegions.TryDequeue(out var region))
       {
         yield return region;
       }
+      _captureMetrics.MarkFrameSent();
     }
     finally
     {
@@ -162,10 +148,11 @@ internal class DesktopCapturer : IDesktopCapturer
   public Task StartCapturingChanges()
   {
     StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
+    _captureMetrics.Start(_appLifetime.ApplicationStopping);
     return Task.CompletedTask;
   }
 
-  private async Task EncodeCpuCaptureResult(CaptureResult captureResult, CancellationToken stoppingToken)
+  private async Task EncodeCpuCaptureResult(CaptureResult captureResult, int quality, CancellationToken cancellationToken)
   {
     if (!captureResult.IsSuccess)
     {
@@ -178,19 +165,21 @@ internal class DesktopCapturer : IDesktopCapturer
       if (!diffResult.IsSuccess)
       {
         _logger.LogError(diffResult.Exception, "Failed to get changed area.  Reason: {ErrorReason}", diffResult.Reason);
-        await _delayer.Delay(_afterFailureDelay, stoppingToken);
+        await _delayer.Delay(_afterFailureDelay, cancellationToken);
         return;
       }
 
       var diffArea = diffResult.Value;
       if (diffArea.IsEmpty)
       {
-        await _delayer.Delay(_afterFailureDelay, stoppingToken);
+        await _delayer.Delay(_afterFailureDelay, cancellationToken);
         return;
       }
 
-      EncodeRegion(captureResult.Bitmap, diffArea);
-      Interlocked.Increment(ref _cpuFrames);
+      EncodeRegion(
+        bitmap: captureResult.Bitmap, 
+        region: diffArea, 
+        quality: quality);
     }
     finally
     {
@@ -199,7 +188,7 @@ internal class DesktopCapturer : IDesktopCapturer
     }
   }
 
-  private async Task EncodeGpuCaptureResult(CaptureResult captureResult)
+  private async Task EncodeGpuCaptureResult(CaptureResult captureResult, int quality)
   {
     if (!captureResult.IsSuccess)
     {
@@ -227,20 +216,19 @@ internal class DesktopCapturer : IDesktopCapturer
         continue;
       }
 
-      EncodeRegion(captureResult.Bitmap, intersect);
+      EncodeRegion(
+        bitmap: captureResult.Bitmap,
+        region: intersect,
+        quality: quality);
     }
-
-    Interlocked.Increment(ref _gpuFrames);
   }
 
-  private void EncodeRegion(Bitmap bitmap, Rectangle region, bool isKeyFrame = false)
+  private void EncodeRegion(Bitmap bitmap, Rectangle region, int quality, bool isKeyFrame = false)
   {
     Bitmap? cropped = null;
 
     try
     {
-      var quality = isKeyFrame ? DefaultImageQuality : _currentQuality;
-
       using var ms = _memoryProvider.GetRecyclableStream();
       using var writer = new BinaryWriter(ms);
 
@@ -259,93 +247,12 @@ internal class DesktopCapturer : IDesktopCapturer
 
       if (!isKeyFrame)
       {
-        _sentRegions.Enqueue(new SentFrame(imageData.Length, _timeProvider.GetLocalNow()));
+        _captureMetrics.MarkBytesSent(imageData.Length);
       }
     }
     finally
     {
       cropped?.Dispose();
-    }
-  }
-
-  private int GetTargetImageQuality()
-  {
-    if (_currentMbps < TargetMbps)
-    {
-      return DefaultImageQuality;
-    }
-
-    var quality = (int)(TargetMbps / _currentMbps * DefaultImageQuality);
-    var newQuality = Math.Max(quality, MinimumQuality);
-
-    if (newQuality < _currentQuality)
-    {
-      return newQuality;
-    }
-
-    return Math.Min(_currentQuality + 2, newQuality);
-  }
-
-  private Task ProcessMetrics()
-  {
-    // Don't do processing evey frame.
-    if (_frameCount++ % 5 != 0)
-    {
-      return Task.CompletedTask;
-    }
-
-    _currentQuality = GetTargetImageQuality();
-    _needsKeyFrame = _needsKeyFrame || _currentQuality < DefaultImageQuality;
-
-    // Keep only frames in our sample window.
-    while (
-      _sentRegions.TryPeek(out var frame) &&
-      frame.Timestamp.AddSeconds(20) < _timeProvider.GetLocalNow())
-    {
-      _sentRegions.TryDequeue(out _);
-    }
-
-    if (_sentRegions.Count >= 2)
-    {
-      var sampleSpan = _timeProvider.GetLocalNow() - _sentRegions.First().Timestamp;
-      _currentMbps = _sentRegions.Sum(x => x.Size) / 1024.0 / 1024.0 / sampleSpan.TotalSeconds * 8;
-    }
-    else if (_sentRegions.Count == 1)
-    {
-      _currentMbps = _sentRegions.First().Size / 1024.0 / 1024.0 * 8;
-    }
-    else
-    {
-      return Task.CompletedTask;
-    }
-
-    return Task.CompletedTask;
-  }
-
-  private async Task ReportMetrics()
-  {
-    await ProcessMetrics();
-    await ThrottleStream();
-
-    if (_metricsBroadcastTimer.Elapsed.TotalSeconds > 3)
-    {
-      var gpuFps = _gpuFrames / _metricsBroadcastTimer.Elapsed.TotalSeconds;
-      var cpuFps = _cpuFrames / _metricsBroadcastTimer.Elapsed.TotalSeconds;
-      var ips = _iterations / _metricsBroadcastTimer.Elapsed.TotalSeconds;
-
-      _metricsBroadcastTimer.Restart();
-      _logger.LogDebug(
-        "Mbps: {CurrentMbps:N2} | GPU FPS: {GpuFps:N2} | CPU FPS: {CpuFps:N2} | IPS (iterations): {IPS:N2} | Current Quality: {ImageQuality}",
-        _currentMbps,
-        gpuFps,
-        cpuFps,
-        ips,
-        _currentQuality);
-
-      await _messenger.Send(new DisplayMetricsChangedMessage(_currentMbps, gpuFps, cpuFps, ips, _currentQuality));
-      Interlocked.Exchange(ref _gpuFrames, 0);
-      Interlocked.Exchange(ref _cpuFrames, 0);
-      Interlocked.Exchange(ref _iterations, 0);
     }
   }
 
@@ -371,33 +278,34 @@ internal class DesktopCapturer : IDesktopCapturer
       return true;
     }
 
-    return _needsKeyFrame && _currentMbps < TargetMbps * .5;
+    return _needsKeyFrame && _captureMetrics.Mbps < CaptureMetrics.TargetMbps * .5;
   }
 
-  private async Task StartCapturingChangesImpl(CancellationToken stoppingToken)
+  private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
   {
-    while (!stoppingToken.IsCancellationRequested)
+    while (!cancellationToken.IsCancellationRequested)
     {
       try
       {
-        await _frameRequestedSignal.Wait(stoppingToken);
+        await _frameRequestedSignal.Wait(cancellationToken);
+        await ThrottleCapturing(cancellationToken);
 
-        Interlocked.Increment(ref _iterations);
+        _captureMetrics.MarkIteration();
 
         if (_selectedDisplay is not { } selectedDisplay)
         {
           _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
         _win32Interop.SwitchToInputDesktop();
 
-        using var captureResult = _screenGrabber.Capture(selectedDisplay);
+        using var captureResult = _screenGrabber.Capture(selectedDisplay, captureCursor: false);
 
         if (captureResult.HadNoChanges)
         {
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
@@ -411,13 +319,15 @@ internal class DesktopCapturer : IDesktopCapturer
           _logger.LogWarning(captureResult.Exception, "Failed to capture latest frame.  Reason: {ResultReason}",
             captureResult.FailureReason);
           ResetDisplays();
-          await _delayer.Delay(_afterFailureDelay, stoppingToken);
+          await _delayer.Delay(_afterFailureDelay, cancellationToken);
           continue;
         }
 
+        _captureMetrics.SetIsUsingGpu(captureResult.IsUsingGpu);
+
         if (ShouldSendKeyFrame())
         {
-          EncodeRegion(captureResult.Bitmap, captureResult.Bitmap.ToRectangle(), true);
+          EncodeRegion(captureResult.Bitmap, captureResult.Bitmap.ToRectangle(), CaptureMetrics.DefaultImageQuality, isKeyFrame: true);
           _forceKeyFrame = false;
           _needsKeyFrame = false;
           _lastCpuBitmap?.Dispose();
@@ -427,16 +337,18 @@ internal class DesktopCapturer : IDesktopCapturer
           continue;
         }
 
+        _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
+
         if (captureResult.IsUsingGpu)
         {
-          await EncodeGpuCaptureResult(captureResult);
+          await EncodeGpuCaptureResult(captureResult, _captureMetrics.Quality);
         }
         else
         {
-          await EncodeCpuCaptureResult(captureResult, stoppingToken);
+          await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
         }
 
-        await ReportMetrics();
+        await _captureMetrics.BroadcastMetrics();
       }
       catch (OperationCanceledException)
       {
@@ -461,14 +373,15 @@ internal class DesktopCapturer : IDesktopCapturer
     }
   }
 
-  private async Task ThrottleStream()
+  private async Task ThrottleCapturing(CancellationToken cancellationToken)
   {
-    if (_currentMbps > TargetMbps * 2)
-    {
-      var waitMs = Math.Min(100, _currentMbps / TargetMbps * 10);
-      var waitTime = TimeSpan.FromMilliseconds(waitMs);
-      await _delayer.Delay(waitTime);
-    }
+    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+
+    await _delayer.WaitForAsync(
+      condition: () => _captureMetrics.Mbps < CaptureMetrics.MaxMbps,
+      pollingDelay: TimeSpan.FromMilliseconds(10),
+      cancellationToken: linkedCts.Token);
   }
 
   private record SentFrame(int Size, DateTimeOffset Timestamp);

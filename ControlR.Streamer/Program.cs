@@ -78,6 +78,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, vi
   services.AddSingleton<IWin32Interop, Win32Interop>();
   services.AddSingleton<IToaster, Toaster>();
   services.AddSingleton<IDesktopCapturer, DesktopCapturer>();
+  services.AddSingleton<ICaptureMetrics, CaptureMetrics>();
   services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
   services.AddSingleton<IMemoryProvider, MemoryProvider>();
   services.AddSingleton<IClipboardManager, ClipboardManager>();

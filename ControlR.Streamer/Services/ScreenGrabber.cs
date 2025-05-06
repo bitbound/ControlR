@@ -98,12 +98,6 @@ internal sealed class ScreenGrabber(
         return GetBitBltCapture(display.MonitorArea, captureCursor);
       }
 
-      if (_win32Interop.GetCurrentThreadDesktop(out var desktopName) &&
-          desktopName.Equals("Winlogon", StringComparison.OrdinalIgnoreCase))
-      {
-        return GetBitBltCapture(display.MonitorArea, captureCursor);
-      }
-
       var result = GetDirectXCapture(display, captureCursor);
 
       if (result.HadNoChanges)
@@ -268,7 +262,7 @@ internal sealed class ScreenGrabber(
         _ = TryDrawCursor(graphics, captureArea);
       }
 
-      return CaptureResult.Ok(bitmap, false);
+      return CaptureResult.Ok(bitmap,isUsingGpu: false);
     }
     catch (Exception ex)
     {
@@ -408,13 +402,13 @@ internal sealed class ScreenGrabber(
     }
     catch (COMException ex)
     {
-      _dxOutputGenerator.MarkFaulted(dxOutput);
+      _dxOutputGenerator.RefreshOutput();
       _logger.LogWarning(ex, "DirectX outputs need to be refreshed.");
       return CaptureResult.Fail(ex);
     }
     catch (Exception ex)
     {
-      _dxOutputGenerator.MarkFaulted(dxOutput);
+      _dxOutputGenerator.RefreshOutput();
       _logger.LogError(ex, "Error while capturing with DirectX.");
       return CaptureResult.Fail(ex);
     }
