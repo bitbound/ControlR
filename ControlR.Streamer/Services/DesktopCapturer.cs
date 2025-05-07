@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Drawing;
-using Bitbound.SimpleMessenger;
+using System.Drawing.Drawing2D;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Extensions;
@@ -372,7 +372,21 @@ internal class DesktopCapturer : IDesktopCapturer
       }
     }
   }
+  private static Bitmap DownscaleBitmap(Bitmap bitmap, double scale)
+  {
+    var newWidth = (int)(bitmap.Width * scale);
+    var newHeight = (int)(bitmap.Height * scale);
+    var resizedBitmap = new Bitmap(newWidth, newHeight);
 
+    using (var graphics = Graphics.FromImage(resizedBitmap))
+    {
+      graphics.CompositingQuality = CompositingQuality.HighSpeed;
+      graphics.InterpolationMode = InterpolationMode.Low;
+      graphics.DrawImage(bitmap, 0, 0, newWidth, newHeight);
+    }
+
+    return resizedBitmap;
+  }
   private async Task ThrottleCapturing(CancellationToken cancellationToken)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));

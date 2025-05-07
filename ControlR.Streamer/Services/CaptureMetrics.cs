@@ -31,8 +31,8 @@ internal sealed class CaptureMetrics(
   ILogger<CaptureMetrics> logger) : ICaptureMetrics
 {
   public const int DefaultImageQuality = 75;
-  public const double MaxMbps = 15;
-  public const int MinimumQuality = 15;
+  public const double MaxMbps = 8;
+  public const int MinimumQuality = 20;
   public const double TargetMbps = 3;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(1);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];

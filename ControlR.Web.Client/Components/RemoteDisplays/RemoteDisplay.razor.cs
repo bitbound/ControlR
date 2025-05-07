@@ -280,16 +280,16 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     try
     {
-      if (dto.SessionId != Session.SessionId)
-      {
-        return;
-      }
+        if (dto.SessionId != Session.SessionId)
+        {
+            return;
+        }
 
-      await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while drawing frame.");
+        Logger.LogError(ex, "Error while drawing frame.");
     }
   }
 

@@ -95,8 +95,11 @@ export async function dispose(canvasId) {
  */
 export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
   const state = getState(canvasId);
+  const ds = new DecompressionStream('gzip');
   const imageBlob = new Blob([encodedRegion]);
-  const bitmap = await createImageBitmap(imageBlob);
+  const decompressStream = imageBlob.stream().pipeThrough(ds);
+  const decompressedImage = await new Response(decompressStream).blob();
+  const bitmap = await createImageBitmap(decompressedImage);
   state.canvas2dContext.drawImage(bitmap, x, y, width, height);
   bitmap.close();
 }

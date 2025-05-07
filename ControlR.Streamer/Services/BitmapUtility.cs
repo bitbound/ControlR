@@ -2,13 +2,14 @@
 using Windows.Graphics.Imaging;
 using ControlR.Streamer.Helpers;
 using System.Drawing.Imaging;
+using System.IO.Compression;
 
 namespace ControlR.Streamer.Services;
 
 public interface IBitmapUtility
 {
   byte[] Encode(Bitmap bitmap, ImageFormat format);
-  byte[] EncodeJpeg(Bitmap bitmap, int quality);
+  byte[] EncodeJpeg(Bitmap bitmap, int quality, bool compressOutput = true);
   Bitmap CropBitmap(Bitmap bitmap, Rectangle cropArea);
   Result<Rectangle> GetChangedArea(Bitmap? currentFrame, Bitmap? previousFrame, bool forceFullscreen = false);
   Task<byte[]> EncodeJpegWinRt(SoftwareBitmap bitmap, double quality);
@@ -33,14 +34,20 @@ public class BitmapUtility : IBitmapUtility
     return ms.ToArray();
   }
 
-  public byte[] EncodeJpeg(Bitmap bitmap, int quality)
+  public byte[] EncodeJpeg(Bitmap bitmap, int quality, bool compressOutput = true)
   {
     using var ms = new MemoryStream();
     using var encoderParams = new EncoderParameters(1);
     encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
     bitmap.Save(ms, _jpegEncoder, encoderParams);
-    return ms.GetBuffer();
+
+    if (compressOutput)
+    {
+      return CompressData(ms);
+    }
+    return ms.ToArray();
   }
+
 
   public async Task<byte[]> EncodeJpegWinRt(SoftwareBitmap bitmap, double quality)
   {
@@ -224,5 +231,20 @@ public class BitmapUtility : IBitmapUtility
         // Ignore.
       }
     }
+  }
+
+  private static byte[] CompressData(Stream sourceStream)
+  {
+    if (sourceStream.CanSeek)
+    {
+      sourceStream.Seek(0, SeekOrigin.Begin);
+    }
+
+    using var compressedStream = new MemoryStream();
+    using (var gzipStream = new GZipStream(compressedStream, CompressionLevel.Fastest))
+    {
+      sourceStream.CopyTo(gzipStream);
+    }
+    return compressedStream.ToArray();
   }
 }
