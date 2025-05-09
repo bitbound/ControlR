@@ -2,19 +2,19 @@
 
 internal static class PathConstants
 {
-    public static string GetAppSettingsPath(Uri originUri)
+    public static string GetAppSettingsPath(string appDataFolder)
     {
-        var dir = GetSettingsDirectory(originUri);
+        var dir = GetSettingsDirectory(appDataFolder);
         return Path.Combine(dir, "appsettings.json");
     }
 
-    public static string GetLogsPath(Uri originUri)
+    public static string GetLogsPath(string appDataFolder)
     {
-        var settingsDir = GetSettingsDirectory(originUri);
+        var settingsDir = GetSettingsDirectory(appDataFolder);
         return Path.Combine(settingsDir, "Logs", "ControlR.Streamer", "LogFile.log");
     }
 
-    private static string GetSettingsDirectory(Uri originUri)
+    private static string GetSettingsDirectory(string appDataFolder)
     {
         var settingsDir = Path.Combine(
               Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -25,7 +25,7 @@ internal static class PathConstants
             settingsDir = Path.Combine(settingsDir, "Debug");
         }
 
-        settingsDir = Path.Combine(settingsDir, originUri.Host);
+        settingsDir = Path.Combine(settingsDir, appDataFolder);
 
         return Directory.CreateDirectory(settingsDir).FullName;
     }

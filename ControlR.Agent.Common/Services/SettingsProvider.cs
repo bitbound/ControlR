@@ -20,14 +20,12 @@ internal interface ISettingsProvider
 internal class SettingsProvider(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IFileSystem fileSystem,
-  IOptions<InstanceOptions> instanceOptions,
-  ILogger<SettingsProvider> logger) : ISettingsProvider
+  IOptions<InstanceOptions> instanceOptions) : ISettingsProvider
 {
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-  private readonly ILogger<SettingsProvider> _logger = logger;
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;

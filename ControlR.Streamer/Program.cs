@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR.Client;
 using ControlR.Streamer.Extensions;
 using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.Libraries.Shared.Helpers;
 
 var sessionIdOption = new Option<Guid>(
     ["-s", "--session-id"],
@@ -17,13 +18,24 @@ var sessionIdOption = new Option<Guid>(
   IsRequired = true,
 };
 
-var originUriOption = new Option<Uri>(
-    ["-o", "--origin"],
-    "The origin URI (including scheme and port) that the streamer should use for data (e.g. https://my.example.com[:8080]). " +
-    "The port can be ommitted for 80 (http) and 443 (https).")
+var appDataFolderOption = new Option<string>(
+    ["-d", "--data-folder"],
+    "The folder name in 'C:\\ProgramData\\ControlR\\' under which logs and other data will be written.")
 {
   IsRequired = true
 };
+
+appDataFolderOption.AddValidator(result =>
+{
+  var folderValue = result.GetValueForOption(appDataFolderOption);
+  Guard.IsNotNull(folderValue, nameof(folderValue));
+
+  var invalidCharacters = Path.GetInvalidFileNameChars().ToHashSet();
+  if (folderValue.Any(c => invalidCharacters.Contains(c)))
+  {
+    result.ErrorMessage = "The app data folder name contains invalid characters.";
+  }
+});
 
 var websocketUriOption = new Option<Uri>(
     ["-w", "--websocket-uri"],
@@ -43,14 +55,14 @@ var viewerNameOption = new Option<string?>(
 
 var rootCommand = new RootCommand("The remote control desktop streamer and input simulator for ControlR.")
 {
-    originUriOption,
+    appDataFolderOption,
     websocketUriOption,
     notifyUserOption,
     sessionIdOption,
     viewerNameOption,
 };
 
-rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, viewerName) =>
+rootCommand.SetHandler(async (appDataFolder, websocketUri, notifyUser, sessionId, viewerName) =>
 {
   var builder = Host.CreateApplicationBuilder(args);
   var configuration = builder.Configuration;
@@ -60,7 +72,7 @@ rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, vi
   var appsettingsFile = SystemEnvironment.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
   configuration
     .AddJsonFile(appsettingsFile, true, true)
-    .AddJsonFile(PathConstants.GetAppSettingsPath(originUri), true, true)
+    .AddJsonFile(PathConstants.GetAppSettingsPath(appDataFolder), true, true)
     .AddEnvironmentVariables();
 
   services.Configure<StartupOptions>(options =>
@@ -93,13 +105,13 @@ rootCommand.SetHandler(async (originUri, websocketUri, notifyUser, sessionId, vi
   services.AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>());
 
   builder.BootstrapSerilog(
-    logFilePath: PathConstants.GetLogsPath(originUri),
+    logFilePath: PathConstants.GetLogsPath(appDataFolder),
     logRetention: TimeSpan.FromDays(7));
 
   var host = builder.Build();
   await host.RunAsync();
 
-}, originUriOption, websocketUriOption, notifyUserOption, sessionIdOption, viewerNameOption);
+}, appDataFolderOption, websocketUriOption, notifyUserOption, sessionIdOption, viewerNameOption);
 
 var exitCode = await rootCommand.InvokeAsync(args);
 Environment.Exit(exitCode);

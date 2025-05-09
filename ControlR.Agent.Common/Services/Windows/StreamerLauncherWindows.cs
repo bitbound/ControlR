@@ -42,9 +42,9 @@ internal class StreamerLauncherWindows(
     {
       var session = new StreamingSession(viewerConnectionId);
 
-      var serverUri = _settings.ServerUri.ToString().TrimEnd('/');
+      var dataFolder = _settings.InstanceId;
       var args =
-        $"--session-id {sessionId} --origin {serverUri} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
+        $"--session-id {sessionId} --data-folder {dataFolder} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
       if (!string.IsNullOrWhiteSpace(viewerName))
       {
         args += $" --viewer-name=\"{viewerName}\"";
