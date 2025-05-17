@@ -20,7 +20,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var deviceManager = testApp.App.Services.GetRequiredService<DeviceManager>();
+    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 

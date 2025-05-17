@@ -8,8 +8,8 @@ public class TestApp(
   FakeTimeProvider timeProvider) : IAsyncDisposable
 {
   public WebApplication App { get; } = app;
+  public IServiceProvider Services => App.Services;
   public FakeTimeProvider TimeProvider { get; } = timeProvider;
-
   public async ValueTask DisposeAsync()
   {
     await App.DisposeAsync();

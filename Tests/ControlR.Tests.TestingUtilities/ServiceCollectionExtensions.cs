@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ControlR.Tests.TestingUtilities;
 
@@ -10,8 +11,7 @@ public static class ServiceCollectionExtensions
     where TService : class
     where TImplementation : class, TService
   {
-    var descriptor = services.Single(d => d.ServiceType == typeof(TService));
-    services.Remove(descriptor);
+    services.RemoveAll<TService>();
 
     switch (lifetime)
     {

@@ -18,6 +18,8 @@ public static class TestAppBuilder
     var builder = WebApplication.CreateBuilder();
     await builder.AddControlrServer();
 
+    configure?.Invoke(builder);
+
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
     builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
 
