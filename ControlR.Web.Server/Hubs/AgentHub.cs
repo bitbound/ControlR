@@ -159,11 +159,10 @@ public class AgentHub(
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
-
   private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
   {
-    // In dev, we can create the device to bootstrap it.
-    if (_hostEnvironment.IsDevelopment())
+    // Allow agents to self-bootstrap when enabled
+    if (_appOptions.Value.AllowAgentsToSelfBootstrap)
     {
       var device = await _deviceManager.AddOrUpdate(dto, addTagIds: false);
       return Result.Ok(device);

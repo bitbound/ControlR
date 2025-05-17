@@ -3,6 +3,7 @@
 public class AppOptions
 {
   public const string SectionKey = "AppOptions";
+  public bool AllowAgentsToSelfBootstrap { get; init; }
   public string? DockerGatewayIp { get; init; }
   public bool EnableCloudflareProxySupport { get; init; }
   public bool EnablePublicRegistration { get; init; }
