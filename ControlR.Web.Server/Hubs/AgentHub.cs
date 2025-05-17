@@ -11,13 +11,15 @@ public class AgentHub(
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IWebHostEnvironment hostEnvironment,
   IDeviceManager deviceManager,
+  IOptions<AppOptions> appOptions,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
+  private readonly IOptions<AppOptions> _appOptions = appOptions;
+  private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
   private DeviceDto? Device
@@ -25,7 +27,7 @@ public class AgentHub(
     get => GetItem<DeviceDto?>(null);
     set => SetItem(value);
   }
-  
+
   public override async Task OnDisconnectedAsync(Exception? exception)
   {
     try
@@ -125,23 +127,6 @@ public class AgentHub(
     }
   }
 
-  private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
-  {
-    // In dev, we can create the device to bootstrap it.
-    if (_hostEnvironment.IsDevelopment())
-    {
-      var device = await _deviceManager.AddOrUpdate(dto, addTagIds: false);
-      return Result.Ok(device);
-    }
-
-    var updateResult = await _deviceManager.UpdateDevice(dto, addTagIds: false);
-    if (!updateResult.IsSuccess)
-    {
-      await Clients.Caller.UninstallAgent(updateResult.Reason);
-    }
-    return updateResult;
-  }
-
   private async Task AddToGroups(Device deviceEntity)
   {
     if (Device is not null)
@@ -173,6 +158,23 @@ public class AgentHub(
 
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
+  }
+
+  private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
+  {
+    // In dev, we can create the device to bootstrap it.
+    if (_hostEnvironment.IsDevelopment())
+    {
+      var device = await _deviceManager.AddOrUpdate(dto, addTagIds: false);
+      return Result.Ok(device);
+    }
+
+    var updateResult = await _deviceManager.UpdateDevice(dto, addTagIds: false);
+    if (!updateResult.IsSuccess)
+    {
+      await Clients.Caller.UninstallAgent(updateResult.Reason);
+    }
+    return updateResult;
   }
 
   private DeviceDto UpdateDtoState(DeviceDto deviceDto)
