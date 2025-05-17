@@ -1,4 +1,4 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
-[MessagePackObject]
-public record DesktopChangedDto([property: Key(0)] string DesktopName);
+[MessagePackObject(keyAsPropertyName: true)]
+public record DesktopChangedDto(string DesktopName);

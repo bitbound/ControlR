@@ -86,57 +86,58 @@ internal class WebSocketRelayMiddleware(
         context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
     }
 
-    private async Task StreamToPartner(SessionSignaler signaler, Guid callerRequestId)
+  private async Task StreamToPartner(SessionSignaler signaler, Guid callerRequestId)
+  {
+    try
     {
-        try
+      ArgumentNullException.ThrowIfNull(signaler.Websocket1);
+      ArgumentNullException.ThrowIfNull(signaler.Websocket2);
+
+      _logger.LogInformation("Starting stream relay. Request ID: {RequestId}", callerRequestId);
+
+      var partnerWebsocket = signaler.GetPartnerWebsocket(callerRequestId);
+      var callerWebsocket = signaler.GetCallerWebsocket(callerRequestId);
+
+      var buffer = new byte[ushort.MaxValue];
+      var bufferMemory = buffer.AsMemory();
+
+      while (
+          partnerWebsocket.State == WebSocketState.Open &&
+          callerWebsocket.State == WebSocketState.Open &&
+           !_appLifetime.ApplicationStopping.IsCancellationRequested)
+      {
+        var result = await callerWebsocket.ReceiveAsync(bufferMemory, _appLifetime.ApplicationStopping);
+
+        if (result.MessageType == WebSocketMessageType.Close)
         {
-            ArgumentNullException.ThrowIfNull(signaler.Websocket1);
-            ArgumentNullException.ThrowIfNull(signaler.Websocket2);
-
-            _logger.LogInformation("Starting stream relay.  Request ID: {RequestId}", callerRequestId);
-
-            var partnerWebsocket = signaler.GetPartnerWebsocket(callerRequestId);
-            var callerWebsocket = signaler.GetCallerWebsocket(callerRequestId);
-
-            var buffer = new byte[ushort.MaxValue];
-            var bufferMemory = buffer.AsMemory();
-
-            while (
-                partnerWebsocket.State == WebSocketState.Open &&
-                callerWebsocket.State == WebSocketState.Open &&
-                 !_appLifetime.ApplicationStopping.IsCancellationRequested)
-            {
-                var result = await callerWebsocket.ReceiveAsync(bufferMemory, _appLifetime.ApplicationStopping);
-
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    _logger.LogInformation("Websocket close message received.");
-                    break;
-                }
-
-                if (result.Count == 0)
-                {
-                    continue;
-                }
-
-                await partnerWebsocket.SendAsync(
-                    bufferMemory[..result.Count],
-                    WebSocketMessageType.Binary,
-                    true,
-                    _appLifetime.ApplicationStopping);
-            }
+          _logger.LogInformation("Websocket close message received.");
+          break;
         }
-        catch (OperationCanceledException)
-        { 
-            _logger.LogInformation("Application shutting down.  Streaming aborted.");
-        }
-        catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
+
+        if (result.Count == 0)
         {
-            _logger.LogInformation("Streamer websocket closed.  Ending stream.");
+          continue;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while proxying viewer websocket.");
-        }
+
+        // Pass through the EndOfMessage flag exactly as received
+        await partnerWebsocket.SendAsync(
+            bufferMemory[..result.Count],
+            result.MessageType,
+            result.EndOfMessage, 
+            _appLifetime.ApplicationStopping);
+      }
     }
+    catch (OperationCanceledException)
+    {
+      _logger.LogInformation("Application shutting down. Streaming aborted.");
+    }
+    catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
+    {
+      _logger.LogInformation("Streamer websocket closed. Ending stream.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while proxying viewer websocket.");
+    }
+  }
 }

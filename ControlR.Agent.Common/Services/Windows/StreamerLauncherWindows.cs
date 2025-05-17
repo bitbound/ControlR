@@ -42,7 +42,10 @@ internal class StreamerLauncherWindows(
     {
       var session = new StreamingSession(viewerConnectionId);
 
-      var dataFolder = _settings.InstanceId;
+      var dataFolder = _settings.InstanceId is { Length: > 0 } instanceId
+        ? instanceId
+        : "Default";
+
       var args =
         $"--session-id {sessionId} --data-folder {dataFolder} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
       if (!string.IsNullOrWhiteSpace(viewerName))

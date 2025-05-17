@@ -280,11 +280,6 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     try
     {
-        if (dto.SessionId != Session.SessionId)
-        {
-            return;
-        }
-
         await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
     }
     catch (Exception ex)
@@ -344,11 +339,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   private async Task HandleDisplayDataReceived(DisplayDataDto dto)
   {
-    if (dto.SessionId != Session.SessionId)
-    {
-      return;
-    }
-
     _displays = dto.Displays;
 
     if (_displays.Length == 0)

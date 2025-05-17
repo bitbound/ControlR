@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
-[MessagePackObject]
+[MessagePackObject(keyAsPropertyName: true)]
 public record KeyEventDto(
-    [property: Key(0)] string Key,
-    [property: Key(1)] bool IsPressed);
+    string Key,
+    bool IsPressed);

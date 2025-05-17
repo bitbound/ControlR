@@ -1,4 +1,4 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
-[MessagePackObject]
+[MessagePackObject(keyAsPropertyName: true)]
 public record WindowsSessionEndingDto();

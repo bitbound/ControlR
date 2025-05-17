@@ -30,4 +30,5 @@ public enum DtoType
   WindowsSessionEnding = 36,
   WindowsSessionSwitched = 37,
   RefreshDeviceInfoRequest = 38,
+  Ack = 39,
 }

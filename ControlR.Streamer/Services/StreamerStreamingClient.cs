@@ -244,9 +244,7 @@ internal sealed class StreamerStreamingClient(
     try
     {
       var displays = _desktopCapturer.GetDisplays().ToArray();
-      var dto = new DisplayDataDto(
-        _startupOptions.Value.SessionId,
-        displays);
+      var dto = new DisplayDataDto(displays);
 
       var wrapper = DtoWrapper.Create(dto, DtoType.DisplayData);
       await Send(wrapper, _appLifetime.ApplicationStopping);

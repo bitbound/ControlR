@@ -1,7 +1,7 @@
-﻿using ControlR.Libraries.Shared.Services;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Services;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace ControlR.Libraries.Clients.Services;
 
@@ -21,12 +21,11 @@ public abstract class StreamingClient(
   ILogger<StreamingClient> logger) : Closable(logger), IStreamingClient
 {
   protected readonly IMessenger Messenger = messenger;
-  private readonly int _maxSendBufferLength = ushort.MaxValue * 2;
   private readonly CancellationTokenSource _clientDisposingCts = new();
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<StreamingClient> _logger = logger;
+  private readonly int _maxSendBufferLength = ushort.MaxValue * 2;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
-  private readonly Guid _messageDelimiter = Guid.Parse("84da960a-54ec-47f5-a8b5-fa362221e8bf");
   private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
   private ClientWebSocket? _client;
@@ -45,9 +44,11 @@ public abstract class StreamingClient(
 
   public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
   {
+    _logger.LogInformation("Connecting to {WebsocketUrl}.", websocketUri);
     _client?.Dispose();
     _client = new ClientWebSocket();
     await _client.ConnectAsync(websocketUri, cancellationToken);
+    _logger.LogInformation("Connection successful.");
     ReadFromStream().Forget();
   }
 
@@ -100,6 +101,11 @@ public abstract class StreamingClient(
 
   public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
   {
+    if (dto.DtoType == DtoType.Ack)
+    {
+      throw new ArgumentException("Cannot send ACK DTOs with this method.  Use SendAck instead.");
+    }
+
     if (!await WaitForSendBuffer(cancellationToken))
     {
       return;
@@ -107,9 +113,153 @@ public abstract class StreamingClient(
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-    await SendDto(dto, linkedCts.Token);
+
+    await _sendLock.WaitAsync(linkedCts.Token);
+    try
+    {
+      var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: cancellationToken);
+
+      await Client.SendAsync(
+          dtoBytes,
+          WebSocketMessageType.Binary,
+          true,
+          cancellationToken);
+
+      _ = Interlocked.Add(ref _sendBufferLength, dtoBytes.Length);
+    }
+    finally
+    {
+      _sendLock.Release();
+    }
   }
 
+  public async Task WaitForClose(CancellationToken cancellationToken)
+  {
+    await _clientDisposingCts.Token.WhenCancelled(cancellationToken);
+  }
+
+  private async Task<bool> FillStream(MemoryStream dtoStream, byte[] dtoBuffer, CancellationToken token)
+  {
+    while (true)
+    {
+      var result = await Client.ReceiveAsync(dtoBuffer, token);
+
+      if (result.MessageType == WebSocketMessageType.Close)
+      {
+        return false;
+      }
+
+      if (result.Count > 0)
+      {
+        await dtoStream.WriteAsync(dtoBuffer.AsMemory(0, result.Count), token);
+      }
+
+      if (result.EndOfMessage)
+      {
+        return true;
+      }
+    }
+  }
+
+  private List<Func<DtoWrapper, Task>> GetMessageHandlers()
+  {
+    lock (_messageHandlers)
+    {
+      return [.. _messageHandlers.Select(x => x.Value)];
+    }
+  }
+
+  private async Task InvokeMessageHandlers(DtoWrapper dto, CancellationToken cancellationToken)
+  {
+    var handlers = GetMessageHandlers();
+
+    foreach (var handler in handlers)
+    {
+      try
+      {
+        if (cancellationToken.IsCancellationRequested)
+        {
+          break;
+        }
+
+        await handler(dto);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error while invoking message handler.");
+      }
+    }
+  }
+
+  private async Task ReadFromStream()
+  {
+    var dtoBuffer = new byte[ushort.MaxValue];
+
+    while (Client.State == WebSocketState.Open && !_clientDisposingCts.IsCancellationRequested)
+    {
+      try
+      {
+        using var dtoStream = _memoryProvider.GetRecyclableStream();
+        if (!await FillStream(dtoStream, dtoBuffer, _clientDisposingCts.Token))
+        {
+          break;
+        }
+
+        var totalBytesRead = (int)dtoStream.Length;
+
+        if (totalBytesRead == 0)
+        {
+          _logger.LogWarning("Received empty message.");
+          continue;
+        }
+
+        dtoStream.Seek(0, SeekOrigin.Begin);
+        var receivedWrapper = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(
+          dtoStream,
+          cancellationToken: _clientDisposingCts.Token);
+
+        switch (receivedWrapper.DtoType)
+        {
+          case DtoType.Ack:
+            {
+              var ackDto = receivedWrapper.GetPayload<AckDto>();
+              _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
+              break;
+            }
+          default:
+            {
+              await SendAck(totalBytesRead);
+              await InvokeMessageHandlers(receivedWrapper, _clientDisposingCts.Token);
+              break;
+            }
+        }
+      }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("Streaming cancelled.");
+        break;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error while reading from stream.");
+        break;
+      }
+    }
+
+    await InvokeOnClosed();
+  }
+
+  private async Task SendAck(int receivedBytes)
+  {
+    var ackDto = new AckDto(receivedBytes);
+    var wrapper = DtoWrapper.Create(ackDto, DtoType.Ack);
+    var wrapperBytes = MessagePackSerializer.Serialize(wrapper);
+    await Client.SendAsync(
+      wrapperBytes,
+      WebSocketMessageType.Binary,
+      true,
+      _clientDisposingCts.Token);
+  }
   private async Task<bool> WaitForSendBuffer(CancellationToken cancellationToken)
   {
     if (_sendBufferLength < _maxSendBufferLength)
@@ -133,221 +283,5 @@ public abstract class StreamingClient(
     _logger.LogError("Timed out while waiting for send buffer to drain.");
     await DisposeAsync();
     return false;
-  }
-
-  public async Task WaitForClose(CancellationToken cancellationToken)
-  {
-    await _clientDisposingCts.Token.WhenCancelled(cancellationToken);
-  }
-
-  private static MessageHeader GetHeader(byte[] buffer)
-  {
-    return new MessageHeader(
-      new Guid(buffer[..16]),
-      (MessageType)BitConverter.ToInt16(buffer.AsSpan()[16..18]),
-      BitConverter.ToInt32(buffer.AsSpan()[18..22]));
-  }
-
-  private static byte[] GetHeaderBytes(MessageHeader header)
-  {
-    return
-    [
-      .. header.Delimiter.ToByteArray(),
-      .. BitConverter.GetBytes((short)header.MessageType),
-      .. BitConverter.GetBytes(header.MessageSize)
-    ];
-  }
-
-  private List<Func<DtoWrapper, Task>> GetMessageHandlers()
-  {
-    lock (_messageHandlers)
-    {
-      return [.. _messageHandlers.Select(x => x.Value)];
-    }
-  }
-
-  private void HandleAck(MessageHeader header)
-  {
-    _ = Interlocked.Add(ref _sendBufferLength, -header.MessageSize);
-  }
-
-  private async Task HandleDtoMessage(MessageHeader header, byte[] dtoBuffer)
-  {
-    using var dtoStream = _memoryProvider.GetRecyclableStream();
-
-    while (dtoStream.Position < header.MessageSize)
-    {
-      var result = await Client.ReceiveAsync(dtoBuffer, _clientDisposingCts.Token);
-
-      if (result.MessageType == WebSocketMessageType.Close ||
-          result.Count == 0)
-      {
-        _logger.LogWarning("Stream ended before DTO was complete.");
-        break;
-      }
-
-      await dtoStream.WriteAsync(dtoBuffer.AsMemory(0, result.Count));
-      await SendAck(result.Count);
-    }
-
-    dtoStream.Seek(0, SeekOrigin.Begin);
-
-    var dto = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(dtoStream,
-      cancellationToken: _clientDisposingCts.Token);
-    await InvokeMessageHandlers(dto, _clientDisposingCts.Token);
-
-  }
-
-  private async Task InvokeMessageHandlers(DtoWrapper dto, CancellationToken cancellationToken)
-  {
-    var handlers = GetMessageHandlers();
-
-    foreach (var handler in handlers)
-    {
-      try
-      {
-        if (cancellationToken.IsCancellationRequested)
-        {
-          break;
-        }
-        
-        await handler(dto);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while invoking message handler.");
-      }
-    }
-  }
-
-  private async Task ReadFromStream()
-  {
-    var headerBuffer = new byte[MessageHeader.Size];
-    var dtoBuffer = new byte[ushort.MaxValue];
-
-    while (Client.State == WebSocketState.Open && !_clientDisposingCts.IsCancellationRequested)
-    {
-      try
-      {
-        var result = await Client.ReceiveAsync(headerBuffer, _clientDisposingCts.Token);
-
-        if (result.MessageType == WebSocketMessageType.Close)
-        {
-          _logger.LogInformation("Websocket close message received.");
-          break;
-        }
-
-        var bytesRead = result.Count;
-
-        if (bytesRead < MessageHeader.Size)
-        {
-          _logger.LogError("Failed to get DTO header.");
-          break;
-        }
-
-        var header = GetHeader(headerBuffer);
-
-        if (header.Delimiter != _messageDelimiter)
-        {
-          _logger.LogCritical("Message header delimiter was incorrect.  Value: {Delimiter}", header.Delimiter);
-          break;
-        }
-
-        switch (header.MessageType)
-        {
-          case MessageType.Dto:
-            await SendAck(bytesRead);
-            await HandleDtoMessage(header, dtoBuffer);
-            break;
-          case MessageType.Ack:
-            HandleAck(header);
-            break;
-          default:
-            throw new InvalidOperationException($"Unknown message type: {header.MessageType}");
-        }
-      }
-      catch (OperationCanceledException)
-      {
-        _logger.LogInformation("Streaming cancelled.");
-        break;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while reading from stream.");
-        break;
-      }
-    }
-
-    await InvokeOnClosed();
-  }
-  private async Task SendAck(int receivedBytes)
-  {
-    await _sendLock.WaitAsync(_clientDisposingCts.Token);
-    try
-    {
-      var header = new MessageHeader(_messageDelimiter, MessageType.Ack, receivedBytes);
-      var headerBytes = GetHeaderBytes(header);
-      await Client.SendAsync(
-        headerBytes,
-        WebSocketMessageType.Binary,
-        true,
-        _clientDisposingCts.Token);
-    }
-    finally
-    {
-      _sendLock.Release();
-    }
-  }
-
-  private async Task SendDto<T>(T dto, CancellationToken cancellationToken)
-  {
-    await _sendLock.WaitAsync(cancellationToken);
-    try
-    {
-      var payload = MessagePackSerializer.Serialize(dto, cancellationToken: cancellationToken);
-      var header = new MessageHeader(_messageDelimiter, MessageType.Dto, payload.Length);
-      var headerBytes = GetHeaderBytes(header);
-
-      await Client.SendAsync(
-        headerBytes,
-        WebSocketMessageType.Binary,
-        false,
-        cancellationToken);
-
-      await Client.SendAsync(
-        payload,
-        WebSocketMessageType.Binary,
-        true,
-        cancellationToken);
-
-      _ = Interlocked.Add(ref _sendBufferLength, headerBytes.Length + payload.Length);
-    }
-    finally
-    {
-      _sendLock.Release();
-    }
-  }
-
-  [StructLayout(LayoutKind.Explicit)]
-  private struct MessageHeader(Guid delimiter, MessageType messageType, int messageSize)
-  {
-    public const int Size = 22;
-
-    [FieldOffset(0)]
-    public readonly Guid Delimiter = delimiter;
-
-    [FieldOffset(16)]
-    public MessageType MessageType = messageType;
-
-    /// <summary>
-    /// <para>
-    ///   For Dto message type, this will be the message size following the header.
-    /// </para>
-    /// <para>
-    ///   For Ack message type, this will be the number of bytes received by the other client.
-    /// </para>
-    /// </summary>
-    [FieldOffset(18)]
-    public readonly int MessageSize = messageSize;
   }
 }

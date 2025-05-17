@@ -236,7 +236,6 @@ internal class DesktopCapturer : IDesktopCapturer
       var imageData = _bitmapUtility.EncodeJpeg(cropped, quality);
 
       var dto = new ScreenRegionDto(
-        _startupOptions.Value.SessionId,
         region.X,
         region.Y,
         region.Width,

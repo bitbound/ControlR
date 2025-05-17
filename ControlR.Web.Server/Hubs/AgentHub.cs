@@ -96,7 +96,7 @@ public class AgentHub(
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == deviceDto.TenantId))
       {
-        await Clients.Client(Context.ConnectionId).UninstallAgent("Invalid tenant ID.");
+        await Clients.Caller.UninstallAgent("Invalid tenant ID.");
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
