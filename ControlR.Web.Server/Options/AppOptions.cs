@@ -25,4 +25,5 @@ public class AppOptions
   public string? SmtpUserName { get; init; }
   public bool UseExternalWebSocketRelay { get; init; }
   public bool UseHttpLogging { get; init; }
+  public bool UseInMemoryDatabase { get; init; }
 }

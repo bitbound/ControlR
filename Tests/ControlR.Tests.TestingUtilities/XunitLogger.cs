@@ -4,10 +4,14 @@ using Xunit.Abstractions;
 
 namespace ControlR.Tests.TestingUtilities;
 
-public class XunitLogger<T>(ITestOutputHelper testOutput) : ILogger<T>
+public class XunitLogger<T>(ITestOutputHelper testOutput) : XunitLogger(testOutput, nameof(T)), ILogger<T>
+{
+}
+
+public class XunitLogger(ITestOutputHelper testOutput, string categoryName) : ILogger
 {
   private readonly ConcurrentStack<string> _scopeStack = new();
-  private readonly string _categoryName = nameof(T);
+  private readonly string _categoryName = categoryName;
 
   public IDisposable BeginScope<TState>(TState state) where TState : notnull
   {
@@ -22,7 +26,7 @@ public class XunitLogger<T>(ITestOutputHelper testOutput) : ILogger<T>
 
   public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
   {
-    var entry = XunitLogger<T>.FormatLogEntry(logLevel, _categoryName, $"{state}", exception, [.. _scopeStack]);
+    var entry = FormatLogEntry(logLevel, _categoryName, $"{state}", exception, [.. _scopeStack]);
     testOutput.WriteLine(entry);
   }
 

@@ -16,8 +16,9 @@
       "type": "dotnet",
       "task": "build",
       "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": ["build server"],
       "problemMatcher": [],
-      "dependsOn": ["dotnet: build"],
       "file": "ControlR.Agent/ControlR.Agent.csproj"
     },
     {
@@ -25,6 +26,8 @@
       "type": "dotnet",
       "task": "build",
       "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": [],
       "problemMatcher": [],
       "file": "ControlR.Web.Server/ControlR.Web.Server.csproj"
     },

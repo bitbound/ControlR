@@ -280,7 +280,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     try
     {
-        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+      await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
     }
     catch (Exception ex)
     {
