@@ -20,8 +20,8 @@ on:
       - "ControlR.Website/**"
 
 env:
-  MAJOR_VERSION: 1
-  MINOR_VERSION: 1
+  MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
+  MINOR_VERSION: ${{vars.MINOR_VERSION}}
 
 jobs:
   build_and_deploy:

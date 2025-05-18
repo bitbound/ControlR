@@ -13,7 +13,7 @@ RUN apt-get update \
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj", "ControlR.Web.WebSocketRelay/"]
-COPY ["ControlR.Web.WebSocketRelay.Common/ControlR.Web.WebSocketRelay.Common.csproj", "ControlR.Web.WebSocketRelay.Common/"]
+COPY ["Libraries/ControlR.Libraries.WebSocketRelay.Common/ControlR.Libraries.WebSocketRelay.Common.csproj", "ControlR.Libraries.WebSocketRelay.Common/"]
 RUN dotnet restore "./ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj"
 COPY . .
 WORKDIR "/src/ControlR.Web.WebSocketRelay"
