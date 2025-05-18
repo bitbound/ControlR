@@ -1,0 +1,217 @@
+name: Build and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "Deploy to target"
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+          - github_release
+        default: "preview"
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        type: string
+      create_release:
+        description: "Create GitHub Release"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - ".github/**"
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  MAJOR_VERSION: 0
+  MINOR_VERSION: 12
+
+jobs:
+  build:
+    name: Build
+    runs-on: self-hosted
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Set version
+        id: set_version
+        run: |
+          $version = "${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.${{ github.run_number }}.0"
+          if ("${{ inputs.version }}" -ne "") {
+            $version = "${{ inputs.version }}"
+          }
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Version: $version"
+
+      - name: Run Tests
+        run: dotnet test "**/Tests/**/*Tests.csproj"
+
+      - name: Build and Publish
+        run: |
+          $outputPath = "${{ github.workspace }}\ControlR.Server\bin\publish"
+
+          $buildParams = @(
+            "-CertificateThumbprint", "${{ secrets.CODE_SIGN_THUMBPRINT }}"
+            "-SignToolPath", "${{ vars.SIGN_TOOL_PATH }}"
+            "-OutputPath", $outputPath
+            "-CurrentVersion", "${{ steps.set_version.outputs.version }}"
+            "-BuildAgent"
+            "-BuildStreamer"
+          )
+
+          & ".\.build\Build.ps1" @buildParams
+
+      - name: Upload Server Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: server-bin
+          path: ControlR.Server\bin\publish
+          retention-days: 7
+
+      - name: Upload Build Scripts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-scripts
+          path: .build\
+          retention-days: 7
+
+      - name: Upload docker-compose file
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose
+          path: docker-compose\docker-compose.yml
+          retention-days: 7
+
+  deploy_docker_preview:
+    name: Deploy to Docker Preview
+    runs-on: self-hosted
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'preview'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download server artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: server-bin
+          path: ControlR.Server/bin/publish
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ControlR.Web.Server/Dockerfile
+          push: true
+          tags: |
+            translucency/controlr:preview
+            translucency/controlr:${{ needs.build.outputs.version }}
+          build-args: |
+            CURRENT_VERSION=${{ needs.build.outputs.version }}
+
+  deploy_docker_production:
+    name: Deploy to Docker Production
+    runs-on: self-hosted
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download server artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: server-bin
+          path: ControlR.Server/bin/publish
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ControlR.Web.Server/Dockerfile
+          push: true
+          tags: |
+            translucency/controlr:latest
+            translucency/controlr:${{ needs.build.outputs.version }}
+          build-args: |
+            CURRENT_VERSION=${{ needs.build.outputs.version }}
+
+  create_github_release:
+    name: Create GitHub Release
+    runs-on: self-hosted
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.create_release == 'true' || github.event.inputs.deploy_target == 'github_release')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download server artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: server-bin
+          path: ./server-publish
+
+      - name: Download docker-compose file
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-compose
+          path: ./docker-compose.yaml
+
+      - name: Create release archive
+        run: |
+          # Create server zip
+          Compress-Archive -Path ".\server-publish\*" -DestinationPath "ControlR.Server.${{ needs.build.outputs.version }}.zip" -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ControlR ${{ needs.build.outputs.version }}
+          tag_name: v${{ needs.build.outputs.version }}
+          draft: false
+          prerelease: ${{ github.event.inputs.deploy_target == 'preview' }}
+          files: |
+            ControlR.Server.${{ needs.build.outputs.version }}.zip
+            docker-compose.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
