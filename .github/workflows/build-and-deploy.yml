@@ -27,6 +27,8 @@ on:
     paths-ignore:
       - "README.md"
       - ".github/**"
+      - "ControlR.Web.WebSocketRelay/**"
+      - "Libraries/ControlR.Libraries.WebSocketRelay.Common/**"
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
