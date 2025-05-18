@@ -1,20 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.5" />
-        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.5.0" />
-        <PackageReference Include="Moq" Version="4.20.72" />
-        <PackageReference Include="xunit" Version="2.9.3" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.5.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+  </ItemGroup>
 
 </Project>
