@@ -104,14 +104,14 @@ jobs:
           path: docker-compose\docker-compose.yml
           retention-days: 7
 
-  deploy_docker_preview:
-    name: Deploy to Docker Preview
+  deploy_docker:
+    name: Deploy to Docker
     runs-on: self-hosted
     needs: build
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.docker_deploy_target == 'preview'
+    if: github.event.inputs.docker_deploy_target != 'none'
 
     steps:
       - name: Checkout code
@@ -139,47 +139,7 @@ jobs:
           file: ControlR.Web.Server/Dockerfile
           push: true
           tags: |
-            translucency/controlr:preview
-            translucency/controlr:${{ needs.build.outputs.version }}
-          build-args: |
-            CURRENT_VERSION=${{ needs.build.outputs.version }}
-
-  deploy_docker_production:
-    name: Deploy to Docker Production
-    runs-on: self-hosted
-    needs: build
-    defaults:
-      run:
-        shell: pwsh
-    if: github.event.inputs.docker_deploy_target == 'latest'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download server artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: server-bin
-          path: ControlR.Server/bin/publish
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PAT }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ControlR.Web.Server/Dockerfile
-          push: true
-          tags: |
-            translucency/controlr:latest
+            translucency/controlr:${{ github.event.inputs.docker_deploy_target }}
             translucency/controlr:${{ needs.build.outputs.version }}
           build-args: |
             CURRENT_VERSION=${{ needs.build.outputs.version }}

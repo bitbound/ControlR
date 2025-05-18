@@ -3,13 +3,13 @@ name: Relay Server
 on:
   workflow_dispatch:
     inputs:
-      deploy_target:
-        description: "Deploy to target"
+      docker_tag:
+        description: "Docker tag to use"
         required: true
         type: choice
         options:
           - preview
-          - production
+          - latest
         default: "preview"
   push:
     branches:
@@ -61,6 +61,5 @@ jobs:
           file: ControlR.Web.WebSocketRelay/Dockerfile
           push: true
           tags: |
-            translucency/controlr-relay:${{ github.run_number }}
-            translucency/controlr-relay:${{ steps.set_version.outputs.version }}
-            ${{ github.event.inputs.deploy_target == 'production' && 'translucency/controlr-relay:latest' || 'translucency/controlr-relay:preview' }}
+            ${{ steps.set_version.outputs.version }}
+            ${{ github.event.inputs.docker_tag }}
