@@ -22,8 +22,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6A8B754D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ControlR.Libraries.DevicesCommon.Tests", "Tests\ControlR.Libraries.DevicesCommon.Tests\ControlR.Libraries.DevicesCommon.Tests.csproj", "{8E0D0D8D-9342-4A55-9547-2AE4FC122DA8}"
 EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ControlR.Website", "ControlR.Website\ControlR.Website.esproj", "{14BABACA-6831-47FD-B1E1-71201BA669AE}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{94B85287-C904-4672-821E-D0B96BBDF89C}"
 	ProjectSection(SolutionItems) = preProject
 		.build\Build.ps1 = .build\Build.ps1
