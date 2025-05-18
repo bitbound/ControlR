@@ -59,10 +59,8 @@ For manual triggering:
 
 For these workflows to function properly, you need to set up the following repository secrets:
 
-- `DOCKERHUB_USERNAME`: Your Docker Hub username
-- `DOCKERHUB_TOKEN`: Your Docker Hub access token
-- `CODE_SIGNING_CERT`: Base64-encoded PFX certificate file (optional)
-- `CERTIFICATE_PASSWORD`: Password for the code signing certificate (optional)
+- `DOCKER_USERNAME`: Your Docker Hub username
+- `DOCKER_PAT`: Your Docker Hub access token
 - `CERTIFICATE_THUMBPRINT`: Thumbprint of the code signing certificate (optional)
 - `SIGNTOOL_BINARY`: Base64-encoded SignTool executable (optional)
 
@@ -71,10 +69,7 @@ For these workflows to function properly, you need to set up the following repos
 When creating a GitHub Release, the following assets are included:
 
 - `ControlR.Server.[version].zip`: Server application
-- `ControlR.DockerCompose.[version].zip`: Docker Compose files
-- `ControlR.Agent.Windows.[version].exe`: Windows agent executable
-- `ControlR.Agent.Linux.[version]`: Linux agent executable
-- `ControlR.Streamer.Windows.[version].zip`: Windows streamer application
+- `docker-compose.yaml`: Docker Compose file
 
 ## Docker Images
 
