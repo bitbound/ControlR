@@ -31,6 +31,26 @@
                Filterable="true">
 
     <ToolBarContent>
+      <MudMenu Icon="@Icons.Material.Filled.Tag" 
+               Label="Tags" 
+               Variant="Variant.Outlined"
+               Dense="true"
+               Class="mr-4"
+               AnchorOrigin="Origin.BottomLeft">
+        <MudCheckBox T="bool" 
+                     Checked="@_selectAllTags" 
+                     CheckedChanged="@((bool x) => HandleTagSelectionChanged(x, Guid.Empty))"
+                     Label="All" />
+        <MudDivider />
+        @foreach (var tag in TagStore.Items)
+        {
+          <MudCheckBox T="bool" 
+                       Checked="@_selectedTagIds.Contains(tag.Id)" 
+                       CheckedChanged="@((bool x) => HandleTagSelectionChanged(x, tag.Id))"
+                       Label="@tag.Name" />
+        }
+      </MudMenu>
+      
       <MudSpacer />
       <MudTextField T="string"
                     @bind-Value="_searchText"
