@@ -118,7 +118,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download server artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: server-bin
           path: ControlR.Server/bin/publish
@@ -158,13 +158,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download server artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: server-bin
           path: ./server-publish
 
       - name: Download docker-compose file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-compose
           path: ./docker-compose.yaml
