@@ -115,7 +115,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.docker_deploy_target != 'none'
+    if: github.event.inputs.docker_deploy_target == 'preview' || github.event.inputs.docker_deploy_target == 'latest'
 
     steps:
       - name: Checkout code
@@ -155,7 +155,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.github_release != 'none'
+    if: github.event.inputs.github_release == 'latest' || github.event.inputs.github_release == 'prerelease'
 
     steps:
       - name: Checkout code
