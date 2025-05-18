@@ -19,8 +19,7 @@ public partial class Dashboard
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
-  private List<Guid> _selectedTagIds = [];
-  private bool _selectAllTags = true;
+  private IEnumerable<TagViewModel>? _selectedTags;
   private bool _loadingTags = true;
 
   [Inject]
@@ -65,9 +64,10 @@ public partial class Dashboard
         ? _devices
         : [.. _devices.Where(x => x.IsOnline)];
         
-      if (!_selectAllTags && _selectedTagIds.Count > 0)
+      if (_selectedTags != null && _selectedTags.Any() && _selectedTags.Count() < TagStore.Items.Count)
       {
-        devices = [.. devices.Where(d => d.TagIds != null && d.TagIds.Any(t => _selectedTagIds.Contains(t)))];
+        var selectedTagIds = _selectedTags.Select(t => t.Id).ToList();
+        devices = [.. devices.Where(d => d.TagIds != null && d.TagIds.Any(t => selectedTagIds.Contains(t)))];
       }
       
       return devices;
@@ -76,6 +76,13 @@ public partial class Dashboard
 
   private bool IsHideOfflineDevicesDisabled =>
     !string.IsNullOrWhiteSpace(_searchText);
+    
+  private string SelectedTagsText =>
+    _selectedTags is null || !_selectedTags.Any()
+      ? "All Tags"
+      : _selectedTags.Count() == TagStore.Items.Count
+        ? "All Tags"
+        : string.Join(", ", _selectedTags.Select(x => x.Name));
 
   private Func<DeviceViewModel, bool> QuickFilter => x =>
   {
@@ -119,7 +126,7 @@ public partial class Dashboard
     {
       await TagStore.Refresh();
     }
-    _selectedTagIds = TagStore.Items.Select(t => t.Id).ToList();
+    _selectedTags = null;
     _loadingTags = false;
 
     if (DeviceStore.Items.Count == 0)
@@ -209,27 +216,6 @@ public partial class Dashboard
     await InvokeAsync(StateHasChanged);
   }
   
-  private async Task HandleTagSelectionChanged(bool isSelected, Guid tagId)
-  {
-    if (tagId == Guid.Empty) // Special case for "All" tag
-    {
-      _selectAllTags = isSelected;
-      _selectedTagIds = isSelected ? TagStore.Items.Select(t => t.Id).ToList() : [];
-    }
-    else
-    {
-      if (isSelected)
-      {
-        _selectedTagIds.Add(tagId);
-      }
-      else
-      {
-        _selectedTagIds.Remove(tagId);
-      }
-      _selectAllTags = _selectedTagIds.Count == TagStore.Items.Count;
-    }
-    await InvokeAsync(StateHasChanged);
-  }
 
   private bool IsOutdated(DeviceViewModel device)
   {
