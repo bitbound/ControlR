@@ -187,6 +187,6 @@ jobs:
           prerelease: ${{ github.event.inputs.github_release == 'prerelease' }}
           files: |
             ControlR.Server.${{ needs.build.outputs.version }}.zip
-            docker-compose.yaml
+            docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
