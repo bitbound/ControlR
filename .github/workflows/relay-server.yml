@@ -28,6 +28,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Show Inputs
+        run: |
+          echo "Inputs: ${{ toJSON(github.event.inputs) }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
