@@ -79,14 +79,14 @@ jobs:
         run: |
           $outputPath = "${{ github.workspace }}\ControlR.Server\bin\publish"
 
-          $buildParams = @(
-            "-CertificateThumbprint", "${{ secrets.CODE_SIGN_THUMBPRINT }}"
-            "-SignToolPath", "${{ vars.SIGN_TOOL_PATH }}"
-            "-OutputPath", $outputPath
-            "-CurrentVersion", "${{ steps.set_version.outputs.version }}"
-            "-BuildAgent"
-            "-BuildStreamer"
-          )
+          $buildParams = @{
+            "-CertificateThumbprint" = "${{ secrets.CODE_SIGN_THUMBPRINT }}"
+            "-SignToolPath" = "${{ vars.SIGN_TOOL_PATH }}"
+            "-OutputPath" = $outputPath
+            "-CurrentVersion" = "${{ steps.set_version.outputs.version }}"
+            "-BuildAgent" = $true
+            "-BuildStreamer" = $true
+          }
 
           & ".\.build\Build.ps1" @buildParams
 
