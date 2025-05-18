@@ -3,29 +3,28 @@ name: Build and Deploy
 on:
   workflow_dispatch:
     inputs:
-      deploy_target:
-        description: "Deploy to target"
+      docker_deploy_target:
+        description: "Deploy to Docker"
         required: true
         type: choice
         options:
+          - none
           - preview
-          - production
-          - github_release
-        default: "preview"
+          - latest
+        default: "none"
+      github_release:
+        description: "Deploy to GitHub Release"
+        required: false
+        type: choice
+        options:
+          - none
+          - prerelease
+          - latest
+        default: "none"
       version:
         description: "Version number (leave empty for auto)"
         required: false
         type: string
-      deploy_to_docker:
-        description: "Deploy to Docker Hub"
-        required: false
-        type: boolean
-        default: false
-      create_release:
-        description: "Create GitHub Release"
-        required: false
-        type: boolean
-        default: false
   push:
     branches:
       - main
@@ -112,7 +111,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.deploy_to_docker && github.event.inputs.deploy_target == 'preview'
+    if: github.event.inputs.docker_deploy_target == 'preview'
 
     steps:
       - name: Checkout code
@@ -152,7 +151,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.deploy_to_docker && github.event.inputs.deploy_target == 'production'
+    if: github.event.inputs.docker_deploy_target == 'latest'
 
     steps:
       - name: Checkout code
@@ -192,7 +191,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.create_release == 'true' || github.event.inputs.deploy_target == 'github_release')
+    if: github.event.inputs.github_release != 'none'
 
     steps:
       - name: Checkout code
@@ -221,7 +220,7 @@ jobs:
           name: ControlR ${{ needs.build.outputs.version }}
           tag_name: v${{ needs.build.outputs.version }}
           draft: false
-          prerelease: ${{ github.event.inputs.deploy_target == 'preview' }}
+          prerelease: ${{ github.event.inputs.github_release == 'prerelease' }}
           files: |
             ControlR.Server.${{ needs.build.outputs.version }}.zip
             docker-compose.yaml
