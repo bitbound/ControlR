@@ -6,8 +6,8 @@
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
 	"features": {
 		//"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-		//"ghcr.io/devcontainers/features/dotnet:2": {},
-		//"ghcr.io/devcontainers/features/powershell:1": {},
+		"ghcr.io/devcontainers/features/dotnet:2": {},
+		"ghcr.io/devcontainers/features/powershell:1": {}
 		//"ghcr.io/dotnet/aspire-devcontainer-feature/dotnetaspire:1": {}
 	}
 	
