@@ -1,0 +1,67 @@
+name: Relay Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "Deploy to target"
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: "preview"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - ".github/**"
+      - "ControlR.Website/**"
+
+env:
+  MAJOR_VERSION: 1
+  MINOR_VERSION: 1
+
+jobs:
+  build_and_deploy:
+    name: Build and Deploy Relay Server
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Set version
+        id: set_version
+        run: |
+          $version = "${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.${{ github.run_number }}"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Version: $version"
+
+      - name: Build project
+        run: |
+          dotnet build --configuration Release -p:Version="${{ steps.set_version.outputs.version }}" ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ControlR.Web.WebSocketRelay/Dockerfile
+          push: true
+          tags: |
+            translucency/controlr-relay:${{ github.run_number }}
+            translucency/controlr-relay:${{ steps.set_version.outputs.version }}
+            ${{ github.event.inputs.deploy_target == 'production' && 'translucency/controlr-relay:latest' || 'translucency/controlr-relay:preview' }}

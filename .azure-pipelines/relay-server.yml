@@ -1,8 +1,8 @@
 name: 1.1.$(Rev:r)
 trigger:
- branches:
-   include:
-     - main
+  branches:
+    include:
+      - main
 jobs:
   - job: Relay_Deploy
     displayName: Relay Server Build and Deploy
@@ -12,18 +12,18 @@ jobs:
       - checkout: self
         fetchDepth: 1
         clean: true
-    
+
       - task: DotNetCoreCLI@2
         inputs:
-          command: 'build'
+          command: "build"
           arguments: '--configuration Release -p:Version="$(Build.BuildNumber)"'
-          projects: 'ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj'
+          projects: "ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj"
 
       - task: Docker@2
         displayName: Build and Push Docker
         inputs:
           containerRegistry: 428e5669-4949-4ad6-9e37-730f15b2cad8
-          repository: translucency/websocket-relay
+          repository: translucency/controlr-relay
           buildContext: $(System.DefaultWorkingDirectory)
           tags: >-
             $(Build.BuildId)
