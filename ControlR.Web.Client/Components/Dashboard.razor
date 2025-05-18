@@ -21,14 +21,14 @@
 
   <MudDataGrid T="DeviceViewModel"
                RowsPerPage="@(25)"
-               Items="FilteredDevices"
                SortMode="SortMode.Multiple"
                QuickFilter="QuickFilter"
                Loading="_loading"
                Hideable="true"
                SortDefinitions="_sortDefinitions"
                ShowColumnOptions="true"
-               Filterable="true">
+               Filterable="true"
+               ServerData="ServerReload">
 
     <ToolBarContent>
       <MudSpacer />

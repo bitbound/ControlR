@@ -450,4 +450,29 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while sending wake command.");
     }
   }
+
+  private async Task<GridData<DeviceViewModel>> ServerReload(GridState<DeviceViewModel> state)
+  {
+    var result = await ControlrApi.GetDevices(state.Page, state.PageSize, state.SortDefinitions, _searchText);
+    if (!result.IsSuccess)
+    {
+      Snackbar.Add(result.Reason, Severity.Error);
+      return new GridData<DeviceViewModel> { TotalItems = 0, Items = Array.Empty<DeviceViewModel>() };
+    }
+
+    var data = result.Value.Items;
+    var totalItems = result.Value.TotalItems;
+
+    return new GridData<DeviceViewModel>
+    {
+      TotalItems = totalItems,
+      Items = data
+    };
+  }
+
+  private async Task OnSearch(string text)
+  {
+    _searchText = text;
+    await InvokeAsync(StateHasChanged);
+  }
 }

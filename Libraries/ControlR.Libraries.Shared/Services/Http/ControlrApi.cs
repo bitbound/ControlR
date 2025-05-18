@@ -42,6 +42,8 @@ public interface IControlrApi
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
+  Task<Result<GridData<DeviceDto>>> GetDevices(int page, int pageSize, IEnumerable<SortDefinition<DeviceDto>> sortDefinitions, string? searchText);
+  Task<Result<int>> GetDeviceCount(string? searchText);
 }
 
 public class ControlrApi(
@@ -370,6 +372,44 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
+  }
+
+  public async Task<Result<GridData<DeviceDto>>> GetDevices(int page, int pageSize, IEnumerable<SortDefinition<DeviceDto>> sortDefinitions, string? searchText)
+  {
+    return await TryCallApi(async () =>
+    {
+      var query = new Dictionary<string, string?>
+      {
+        ["page"] = page.ToString(),
+        ["pageSize"] = pageSize.ToString(),
+        ["searchText"] = searchText
+      };
+
+      foreach (var sortDefinition in sortDefinitions)
+      {
+        query[$"sortBy"] = sortDefinition.SortBy;
+        query[$"descending"] = sortDefinition.Descending.ToString();
+      }
+
+      var uri = QueryHelpers.AddQueryString($"{HttpConstants.DevicesEndpoint}/paged", query);
+      var result = await _client.GetFromJsonAsync<GridData<DeviceDto>>(uri);
+      return result;
+    });
+  }
+
+  public async Task<Result<int>> GetDeviceCount(string? searchText)
+  {
+    return await TryCallApi(async () =>
+    {
+      var query = new Dictionary<string, string?>
+      {
+        ["searchText"] = searchText
+      };
+
+      var uri = QueryHelpers.AddQueryString($"{HttpConstants.DevicesEndpoint}/count", query);
+      var result = await _client.GetFromJsonAsync<int>(uri);
+      return result;
     });
   }
 

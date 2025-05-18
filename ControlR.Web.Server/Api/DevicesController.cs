@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
@@ -104,5 +104,81 @@ public class DevicesController : ControllerBase
         yield return device.ToDto();
       }
     }
+  }
+
+  [HttpGet("paged")]
+  public async Task<ActionResult<GridData<DeviceDto>>> GetDevices(
+    [FromQuery] int page,
+    [FromQuery] int pageSize,
+    [FromQuery] string? searchText,
+    [FromQuery] string? sortBy,
+    [FromQuery] bool descending,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService)
+  {
+    var query = appDb.Devices.AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(searchText))
+    {
+      query = query.Where(device =>
+        device.Name.Contains(searchText) ||
+        device.Alias.Contains(searchText) ||
+        device.AgentVersion.Contains(searchText) ||
+        device.OsDescription.Contains(searchText) ||
+        device.PublicIpV4.Contains(searchText) ||
+        device.PublicIpV6.Contains(searchText));
+    }
+
+    if (!string.IsNullOrWhiteSpace(sortBy))
+    {
+      query = descending
+        ? query.OrderByDescending(sortBy)
+        : query.OrderBy(sortBy);
+    }
+
+    var totalItems = await query.CountAsync();
+    var devices = await query
+      .Skip(page * pageSize)
+      .Take(pageSize)
+      .ToListAsync();
+
+    var authorizedDevices = new List<DeviceDto>();
+    foreach (var device in devices)
+    {
+      var authResult =
+        await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+      if (authResult.Succeeded)
+      {
+        authorizedDevices.Add(device.ToDto());
+      }
+    }
+
+    return new GridData<DeviceDto>
+    {
+      TotalItems = totalItems,
+      Items = authorizedDevices
+    };
+  }
+
+  [HttpGet("count")]
+  public async Task<ActionResult<int>> GetDeviceCount(
+    [FromQuery] string? searchText,
+    [FromServices] AppDb appDb)
+  {
+    var query = appDb.Devices.AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(searchText))
+    {
+      query = query.Where(device =>
+        device.Name.Contains(searchText) ||
+        device.Alias.Contains(searchText) ||
+        device.AgentVersion.Contains(searchText) ||
+        device.OsDescription.Contains(searchText) ||
+        device.PublicIpV4.Contains(searchText) ||
+        device.PublicIpV6.Contains(searchText));
+    }
+
+    var totalItems = await query.CountAsync();
+    return totalItems;
   }
 }
