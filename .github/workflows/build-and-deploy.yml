@@ -99,7 +99,7 @@ jobs:
           retention-days: 7
 
       - name: Upload docker-compose file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-compose
           path: docker-compose\docker-compose.yml
