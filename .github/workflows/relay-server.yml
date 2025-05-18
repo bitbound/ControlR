@@ -14,10 +14,9 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "README.md"
-      - ".github/**"
-      - "ControlR.Website/**"
+    paths:
+      - "ControlR.Web.WebSocketRelay/**"
+      - "Libraries/ControlR.Libraries.WebSocketRelay.Common/**"
 
 env:
   MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
