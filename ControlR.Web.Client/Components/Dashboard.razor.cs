@@ -70,9 +70,14 @@ public partial class Dashboard
         devices = devices.Where(x => x.IsOnline);
       }
 
-      // Filter by selected tags if any are selected
-      if (_selectedTags.Count > 0)
+      if (_selectedTags.Count == 0)
       {
+        devices = devices.Where(device =>
+          !_selectedTags.All(tag => tag.DeviceIds.Contains(device.Id)));
+      }
+      else if (_selectedTags.Count > 0)
+      {
+        // Filter by selected tags if any are selected
         devices = devices.Where(device =>
           _selectedTags.Any(tag => tag.DeviceIds.Contains(device.Id)));
       }
