@@ -15,10 +15,11 @@ public partial class Dashboard
   };
 
   private Version? _agentReleaseVersion;
-  private ObservableCollection<DeviceViewModel> _devices = [];
+  private ObservableCollection<DeviceViewModel> _devices = [];  
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
+  private HashSet<TagViewModel> _selectedTags = [];
 
   [Inject]
   public required IBusyCounter BusyCounter { get; init; }
@@ -43,6 +44,10 @@ public partial class Dashboard
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+  
+  [Inject]
+  public required ITagStore TagStore { get; init; }
+  
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
 
@@ -50,21 +55,36 @@ public partial class Dashboard
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
 
+  private bool ShouldBypassHideOfflineDevices =>
+    !string.IsNullOrWhiteSpace(_searchText);
+
   private ICollection<DeviceViewModel> FilteredDevices
   {
     get
     {
-      if (!_hideOfflineDevices || IsHideOfflineDevicesDisabled)
+      var devices = _devices.AsEnumerable();
+      
+      // Filter by online status if enabled
+      if (_hideOfflineDevices && !ShouldBypassHideOfflineDevices)
       {
-        return _devices;
+        devices = devices.Where(x => x.IsOnline);
       }
 
-      return [.. _devices.Where(x => x.IsOnline)];
+      if (_selectedTags.Count == 0)
+      {
+        devices = devices.Where(device =>
+          !_selectedTags.All(tag => tag.DeviceIds.Contains(device.Id)));
+      }
+      else if (_selectedTags.Count > 0)
+      {
+        // Filter by selected tags if any are selected
+        devices = devices.Where(device =>
+          _selectedTags.Any(tag => tag.DeviceIds.Contains(device.Id)));
+      }
+
+      return [.. devices];
     }
   }
-
-  private bool IsHideOfflineDevicesDisabled =>
-    !string.IsNullOrWhiteSpace(_searchText);
 
   private Func<DeviceViewModel, bool> QuickFilter => x =>
   {
@@ -107,6 +127,13 @@ public partial class Dashboard
     {
       await DeviceStore.Refresh();
     }
+
+    if (TagStore.Items.Count == 0)
+    {
+      await TagStore.Refresh();
+    }
+
+    _selectedTags = [.. TagStore.Items];
 
     await LoadDevicesFromStore();
 
@@ -153,6 +180,22 @@ public partial class Dashboard
     }
   }
 
+  private string GetTagsMultiSelectText(List<string> tags)
+  {
+    if (tags.Count == 0)
+    {
+      return "No tags selected";
+    }
+
+    if (_selectedTags.Count == TagStore.Items.Count)
+    {
+      return "All tags selected";
+    }
+
+    var tagNoun = tags.Count > 1 ? "tags" : "tag";
+    return $"{tags.Count} {tagNoun} selected";
+  }
+
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
@@ -169,6 +212,7 @@ public partial class Dashboard
     }
     await InvokeAsync(StateHasChanged);
   }
+
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
   {
     if (message.NewState == HubConnectionState.Connected)
@@ -182,7 +226,7 @@ public partial class Dashboard
     Snackbar.Add("Refreshing devices", Severity.Success);
     await RefreshDevices();
   }
-
+  
   private async Task HideOfflineDevicesChanged(bool isChecked)
   {
     _hideOfflineDevices = isChecked;
@@ -213,6 +257,12 @@ public partial class Dashboard
     }
 
     _devices = devices;
+  }
+
+  private Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
+  {
+    _selectedTags = [.. tags];
+    return InvokeAsync(StateHasChanged);
   }
   private async Task RefreshDeviceInfo(DeviceViewModel device)
   {

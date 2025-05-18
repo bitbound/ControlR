@@ -16,12 +16,12 @@
                  Value="_hideOfflineDevices"
                  ValueChanged="HideOfflineDevicesChanged"
                  Label="Hide Offline Devices"
-                 Disabled="IsHideOfflineDevicesDisabled" />
+                 Disabled="ShouldBypassHideOfflineDevices" />
   </div>
 
   <MudDataGrid T="DeviceViewModel"
                RowsPerPage="@(25)"
-               Items="FilteredDevices"
+               Items="FilteredDevices"               
                SortMode="SortMode.Multiple"
                QuickFilter="QuickFilter"
                Loading="_loading"
@@ -31,7 +31,24 @@
                Filterable="true">
 
     <ToolBarContent>
-      <MudSpacer />
+      <MudSelect T="TagViewModel"
+                 MultiSelection="true"       
+                 MultiSelectionTextFunc="GetTagsMultiSelectText"
+                 Placeholder="Filter devices by selecting tags"
+                 AdornmentIcon="@Icons.Material.Filled.Tag"
+                 Adornment="Adornment.End"
+                 Class="mr-4"
+                 SelectedValues="_selectedTags"
+                 SelectedValuesChanged="OnSelectedTagsChanged"
+                 SelectAll="true"
+                 SelectAllText="All Tags"
+                 Immediate="true">
+        @foreach (var tag in TagStore.Items)
+        {
+          <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
+        }
+      </MudSelect>
+      
       <MudTextField T="string"
                     @bind-Value="_searchText"
                     Placeholder="Search"
