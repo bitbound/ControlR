@@ -16,6 +16,11 @@ on:
         description: "Version number (leave empty for auto)"
         required: false
         type: string
+      deploy_to_docker:
+        description: "Deploy to Docker Hub"
+        required: false
+        type: boolean
+        default: false
       create_release:
         description: "Create GitHub Release"
         required: false
@@ -107,7 +112,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'preview'
+    if: github.event.inputs.deploy_to_docker && github.event.inputs.deploy_target == 'preview'
 
     steps:
       - name: Checkout code
@@ -147,7 +152,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production'
+    if: github.event.inputs.deploy_to_docker && github.event.inputs.deploy_target == 'production'
 
     steps:
       - name: Checkout code
