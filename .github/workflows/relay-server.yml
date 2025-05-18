@@ -65,5 +65,5 @@ jobs:
           file: ControlR.Web.WebSocketRelay/Dockerfile
           push: true
           tags: |
-            ${{ steps.set_version.outputs.version }}
-            ${{ github.event.inputs.docker_tag }}
+            translucency/controlr-relay:${{ steps.set_version.outputs.version }}
+            translucency/controlr-relay:${{ github.event.inputs.docker_tag }}

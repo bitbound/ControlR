@@ -2,7 +2,7 @@
 
 Open-source, self-hostable remote control and remote access.
 
-[![Build Status](https://dev.azure.com/translucency/ControlR/_apis/build/status%2FControlR?branchName=main)](https://dev.azure.com/translucency/ControlR/_build/latest?definitionId=35&branchName=main)
+[![Build and Deploy](https://github.com/bitbound/ControlR/actions/workflows/build-and-deploy.yml/badge.svg?branch=main)](https://github.com/bitbound/ControlR/actions/workflows/build-and-deploy.yml)
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
 Website: https://controlr.app  
@@ -45,9 +45,9 @@ If the public IP for your connected devices are not showing correctly, the probl
 
 ## Multi-tenancy
 
-By default, the server is single-tenant.  The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
+By default, the server is single-tenant. The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
 
-Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the compose file will allow anyone to create a new account on the server.  A new tenant is created for each account that is created this way.
+Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the compose file will allow anyone to create a new account on the server. A new tenant is created for each account that is created this way.
 
 The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/en-us/ef/core/querying/filters) feature to isolate tenant data (devices, users, etc.);
 
@@ -64,11 +64,13 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 - Terminal uses Bash
 
 ## Permissions
-Permissions are implemented via a combination of role-based and resource-based authorization.  When the first account is created, all roles are assigned.  Subsequent accounts must be explicitly assigned roles.
 
-To access a device, a user must have either the `DeviceSuperuser` role or a matching tag.  Tags can be assigned to both users and devices to grant access.
+Permissions are implemented via a combination of role-based and resource-based authorization. When the first account is created, all roles are assigned. Subsequent accounts must be explicitly assigned roles.
+
+To access a device, a user must have either the `DeviceSuperuser` role or a matching tag. Tags can be assigned to both users and devices to grant access.
 
 Role Descriptions:
+
 - `AgentInstaller`
   - Able to deploy/install the agent on new devices
 - `DeviceSuperuser`
