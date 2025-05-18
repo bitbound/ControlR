@@ -55,7 +55,7 @@ public partial class Dashboard
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
 
-  private bool BypassHideOfflineDevices =>
+  private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
 
   private ICollection<DeviceViewModel> FilteredDevices
@@ -65,7 +65,7 @@ public partial class Dashboard
       var devices = _devices.AsEnumerable();
       
       // Filter by online status if enabled
-      if (_hideOfflineDevices && !BypassHideOfflineDevices)
+      if (_hideOfflineDevices && !ShouldBypassHideOfflineDevices)
       {
         devices = devices.Where(x => x.IsOnline);
       }
