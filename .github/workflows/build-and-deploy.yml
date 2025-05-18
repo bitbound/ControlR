@@ -73,7 +73,7 @@ jobs:
           echo "Version: $version"
 
       - name: Run Tests
-        run: dotnet test "**/Tests/**/*Tests.csproj"
+        run: dotnet test
 
       - name: Build and Publish
         run: |
