@@ -38,6 +38,9 @@ jobs:
   build:
     name: Build
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: pwsh
     outputs:
       version: ${{ steps.set_version.outputs.version }}
 
@@ -82,17 +85,10 @@ jobs:
           & ".\.build\Build.ps1" @buildParams
 
       - name: Upload Server Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: server-bin
           path: ControlR.Server\bin\publish
-          retention-days: 7
-
-      - name: Upload Build Scripts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-scripts
-          path: .build\
           retention-days: 7
 
       - name: Upload docker-compose file
@@ -106,6 +102,9 @@ jobs:
     name: Deploy to Docker Preview
     runs-on: self-hosted
     needs: build
+    defaults:
+      run:
+        shell: pwsh
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'preview'
 
     steps:
@@ -143,6 +142,9 @@ jobs:
     name: Deploy to Docker Production
     runs-on: self-hosted
     needs: build
+    defaults:
+      run:
+        shell: pwsh
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production'
 
     steps:
@@ -180,6 +182,9 @@ jobs:
     name: Create GitHub Release
     runs-on: self-hosted
     needs: build
+    defaults:
+      run:
+        shell: pwsh
     if: github.event_name == 'workflow_dispatch' && (github.event.inputs.create_release == 'true' || github.event.inputs.deploy_target == 'github_release')
 
     steps:
