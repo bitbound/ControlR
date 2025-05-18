@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
   /// </param>
   /// <returns></returns>
   public static IServiceCollection AddStronglyTypedSignalrClient<THub, TClient, TClientImpl>(
-    this IServiceCollection services, 
+    this IServiceCollection services,
     ServiceLifetime clientLifetime)
     where THub : class
     where TClient : class

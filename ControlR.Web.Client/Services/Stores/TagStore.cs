@@ -3,7 +3,7 @@
 namespace ControlR.Web.Client.Services.Stores;
 
 public interface ITagStore : IStoreBase<TagViewModel>
-{}
+{ }
 
 public class TagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<TagStore> logger)
   : StoreBase<TagViewModel>(controlrApi, snackbar, logger), ITagStore

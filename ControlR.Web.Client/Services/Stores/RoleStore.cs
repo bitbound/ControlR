@@ -3,7 +3,7 @@
 namespace ControlR.Web.Client.Services.Stores;
 
 public interface IRoleStore : IStoreBase<RoleViewModel>
-{}
+{ }
 
 internal class RoleStore(
   IControlrApi controlrApi,

@@ -90,7 +90,7 @@ public class DesktopCapturerTests
     _logger.LogInformation("Absolute: {Abs}", JsonSerializer.Serialize(abs, _jsonOptions));
 
     _inputSim.MovePointer(abs.X, abs.Y, Libraries.Shared.Dtos.StreamerDtos.MovePointerType.Absolute);
-    
+
     var virtualScreen = _screenGrabber.GetVirtualScreenBounds();
   }
 }

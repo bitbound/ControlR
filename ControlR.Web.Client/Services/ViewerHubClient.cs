@@ -11,7 +11,7 @@ public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : I
   public async Task InvokeToast(ToastInfo toastInfo)
   {
     var toastMessage = new ToastMessage(
-      toastInfo.Message, 
+      toastInfo.Message,
       toastInfo.MessageSeverity.ToMudSeverity());
 
     await _messenger.Send(toastMessage);

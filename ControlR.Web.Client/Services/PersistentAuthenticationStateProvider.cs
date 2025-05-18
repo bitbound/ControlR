@@ -39,7 +39,7 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
     ];
 
     var identity = new ClaimsIdentity(claims, nameof(PersistentAuthenticationStateProvider));
-    
+
     _authenticationStateTask = Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
   }
 

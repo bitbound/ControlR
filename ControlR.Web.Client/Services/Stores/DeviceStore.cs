@@ -3,7 +3,7 @@
 namespace ControlR.Web.Client.Services.Stores;
 
 public interface IDeviceStore : IStoreBase<DeviceDto>
-{}
+{ }
 
 internal class DeviceStore : StoreBase<DeviceDto>, IDeviceStore
 {

@@ -3,76 +3,76 @@
 namespace ControlR.Libraries.Shared.Primitives;
 public sealed class AutoResetEventAsync : IDisposable
 {
-    private readonly Lock _lock = new();
-    private readonly ConcurrentQueue<TaskCompletionSource> _queue = new();
-    private bool _isDisposed;
-    private bool _isSet;
-    public AutoResetEventAsync(bool isSet = false)
+  private readonly Lock _lock = new();
+  private readonly ConcurrentQueue<TaskCompletionSource> _queue = new();
+  private bool _isDisposed;
+  private bool _isSet;
+  public AutoResetEventAsync(bool isSet = false)
+  {
+    if (isSet)
     {
-        if (isSet)
-        {
-            Set();
-        }
+      Set();
     }
+  }
 
-    public bool IsSet
+  public bool IsSet
+  {
+    get
     {
-        get
-        {
-            lock (_lock)
-            {
-                return _isSet;
-            }
-        }
+      lock (_lock)
+      {
+        return _isSet;
+      }
     }
+  }
 
-    public void Dispose()
+  public void Dispose()
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            ObjectDisposedException.ThrowIf(_isDisposed, this);
-            _isDisposed = true;
+      ObjectDisposedException.ThrowIf(_isDisposed, this);
+      _isDisposed = true;
 
-            while (_queue.TryDequeue(out var tcs))
-            {
-                tcs.SetCanceled();
-            }
-        }
+      while (_queue.TryDequeue(out var tcs))
+      {
+        tcs.SetCanceled();
+      }
     }
+  }
 
-    public void Set()
+  public void Set()
+  {
+    lock (_lock)
     {
-        lock (_lock)
+      if (_queue.IsEmpty)
+      {
+        _isSet = true;
+      }
+      else
+      {
+        if (_queue.TryDequeue(out var tcs))
         {
-            if (_queue.IsEmpty)
-            {
-                _isSet = true;
-            }
-            else
-            {
-                if (_queue.TryDequeue(out var tcs))
-                {
-                    tcs.SetResult();
-                }
-            }
+          tcs.SetResult();
         }
+      }
     }
+  }
 
-    public Task Wait(CancellationToken cancellationToken)
+  public Task Wait(CancellationToken cancellationToken)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            if (_isSet)
-            {
-                _isSet = false;
-                return Task.CompletedTask;
-            }
-            else
-            {
-                var tsc = new TaskCompletionSource();
-                _queue.Enqueue(tsc);
-                return tsc.Task.WaitAsync(cancellationToken);
-            }
-        }
+      if (_isSet)
+      {
+        _isSet = false;
+        return Task.CompletedTask;
+      }
+      else
+      {
+        var tsc = new TaskCompletionSource();
+        _queue.Enqueue(tsc);
+        return tsc.Task.WaitAsync(cancellationToken);
+      }
     }
+  }
 }

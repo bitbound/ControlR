@@ -10,44 +10,44 @@ namespace ControlR.Libraries.Shared.Helpers;
 
 public static class Guard
 {
-    public static void IsNotNull<T>([NotNull] T? value, [CallerArgumentExpression(nameof(value))] string name = "")
+  public static void IsNotNull<T>([NotNull] T? value, [CallerArgumentExpression(nameof(value))] string name = "")
+  {
+    if (value is not null)
     {
-        if (value is not null)
-        {
-            return;
-        }
-
-        throw new ArgumentNullException(name);
+      return;
     }
 
-    public static void IsNotNull<T>([NotNull] T? value, [CallerArgumentExpression(nameof(value))] string name = "")
-        where T : struct
-    {
-        if (value is not null)
-        {
-            return;
-        }
+    throw new ArgumentNullException(name);
+  }
 
-        throw new ArgumentNullException(name);
+  public static void IsNotNull<T>([NotNull] T? value, [CallerArgumentExpression(nameof(value))] string name = "")
+      where T : struct
+  {
+    if (value is not null)
+    {
+      return;
     }
 
-    public static void IsNotNullOrEmpty([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
-    {
-        if (!string.IsNullOrEmpty(text))
-        {
-            return;
-        }
+    throw new ArgumentNullException(name);
+  }
 
-        throw new ArgumentNullException(name);
+  public static void IsNotNullOrEmpty([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
+  {
+    if (!string.IsNullOrEmpty(text))
+    {
+      return;
     }
 
-    public static void IsNotNullOrWhiteSpace([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
-    {
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
+    throw new ArgumentNullException(name);
+  }
 
-        throw new ArgumentNullException(name);
+  public static void IsNotNullOrWhiteSpace([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")
+  {
+    if (!string.IsNullOrWhiteSpace(text))
+    {
+      return;
     }
+
+    throw new ArgumentNullException(name);
+  }
 }

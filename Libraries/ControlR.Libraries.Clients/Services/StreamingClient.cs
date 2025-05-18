@@ -89,7 +89,7 @@ public abstract class StreamingClient(
     {
       _messageHandlers.AddOrUpdate(subscriber, handler);
     }
-    
+
     return new CallbackDisposable(() =>
     {
       lock (_messageHandlers)

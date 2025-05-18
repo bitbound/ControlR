@@ -6,7 +6,7 @@ public interface IClipboardManager
   Task<string?> GetText();
 }
 
-internal class ClipboardManager(IJsInterop jsInterop): IClipboardManager
+internal class ClipboardManager(IJsInterop jsInterop) : IClipboardManager
 {
   private readonly IJsInterop _jsInterop = jsInterop;
 

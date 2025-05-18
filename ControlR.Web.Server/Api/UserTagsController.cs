@@ -19,11 +19,11 @@ public class UserTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+
     var user = await appDb.Users
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == dto.UserId);
-    
+
     if (user is null)
     {
       return NotFound("User not found.");
@@ -33,9 +33,9 @@ public class UserTagsController : ControllerBase
     {
       return Unauthorized();
     }
-   
+
     var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
-    
+
     if (tag is null)
     {
       return NotFound("Tag not found.");
@@ -61,12 +61,12 @@ public class UserTagsController : ControllerBase
       var tags = await appDb.Tags
         .AsNoTracking()
         .ToListAsync();
-      
+
       return Ok(tags
         .Select(x => x.ToDto())
         .ToArray());
     }
-    
+
     if (!User.TryGetUserId(out var userId))
     {
       return Unauthorized();
@@ -76,49 +76,49 @@ public class UserTagsController : ControllerBase
       .AsNoTracking()
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
-    
+
     if (user is null)
     {
       return Unauthorized();
     }
-    
+
     if (user.Tags is not { Count: > 0 })
     {
       return Ok(Array.Empty<TagResponseDto>());
     }
-    
+
     var userTags = user.Tags
       .Select(x => x.ToDto())
       .ToArray();
-    
+
     return Ok(userTags);
   }
 
   [HttpGet("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<TagResponseDto[]>> GetUserTags(
-    [FromRoute]Guid userId,
+    [FromRoute] Guid userId,
     [FromServices] AppDb appDb)
   {
     var user = await appDb.Users
       .AsNoTracking()
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
-    
+
     if (user is null)
     {
       return Unauthorized();
     }
-    
+
     if (user.Tags is not { Count: > 0 })
     {
       return Ok(Array.Empty<TagResponseDto>());
     }
-    
+
     var userTags = user.Tags
       .Select(x => x.ToDto())
       .ToArray();
-    
+
     return Ok(userTags);
   }
 
@@ -133,11 +133,11 @@ public class UserTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+
     var user = await appDb.Users
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == userId);
-    
+
     if (user is null)
     {
       return NotFound("User not found.");

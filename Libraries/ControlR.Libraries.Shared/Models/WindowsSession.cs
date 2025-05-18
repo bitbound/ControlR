@@ -9,15 +9,15 @@ public enum WindowsSessionType
 [MessagePackObject]
 public class WindowsSession
 {
-  [Key(nameof(Id))] 
+  [Key(nameof(Id))]
   public uint Id { get; set; }
 
-  [Key(nameof(Name))] 
+  [Key(nameof(Name))]
   public string Name { get; set; } = string.Empty;
 
-  [Key(nameof(Type))] 
+  [Key(nameof(Type))]
   public WindowsSessionType Type { get; set; }
 
-  [Key(nameof(Username))] 
+  [Key(nameof(Username))]
   public string Username { get; set; } = string.Empty;
 }

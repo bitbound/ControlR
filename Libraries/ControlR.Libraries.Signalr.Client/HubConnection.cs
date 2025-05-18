@@ -139,8 +139,8 @@ internal sealed class HubConnection<THub, TClient>(
   where TClient : class
   where THub : class
 {
-  private const BindingFlags BindingFlags = 
-    System.Reflection.BindingFlags.Public | 
+  private const BindingFlags BindingFlags =
+    System.Reflection.BindingFlags.Public |
     System.Reflection.BindingFlags.Instance |
     System.Reflection.BindingFlags.DeclaredOnly;
 

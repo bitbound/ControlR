@@ -10,7 +10,7 @@ public class EqualToAttribute(string comparisonProperty) : ValidationAttribute
   protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
   {
     var currentValue = value;
-    var property = validationContext.ObjectType.GetProperty(_comparisonProperty) 
+    var property = validationContext.ObjectType.GetProperty(_comparisonProperty)
       ?? throw new ArgumentException("Property with this name not found.");
 
     var comparisonValue = property.GetValue(validationContext.ObjectInstance);

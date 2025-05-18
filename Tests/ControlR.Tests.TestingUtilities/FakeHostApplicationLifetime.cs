@@ -9,7 +9,7 @@ public sealed class FakeHostApplicationLifetime : IHostApplicationLifetime, IDis
 
   public FakeHostApplicationLifetime(
     TimeProvider timeProvider,
-    bool startApplication = true, 
+    bool startApplication = true,
     TimeSpan? stopDelay = null)
   {
     _timeProvider = timeProvider;

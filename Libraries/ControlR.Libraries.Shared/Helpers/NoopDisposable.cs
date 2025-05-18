@@ -2,8 +2,8 @@
 
 public class NoopDisposable : IDisposable
 {
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
+  public void Dispose()
+  {
+    GC.SuppressFinalize(this);
+  }
 }

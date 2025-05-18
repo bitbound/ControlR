@@ -7,7 +7,7 @@ public class ConcurrentHashSet<T> : ISet<T>, IReadOnlySet<T>
   private readonly HashSet<T> _set = [];
 
   public ConcurrentHashSet()
-  {}
+  { }
 
   public ConcurrentHashSet(IEnumerable<T> initialItems)
   {
@@ -185,6 +185,6 @@ public class ConcurrentHashSet<T> : ISet<T>, IReadOnlySet<T>
     lock (_set)
     {
       return _set.SetEquals(other);
-    } 
+    }
   }
 }

@@ -11,80 +11,80 @@ internal class WebSocketRelayMiddleware(
     ISessionStore _streamStore,
     ILogger<WebSocketRelayMiddleware> _logger)
 {
-    public async Task InvokeAsync(HttpContext context)
+  public async Task InvokeAsync(HttpContext context)
+  {
+    if (!context.WebSockets.IsWebSocketRequest)
     {
-        if (!context.WebSockets.IsWebSocketRequest)
-        {
-            await _next(context);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(context.Request.Path.Value))
-        {
-            SetBadRequest(context, "Path cannot be empty.");
-            return;
-        }
-
-        var parts = context.Request.Path.Value.Split("/", StringSplitOptions.RemoveEmptyEntries);
-
-        if (parts.Length < 3)
-        {
-            SetBadRequest(context, "Path should have at least 3 parts.");
-            return;
-        }
-
-        var sessionParam = parts[^2];
-        var accessToken = parts[^1];
-
-        if (!Guid.TryParse(sessionParam, out var sessionId))
-        {
-            SetBadRequest(context, "Session ID is not a valid GUID.");
-            return;
-        }
-
-        var requestId = Guid.NewGuid();
-        await using var signaler = _streamStore.GetOrAdd(sessionId, id => new SessionSignaler(requestId, accessToken));
-
-        if (!signaler.ValidateToken(accessToken))
-        {
-            _logger.LogError("Invalid access token.  Session ID: {SessionId}", sessionId);
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.CompleteAsync();
-            return;
-        }
-
-        if (!signaler.SignalReady())
-        {
-            _logger.LogError("Failed to signal ready.  Session ID: {SessionId}", sessionId);
-            SetBadRequest(context, "Failed to signal ready.");
-            return;
-        }
-
-        try
-        {
-            await signaler.WaitForPartner(_appLifetime.ApplicationStopping);
-            _ = _streamStore.TryRemove(sessionId, out _);
-
-            var websocket = await context.WebSockets.AcceptWebSocketAsync();
-            await signaler.SetWebsocket(websocket, requestId, _appLifetime.ApplicationStopping);
-            await StreamToPartner(signaler, requestId);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogWarning(ex, "Timed out while waiting for partner to connect.");
-            context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
-            await context.Response.WriteAsync("Timed out while waiting for partner.");
-            return;
-        }
+      await _next(context);
+      return;
     }
 
-    private void SetBadRequest(HttpContext context, string message)
+    if (string.IsNullOrWhiteSpace(context.Request.Path.Value))
     {
-        _logger.LogWarning("Bad request.  Path: {RequestPath}", context.Request.Path);
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        var body = $"{message}\n\nPath should be in the form of '/relay/{{session-id (Guid)}}'.";
-        context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
+      SetBadRequest(context, "Path cannot be empty.");
+      return;
     }
+
+    var parts = context.Request.Path.Value.Split("/", StringSplitOptions.RemoveEmptyEntries);
+
+    if (parts.Length < 3)
+    {
+      SetBadRequest(context, "Path should have at least 3 parts.");
+      return;
+    }
+
+    var sessionParam = parts[^2];
+    var accessToken = parts[^1];
+
+    if (!Guid.TryParse(sessionParam, out var sessionId))
+    {
+      SetBadRequest(context, "Session ID is not a valid GUID.");
+      return;
+    }
+
+    var requestId = Guid.NewGuid();
+    await using var signaler = _streamStore.GetOrAdd(sessionId, id => new SessionSignaler(requestId, accessToken));
+
+    if (!signaler.ValidateToken(accessToken))
+    {
+      _logger.LogError("Invalid access token.  Session ID: {SessionId}", sessionId);
+      context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+      await context.Response.CompleteAsync();
+      return;
+    }
+
+    if (!signaler.SignalReady())
+    {
+      _logger.LogError("Failed to signal ready.  Session ID: {SessionId}", sessionId);
+      SetBadRequest(context, "Failed to signal ready.");
+      return;
+    }
+
+    try
+    {
+      await signaler.WaitForPartner(_appLifetime.ApplicationStopping);
+      _ = _streamStore.TryRemove(sessionId, out _);
+
+      var websocket = await context.WebSockets.AcceptWebSocketAsync();
+      await signaler.SetWebsocket(websocket, requestId, _appLifetime.ApplicationStopping);
+      await StreamToPartner(signaler, requestId);
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogWarning(ex, "Timed out while waiting for partner to connect.");
+      context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
+      await context.Response.WriteAsync("Timed out while waiting for partner.");
+      return;
+    }
+  }
+
+  private void SetBadRequest(HttpContext context, string message)
+  {
+    _logger.LogWarning("Bad request.  Path: {RequestPath}", context.Request.Path);
+    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+    var body = $"{message}\n\nPath should be in the form of '/relay/{{session-id (Guid)}}'.";
+    context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
+  }
 
   private async Task StreamToPartner(SessionSignaler signaler, Guid callerRequestId)
   {
@@ -123,7 +123,7 @@ internal class WebSocketRelayMiddleware(
         await partnerWebsocket.SendAsync(
             bufferMemory[..result.Count],
             result.MessageType,
-            result.EndOfMessage, 
+            result.EndOfMessage,
             _appLifetime.ApplicationStopping);
       }
     }

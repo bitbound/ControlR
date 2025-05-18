@@ -2,6 +2,6 @@
 
 public enum TerminalOutputKind
 {
-    StandardOutput,
-    StandardError,
+  StandardOutput,
+  StandardError,
 }

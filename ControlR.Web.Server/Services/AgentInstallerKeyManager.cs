@@ -37,20 +37,20 @@ public class AgentInstallerKeyManager(
     switch (keyType)
     {
       case InstallerKeyType.UsageBased:
-      {
-        _keyCache.Set(keySecret, installerKey);
-        break;
-      }
-      case InstallerKeyType.TimeBased:
-      {
-        if (!expiration.HasValue)
         {
-          throw new ArgumentNullException(nameof(expiration));
+          _keyCache.Set(keySecret, installerKey);
+          break;
         }
+      case InstallerKeyType.TimeBased:
+        {
+          if (!expiration.HasValue)
+          {
+            throw new ArgumentNullException(nameof(expiration));
+          }
 
-        _keyCache.Set(keySecret, installerKey, expiration.Value);
-        break;
-      }
+          _keyCache.Set(keySecret, installerKey, expiration.Value);
+          break;
+        }
       case InstallerKeyType.Unknown:
       default:
         throw new ArgumentOutOfRangeException(nameof(keyType), "Unknown installer key type.");
@@ -90,35 +90,35 @@ public class AgentInstallerKeyManager(
       case InstallerKeyType.Unknown:
         break;
       case InstallerKeyType.UsageBased:
-      {
-        // This operation has a race condition if multiple validations are being
-        // performed on the same key concurrently.  But the risk/impact is so
-        // small that it's not worth locking the resource.
-
-        var isValid = installerKey.CurrentUses < installerKey.AllowedUses;
-        installerKey = installerKey with { CurrentUses = installerKey.CurrentUses + 1 };
-
-        if (installerKey.CurrentUses >= installerKey.AllowedUses)
         {
-          _keyCache.Remove(key);
-        }
-        else
-        {
-          _keyCache.Set(key, installerKey);
-        }
+          // This operation has a race condition if multiple validations are being
+          // performed on the same key concurrently.  But the risk/impact is so
+          // small that it's not worth locking the resource.
 
-        return isValid.AsTaskResult();
-      }
+          var isValid = installerKey.CurrentUses < installerKey.AllowedUses;
+          installerKey = installerKey with { CurrentUses = installerKey.CurrentUses + 1 };
+
+          if (installerKey.CurrentUses >= installerKey.AllowedUses)
+          {
+            _keyCache.Remove(key);
+          }
+          else
+          {
+            _keyCache.Set(key, installerKey);
+          }
+
+          return isValid.AsTaskResult();
+        }
       case InstallerKeyType.TimeBased:
-      {
-        var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
-        if (!isValid)
         {
-          _keyCache.Remove(key);
-        }
+          var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
+          if (!isValid)
+          {
+            _keyCache.Remove(key);
+          }
 
-        return isValid.AsTaskResult();
-      }
+          return isValid.AsTaskResult();
+        }
       default:
         _logger.LogError("Unknown installer key type: {KeyType}", installerKey.KeyType);
         break;

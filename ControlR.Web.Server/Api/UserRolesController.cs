@@ -22,11 +22,11 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     {
       return Unauthorized();
     }
-    
+
     var user = await appDb.Users
       .Include(x => x.UserRoles)
       .FirstOrDefaultAsync(x => x.Id == dto.UserId);
-    
+
     if (user is null)
     {
       return NotFound("User not found.");
@@ -36,9 +36,9 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     {
       return Unauthorized();
     }
-    
+
     var role = await appDb.Roles.FirstOrDefaultAsync(x => x.Id == dto.RoleId);
-    
+
     if (role is null)
     {
       return NotFound("Role not found.");
@@ -71,7 +71,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
   public async Task<ActionResult<RoleResponseDto[]>> GetOwnRoles(
     [FromServices] AppDb appDb)
   {
-    
+
     if (!User.TryGetUserId(out var userId))
     {
       return Unauthorized();
@@ -88,28 +88,28 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
           .Where(r => u.UserRoles!.Any(ur => ur.RoleId == r.Id)).ToList()
       })
       .FirstOrDefaultAsync(x => x.User.Id == userId);
-    
+
     if (user is null)
     {
       return Unauthorized();
     }
-    
+
     if (user.Roles is not { Count: > 0 })
     {
       return Ok(Array.Empty<RoleResponseDto>());
     }
-    
+
     var userRoles = user.Roles
       .Select(x => x.ToDto())
       .ToArray();
-    
+
     return Ok(userRoles);
   }
 
   [HttpGet("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<RoleResponseDto[]>> GetUserRoles(
-    [FromRoute]Guid userId,
+    [FromRoute] Guid userId,
     [FromServices] AppDb appDb)
   {
     var user = await appDb.Users
@@ -128,16 +128,16 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     {
       return Unauthorized();
     }
-    
+
     if (user.Roles is not { Count: > 0 })
     {
       return Ok(Array.Empty<RoleResponseDto>());
     }
-    
+
     var userRoles = user.Roles
       .Select(x => x.ToDto())
       .ToArray();
-    
+
     return Ok(userRoles);
   }
 
@@ -157,11 +157,11 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     {
       return Unauthorized();
     }
-    
+
     var user = await appDb.Users
       .Include(x => x.UserRoles)
       .FirstOrDefaultAsync(x => x.Id == userId);
-    
+
     if (user is null)
     {
       return NotFound("User not found.");

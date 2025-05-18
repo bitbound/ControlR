@@ -13,9 +13,9 @@ public class InvitesController : ControllerBase
   [HttpPost("accept")]
   [AllowAnonymous]
   public async Task<ActionResult<AcceptInvitationResponseDto>> AcceptInvite(
-    [FromBody]AcceptInvitationRequestDto dto,
+    [FromBody] AcceptInvitationRequestDto dto,
     [FromServices] AppDb appDb,
-    [FromServices]UserManager<AppUser> userManager)
+    [FromServices] UserManager<AppUser> userManager)
   {
     var invite = await appDb.TenantInvites
       .IgnoreQueryFilters()
@@ -48,7 +48,7 @@ public class InvitesController : ControllerBase
 
   [HttpGet]
   public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
-    [FromServices]AppDb appDb)
+    [FromServices] AppDb appDb)
   {
     var origin = Request.ToOrigin();
     return await appDb.TenantInvites
@@ -62,9 +62,9 @@ public class InvitesController : ControllerBase
 
   [HttpPost]
   public async Task<ActionResult<TenantInviteResponseDto>> Create(
-    [FromBody]TenantInviteRequestDto dto,
-    [FromServices]AppDb appDb,
-    [FromServices]IUserCreator userCreator)
+    [FromBody] TenantInviteRequestDto dto,
+    [FromServices] AppDb appDb,
+    [FromServices] IUserCreator userCreator)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -87,14 +87,14 @@ public class InvitesController : ControllerBase
 
     var randomPassword = RandomGenerator.GenerateString(64);
     var createResult = await userCreator.CreateUser(
-      dto.InviteeEmail, 
-      password: randomPassword, 
+      dto.InviteeEmail,
+      password: randomPassword,
       tenantId: tenantId);
 
     if (!createResult.Succeeded)
     {
       var firstError = createResult.IdentityResult.Errors.FirstOrDefault();
-      
+
       if (firstError is { Code: nameof(IdentityErrorDescriber.DuplicateUserName) } idError)
       {
         return Conflict("User already exists.");
@@ -122,7 +122,7 @@ public class InvitesController : ControllerBase
   public async Task<IActionResult> Delete(
     [FromRoute] Guid inviteId,
     [FromServices] AppDb appDb,
-    [FromServices]UserManager<AppUser> userManager)
+    [FromServices] UserManager<AppUser> userManager)
   {
     var invite = await appDb.TenantInvites.FindAsync(inviteId);
     if (invite is null)

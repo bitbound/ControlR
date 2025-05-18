@@ -36,9 +36,9 @@ internal class AgentInstallerWindows(
   private readonly IProcessManager _processes = processes;
 
   public async Task Install(
-    Uri? serverUri = null, 
-    Guid? tenantId = null, 
-    string? installerKey = null, 
+    Uri? serverUri = null,
+    Guid? tenantId = null,
+    string? installerKey = null,
     Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))

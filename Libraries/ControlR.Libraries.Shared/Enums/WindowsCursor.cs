@@ -2,13 +2,13 @@
 
 public enum WindowsCursor
 {
-    Unknown,
-    NormalArrow,
-    Ibeam,
-    SizeNs,
-    SizeWe,
-    SizeNwse,
-    SizeNesw,
-    Wait,
-    Hand
+  Unknown,
+  NormalArrow,
+  Ibeam,
+  SizeNs,
+  SizeWe,
+  SizeNwse,
+  SizeNesw,
+  Wait,
+  Hand
 }

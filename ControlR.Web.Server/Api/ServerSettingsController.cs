@@ -13,7 +13,7 @@ public class ServerSettingsController : ControllerBase
     [FromServices] AppDb db,
     [FromServices] IOptionsMonitor<AppOptions> appOptions)
   {
-    var registrationEnabled =  appOptions.CurrentValue.EnablePublicRegistration || !await db.Users.AnyAsync();
+    var registrationEnabled = appOptions.CurrentValue.EnablePublicRegistration || !await db.Users.AnyAsync();
     return new ServerSettingsDto(registrationEnabled);
   }
 }

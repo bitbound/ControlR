@@ -45,7 +45,7 @@ public class DevicesController : ControllerBase
         return BadRequest();
       }
 
-      var authResult = await deviceManager.CanInstallAgentOnDevice(keyCreator,  existingDevice);
+      var authResult = await deviceManager.CanInstallAgentOnDevice(keyCreator, existingDevice);
 
       if (!authResult)
       {

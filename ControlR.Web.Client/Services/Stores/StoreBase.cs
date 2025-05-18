@@ -81,7 +81,7 @@ public abstract class StoreBase<TDto>(
 
   public IDisposable RegisterChangeHandler(object subscriber, Func<Task> handler)
   {
-    
+
     lock (_changeHandlers)
     {
       _changeHandlers.AddOrUpdate(subscriber, handler);
@@ -120,7 +120,7 @@ public abstract class StoreBase<TDto>(
 
   public async Task<bool> Remove(TDto dto)
   {
-    var removed =  Cache.Remove(dto.Id, out _);
+    var removed = Cache.Remove(dto.Id, out _);
     await InvokeChangeHandlers();
     return removed;
   }

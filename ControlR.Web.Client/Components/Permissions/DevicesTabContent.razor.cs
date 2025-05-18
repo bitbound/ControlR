@@ -30,7 +30,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
       .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
       .OrderBy(x => x.Name);
 
-  private IOrderedEnumerable<TagViewModel> FilteredTags => 
+  private IOrderedEnumerable<TagViewModel> FilteredTags =>
     TagStore.Items
       .Where(x => x.Name.Contains(_tagSearchPattern, StringComparison.OrdinalIgnoreCase))
       .OrderBy(x => x.Name);

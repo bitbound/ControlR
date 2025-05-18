@@ -21,7 +21,7 @@ public class AgentInstallerKeyManagerTests
       _timeProvider,
       logger);
   }
-  
+
   [Fact]
   public async Task ValidateKey_WhenKeyDoesNotExist_Fails()
   {
@@ -33,10 +33,10 @@ public class AgentInstallerKeyManagerTests
   public async Task ValidateKey_WhenUsageBasedKeyExists_Succeeds()
   {
     var key = await _keyManager.CreateKey(
-      tenantId: Guid.NewGuid(), 
-      creatorId: Guid.NewGuid(), 
-      keyType: InstallerKeyType.UsageBased, 
-      allowedUses: 1, 
+      tenantId: Guid.NewGuid(),
+      creatorId: Guid.NewGuid(),
+      keyType: InstallerKeyType.UsageBased,
+      allowedUses: 1,
       expiration: null);
 
     var validateResult = await _keyManager.ValidateKey(key.KeySecret);

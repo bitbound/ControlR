@@ -27,18 +27,18 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-    
+
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
     var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
-    
+
     // Create test tags
     foreach (var tagId in tagIds)
     {
       db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenantId });
     }
     await db.SaveChangesAsync();
-    
+
     var deviceDto = new DeviceDto(
       Name: "Test Device",
       AgentVersion: "1.0.0",
@@ -58,7 +58,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       UsedMemory: 8192,
       UsedStorage: 512000,
       CurrentUsers: ["User1", "User2"],
-      MacAddresses: ["00:00:00:00:00:01"],      PublicIpV4: "127.0.0.1",
+      MacAddresses: ["00:00:00:00:00:01"], PublicIpV4: "127.0.0.1",
       PublicIpV6: "::1",
       Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }])
     {
@@ -93,15 +93,15 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal("::1", result.PublicIpV6);
     Assert.Single(result.Drives);
     Assert.Equal("C:", result.Drives[0].Name);
-    
+
     // Verify tags are associated
     Assert.NotNull(result.Tags);
     Assert.Equal(2, result.Tags.Count);
     Assert.All(result.Tags, tag => Assert.Contains(tag.Id, tagIds));
-    
+
     // Verify Alias isn't updated (DeviceDto.Alias shouldn't update the entity)
     Assert.Equal(string.Empty, result.Alias);
-    
+
     // Test update of existing device
     var updatedDto = deviceDto with
     {
@@ -109,15 +109,15 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       AgentVersion = "1.0.1",
       OsDescription = "Windows 11"
     };
-    
+
     var updatedResult = await deviceManager.AddOrUpdate(updatedDto, addTagIds: false);
-    
+
     Assert.NotNull(updatedResult);
     Assert.Equal(deviceId, updatedResult.Id);
     Assert.Equal("Updated Device", updatedResult.Name);
     Assert.Equal("1.0.1", updatedResult.AgentVersion);
     Assert.Equal("Windows 11", updatedResult.OsDescription);
-    
+
     // Verify tags aren't updated since addTagIds is false
     Assert.NotNull(updatedResult.Tags);
     Assert.Equal(2, updatedResult.Tags.Count);
@@ -130,17 +130,17 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-    
+
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
     var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
-    
+
     // Create test tags
     foreach (var tagId in tagIds)
     {
       db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenantId });
     }
-    
+
     // Create a device in the database first
     var device = new Device
     {
@@ -152,7 +152,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     };
     db.Devices.Add(device);
     await db.SaveChangesAsync();
-    
+
     var deviceDto = new DeviceDto(
       Name: "Updated Device",
       AgentVersion: "2.0.0",
@@ -187,7 +187,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     // Assert
     Assert.True(result.IsSuccess);
     var updatedDevice = result.Value;
-    
+
     Assert.NotNull(updatedDevice);
     Assert.Equal(deviceId, updatedDevice.Id);
     Assert.Equal("Updated Device", updatedDevice.Name);
@@ -201,19 +201,19 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal("test-connection-id", updatedDevice.ConnectionId);
     Assert.Equal("Windows 11", updatedDevice.OsDescription);
     Assert.Equal(tenantId, updatedDevice.TenantId);
-    
+
     // Verify tags are associated
     Assert.NotNull(updatedDevice.Tags);
     Assert.Equal(2, updatedDevice.Tags.Count);
     Assert.All(updatedDevice.Tags, tag => Assert.Contains(tag.Id, tagIds));
-    
+
     // Verify Alias isn't updated (DeviceDto.Alias shouldn't update the entity)
     Assert.Equal("Original Alias", updatedDevice.Alias);
-    
+
     // Test update with non-existent device ID
     var nonExistentDto = deviceDto with { Id = Guid.NewGuid() };
     var failResult = await deviceManager.UpdateDevice(nonExistentDto);
-      Assert.False(failResult.IsSuccess);
+    Assert.False(failResult.IsSuccess);
     Assert.Equal("Device does not exist in the database.", failResult.Reason);
   }
 
@@ -225,10 +225,10 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-    
+
     var tenantId = Guid.NewGuid();
     var otherTenantId = Guid.NewGuid();
-    
+
     // Create a test device
     var device = new Device
     {
@@ -237,7 +237,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       TenantId = tenantId
     };
     db.Devices.Add(device);
-    
+
     // Create a role for agent installer
     var installerRole = new AppRole
     {
@@ -246,7 +246,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       NormalizedName = RoleNames.AgentInstaller.ToUpper()
     };
     await db.Roles.AddAsync(installerRole);
-    
+
     // Create users with different permissions
     var installerUser = new AppUser
     {
@@ -258,7 +258,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       EmailConfirmed = true,
       TenantId = tenantId
     };
-    
+
     var nonInstallerUser = new AppUser
     {
       Id = Guid.NewGuid(),
@@ -269,7 +269,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       EmailConfirmed = true,
       TenantId = tenantId
     };
-    
+
     var differentTenantUser = new AppUser
     {
       Id = Guid.NewGuid(),
@@ -280,28 +280,28 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       EmailConfirmed = true,
       TenantId = otherTenantId
     };
-    
+
     await db.Users.AddRangeAsync(installerUser, nonInstallerUser, differentTenantUser);
-    
+
     // Assign installer role to the installer user
     await db.UserRoles.AddAsync(new IdentityUserRole<Guid>
     {
       UserId = installerUser.Id,
       RoleId = installerRole.Id
     });
-    
+
     await db.SaveChangesAsync();
 
     // Act & Assert
-    
+
     // Installer user from same tenant should be able to install
     var canInstall = await deviceManager.CanInstallAgentOnDevice(installerUser, device);
     Assert.True(canInstall);
-    
+
     // Non-installer user from same tenant should not be able to install
     var canNonInstallerInstall = await deviceManager.CanInstallAgentOnDevice(nonInstallerUser, device);
     Assert.False(canNonInstallerInstall);
-    
+
     // User from different tenant should not be able to install
     var canDifferentTenantInstall = await deviceManager.CanInstallAgentOnDevice(differentTenantUser, device);
     Assert.False(canDifferentTenantInstall);

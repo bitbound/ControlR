@@ -20,11 +20,11 @@ public class DeviceTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+
     var device = await appDb.Devices
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == dto.DeviceId);
-    
+
     if (device is null)
     {
       return NotFound("Device not found.");
@@ -34,9 +34,9 @@ public class DeviceTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+
     var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
-    
+
     if (tag is null)
     {
       return NotFound("Tag not found.");
@@ -69,11 +69,11 @@ public class DeviceTagsController : ControllerBase
     {
       return Unauthorized();
     }
-    
+
     var device = await appDb.Devices
       .Include(x => x.Tags)
       .FirstOrDefaultAsync(x => x.Id == deviceId);
-    
+
     if (device is null)
     {
       return NotFound("User not found.");
@@ -94,7 +94,7 @@ public class DeviceTagsController : ControllerBase
     await appDb.SaveChangesAsync();
 
     await agentHub.Groups.RemoveFromGroupAsync(
-      device.ConnectionId, 
+      device.ConnectionId,
       HubGroupNames.GetTagGroupName(tagId, tenantId));
 
     return NoContent();

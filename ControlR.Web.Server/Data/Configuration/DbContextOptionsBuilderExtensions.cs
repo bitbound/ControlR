@@ -17,7 +17,7 @@ public static class DbContextOptionsBuilderExtensions
     }
 
     var options = new ClaimsDbContextOptions
-    { 
+    {
       TenantId = tenantId,
       UserId = userId
     };

@@ -137,8 +137,8 @@ internal class DxOutputGenerator : IDxOutputGenerator
     }
 
     _faultedDevices.Set(
-      _currentOutput.DeviceName, 
-      _currentOutput.DeviceName, 
+      _currentOutput.DeviceName,
+      _currentOutput.DeviceName,
       TimeSpan.FromSeconds(10));
 
     Disposer.TryDispose(_currentOutput);

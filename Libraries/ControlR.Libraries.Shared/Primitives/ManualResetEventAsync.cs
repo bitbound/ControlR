@@ -2,65 +2,65 @@
 
 public sealed class ManualResetEventAsync : IDisposable
 {
-    private readonly Lock _taskLock = new();
-    private TaskCompletionSource _tcs = new();
+  private readonly Lock _taskLock = new();
+  private TaskCompletionSource _tcs = new();
 
-    public ManualResetEventAsync(bool isSet = false)
+  public ManualResetEventAsync(bool isSet = false)
+  {
+    if (isSet)
     {
-        if (isSet)
-        {
-            Set();
-        }
+      Set();
     }
+  }
 
-    public bool IsSet
+  public bool IsSet
+  {
+    get
     {
-        get
-        {
-            lock (_taskLock)
-            {
-                return _tcs.Task.IsCompleted;
-            }
-        }
+      lock (_taskLock)
+      {
+        return _tcs.Task.IsCompleted;
+      }
     }
+  }
 
-    public void Dispose()
+  public void Dispose()
+  {
+    Set();
+  }
+
+  public void Reset()
+  {
+    lock (_taskLock)
     {
-        Set();
-    }
+      if (!_tcs.Task.IsCompleted)
+      {
+        return;
+      }
 
-    public void Reset()
+      _tcs = new();
+    }
+  }
+
+  public void Set()
+  {
+    lock (_taskLock)
     {
-        lock (_taskLock)
-        {
-            if (!_tcs.Task.IsCompleted)
-            {
-                return;
-            }
-
-            _tcs = new();
-        }
+      _ = _tcs.TrySetResult();
     }
+  }
 
-    public void Set()
+  public Task Wait(CancellationToken cancellationToken)
+  {
+    lock (_taskLock)
     {
-        lock (_taskLock)
-        {
-            _ = _tcs.TrySetResult();
-        }
+      return _tcs.Task.WaitAsync(cancellationToken);
     }
+  }
 
-    public Task Wait(CancellationToken cancellationToken)
-    {
-        lock (_taskLock)
-        {
-            return _tcs.Task.WaitAsync(cancellationToken);
-        }
-    }
-
-    public async Task Wait(TimeSpan timeout)
-    {
-        using var cts = new CancellationTokenSource(timeout);
-        await Wait(cts.Token);
-    }
+  public async Task Wait(TimeSpan timeout)
+  {
+    using var cts = new CancellationTokenSource(timeout);
+    await Wait(cts.Token);
+  }
 }

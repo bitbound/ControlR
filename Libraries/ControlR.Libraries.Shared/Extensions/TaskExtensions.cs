@@ -2,54 +2,54 @@
 
 public static class TaskExtensions
 {
-    public static async void Forget(this Task task, Func<Exception, Task>? exceptionHandler = null)
+  public static async void Forget(this Task task, Func<Exception, Task>? exceptionHandler = null)
+  {
+    try
     {
-        try
-        {
-            await task;
-        }
-        catch (Exception ex)
-        {
-            if (exceptionHandler is null)
-            {
-                return;
-            }
-
-            try
-            {
-                await exceptionHandler(ex);
-            }
-            catch { }
-        }
+      await task;
     }
-
-    public static async void Forget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
+    catch (Exception ex)
     {
-        try
-        {
-            await task;
-        }
-        catch (Exception ex)
-        {
-            if (exceptionHandler is null)
-            {
-                return;
-            }
+      if (exceptionHandler is null)
+      {
+        return;
+      }
 
-            try
-            {
-                await exceptionHandler(ex);
-            }
-            catch { }
-        }
+      try
+      {
+        await exceptionHandler(ex);
+      }
+      catch { }
     }
+  }
 
-    public static Task OrCompleted<T>(this T? value)
+  public static async void Forget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
+  {
+    try
     {
-        if (value is Task task)
-        {
-            return task;
-        }
-        return Task.CompletedTask;
+      await task;
     }
+    catch (Exception ex)
+    {
+      if (exceptionHandler is null)
+      {
+        return;
+      }
+
+      try
+      {
+        await exceptionHandler(ex);
+      }
+      catch { }
+    }
+  }
+
+  public static Task OrCompleted<T>(this T? value)
+  {
+    if (value is Task task)
+    {
+      return task;
+    }
+    return Task.CompletedTask;
+  }
 }

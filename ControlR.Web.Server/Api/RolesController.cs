@@ -10,17 +10,17 @@ public class RolesController : ControllerBase
 {
   [HttpGet]
   public async Task<ActionResult<RoleResponseDto[]>> GetAll(
-    [FromServices]RoleManager<AppRole> roleManager)
+    [FromServices] RoleManager<AppRole> roleManager)
   {
     var roles = await roleManager.Roles
       .AsNoTracking()
       .Include(r => r.UserRoles)
       .Select(r => new
-        {
-          r.Id,
-          Name = r.Name ?? "",
-          UserIds = r.UserRoles!.Select(u => u.UserId)
-        })
+      {
+        r.Id,
+        Name = r.Name ?? "",
+        UserIds = r.UserRoles!.Select(u => u.UserId)
+      })
       .ToListAsync();
 
     var dtos = roles.Select(x => new RoleResponseDto(x.Id, x.Name, [.. x.UserIds]));

@@ -37,7 +37,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureRoles(builder);
 
     ConfigureTags(builder);
-    
+
     ConfigureUsers(builder);
 
     ConfigureUserPreferences(builder);
@@ -135,7 +135,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           Name = RoleNames.DeviceSuperUser,
           NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
         });
-    
+
     builder
       .Entity<AppRole>()
       .HasData(

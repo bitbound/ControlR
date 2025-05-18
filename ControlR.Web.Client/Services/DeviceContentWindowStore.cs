@@ -37,15 +37,15 @@ internal class DeviceContentWindowStore : IDeviceContentWindowStore
   }
 
   public void AddContentInstance<T>(
-    DeviceViewModel device, 
-    DeviceContentInstanceType instanceType, 
+    DeviceViewModel device,
+    DeviceContentInstanceType instanceType,
     Dictionary<string, object?>? componentParams = null)
     where T : ComponentBase
   {
     void RenderComponent(RenderTreeBuilder builder)
     {
       builder.OpenComponent<T>(0);
-      
+
       if (componentParams is not null)
       {
         for (var i = 0; i < componentParams.Count; i++)

@@ -284,7 +284,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Error while drawing frame.");
+      Logger.LogError(ex, "Error while drawing frame.");
     }
   }
 

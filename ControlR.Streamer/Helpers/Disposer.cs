@@ -1,18 +1,18 @@
 ﻿namespace ControlR.Streamer.Helpers;
 public static class Disposer
 {
-    public static void TryDispose(params IDisposable?[] disposables)
+  public static void TryDispose(params IDisposable?[] disposables)
+  {
+    foreach (var disposable in disposables)
     {
-        foreach (var disposable in disposables)
-        {
-          try
-          {
-            disposable?.Dispose();
-          }
-          catch
-          {
-            // Intentionally ignored.
-          }
-        }
+      try
+      {
+        disposable?.Dispose();
+      }
+      catch
+      {
+        // Intentionally ignored.
+      }
     }
+  }
 }

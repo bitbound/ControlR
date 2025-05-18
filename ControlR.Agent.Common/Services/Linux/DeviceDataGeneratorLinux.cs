@@ -16,7 +16,7 @@ internal class DeviceDataGeneratorLinux(
   private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceModel> CreateDevice( Guid deviceId)
+  public async Task<DeviceModel> CreateDevice(Guid deviceId)
   {
     try
     {

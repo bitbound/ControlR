@@ -29,7 +29,7 @@ public static class EntityToDtoExtensions
       device.PublicIpV4,
       device.PublicIpV6,
       device.Drives)
-    { 
+    {
       Alias = device.Alias,
     };
   }

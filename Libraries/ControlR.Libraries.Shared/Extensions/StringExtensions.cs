@@ -9,7 +9,7 @@ public static class StringExtensions
     var invalidCharacters = Path.GetInvalidFileNameChars().ToHashSet();
     return string.Concat(self.Aggregate(
       new StringBuilder(),
-      (sb, c) => invalidCharacters.Contains(c) 
+      (sb, c) => invalidCharacters.Contains(c)
         ? sb.Append('_')
         : sb.Append(c)));
   }

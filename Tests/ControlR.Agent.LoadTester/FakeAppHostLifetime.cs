@@ -12,6 +12,6 @@ internal class FakeAppHostLifetime(CancellationToken stoppingToken) : IHostAppli
 
   public void StopApplication()
   {
-   
+
   }
 }

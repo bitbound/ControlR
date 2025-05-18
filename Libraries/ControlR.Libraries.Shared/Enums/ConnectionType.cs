@@ -4,12 +4,12 @@ namespace ControlR.Libraries.Shared.Enums;
 
 public enum ConnectionType
 {
-    [EnumMember]
-    Unknown,
-    [EnumMember]
-    Viewer,
-    [EnumMember]
-    Agent,
-    [EnumMember]
-    Desktop
+  [EnumMember]
+  Unknown,
+  [EnumMember]
+  Viewer,
+  [EnumMember]
+  Agent,
+  [EnumMember]
+  Desktop
 }

@@ -177,8 +177,8 @@ internal class DesktopCapturer : IDesktopCapturer
       }
 
       EncodeRegion(
-        bitmap: captureResult.Bitmap, 
-        region: diffArea, 
+        bitmap: captureResult.Bitmap,
+        region: diffArea,
         quality: quality);
     }
     finally

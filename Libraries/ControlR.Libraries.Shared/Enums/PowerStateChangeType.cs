@@ -4,12 +4,12 @@ namespace ControlR.Libraries.Shared.Enums;
 
 public enum PowerStateChangeType
 {
-    [EnumMember]
-    None,
+  [EnumMember]
+  None,
 
-    [EnumMember]
-    Restart,
+  [EnumMember]
+  Restart,
 
-    [EnumMember]
-    Shutdown
+  [EnumMember]
+  Shutdown
 }

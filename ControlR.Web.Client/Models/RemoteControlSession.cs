@@ -6,7 +6,7 @@ public class RemoteControlSession(DeviceViewModel device, int initialSystemSessi
   public Guid SessionId { get; private set; } = Guid.NewGuid();
 
   public void CreateNewSessionId()
-    {
-        SessionId = Guid.NewGuid();
-    }
+  {
+    SessionId = Guid.NewGuid();
+  }
 }

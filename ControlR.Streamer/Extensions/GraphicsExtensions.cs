@@ -9,5 +9,5 @@ public static class GraphicsExtensions
     return new DisposableValue<nint>(
       value: graphics.GetHdc(),
       disposeCallback: graphics.ReleaseHdc);
-  } 
+  }
 }

@@ -31,7 +31,7 @@ public class OptionsMonitorWrapper<T>(T options) : IOptionsMonitor<T>
     {
       _listeners.Add(listener);
     }
-    
+
     return new CallbackDisposable(() =>
     {
       lock (_listeners)

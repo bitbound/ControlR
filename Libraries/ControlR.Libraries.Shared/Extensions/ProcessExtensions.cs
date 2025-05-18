@@ -4,17 +4,17 @@ namespace ControlR.Libraries.Shared.Extensions;
 
 public static class ProcessExtensions
 {
-    public static void KillAndDispose(this Process process)
+  public static void KillAndDispose(this Process process)
+  {
+    try
     {
-        try
-        {
-            process.Kill();
-        }
-        catch { }
-        try
-        {
-            process.Dispose();
-        }
-        catch { }
+      process.Kill();
     }
+    catch { }
+    try
+    {
+      process.Dispose();
+    }
+    catch { }
+  }
 }

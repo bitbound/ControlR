@@ -262,12 +262,12 @@ internal sealed class ScreenGrabber(
         _ = TryDrawCursor(graphics, captureArea);
       }
 
-      return CaptureResult.Ok(bitmap,isUsingGpu: false);
+      return CaptureResult.Ok(bitmap, isUsingGpu: false);
     }
     catch (Exception ex)
     {
       _logger.LogError(
-        ex, 
+        ex,
         "Error getting capture with BitBlt. Capture Area: {@CaptureArea}",
         captureArea);
       return CaptureResult.Fail(ex);

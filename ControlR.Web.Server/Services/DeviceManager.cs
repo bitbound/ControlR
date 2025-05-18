@@ -23,7 +23,7 @@ public class DeviceManager(
     var entityState = entity is null
       ? EntityState.Added
       : EntityState.Modified;
-    
+
     entity ??= new Device();
 
     await UpdateDeviceEntity(entity, deviceDto, entityState, addTagIds);

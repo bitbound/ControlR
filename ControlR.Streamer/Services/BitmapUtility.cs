@@ -104,7 +104,7 @@ public class BitmapUtility : IBitmapUtility
       bd2 = currentFrame.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, previousFrame.PixelFormat);
 
       var bytesPerPixel = Image.GetPixelFormatSize(currentFrame.PixelFormat) / 8;
-      
+
       unsafe
       {
         var scan1 = (byte*)bd1.Scan0.ToPointer();

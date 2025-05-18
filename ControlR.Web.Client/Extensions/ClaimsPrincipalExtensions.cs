@@ -29,7 +29,7 @@ public static class ClaimsPrincipalExtensions
     tenantId = id;
     return true;
   }
-  
+
   public static bool TryGetUserId(
     this ClaimsPrincipal user,
     out Guid userId)

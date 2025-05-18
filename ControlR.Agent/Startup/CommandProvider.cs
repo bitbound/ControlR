@@ -146,13 +146,13 @@ internal static class CommandProvider
   }
 
   private static IHost CreateHost(
-    StartupMode startupMode, 
-    string[] args, 
+    StartupMode startupMode,
+    string[] args,
     string? instanceId = null,
     Uri? serverUri = null)
   {
     var host = Host.CreateApplicationBuilder(args);
-   
+
     host.AddControlRAgent(startupMode, instanceId, serverUri);
     return host.Build();
   }

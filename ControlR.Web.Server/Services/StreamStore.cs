@@ -40,8 +40,8 @@ public class StreamStore(ILogger<StreamStore> logger) : IStreamStore
   }
 
   public async Task<Result<StreamSignaler>> WaitForStreamSession(
-    Guid streamId, 
-    string viewerConnectionId, 
+    Guid streamId,
+    string viewerConnectionId,
     CancellationToken cancellationToken)
   {
     try
@@ -58,7 +58,7 @@ public class StreamStore(ILogger<StreamStore> logger) : IStreamStore
         .Fail<StreamSignaler>("Timed out while waiting for stream")
         .Log(_logger);
     }
-    catch (Exception ex) 
+    catch (Exception ex)
     {
       _logger.LogError(ex, "Error while waiting for stream.");
       return Result.Fail<StreamSignaler>("An error occurred while waiting for the stream.");

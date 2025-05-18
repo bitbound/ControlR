@@ -27,10 +27,10 @@ public static class UriExtensions
       .Split('&')
       .Select(x => x.Split('='))
       .DistinctBy(x => x[0])
-      .ToImmutableDictionary(x => 
-        x[0], 
-        x => x.Length > 1 ? 
-          x[1] : 
+      .ToImmutableDictionary(x =>
+        x[0],
+        x => x.Length > 1 ?
+          x[1] :
           string.Empty);
   }
 

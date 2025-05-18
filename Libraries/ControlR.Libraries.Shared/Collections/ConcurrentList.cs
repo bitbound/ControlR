@@ -4,196 +4,196 @@ namespace ControlR.Libraries.Shared.Collections;
 
 public class ConcurrentList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnumerable, IReadOnlyList<T>
 {
-    private readonly List<T> _list = [];
+  private readonly List<T> _list = [];
 
-    private readonly Lock _lock = new();
-    public ConcurrentList() { }
+  private readonly Lock _lock = new();
+  public ConcurrentList() { }
 
-    public ConcurrentList(IEnumerable<T> initialItems)
+  public ConcurrentList(IEnumerable<T> initialItems)
+  {
+    _list.AddRange(initialItems);
+  }
+
+  public int Count
+  {
+    get
     {
-        _list.AddRange(initialItems);
+      lock (_lock)
+      {
+        return _list.Count;
+      }
     }
+  }
 
-    public int Count
+  public bool IsReadOnly => false;
+
+  public T this[int index]
+  {
+    get
     {
-        get
-        {
-            lock (_lock)
-            {
-                return _list.Count;
-            }
-        }
+      lock (_lock)
+      {
+        return _list[index];
+      }
     }
-
-    public bool IsReadOnly => false;
-
-    public T this[int index]
+    set
     {
-        get
-        {
-            lock (_lock)
-            {
-                return _list[index];
-            }
-        }
-        set
-        {
-            lock (_lock)
-            {
-                _list[index] = value;
-            }
-        }
+      lock (_lock)
+      {
+        _list[index] = value;
+      }
     }
+  }
 
-    public void Add(T item)
+  public void Add(T item)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.Add(item);
-        }
+      _list.Add(item);
     }
+  }
 
-    public void AddRange(IEnumerable<T> collection)
+  public void AddRange(IEnumerable<T> collection)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.AddRange(collection);
-        }
+      _list.AddRange(collection);
     }
+  }
 
-    public void Clear()
+  public void Clear()
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.Clear();
-        }
+      _list.Clear();
     }
+  }
 
-    public bool Contains(T item)
+  public bool Contains(T item)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.Contains(item);
-        }
+      return _list.Contains(item);
     }
+  }
 
-    public void CopyTo(T[] array, int arrayIndex)
+  public void CopyTo(T[] array, int arrayIndex)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.CopyTo(array, arrayIndex);
-        }
+      _list.CopyTo(array, arrayIndex);
     }
+  }
 
-    public bool Exists(Predicate<T> predicate)
+  public bool Exists(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.Exists(predicate);
-        }
+      return _list.Exists(predicate);
     }
+  }
 
-    public T? Find(Predicate<T> predicate)
+  public T? Find(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.Find(predicate);
-        }
+      return _list.Find(predicate);
     }
+  }
 
-    public List<T> FindAll(Predicate<T> predicate)
+  public List<T> FindAll(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.FindAll(predicate);
-        }
+      return _list.FindAll(predicate);
     }
+  }
 
-    public int FindIndex(Predicate<T> predicate)
+  public int FindIndex(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.FindIndex(predicate);
-        }
+      return _list.FindIndex(predicate);
     }
+  }
 
-    public T? FindLast(Predicate<T> predicate)
+  public T? FindLast(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.FindLast(predicate);
-        }
+      return _list.FindLast(predicate);
     }
+  }
 
-    public int FindLastIndex(Predicate<T> predicate)
+  public int FindLastIndex(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.FindLastIndex(predicate);
-        }
+      return _list.FindLastIndex(predicate);
     }
+  }
 
-    public IEnumerator<T> GetEnumerator()
+  public IEnumerator<T> GetEnumerator()
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.ToList().GetEnumerator();
-        }
+      return _list.ToList().GetEnumerator();
     }
+  }
 
-    public int IndexOf(T item)
+  public int IndexOf(T item)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.IndexOf(item);
-        }
+      return _list.IndexOf(item);
     }
+  }
 
-    public void Insert(int index, T item)
+  public void Insert(int index, T item)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.Insert(index, item);
-        }
+      _list.Insert(index, item);
     }
+  }
 
-    public bool Remove(T item)
+  public bool Remove(T item)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.Remove(item);
-        }
+      return _list.Remove(item);
     }
+  }
 
-    public void RemoveAll(Predicate<T> predicate)
+  public void RemoveAll(Predicate<T> predicate)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.RemoveAll(predicate);
-        }
+      _list.RemoveAll(predicate);
     }
+  }
 
-    public void RemoveAt(int index)
+  public void RemoveAt(int index)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.RemoveAt(index);
-        }
+      _list.RemoveAt(index);
     }
+  }
 
-    public void RemoveRange(int index, int count)
+  public void RemoveRange(int index, int count)
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            _list.RemoveRange(index, count);
-        }
+      _list.RemoveRange(index, count);
     }
+  }
 
-    IEnumerator IEnumerable.GetEnumerator()
+  IEnumerator IEnumerable.GetEnumerator()
+  {
+    lock (_lock)
     {
-        lock (_lock)
-        {
-            return _list.ToList().GetEnumerator();
-        }
+      return _list.ToList().GetEnumerator();
     }
+  }
 }

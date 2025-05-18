@@ -40,8 +40,8 @@ public static class LoggerExtensions
     Result result,
     [CallerMemberName] string callerName = "")
   {
-    using var logScope = string.IsNullOrWhiteSpace(callerName) 
-      ? new NoopDisposable() 
+    using var logScope = string.IsNullOrWhiteSpace(callerName)
+      ? new NoopDisposable()
       : logger.BeginScope(callerName);
 
     if (result.IsSuccess)

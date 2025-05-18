@@ -40,7 +40,7 @@ internal static class DisplaysEnumerationHelper
     var displays = new List<DisplayInfo>();
 
     EnumDisplayMonitors(nint.Zero, nint.Zero,
-      delegate(nint hMonitor, nint _, ref Rect _, nint _)
+      delegate (nint hMonitor, nint _, ref Rect _, nint _)
       {
         var mi = new MonitorInfoEx();
         mi.Size = Marshal.SizeOf(mi);

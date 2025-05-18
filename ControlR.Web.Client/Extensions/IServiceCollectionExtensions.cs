@@ -13,7 +13,7 @@ public static class ServiceCollectionExtensions
   {
     services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
-    
+
     services.AddLazyDi();
 
     services.AddSingleton(TimeProvider.System);

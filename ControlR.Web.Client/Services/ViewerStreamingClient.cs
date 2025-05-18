@@ -33,7 +33,7 @@ public class ViewerStreamingClient(
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IDelayer delayer,
-  ILogger<ViewerStreamingClient> logger) 
+  ILogger<ViewerStreamingClient> logger)
   : StreamingClient(messenger, memoryProvider, delayer, logger), IViewerStreamingClient
 {
   private readonly IDelayer _delayer = delayer;
