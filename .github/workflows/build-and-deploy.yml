@@ -186,8 +186,9 @@ jobs:
         with:
           name: ControlR ${{ needs.build.outputs.version }}
           tag_name: v${{ needs.build.outputs.version }}
-          draft: false
+          draft: true
           prerelease: ${{ github.event.inputs.github_release == 'prerelease' }}
+          generate_release_notes: true
           files: |
             ControlR.Server.${{ needs.build.outputs.version }}.zip
             docker-compose.yml
