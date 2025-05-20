@@ -74,8 +74,15 @@ if (!app.Environment.IsDevelopment())
   app.UseOutputCache();
 }
 
-await app.ApplyMigrations();
-await app.SetAllDevicesOffline();
-await app.SetAllUsersOffline();
+if (appOptions.UseInMemoryDatabase)
+{
+  await app.AddBuiltInRoles();
+}
+else
+{
+  await app.ApplyMigrations();
+  await app.SetAllDevicesOffline();
+  await app.SetAllUsersOffline();
+}
 
 await app.RunAsync();

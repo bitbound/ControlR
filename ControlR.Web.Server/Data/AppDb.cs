@@ -1,9 +1,11 @@
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Server.Authz.Roles;
 using ControlR.Web.Server.Converters;
 using ControlR.Web.Server.Data.Configuration;
 using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using System.Data;
 
 namespace ControlR.Web.Server.Data;
 
@@ -106,45 +108,11 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   private static void SeedDatabase(ModelBuilder builder)
   {
-    builder
-      .Entity<AppRole>()
-      .HasData(
-        new AppRole
-        {
-          Id = DeterministicGuid.Create(1),
-          Name = RoleNames.ServerAdministrator,
-          NormalizedName = RoleNames.ServerAdministrator.ToUpper()
-        });
+    var builtInRoles = RoleFactory.GetBuiltInRoles();
 
     builder
-      .Entity<AppRole>()
-      .HasData(
-        new AppRole
-        {
-          Id = DeterministicGuid.Create(2),
-          Name = RoleNames.TenantAdministrator,
-          NormalizedName = RoleNames.TenantAdministrator.ToUpper()
-        });
-
-    builder
-      .Entity<AppRole>()
-      .HasData(
-        new AppRole
-        {
-          Id = DeterministicGuid.Create(3),
-          Name = RoleNames.DeviceSuperUser,
-          NormalizedName = RoleNames.DeviceSuperUser.ToUpper()
-        });
-
-    builder
-      .Entity<AppRole>()
-      .HasData(
-        new AppRole
-        {
-          Id = DeterministicGuid.Create(4),
-          Name = RoleNames.AgentInstaller,
-          NormalizedName = RoleNames.AgentInstaller.ToUpper()
-        });
+        .Entity<AppRole>()
+        .HasData(builtInRoles);
   }
 
   private void ConfigureDevices(ModelBuilder builder)

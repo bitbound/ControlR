@@ -9,7 +9,6 @@ public class AgentHub(
   AppDb appDb,
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
-  IWebHostEnvironment hostEnvironment,
   IDeviceManager deviceManager,
   IOptions<AppOptions> appOptions,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
@@ -17,7 +16,6 @@ public class AgentHub(
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
-  private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
@@ -77,7 +75,7 @@ public class AgentHub(
   {
     try
     {
-      if (_hostEnvironment.IsDevelopment() && deviceDto.TenantId == Guid.Empty)
+      if (_appOptions.Value.AllowAgentsToSelfBootstrap && deviceDto.TenantId == Guid.Empty)
       {
         var lastTenant = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
