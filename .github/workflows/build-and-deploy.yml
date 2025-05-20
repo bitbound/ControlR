@@ -152,6 +152,9 @@ jobs:
     name: Create GitHub Release
     runs-on: self-hosted
     needs: build
+    permissions:
+      contents: write
+
     defaults:
       run:
         shell: pwsh
