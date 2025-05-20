@@ -129,13 +129,25 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureTags(ModelBuilder builder)
   {
     builder
       .Entity<Tag>()
       .HasIndex(x => new { x.Name, x.TenantId })
       .IsUnique();
+      
+    // Add index to improve tag lookup performance for filtering
+    builder
+      .Entity<Tag>()
+      .HasIndex(x => x.Id)
+      .HasDatabaseName("IX_Tags_Id");
+      
+    // Create index for the many-to-many relationship between tags and devices
+    builder
+      .Entity<Device>()
+      .HasMany(d => d.Tags)
+      .WithMany(t => t.Devices)
+      .UsingEntity(j => j.HasIndex("TagsId").HasDatabaseName("IX_DeviceTag_TagsId"));
 
     if (_tenantId is not null)
     {

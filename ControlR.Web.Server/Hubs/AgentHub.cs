@@ -1,6 +1,8 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.OutputCaching;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
 
 namespace ControlR.Web.Server.Hubs;
@@ -11,11 +13,13 @@ public class AgentHub(
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IDeviceManager deviceManager,
   IOptions<AppOptions> appOptions,
+  IOutputCacheStore outputCacheStore,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
+  private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
@@ -141,13 +145,15 @@ public class AgentHub(
         await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTagGroupName(tag.Id, deviceEntity.TenantId));
       }
     }
-  }
-
-  private async Task SendDeviceUpdate(Device device, DeviceDto dto)
+  }  private async Task SendDeviceUpdate(Device device, DeviceDto dto)
   {
     await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
+
+    // Invalidate the device grid cache using the extension method
+    await _outputCacheStore.InvalidateDeviceGridCacheAsync();
+    _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", device.Id);
 
     if (device.Tags is null)
     {

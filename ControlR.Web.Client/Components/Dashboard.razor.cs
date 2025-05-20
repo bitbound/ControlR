@@ -15,7 +15,8 @@ public partial class Dashboard
   };
 
   private Version? _agentReleaseVersion;
-  private ObservableCollection<DeviceViewModel> _devices = [];  
+  private MudDataGrid<DeviceViewModel>? _dataGrid;
+  private Dictionary<Guid, DeviceViewModel> _deviceCache = new();
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
@@ -58,29 +59,71 @@ public partial class Dashboard
   private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
 
-  private ICollection<DeviceViewModel> FilteredDevices
+  private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
   {
-    get
+    var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count
+        ? _selectedTags.Select(t => t.Id).ToList()
+        : null;
+
+    var request = new DeviceGridRequestDto
     {
-      var devices = _devices.AsEnumerable();
-      
-      // Filter by online status if enabled
-      if (_hideOfflineDevices && !ShouldBypassHideOfflineDevices)
-      {
-        devices = devices.Where(x => x.IsOnline);
-      }
+      SearchText = _searchText,
+      HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
+      TagIds = tagIds,
+      Page = state.Page,
+      PageSize = state.PageSize,
+      SortDefinitions = state.SortDefinitions
+          .Select(sd => new DeviceColumnSort
+          {
+              PropertyName = sd.SortBy,
+              Descending = sd.Descending,
+              SortOrder = sd.Index
+          })
+          .ToList()
+    };
 
-      if (_selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count)
-      {
-        // Filter by selected tags if any are selected
-        devices = devices.Where(device =>
-          _selectedTags.Any(tag => tag.DeviceIds.Contains(device.Id)));
-      }
-
-      return [.. devices];
+    var result = await ControlrApi.GetDevicesGridData(request);
+    if (!result.IsSuccess)
+    {
+      Snackbar.Add("Failed to load devices", Severity.Error);
+      return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
     }
+
+    var viewModels = result.Value.Items
+        .Select(dto =>
+        {
+            var viewModel = dto.CloneAs<DeviceDto, DeviceViewModel>();
+            viewModel.IsOutdated = IsOutdated(viewModel);
+            
+            // Update cache with this device
+            _deviceCache[viewModel.Id] = viewModel;
+            
+            return viewModel;
+        })
+        .ToArray();
+
+    return new GridData<DeviceViewModel>
+    {
+        TotalItems = result.Value.TotalItems,
+        Items = viewModels
+    };
   }
 
+  // Replace FilteredDevices with a method to handle device updates
+  private bool IsDeviceVisible(Guid deviceId)
+  {
+    return _deviceCache.ContainsKey(deviceId);
+  }
+
+  private void UpdateVisibleDevice(DeviceViewModel device)
+  {
+    if (IsDeviceVisible(device.Id))
+    {
+      _deviceCache[device.Id] = device;
+      InvokeAsync(StateHasChanged);
+    }
+  }
+  
   private Func<DeviceViewModel, bool> QuickFilter => x =>
   {
     if (string.IsNullOrWhiteSpace(_searchText))
@@ -190,22 +233,16 @@ public partial class Dashboard
     var tagNoun = tags.Count > 1 ? "tags" : "tag";
     return $"{tags.Count} {tagNoun} selected";
   }
-
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
     viewModel.IsOutdated = IsOutdated(viewModel);
 
-    var index = _devices.FindIndex(x => x.Id == viewModel.Id);
-    if (index > -1)
+    if (IsDeviceVisible(viewModel.Id))
     {
-      _devices[index] = viewModel;
+      _deviceCache[viewModel.Id] = viewModel;
+      await InvokeAsync(StateHasChanged);
     }
-    else
-    {
-      _devices.Add(viewModel);
-    }
-    await InvokeAsync(StateHasChanged);
   }
 
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
@@ -226,7 +263,19 @@ public partial class Dashboard
   {
     _hideOfflineDevices = isChecked;
     await Settings.SetHideOfflineDevices(isChecked);
-    await InvokeAsync(StateHasChanged);
+    if (_dataGrid != null)
+    {
+      await _dataGrid.ReloadServerData();
+    }
+  }
+
+  private async Task OnSearch(string text)
+  {
+    _searchText = text;
+    if (_dataGrid != null)
+    {
+      await _dataGrid.ReloadServerData();
+    }
   }
 
   private bool IsOutdated(DeviceViewModel device)
@@ -236,7 +285,6 @@ public partial class Dashboard
       Version.TryParse(device.AgentVersion, out var agentVersion) &&
       !agentVersion.Equals(_agentReleaseVersion);
   }
-
   private async Task LoadDevicesFromStore()
   {
     var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
@@ -245,13 +293,13 @@ public partial class Dashboard
       _agentReleaseVersion = agentVerResult.Value;
     }
 
-    var devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
+    // Initialize device cache from store to maintain state across refreshes
+    var devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, List<DeviceViewModel>>();
     foreach (var device in devices)
     {
       device.IsOutdated = IsOutdated(device);
+      _deviceCache[device.Id] = device;
     }
-
-    _devices = devices;
   }
 
   private Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
@@ -335,7 +383,6 @@ public partial class Dashboard
         break;
     }
   }
-
   private async Task RemoveDevice(DeviceViewModel device)
   {
     try
@@ -358,12 +405,16 @@ public partial class Dashboard
         return;
       }
 
-      _devices.Remove(device);
+      _deviceCache.Remove(device.Id);
       if (DeviceStore.TryGet(device.Id, out var dto))
       {
         _ = DeviceStore.Remove(dto);
       }
       Snackbar.Add("Device removed", Severity.Success);
+      if (_dataGrid != null)
+      {
+        await _dataGrid.ReloadServerData();
+      }
     }
     catch (Exception ex)
     {

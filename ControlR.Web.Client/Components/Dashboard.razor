@@ -20,10 +20,10 @@
   </div>
 
   <MudDataGrid T="DeviceViewModel"
-               RowsPerPage="@(25)"
-               Items="FilteredDevices"               
+               @ref="_dataGrid"
+               ServerData="LoadServerData"
+               RowsPerPage="@(25)"               
                SortMode="SortMode.Multiple"
-               QuickFilter="QuickFilter"
                Loading="_loading"
                Hideable="true"
                SortDefinitions="_sortDefinitions"
@@ -48,9 +48,9 @@
           <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
         }
       </MudSelect>
-      
-      <MudTextField T="string"
-                    @bind-Value="_searchText"
+        <MudTextField T="string"
+                    Value="@_searchText"
+                    ValueChanged="OnSearch"
                     Placeholder="Search"
                     Clearable
                     Adornment="Adornment.Start"
