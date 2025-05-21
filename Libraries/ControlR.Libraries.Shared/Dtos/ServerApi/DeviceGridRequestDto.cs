@@ -15,13 +15,7 @@ public class DeviceGridRequestDto
 
 public class DeviceColumnSort
 {
-    public string PropertyName { get; set; } = string.Empty;
+    public string? PropertyName { get; set; }
     public bool Descending { get; set; }
     public int SortOrder { get; set; }
-}
-
-public class DeviceGridResponseDto
-{
-    public List<DeviceDto> Items { get; set; } = new();
-    public int TotalItems { get; set; }
 }
