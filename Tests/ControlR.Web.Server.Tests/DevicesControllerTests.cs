@@ -104,7 +104,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }; var result1 = await controller.GetDevicesGridData(
         request1,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response1 = result1.Value;
 
@@ -117,7 +116,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }; var result2 = await controller.GetDevicesGridData(
         request2,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response2 = result2.Value;
 
@@ -131,7 +129,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result3 = await controller.GetDevicesGridData(
         request3,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response3 = result3.Value;        // Test case 4: Search by name
     var request4 = new DeviceGridRequestDto
@@ -143,7 +140,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result4 = await controller.GetDevicesGridData(
         request4,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response4 = result4.Value;
 
@@ -157,7 +153,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result5 = await controller.GetDevicesGridData(
         request5,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response5 = result5.Value;
 

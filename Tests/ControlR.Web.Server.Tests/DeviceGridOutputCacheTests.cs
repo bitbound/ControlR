@@ -72,9 +72,17 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1:1",
-        Drives: [new ControlR.Libraries.Shared.Models.Drive { Name = "C", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+        Drives: []);
 
     await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
+    await db.SaveChangesAsync(); // Ensure the device is saved to the database
+
+    // Force a database refresh to ensure entity is tracked
+    var device = db.Devices.Find(deviceId);
+    if (device != null)
+    {
+      await db.Entry(device).ReloadAsync();
+    }
 
     // Configure controller user context for authorization
     await controller.SetControllerUser(user);
@@ -95,7 +103,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
-    var newDeviceDto = deviceDto with { Id = newDeviceId, Name = "New Cache Test Device" };
+    var newDeviceDto = deviceDto with { Id = newDeviceId, Name = "New Cache Test Device", Drives = [] };
     await deviceManager.AddOrUpdate(newDeviceDto, addTagIds: true);
 
     // Simulate cache invalidation

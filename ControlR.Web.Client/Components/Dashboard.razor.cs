@@ -72,20 +72,24 @@ public partial class Dashboard
       TagIds = tagIds,
       Page = state.Page,
       PageSize = state.PageSize,
-      SortDefinitions = state.SortDefinitions
+      SortDefinitions = [.. state.SortDefinitions
           .Select(sd => new DeviceColumnSort
           {
               PropertyName = sd.SortBy,
               Descending = sd.Descending,
               SortOrder = sd.Index
-          })
-          .ToList()
+          })]
     };
 
     var result = await ControlrApi.GetDevicesGridData(request);
     if (!result.IsSuccess)
     {
       Snackbar.Add("Failed to load devices", Severity.Error);
+      return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
+    }
+
+    if (result.Value.Items is null)
+    {
       return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
     }
 
@@ -105,7 +109,7 @@ public partial class Dashboard
     return new GridData<DeviceViewModel>
     {
         TotalItems = result.Value.TotalItems,
-        Items = viewModels
+        Items = viewModels ?? []
     };
   }
 

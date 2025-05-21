@@ -1,4 +1,5 @@
-﻿using ControlR.Web.Server.Data.Entities;
+﻿using ControlR.Web.Client.Authz;
+using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -18,14 +19,14 @@ internal static class ControllerExtensions
   public static Task SetControllerUser(this ControllerBase controller, AppUser user, string[]? roles = null)
   {
     ArgumentNullException.ThrowIfNull(controller);
-    ArgumentNullException.ThrowIfNull(user);
-
-    // Create list of claims
+    ArgumentNullException.ThrowIfNull(user);    // Create list of claims
     var claims = new List<Claim>
     {
       new(ClaimTypes.NameIdentifier, user.Id.ToString()),
       new(ClaimTypes.Email, user.Email ?? string.Empty),
-      new("TenantId", user.TenantId.ToString())
+      new("TenantId", user.TenantId.ToString()),
+      new(UserClaimTypes.TenantId, user.TenantId.ToString()),
+      new(UserClaimTypes.UserId, user.Id.ToString())
     };
 
     // Add role claims if provided
