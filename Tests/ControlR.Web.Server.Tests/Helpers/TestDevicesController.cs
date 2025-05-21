@@ -49,12 +49,12 @@ public class TestDevicesController : DevicesController
             {
                 var searchText = requestDto.SearchText.ToLower();
                 query = query.Where(d => 
-                    d.Name.ToLower().Contains(searchText) ||
-                    d.Alias.ToLower().Contains(searchText) ||
-                    d.OsDescription.ToLower().Contains(searchText) ||
-                    d.ConnectionId.ToLower().Contains(searchText) ||
-                    d.MacAddresses.Any(m => m.ToLower().Contains(searchText)) ||
-                    d.CurrentUsers.Any(u => u.ToLower().Contains(searchText)));
+                    d.Name.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+                    d.Alias.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+                    d.OsDescription.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+                    d.ConnectionId.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+                    d.MacAddresses.Any(m => m.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)) ||
+                    d.CurrentUsers.Any(u => u.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)));
             }
             
             if (requestDto.HideOfflineDevices)

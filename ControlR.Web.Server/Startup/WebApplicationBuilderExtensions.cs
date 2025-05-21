@@ -196,18 +196,12 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IDelayer, Delayer>();
     builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
-    builder.Services.AddSingleton<IEmailSender, EmailSender>();    builder.Services.AddWebSocketRelay();
+    builder.Services.AddSingleton<IEmailSender, EmailSender>();
+    builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IStreamStore, StreamStore>();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
     
-    // Register both the old and new cache services during transition
-    // The old service is kept temporarily for backward compatibility
-    builder.Services.AddSingleton<IDeviceGridCacheService, DeviceGridCacheService>();
-    
-    // Add specialized caching logger
-    builder.Services.AddScoped<DeviceGridCachingLogger>();
-
     builder.Host.UseSystemd();
 
     return builder;

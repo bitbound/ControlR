@@ -93,7 +93,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
     }        // Configure controller user context for authorization
-    await testApp.SetControllerUser(controller, user, new[] { RoleNames.DeviceSuperUser });
+    await controller.SetControllerUser(user, [RoleNames.DeviceSuperUser]);
 
     // Act
     // Test case 1: Get all devices with pagination
@@ -105,7 +105,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request1,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response1 = result1.Value;
 
     // Test case 2: Filter by online status
@@ -118,7 +118,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request2,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response2 = result2.Value;
 
     // Test case 3: Filter by tag
@@ -132,7 +132,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request3,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response3 = result3.Value;        // Test case 4: Search by name
     var request4 = new DeviceGridRequestDto
     {
@@ -144,7 +144,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request4,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response4 = result4.Value;
 
     // Test case 5: Sort by CPU utilization (descending)
@@ -158,7 +158,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request5,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response5 = result5.Value;
 
     // Assert
@@ -197,7 +197,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<ControlR.Web.Server.Api.DevicesController>();
+    var controller = testApp.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
@@ -259,7 +259,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
     }        // Configure controller user context for authorization
-    await testApp.SetControllerUser(controller, user, new[] { RoleNames.DeviceSuperUser });
+    await controller.SetControllerUser(user, [RoleNames.DeviceSuperUser]);
 
     // Act - Combined filters: online + has tag + contains "Device 2" in name
     var request = new DeviceGridRequestDto
@@ -275,7 +275,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response = result.Value;
 
     // Assert
@@ -293,7 +293,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<ControlR.Web.Server.Api.DevicesController>();
+    var controller = testApp.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
@@ -379,7 +379,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
       await deviceManager.AddOrUpdate(device2Dto, addTagIds: false);
     }        // Configure controller user context for authorization
-    await testApp.SetControllerUser(controller, user1, new[] { RoleNames.DeviceSuperUser });
+    await controller.SetControllerUser(user1, [RoleNames.DeviceSuperUser]);
 
     // Act
     var request = new DeviceGridRequestDto
@@ -392,7 +392,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response = result.Value;
 
     // Assert

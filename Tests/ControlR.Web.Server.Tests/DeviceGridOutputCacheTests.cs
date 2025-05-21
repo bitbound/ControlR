@@ -24,7 +24,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<ControlR.Web.Server.Api.DevicesController>();
+    var controller = testApp.CreateController<Api.DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
     var outputCacheStore = testApp.App.Services.GetRequiredService<IOutputCacheStore>();
 
@@ -72,10 +72,12 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1:1",
-        Drives: [new ControlR.Libraries.Shared.Models.Drive { Name = "C", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]); await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
+        Drives: [new ControlR.Libraries.Shared.Models.Drive { Name = "C", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+    await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
 
     // Configure controller user context for authorization
-    await testApp.SetControllerUser(controller, user);
+    await controller.SetControllerUser(user);
 
     // Create the request
     var request = new DeviceGridRequestDto

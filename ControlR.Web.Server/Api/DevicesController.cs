@@ -1,15 +1,6 @@
 ﻿using System.Security.Claims;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Web.Server.Authz;
-using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Extensions;
-using ControlR.Web.Server.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Api;
 

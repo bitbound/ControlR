@@ -7,71 +7,75 @@ namespace ControlR.Web.Server.Tests;
 
 public class OutputCacheExtensionsTests(ITestOutputHelper testOutput)
 {
-    private readonly ITestOutputHelper _testOutputHelper = testOutput;    
-    
-    [Fact]
-    public async Task InvalidateDeviceGridCacheAsync_EvictsByDeviceGridTag()
-    {
-        // Arrange
-        var mockOutputCacheStore = new Mock<IOutputCacheStore>();
-        mockOutputCacheStore.Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.CompletedTask);
+  private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
-        // Act
-        await mockOutputCacheStore.Object.InvalidateDeviceGridCacheAsync();
+  [Fact]
+  public async Task InvalidateDeviceGridCacheAsync_EvictsByDeviceGridTag()
+  {
+    // Arrange
+    var mockOutputCacheStore = new Mock<IOutputCacheStore>();
+    mockOutputCacheStore
+      .Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(ValueTask.CompletedTask);
 
-        // Assert
-        mockOutputCacheStore.Verify(s => s.EvictByTagAsync("device-grid", It.IsAny<CancellationToken>()), Times.Once);
-    }
+    // Act
+    await mockOutputCacheStore.Object.InvalidateDeviceGridCacheAsync();
 
-    [Fact]
-    public async Task InvalidateDeviceCacheAsync_EvictsByDeviceSpecificTag()
-    {
-        // Arrange
-        var mockOutputCacheStore = new Mock<IOutputCacheStore>();
-        mockOutputCacheStore.Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.CompletedTask);
+    // Assert
+    mockOutputCacheStore.Verify(s => s.EvictByTagAsync("device-grid", It.IsAny<CancellationToken>()), Times.Once);
+  }
 
-        var deviceId = Guid.NewGuid();
+  [Fact]
+  public async Task InvalidateDeviceCacheAsync_EvictsByDeviceSpecificTag()
+  {
+    // Arrange
+    var mockOutputCacheStore = new Mock<IOutputCacheStore>();
+    mockOutputCacheStore
+      .Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(ValueTask.CompletedTask);
 
-        // Act
-        await mockOutputCacheStore.Object.InvalidateDeviceCacheAsync(deviceId);
+    var deviceId = Guid.NewGuid();
 
-        // Assert
-        mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"device-{deviceId}", It.IsAny<CancellationToken>()), Times.Once);
-    }
-    
-    [Fact]
-    public async Task InvalidateUserDeviceGridCacheAsync_EvictsByUserTag()
-    {
-        // Arrange
-        var mockOutputCacheStore = new Mock<IOutputCacheStore>();
-        mockOutputCacheStore.Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.CompletedTask);
+    // Act
+    await mockOutputCacheStore.Object.InvalidateDeviceCacheAsync(deviceId);
 
-        var userId = Guid.NewGuid().ToString();
+    // Assert
+    mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"device-{deviceId}", It.IsAny<CancellationToken>()), Times.Once);
+  }
 
-        // Act
-        await mockOutputCacheStore.Object.InvalidateUserDeviceGridCacheAsync(userId);
+  [Fact]
+  public async Task InvalidateUserDeviceGridCacheAsync_EvictsByUserTag()
+  {
+    // Arrange
+    var mockOutputCacheStore = new Mock<IOutputCacheStore>();
+    mockOutputCacheStore
+      .Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(ValueTask.CompletedTask);
 
-        // Assert
-        mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"user-{userId}", It.IsAny<CancellationToken>()), Times.Once);
-    }
-    
-    [Fact]
-    public async Task InvalidateDeviceGridRequestCacheAsync_EvictsByRequestHashTag()
-    {
-        // Arrange
-        var mockOutputCacheStore = new Mock<IOutputCacheStore>();
-        mockOutputCacheStore.Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.CompletedTask);
+    var userId = Guid.NewGuid().ToString();
 
-        var requestHash = "abc123";
+    // Act
+    await mockOutputCacheStore.Object.InvalidateUserDeviceGridCacheAsync(userId);
 
-        // Act
-        await mockOutputCacheStore.Object.InvalidateDeviceGridRequestCacheAsync(requestHash);
+    // Assert
+    mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"user-{userId}", It.IsAny<CancellationToken>()), Times.Once);
+  }
 
-        // Assert
-        mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"request-{requestHash}", It.IsAny<CancellationToken>()), Times.Once);
-    }
+  [Fact]
+  public async Task InvalidateDeviceGridRequestCacheAsync_EvictsByRequestHashTag()
+  {
+    // Arrange
+    var mockOutputCacheStore = new Mock<IOutputCacheStore>();
+    mockOutputCacheStore
+      .Setup(s => s.EvictByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(ValueTask.CompletedTask);
+
+    var requestHash = "abc123";
+
+    // Act
+    await mockOutputCacheStore.Object.InvalidateDeviceGridRequestCacheAsync(requestHash);
+
+    // Assert
+    mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"request-{requestHash}", It.IsAny<CancellationToken>()), Times.Once);
+  }
 }
