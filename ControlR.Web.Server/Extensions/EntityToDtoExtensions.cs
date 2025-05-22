@@ -31,6 +31,7 @@ public static class EntityToDtoExtensions
       device.Drives)
     {
       Alias = device.Alias,
+      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
     };
   }
 

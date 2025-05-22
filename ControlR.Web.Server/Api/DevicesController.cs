@@ -125,29 +125,35 @@ public class DevicesController : ControllerBase
   {
     try
     {
-      logger.LogDebug("Processing device grid request: UserId: {UserId}, Page {Page}, PageSize {PageSize}, Search: {SearchText}, HideOffline: {HideOffline}, TagIds: {TagIds}",
-          User.FindFirst(ClaimTypes.NameIdentifier)?.Value, requestDto.Page, requestDto.PageSize, requestDto.SearchText, requestDto.HideOfflineDevices,
-          requestDto.TagIds != null ? string.Join(",", requestDto.TagIds) : "none");
-
       var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
       // Start with all devices
-      var query = appDb.Devices.AsQueryable();
+      var query = appDb.Devices.Include(x => x.Tags).AsQueryable();
 
       // Apply filtering
       if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
       {
         var searchText = requestDto.SearchText;
 
-        // Use EF.Functions.Like for the database-searchable fields
-        query = query.Where(d =>
-          EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
-          d.CurrentUsers.Any(x => EF.Functions.ILike(x, $"%{searchText}%")));
-
-        // We'll handle arrays in memory after retrieving the base data
+        if (appDb.Database.IsInMemory())
+        {
+          query = query.Where(d =>
+            d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            d.Alias.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+          // Use EF.Functions.Like for the database-searchable fields
+          query = query.Where(d =>
+            EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
+            EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
+            EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
+            EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
+            string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
       }
 
       if (requestDto.HideOfflineDevices)
@@ -201,13 +207,13 @@ public class DevicesController : ControllerBase
               break;
             case "UsedMemoryPercent":
               orderFunc = q => sortDef.Descending ?
-                q.OrderByDescending(d => d.UsedMemory / (double)(d.TotalMemory == 0 ? 1 : d.TotalMemory)) :
-                q.OrderBy(d => d.UsedMemory / (double)(d.TotalMemory == 0 ? 1 : d.TotalMemory));
+                q.OrderByDescending(d => d.UsedMemoryPercent) :
+                q.OrderBy(d => d.UsedMemoryPercent);
               break;
             case "UsedStoragePercent":
               orderFunc = q => sortDef.Descending ?
-                q.OrderByDescending(d => d.UsedStorage / (double)(d.TotalStorage == 0 ? 1 : d.TotalStorage)) :
-                q.OrderBy(d => d.UsedStorage / (double)(d.TotalStorage == 0 ? 1 : d.TotalStorage));
+                q.OrderByDescending(d => d.UsedStoragePercent) :
+                q.OrderBy(d => d.UsedStoragePercent);
               break;
             default:
               continue;
@@ -226,7 +232,6 @@ public class DevicesController : ControllerBase
       var devices = await query
         .Skip(requestDto.Page * requestDto.PageSize)
         .Take(requestDto.PageSize)
-        .Include(d => d.Tags) // Pre-load tags to avoid N+1 issues
         .ToListAsync();
 
       // Filter for authorized devices
@@ -235,7 +240,9 @@ public class DevicesController : ControllerBase
       foreach (var device in devices)
       {
         var authResult = await authorizationService.AuthorizeAsync(
-            User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+            User,
+            device,
+            DeviceAccessByDeviceResourcePolicy.PolicyName);
 
         if (authResult.Succeeded)
         {
@@ -248,9 +255,6 @@ public class DevicesController : ControllerBase
         Items = authorizedDevices,
         TotalItems = totalCount
       };
-
-      logger.LogDebug("Returning device grid data: Total: {TotalItems}, Returned: {ItemCount}, Page: {Page}, PageSize: {PageSize}",
-          response.TotalItems, response.Items.Count, requestDto.Page, requestDto.PageSize);
 
       return response;
     }
