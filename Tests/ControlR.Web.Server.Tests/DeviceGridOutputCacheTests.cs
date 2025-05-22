@@ -132,10 +132,12 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var unauthenticatedResult = context.EnableOutputCaching;
 
     // Set authenticated user
-    context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
-    {
-            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-    }, "TestAuth"));
+    context.HttpContext.User = new ClaimsPrincipal(
+      new ClaimsIdentity(
+      [
+        new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+      ],
+      "TestAuth"));
 
     context.EnableOutputCaching = false;
 
