@@ -5,6 +5,7 @@ using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Configuration;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -15,19 +16,22 @@ public static class TestAppBuilder
     [CallerMemberName] string testDatabaseName = "",
     Action<WebApplicationBuilder>? configure = null)
   {
-    Environment.SetEnvironmentVariable("ControlR_AppOptions__UseInMemoryDatabase", "true", EnvironmentVariableTarget.Process);
-    Environment.SetEnvironmentVariable("ControlR_AppOptions__InMemoryDatabaseName", testDatabaseName, EnvironmentVariableTarget.Process);
-
     var builder = WebApplication.CreateBuilder();
-    await builder.AddControlrServer();
+    _ = builder.Configuration.AddInMemoryCollection(
+    [
+      new KeyValuePair<string, string?>("AppOptions:UseInMemoryDatabase", "true"),
+      new KeyValuePair<string, string?>("AppOptions:InMemoryDatabaseName", testDatabaseName)
+    ]);
+
+    _ = await builder.AddControlrServer();
 
     configure?.Invoke(builder);
 
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
-    builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
+    _ = builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
 
-    builder.Logging.ClearProviders();
-    builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
+    _ = builder.Logging.ClearProviders();
+    _ = builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
 
     var app = builder.Build();
     await app.AddBuiltInRoles();
