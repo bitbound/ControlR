@@ -4,6 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
+using System.Runtime.CompilerServices;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -11,9 +12,11 @@ public static class TestAppBuilder
 {
   public static async Task<TestApp> CreateTestApp(
     ITestOutputHelper testOutput,
+    [CallerMemberName] string testDatabaseName = "",
     Action<WebApplicationBuilder>? configure = null)
   {
     Environment.SetEnvironmentVariable("ControlR_AppOptions__UseInMemoryDatabase", "true", EnvironmentVariableTarget.Process);
+    Environment.SetEnvironmentVariable("ControlR_AppOptions__InMemoryDatabaseName", testDatabaseName, EnvironmentVariableTarget.Process);
 
     var builder = WebApplication.CreateBuilder();
     await builder.AddControlrServer();
@@ -28,6 +31,7 @@ public static class TestAppBuilder
 
     var app = builder.Build();
     await app.AddBuiltInRoles();
+
     return new TestApp(app, timeProvider);
   }
 }

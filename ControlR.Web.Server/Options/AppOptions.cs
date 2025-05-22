@@ -10,6 +10,7 @@ public class AppOptions
   public IReadOnlyList<ExternalWebSocketHost> ExternalWebSocketHosts { get; init; } = [];
   public string? GitHubClientId { get; init; }
   public string? GitHubClientSecret { get; init; }
+  public string? InMemoryDatabaseName { get; init; }
   public string[] KnownNetworks { get; init; } = [];
   public string[] KnownProxies { get; init; } = [];
   public string? MicrosoftClientId { get; init; }

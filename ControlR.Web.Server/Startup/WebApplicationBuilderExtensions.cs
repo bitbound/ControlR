@@ -44,7 +44,8 @@ public static class WebApplicationBuilderExtensions
     {
       builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
       {
-        options.UseInMemoryDatabase("Controlr");
+        var dbName = appOptions.InMemoryDatabaseName ?? "Controlr";
+        options.UseInMemoryDatabase(dbName);
       }, lifetime: ServiceLifetime.Transient);
     }
     else
