@@ -123,145 +123,144 @@ public class DevicesController : ControllerBase
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DevicesController> logger)
   {
-    try
+    // Start with all devices
+    var anyDevices = await appDb.Devices.AnyAsync();
+    var query = appDb.Devices.Include(x => x.Tags).AsQueryable();
+
+    // Apply filtering
+    if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
     {
-      var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+      var searchText = requestDto.SearchText;
 
-      // Start with all devices
-      var query = appDb.Devices.Include(x => x.Tags).AsQueryable();
-
-      // Apply filtering
-      if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
+      if (appDb.Database.IsInMemory())
       {
-        var searchText = requestDto.SearchText;
-
-        if (appDb.Database.IsInMemory())
-        {
-          query = query.Where(d =>
-            d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            d.Alias.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
-        }
-        else
-        {
-          // Use EF.Functions.Like for the database-searchable fields
-          query = query.Where(d =>
-            EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
-            EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
-            EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
-            EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
-            string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
-        }
+        query = query.Where(d =>
+          d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+          d.Alias.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+          d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+          d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+          string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
       }
-
-      if (requestDto.HideOfflineDevices)
+      else
       {
-        query = query.Where(d => d.IsOnline);
+        // Use EF.Functions.Like for the database-searchable fields
+        query = query.Where(d =>
+          EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
+          EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
+          EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
+          EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
+          EF.Functions.ILike(string.Join("", d.CurrentUsers) ?? "", $"%{searchText}%"));
       }
-
-      // Handle tag filtering
-      if (requestDto.TagIds != null && requestDto.TagIds.Count > 0)
-      {
-        // Find devices through the many-to-many relationship
-        var deviceIds = await appDb.Devices
-            .Where(d => d.Tags!.Any(t => requestDto.TagIds.Contains(t.Id)))
-            .Select(d => d.Id)
-            .ToListAsync();
-
-        if (deviceIds.Count != 0)
-        {
-          query = query.Where(d => deviceIds.Contains(d.Id));
-        }
-        else
-        {
-          // No matching devices found
-          return new DeviceGridResponseDto
-          {
-            Items = [],
-            TotalItems = 0
-          };
-        }
-      }
-
-      // Apply sorting
-      if (requestDto.SortDefinitions != null && requestDto.SortDefinitions.Count > 0)
-      {
-        IOrderedQueryable<Device>? orderedQuery = null;
-
-        foreach (var sortDef in requestDto.SortDefinitions.OrderBy(s => s.SortOrder))
-        {
-          Func<IQueryable<Device>, IOrderedQueryable<Device>> orderFunc;
-
-          switch (sortDef.PropertyName)
-          {
-            case nameof(Device.Name):
-              orderFunc = q => sortDef.Descending ? q.OrderByDescending(d => d.Name) : q.OrderBy(d => d.Name);
-              break;
-            case nameof(Device.IsOnline):
-              orderFunc = q => sortDef.Descending ? q.OrderByDescending(d => d.IsOnline) : q.OrderBy(d => d.IsOnline);
-              break;
-            case "CpuUtilization":
-              orderFunc = q => sortDef.Descending ? q.OrderByDescending(d => d.CpuUtilization) : q.OrderBy(d => d.CpuUtilization);
-              break;
-            case "UsedMemoryPercent":
-              orderFunc = q => sortDef.Descending ?
-                q.OrderByDescending(d => d.UsedMemoryPercent) :
-                q.OrderBy(d => d.UsedMemoryPercent);
-              break;
-            case "UsedStoragePercent":
-              orderFunc = q => sortDef.Descending ?
-                q.OrderByDescending(d => d.UsedStoragePercent) :
-                q.OrderBy(d => d.UsedStoragePercent);
-              break;
-            default:
-              continue;
-          }
-
-          orderedQuery = orderedQuery == null ? orderFunc(query) : orderFunc(orderedQuery);
-        }
-
-        query = orderedQuery ?? query;
-      }
-
-      // Get the total count of matching items (before pagination)
-      var totalCount = await query.CountAsync();
-
-      // Get the devices for the current page
-      var devices = await query
-        .Skip(requestDto.Page * requestDto.PageSize)
-        .Take(requestDto.PageSize)
-        .ToListAsync();
-
-      // Filter for authorized devices
-      var authorizedDevices = new List<DeviceDto>();
-
-      foreach (var device in devices)
-      {
-        var authResult = await authorizationService.AuthorizeAsync(
-            User,
-            device,
-            DeviceAccessByDeviceResourcePolicy.PolicyName);
-
-        if (authResult.Succeeded)
-        {
-          authorizedDevices.Add(device.ToDto());
-        }
-      }
-
-      var response = new DeviceGridResponseDto
-      {
-        Items = authorizedDevices,
-        TotalItems = totalCount
-      };
-
-      return response;
     }
-    catch (Exception ex)
+
+    if (requestDto.HideOfflineDevices)
     {
-      logger.LogError(ex, "Error retrieving device grid data: {ErrorMessage}", ex.Message);
-      return StatusCode(500, "An error occurred while retrieving device data");
+      query = query.Where(d => d.IsOnline);
     }
+
+    // Handle tag filtering
+    if (requestDto.TagIds != null && requestDto.TagIds.Count > 0)
+    {
+      // Find devices through the many-to-many relationship
+      var deviceIds = await appDb.Devices
+          .Where(d => d.Tags!.Any(t => requestDto.TagIds.Contains(t.Id)))
+          .Select(d => d.Id)
+          .ToListAsync();
+
+      if (deviceIds.Count != 0)
+      {
+        query = query.Where(d => deviceIds.Contains(d.Id));
+      }
+      else
+      {
+        // No matching devices found
+        return new DeviceGridResponseDto
+        {
+          Items = [],
+          TotalItems = 0,
+          AnyDevicesForUser = anyDevices
+        };
+      }
+    }
+
+    // Apply sorting
+    if (requestDto.SortDefinitions != null && requestDto.SortDefinitions.Count > 0)
+    {
+      IOrderedQueryable<Device>? orderedQuery = null;
+
+      foreach (var sortDef in requestDto.SortDefinitions.OrderBy(s => s.SortOrder))
+      {
+        Func<IQueryable<Device>, IOrderedQueryable<Device>> orderFunc;
+
+        switch (sortDef.PropertyName)
+        {
+          case nameof(DeviceDto.Name):
+            orderFunc = q => sortDef.Descending ?
+              q.OrderByDescending(d => d.Name) :
+              q.OrderBy(d => d.Name);
+            break;
+          case nameof(DeviceDto.IsOnline):
+            orderFunc = q => sortDef.Descending ?
+              q.OrderByDescending(d => d.IsOnline) :
+              q.OrderBy(d => d.IsOnline);
+            break;
+          case nameof(DeviceDto.CpuUtilization):
+            orderFunc = q => sortDef.Descending ?
+              q.OrderByDescending(d => d.CpuUtilization) :
+              q.OrderBy(d => d.CpuUtilization);
+            break;
+          case nameof(DeviceDto.UsedMemoryPercent):
+            orderFunc = q => sortDef.Descending ?
+              q.OrderByDescending(d => d.UsedMemoryPercent) :
+              q.OrderBy(d => d.UsedMemoryPercent);
+            break;
+          case nameof(DeviceDto.UsedStoragePercent):
+            orderFunc = q => sortDef.Descending ?
+              q.OrderByDescending(d => d.UsedStoragePercent) :
+              q.OrderBy(d => d.UsedStoragePercent);
+            break;
+          default:
+            continue;
+        }
+
+        orderedQuery = orderedQuery == null ? orderFunc(query) : orderFunc(orderedQuery);
+      }
+
+      query = orderedQuery ?? query;
+    }
+
+    // Get the total count of matching items (before pagination)
+    var totalCount = await query.CountAsync();
+
+    // Get the devices for the current page
+    var devices = await query
+      .Skip(requestDto.Page * requestDto.PageSize)
+      .Take(requestDto.PageSize)
+      .ToListAsync();
+
+    // Filter for authorized devices
+    var authorizedDevices = new List<DeviceDto>();
+
+    foreach (var device in devices)
+    {
+      var authResult = await authorizationService.AuthorizeAsync(
+          User,
+          device,
+          DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+      if (authResult.Succeeded)
+      {
+        authorizedDevices.Add(device.ToDto());
+      }
+    }
+
+    var response = new DeviceGridResponseDto
+    {
+      Items = authorizedDevices,
+      TotalItems = totalCount,
+      AnyDevicesForUser = anyDevices
+    };
+
+    return response;
   }
 }

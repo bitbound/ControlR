@@ -11,3 +11,7 @@
     white-space: nowrap !important;
   }
 
+.top-controls-grid {
+    display: grid;
+    grid-template-columns: minmax(min-content, 400px);
+}

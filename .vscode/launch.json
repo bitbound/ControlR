@@ -8,10 +8,10 @@
       "name": "Agent (Run)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build agent",
       "program": "${workspaceFolder}/ControlR.Agent/bin/Debug/net9.0/ControlR.Agent.dll",
       "launchSettingsFilePath": "${workspaceFolder}/ControlR.Agent/Properties/launchSettings.json",
       "launchSettingsProfile": "Run",
+      "preLaunchTask": "build agent",
       "cwd": "${workspaceFolder}/ControlR.Agent",
       "stopAtEntry": false,
       "console": "internalConsole"
@@ -20,10 +20,10 @@
       "name": "Server (https)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build server",
       "program": "${workspaceFolder}/ControlR.Web.Server/bin/Debug/net9.0/ControlR.Web.Server.dll",
       "launchSettingsFilePath": "${workspaceFolder}/ControlR.Web.Server/Properties/launchSettings.json",
       "launchSettingsProfile": "https",
+      "preLaunchTask": "build server",
       "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
       "console": "internalConsole"
