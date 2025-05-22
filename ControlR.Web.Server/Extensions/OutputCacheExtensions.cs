@@ -7,12 +7,13 @@ namespace ControlR.Web.Server.Extensions;
 /// </summary>
 public static class OutputCacheExtensions
 {
+
     /// <summary>
-    /// Invalidates the device grid cache by evicting all entries with the device-grid tag
+    /// Invalidates the device grid cache for all tenants
     /// </summary>
-    /// <param name="outputCacheStore">The output cache store</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>A task representing the asynchronous operation</returns>
+    /// <param name="outputCacheStore"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static ValueTask InvalidateDeviceGridCacheAsync(
         this IOutputCacheStore outputCacheStore,
         CancellationToken cancellationToken = default)
@@ -20,6 +21,20 @@ public static class OutputCacheExtensions
         return outputCacheStore.EvictByTagAsync("device-grid", cancellationToken);
     }
 
+    /// <summary>
+    /// Invalidates the device grid cache for a specific tenant
+    /// </summary>
+    /// <param name="outputCacheStore"></param>
+    /// <param name="tenantId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static ValueTask InvalidateDeviceGridCacheForTenantAsync(
+        this IOutputCacheStore outputCacheStore,
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        return outputCacheStore.EvictByTagAsync($"device-grid-tenant-{tenantId}", cancellationToken);
+    }
     /// <summary>
     /// Invalidates the device grid cache for a specific device
     /// </summary>

@@ -153,7 +153,7 @@ public class AgentHub(
       .ReceiveDeviceUpdate(dto);
 
     // Invalidate the device grid cache using the extension method
-    await _outputCacheStore.InvalidateDeviceGridCacheAsync();
+    await _outputCacheStore.InvalidateDeviceCacheAsync(device.Id);
     _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", device.Id);
 
     if (device.Tags is null)

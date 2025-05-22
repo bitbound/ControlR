@@ -24,11 +24,16 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
       {
         userId = Guid.NewGuid();
       }
-       
+
       // Set user tag for cache eviction
       context.Tags.Add($"user-{userId}");
 
-      // Add the device-grid tag to all entries
+      // Add tenant-specific tag
+      if (context.HttpContext.User.TryGetTenantId(out var tenantId))
+      {
+        context.Tags.Add($"device-grid-tenant-{tenantId}");
+      }
+      // Keep the global tag as well if needed
       context.Tags.Add("device-grid");
 
       // Vary by query parameters and headers
@@ -39,7 +44,7 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
       // Note: ASP.NET Core doesn't natively support varying by POST body, so this is a workaround
       context.HttpContext.Request.EnableBuffering();
       using var reader = new StreamReader(context.HttpContext.Request.Body, leaveOpen: true);
-      var requestBody = reader.ReadToEndAsync(cancellationToken).GetAwaiter().GetResult(); 
+      var requestBody = reader.ReadToEndAsync(cancellationToken).GetAwaiter().GetResult();
       context.HttpContext.Request.Body.Position = 0;
       // Create a hash of the request body to vary by
       var requestHash = ComputeRequestHash(requestBody);
