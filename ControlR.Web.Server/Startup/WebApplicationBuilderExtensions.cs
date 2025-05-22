@@ -169,7 +169,11 @@ public static class WebApplicationBuilderExtensions
         options.RequestHeaders.Add("CDN-Loop");
         options.LoggingFields = HttpLoggingFields.All;
       });
-    }    // Add other services.    builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
+    }
+
+    // Add other services.
+
+    builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
     builder.Services.AddLazyDi();
     
     // Configure output cache

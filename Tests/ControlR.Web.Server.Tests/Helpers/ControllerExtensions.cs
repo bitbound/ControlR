@@ -1,6 +1,7 @@
 ﻿using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -16,27 +17,28 @@ internal static class ControllerExtensions
   /// <param name="user">The user to set for authorization</param>
   /// <param name="roles">Optional roles to assign to the user</param>
   /// <returns>A task representing the async operation</returns>
-  public static Task SetControllerUser(this ControllerBase controller, AppUser user, string[]? roles = null)
+  public static async Task SetControllerUser(
+    this ControllerBase controller,
+    AppUser user,
+    UserManager<AppUser> userManager)
   {
     ArgumentNullException.ThrowIfNull(controller);
-    ArgumentNullException.ThrowIfNull(user);    // Create list of claims
-    var claims = new List<Claim>
-    {
-      new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-      new(ClaimTypes.Email, user.Email ?? string.Empty),
-      new("TenantId", user.TenantId.ToString()),
-      new(UserClaimTypes.TenantId, user.TenantId.ToString()),
-      new(UserClaimTypes.UserId, user.Id.ToString())
-    };
+    ArgumentNullException.ThrowIfNull(user);
 
-    // Add role claims if provided
-    if (roles != null)
-    {
-      foreach (var role in roles)
-      {
-        claims.Add(new Claim(ClaimTypes.Role, role));
-      }
-    }
+    var userRoles = await userManager.GetRolesAsync(user);
+    var userClaims = await userManager.GetClaimsAsync(user);
+    var roleClaims = userRoles.Select(role => new Claim(ClaimTypes.Role, role));
+
+    Claim[] claims =
+    [
+      new(ClaimTypes.NameIdentifier, $"{user.Id}"),
+      new(ClaimTypes.Name, $"{user.UserName}"),
+      new(ClaimTypes.Email, $"{user.Email}"),
+      new(UserClaimTypes.TenantId, user.TenantId.ToString()),
+      new(UserClaimTypes.UserId, user.Id.ToString()),
+      ..roleClaims,
+      ..userClaims
+    ];
 
     // Create ClaimsIdentity with necessary claims
     var identity = new ClaimsIdentity(claims, "TestAuthentication");
@@ -56,7 +58,5 @@ internal static class ControllerExtensions
     {
       controller.ControllerContext.HttpContext.User = principal;
     }
-
-    return Task.CompletedTask;
   }
 }

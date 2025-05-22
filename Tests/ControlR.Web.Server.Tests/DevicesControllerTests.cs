@@ -6,18 +6,14 @@ using ControlR.Web.Server.Tests.Helpers;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Web.Client.Authz;
-using Microsoft.EntityFrameworkCore;
 using ControlR.Web.Server.Api;
-using System.Reflection;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -33,6 +29,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
     // Create test tenant
     var tenantId = Guid.NewGuid();
@@ -41,16 +38,13 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await db.SaveChangesAsync();
 
     // Create test user
-    var userId = Guid.NewGuid();
-    var user = new AppUser
-    {
-      Id = userId,
-      UserName = "test@example.com",
-      Email = "test@example.com",
-      TenantId = tenantId
-    };
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
+    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
+    Assert.True(userResult.Succeeded);
+
+    var user = userResult.User;
+
+    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
+    Assert.True(addResult.Succeeded);
 
     // Create test tags
     var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
@@ -93,7 +87,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
     }        // Configure controller user context for authorization
-    await controller.SetControllerUser(user, [RoleNames.DeviceSuperUser]);
+    await controller.SetControllerUser(user, userManager);
 
     // Act
     // Test case 1: Get all devices with pagination
@@ -186,7 +180,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       Assert.True(response5.Items[i].CpuUtilization >= response5.Items[i + 1].CpuUtilization);
     }
   }
-
   [Fact]
   public async Task GetDevicesGridData_AppliesCombinedFilters()
   {
@@ -197,6 +190,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
     // Create test tenant
     var tenantId = Guid.NewGuid();
@@ -205,16 +199,12 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await db.SaveChangesAsync();
 
     // Create test user
-    var userId = Guid.NewGuid();
-    var user = new AppUser
-    {
-      Id = userId,
-      UserName = "test@example.com",
-      Email = "test@example.com",
-      TenantId = tenantId
-    };
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
+    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
+    Assert.True(userResult.Succeeded);
+    var user = userResult.User;
+
+    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
+    Assert.True(addResult.Succeeded);
 
     // Create test tag
     var tagId = Guid.NewGuid();
@@ -253,8 +243,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       };
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
-    }        // Configure controller user context for authorization
-    await controller.SetControllerUser(user, [RoleNames.DeviceSuperUser]);
+    }    // Configure controller user context for authorization
+    await controller.SetControllerUser(user, userManager);
 
     // Act - Combined filters: online + has tag + contains "Device 2" in name
     var request = new DeviceGridRequestDto
@@ -282,7 +272,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     Assert.NotNull(device.TagIds);
     Assert.Contains(tagId, device.TagIds!);
   }
-
   [Fact]
   public async Task GetDevicesGridData_RespectsUserAuthorization()
   {
@@ -292,6 +281,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
+    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
     // Create two tenants
     var tenant1Id = Guid.NewGuid();
@@ -304,16 +295,12 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await db.SaveChangesAsync();
 
     // Create user for tenant 1
-    var user1Id = Guid.NewGuid();
-    var user1 = new AppUser
-    {
-      Id = user1Id,
-      UserName = "user1@example.com",
-      Email = "user1@example.com",
-      TenantId = tenant1Id
-    };
-    db.Users.Add(user1);
-    await db.SaveChangesAsync();
+    var userResult = await userCreator.CreateUser("user1@example.com", "T3stP@ssw0rd!", tenant1Id);
+    Assert.True(userResult.Succeeded);
+    var user1 = userResult.User;
+
+    var addResult = await userManager.AddToRoleAsync(user1, RoleNames.DeviceSuperUser);
+    Assert.True(addResult.Succeeded);
 
     // Create devices for both tenants
     for (int i = 0; i < 5; i++)
@@ -373,8 +360,10 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(device2Dto, addTagIds: false);
-    }        // Configure controller user context for authorization
-    await controller.SetControllerUser(user1, [RoleNames.DeviceSuperUser]);
+    }
+
+    // Configure controller user context for authorization
+    await controller.SetControllerUser(user1, userManager);
 
     // Act
     var request = new DeviceGridRequestDto

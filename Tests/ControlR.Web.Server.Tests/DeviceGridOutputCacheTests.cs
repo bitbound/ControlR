@@ -6,7 +6,7 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,26 +27,15 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var controller = testApp.CreateController<Api.DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
     var outputCacheStore = testApp.App.Services.GetRequiredService<IOutputCacheStore>();
-
+    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
 
-    // Create test tenant
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Output Cache Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
     // Create test user
-    var userId = Guid.NewGuid();
-    var user = new AppUser
-    {
-      Id = userId,
-      UserName = "cachetest@example.com",
-      Email = "cachetest@example.com",
-      TenantId = tenantId
-    };
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
+    var userResult = await userCreator.CreateUser("cachetest@example.com", "T3stP@ssw0rd!",returnUrl: null);
+    Assert.True(userResult.Succeeded);
+
+    var user = userResult.User;
 
     // Create test device
     var deviceId = Guid.NewGuid();
@@ -59,11 +48,11 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         IsOnline: true,
         LastSeen: DateTimeOffset.Now,
         OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
-        Platform: ControlR.Libraries.Shared.Enums.SystemPlatform.Windows,
+        Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
         ProcessorCount: 8,
         ConnectionId: "test-connection-id",
         OsDescription: "Windows 11",
-        TenantId: tenantId,
+        TenantId: user.TenantId,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -85,7 +74,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     }
 
     // Configure controller user context for authorization
-    await controller.SetControllerUser(user);
+    await controller.SetControllerUser(user, userManager);
 
     // Create the request
     var request = new DeviceGridRequestDto
@@ -99,7 +88,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+        testApp.App.Services.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
@@ -110,7 +99,11 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await outputCacheStore.EvictByTagAsync("device-grid", default);
 
     // Act - Third call after invalidation should get updated data
-    var result3 = await controller.GetDevicesGridData(request, db, testApp.App.Services.GetRequiredService<IAuthorizationService>(), testApp.App.Services.GetRequiredService<ILogger<ControlR.Web.Server.Api.DevicesController>>());
+    var result3 = await controller.GetDevicesGridData(
+      request,
+      db,
+      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
+      testApp.App.Services.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Assert
     Assert.NotNull(result1.Value);

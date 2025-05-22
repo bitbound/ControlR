@@ -27,6 +27,7 @@ public static class TestAppBuilder
     builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
 
     var app = builder.Build();
+    await app.AddBuiltInRoles();
     return new TestApp(app, timeProvider);
   }
 }
