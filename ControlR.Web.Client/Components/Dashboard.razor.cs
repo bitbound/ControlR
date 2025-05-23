@@ -160,9 +160,10 @@ public partial class Dashboard
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
-    viewModel.IsOutdated = IsOutdated(viewModel);
-    var foundItem = _dataGrid?.Items.FindIndex(x => x.Id == viewModel.Id);
-    await Task.Delay(1);
+    if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
+    {
+      await ReloadGridData();
+    }
   }
 
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
