@@ -1,7 +1,5 @@
 using System.Linq.Expressions;
-using ControlR.Web.Server.Caching;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api;
 
@@ -109,7 +107,6 @@ public class DevicesController : ControllerBase
   }
 
   [HttpPost("grid")]
-  [OutputCache(PolicyName = OutputCachePolicyNames.DeviceGrid)]
   public async Task<ActionResult<DeviceGridResponseDto>> GetDevicesGridData(
     [FromBody] DeviceGridRequestDto requestDto,
     [FromServices] AppDb appDb,

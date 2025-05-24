@@ -10,15 +10,11 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
-using ControlR.Web.Server.Middleware;
-using ControlR.Web.Server.Caching;
-
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -178,18 +174,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
     builder.Services.AddLazyDi();
 
-    // Configure output cache
-    builder.Services.AddOutputCache(options =>
-    {
-      // Define a named policy for device grid
-      options.AddPolicy(OutputCachePolicyNames.DeviceGrid, builder =>
-      {
-        builder
-          .AddPolicy<DeviceGridOutputCachePolicy>()
-          .Cache();
-      });
-    });
-
+    builder.Services.AddOutputCache();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
