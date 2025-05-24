@@ -8,7 +8,8 @@ var pgPassword = builder.AddParameter("PgPassword", true);
 var postgres = builder
     .AddPostgres(ServiceNames.Postgres, pgUser, pgPassword, port: 5432)
     .WithLifetime(ContainerLifetime.Persistent)
-    .WithDataVolume("controlr-data");
+    .WithDataVolume("controlr-data")
+    .ExcludeFromManifest();
 
 var pgHost = postgres.GetEndpoint("tcp");
 

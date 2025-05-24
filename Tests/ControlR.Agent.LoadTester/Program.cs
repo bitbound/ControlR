@@ -7,14 +7,11 @@ using ControlR.Agent.Common.Services.Windows;
 using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Serilog;
 using ControlR.Agent.LoadTester.Helpers;
 

@@ -1,3 +1,4 @@
+using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Http;
@@ -16,7 +17,7 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
     public async Task CacheRequestAsync_Authenticated_EnablesCachingWithTags()
     {
         // Arrange
-        var policy = new DeviceGridCachePolicy();
+        var policy = new DeviceGridOutputCachePolicy();
         var httpContext = new DefaultHttpContext();
         var userId = Guid.NewGuid().ToString();
         
@@ -48,7 +49,7 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
     public async Task CacheRequestAsync_Unauthenticated_DisablesCaching()
     {
         // Arrange
-        var policy = new DeviceGridCachePolicy();
+        var policy = new DeviceGridOutputCachePolicy();
         var httpContext = new DefaultHttpContext();
         
         // Setup unauthenticated user
@@ -71,7 +72,7 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
     public async Task CacheRequestAsync_BodyHashing_CreatesRequestTag()
     {
         // Arrange
-        var policy = new DeviceGridCachePolicy();
+        var policy = new DeviceGridOutputCachePolicy();
         var httpContext = new DefaultHttpContext();
         var userId = Guid.NewGuid().ToString();
         
