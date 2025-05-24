@@ -44,13 +44,6 @@ app.UseWhen(
   ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
-app.UseWhen(
-  ctx => ctx.Request.Path.StartsWithSegments("/api/devices/grid"),
-  appBuilder => appBuilder.UseMiddleware<DeviceGridExceptionHandlerMiddleware>());
-
-// Configure output cache - must be before any middleware that generates response
-app.UseOutputCache();
-
 app.MapStaticAssets();
 
 app.MapWebSocketRelay();
@@ -59,6 +52,9 @@ app.MapHub<AgentHub>("/hubs/agent");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+// Configure output cache - must be before any middleware that generates response
+app.UseOutputCache();
 
 app.MapControllers();
 
@@ -75,11 +71,6 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
-// Remove duplicate output cache middleware call
-if (!app.Environment.IsDevelopment())
-{
-  // Output cache middleware is already registered above
-}
 
 if (appOptions.UseInMemoryDatabase)
 {

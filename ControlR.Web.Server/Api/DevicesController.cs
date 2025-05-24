@@ -1,14 +1,5 @@
-using System.Security.Claims;
-using ControlR.Web.Server.Authz.Policies;
-using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Interfaces;
-using ControlR.Web.Server.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Api;
 
@@ -116,7 +107,6 @@ public class DevicesController : ControllerBase
   }
 
   [HttpPost("grid")]
-  [OutputCache(PolicyName = "DeviceGridPolicy")]
   public async Task<ActionResult<DeviceGridResponseDto>> GetDevicesGridData(
     [FromBody] DeviceGridRequestDto requestDto,
     [FromServices] AppDb appDb,
@@ -125,7 +115,11 @@ public class DevicesController : ControllerBase
   {
     // Start with all devices
     var anyDevices = await appDb.Devices.AnyAsync();
-    var query = appDb.Devices.Include(x => x.Tags).AsQueryable();
+    var query = appDb.Devices
+      .Include(x => x.Tags)
+      .AsSplitQuery()
+      .OrderBy(x => x.CreatedAt)
+      .AsQueryable();
 
     // Apply filtering
     if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
@@ -183,52 +177,44 @@ public class DevicesController : ControllerBase
       }
     }
 
-    // Apply sorting
+    var sortExpressions = new Dictionary<string, Expression<Func<Device, object>>>
+    {
+      [nameof(DeviceDto.Name)] = d => d.Name,
+      [nameof(DeviceDto.IsOnline)] = d => d.IsOnline,
+      [nameof(DeviceDto.CpuUtilization)] = d => d.CpuUtilization,
+      [nameof(DeviceDto.UsedMemoryPercent)] = d => d.UsedMemoryPercent,
+      [nameof(DeviceDto.UsedStoragePercent)] = d => d.UsedStoragePercent
+    };
+
     if (requestDto.SortDefinitions != null && requestDto.SortDefinitions.Count > 0)
     {
       IOrderedQueryable<Device>? orderedQuery = null;
 
       foreach (var sortDef in requestDto.SortDefinitions.OrderBy(s => s.SortOrder))
       {
-        Func<IQueryable<Device>, IOrderedQueryable<Device>> orderFunc;
-
-        switch (sortDef.PropertyName)
+        if (string.IsNullOrWhiteSpace(sortDef.PropertyName) ||
+            !sortExpressions.TryGetValue(sortDef.PropertyName, out var expr))
         {
-          case nameof(DeviceDto.Name):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.Name) :
-              q.OrderBy(d => d.Name);
-            break;
-          case nameof(DeviceDto.IsOnline):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.IsOnline) :
-              q.OrderBy(d => d.IsOnline);
-            break;
-          case nameof(DeviceDto.CpuUtilization):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.CpuUtilization) :
-              q.OrderBy(d => d.CpuUtilization);
-            break;
-          case nameof(DeviceDto.UsedMemoryPercent):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.UsedMemoryPercent) :
-              q.OrderBy(d => d.UsedMemoryPercent);
-            break;
-          case nameof(DeviceDto.UsedStoragePercent):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.UsedStoragePercent) :
-              q.OrderBy(d => d.UsedStoragePercent);
-            break;
-          default:
-            continue;
+
+          continue;
         }
 
-        orderedQuery = orderedQuery == null ? orderFunc(query) : orderFunc(orderedQuery);
+        if (orderedQuery == null)
+        {
+          orderedQuery = sortDef.Descending
+              ? query.OrderByDescending(expr)
+              : query.OrderBy(expr);
+        }
+        else
+        {
+          orderedQuery = sortDef.Descending
+              ? orderedQuery.ThenByDescending(expr)
+              : orderedQuery.ThenBy(expr);
+        }
       }
 
       query = orderedQuery ?? query;
     }
-
     // Get the total count of matching items (before pagination)
     var totalCount = await query.CountAsync();
 

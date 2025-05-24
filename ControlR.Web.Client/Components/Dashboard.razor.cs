@@ -13,6 +13,7 @@ public partial class Dashboard
     ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Name), false, 1, x => x.Name)
   };
 
+  private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
   private Version? _agentReleaseVersion;
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
@@ -100,6 +101,7 @@ public partial class Dashboard
     _selectedTags = [.. TagStore.Items];
 
     _loading = false;
+    _componentLoadedSignal.Set();
   }
 
   private async Task EditDevice(DeviceViewModel device)
@@ -160,9 +162,10 @@ public partial class Dashboard
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
-    viewModel.IsOutdated = IsOutdated(viewModel);
-    var foundItem = _dataGrid?.Items.FindIndex(x => x.Id == viewModel.Id);
-    await Task.Delay(1);
+    if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
+    {
+      await ReloadGridData();
+    }
   }
 
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
@@ -196,6 +199,12 @@ public partial class Dashboard
 
   private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
   {
+    if (_loading)
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await _componentLoadedSignal.Wait(cts.Token);
+    }
+
     var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count
         ? _selectedTags.Select(t => t.Id).ToList()
         : null;
