@@ -72,11 +72,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
     return new FakeDeviceDataGenerator(
       i,
       tenantId,
-      agentVersion,
-      sp.GetRequiredService<ISystemEnvironment>(),
-      sp.GetRequiredService<ICpuUtilizationSampler>(),
-      sp.GetRequiredService<IOptionsMonitor<AgentAppOptions>>(),
-      sp.GetRequiredService<ILogger<FakeDeviceDataGenerator>>());
+      agentVersion);
   });
 
   var host = builder.Build();
