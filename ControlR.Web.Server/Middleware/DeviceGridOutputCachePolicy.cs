@@ -1,10 +1,9 @@
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
-using System.Text.Json;
 
 namespace ControlR.Web.Server.Middleware;
 
-public class DeviceGridOutputCachePolicy : IOutputCachePolicy
+public class DeviceGridOutputCachePolicy() : IOutputCachePolicy
 {
   private readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(30);
 
@@ -45,16 +44,19 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
     // Vary by query parameters and headers
     context.CacheVaryByRules.QueryKeys = "*";
     context.CacheVaryByRules.HeaderNames = new[] { "Authorization" };
+
     // Vary by request hash - computed from the body
     // Note: ASP.NET Core doesn't natively support varying by POST body, so this is a workaround
     context.HttpContext.Request.EnableBuffering();
     using var reader = new StreamReader(context.HttpContext.Request.Body, leaveOpen: true);
     var requestBody = await reader.ReadToEndAsync(cancellationToken);
     context.HttpContext.Request.Body.Position = 0;
+
     // Create a hash of the request body to vary by
     var requestHash = ComputeRequestHash(requestBody);
     // Store request hash as a tag to allow for more specific cache invalidation
     context.Tags.Add($"request-{requestHash}");
+    context.CacheVaryByRules.VaryByValues.TryAdd(nameof(DeviceGridRequestDto), requestBody);
 
     // Add custom response header to indicate cache usage
     context.HttpContext.Response.OnStarting(() =>

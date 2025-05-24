@@ -44,10 +44,6 @@ app.UseWhen(
   ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
-app.UseWhen(
-  ctx => ctx.Request.Path.StartsWithSegments("/api/devices/grid"),
-  appBuilder => appBuilder.UseMiddleware<DeviceGridExceptionHandlerMiddleware>());
-
 app.MapStaticAssets();
 
 app.MapWebSocketRelay();
