@@ -111,8 +111,7 @@
         </CellTemplate>
       </TemplateColumn>
 
-      <TemplateColumn T="DeviceViewModel" StickyLeft="true" Sortable="true" Filterable="true" SortBy="@(x => x.Name)"
-        Title="Name">
+      <PropertyColumn Title="Name" Property="x => x.Name" Sortable="true" Filterable="true" StickyLeft="true">
         <CellTemplate>
           @if (string.IsNullOrWhiteSpace(context.Item.Alias))
           {
@@ -123,9 +122,10 @@
             @($"{context.Item.Name} ({context.Item.Alias})")
           }
         </CellTemplate>
-      </TemplateColumn>
 
-      <TemplateColumn T="DeviceViewModel" Sortable="true" SortBy="@(x => x.IsOnline)" Filterable="true" Title="Online">
+      </PropertyColumn>
+
+      <PropertyColumn Property="@(x => x.IsOnline)" Sortable="true" Filterable="true" Title="Online">
         <CellTemplate>
           @if (context.Item.IsOnline)
           {
@@ -149,7 +149,7 @@
             </MudTooltip>
           }
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
       <PropertyColumn Property="x => x!.CurrentUsers" Title="Current Users" Sortable="false" Filterable="false">
         <CellTemplate>
@@ -157,26 +157,24 @@
         </CellTemplate>
       </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel" Title="CPU" Sortable="true" SortBy="@(x => x.CpuUtilization)"
-        Filterable="true">
+      <PropertyColumn Property="@(x => x.CpuUtilization)" Title="CPU" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel" Title="Memory" Sortable="true" SortBy="@(x => x.UsedMemoryPercent)"
-        Filterable="true">
+      <PropertyColumn Property="@(x => x.UsedMemoryPercent)" Title="Memory" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel" Title="Storage" Sortable="true" SortBy="@(x => x.UsedStoragePercent)"
-        Filterable="true">
+      <PropertyColumn Property="@(x => x.UsedStoragePercent)" Title="Storage" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
+
       <HierarchyColumn T="DeviceViewModel" />
     </Columns>
 

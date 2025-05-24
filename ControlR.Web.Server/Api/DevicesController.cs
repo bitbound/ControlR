@@ -125,7 +125,10 @@ public class DevicesController : ControllerBase
   {
     // Start with all devices
     var anyDevices = await appDb.Devices.AnyAsync();
-    var query = appDb.Devices.Include(x => x.Tags).AsQueryable();
+    var query = appDb.Devices
+      .Include(x => x.Tags)
+      .OrderBy(x => x.CreatedAt)
+      .AsQueryable();
 
     // Apply filtering
     if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
