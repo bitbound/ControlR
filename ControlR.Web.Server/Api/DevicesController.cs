@@ -190,7 +190,7 @@ public class DevicesController : ControllerBase
 
     var sortExpressions = new Dictionary<string, Expression<Func<Device, object>>>
     {
-      [nameof(DeviceDto.Name)] = d => d.Name!,
+      [nameof(DeviceDto.Name)] = d => d.Name,
       [nameof(DeviceDto.IsOnline)] = d => d.IsOnline,
       [nameof(DeviceDto.CpuUtilization)] = d => d.CpuUtilization,
       [nameof(DeviceDto.UsedMemoryPercent)] = d => d.UsedMemoryPercent,
