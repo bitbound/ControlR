@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.OutputCaching;
 using System.Security.Claims;
 
-namespace ControlR.Web.Server.Startup;
+namespace ControlR.Web.Server.Services;
 
 /// <summary>
 /// Custom output cache policy for device grid data.
@@ -43,7 +43,7 @@ public class DeviceGridCachePolicy : IOutputCachePolicy
                 context.HttpContext.Request.EnableBuffering();
             }
         }
-        
+
         return ValueTask.CompletedTask;
     }
 

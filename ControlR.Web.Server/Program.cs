@@ -75,11 +75,6 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
-// Remove duplicate output cache middleware call
-if (!app.Environment.IsDevelopment())
-{
-  // Output cache middleware is already registered above
-}
 
 if (appOptions.UseInMemoryDatabase)
 {

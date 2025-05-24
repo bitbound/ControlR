@@ -190,40 +190,81 @@ public class DevicesController : ControllerBase
 
       foreach (var sortDef in requestDto.SortDefinitions.OrderBy(s => s.SortOrder))
       {
-        Func<IQueryable<Device>, IOrderedQueryable<Device>> orderFunc;
-
         switch (sortDef.PropertyName)
         {
           case nameof(DeviceDto.Name):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.Name) :
-              q.OrderBy(d => d.Name);
+            if (orderedQuery == null)
+            {
+              orderedQuery = sortDef.Descending ?
+                query.OrderByDescending(d => d.Name) :
+                query.OrderBy(d => d.Name);
+            }
+            else
+            {
+              orderedQuery = sortDef.Descending ?
+                orderedQuery.ThenByDescending(d => d.Name) :
+                orderedQuery.ThenBy(d => d.Name);
+            }
             break;
           case nameof(DeviceDto.IsOnline):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.IsOnline) :
-              q.OrderBy(d => d.IsOnline);
+            if (orderedQuery == null)
+            {
+              orderedQuery = sortDef.Descending ?
+                query.OrderByDescending(d => d.IsOnline) :
+                query.OrderBy(d => d.IsOnline);
+            }
+            else
+            {
+              orderedQuery = sortDef.Descending ?
+                orderedQuery.ThenByDescending(d => d.IsOnline) :
+                orderedQuery.ThenBy(d => d.IsOnline);
+            }
             break;
           case nameof(DeviceDto.CpuUtilization):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.CpuUtilization) :
-              q.OrderBy(d => d.CpuUtilization);
+            if (orderedQuery == null)
+            {
+              orderedQuery = sortDef.Descending ?
+                query.OrderByDescending(d => d.CpuUtilization) :
+                query.OrderBy(d => d.CpuUtilization);
+            }
+            else
+            {
+              orderedQuery = sortDef.Descending ?
+                orderedQuery.ThenByDescending(d => d.CpuUtilization) :
+                orderedQuery.ThenBy(d => d.CpuUtilization);
+            }
             break;
           case nameof(DeviceDto.UsedMemoryPercent):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.UsedMemoryPercent) :
-              q.OrderBy(d => d.UsedMemoryPercent);
+            if (orderedQuery == null)
+            {
+              orderedQuery = sortDef.Descending ?
+                query.OrderByDescending(d => d.UsedMemoryPercent) :
+                query.OrderBy(d => d.UsedMemoryPercent);
+            }
+            else
+            {
+              orderedQuery = sortDef.Descending ?
+                orderedQuery.ThenByDescending(d => d.UsedMemoryPercent) :
+                orderedQuery.ThenBy(d => d.UsedMemoryPercent);
+            }
             break;
           case nameof(DeviceDto.UsedStoragePercent):
-            orderFunc = q => sortDef.Descending ?
-              q.OrderByDescending(d => d.UsedStoragePercent) :
-              q.OrderBy(d => d.UsedStoragePercent);
+            if (orderedQuery == null)
+            {
+              orderedQuery = sortDef.Descending ?
+                query.OrderByDescending(d => d.UsedStoragePercent) :
+                query.OrderBy(d => d.UsedStoragePercent);
+            }
+            else
+            {
+              orderedQuery = sortDef.Descending ?
+                orderedQuery.ThenByDescending(d => d.UsedStoragePercent) :
+                orderedQuery.ThenBy(d => d.UsedStoragePercent);
+            }
             break;
           default:
             continue;
         }
-
-        orderedQuery = orderedQuery == null ? orderFunc(query) : orderFunc(orderedQuery);
       }
 
       query = orderedQuery ?? query;

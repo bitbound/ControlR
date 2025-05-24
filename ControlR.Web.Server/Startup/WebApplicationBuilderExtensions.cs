@@ -176,21 +176,17 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
     builder.Services.AddLazyDi();
-    
+
     // Configure output cache
-    builder.Services.AddOutputCache(options => 
+    builder.Services.AddOutputCache(options =>
     {
-        // Define a named policy for device grid
-        options.AddPolicy("DeviceGridPolicy", builder => 
-        {
-            builder.Cache();
-            builder.Expire(TimeSpan.FromMinutes(2));
-            builder.Tag("device-grid");
-            
-            // Add a custom policy that ensures we only cache for authenticated users
-            // and varies the cache by user ID and request content
-            builder.AddPolicy<DeviceGridOutputCachePolicy>();
-        });
+      // Define a named policy for device grid
+      options.AddPolicy("DeviceGridPolicy", builder =>
+      {
+        builder
+          .AddPolicy<DeviceGridOutputCachePolicy>()
+          .Cache();
+      });
     });
 
     builder.Services.AddHttpContextAccessor();
@@ -206,7 +202,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IStreamStore, StreamStore>();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
-    
+
     builder.Host.UseSystemd();
 
     return builder;
