@@ -127,6 +127,7 @@ public class DevicesController : ControllerBase
     var anyDevices = await appDb.Devices.AnyAsync();
     var query = appDb.Devices
       .Include(x => x.Tags)
+      .AsSplitQuery()
       .OrderBy(x => x.CreatedAt)
       .AsQueryable();
 

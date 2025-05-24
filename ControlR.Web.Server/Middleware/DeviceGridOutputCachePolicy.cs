@@ -8,7 +8,7 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
 {
   private readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(30);
 
-  public ValueTask CacheRequestAsync(OutputCacheContext context, CancellationToken cancellationToken)
+  public async ValueTask CacheRequestAsync(OutputCacheContext context, CancellationToken cancellationToken)
   {
     // Only cache if the user is authenticated
     var isAuthenticated = context.HttpContext.User.Identity?.IsAuthenticated == true;
@@ -16,8 +16,11 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
 
     if (!isAuthenticated)
     {
-      return ValueTask.CompletedTask;
+      return;
     }
+
+    context.AllowCacheLookup = true;
+    context.AllowCacheStorage = true;
 
     // Set cache duration
     context.ResponseExpirationTimeSpan = _cacheDuration;
@@ -42,12 +45,11 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
     // Vary by query parameters and headers
     context.CacheVaryByRules.QueryKeys = "*";
     context.CacheVaryByRules.HeaderNames = new[] { "Authorization" };
-
     // Vary by request hash - computed from the body
     // Note: ASP.NET Core doesn't natively support varying by POST body, so this is a workaround
     context.HttpContext.Request.EnableBuffering();
     using var reader = new StreamReader(context.HttpContext.Request.Body, leaveOpen: true);
-    var requestBody = reader.ReadToEndAsync(cancellationToken).GetAwaiter().GetResult();
+    var requestBody = await reader.ReadToEndAsync(cancellationToken);
     context.HttpContext.Request.Body.Position = 0;
     // Create a hash of the request body to vary by
     var requestHash = ComputeRequestHash(requestBody);
@@ -61,18 +63,18 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
       context.HttpContext.Response.Headers["X-DeviceGrid-Cache-Hash"] = requestHash;
       return Task.CompletedTask;
     });
-
-    return ValueTask.CompletedTask;
   }
 
   public ValueTask ServeFromCacheAsync(OutputCacheContext context, CancellationToken cancellationToken)
   {
+    context.AllowCacheLookup = true;
     // Use default behavior
     return ValueTask.CompletedTask;
   }
 
   public ValueTask ServeResponseAsync(OutputCacheContext context, CancellationToken cancellationToken)
   {
+    context.AllowCacheLookup = true;
     // Use default behavior
     return ValueTask.CompletedTask;
   }
