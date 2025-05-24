@@ -36,11 +36,10 @@ internal static class PathConstants
 
     if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
-      var settingsDir = "/etc/controlr";
-      if (SystemEnvironment.Instance.IsDebug)
-      {
-        settingsDir += "/debug";
-      }
+      var settingsDir = SystemEnvironment.Instance.IsDebug
+        ? "~/.controlr"
+        : "/etc/controlr";
+
       if (!string.IsNullOrWhiteSpace(instanceId))
       {
         settingsDir = Path.Combine(settingsDir, instanceId);

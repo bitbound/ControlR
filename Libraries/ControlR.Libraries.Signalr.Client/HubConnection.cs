@@ -171,7 +171,7 @@ internal sealed class HubConnection<THub, TClient>(
   internal HubConnection Connection => _connection ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
   public async Task<bool> Connect(
-      Uri hubEndpoint,
+    Uri hubEndpoint,
     bool autoRetry,
     Action<HttpConnectionOptions>? configure = null,
     CancellationToken cancellationToken = default)

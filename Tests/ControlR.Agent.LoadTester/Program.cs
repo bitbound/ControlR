@@ -42,8 +42,14 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
     return;
   }
 
-  var builder = Host.CreateApplicationBuilder(args);
-  builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}", serverUri);
+  var settings = new HostApplicationBuilderSettings()
+  {
+    Args = args,
+    EnvironmentName = "Development",
+    ApplicationName = "ControlR.Agent.LoadTester",
+  };
+  var builder = Host.CreateEmptyApplicationBuilder(settings);
+  builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}", serverUri, loadAppSettings: false);
 
   var deviceId = DeterministicGuid.Create(i);
 
@@ -60,8 +66,12 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   builder.Services.ReplaceImplementation<IAgentUpdater, FakeAgentUpdater>();
   builder.Services.ReplaceImplementation<IStreamerUpdater, FakeStreamerUpdater>();
   builder.Services.ReplaceImplementation<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
+  builder.Services.ReplaceImplementation<IHubConnectionConfigurer, LoadTestHubConnectionConfigurer>();
   builder.Services.ReplaceImplementation<ISettingsProvider, FakeSettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
-  builder.Services.RemoveImplementation<StreamingSessionWatcher>();
+  if (OperatingSystem.IsWindows())
+  {
+    builder.Services.RemoveImplementation<StreamingSessionWatcher>();
+  }
   builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
 
   builder.Services.ReplaceImplementation<IDeviceDataGenerator, FakeDeviceDataGenerator>(sp =>

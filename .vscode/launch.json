@@ -27,6 +27,18 @@
       "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
       "console": "internalConsole"
+    },
+    {
+      "name": "LoadTester",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester/bin/Debug/net9.0/ControlR.Agent.LoadTester.dll",
+      "launchSettingsFilePath": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester/Properties/launchSettings.json",
+      "launchSettingsProfile": "local",
+      "preLaunchTask": "build loadtester",
+      "cwd": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester",
+      "stopAtEntry": false,
+      "console": "internalConsole"
     }
   ],
   "compounds": [
@@ -34,6 +46,12 @@
       "name": "Server + Compose + Agent",
       "preLaunchTask": "compose",
       "configurations": ["Server (https)", "Agent (Run)"],
+      "stopAll": true
+    },
+    {
+      "name": "Load Test",
+      "preLaunchTask": "compose",
+      "configurations": ["Server (https)", "LoadTester"],
       "stopAll": true
     },
     {
