@@ -17,6 +17,7 @@ using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Middleware;
+using ControlR.Web.Server.Caching;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -181,7 +182,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddOutputCache(options =>
     {
       // Define a named policy for device grid
-      options.AddPolicy("DeviceGridPolicy", builder =>
+      options.AddPolicy(OutputCachePolicyNames.DeviceGrid, builder =>
       {
         builder
           .AddPolicy<DeviceGridOutputCachePolicy>()
