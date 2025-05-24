@@ -1,4 +1,6 @@
-﻿namespace ControlR.Agent.Common.Startup;
+﻿using ControlR.Agent.Common.Services.Linux;
+
+namespace ControlR.Agent.Common.Startup;
 
 internal static class PathConstants
 {
@@ -36,9 +38,10 @@ internal static class PathConstants
 
     if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
-      var settingsDir = SystemEnvironment.Instance.IsDebug
-        ? "~/.controlr"
-        : "/etc/controlr";
+
+      var settingsDir = ElevationCheckerLinux.Instance.IsElevated()
+        ? "/etc/controlr"
+        : "~/.controlr";
 
       if (!string.IsNullOrWhiteSpace(instanceId))
       {

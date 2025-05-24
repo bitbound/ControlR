@@ -60,13 +60,15 @@ internal class LoadTestHubConnectionConfigurer(
           try
           {
             var connectionCount = Interlocked.Increment(ref _connectionCount) - 1;
-            var lastOctet = _lastOctets[connectionCount % _lastOctets.Length];
-            var port = _ports[connectionCount % _ports.Length];
+            var octetIndex = connectionCount / _ports.Length % _lastOctets.Length;
+            var portIndex = connectionCount % _ports.Length;
+            var lastOctet = _lastOctets[octetIndex];
+            var port = _ports[portIndex];
             var localEndpoint = new IPEndPoint(IPAddress.Parse($"192.168.0.{lastOctet}"), port);
 
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            socket.SetSocketOption(SocketOptionLevel.Socket, (SocketOptionName)SO_REUSEPORT, true);
+            socket.SetRawSocketOption(1, SO_REUSEPORT, BitConverter.GetBytes(1));
             socket.Bind(localEndpoint);
             var remoteEndpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
             await socket.ConnectAsync(remoteEndpoint, token);
