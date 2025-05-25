@@ -13,8 +13,9 @@ var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
 var startCount = ArgsParser.GetArgValue("--start-count", 0);
 var serverUriArg = ArgsParser.GetArgValue<string>("--server-uri");
 var serverUri = new Uri(serverUriArg);
+var tenantIdArg = ArgsParser.GetArgValue("--tenant-id", string.Empty);
+var tenantId = Guid.TryParse(tenantIdArg, out var parsedTenantId) ? parsedTenantId : Guid.Empty;
 var agentVersion = await GetAgentVersion(serverUri);
-var tenantId = Guid.Parse("23fec81b-6e09-4161-92c3-930d8c5162ca");
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
@@ -32,7 +33,13 @@ var retryPolicy = new TestAgentRetryPolicy();
 
 _ = ReportConnections(connections, cancellationToken);
 
-await Parallel.ForAsync(startCount, startCount + agentCount, cts.Token, async (i, ct) =>
+var parallelOptions = new ParallelOptions()
+{
+  MaxDegreeOfParallelism = Environment.ProcessorCount * 10,
+  CancellationToken = cts.Token
+};
+
+await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
   {
@@ -107,7 +114,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, cts.Token, async (i
   }
 });
 
-Console.WriteLine($"All {agentCount} agents started successfully.");
+Console.WriteLine($"All {agentCount:N0} agents started successfully.");
 await Task.Delay(Timeout.Infinite, cancellationToken);
 return;
 
@@ -120,7 +127,7 @@ static async Task ReportConnections(ConcurrentBag<HubConnection> connections, Ca
 
     foreach (var group in groups)
     {
-      Console.WriteLine($"{group.Key}: {group.Count()}");
+      Console.WriteLine($"{group.Key}: {group.Count():N0}");
     }
   }
 }
