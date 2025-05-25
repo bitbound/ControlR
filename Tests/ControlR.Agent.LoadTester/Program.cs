@@ -1,7 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.Agent.LoadTester;
-using ControlR.Agent.Common.Models;
-using ControlR.Agent.Common.Services;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
@@ -10,8 +8,6 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
 var startCount = ArgsParser.GetArgValue("--start-count", 0);

@@ -2,7 +2,7 @@
   "profiles": {
     "local": {
       "commandName": "Project",
-      "commandLineArgs": "--server-uri https://e.jaredg.dev --agent-count 1 --start-count 0"
+      "commandLineArgs": "--server-uri http://localhost:5120 --agent-count 10 --start-count 0"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"
