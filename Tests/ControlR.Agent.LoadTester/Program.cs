@@ -14,11 +14,11 @@ using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
-var startCount = ArgsParser.GetArgValue<int>("--start-count");
+var startCount = ArgsParser.GetArgValue("--start-count", 0);
 var serverUriArg = ArgsParser.GetArgValue<string>("--server-uri");
 var serverUri = new Uri(serverUriArg);
 var agentVersion = await GetAgentVersion(serverUri);
-var tenantId = Guid.Empty;
+var tenantId = Guid.Parse("23fec81b-6e09-4161-92c3-930d8c5162ca");
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
@@ -31,7 +31,6 @@ Console.WriteLine($"Connecting to {serverUri}");
 
 var connections = new ConcurrentBag<HubConnection>();
 var hubUri = new Uri(serverUri, "/hubs/agent");
-var hubConfigurer = new LoadTestHubConnectionConfigurer();
 var agentHubClient = new TestAgentHubClient();
 var retryPolicy = new TestAgentRetryPolicy();
 
@@ -50,7 +49,9 @@ await Parallel.ForAsync(startCount, startCount + agentCount, cts.Token, async (i
     {
       var builder = new HubConnectionBuilder();
       var connection = builder
-        .WithUrl(hubUri, hubConfigurer.ConfigureHubConnection)
+        .WithUrl(
+          hubUri,
+          options => ConnectionHelper.ConfigureHubConnection(i, options))
         .WithAutomaticReconnect(retryPolicy)
         .Build();
 
@@ -95,11 +96,9 @@ await Parallel.ForAsync(startCount, startCount + agentCount, cts.Token, async (i
       await connection.StartAsync(ct);
 
       var deviceId = DeterministicGuid.Create(i);
-      var fakeDeviceCreator = new FakeDeviceDataGenerator(i, tenantId, agentVersion);
-      var device = await fakeDeviceCreator.CreateDevice(deviceId);
-      var deviceDto = device.TryCloneAs<DeviceModel, DeviceDto>();
+      var deviceDto = await ConnectionHelper.CreateDevice(deviceId, tenantId, i, agentVersion);
 
-      await connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto.Value, ct);
+      await connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto, ct);
 
       connections.Add(connection);
       break;

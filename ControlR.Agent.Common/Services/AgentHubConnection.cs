@@ -2,6 +2,7 @@
 using ControlR.Agent.Common.Models;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 
@@ -23,7 +24,6 @@ internal class AgentHubConnection(
   ISettingsProvider settings,
   IStreamerUpdater streamerUpdater,
   IAgentUpdater agentUpdater,
-  IHubConnectionConfigurer hubConnectionConfigurer,
   ILogger<AgentHubConnection> logger)
   : IAgentHubConnection
 {
@@ -34,7 +34,6 @@ internal class AgentHubConnection(
   private readonly ILogger<AgentHubConnection> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
   private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
-  private readonly IHubConnectionConfigurer _hubConnectionConfigurer = hubConnectionConfigurer;
   
   public HubConnectionState State => _hubConnection.ConnectionState;
 
@@ -45,7 +44,11 @@ internal class AgentHubConnection(
     var result = await _hubConnection.Connect(
       hubEndpoint,
       true,
-      _hubConnectionConfigurer.ConfigureHubConnection,
+      options =>
+      {
+        options.SkipNegotiation = true;
+        options.Transports = HttpTransportType.WebSockets;
+      },
       _appLifetime.ApplicationStopping);
 
     if (!result)

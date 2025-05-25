@@ -97,7 +97,6 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-      services.AddSingleton<IHubConnectionConfigurer, AgentHubConnectionConfigurer>();
       services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
 
       services.AddHostedService<HubConnectionInitializer>();
