@@ -20,10 +20,8 @@ internal class AgentHubConnectionConfigurer : IHubConnectionConfigurer
   }
 }
 
-internal class LoadTestHubConnectionConfigurer(
-  ILogger<LoadTestHubConnectionConfigurer> logger) : IHubConnectionConfigurer
+internal class LoadTestHubConnectionConfigurer : IHubConnectionConfigurer
 {
-  private readonly ILogger<LoadTestHubConnectionConfigurer> _logger = logger;
   private const int SO_REUSEPORT = 15;
   private static int _connectionCount;
   private static int[] _lastOctets = [.. Enumerable.Range(149, 5)];
@@ -48,7 +46,7 @@ internal class LoadTestHubConnectionConfigurer(
     };
   }
 
-  private HttpMessageInvoker GetMessageInvoker()
+  private static HttpMessageInvoker GetMessageInvoker()
   {
     var socketsHandler = new SocketsHttpHandler()
     {
@@ -76,7 +74,7 @@ internal class LoadTestHubConnectionConfigurer(
           }
           catch (Exception ex)
           {
-            _logger.LogError(ex, "Failed to get bound socket.");
+            Console.WriteLine($"Failed to get bound socket. Error: {ex}");
           }
         }
       },
