@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Services;
+﻿using ControlR.Libraries.Shared.Services;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,15 +14,15 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
-  IServiceProvider _services,
-  IMessenger _messenger,
-  IDelayer _delayer,
-  ILogger<HubConnectionBase> _logger) : IHubConnectionBase
+  IServiceProvider services,
+  IMessenger messenger,
+  IDelayer delayer,
+  ILogger<HubConnectionBase> logger) : IHubConnectionBase
 {
-  protected readonly IDelayer Delayer = _delayer;
-  protected readonly IMessenger Messenger = _messenger;
-  protected readonly IServiceProvider Services = _services;
-  protected readonly ILogger<HubConnectionBase> Logger = _logger;
+  protected readonly IDelayer Delayer = delayer;
+  protected readonly IMessenger Messenger = messenger;
+  protected readonly IServiceProvider Services = services;
+  protected readonly ILogger<HubConnectionBase> Logger = logger;
 
   private CancellationToken _cancellationToken;
   private HubConnection? _connection;
@@ -73,8 +72,7 @@ public abstract class HubConnectionBase(
     {
       try
       {
-        using var scope = Services.CreateScope();
-        var builder = scope.ServiceProvider.GetRequiredService<IHubConnectionBuilder>();
+        var builder = Services.GetRequiredService<IHubConnectionBuilder>();
 
         if (_connection is not null)
         {
@@ -83,15 +81,11 @@ public abstract class HubConnectionBase(
 
         var hubUrl = hubUrlFactory();
 
-        builder = builder
-          .WithUrl(hubUrl, options => { optionsConfig(options); })
-          .AddMessagePackProtocol();
+        builder = builder.WithUrl(hubUrl, optionsConfig);
 
         if (useReconnect)
         {
-          builder
-            .WithStatefulReconnect()
-            .WithAutomaticReconnect(new RetryPolicy());
+          builder.WithAutomaticReconnect(new RetryPolicy());
         }
 
         _connection = builder.Build();

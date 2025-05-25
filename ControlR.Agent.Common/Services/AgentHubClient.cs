@@ -10,25 +10,19 @@ using Microsoft.Extensions.Options;
 namespace ControlR.Agent.Common.Services;
 
 internal class AgentHubClient(
-  IAgentHubConnection hubConnection,
   ISystemEnvironment environmentHelper,
   IStreamerLauncher streamerLauncher,
   IMessenger messenger,
   ITerminalStore terminalStore,
-  IDelayer delayer,
   IWin32Interop win32Interop,
   IStreamerUpdater streamerUpdater,
   IHostApplicationLifetime appLifetime,
-  IOptionsMonitor<AgentAppOptions> appOptions,
   ISettingsProvider settings,
   IProcessManager processManager,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
-  private readonly IDelayer _delayer = delayer;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
-  private readonly IAgentHubConnection _hubConnection = hubConnection;
   private readonly ILogger<AgentHubClient> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly IProcessManager _processManager = processManager;

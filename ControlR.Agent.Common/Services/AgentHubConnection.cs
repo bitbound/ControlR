@@ -54,7 +54,7 @@ internal class AgentHubConnection(
       return;
     }
 
-    await SendDeviceHeartbeat();
+    //await SendDeviceHeartbeat();
 
     _hubConnection.Reconnected += HubConnection_Reconnected;
 

@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using ControlR.Agent.LoadTester.Helpers;
+using Microsoft.AspNetCore.SignalR.Client;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
 var startCount = ArgsParser.GetArgValue<int>("--start-count");
@@ -63,24 +64,31 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
       { "Serilog:MinimumLevel:Default", "Warning" }
     });
 
-  builder.Services.ReplaceImplementation<IAgentUpdater, FakeAgentUpdater>();
-  builder.Services.ReplaceImplementation<IStreamerUpdater, FakeStreamerUpdater>();
-  builder.Services.ReplaceImplementation<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
-  builder.Services.ReplaceImplementation<IHubConnectionConfigurer, LoadTestHubConnectionConfigurer>();
-  builder.Services.ReplaceImplementation<ISettingsProvider, FakeSettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
+  builder.Services.ReplaceService<IAgentUpdater, FakeAgentUpdater>(ServiceLifetime.Singleton);
+  builder.Services.ReplaceService<IStreamerUpdater, FakeStreamerUpdater>(ServiceLifetime.Singleton);
+  builder.Services.ReplaceService<ICpuUtilizationSampler, FakeCpuUtilizationSampler>(ServiceLifetime.Singleton);
+  builder.Services.ReplaceService<IHubConnectionConfigurer, LoadTestHubConnectionConfigurer>(ServiceLifetime.Singleton);
+  builder.Services.ReplaceService<ISettingsProvider, FakeSettingsProvider>(
+    new FakeSettingsProvider(deviceId, serverUri),
+    ServiceLifetime.Singleton);
+
+  builder.Services.RemoveService<IHubConnection<IAgentHub>>();
+  builder.Services.ReplaceService<IAgentHubConnection, TestAgentHubConnection>(ServiceLifetime.Singleton);
   if (OperatingSystem.IsWindows())
   {
     builder.Services.RemoveImplementation<StreamingSessionWatcher>();
   }
   builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
 
-  builder.Services.ReplaceImplementation<IDeviceDataGenerator, FakeDeviceDataGenerator>(sp =>
-  {
-    return new FakeDeviceDataGenerator(
-      i,
-      tenantId,
-      agentVersion);
-  });
+  builder.Services.ReplaceService<IDeviceDataGenerator, FakeDeviceDataGenerator>(
+    ServiceLifetime.Singleton,
+    sp =>
+    {
+      return new FakeDeviceDataGenerator(
+        i,
+        tenantId,
+        agentVersion);
+    });
 
   var host = builder.Build();
   await host.StartAsync(cancellationToken);
@@ -89,7 +97,8 @@ await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
   await Delayer.Default.WaitForAsync(
     () =>
     {
-      return hosts.All(x => x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected);
+      return hosts.All(x =>
+        x.Services.GetRequiredService<IAgentHubConnection>().State == HubConnectionState.Connected);
     },
     TimeSpan.FromSeconds(1),
     () =>
@@ -110,9 +119,9 @@ static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken canc
   using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
   while (await timer.WaitForNextTickAsync(cancellationToken))
   {
-    var hubConnections = hosts.Select(x => { return x.Services.GetRequiredService<IHubConnection<IAgentHub>>(); });
+    var hubConnections = hosts.Select(x => { return x.Services.GetRequiredService<IAgentHubConnection>(); });
 
-    var groups = hubConnections.GroupBy(x => x.ConnectionState);
+    var groups = hubConnections.GroupBy(x => x.State);
 
     foreach (var group in groups)
     {
