@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 
-namespace ControlR.Web.Client.Models;
+namespace ControlR.Web.Client.Components.ContentWindows;
 
 public class DeviceContentInstance(DeviceViewModel device, RenderFragment content, DeviceContentInstanceType contentType)
 {
