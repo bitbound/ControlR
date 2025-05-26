@@ -1,0 +1,45 @@
+@using System.Collections.Immutable
+
+@inject ITagStore TagStore
+
+<MudSelect T="TagViewModel" MultiSelection="true" MultiSelectionTextFunc="GetTagsMultiSelectText"
+  Placeholder="@(PlaceholderText)" AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
+  SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged" SelectAll="true" FullWidth="false"
+  SelectAllText="All Tags" Immediate="true" Class="ms-3">
+  @foreach (var tag in TagStore.Items)
+  {
+    <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
+  }
+</MudSelect>
+
+@code {
+  private HashSet<TagViewModel> _selectedTags = [];
+
+  [Parameter]
+  public EventCallback<ImmutableArray<TagViewModel>> SelectedTagsChanged { get; set; }
+
+  [Parameter]
+  public string PlaceholderText { get; set; } = "Filter devices by selecting tags";
+
+  private string GetTagsMultiSelectText(List<string> tags)
+  {
+    if (tags.Count == 0)
+    {
+      return "No tags selected";
+    }
+
+    if (_selectedTags.Count == TagStore.Items.Count)
+    {
+      return "All tags selected";
+    }
+
+    var tagNoun = tags.Count > 1 ? "tags" : "tag";
+    return $"{tags.Count} {tagNoun} selected";
+  }
+
+  private async Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
+  {
+    _selectedTags = [.. tags];
+    await SelectedTagsChanged.InvokeAsync(_selectedTags.ToImmutableArray());
+  }
+} 

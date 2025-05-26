@@ -1,4 +1,5 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Collections.Immutable;
+using System.Runtime.Versioning;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -261,7 +262,7 @@ public partial class Dashboard
     await ReloadGridData();
   }
 
-  private async Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
+  private async Task OnSelectedTagsChanged(ImmutableArray<TagViewModel> tags)
   {
     _selectedTags = [.. tags];
     await ReloadGridData();
