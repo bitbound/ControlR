@@ -1,3 +1,4 @@
+using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Startup;
@@ -20,11 +21,14 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
         var policy = new DeviceGridOutputCachePolicy();
         var httpContext = new DefaultHttpContext();
         var userId = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid().ToString();
         
         // Setup authenticated user
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, userId)
+            new(ClaimTypes.NameIdentifier, userId),
+            new(UserClaimTypes.UserId, userId),
+            new(UserClaimTypes.TenantId, tenantId)
         };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var user = new ClaimsPrincipal(identity);
