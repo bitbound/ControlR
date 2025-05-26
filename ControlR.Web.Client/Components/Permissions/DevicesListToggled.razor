@@ -1,0 +1,91 @@
+@inject IControlrApi ControlrApi
+@inject ISnackbar Snackbar
+
+<MudTextField T="string" Value="_deviceSearchPattern" ValueChanged="HandleSearchValueChanged" Label="Search"
+  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate DebounceInterval="500"
+  Class="my-2" Clearable="true" />
+
+<MudPaper>
+  @foreach (var device in _devices)
+  {
+    <MudSwitch T="bool" Value="@(IsDeviceToggled(device))" Color="Color.Success"
+      ValueChanged="@(async isToggled => await DeviceToggled.InvokeAsync((device, isToggled)))">
+      @device.Name
+    </MudSwitch>
+  }
+</MudPaper>
+
+<MudPagination Selected="_currentPage" Count="_totalPages" BoundaryCount="1" SelectedChanged="HandlePageChanged" />
+
+@code {
+  private readonly DeviceColumnSort _defaultSort = new()
+  {
+    PropertyName = nameof(DeviceDto.Name),
+    Descending = false,
+    SortOrder = 0
+  };
+
+  private int _currentPage = 1;
+  private int _totalPages = 1;
+
+  [Parameter]
+  [EditorRequired]
+  public Func<DeviceDto, bool> IsDeviceToggled { get; set; }
+
+  [Parameter]
+  public EventCallback<(DeviceDto, bool)> DeviceToggled { get; set; }
+
+  [Parameter]
+  public int PageSize { get; set; } = 10;
+
+  private string _deviceSearchPattern = string.Empty;
+  private HashSet<DeviceDto> _devices = [];
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+    await LoadDevices();
+  }
+
+  private async Task HandlePageChanged(int page)
+  {
+    _currentPage = page;
+    await LoadDevices();
+  }
+  private async Task HandleSearchValueChanged(string value)
+  {
+    _deviceSearchPattern = value;
+    _currentPage = 1;
+    _totalPages = 1;
+    await LoadDevices();
+  }
+
+  private async Task LoadDevices()
+  {
+    var request = new DeviceSearchRequestDto
+    {
+      SearchText = _deviceSearchPattern,
+      HideOfflineDevices = false,
+      Page = _currentPage - 1, // API uses 0-based index
+      PageSize = PageSize,
+      SortDefinitions = [_defaultSort]
+    };
+
+    var response = await ControlrApi.SearchDevices(request);
+    if (!response.IsSuccess)
+    {
+      Snackbar.Add("Failed to load devices", Severity.Error);
+      return;
+    }
+
+    if (response.Value.Items is not { Count: > 0 } returnedDevices)
+    {
+      _devices = [];
+      _totalPages = 1;
+      return;
+    }
+
+    _devices = returnedDevices.ToHashSet();
+    _totalPages = (int)Math.Ceiling(response.Value.TotalItems / (double)PageSize);
+  }
+}

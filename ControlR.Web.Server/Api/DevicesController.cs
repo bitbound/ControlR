@@ -106,9 +106,9 @@ public class DevicesController : ControllerBase
     }
   }
 
-  [HttpPost("grid")]
-  public async Task<ActionResult<DeviceGridResponseDto>> GetDevicesGridData(
-    [FromBody] DeviceGridRequestDto requestDto,
+  [HttpPost("search")]
+  public async Task<ActionResult<DeviceSearchResponseDto>> SearchDevices(
+    [FromBody] DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DevicesController> logger)
@@ -168,7 +168,7 @@ public class DevicesController : ControllerBase
       else
       {
         // No matching devices found
-        return new DeviceGridResponseDto
+        return new DeviceSearchResponseDto
         {
           Items = [],
           TotalItems = 0,
@@ -240,7 +240,7 @@ public class DevicesController : ControllerBase
       }
     }
 
-    var response = new DeviceGridResponseDto
+    var response = new DeviceSearchResponseDto
     {
       Items = authorizedDevices,
       TotalItems = totalCount,

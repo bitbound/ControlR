@@ -1,6 +1,6 @@
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
-public class DeviceGridResponseDto
+public class DeviceSearchResponseDto
 {
     public List<DeviceDto>? Items { get; set; }
     public int TotalItems { get; set; }

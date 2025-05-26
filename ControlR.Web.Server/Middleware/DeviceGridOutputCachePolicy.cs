@@ -56,7 +56,7 @@ public class DeviceGridOutputCachePolicy() : IOutputCachePolicy
     var requestHash = ComputeRequestHash(requestBody);
     // Store request hash as a tag to allow for more specific cache invalidation
     context.Tags.Add($"request-{requestHash}");
-    context.CacheVaryByRules.VaryByValues.TryAdd(nameof(DeviceGridRequestDto), requestBody);
+    context.CacheVaryByRules.VaryByValues.TryAdd(nameof(DeviceSearchRequestDto), requestBody);
 
     // Add custom response header to indicate cache usage
     context.HttpContext.Response.OnStarting(() =>

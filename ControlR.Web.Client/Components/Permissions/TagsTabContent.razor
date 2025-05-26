@@ -94,25 +94,10 @@
     </MudText>
     @if (_selectedTag is not null)
     {
-      <MudTextField T="string" 
-                    @bind-Value="_deviceSearchPattern"
-                    Label="Search"
-                    Adornment="Adornment.Start"
-                    AdornmentIcon="@Icons.Material.Filled.Search"
-                    Immediate="true"
-                    Class="my-2"
-                    Clearable="true" />
-      <MudPaper MaxHeight="500px" Class="pa-3 overflow-y-auto">
-        @foreach (var device in FilteredDevices)
-        {
-          <MudSwitch T="bool"
-                     Value="@(_selectedTag.DeviceIds.Contains(device.Id))"
-                     Color="Color.Success"
-                     ValueChanged="@(async isToggled => await SetDeviceTag(isToggled, _selectedTag, device.Id))">
-            @device.Name
-          </MudSwitch>
-        }
-      </MudPaper>
+      <DevicesListToggled 
+        PageSize="10"
+        DeviceToggled="@(args => HandleDeviceToggled(args))"
+        IsDeviceToggled="@(device => _selectedTag.DeviceIds.Contains(device.Id))" />
     }
   </MudItem>
 </MudGrid>

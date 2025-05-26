@@ -15,7 +15,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result<DeviceGridResponseDto>> GetDevicesGridData(DeviceGridRequestDto request);
+  Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
@@ -52,13 +52,13 @@ public class ControlrApi(
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
 
-  public async Task<Result<DeviceGridResponseDto>> GetDevicesGridData(DeviceGridRequestDto request)
+  public async Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request)
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/grid", request);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/search", request);
       response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<DeviceGridResponseDto>();
+      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>();
     });
   }
 

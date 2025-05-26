@@ -86,7 +86,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Act - Combined filters: online + has tag + contains "Device 2" in name
-    var request = new DeviceGridRequestDto
+    var request = new DeviceSearchRequestDto
     {
       HideOfflineDevices = true,
       TagIds = [tagId],
@@ -95,7 +95,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       PageSize = 10
     };
 
-    var result = await controller.GetDevicesGridData(
+    var result = await controller.SearchDevices(
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
@@ -206,13 +206,13 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user1, userManager);
 
     // Act
-    var request = new DeviceGridRequestDto
+    var request = new DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 20 // Request all devices
     };
 
-    var result = await controller.GetDevicesGridData(
+    var result = await controller.SearchDevices(
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
@@ -299,7 +299,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     // Act
     // Test case 1: Get all devices with pagination
-    var request1 = new DeviceGridRequestDto
+    var request1 = new DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 5
@@ -310,7 +310,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response1 = result1.Value;
 
     // Test case 2: Filter by online status
-    var request2 = new DeviceGridRequestDto
+    var request2 = new DeviceSearchRequestDto
     {
       HideOfflineDevices = true,
       Page = 0,
@@ -322,7 +322,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response2 = result2.Value;
 
     // Test case 3: Filter by tag
-    var request3 = new DeviceGridRequestDto
+    var request3 = new DeviceSearchRequestDto
     {
       TagIds = [tagIds[0]],
       Page = 0,
@@ -334,7 +334,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
     var response3 = result3.Value;
     // Test case 4: Search by name
-    var request4 = new DeviceGridRequestDto
+    var request4 = new DeviceSearchRequestDto
     {
       SearchText = "Device 1",
       Page = 0,
@@ -347,7 +347,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response4 = result4.Value;
 
     // Test case 5: Sort by CPU utilization (descending)
-    var request5 = new DeviceGridRequestDto
+    var request5 = new DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 10,

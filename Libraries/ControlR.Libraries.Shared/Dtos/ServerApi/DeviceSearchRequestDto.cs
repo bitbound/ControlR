@@ -1,9 +1,6 @@
-using ControlR.Libraries.Shared.Enums;
-using System.Text.Json.Serialization;
-
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
-public class DeviceGridRequestDto
+public class DeviceSearchRequestDto
 {
     public string? SearchText { get; set; }
     public bool HideOfflineDevices { get; set; }

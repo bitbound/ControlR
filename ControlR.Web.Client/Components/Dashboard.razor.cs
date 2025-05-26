@@ -210,7 +210,7 @@ public partial class Dashboard
         ? _selectedTags.Select(t => t.Id).ToList()
         : null;
 
-    var request = new DeviceGridRequestDto
+    var request = new DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
@@ -226,7 +226,7 @@ public partial class Dashboard
           })]
     };
 
-    var result = await ControlrApi.GetDevicesGridData(request);
+    var result = await ControlrApi.SearchDevices(request);
     if (!result.IsSuccess)
     {
       Snackbar.Add("Failed to load devices", Severity.Error);

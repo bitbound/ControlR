@@ -3,32 +3,9 @@
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Devices
     </MudText>
-
-    <MudTextField T="string"
-                  @bind-Value="_deviceSearchPattern"
-                  Label="Search"
-                  Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search"
-                  Immediate="true"
-                  Class="my-2"
-                  Clearable="true" />
-
-    <MudPaper MaxHeight="500px" Class="overflow-y-auto">
-      <MudList T="DeviceDto"
-               @bind-SelectedValue="_selectedDevice"
-               SelectionMode="SelectionMode.SingleSelection"
-               Color="Color.Info">
-
-        @foreach (var device in FilteredDevices)
-        {
-          <MudListItem T="DeviceDto" Value="@device">
-            @device.Name
-          </MudListItem>
-        }
-
-      </MudList>
-    </MudPaper>
+    <DevicesList PageSize="10" @bind-SelectedDevice="_selectedDevice" />
   </MudItem>
+
   <MudItem sm="6" xs="12">
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">
       Tags
