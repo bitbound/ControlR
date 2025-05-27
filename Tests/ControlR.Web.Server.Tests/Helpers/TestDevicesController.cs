@@ -30,8 +30,8 @@ public class TestDevicesController : ControllerBase
   /// </summary>
   [HttpPost("grid")]
   [Microsoft.AspNetCore.OutputCaching.OutputCache(PolicyName = "DeviceGridPolicy")]
-  public async Task<ActionResult<DeviceGridResponseDto>> GetDevicesGridData(
-      [FromBody] DeviceGridRequestDto requestDto,
+  public async Task<ActionResult<DeviceSearchResponseDto>> GetDevicesGridData(
+      [FromBody] DeviceSearchRequestDto requestDto,
       [FromServices] AppDb appDb,
       [FromServices] ILogger<DevicesController> logger)
   {
@@ -41,8 +41,8 @@ public class TestDevicesController : ControllerBase
   /// <summary>
   /// A test-friendly implementation of GetDevicesGridData that avoids Entity Framework query translation errors
   /// </summary>
-  public async Task<ActionResult<DeviceGridResponseDto>> GetDevicesGridDataTest(
-      DeviceGridRequestDto requestDto,
+  public async Task<ActionResult<DeviceSearchResponseDto>> GetDevicesGridDataTest(
+      DeviceSearchRequestDto requestDto,
       AppDb appDb,
       ILogger<DevicesController> logger)
   {
@@ -89,7 +89,7 @@ public class TestDevicesController : ControllerBase
         };
 
         // Create a response with this fake device
-        return new DeviceGridResponseDto
+        return new DeviceSearchResponseDto
         {
           Items = [fakeDevice],
           TotalItems = 1
@@ -191,7 +191,7 @@ public class TestDevicesController : ControllerBase
         authorizedDevices.Add(device.ToDto());
       }
 
-      var response = new DeviceGridResponseDto
+      var response = new DeviceSearchResponseDto
       {
         Items = authorizedDevices,
         TotalItems = totalCount

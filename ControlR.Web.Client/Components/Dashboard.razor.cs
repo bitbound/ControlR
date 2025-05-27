@@ -1,4 +1,5 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Collections.Immutable;
+using System.Runtime.Versioning;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -209,7 +210,7 @@ public partial class Dashboard
         ? _selectedTags.Select(t => t.Id).ToList()
         : null;
 
-    var request = new DeviceGridRequestDto
+    var request = new DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
@@ -225,7 +226,7 @@ public partial class Dashboard
           })]
     };
 
-    var result = await ControlrApi.GetDevicesGridData(request);
+    var result = await ControlrApi.SearchDevices(request);
     if (!result.IsSuccess)
     {
       Snackbar.Add("Failed to load devices", Severity.Error);
@@ -261,7 +262,7 @@ public partial class Dashboard
     await ReloadGridData();
   }
 
-  private async Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
+  private async Task OnSelectedTagsChanged(ImmutableArray<TagViewModel> tags)
   {
     _selectedTags = [.. tags];
     await ReloadGridData();

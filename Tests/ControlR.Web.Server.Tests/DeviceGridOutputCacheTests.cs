@@ -77,14 +77,14 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Create the request
-    var request = new DeviceGridRequestDto
+    var request = new DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 10
     };
 
     // Act - First call should hit the database
-    var result1 = await controller.GetDevicesGridData(
+    var result1 = await controller.SearchDevices(
         request,
         db,
         testApp.App.Services.GetRequiredService<IAuthorizationService>(),
@@ -99,7 +99,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await outputCacheStore.EvictByTagAsync("device-grid", default);
 
     // Act - Third call after invalidation should get updated data
-    var result3 = await controller.GetDevicesGridData(
+    var result3 = await controller.SearchDevices(
       request,
       db,
       testApp.App.Services.GetRequiredService<IAuthorizationService>(),

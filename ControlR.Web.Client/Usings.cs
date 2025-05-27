@@ -31,4 +31,4 @@ global using ControlR.Libraries.Shared.Constants;
 global using ControlR.Libraries.Shared.Dtos.Interfaces;
 global using ControlR.Web.Client.Services.Stores;
 global using ControlR.Web.Client.ViewModels;
-global using ControlR.Web.Client.DataValidation;
+global using ControlR.Web.Client.Components.ContentWindows;

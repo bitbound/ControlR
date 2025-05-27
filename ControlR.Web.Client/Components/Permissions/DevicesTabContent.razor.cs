@@ -6,15 +6,11 @@ namespace ControlR.Web.Client.Components.Permissions;
 public partial class DevicesTabContent : ComponentBase, IDisposable
 {
   private ImmutableArray<IDisposable>? _changeHandlers;
-  private string _deviceSearchPattern = string.Empty;
   private DeviceDto? _selectedDevice;
   private string _tagSearchPattern = string.Empty;
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
-
-  [Inject]
-  public required IDeviceStore DeviceStore { get; init; }
 
   [Inject]
   public required ILogger<DevicesTabContent> Logger { get; init; }
@@ -24,11 +20,6 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
 
   [Inject]
   public required ITagStore TagStore { get; init; }
-
-  private IOrderedEnumerable<DeviceDto> FilteredDevices =>
-    DeviceStore.Items
-      .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
-      .OrderBy(x => x.Name);
 
   private IOrderedEnumerable<TagViewModel> FilteredTags =>
     TagStore.Items
@@ -46,8 +37,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
     await base.OnInitializedAsync();
     _changeHandlers =
     [
-      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged)),
-      DeviceStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
+      TagStore.RegisterChangeHandler(this, async () => await InvokeAsync(StateHasChanged))
     ];
   }
 

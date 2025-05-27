@@ -13,15 +13,7 @@
 
   <div class="top-controls-grid">
     <div>
-      <MudSelect T="TagViewModel" MultiSelection="true" MultiSelectionTextFunc="GetTagsMultiSelectText"
-        Placeholder="Filter devices by selecting tags" AdornmentIcon="@Icons.Material.Filled.Tag"
-        Adornment="Adornment.End" SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged"
-        SelectAll="true" FullWidth="false" SelectAllText="All Tags" Immediate="true" Class="ms-3">
-        @foreach (var tag in TagStore.Items)
-        {
-          <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
-        }
-      </MudSelect>
+      <TagsSelector SelectedTagsChanged="OnSelectedTagsChanged" />
     </div>
     <div>
       <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"

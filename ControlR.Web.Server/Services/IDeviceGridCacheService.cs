@@ -12,12 +12,12 @@ public interface IDeviceGridCacheService
     /// <summary>
     /// Gets cached device grid response based on request parameters and user ID
     /// </summary>
-    ActionResult<DeviceGridResponseDto>? GetFromCache(DeviceGridRequestDto request, string userId);
+    ActionResult<DeviceSearchResponseDto>? GetFromCache(DeviceSearchRequestDto request, string userId);
     
     /// <summary>
     /// Caches device grid response for a specific user
     /// </summary>
-    void SetCache(DeviceGridRequestDto request, DeviceGridResponseDto response, string userId);
+    void SetCache(DeviceSearchRequestDto request, DeviceSearchResponseDto response, string userId);
     
     /// <summary>
     /// Invalidates cache for a specific user
