@@ -25,7 +25,6 @@ var webEndpoint = web.GetEndpoint("http");
 
 builder
   .AddProject<Projects.ControlR_Agent>(ServiceNames.ControlrAgent, "Run")
-  .WithArgs("run", "-i", "localhost")
   .WithEnvironment("AppOptions__ServerUri", webEndpoint)
   .WaitFor(web)
   .ExcludeFromManifest();

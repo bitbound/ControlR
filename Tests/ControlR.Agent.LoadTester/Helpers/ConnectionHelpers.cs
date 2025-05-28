@@ -60,9 +60,18 @@ public static class ConnectionHelper
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             socket.SetRawSocketOption(1, SO_REUSEPORT, BitConverter.GetBytes(1));
             socket.Bind(localEndpoint);
-            //var remoteEndpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
-            var ips = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, token);
-            var remoteEndpoint = new IPEndPoint(ips[0], context.DnsEndPoint.Port);
+
+            IPEndPoint? remoteEndpoint;
+
+            if (context.DnsEndPoint.Host == "localhost")
+            {
+              remoteEndpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
+            }
+            else
+            {
+              var ips = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, token);
+              remoteEndpoint = new IPEndPoint(ips[0], context.DnsEndPoint.Port);
+            }
             await socket.ConnectAsync(remoteEndpoint, token);
             return new NetworkStream(socket, ownsSocket: false);
           }
@@ -76,7 +85,7 @@ public static class ConnectionHelper
 
     return new HttpMessageInvoker(socketsHandler);
   }
-  
+
 
   public static Task<DeviceDto> CreateDevice(
     Guid deviceId,
