@@ -3,7 +3,7 @@ internal static class ArgsParser
 {
   private static readonly Dictionary<string, string> _args = [];
 
-  public static TValue GetArgValue<TValue>(string argName)
+  public static TValue GetArgValue<TValue>(string argName, TValue? defaultValue = default)
   {
     BuildArgs();
 
@@ -11,6 +11,10 @@ internal static class ArgsParser
 
     if (!_args.TryGetValue(sanitizedName, out var value))
     {
+      if (defaultValue is not null)
+      {
+        return defaultValue;
+      }
       throw new ArgumentException($"Argument '{sanitizedName}' not found.");
     }
 

@@ -34,6 +34,7 @@ internal class AgentHubConnection(
   private readonly ILogger<AgentHubConnection> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
   private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
+  
   public HubConnectionState State => _hubConnection.ConnectionState;
 
   public async Task Connect(CancellationToken cancellationToken)

@@ -1,5 +1,5 @@
 ﻿<div>
-  @if (!_loading && DeviceStore.Items.Count == 0)
+  @if (!_loading && _anyDevicesForUser == false)
   {
     <MudAlert Severity="Severity.Info">
       No devices found. Head over to the <MudLink Color="Color.Tertiary" Href="/deploy">Deploy Page</MudLink>
@@ -11,84 +11,47 @@
     Devices
   </MudText>
 
-  <div class="d-inline-block">
-    <MudCheckBox T="bool"
-                 Value="_hideOfflineDevices"
-                 ValueChanged="HideOfflineDevicesChanged"
-                 Label="Hide Offline Devices"
-                 Disabled="ShouldBypassHideOfflineDevices" />
+  <div class="top-controls-grid">
+    <div>
+      <TagsSelector SelectedTagsChanged="OnSelectedTagsChanged" />
+    </div>
+    <div>
+      <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"
+                   Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" />
+    </div>
   </div>
 
-  <MudDataGrid T="DeviceViewModel"
-               RowsPerPage="@(25)"
-               Items="FilteredDevices"               
-               SortMode="SortMode.Multiple"
-               QuickFilter="QuickFilter"
-               Loading="_loading"
-               Hideable="true"
-               SortDefinitions="_sortDefinitions"
-               ShowColumnOptions="true"
-               Filterable="true">
+  <MudDataGrid T="DeviceViewModel" @ref="_dataGrid" ServerData="LoadServerData" RowsPerPage="@(25)"
+               SortMode="SortMode.Multiple" Loading="_loading" Hideable="true" SortDefinitions="_sortDefinitions"
+               ShowColumnOptions="true" Filterable="true">
 
     <ToolBarContent>
-      <MudSelect T="TagViewModel"
-                 MultiSelection="true"
-                 MultiSelectionTextFunc="GetTagsMultiSelectText"
-                 Placeholder="Filter devices by selecting tags"
-                 AdornmentIcon="@Icons.Material.Filled.Tag"
-                 Adornment="Adornment.End"
-                 Class="mr-4"
-                 SelectedValues="_selectedTags"
-                 SelectedValuesChanged="OnSelectedTagsChanged"
-                 SelectAll="true"
-                 SelectAllText="All Tags"
-                 Immediate="true">
-        @foreach (var tag in TagStore.Items)
-        {
-          <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
-        }
-      </MudSelect>
-      
-      <MudTextField T="string"
-                    @bind-Value="_searchText"
-                    Placeholder="Search"
-                    Clearable
-                    Adornment="Adornment.Start"
-                    Immediate
-                    DebounceInterval="500"
-                    AdornmentIcon="@Icons.Material.Filled.Search"
-                    IconSize="Size.Medium"
-                    Class="mt-0">
+      <MudSpacer />
+
+      <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearch" Placeholder="Search" Clearable
+                    Adornment="Adornment.Start" Immediate DebounceInterval="500" AdornmentIcon="@Icons.Material.Filled.Search"
+                    IconSize="Size.Medium" Class="mt-0">
       </MudTextField>
 
       <MudTooltip Text="Refresh">
-        <MudIconButton Variant="Variant.Outlined"
-                       Color="Color.Info"
-                       Class="ml-4"
-                       Icon="@(Icons.Material.Filled.Refresh)"
-                       OnClick="HandleRefreshClicked" />
+        <MudIconButton Variant="Variant.Outlined" Color="Color.Info" Class="ml-4"
+                       Icon="@(Icons.Material.Filled.Refresh)" OnClick="HandleRefreshClicked" />
       </MudTooltip>
     </ToolBarContent>
 
     <Columns>
-      <TemplateColumn T="DeviceViewModel"
-                      Sortable="false"
-                      Filterable="false"
-                      ShowColumnOptions="false"
-                      Title="Actions">
+      <TemplateColumn T="DeviceViewModel" Sortable="false" Filterable="false" ShowColumnOptions="false" Title="Actions">
 
         <CellTemplate>
           <MudTooltip Text="Actions">
             <MudMenu Variant="Variant.Outlined" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
               @if (context.Item.IsOnline)
               {
-                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)"
-                             IconColor="Color.Info"
+                <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)" IconColor="Color.Info"
                              OnClick="@(() => RemoteControlClicked(context.Item))">
                   Remote Control
                 </MudMenuItem>
-                <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)"
-                             IconColor="Color.Info"
+                <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)" IconColor="Color.Info"
                              OnClick="@(() => StartTerminal(context.Item))">
                   Terminal
                 </MudMenuItem>
@@ -98,46 +61,39 @@
                   Edit
                 </MudMenuItem> \*@
 
-                <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)"
-                             IconColor="Color.Success"
+                <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)" IconColor="Color.Success"
                              OnClick="@(() => RefreshDeviceInfo(context.Item))">
                   Refresh
                 </MudMenuItem>
 
                 @if (context.Item.IsOutdated)
                 {
-                  <MudMenuItem Icon="@(Icons.Material.Filled.Update)"
-                               IconColor="Color.Warning"
+                  <MudMenuItem Icon="@(Icons.Material.Filled.Update)" IconColor="Color.Warning"
                                OnClick="@(() => UpdateDevice(context.Item.Id))">
                     Update
                   </MudMenuItem>
                 }
 
-                <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)"
-                             IconColor="Color.Error"
+                <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)" IconColor="Color.Error"
                              OnClick="@(() => ShutdownDevice(context.Item))">
                   Shutdown
                 </MudMenuItem>
-                <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)"
-                             IconColor="Color.Error"
+                <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)" IconColor="Color.Error"
                              OnClick="@(() => RestartDevice(context.Item))">
                   Restart
                 </MudMenuItem>
-                <MudMenuItem Icon="@(Icons.Material.Filled.DeleteForever)"
-                             IconColor="Color.Error"
+                <MudMenuItem Icon="@(Icons.Material.Filled.DeleteForever)" IconColor="Color.Error"
                              OnClick="@(() => UninstallAgent(context.Item))">
                   Delete
                 </MudMenuItem>
               }
               else
               {
-                <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)"
-                             IconColor="Color.Success"
+                <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)" IconColor="Color.Success"
                              OnClick="@(() => WakeDevice(context.Item))">
                   Wake
                 </MudMenuItem>
-                <MudMenuItem Icon="@(Icons.Material.Filled.Delete)"
-                             IconColor="Color.Error"
+                <MudMenuItem Icon="@(Icons.Material.Filled.Delete)" IconColor="Color.Error"
                              OnClick="@(() => RemoveDevice(context.Item))">
                   Remove
                 </MudMenuItem>
@@ -147,12 +103,7 @@
         </CellTemplate>
       </TemplateColumn>
 
-      <TemplateColumn T="DeviceViewModel"
-                      StickyLeft="true"
-                      Sortable="true"
-                      Filterable="true"
-                      SortBy="@(x => x.Name)"
-                      Title="Name">
+      <PropertyColumn Title="Name" Property="x => x.Name" Sortable="true" Filterable="true" StickyLeft="true">
         <CellTemplate>
           @if (string.IsNullOrWhiteSpace(context.Item.Alias))
           {
@@ -163,13 +114,10 @@
             @($"{context.Item.Name} ({context.Item.Alias})")
           }
         </CellTemplate>
-      </TemplateColumn>
 
-      <TemplateColumn T="DeviceViewModel"
-                      Sortable="true"
-                      SortBy="@(x => x.IsOnline)"
-                      Filterable="true"
-                      Title="Online">
+      </PropertyColumn>
+
+      <PropertyColumn Property="@(x => x.IsOnline)" Sortable="true" Filterable="true" Title="Online">
         <CellTemplate>
           @if (context.Item.IsOnline)
           {
@@ -193,46 +141,32 @@
             </MudTooltip>
           }
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
-      <PropertyColumn Property="x => x!.CurrentUsers"
-                      Title="Current Users"
-                      Sortable="false"
-                      Filterable="false">
+      <PropertyColumn Property="x => x!.CurrentUsers" Title="Current Users" Sortable="false" Filterable="false">
         <CellTemplate>
           @(string.Join(", ", context.Item.CurrentUsers))
         </CellTemplate>
       </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel"
-                      Title="CPU"
-                      Sortable="true"
-                      SortBy="@(x => x.CpuUtilization)"
-                      Filterable="true">
+      <PropertyColumn Property="@(x => x.CpuUtilization)" Title="CPU" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel"
-                      Title="Memory"
-                      Sortable="true"
-                      SortBy="@(x => x.UsedMemoryPercent)"
-                      Filterable="true">
+      <PropertyColumn Property="@(x => x.UsedMemoryPercent)" Title="Memory" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
 
-      <TemplateColumn T="DeviceViewModel"
-                      Title="Storage"
-                      Sortable="true"
-                      SortBy="@(x => x.UsedStoragePercent)"
-                      Filterable="true">
+      <PropertyColumn Property="@(x => x.UsedStoragePercent)" Title="Storage" Sortable="true" Filterable="true">
         <CellTemplate>
           @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
         </CellTemplate>
-      </TemplateColumn>
+      </PropertyColumn>
+
       <HierarchyColumn T="DeviceViewModel" />
     </Columns>
 
@@ -348,10 +282,7 @@
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             CPU Usage
           </MudText>
-          <RadialGauge Value="@(context.Item.CpuUtilization)" 
-                        MaxValue="1"
-                       Width="250px"
-                      Height="250px">
+          <RadialGauge Value="@(context.Item.CpuUtilization)" MaxValue="1" Width="250px" Height="250px">
             <MudText Typo="Typo.body1">
               @(Math.Round(context.Item.CpuUtilization * 100, 2))%
             </MudText>
@@ -363,10 +294,7 @@
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             Memory Usage
           </MudText>
-          <RadialGauge Value="@(context.Item.UsedMemoryPercent)"
-                       MaxValue="1"
-                       Height="250px"
-                       Width="250px"
+          <RadialGauge Value="@(context.Item.UsedMemoryPercent)" MaxValue="1" Height="250px" Width="250px"
                        Class="text-center">
             <MudText Typo="Typo.body1">
               @(Math.Round(context.Item.UsedMemoryPercent * 100, 2))%
@@ -381,54 +309,57 @@
             <MudText Typo="Typo.h6" Color="Color.Primary" Class="ellipsis-text">
               Hard Drive
             </MudText>
-            <MudChart ChartType="ChartType.Donut"
-                      Width="250px"
-                      Height="250px"
-                      InputData="@(new double[]{ drive.TotalSize - drive.FreeSpace, drive.FreeSpace})"
+            <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px" Class="d-inline-block"
+                      InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
                       InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
               <CustomGraphics>
-                <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica" font-size="2">
+                <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+                      font-size="16">
                   Total
                 </text>
-                <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica" font-size="4">
+                <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+                      font-size="20">
                   @(drive.TotalSize.ToString("N0")) GB
                 </text>
               </CustomGraphics>
             </MudChart>
-            <div class="child-content-grid">
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Name:
-              </MudText>
-              <MudTooltip Text="@drive.Name">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.Name
+            <div class="d-inline-block">
+              <div class="child-content-grid">
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Name:
                 </MudText>
-              </MudTooltip>
+                <MudTooltip Text="@drive.Name">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.Name
+                  </MudText>
+                </MudTooltip>
 
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Volume Label:
-              </MudText>
-              <MudTooltip Text="@drive.VolumeLabel">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.VolumeLabel
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Volume Label:
                 </MudText>
-              </MudTooltip>
+                <MudTooltip Text="@drive.VolumeLabel">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.VolumeLabel
+                  </MudText>
+                </MudTooltip>
 
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Format:
-              </MudText>
-              <MudText Typo="Typo.body1">
-                @drive.DriveFormat
-              </MudText>
-
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Root Directory:
-              </MudText>
-              <MudTooltip Text="@drive.RootDirectory">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.RootDirectory
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Format:
                 </MudText>
-              </MudTooltip>
+                <MudText Typo="Typo.body1">
+                  @drive.DriveFormat
+                </MudText>
+
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Root Directory:
+                </MudText>
+                <MudTooltip Text="@drive.RootDirectory">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.RootDirectory
+                  </MudText>
+                </MudTooltip>
+              </div>
+
             </div>
 
           </MudItem>

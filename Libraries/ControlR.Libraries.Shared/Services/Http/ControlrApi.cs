@@ -15,6 +15,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
+  Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
@@ -50,6 +51,16 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
+
+  public async Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/search", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>();
+    });
+  }
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -281,7 +292,6 @@ public class ControlrApi(
       return Result.Fail<byte[]>(ex);
     }
   }
-
   public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
   {
     return await TryCallApi(async () =>

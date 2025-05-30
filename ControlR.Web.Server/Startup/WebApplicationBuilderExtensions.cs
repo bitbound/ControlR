@@ -15,7 +15,6 @@ using MudBlazor.Services;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
-
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -42,7 +41,8 @@ public static class WebApplicationBuilderExtensions
     {
       builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
       {
-        options.UseInMemoryDatabase("Controlr");
+        var dbName = appOptions.InMemoryDatabaseName ?? "Controlr";
+        options.UseInMemoryDatabase(dbName);
       }, lifetime: ServiceLifetime.Transient);
     }
     else
@@ -170,10 +170,11 @@ public static class WebApplicationBuilderExtensions
     }
 
     // Add other services.
+
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
     builder.Services.AddLazyDi();
-    builder.Services.AddOutputCache();
 
+    builder.Services.AddOutputCache();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));

@@ -152,6 +152,16 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     Snackbar.Add("Tag renamed", Severity.Success);
   }
 
+  private async Task HandleDeviceToggled((DeviceDto device, bool isToggled) args)
+  {
+    if (_selectedTag is null)
+    {
+      Snackbar.Add("No tag selected", Severity.Error);
+      return;
+    }
+    
+    await SetDeviceTag(args.isToggled, _selectedTag, args.device.Id);
+  }
   private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
   {
     if (args.Key == "Enter")

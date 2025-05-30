@@ -1,29 +1,21 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.Agent.LoadTester;
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
-using ControlR.Agent.Common.Services;
-using ControlR.Agent.Common.Services.Windows;
-using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.Signalr.Client;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Serilog;
 using ControlR.Agent.LoadTester.Helpers;
+using Microsoft.AspNetCore.SignalR.Client;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Primitives;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
-var startCount = ArgsParser.GetArgValue<int>("--start-count");
+var startCount = ArgsParser.GetArgValue("--start-count", 0);
 var serverUriArg = ArgsParser.GetArgValue<string>("--server-uri");
 var serverUri = new Uri(serverUriArg);
+var tenantIdArg = ArgsParser.GetArgValue("--tenant-id", string.Empty);
+var tenantId = Guid.TryParse(tenantIdArg, out var parsedTenantId) ? parsedTenantId : Guid.Empty;
 var agentVersion = await GetAgentVersion(serverUri);
-var tenantId = Guid.Empty;
 
 Console.WriteLine($"Starting agent count at {startCount}.");
 
@@ -34,86 +26,108 @@ Console.CancelKeyPress += (s, e) => { cts.Cancel(); };
 
 Console.WriteLine($"Connecting to {serverUri}");
 
-var hosts = new ConcurrentBag<IHost>();
+var connections = new ConcurrentBag<HubConnection>();
+var hubUri = new Uri(serverUri, "/hubs/agent");
+var agentHubClient = new TestAgentHubClient();
+var retryPolicy = new TestAgentRetryPolicy();
 
-_ = ReportHosts(hosts, cancellationToken);
+_ = ReportConnections(connections, cancellationToken);
 
-await Parallel.ForAsync(startCount, startCount + agentCount, async (i, ct) =>
+var parallelOptions = new ParallelOptions()
+{
+  MaxDegreeOfParallelism = Environment.ProcessorCount * 10,
+  CancellationToken = cts.Token
+};
+
+await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, async (i, ct) =>
 {
   if (ct.IsCancellationRequested)
   {
     return;
   }
 
-  var builder = Host.CreateApplicationBuilder(args);
-  builder.AddControlRAgent(StartupMode.Run, $"loadtester-{i}", serverUri);
-
-  var deviceId = DeterministicGuid.Create(i);
-
-  builder.Configuration
-    .AddInMemoryCollection(new Dictionary<string, string?>
-    {
-      { "AppOptions:DeviceId", deviceId.ToString() },
-      { "AppOptions:ServerUri", $"{serverUri}" },
-      { "AppOptions:TenantId", tenantId.ToString() },
-      { "Logging:LogLevel:Default", "Warning" },
-      { "Serilog:MinimumLevel:Default", "Warning" }
-    });
-
-  builder.Services.ReplaceImplementation<IAgentUpdater, FakeAgentUpdater>();
-  builder.Services.ReplaceImplementation<IStreamerUpdater, FakeStreamerUpdater>();
-  builder.Services.ReplaceImplementation<ICpuUtilizationSampler, FakeCpuUtilizationSampler>();
-  builder.Services.ReplaceImplementation<ISettingsProvider, FakeSettingsProvider>(new FakeSettingsProvider(deviceId, serverUri));
-  builder.Services.RemoveImplementation<StreamingSessionWatcher>();
-  builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
-
-  builder.Services.ReplaceImplementation<IDeviceDataGenerator, FakeDeviceDataGenerator>(sp =>
+  while (true)
   {
-    return new FakeDeviceDataGenerator(
-      i,
-      tenantId,
-      agentVersion,
-      sp.GetRequiredService<ISystemEnvironment>(),
-      sp.GetRequiredService<ICpuUtilizationSampler>(),
-      sp.GetRequiredService<IOptionsMonitor<AgentAppOptions>>(),
-      sp.GetRequiredService<ILogger<FakeDeviceDataGenerator>>());
-  });
-
-  var host = builder.Build();
-  await host.StartAsync(cancellationToken);
-  hosts.Add(host);
-
-  await Delayer.Default.WaitForAsync(
-    () =>
+    try
     {
-      return hosts.All(x => x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected);
-    },
-    TimeSpan.FromSeconds(1),
-    () =>
+      var builder = new HubConnectionBuilder();
+      var connection = builder
+        .WithUrl(
+          hubUri,
+          options => ConnectionHelper.ConfigureHubConnection(i, options))
+        .WithAutomaticReconnect(retryPolicy)
+        .Build();
+
+      connection.Reconnected += connectionId =>
+      {
+        Console.WriteLine($"Agent {i} reconnected with connection ID: {connectionId}");
+        return Task.CompletedTask;
+      };
+
+      connection.Closed += error =>
+      {
+        Console.WriteLine($"Agent {i} connection closed: {error?.Message}");
+        return Task.CompletedTask;
+      };
+
+      connection.Reconnecting += error =>
+      {
+        Console.WriteLine($"Agent {i} reconnecting: {error?.Message}");
+        return Task.CompletedTask;
+      };
+
+      connection.On<StreamerSessionRequestDto, bool>(
+        nameof(IAgentHubClient.CreateStreamingSession),
+        agentHubClient.CreateStreamingSession);
+
+      connection.On<TerminalSessionRequest, Result<TerminalSessionRequestResult>>(
+        nameof(IAgentHubClient.CreateTerminalSession),
+        agentHubClient.CreateTerminalSession);
+
+      connection.On(
+        nameof(IAgentHubClient.GetWindowsSessions),
+         agentHubClient.GetWindowsSessions);
+
+      connection.On<TerminalInputDto, Result>(
+        nameof(IAgentHubClient.ReceiveTerminalInput),
+        agentHubClient.ReceiveTerminalInput);
+
+      connection.On<string>(
+        nameof(IAgentHubClient.UninstallAgent),
+        agentHubClient.UninstallAgent);
+
+      await connection.StartAsync(ct);
+
+      var deviceId = DeterministicGuid.Create(i);
+      var deviceDto = await ConnectionHelper.CreateDevice(deviceId, tenantId, i, agentVersion);
+
+      await connection.InvokeAsync(nameof(IAgentHub.UpdateDevice), deviceDto, ct);
+
+      connections.Add(connection);
+      break;
+    }
+    catch (Exception ex)
     {
-      Log.Information("Waiting for all connections to be established.");
-      return Task.CompletedTask;
-    },
-    cancellationToken: cancellationToken);
+      Console.WriteLine($"Agent {i} failed to connect: {ex.Message}");
+      await Task.Delay(TimeSpan.FromSeconds(5), ct);
+    }
+  }
 });
 
-var hostTasks = hosts.Select(x => x.WaitForShutdownAsync());
-await Task.WhenAll(hostTasks);
-
+Console.WriteLine($"All {agentCount:N0} agents started successfully.");
+await Task.Delay(Timeout.Infinite, cancellationToken);
 return;
 
-static async Task ReportHosts(ConcurrentBag<IHost> hosts, CancellationToken cancellationToken)
+static async Task ReportConnections(ConcurrentBag<HubConnection> connections, CancellationToken cancellationToken)
 {
   using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
   while (await timer.WaitForNextTickAsync(cancellationToken))
   {
-    var hubConnections = hosts.Select(x => { return x.Services.GetRequiredService<IHubConnection<IAgentHub>>(); });
-
-    var groups = hubConnections.GroupBy(x => x.ConnectionState);
+    var groups = connections.GroupBy(x => x.State);
 
     foreach (var group in groups)
     {
-      Console.WriteLine($"{group.Key}: {group.Count()}");
+      Console.WriteLine($"{group.Key}: {group.Count():N0}");
     }
   }
 }

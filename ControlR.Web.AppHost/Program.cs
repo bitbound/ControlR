@@ -8,7 +8,8 @@ var pgPassword = builder.AddParameter("PgPassword", true);
 var postgres = builder
     .AddPostgres(ServiceNames.Postgres, pgUser, pgPassword, port: 5432)
     .WithLifetime(ContainerLifetime.Persistent)
-    .WithDataVolume("controlr-data");
+    .WithDataVolume("controlr-data")
+    .ExcludeFromManifest();
 
 var pgHost = postgres.GetEndpoint("tcp");
 
@@ -24,7 +25,6 @@ var webEndpoint = web.GetEndpoint("http");
 
 builder
   .AddProject<Projects.ControlR_Agent>(ServiceNames.ControlrAgent, "Run")
-  .WithArgs("run", "-i", "localhost")
   .WithEnvironment("AppOptions__ServerUri", webEndpoint)
   .WaitFor(web)
   .ExcludeFromManifest();

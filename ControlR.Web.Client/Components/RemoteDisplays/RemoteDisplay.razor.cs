@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Web.Client.Components.ContentWindows;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -141,8 +142,9 @@ public partial class RemoteDisplay : IAsyncDisposable
   }
 
 
-  public async ValueTask DisposeAsync()
+  public override async ValueTask DisposeAsync()
   {
+    await base.DisposeAsync();
     _clientOnCloseRegistration?.Dispose();
     _isDisposed = true;
     await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);

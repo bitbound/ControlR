@@ -29,7 +29,8 @@ internal static class HostApplicationBuilderExtensions
     this HostApplicationBuilder builder,
     StartupMode startupMode,
     string? instanceId,
-    Uri? serverUri)
+    Uri? serverUri,
+    bool loadAppSettings = true)
   {
     builder.AddServiceDefaults(ServiceNames.ControlrAgent);
 
@@ -54,8 +55,12 @@ internal static class HostApplicationBuilderExtensions
         { $"{InstanceOptions.SectionKey}:{nameof(InstanceOptions.InstanceId)}", instanceId },
         { $"{AgentAppOptions.SectionKey}:{nameof(AgentAppOptions.ServerUri)}", serverUri?.ToString() },
       })
-      .AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true)
       .AddEnvironmentVariables();
+
+    if (loadAppSettings)
+    {
+      builder.Configuration.AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true);
+    }
 
     services
       .AddOptions<AgentAppOptions>()

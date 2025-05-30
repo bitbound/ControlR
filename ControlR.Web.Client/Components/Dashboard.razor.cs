@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.SignalR.Client;
-using System.Collections.ObjectModel;
+﻿using System.Collections.Immutable;
 using System.Runtime.Versioning;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components;
 
@@ -14,8 +14,10 @@ public partial class Dashboard
     ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Name), false, 1, x => x.Name)
   };
 
+  private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
   private Version? _agentReleaseVersion;
-  private ObservableCollection<DeviceViewModel> _devices = [];  
+  private bool? _anyDevicesForUser;
+  private MudDataGrid<DeviceViewModel>? _dataGrid;
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private string? _searchText;
@@ -26,9 +28,6 @@ public partial class Dashboard
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
-
-  [Inject]
-  public required IDeviceStore DeviceStore { get; init; }
 
   [Inject]
   public required IDialogService DialogService { get; init; }
@@ -44,68 +43,18 @@ public partial class Dashboard
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-  
+
   [Inject]
   public required ITagStore TagStore { get; init; }
-  
+
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
 
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-
   private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
-
-  private ICollection<DeviceViewModel> FilteredDevices
-  {
-    get
-    {
-      var devices = _devices.AsEnumerable();
-      
-      // Filter by online status if enabled
-      if (_hideOfflineDevices && !ShouldBypassHideOfflineDevices)
-      {
-        devices = devices.Where(x => x.IsOnline);
-      }
-
-      if (_selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count)
-      {
-        // Filter by selected tags if any are selected
-        devices = devices.Where(device =>
-          _selectedTags.Any(tag => tag.DeviceIds.Contains(device.Id)));
-      }
-
-      return [.. devices];
-    }
-  }
-
-  private Func<DeviceViewModel, bool> QuickFilter => x =>
-  {
-    if (string.IsNullOrWhiteSpace(_searchText))
-    {
-      return true;
-    }
-
-    var element = JsonSerializer.SerializeToElement(x);
-    foreach (var property in element.EnumerateObject())
-    {
-      try
-      {
-        if (property.Value.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-        {
-          return true;
-        }
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Error while filtering devices.");
-      }
-    }
-
-    return false;
-  };
 
   protected override async Task OnInitializedAsync()
   {
@@ -114,98 +63,22 @@ public partial class Dashboard
     using var token = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
+    await SetLatestAgentVersion();
 
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
 
-    if (DeviceStore.Items.Count == 0)
-    {
-      await DeviceStore.Refresh();
-    }
-
-    if (TagStore.Items.Count == 0)
-    {
-      await TagStore.Refresh();
-    }
-
-    _selectedTags = [.. TagStore.Items];
-
-    await LoadDevicesFromStore();
-
     _loading = false;
-  }
-
-  private async Task EditDevice(DeviceViewModel device)
-  {
-    try
-    {
-      // TODO: Implement EditDevice.
-      await Task.Yield();
-      //var settingsResult = await ControlrApi.GetDeviceDetails(device.Id);
-      //if (!settingsResult.IsSuccess)
-      //{
-      //  Snackbar.Add(settingsResult.Reason, Severity.Error);
-      //  return;
-      //}
-
-      //var dialogOptions = new DialogOptions
-      //{
-      //  BackdropClick = false,
-      //  FullWidth = true,
-      //  MaxWidth = MaxWidth.Medium
-      //};
-
-      //var parameters = new DialogParameters
-      //{
-      //  { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-      //  { nameof(AppSettingsEditorDialog.DeviceViewModel), device }
-      //};
-      //var dialogRef =
-      //  await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
-      //var result = await dialogRef.Result;
-      //if (result?.Data is true)
-      //{
-      //  Snackbar.Add("Settings saved on device", Severity.Success);
-      //}
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while getting device settings.");
-      Snackbar.Add("Failed to get device settings", Severity.Error);
-    }
-  }
-
-  private string GetTagsMultiSelectText(List<string> tags)
-  {
-    if (tags.Count == 0)
-    {
-      return "No tags selected";
-    }
-
-    if (_selectedTags.Count == TagStore.Items.Count)
-    {
-      return "All tags selected";
-    }
-
-    var tagNoun = tags.Count > 1 ? "tags" : "tag";
-    return $"{tags.Count} {tagNoun} selected";
+    _componentLoadedSignal.Set();
   }
 
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();
-    viewModel.IsOutdated = IsOutdated(viewModel);
-
-    var index = _devices.FindIndex(x => x.Id == viewModel.Id);
-    if (index > -1)
+    if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
     {
-      _devices[index] = viewModel;
+      await ReloadGridData();
     }
-    else
-    {
-      _devices.Add(viewModel);
-    }
-    await InvokeAsync(StateHasChanged);
   }
 
   private async Task HandleHubConnectionStateChangedMessage(object subscriber, HubConnectionStateChangedMessage message)
@@ -221,12 +94,12 @@ public partial class Dashboard
     Snackbar.Add("Refreshing devices", Severity.Success);
     await RefreshDevices();
   }
-  
+
   private async Task HideOfflineDevicesChanged(bool isChecked)
   {
     _hideOfflineDevices = isChecked;
     await Settings.SetHideOfflineDevices(isChecked);
-    await InvokeAsync(StateHasChanged);
+    await ReloadGridData();
   }
 
   private bool IsOutdated(DeviceViewModel device)
@@ -237,27 +110,74 @@ public partial class Dashboard
       !agentVersion.Equals(_agentReleaseVersion);
   }
 
-  private async Task LoadDevicesFromStore()
+  private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
   {
-    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
-    if (agentVerResult.IsSuccess)
+    if (_loading)
     {
-      _agentReleaseVersion = agentVerResult.Value;
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await _componentLoadedSignal.Wait(cts.Token);
     }
 
-    var devices = DeviceStore.Items.CloneAs<ICollection<DeviceDto>, ObservableCollection<DeviceViewModel>>();
-    foreach (var device in devices)
+    var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count
+        ? _selectedTags.Select(t => t.Id).ToList()
+        : null;
+
+    var request = new DeviceSearchRequestDto
     {
-      device.IsOutdated = IsOutdated(device);
+      SearchText = _searchText,
+      HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
+      TagIds = tagIds,
+      Page = state.Page,
+      PageSize = state.PageSize,
+      SortDefinitions = [.. state.SortDefinitions
+          .Select(sd => new DeviceColumnSort
+          {
+              PropertyName = sd.SortBy,
+              Descending = sd.Descending,
+              SortOrder = sd.Index
+          })]
+    };
+
+    var result = await ControlrApi.SearchDevices(request);
+    if (!result.IsSuccess)
+    {
+      Snackbar.Add("Failed to load devices", Severity.Error);
+      return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
     }
 
-    _devices = devices;
+    _anyDevicesForUser = result.Value.AnyDevicesForUser;
+
+    if (result.Value.Items is null)
+    {
+      return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
+    }
+
+    var viewModels = result.Value.Items
+        .Select(dto =>
+        {
+          var viewModel = dto.CloneAs<DeviceDto, DeviceViewModel>();
+          viewModel.IsOutdated = IsOutdated(viewModel);
+          return viewModel;
+        })
+        .ToArray();
+
+    return new GridData<DeviceViewModel>
+    {
+      TotalItems = result.Value.TotalItems,
+      Items = viewModels ?? []
+    };
   }
 
-  private Task OnSelectedTagsChanged(IEnumerable<TagViewModel> tags)
+  private async Task OnSearch(string text)
+  {
+    _searchText = text;
+    await ReloadGridData();
+  }
+
+  private async Task OnSelectedTagsChanged(ImmutableArray<TagViewModel> tags)
   {
     _selectedTags = [.. tags];
-    return InvokeAsync(StateHasChanged);
+    await ReloadGridData();
   }
   private async Task RefreshDeviceInfo(DeviceViewModel device)
   {
@@ -278,9 +198,9 @@ public partial class Dashboard
     {
       _loading = true;
       using var _ = BusyCounter.IncrementBusyCounter();
+      await SetLatestAgentVersion();
       await InvokeAsync(StateHasChanged);
-      await DeviceStore.Refresh();
-      await LoadDevicesFromStore();
+      await ReloadGridData();
     }
     catch (Exception ex)
     {
@@ -294,6 +214,13 @@ public partial class Dashboard
     }
   }
 
+  private async Task ReloadGridData()
+  {
+    if (_dataGrid is not null)
+    {
+      await _dataGrid.ReloadServerData();
+    }
+  }
 
   private async Task RemoteControlClicked(DeviceViewModel device)
   {
@@ -335,7 +262,6 @@ public partial class Dashboard
         break;
     }
   }
-
   private async Task RemoveDevice(DeviceViewModel device)
   {
     try
@@ -358,12 +284,8 @@ public partial class Dashboard
         return;
       }
 
-      _devices.Remove(device);
-      if (DeviceStore.TryGet(device.Id, out var dto))
-      {
-        _ = DeviceStore.Remove(dto);
-      }
       Snackbar.Add("Device removed", Severity.Success);
+      await ReloadGridData();
     }
     catch (Exception ex)
     {
@@ -392,6 +314,14 @@ public partial class Dashboard
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while restarting device.");
+    }
+  }
+  private async Task SetLatestAgentVersion()
+  {
+    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
+    if (agentVerResult.IsSuccess)
+    {
+      _agentReleaseVersion = agentVerResult.Value;
     }
   }
 

@@ -44,7 +44,6 @@ app.UseWhen(
   ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
-
 app.MapStaticAssets();
 
 app.MapWebSocketRelay();
@@ -53,6 +52,9 @@ app.MapHub<AgentHub>("/hubs/agent");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+// Configure output cache - must be before any middleware that generates response
+app.UseOutputCache();
 
 app.MapControllers();
 
@@ -69,10 +71,6 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapHub<ViewerHub>("/hubs/viewer");
 
-if (!app.Environment.IsDevelopment())
-{
-  app.UseOutputCache();
-}
 
 if (appOptions.UseInMemoryDatabase)
 {

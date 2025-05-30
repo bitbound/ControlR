@@ -1,3 +1,9 @@
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
@@ -5,12 +11,6 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
-using System.Collections.Immutable;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Web.Client.Authz;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -124,6 +124,90 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task DeviceManager_CanInstallAgentOnDevice()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
+    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+
+    var tenantId = Guid.NewGuid();
+    var otherTenantId = Guid.NewGuid();
+
+    // Create a test device
+    var device = new Device
+    {
+      Id = Guid.NewGuid(),
+      Name = "Test Device",
+      TenantId = tenantId
+    };
+    db.Devices.Add(device);
+
+    // Create users with different permissions
+    var installerUser = new AppUser
+    {
+      Id = Guid.NewGuid(),
+      UserName = "installer@example.com",
+      NormalizedUserName = "INSTALLER@EXAMPLE.COM",
+      Email = "installer@example.com",
+      NormalizedEmail = "INSTALLER@EXAMPLE.COM",
+      EmailConfirmed = true,
+      TenantId = tenantId
+    };
+
+    var installerUserResult = await userManager.CreateAsync(installerUser);
+    Assert.True(installerUserResult.Succeeded);
+
+    var nonInstallerUser = new AppUser
+    {
+      Id = Guid.NewGuid(),
+      UserName = "regular@example.com",
+      NormalizedUserName = "REGULAR@EXAMPLE.COM",
+      Email = "regular@example.com",
+      NormalizedEmail = "REGULAR@EXAMPLE.COM",
+      EmailConfirmed = true,
+      TenantId = tenantId
+    };
+
+    var nonInstallerUserResult = await userManager.CreateAsync(nonInstallerUser);
+    Assert.True(nonInstallerUserResult.Succeeded);
+
+    var differentTenantUser = new AppUser
+    {
+      Id = Guid.NewGuid(),
+      UserName = "different@example.com",
+      NormalizedUserName = "DIFFERENT@EXAMPLE.COM",
+      Email = "different@example.com",
+      NormalizedEmail = "DIFFERENT@EXAMPLE.COM",
+      EmailConfirmed = true,
+      TenantId = otherTenantId
+    };
+
+    var differentTenantUserResult = await userManager.CreateAsync(differentTenantUser);
+    Assert.True(differentTenantUserResult.Succeeded);
+
+    await db.SaveChangesAsync();
+
+    await userManager.AddToRoleAsync(installerUser, RoleNames.AgentInstaller);
+    await userManager.AddToRoleAsync(differentTenantUser, RoleNames.AgentInstaller);
+
+    // Act & Assert
+
+    // Installer user from same tenant should be able to install
+    var canInstall = await deviceManager.CanInstallAgentOnDevice(installerUser, device);
+    Assert.True(canInstall);
+
+    // Non-installer user from same tenant should not be able to install
+    var canNonInstallerInstall = await deviceManager.CanInstallAgentOnDevice(nonInstallerUser, device);
+    Assert.False(canNonInstallerInstall);
+
+    // User from different tenant should not be able to install
+    var canDifferentTenantInstall = await deviceManager.CanInstallAgentOnDevice(differentTenantUser, device);
+    Assert.False(canDifferentTenantInstall);
+  }
+
+  [Fact]
   public async Task DeviceManager_UpdateDevice()
   {
     // Arrange
@@ -215,95 +299,5 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     var failResult = await deviceManager.UpdateDevice(nonExistentDto);
     Assert.False(failResult.IsSuccess);
     Assert.Equal("Device does not exist in the database.", failResult.Reason);
-  }
-
-  [Fact]
-  public async Task DeviceManager_CanInstallAgentOnDevice()
-  {
-    // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenantId = Guid.NewGuid();
-    var otherTenantId = Guid.NewGuid();
-
-    // Create a test device
-    var device = new Device
-    {
-      Id = Guid.NewGuid(),
-      Name = "Test Device",
-      TenantId = tenantId
-    };
-    db.Devices.Add(device);
-
-    // Create a role for agent installer
-    var installerRole = new AppRole
-    {
-      Id = Guid.NewGuid(),
-      Name = RoleNames.AgentInstaller,
-      NormalizedName = RoleNames.AgentInstaller.ToUpper()
-    };
-    await db.Roles.AddAsync(installerRole);
-
-    // Create users with different permissions
-    var installerUser = new AppUser
-    {
-      Id = Guid.NewGuid(),
-      UserName = "installer@example.com",
-      NormalizedUserName = "INSTALLER@EXAMPLE.COM",
-      Email = "installer@example.com",
-      NormalizedEmail = "INSTALLER@EXAMPLE.COM",
-      EmailConfirmed = true,
-      TenantId = tenantId
-    };
-
-    var nonInstallerUser = new AppUser
-    {
-      Id = Guid.NewGuid(),
-      UserName = "regular@example.com",
-      NormalizedUserName = "REGULAR@EXAMPLE.COM",
-      Email = "regular@example.com",
-      NormalizedEmail = "REGULAR@EXAMPLE.COM",
-      EmailConfirmed = true,
-      TenantId = tenantId
-    };
-
-    var differentTenantUser = new AppUser
-    {
-      Id = Guid.NewGuid(),
-      UserName = "different@example.com",
-      NormalizedUserName = "DIFFERENT@EXAMPLE.COM",
-      Email = "different@example.com",
-      NormalizedEmail = "DIFFERENT@EXAMPLE.COM",
-      EmailConfirmed = true,
-      TenantId = otherTenantId
-    };
-
-    await db.Users.AddRangeAsync(installerUser, nonInstallerUser, differentTenantUser);
-
-    // Assign installer role to the installer user
-    await db.UserRoles.AddAsync(new IdentityUserRole<Guid>
-    {
-      UserId = installerUser.Id,
-      RoleId = installerRole.Id
-    });
-
-    await db.SaveChangesAsync();
-
-    // Act & Assert
-
-    // Installer user from same tenant should be able to install
-    var canInstall = await deviceManager.CanInstallAgentOnDevice(installerUser, device);
-    Assert.True(canInstall);
-
-    // Non-installer user from same tenant should not be able to install
-    var canNonInstallerInstall = await deviceManager.CanInstallAgentOnDevice(nonInstallerUser, device);
-    Assert.False(canNonInstallerInstall);
-
-    // User from different tenant should not be able to install
-    var canDifferentTenantInstall = await deviceManager.CanInstallAgentOnDevice(differentTenantUser, device);
-    Assert.False(canDifferentTenantInstall);
   }
 }

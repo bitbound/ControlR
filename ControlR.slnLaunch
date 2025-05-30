@@ -45,7 +45,7 @@
       {
         "Path": "Tests\\ControlR.Agent.LoadTester\\ControlR.Agent.LoadTester.csproj",
         "Action": "Start",
-        "DebugTarget": "ControlR.Agent.LoadTester"
+        "DebugTarget": "local"
       },
       {
         "Path": "docker-compose\\docker-compose.dcproj",

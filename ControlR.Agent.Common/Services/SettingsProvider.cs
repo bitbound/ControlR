@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;
 
-internal interface ISettingsProvider
+public interface ISettingsProvider
 {
   Guid DeviceId { get; }
   string InstanceId { get; }

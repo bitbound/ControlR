@@ -129,7 +129,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureTags(ModelBuilder builder)
   {
     builder
