@@ -53,32 +53,6 @@ public partial class Dashboard
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private Func<DeviceViewModel, bool> QuickFilter => x =>
-  {
-    if (string.IsNullOrWhiteSpace(_searchText))
-    {
-      return true;
-    }
-
-    var element = JsonSerializer.SerializeToElement(x);
-    foreach (var property in element.EnumerateObject())
-    {
-      try
-      {
-        if (property.Value.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-        {
-          return true;
-        }
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Error while filtering devices.");
-      }
-    }
-
-    return false;
-  };
-
   private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
 
@@ -94,72 +68,10 @@ public partial class Dashboard
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
 
-    if (TagStore.Items.Count == 0)
-    {
-      await TagStore.Refresh();
-    }
-
-    _selectedTags = [.. TagStore.Items];
-
     _loading = false;
     _componentLoadedSignal.Set();
   }
 
-  private async Task EditDevice(DeviceViewModel device)
-  {
-    try
-    {
-      // TODO: Implement EditDevice.
-      await Task.Yield();
-      //var settingsResult = await ControlrApi.GetDeviceDetails(device.Id);
-      //if (!settingsResult.IsSuccess)
-      //{
-      //  Snackbar.Add(settingsResult.Reason, Severity.Error);
-      //  return;
-      //}
-
-      //var dialogOptions = new DialogOptions
-      //{
-      //  BackdropClick = false,
-      //  FullWidth = true,
-      //  MaxWidth = MaxWidth.Medium
-      //};
-
-      //var parameters = new DialogParameters
-      //{
-      //  { nameof(AppSettingsEditorDialog.AppSettings), settingsResult.Value },
-      //  { nameof(AppSettingsEditorDialog.DeviceViewModel), device }
-      //};
-      //var dialogRef =
-      //  await DialogService.ShowAsync<AppSettingsEditorDialog>("Agent App Settings", parameters, dialogOptions);
-      //var result = await dialogRef.Result;
-      //if (result?.Data is true)
-      //{
-      //  Snackbar.Add("Settings saved on device", Severity.Success);
-      //}
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while getting device settings.");
-      Snackbar.Add("Failed to get device settings", Severity.Error);
-    }
-  }
-
-  private string GetTagsMultiSelectText(List<string> tags)
-  {
-    if (tags.Count == 0)
-    {
-      return "No tags selected";
-    }
-
-    if (_selectedTags.Count == TagStore.Items.Count)
-    {
-      return "All tags selected";
-    }
-
-    var tagNoun = tags.Count > 1 ? "tags" : "tag";
-    return $"{tags.Count} {tagNoun} selected";
-  }
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceDto, DeviceViewModel>();

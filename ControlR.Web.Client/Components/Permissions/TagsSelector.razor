@@ -21,6 +21,18 @@
   [Parameter]
   public string PlaceholderText { get; set; } = "Filter devices by selecting tags";
 
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (TagStore.Items.Count == 0)
+    {
+      await TagStore.Refresh();
+    }
+
+    _selectedTags = [.. TagStore.Items];
+  }
+
   private string GetTagsMultiSelectText(List<string> tags)
   {
     if (tags.Count == 0)
