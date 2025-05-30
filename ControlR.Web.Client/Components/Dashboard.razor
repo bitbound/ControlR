@@ -17,25 +17,25 @@
     </div>
     <div>
       <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"
-        Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" />
+                   Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" />
     </div>
   </div>
 
   <MudDataGrid T="DeviceViewModel" @ref="_dataGrid" ServerData="LoadServerData" RowsPerPage="@(25)"
-    SortMode="SortMode.Multiple" Loading="_loading" Hideable="true" SortDefinitions="_sortDefinitions"
-    ShowColumnOptions="true" Filterable="true">
+               SortMode="SortMode.Multiple" Loading="_loading" Hideable="true" SortDefinitions="_sortDefinitions"
+               ShowColumnOptions="true" Filterable="true">
 
     <ToolBarContent>
       <MudSpacer />
 
       <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearch" Placeholder="Search" Clearable
-        Adornment="Adornment.Start" Immediate DebounceInterval="500" AdornmentIcon="@Icons.Material.Filled.Search"
-        IconSize="Size.Medium" Class="mt-0">
+                    Adornment="Adornment.Start" Immediate DebounceInterval="500" AdornmentIcon="@Icons.Material.Filled.Search"
+                    IconSize="Size.Medium" Class="mt-0">
       </MudTextField>
 
       <MudTooltip Text="Refresh">
         <MudIconButton Variant="Variant.Outlined" Color="Color.Info" Class="ml-4"
-          Icon="@(Icons.Material.Filled.Refresh)" OnClick="HandleRefreshClicked" />
+                       Icon="@(Icons.Material.Filled.Refresh)" OnClick="HandleRefreshClicked" />
       </MudTooltip>
     </ToolBarContent>
 
@@ -48,11 +48,11 @@
               @if (context.Item.IsOnline)
               {
                 <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)" IconColor="Color.Info"
-                  OnClick="@(() => RemoteControlClicked(context.Item))">
+                             OnClick="@(() => RemoteControlClicked(context.Item))">
                   Remote Control
                 </MudMenuItem>
                 <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)" IconColor="Color.Info"
-                  OnClick="@(() => StartTerminal(context.Item))">
+                             OnClick="@(() => StartTerminal(context.Item))">
                   Terminal
                 </MudMenuItem>
                 @*<MudMenuItem Icon="@(Icons.Material.Filled.Edit)"
@@ -62,39 +62,39 @@
                 </MudMenuItem> \*@
 
                 <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)" IconColor="Color.Success"
-                  OnClick="@(() => RefreshDeviceInfo(context.Item))">
+                             OnClick="@(() => RefreshDeviceInfo(context.Item))">
                   Refresh
                 </MudMenuItem>
 
                 @if (context.Item.IsOutdated)
                 {
                   <MudMenuItem Icon="@(Icons.Material.Filled.Update)" IconColor="Color.Warning"
-                    OnClick="@(() => UpdateDevice(context.Item.Id))">
+                               OnClick="@(() => UpdateDevice(context.Item.Id))">
                     Update
                   </MudMenuItem>
                 }
 
                 <MudMenuItem Icon="@(Icons.Material.Filled.PowerOff)" IconColor="Color.Error"
-                  OnClick="@(() => ShutdownDevice(context.Item))">
+                             OnClick="@(() => ShutdownDevice(context.Item))">
                   Shutdown
                 </MudMenuItem>
                 <MudMenuItem Icon="@(Icons.Material.Filled.RestartAlt)" IconColor="Color.Error"
-                  OnClick="@(() => RestartDevice(context.Item))">
+                             OnClick="@(() => RestartDevice(context.Item))">
                   Restart
                 </MudMenuItem>
                 <MudMenuItem Icon="@(Icons.Material.Filled.DeleteForever)" IconColor="Color.Error"
-                  OnClick="@(() => UninstallAgent(context.Item))">
+                             OnClick="@(() => UninstallAgent(context.Item))">
                   Delete
                 </MudMenuItem>
               }
               else
               {
                 <MudMenuItem Icon="@(Icons.Material.Filled.Visibility)" IconColor="Color.Success"
-                  OnClick="@(() => WakeDevice(context.Item))">
+                             OnClick="@(() => WakeDevice(context.Item))">
                   Wake
                 </MudMenuItem>
                 <MudMenuItem Icon="@(Icons.Material.Filled.Delete)" IconColor="Color.Error"
-                  OnClick="@(() => RemoveDevice(context.Item))">
+                             OnClick="@(() => RemoveDevice(context.Item))">
                   Remove
                 </MudMenuItem>
               }
@@ -295,7 +295,7 @@
             Memory Usage
           </MudText>
           <RadialGauge Value="@(context.Item.UsedMemoryPercent)" MaxValue="1" Height="250px" Width="250px"
-            Class="text-center">
+                       Class="text-center">
             <MudText Typo="Typo.body1">
               @(Math.Round(context.Item.UsedMemoryPercent * 100, 2))%
             </MudText>
@@ -309,54 +309,57 @@
             <MudText Typo="Typo.h6" Color="Color.Primary" Class="ellipsis-text">
               Hard Drive
             </MudText>
-            <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px"
-              InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
-              InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
+            <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px" Class="d-inline-block"
+                      InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
+                      InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
               <CustomGraphics>
                 <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
-                  font-size="2">
+                      font-size="16">
                   Total
                 </text>
                 <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
-                  font-size="4">
+                      font-size="20">
                   @(drive.TotalSize.ToString("N0")) GB
                 </text>
               </CustomGraphics>
             </MudChart>
-            <div class="child-content-grid">
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Name:
-              </MudText>
-              <MudTooltip Text="@drive.Name">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.Name
+            <div class="d-inline-block">
+              <div class="child-content-grid">
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Name:
                 </MudText>
-              </MudTooltip>
+                <MudTooltip Text="@drive.Name">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.Name
+                  </MudText>
+                </MudTooltip>
 
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Volume Label:
-              </MudText>
-              <MudTooltip Text="@drive.VolumeLabel">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.VolumeLabel
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Volume Label:
                 </MudText>
-              </MudTooltip>
+                <MudTooltip Text="@drive.VolumeLabel">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.VolumeLabel
+                  </MudText>
+                </MudTooltip>
 
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Format:
-              </MudText>
-              <MudText Typo="Typo.body1">
-                @drive.DriveFormat
-              </MudText>
-
-              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                Root Directory:
-              </MudText>
-              <MudTooltip Text="@drive.RootDirectory">
-                <MudText Typo="Typo.body1" Class="ellipsis-text">
-                  @drive.RootDirectory
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Format:
                 </MudText>
-              </MudTooltip>
+                <MudText Typo="Typo.body1">
+                  @drive.DriveFormat
+                </MudText>
+
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                  Root Directory:
+                </MudText>
+                <MudTooltip Text="@drive.RootDirectory">
+                  <MudText Typo="Typo.body1" Class="ellipsis-text">
+                    @drive.RootDirectory
+                  </MudText>
+                </MudTooltip>
+              </div>
+
             </div>
 
           </MudItem>
