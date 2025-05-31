@@ -140,7 +140,7 @@ jobs:
         shell: pwsh
         run: |
           $TestPaths = @(
-            "./server-publish/wwwroot/AgentVersion.txt",
+            "./server-publish/wwwroot/downloads/AgentVersion.txt",
             "./server-publish/wwwroot/downloads/win-x86/ControlR.Agent.exe",
             "./server-publish/wwwroot/downloads/win-x86/ControlR.Streamer.zip",
             "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent"
