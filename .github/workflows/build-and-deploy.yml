@@ -125,7 +125,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: server-bin
-          path: ControlR.Server/bin/publish
+          path: ./server-publish
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -136,11 +136,35 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
+      - name: Create Custom Dockerfile
+        shell: pwsh
+        run: |
+          $DockerFile = @"
+          FROM mcr.microsoft.com/dotnet/aspnet:9.0
+          RUN apt update
+          RUN apt -y install curl
+          RUN mkdir -p /app/AppData
+          RUN chown app:app -R /app/AppData
+          USER app
+          WORKDIR /app
+          EXPOSE 8080
+          EXPOSE 8081
+
+          COPY . /app
+
+          ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
+
+          HEALTHCHECK \
+            CMD curl -f http://localhost:8080/health || exit 1
+          "@
+
+          Set-Content -Path "./server-publish/Dockerfile" -Value $DockerFile -Force
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ControlR.Web.Server/Dockerfile
+          file: ./server-publish/Dockerfile
           push: true
           tags: |
             translucency/controlr:${{ github.event.inputs.docker_deploy_target }}
