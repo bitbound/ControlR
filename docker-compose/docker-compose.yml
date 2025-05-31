@@ -36,6 +36,9 @@ services:
       # Whether to make self-registration publicly available.
       ControlR_AppOptions__EnablePublicRegistration: false
 
+      # Allows devices to self-register without requiring an installer key.
+      ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
+
       # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
