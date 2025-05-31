@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - none
+          - dev
           - preview
           - latest
         default: "none"
@@ -115,7 +116,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.docker_deploy_target == 'preview' || github.event.inputs.docker_deploy_target == 'latest'
+    if: github.event.inputs.docker_deploy_target != 'none'
 
     steps:
       - name: Checkout code
@@ -198,7 +199,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    if: github.event.inputs.github_release == 'latest' || github.event.inputs.github_release == 'prerelease'
+    if: github.event.inputs.github_release != 'none'
 
     steps:
       - name: Checkout code
