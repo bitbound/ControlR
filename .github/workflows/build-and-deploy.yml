@@ -136,6 +136,22 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
+      - name: Verify Download Files
+        shell: pwsh
+        run: |
+          $TestPaths = @(
+            "./server-publish/wwwroot/AgentVersion.txt",
+            "./server-publish/wwwroot/downloads/win-x86/ControlR.Agent.exe",
+            "./server-publish/wwwroot/downloads/win-x86/ControlR.Streamer.zip",
+            "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent"
+          )
+          foreach ($TestPath in $TestPaths) {
+            if (!(Test-Path $TestPath)) {
+              Write-Error "$TestPath not found."
+              exit 1
+            }
+          }
+
       - name: Create Custom Dockerfile
         shell: pwsh
         run: |
