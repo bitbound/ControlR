@@ -96,8 +96,6 @@ internal class DxOutputGenerator : IDxOutputGenerator
                   pFeatureLevel: null,
                   ppImmediateContext: out var deviceContext);
 
-              var texture2d = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
-
               output.DuplicateOutput(device, out var outputDuplication);
 
               _currentOutput = new DxOutput(
