@@ -225,7 +225,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ControlR ${{ needs.build.outputs.version }}
+          name: v${{ needs.build.outputs.version }} Release
           tag_name: v${{ needs.build.outputs.version }}
           draft: true
           prerelease: ${{ github.event.inputs.github_release == 'prerelease' }}
