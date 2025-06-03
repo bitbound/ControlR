@@ -14,26 +14,24 @@ public interface IHubConnectionBase
 }
 
 public abstract class HubConnectionBase(
+  TimeProvider timeProvider,
   IServiceProvider services,
   IMessenger messenger,
-  IDelayer delayer,
   ILogger<HubConnectionBase> logger) : IHubConnectionBase
 {
-  protected readonly IDelayer Delayer = delayer;
+  protected readonly ILogger<HubConnectionBase> Logger = logger;
   protected readonly IMessenger Messenger = messenger;
   protected readonly IServiceProvider Services = services;
-  protected readonly ILogger<HubConnectionBase> Logger = logger;
+  protected readonly TimeProvider TimeProvider = timeProvider;
 
-  private CancellationToken _cancellationToken;
+  private readonly ManualResetEventAsync _connectionReady = new(false);
   private HubConnection? _connection;
   private Func<string, Task> _onConnectFailure = _ => Task.CompletedTask;
   private bool _useReconnect;
 
-  protected HubConnection Connection => _connection ?? throw new Exception("You must start the connection first.");
-
   public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
   public bool IsConnected => _connection?.State == HubConnectionState.Connected;
-
+  protected HubConnection Connection => _connection ?? throw new InvalidOperationException("You must start the connection first.");
   public Task ReceiveDto(DtoWrapper dto)
   {
     Messenger.Send(new DtoReceivedMessage<DtoWrapper>(dto)).Forget();
@@ -65,7 +63,6 @@ public abstract class HubConnectionBase(
     }
 
     _useReconnect = useReconnect;
-    _cancellationToken = cancellationToken;
     _onConnectFailure = onConnectFailure;
 
     while (!cancellationToken.IsCancellationRequested)
@@ -116,7 +113,7 @@ public abstract class HubConnectionBase(
         await _onConnectFailure.Invoke($"Connection error.  Message: {ex.Message}");
       }
 
-      await Task.Delay(3_000, cancellationToken);
+      await Task.Delay(TimeSpan.FromSeconds(3), TimeProvider, cancellationToken);
     }
   }
 
@@ -130,7 +127,7 @@ public abstract class HubConnectionBase(
       await _connection.StopAsync();
     }
 
-    await Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, _useReconnect, _cancellationToken);
+    await Connect(hubUrlFactory, connectionConfig, optionsConfig, _onConnectFailure, _useReconnect, CancellationToken.None);
   }
 
   protected async Task StopConnection(CancellationToken cancellationToken)
@@ -138,29 +135,33 @@ public abstract class HubConnectionBase(
     if (_connection is not null)
     {
       await _connection.StopAsync(cancellationToken);
+      _connectionReady.Reset();
     }
   }
 
-  protected async Task WaitForConnection()
+  protected async Task WaitForConnection(CancellationToken cancellationToken)
   {
-    await Delayer.WaitForAsync(() => IsConnected);
+    await _connectionReady.Wait(cancellationToken);
   }
 
   private Task HubConnection_Closed(Exception? arg)
   {
     Logger.LogWarning(arg, "Hub connection closed.");
+    _connectionReady.Reset();
     return Task.CompletedTask;
   }
 
   private Task HubConnection_Reconnected(string? arg)
   {
     Logger.LogInformation("Reconnected to hub.  New connection ID: {id}", arg);
+    _connectionReady.Set();
     return Task.CompletedTask;
   }
 
   private Task HubConnection_Reconnecting(Exception? arg)
   {
     Logger.LogInformation(arg, "Reconnecting to hub.");
+    _connectionReady.Reset();
     return Task.CompletedTask;
   }
 

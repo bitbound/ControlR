@@ -187,7 +187,7 @@ public sealed class CaptureTests
     using var result = _grabber.Capture(display1, true, tryUseDirectX: true, allowFallbackToBitBlt: true);
     if (!result.IsSuccess)
     {
-      throw new Exception("Capture failed.");
+      throw new InvalidOperationException("Capture failed.");
     }
 
     var sw = Stopwatch.StartNew();
@@ -205,7 +205,7 @@ public sealed class CaptureTests
     using var result = _grabber.Capture(display1);
     if (!result.IsSuccess)
     {
-      throw new Exception("Capture failed.");
+      throw new InvalidOperationException("Capture failed.");
     }
 
     var encoded = _bitmapUtility.EncodeJpeg(result.Bitmap, 25);
@@ -223,7 +223,7 @@ public sealed class CaptureTests
     using var result = _grabber.Capture(display1);
     if (!result.IsSuccess)
     {
-      throw new Exception("Capture failed.");
+      throw new InvalidOperationException("Capture failed.");
     }
 
     var sbBuffer = new byte[result.Bitmap.Width * result.Bitmap.Height * Image.GetPixelFormatSize(result.Bitmap.PixelFormat)];

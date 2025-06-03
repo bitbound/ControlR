@@ -397,5 +397,4 @@ internal class DesktopCapturer : IDesktopCapturer
       cancellationToken: linkedCts.Token);
   }
 
-  private record SentFrame(int Size, DateTimeOffset Timestamp);
 }

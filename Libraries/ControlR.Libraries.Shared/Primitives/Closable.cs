@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using ControlR.Libraries.Shared.Collections;
+using System.Collections.Concurrent;
 
 namespace ControlR.Libraries.Shared.Primitives;
 
@@ -10,18 +11,17 @@ public interface IClosable
 
 public class Closable(ILogger<Closable> logger) : IClosable
 {
-  private readonly ConcurrentDictionary<Guid, Func<Task>> _onCloseCallbacks = new();
+  private readonly ConcurrentList<Func<Task>> _onCloseCallbacks = [];
 
   public IDisposable OnClosed(Func<Task> callback)
   {
-    var id = Guid.NewGuid();
-    _onCloseCallbacks.TryAdd(id, callback);
-    return new CallbackDisposable(() => { _onCloseCallbacks.TryRemove(id, out _); });
+    _onCloseCallbacks.Add(callback);
+    return new CallbackDisposable(() => { _onCloseCallbacks.Remove(callback); });
   }
 
   public async Task InvokeOnClosed()
   {
-    foreach (var callback in _onCloseCallbacks.Values)
+    foreach (var callback in _onCloseCallbacks)
     {
       try
       {

@@ -39,7 +39,7 @@ public abstract class StreamingClient(
 
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
 
-  protected ClientWebSocket Client => _client ?? throw new Exception("Client not initialized.");
+  protected ClientWebSocket Client => _client ?? throw new InvalidOperationException("Client not initialized.");
   protected bool IsDisposed { get; private set; }
 
   public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
@@ -64,6 +64,7 @@ public abstract class StreamingClient(
       IsDisposed = true;
 
       await _clientDisposingCts.CancelAsync();
+      _clientDisposingCts.Dispose();
 
       if (State == WebSocketState.Open)
       {

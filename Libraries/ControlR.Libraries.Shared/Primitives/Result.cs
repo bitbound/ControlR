@@ -202,6 +202,6 @@ public class Result<T>
     {
       return Result.Ok(value);
     }
-    return Result.Fail<TNewValue>(Exception ?? new Exception(Reason), Reason);
+    return Result.Fail<TNewValue>(Exception ?? new InvalidOperationException(Reason), Reason);
   }
 }
