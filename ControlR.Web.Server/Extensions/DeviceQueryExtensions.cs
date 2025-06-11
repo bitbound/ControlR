@@ -177,15 +177,15 @@ public static class DeviceQueryExtensions
     {
       // If not a valid boolean, return query unchanged
       return query;
-    }
-
-    return filterOperator switch
+    }    switch (filterOperator)
     {
       // Handle MudBlazor boolean filter operators
-      FilterOperator.Boolean.Is => query.Where(BuildBooleanExpression(propertySelector, boolValue)),
-      _ => throw new ArgumentOutOfRangeException(
-        nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
-    };
+      case FilterOperator.Boolean.Is:
+        return query.Where(BuildBooleanExpression(propertySelector, boolValue));
+      default:
+        logger.LogError("Unsupported boolean filter operator: {FilterOperator}", filterOperator);
+        return query;
+    }
   }
 
   private static IQueryable<Device> FilterByStringColumn(
@@ -195,55 +195,54 @@ public static class DeviceQueryExtensions
     Expression<Func<Device, string?>> propertySelector,
     bool isRelationalDatabase,
     ILogger logger)
-  {
-    if (isRelationalDatabase)
+  {    if (isRelationalDatabase)
     {
-      return filterOperator switch
+      switch (filterOperator)
       {
-        FilterOperator.String.Contains =>
-          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}%"))),
-        FilterOperator.String.Empty =>
-          query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p))),
-        FilterOperator.String.EndsWith =>
-          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}"))),
-        FilterOperator.String.Equal =>
-          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, filterValue))),
-        FilterOperator.String.NotContains =>
-          query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, $"%{filterValue}%"))),
-        FilterOperator.String.NotEmpty =>
-          query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p))),
-        FilterOperator.String.NotEqual =>
-          query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, filterValue))),
-        FilterOperator.String.StartsWith =>
-          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"{filterValue}%"))),
-        _ =>
-          throw new ArgumentOutOfRangeException(
-            nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
-      };
-    }
-    else
+        case FilterOperator.String.Contains:
+          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}%")));
+        case FilterOperator.String.Empty:
+          return query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p)));
+        case FilterOperator.String.EndsWith:
+          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}")));
+        case FilterOperator.String.Equal:
+          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, filterValue)));
+        case FilterOperator.String.NotContains:
+          return query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, $"%{filterValue}%")));
+        case FilterOperator.String.NotEmpty:
+          return query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p)));
+        case FilterOperator.String.NotEqual:
+          return query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, filterValue)));
+        case FilterOperator.String.StartsWith:
+          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"{filterValue}%")));
+        default:
+          logger.LogError("Unsupported string filter operator for relational database: {FilterOperator}", filterOperator);
+          return query;
+      }
+    }    else
     {
-      return filterOperator switch
+      switch (filterOperator)
       {
-        FilterOperator.String.Contains =>
-          query.Where(BuildStringExpression(propertySelector, p => p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase))),
-        FilterOperator.String.Empty =>
-          query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p))),
-        FilterOperator.String.EndsWith =>
-          query.Where(BuildStringExpression(propertySelector, p => p!.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase))),
-        FilterOperator.String.Equal =>
-          query.Where(BuildStringExpression(propertySelector, p => p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase))),
-        FilterOperator.String.NotContains =>
-          query.Where(BuildStringExpression(propertySelector, p => !p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase))),
-        FilterOperator.String.NotEmpty =>
-          query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p))),
-        FilterOperator.String.NotEqual =>
-          query.Where(BuildStringExpression(propertySelector, p => !p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase))),
-        FilterOperator.String.StartsWith =>
-          query.Where(BuildStringExpression(propertySelector, p => p!.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase))),
-        _ => throw new ArgumentOutOfRangeException(
-              nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
-      };
+        case FilterOperator.String.Contains:
+          return query.Where(BuildStringExpression(propertySelector, p => p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase)));
+        case FilterOperator.String.Empty:
+          return query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p)));
+        case FilterOperator.String.EndsWith:
+          return query.Where(BuildStringExpression(propertySelector, p => p!.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase)));
+        case FilterOperator.String.Equal:
+          return query.Where(BuildStringExpression(propertySelector, p => p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase)));
+        case FilterOperator.String.NotContains:
+          return query.Where(BuildStringExpression(propertySelector, p => !p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase)));
+        case FilterOperator.String.NotEmpty:
+          return query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p)));
+        case FilterOperator.String.NotEqual:
+          return query.Where(BuildStringExpression(propertySelector, p => !p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase)));
+        case FilterOperator.String.StartsWith:
+          return query.Where(BuildStringExpression(propertySelector, p => p!.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase)));
+        default:
+          logger.LogError("Unsupported string filter operator for non-relational database: {FilterOperator}", filterOperator);
+          return query;
+      }
     }
   }
   private static IQueryable<Device> FilterByDoubleColumn(
@@ -258,30 +257,29 @@ public static class DeviceQueryExtensions
     {
       // If not a valid double, return query unchanged
       return query;
-    }
-
-    return filterOperator switch
+    }    switch (filterOperator)
     {
       // Handle MudBlazor numeric filter operators
-      FilterOperator.Number.Equal =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d == doubleValue)),
-      FilterOperator.Number.NotEqual =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d != doubleValue)),
-      FilterOperator.Number.GreaterThan =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d > doubleValue)),
-      FilterOperator.Number.GreaterThanOrEqual =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d >= doubleValue)),
-      FilterOperator.Number.LessThan =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue)),
-      FilterOperator.Number.LessThanOrEqual =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue)),
-      FilterOperator.Number.Empty =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d == 0)),
-      FilterOperator.Number.NotEmpty =>
-        query.Where(BuildDoubleExpression(propertySelector, d => d != 0)),
-      _ => throw new ArgumentOutOfRangeException(
-        nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
-    };
+      case FilterOperator.Number.Equal:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d == doubleValue));
+      case FilterOperator.Number.NotEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d != doubleValue));
+      case FilterOperator.Number.GreaterThan:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d > doubleValue));
+      case FilterOperator.Number.GreaterThanOrEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d >= doubleValue));
+      case FilterOperator.Number.LessThan:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue));
+      case FilterOperator.Number.LessThanOrEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue));
+      case FilterOperator.Number.Empty:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d == 0));
+      case FilterOperator.Number.NotEmpty:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d != 0));
+      default:
+        logger.LogError("Unsupported numeric filter operator: {FilterOperator}", filterOperator);
+        return query;
+    }
   }
 
   private class ParameterReplacerVisitor(ParameterExpression oldParameter, Expression newExpression) : ExpressionVisitor
