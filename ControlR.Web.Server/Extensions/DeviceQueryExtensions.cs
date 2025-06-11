@@ -27,25 +27,28 @@ public static class DeviceQueryExtensions
       switch (filter.PropertyName)
       {
         case nameof(Device.Name):
-          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Name, isRelationalDatabase);
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Name, isRelationalDatabase, logger);
           break;
         case nameof(Device.Alias):
-          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Alias, isRelationalDatabase);
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Alias, isRelationalDatabase, logger);
           break;
         case nameof(Device.OsDescription):
-          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.OsDescription, isRelationalDatabase);
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.OsDescription, isRelationalDatabase, logger);
           break;
         case nameof(Device.ConnectionId):
-          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.ConnectionId, isRelationalDatabase);
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.ConnectionId, isRelationalDatabase, logger);
           break;
         case nameof(Device.IsOnline):
-          query = query.FilterByBooleanColumn(filter.Operator, filter.Value, d => d.IsOnline);
+          query = query.FilterByBooleanColumn(filter.Operator, filter.Value, d => d.IsOnline, logger);
           break;
         case nameof(Device.CpuUtilization):
+          query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.CpuUtilization, logger);
           break;
         case nameof(Device.UsedMemoryPercent):
+          query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.UsedMemoryPercent, logger);
           break;
         case nameof(Device.UsedStoragePercent):
+          query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.UsedStoragePercent, logger);
           break;
         default:
           logger.LogError("Unhandled filter property: {PropertyName}", filter.PropertyName);
@@ -147,11 +150,27 @@ public static class DeviceQueryExtensions
     return Expression.Lambda<Func<Device, bool>>(replacedCondition!, parameter);
   }
 
+  private static Expression<Func<Device, bool>> BuildDoubleExpression(
+    Expression<Func<Device, double>> propertySelector,
+    Expression<Func<double, bool>> condition)
+  {
+    var parameter = propertySelector.Parameters[0];
+    var propertyExpression = propertySelector.Body;
+    var conditionBody = condition.Body;
+
+    // Replace the parameter in the condition with the property expression
+    var visitor = new ParameterReplacerVisitor(condition.Parameters[0], propertyExpression);
+    var replacedCondition = visitor.Visit(conditionBody);
+
+    return Expression.Lambda<Func<Device, bool>>(replacedCondition!, parameter);
+  }
+
   private static IQueryable<Device> FilterByBooleanColumn(
     this IQueryable<Device> query,
     string filterOperator,
     string filterValue,
-    Expression<Func<Device, bool>> propertySelector)
+    Expression<Func<Device, bool>> propertySelector,
+    ILogger logger)
   {
     // Parse the filter value to boolean
     if (!bool.TryParse(filterValue, out var boolValue))
@@ -163,8 +182,7 @@ public static class DeviceQueryExtensions
     return filterOperator switch
     {
       // Handle MudBlazor boolean filter operators
-      FilterOperator.Boolean.Is =>
-        query.Where(BuildBooleanExpression(propertySelector, boolValue)),
+      FilterOperator.Boolean.Is => query.Where(BuildBooleanExpression(propertySelector, boolValue)),
       _ => throw new ArgumentOutOfRangeException(
         nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
     };
@@ -175,7 +193,8 @@ public static class DeviceQueryExtensions
     string filterOperator,
     string filterValue,
     Expression<Func<Device, string?>> propertySelector,
-    bool isRelationalDatabase)
+    bool isRelationalDatabase,
+    ILogger logger)
   {
     if (isRelationalDatabase)
     {
@@ -226,6 +245,43 @@ public static class DeviceQueryExtensions
               nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
       };
     }
+  }
+  private static IQueryable<Device> FilterByDoubleColumn(
+    this IQueryable<Device> query,
+    string filterOperator,
+    string filterValue,
+    Expression<Func<Device, double>> propertySelector,
+    ILogger logger)
+  {
+    // Parse the filter value to double
+    if (!double.TryParse(filterValue, out var doubleValue))
+    {
+      // If not a valid double, return query unchanged
+      return query;
+    }
+
+    return filterOperator switch
+    {
+      // Handle MudBlazor numeric filter operators
+      FilterOperator.Number.Equal =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d == doubleValue)),
+      FilterOperator.Number.NotEqual =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d != doubleValue)),
+      FilterOperator.Number.GreaterThan =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d > doubleValue)),
+      FilterOperator.Number.GreaterThanOrEqual =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d >= doubleValue)),
+      FilterOperator.Number.LessThan =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue)),
+      FilterOperator.Number.LessThanOrEqual =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue)),
+      FilterOperator.Number.Empty =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d == 0)),
+      FilterOperator.Number.NotEmpty =>
+        query.Where(BuildDoubleExpression(propertySelector, d => d != 0)),
+      _ => throw new ArgumentOutOfRangeException(
+        nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
+    };
   }
 
   private class ParameterReplacerVisitor(ParameterExpression oldParameter, Expression newExpression) : ExpressionVisitor
