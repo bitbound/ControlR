@@ -159,8 +159,8 @@ public static class DeviceQueryExtensions
   }
 
   private static Expression<Func<Device, bool>> BuildDoubleExpression(
-    Expression<Func<Device, double>> propertySelector,
-    Expression<Func<double, bool>> condition)
+    Expression<Func<Device, double?>> propertySelector,
+    Expression<Func<double?, bool>> condition)
   {
     var parameter = propertySelector.Parameters[0];
     var propertyExpression = propertySelector.Body;
@@ -261,14 +261,24 @@ public static class DeviceQueryExtensions
     this IQueryable<Device> query,
     string filterOperator,
     string? filterValue,
-    Expression<Func<Device, double>> propertySelector,
+    Expression<Func<Device, double?>> propertySelector,
     ILogger logger)
   {
     // Parse the filter value to double
     if (!double.TryParse(filterValue, out var doubleValue))
     {
-      // If not a valid double, return query unchanged
-      return query;
+      switch (filterOperator)
+      {
+        case FilterOperator.Number.Empty:
+          // If the filter is for empty, we can return devices with 0 value
+          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d == 0));
+        case FilterOperator.Number.NotEmpty:
+          // If the filter is for not empty, we can return devices with non-zero value
+          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d != 0));
+        default:
+          logger.LogError("Invalid double filter value: {FilterValue}", filterValue);
+          return query;
+      }
     }
 
     switch (filterOperator)
@@ -286,10 +296,6 @@ public static class DeviceQueryExtensions
         return query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue));
       case FilterOperator.Number.LessThanOrEqual:
         return query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue));
-      case FilterOperator.Number.Empty:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d == 0));
-      case FilterOperator.Number.NotEmpty:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d != 0));
       default:
         logger.LogError("Unsupported numeric filter operator: {FilterOperator}", filterOperator);
         return query;

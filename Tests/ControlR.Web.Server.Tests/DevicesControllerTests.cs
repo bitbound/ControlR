@@ -807,7 +807,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
     }
 
-    await controller.SetControllerUser(user, userManager);    // Test Empty filter (CpuUtilization = 0)
+    await controller.SetControllerUser(user, userManager);
+
+    // Test Empty filter (CpuUtilization = 0)
     var emptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Empty, Value = "" }],
@@ -819,7 +821,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       emptyRequest,
       db,
       testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test NotEmpty filter (CpuUtilization != 0)
+      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+
+    // Test NotEmpty filter (CpuUtilization != 0)
     var notEmptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.NotEmpty, Value = "" }],
@@ -831,7 +835,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       notEmptyRequest,
       db,
       testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+
+    // Assert
     Assert.NotNull(emptyResult.Value);
     Assert.NotNull(emptyResult.Value.Items);
     Assert.Equal(2, emptyResult.Value.Items.Count); // Devices 0 and 2
@@ -942,6 +948,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     Assert.NotNull(invalidPropertyResult.Value.Items);
     Assert.Single(invalidPropertyResult.Value.Items);
   }
+
   [Fact]
   public async Task GetDevicesGridData_RespectsUserAuthorization()
   {
