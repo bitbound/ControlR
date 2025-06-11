@@ -135,6 +135,13 @@ public partial class Dashboard
               PropertyName = sd.SortBy,
               Descending = sd.Descending,
               SortOrder = sd.Index
+          })],
+      FilterDefinitions = [.. state.FilterDefinitions
+          .Select(fd => new DeviceColumnFilter
+          {
+              PropertyName = fd.Column?.PropertyName,
+              Operator = fd.Operator,
+              Value = fd.Value?.ToString()
           })]
     };
 

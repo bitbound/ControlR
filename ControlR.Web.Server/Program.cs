@@ -1,10 +1,10 @@
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
+using ControlR.Web.Client.Components.Layout;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
-using _Imports = ControlR.Web.Client._Imports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,7 +64,7 @@ app.UseWhen(
   {
     app.MapRazorComponents<App>()
       .AddInteractiveWebAssemblyRenderMode()
-      .AddAdditionalAssemblies(typeof(_Imports).Assembly);
+      .AddAdditionalAssemblies(typeof(MainLayout).Assembly);
   });
 
 app.MapAdditionalIdentityEndpoints();
