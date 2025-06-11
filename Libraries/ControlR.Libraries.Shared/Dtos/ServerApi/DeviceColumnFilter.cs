@@ -9,15 +9,15 @@ public class DeviceColumnFilter
   public string? Operator { get; set; }
   public string? Value { get; set; }
 
-  [MemberNotNullWhen(true, nameof(PropertyName), nameof(Operator), nameof(Value))]
+  [MemberNotNullWhen(true, nameof(PropertyName), nameof(Operator))]
   public bool Validate()
   {
     if (string.IsNullOrWhiteSpace(PropertyName) ||
-        string.IsNullOrWhiteSpace(Operator) ||
-        string.IsNullOrWhiteSpace(Value))
+        string.IsNullOrWhiteSpace(Operator))
     {
       return false;
     }
+
     return true;
   }
 }

@@ -45,10 +45,18 @@ public static class DeviceQueryExtensions
           query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.CpuUtilization, logger);
           break;
         case nameof(Device.UsedMemoryPercent):
-          query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.UsedMemoryPercent, logger);
+          query = query.FilterByDoubleColumn(
+            filter.Operator,
+            filter.Value,
+            d => d.UsedMemory / d.TotalMemory,
+            logger);
           break;
         case nameof(Device.UsedStoragePercent):
-          query = query.FilterByDoubleColumn(filter.Operator, filter.Value, d => d.UsedStoragePercent, logger);
+          query = query.FilterByDoubleColumn(
+            filter.Operator,
+            filter.Value,
+            d => d.UsedStorage / d.TotalStorage,
+            logger);
           break;
         default:
           logger.LogError("Unhandled filter property: {PropertyName}", filter.PropertyName);
@@ -168,7 +176,7 @@ public static class DeviceQueryExtensions
   private static IQueryable<Device> FilterByBooleanColumn(
     this IQueryable<Device> query,
     string filterOperator,
-    string filterValue,
+    string? filterValue,
     Expression<Func<Device, bool>> propertySelector,
     ILogger logger)
   {
@@ -191,11 +199,14 @@ public static class DeviceQueryExtensions
   private static IQueryable<Device> FilterByStringColumn(
     this IQueryable<Device> query,
     string filterOperator,
-    string filterValue,
+    string? filterValue,
     Expression<Func<Device, string?>> propertySelector,
     bool isRelationalDatabase,
     ILogger logger)
-  {    if (isRelationalDatabase)
+  {
+    filterValue ??= string.Empty;
+
+    if (isRelationalDatabase)
     {
       switch (filterOperator)
       {
@@ -219,7 +230,8 @@ public static class DeviceQueryExtensions
           logger.LogError("Unsupported string filter operator for relational database: {FilterOperator}", filterOperator);
           return query;
       }
-    }    else
+    }
+    else
     {
       switch (filterOperator)
       {
@@ -248,7 +260,7 @@ public static class DeviceQueryExtensions
   private static IQueryable<Device> FilterByDoubleColumn(
     this IQueryable<Device> query,
     string filterOperator,
-    string filterValue,
+    string? filterValue,
     Expression<Func<Device, double>> propertySelector,
     ILogger logger)
   {
@@ -257,7 +269,9 @@ public static class DeviceQueryExtensions
     {
       // If not a valid double, return query unchanged
       return query;
-    }    switch (filterOperator)
+    }
+
+    switch (filterOperator)
     {
       // Handle MudBlazor numeric filter operators
       case FilterOperator.Number.Equal:
