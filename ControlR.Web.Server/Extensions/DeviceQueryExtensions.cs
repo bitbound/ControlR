@@ -1,4 +1,5 @@
 ﻿using MudBlazor;
+using System.Linq.Expressions;
 
 namespace ControlR.Web.Server.Extensions;
 
@@ -85,11 +86,19 @@ public static class DeviceQueryExtensions
         logger.LogError("Invalid column filter definition: {@Filter}", filter);
         continue;
       }
-
       switch (filter.PropertyName)
       {
         case nameof(Device.Name):
-          query = query.FilterByStringColumn(filter.Operator, filter.Value, isRelationalDatabase);
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Name, isRelationalDatabase);
+          break;
+        case nameof(Device.Alias):
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.Alias, isRelationalDatabase);
+          break;
+        case nameof(Device.OsDescription):
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.OsDescription, isRelationalDatabase);
+          break;
+        case nameof(Device.ConnectionId):
+          query = query.FilterByStringColumn(filter.Operator, filter.Value, d => d.ConnectionId, isRelationalDatabase);
           break;
         case nameof(Device.IsOnline):
           break;
@@ -111,6 +120,7 @@ public static class DeviceQueryExtensions
     this IQueryable<Device> query,
     string filterOperator,
     string filterValue,
+    Expression<Func<Device, string?>> propertySelector,
     bool isRelationalDatabase)
   {
     if (isRelationalDatabase)
@@ -118,21 +128,21 @@ public static class DeviceQueryExtensions
       return filterOperator switch
       {
         FilterOperator.String.Contains =>
-          query.Where(d => EF.Functions.ILike(d.Name, $"%{filterValue}%")),
+          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}%"))),
         FilterOperator.String.Empty =>
-          query.Where(d => string.IsNullOrWhiteSpace(d.Name)),
+          query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p))),
         FilterOperator.String.EndsWith =>
-          query.Where(d => EF.Functions.ILike(d.Name, $"%{filterValue}")),
+          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}"))),
         FilterOperator.String.Equal =>
-          query.Where(d => EF.Functions.ILike(d.Name, filterValue)),
+          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, filterValue))),
         FilterOperator.String.NotContains =>
-          query.Where(d => !EF.Functions.ILike(d.Name, $"%{filterValue}%")),
+          query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, $"%{filterValue}%"))),
         FilterOperator.String.NotEmpty =>
-          query.Where(d => !string.IsNullOrWhiteSpace(d.Name)),
+          query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p))),
         FilterOperator.String.NotEqual =>
-          query.Where(d => !EF.Functions.ILike(d.Name, filterValue)),
+          query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, filterValue))),
         FilterOperator.String.StartsWith =>
-          query.Where(d => EF.Functions.ILike(d.Name, $"{filterValue}%")),
+          query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"{filterValue}%"))),
         _ =>
           throw new ArgumentOutOfRangeException(
             nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
@@ -143,24 +153,50 @@ public static class DeviceQueryExtensions
       return filterOperator switch
       {
         FilterOperator.String.Contains =>
-          query.Where(d => d.Name.Contains(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase))),
         FilterOperator.String.Empty =>
-          query.Where(d => string.IsNullOrWhiteSpace(d.Name)),
+          query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p))),
         FilterOperator.String.EndsWith =>
-          query.Where(d => d.Name.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => p!.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase))),
         FilterOperator.String.Equal =>
-          query.Where(d => d.Name.Equals(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase))),
         FilterOperator.String.NotContains =>
-          query.Where(d => !d.Name.Contains(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => !p!.Contains(filterValue, StringComparison.OrdinalIgnoreCase))),
         FilterOperator.String.NotEmpty =>
-          query.Where(d => !string.IsNullOrWhiteSpace(d.Name)),
+          query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p))),
         FilterOperator.String.NotEqual =>
-          query.Where(d => !d.Name.Equals(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => !p!.Equals(filterValue, StringComparison.OrdinalIgnoreCase))),
         FilterOperator.String.StartsWith =>
-          query.Where(d => d.Name.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase)),
+          query.Where(BuildStringExpression(propertySelector, p => p!.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase))),
         _ => throw new ArgumentOutOfRangeException(
               nameof(filterOperator), $"Unsupported filter operator: {filterOperator}"),
       };
+    }
+  }
+
+  private static Expression<Func<Device, bool>> BuildStringExpression(
+    Expression<Func<Device, string?>> propertySelector,
+    Expression<Func<string?, bool>> condition)
+  {
+    var parameter = propertySelector.Parameters[0];
+    var propertyExpression = propertySelector.Body;
+    var conditionBody = condition.Body;
+
+    // Replace the parameter in the condition with the property expression
+    var visitor = new ParameterReplacerVisitor(condition.Parameters[0], propertyExpression);
+    var replacedCondition = visitor.Visit(conditionBody);
+
+    return Expression.Lambda<Func<Device, bool>>(replacedCondition!, parameter);
+  }
+
+  private class ParameterReplacerVisitor(ParameterExpression oldParameter, Expression newExpression) : ExpressionVisitor
+  {
+    private readonly ParameterExpression _oldParameter = oldParameter;
+    private readonly Expression _newExpression = newExpression;
+
+    protected override Expression VisitParameter(ParameterExpression node)
+    {
+      return node == _oldParameter ? _newExpression : base.VisitParameter(node);
     }
   }
 }
