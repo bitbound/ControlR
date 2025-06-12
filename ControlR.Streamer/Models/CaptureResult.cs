@@ -8,6 +8,7 @@ public sealed class CaptureResult : IDisposable
   public Bitmap? Bitmap { get; init; }
 
   public Rectangle[] DirtyRects { get; init; } = [];
+  public CaptureResult? PreviousResult { get; init; }
   public bool DxTimedOut { get; init; }
   public Exception? Exception { get; init; }
   public string FailureReason { get; init; } = string.Empty;
@@ -25,20 +26,25 @@ public sealed class CaptureResult : IDisposable
     Bitmap?.Dispose();
   }
 
-  internal static CaptureResult Fail(string failureReason)
+  internal static CaptureResult Fail(string failureReason, CaptureResult? dxCaptureResult = null)
   {
     return new CaptureResult()
     {
-      FailureReason = failureReason
+      FailureReason = failureReason,
+      PreviousResult = dxCaptureResult,
     };
   }
 
-  internal static CaptureResult Fail(Exception exception, string? failureReason = null)
+  internal static CaptureResult Fail(
+    Exception exception, 
+    string? failureReason = null, 
+    CaptureResult? dxCaptureResult = null)
   {
     return new CaptureResult()
     {
       FailureReason = failureReason ?? exception.Message,
       Exception = exception,
+      PreviousResult = dxCaptureResult,
     };
   }
 
@@ -59,14 +65,19 @@ public sealed class CaptureResult : IDisposable
     };
   }
 
-  internal static CaptureResult Ok(Bitmap bitmap, bool isUsingGpu, Rectangle[]? dirtyRects = default)
+  internal static CaptureResult Ok(
+    Bitmap bitmap, 
+    bool isUsingGpu, 
+    Rectangle[]? dirtyRects = default,
+    CaptureResult? dxCaptureResult = null)
   {
     return new CaptureResult()
     {
       Bitmap = bitmap,
       IsSuccess = true,
       IsUsingGpu = isUsingGpu,
-      DirtyRects = dirtyRects ?? []
+      DirtyRects = dirtyRects ?? [],
+      PreviousResult = dxCaptureResult,
     };
   }
 

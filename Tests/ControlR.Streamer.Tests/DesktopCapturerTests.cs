@@ -65,11 +65,11 @@ public class DesktopCapturerTests
       new XunitLogger<ScreenGrabber>(outputHelper));
 
     _capturer = new DesktopCapturer(
+      timeProvider: _timeProvider,
       screenGrabber: _screenGrabber,
       bitmapUtility: _bitmapUtility,
       memoryProvider: _memoryProvider,
       win32Interop: _win32Interop,
-      delayer: _delayer,
       captureMetrics: _captureMetrics.Object,
       appLifetime: _appLifetime,
       startupOptions: new OptionsWrapper<StartupOptions>(_startupOptions),

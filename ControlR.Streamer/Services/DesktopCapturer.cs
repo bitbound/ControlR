@@ -29,12 +29,12 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly IHostApplicationLifetime _appLifetime;
   private readonly IBitmapUtility _bitmapUtility;
   private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
-  private readonly IDelayer _delayer;
   private readonly ICaptureMetrics _captureMetrics;
   private readonly AutoResetEventAsync _frameReadySignal = new();
   private readonly AutoResetEventAsync _frameRequestedSignal = new(true);
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
+  private readonly TimeProvider _timeProvider;
   private readonly IScreenGrabber _screenGrabber;
   private readonly IOptions<StartupOptions> _startupOptions;
   private readonly IWin32Interop _win32Interop;
@@ -48,21 +48,21 @@ internal class DesktopCapturer : IDesktopCapturer
 
 
   public DesktopCapturer(
+    TimeProvider timeProvider,
     IScreenGrabber screenGrabber,
     IBitmapUtility bitmapUtility,
     IMemoryProvider memoryProvider,
     IWin32Interop win32Interop,
-    IDelayer delayer,
     ICaptureMetrics captureMetrics,
     IHostApplicationLifetime appLifetime,
     IOptions<StartupOptions> startupOptions,
     ILogger<DesktopCapturer> logger)
   {
+    _timeProvider = timeProvider;
     _screenGrabber = screenGrabber;
     _bitmapUtility = bitmapUtility;
     _memoryProvider = memoryProvider;
     _win32Interop = win32Interop;
-    _delayer = delayer;
     _captureMetrics = captureMetrics;
     _startupOptions = startupOptions;
     _appLifetime = appLifetime;
@@ -165,14 +165,14 @@ internal class DesktopCapturer : IDesktopCapturer
       if (!diffResult.IsSuccess)
       {
         _logger.LogError(diffResult.Exception, "Failed to get changed area.  Reason: {ErrorReason}", diffResult.Reason);
-        await _delayer.Delay(_afterFailureDelay, cancellationToken);
+        await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
         return;
       }
 
       var diffArea = diffResult.Value;
       if (diffArea.IsEmpty)
       {
-        await _delayer.Delay(_afterFailureDelay, cancellationToken);
+        await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
         return;
       }
 
@@ -197,7 +197,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
     if (captureResult.DirtyRects.Length == 0)
     {
-      await _delayer.Delay(_afterFailureDelay);
+      await Task.Delay(_afterFailureDelay, _timeProvider);
       return;
     }
 
@@ -294,7 +294,7 @@ internal class DesktopCapturer : IDesktopCapturer
         if (_selectedDisplay is not { } selectedDisplay)
         {
           _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
-          await _delayer.Delay(_afterFailureDelay, cancellationToken);
+          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
           continue;
         }
 
@@ -304,25 +304,30 @@ internal class DesktopCapturer : IDesktopCapturer
 
         if (captureResult.HadNoChanges)
         {
-          await _delayer.Delay(_afterFailureDelay, cancellationToken);
+          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
           continue;
-        }
-
-        if (captureResult.DxTimedOut)
-        {
-          _logger.LogDebug("DirectX capture timed out. BitBlt fallback used.");
         }
 
         if (!captureResult.IsSuccess)
         {
-          _logger.LogWarning(captureResult.Exception, "Failed to capture latest frame.  Reason: {ResultReason}",
+          _logger.LogWarning(
+            captureResult.Exception,
+            "Failed to capture latest frame.  Reason: {ResultReason}",
             captureResult.FailureReason);
+
           ResetDisplays();
-          await _delayer.Delay(_afterFailureDelay, cancellationToken);
+          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
           continue;
         }
 
+        if (!captureResult.IsUsingGpu && _captureMetrics.IsUsingGpu)
+        {
+          // We've switched from GPU to CPU capture, so we need to force a keyframe.
+          _forceKeyFrame = true;
+        }
+
         _captureMetrics.SetIsUsingGpu(captureResult.IsUsingGpu);
+
 
         if (ShouldSendKeyFrame())
         {
@@ -388,13 +393,15 @@ internal class DesktopCapturer : IDesktopCapturer
   }
   private async Task ThrottleCapturing(CancellationToken cancellationToken)
   {
-    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-
-    await _delayer.WaitForAsync(
-      condition: () => _captureMetrics.Mbps < CaptureMetrics.MaxMbps,
-      pollingDelay: TimeSpan.FromMilliseconds(10),
-      cancellationToken: linkedCts.Token);
+    try
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(250), _timeProvider);
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+      await _captureMetrics.WaitForBandwidth(linkedCts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+      _logger.LogDebug("Throttle timed out.");
+    }
   }
-
 }
