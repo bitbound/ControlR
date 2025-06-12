@@ -23,6 +23,7 @@ public interface ICaptureMetrics
   void SetIsUsingGpu(bool isUsingGpu);
   void Start(CancellationToken cancellationToken);
   void Stop();
+  Task WaitForBandwidth(CancellationToken cancellationToken);
 }
 
 internal sealed class CaptureMetrics(
@@ -44,6 +45,7 @@ internal sealed class CaptureMetrics(
   private readonly SemaphoreSlim _processLock = new(1, 1);
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly TimeSpan _timerInterval = TimeSpan.FromSeconds(.1);
+  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new(false);
   private CancellationTokenSource? _abortTokenSource;
   private double _fps;
   private double _ips;
@@ -180,12 +182,21 @@ internal sealed class CaptureMetrics(
         _mbps = 0;
       }
 
-      while (
-        _iterations.TryPeek(out var iteration) &&
-        iteration.AddSeconds(1) < _timeProvider.GetUtcNow())
+      if (_mbps >= MaxMbps && _bandwidthAvailableSignal.IsSet)
       {
-        _ = _iterations.TryDequeue(out _);
+        _bandwidthAvailableSignal.Reset();
       }
+      else if (_mbps < MaxMbps && !_bandwidthAvailableSignal.IsSet)
+      {
+        _bandwidthAvailableSignal.Set();
+      }
+
+      while (
+          _iterations.TryPeek(out var iteration) &&
+          iteration.AddSeconds(1) < _timeProvider.GetUtcNow())
+        {
+          _ = _iterations.TryDequeue(out _);
+        }
 
       _ips = _iterations.Count;
 
@@ -208,5 +219,11 @@ internal sealed class CaptureMetrics(
       _processLock.Release();
     }
   }
+
+  public async Task WaitForBandwidth(CancellationToken cancellationToken)
+  {
+    await _bandwidthAvailableSignal.Wait(cancellationToken);
+  }
+
   private record SentPayload(int Size, DateTimeOffset Timestamp);
 }

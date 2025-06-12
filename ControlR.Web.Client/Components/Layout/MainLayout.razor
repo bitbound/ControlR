@@ -15,10 +15,21 @@
 
   <MudLayout>
     <MudAppBar Elevation="1">
-      <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-                                Edge="Edge.Start"/>
 
-      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3"/>
+      @if (RendererInfo.IsInteractive)
+      {
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => ToggleNavDrawer())" />
+      }
+      else
+      {
+        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                  Edge="Edge.Start"/>
+      }
+
+      <MudImage Src=@Assets["icon-192.png"] Height="30" Class="mx-2" />
+      <MudLink Href="/" Underline="Underline.None">
+        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+      </MudLink>
 
       <MudSpacer/>
 
@@ -72,13 +83,6 @@
                id="nav-drawer"
                ClipMode="DrawerClipMode.Always"
                Elevation="2">
-
-      <MudDrawerHeader Class="ps-4">
-        <MudImage Src="/icon-192.png" Height="30" Class="me-2"/>
-        <MudLink Href="/" Underline="Underline.None">
-          <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-        </MudLink>
-      </MudDrawerHeader>
 
       <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
     </MudDrawer>
@@ -230,6 +234,12 @@
   {
     Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
+  }
+
+
+  private void ToggleNavDrawer()
+  {
+    _drawerOpen = !_drawerOpen;
   }
 
 }

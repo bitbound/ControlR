@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.AspNetCore.Mvc;
+using MudBlazor;
 
 namespace ControlR.Web.Server.Api;
 
@@ -113,6 +114,7 @@ public class DevicesController : ControllerBase
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DevicesController> logger)
   {
+    var isRelationalDatabase = appDb.Database.IsRelational();
     // Start with all devices
     var anyDevices = await appDb.Devices.AnyAsync();
     var query = appDb.Devices
@@ -122,59 +124,22 @@ public class DevicesController : ControllerBase
       .AsQueryable();
 
     // Apply filtering
-    if (!string.IsNullOrWhiteSpace(requestDto.SearchText))
+    query = query
+      .FilterBySearchText(requestDto.SearchText, isRelationalDatabase)
+      .FilterByOnlineOffline(requestDto.HideOfflineDevices)
+      .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
+
+    query = await query.FilterByTagIds(requestDto.TagIds, appDb);
+
+    if (query is null)
     {
-      var searchText = requestDto.SearchText;
-
-      if (appDb.Database.IsInMemory())
+      // No matching devices found
+      return new DeviceSearchResponseDto
       {
-        query = query.Where(d =>
-          d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-          d.Alias.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-          d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-          d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-          string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
-      }
-      else
-      {
-        // Use EF.Functions.Like for the database-searchable fields
-        query = query.Where(d =>
-          EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(string.Join("", d.CurrentUsers) ?? "", $"%{searchText}%"));
-      }
-    }
-
-    if (requestDto.HideOfflineDevices)
-    {
-      query = query.Where(d => d.IsOnline);
-    }
-
-    // Handle tag filtering
-    if (requestDto.TagIds != null && requestDto.TagIds.Count > 0)
-    {
-      // Find devices through the many-to-many relationship
-      var deviceIds = await appDb.Devices
-          .Where(d => d.Tags!.Any(t => requestDto.TagIds.Contains(t.Id)))
-          .Select(d => d.Id)
-          .ToListAsync();
-
-      if (deviceIds.Count != 0)
-      {
-        query = query.Where(d => deviceIds.Contains(d.Id));
-      }
-      else
-      {
-        // No matching devices found
-        return new DeviceSearchResponseDto
-        {
-          Items = [],
-          TotalItems = 0,
-          AnyDevicesForUser = anyDevices
-        };
-      }
+        Items = [],
+        TotalItems = 0,
+        AnyDevicesForUser = anyDevices
+      };
     }
 
     // Apply sorting
@@ -187,11 +152,11 @@ public class DevicesController : ControllerBase
       [nameof(DeviceDto.UsedStoragePercent)] = d => d.UsedStoragePercent
     };
 
-    if (requestDto.SortDefinitions != null && requestDto.SortDefinitions.Count > 0)
+    if (requestDto.SortDefinitions is { Count: > 0} sortDefs)
     {
       IOrderedQueryable<Device>? orderedQuery = null;
 
-      foreach (var sortDef in requestDto.SortDefinitions.OrderBy(s => s.SortOrder))
+      foreach (var sortDef in sortDefs.OrderBy(s => s.SortOrder))
       {
         if (string.IsNullOrWhiteSpace(sortDef.PropertyName) ||
             !sortExpressions.TryGetValue(sortDef.PropertyName, out var expr))

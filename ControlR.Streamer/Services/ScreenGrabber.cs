@@ -98,29 +98,29 @@ internal sealed class ScreenGrabber(
         return GetBitBltCapture(display.MonitorArea, captureCursor);
       }
 
-      var result = GetDirectXCapture(display, captureCursor);
+      var dxResult = GetDirectXCapture(display, captureCursor);
 
-      if (result.HadNoChanges)
+      if (dxResult.HadNoChanges)
       {
-        return result;
+        return dxResult;
       }
 
-      if (result.DxTimedOut && allowFallbackToBitBlt)
+      if (dxResult.DxTimedOut && allowFallbackToBitBlt)
       {
-        return GetBitBltCapture(display.MonitorArea, captureCursor);
+        return GetBitBltCapture(display.MonitorArea, captureCursor, dxResult);
       }
 
-      if (!result.IsSuccess || result.Bitmap is null || _bitmapUtility.IsEmpty(result.Bitmap))
+      if (!dxResult.IsSuccess || dxResult.Bitmap is null || _bitmapUtility.IsEmpty(dxResult.Bitmap))
       {
         if (!allowFallbackToBitBlt)
         {
-          return result;
+          return dxResult;
         }
 
-        return GetBitBltCapture(display.MonitorArea, captureCursor);
+        return GetBitBltCapture(display.MonitorArea, captureCursor, dxResult);
       }
 
-      return result;
+      return dxResult;
     }
     catch (Exception ex)
     {
@@ -235,7 +235,10 @@ internal sealed class ScreenGrabber(
     }
   }
 
-  private CaptureResult GetBitBltCapture(Rectangle captureArea, bool captureCursor)
+  private CaptureResult GetBitBltCapture(
+    Rectangle captureArea, 
+    bool captureCursor, 
+    CaptureResult? dxResult = null)
   {
     try
     {
@@ -253,7 +256,7 @@ internal sealed class ScreenGrabber(
 
         if (!bitBltResult)
         {
-          return CaptureResult.Fail("BitBlt function failed.");
+          return CaptureResult.Fail("BitBlt function failed.", dxResult);
         }
       }
 
@@ -270,10 +273,10 @@ internal sealed class ScreenGrabber(
         ex,
         "Error getting capture with BitBlt. Capture Area: {@CaptureArea}",
         captureArea);
-      return CaptureResult.Fail(ex);
+      return CaptureResult.Fail(exception: ex, dxCaptureResult: dxResult);
     }
   }
-
+  
   private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.GetDxOutput(display.DeviceName);
