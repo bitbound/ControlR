@@ -26,6 +26,11 @@
                                   Edge="Edge.Start"/>
       }
 
+      <MudImage Src=@Assets["icon-192.png"] Height="30" Class="mx-2" />
+      <MudLink Href="/" Underline="Underline.None">
+        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+      </MudLink>
+
       <MudSpacer/>
 
       @if (!RendererInfo.IsInteractive)
@@ -78,13 +83,6 @@
                id="nav-drawer"
                ClipMode="DrawerClipMode.Always"
                Elevation="2">
-
-      <MudDrawerHeader Class="ps-4">
-        <MudImage Src="/icon-192.png" Height="30" Class="me-2"/>
-        <MudLink Href="/" Underline="Underline.None">
-          <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-        </MudLink>
-      </MudDrawerHeader>
 
       <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
     </MudDrawer>
