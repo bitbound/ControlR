@@ -15,10 +15,16 @@
 
   <MudLayout>
     <MudAppBar Elevation="1">
-      <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-                                Edge="Edge.Start"/>
 
-      <MudChip T="string" Text="Beta" Color="Color.Info" Class="ms-3"/>
+      @if (RendererInfo.IsInteractive)
+      {
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => ToggleNavDrawer())" />
+      }
+      else
+      {
+        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                  Edge="Edge.Start"/>
+      }
 
       <MudSpacer/>
 
@@ -230,6 +236,12 @@
   {
     Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
+  }
+
+
+  private void ToggleNavDrawer()
+  {
+    _drawerOpen = !_drawerOpen;
   }
 
 }
