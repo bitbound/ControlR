@@ -15,6 +15,7 @@ public class DeviceContentInstance(DeviceViewModel device, RenderFragment conten
       {
         DeviceContentInstanceType.RemoteControl => "Remote",
         DeviceContentInstanceType.Terminal => "Terminal",
+        DeviceContentInstanceType.VncFrame => "VNC",
         _ => "Content"
       };
     }

@@ -49,7 +49,7 @@ app.MapStaticAssets();
 app.UseStaticFiles(new StaticFileOptions
 {
   FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.WebRootPath, "novnc")),
+        Path.Combine(builder.Environment.ContentRootPath, "novnc")),
   RequestPath = "/novnc",
   ServeUnknownFileTypes = true,
 });

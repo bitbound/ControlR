@@ -270,6 +270,7 @@ public partial class Dashboard
         break;
     }
   }
+
   private Task VncConnectClicked(DeviceViewModel device)
   {
     WindowStore.AddContentInstance<VncFrame>(
@@ -281,6 +282,7 @@ public partial class Dashboard
       });
     return Task.CompletedTask;
   }
+
   private async Task RemoveDevice(DeviceViewModel device)
   {
     try
