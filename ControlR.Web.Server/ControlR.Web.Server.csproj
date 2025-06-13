@@ -44,6 +44,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<StaticWebAsset Remove="wwwroot/novnc/**" />
+		<Content Remove="novnc\**\*" />
+		<Content Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>
