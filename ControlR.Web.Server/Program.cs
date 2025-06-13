@@ -5,6 +5,7 @@ using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,13 @@ app.UseWhen(
   appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
 app.MapStaticAssets();
+app.UseStaticFiles(new StaticFileOptions
+{
+  FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "novnc")),
+  RequestPath = "/novnc",
+  ServeUnknownFileTypes = true,
+});
 
 app.MapWebSocketRelay();
 app.MapHub<AgentHub>("/hubs/agent");

@@ -26,10 +26,9 @@ public class ViewerHub(
   private readonly IIpApi _ipApi = ipApi;
   private readonly ILogger<ViewerHub> _logger = logger;
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
+  private readonly IStreamStore _streamStore = streamStore;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IWsRelayApi _wsRelayApi = wsRelayApi;
-  private readonly IStreamStore _streamStore = streamStore;
-
   public Task<bool> CheckIfServerAdministrator()
   {
     return IsServerAdmin().AsTaskResult();
@@ -73,6 +72,43 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while getting agent count.");
       return Result.Fail<ServerStatsDto>("Failed to get agent count.");
+    }
+  }
+
+  public async IAsyncEnumerable<byte[]> GetStream(Guid streamId)
+  {
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    var sessionResult = await _streamStore.WaitForStreamSession(
+        streamId,
+        Context.ConnectionId,
+        cts.Token);
+
+    if (!sessionResult.IsSuccess)
+    {
+      var toastInfo = new ToastInfo(sessionResult.Reason, MessageSeverity.Error);
+      await Clients.Caller.InvokeToast(toastInfo);
+      yield break;
+    }
+
+    var signaler = sessionResult.Value;
+
+    if (signaler.Stream is null)
+    {
+      _logger.LogError("Stream was null.");
+      yield break;
+    }
+
+    try
+    {
+      await foreach (var chunk in signaler.Stream)
+      {
+        yield return chunk;
+      }
+    }
+    finally
+    {
+      signaler.EndSignal.Set();
+      _logger.LogInformation("Streaming session ended for {sessionId}.", streamId);
     }
   }
 
@@ -320,6 +356,66 @@ public class ViewerHub(
     }
   }
 
+  public async Task<Result> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto)
+  {
+    try
+    {
+      if (Context.User is null)
+      {
+        return Result.Fail("User is null.");
+      }
+
+      if (!TryGetUserId(out var userId))
+      {
+        return Result.Fail("Failed to get user ID.");
+      }
+
+      var user = await _userManager.Users
+        .AsNoTracking()
+        .Include(x => x.UserPreferences)
+        .FirstOrDefaultAsync(x => x.Id == userId);
+
+      if (user is null)
+      {
+        return Result.Fail("User not found.");
+      }
+
+      var displayName = user.UserPreferences
+        ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
+        ?.Value;
+      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+
+      _logger.LogInformation(
+        "Starting VNC session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.",
+        displayName,
+        userId,
+        deviceId,
+        remoteIp);
+
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail("Unauthorized.");
+      }
+
+      var device = authResult.Value;
+
+      if (string.IsNullOrWhiteSpace(displayName))
+      {
+        displayName = user.UserName ?? "";
+      }
+
+      sessionRequestDto = sessionRequestDto with { ViewerName = displayName };
+
+      return await _agentHub.Clients
+        .Client(device.ConnectionId)
+        .CreateVncSession(sessionRequestDto);
+    }
+    catch (Exception ex)
+    {
+      return Result.Fail(ex);
+    }
+  }
+
   public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {
     try
@@ -493,45 +589,6 @@ public class ViewerHub(
     _logger.LogError("UserId claim is unexpected missing when calling {MemberName}.", callerName);
     return false;
   }
-
-  public async IAsyncEnumerable<byte[]> GetStream(Guid streamId)
-  {
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    var sessionResult = await _streamStore.WaitForStreamSession(
-        streamId,
-        Context.ConnectionId,
-        cts.Token);
-
-    if (!sessionResult.IsSuccess)
-    {
-      var toastInfo = new ToastInfo(sessionResult.Reason, MessageSeverity.Error);
-      await Clients.Caller.InvokeToast(toastInfo);
-      yield break;
-    }
-
-    var signaler = sessionResult.Value;
-
-    if (signaler.Stream is null)
-    {
-      _logger.LogError("Stream was null.");
-      yield break;
-    }
-
-    try
-    {
-      await foreach (var chunk in signaler.Stream)
-      {
-        yield return chunk;
-      }
-    }
-    finally
-    {
-      signaler.EndSignal.Set();
-      _logger.LogInformation("Streaming session ended for {sessionId}.", streamId);
-    }
-  }
-
-
   private bool VerifyIsServerAdmin([CallerMemberName] string callerMember = "")
   {
     if (IsServerAdmin())

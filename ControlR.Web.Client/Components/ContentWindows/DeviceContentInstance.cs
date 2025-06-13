@@ -27,5 +27,6 @@ public class DeviceContentInstance(DeviceViewModel device, RenderFragment conten
 public enum DeviceContentInstanceType
 {
   RemoteControl,
-  Terminal
+  Terminal,
+  VncFrame
 }

@@ -19,6 +19,7 @@ internal class AgentHubClient(
   IHostApplicationLifetime appLifetime,
   ISettingsProvider settings,
   IProcessManager processManager,
+  ILocalSocketProxy localProxy,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
@@ -31,6 +32,7 @@ internal class AgentHubClient(
   private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
   private readonly ITerminalStore _terminalStore = terminalStore;
   private readonly IWin32Interop _win32Interop = win32Interop;
+  private readonly ILocalSocketProxy _localProxy = localProxy;
 
   public async Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto)
   {
@@ -86,6 +88,19 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto)
+  {
+    try
+    {
+      _logger.LogInformation("VNC session requested.  Request DTO: {@RequestDto}", sessionRequestDto);
+      return await _localProxy.HandleVncSession(sessionRequestDto).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while creating VNC session.");
+      return Result.Fail("An error occurred while creating VNC session.");
+    }
+  }
 
   [SupportedOSPlatform("windows6.0.6000")]
   public Task<WindowsSession[]> GetWindowsSessions()

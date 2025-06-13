@@ -1,16 +1,15 @@
-﻿namespace ControlR.Libraries.Shared.Models;
+﻿using ControlR.Libraries.Shared.Constants;
 
-[MessagePackObject]
+namespace ControlR.Libraries.Shared.Models;
+
+[MessagePackObject(keyAsPropertyName: true)]
 public class AgentAppOptions
 {
   public const string SectionKey = "AppOptions";
 
-  [Key(0)]
   public Guid DeviceId { get; set; }
 
-  [Key(1)]
   public Uri? ServerUri { get; set; }
-
-  [Key(2)]
   public Guid TenantId { get; set; }
+  public int? VncPort { get; set; }
 }

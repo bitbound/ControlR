@@ -1,0 +1,110 @@
+﻿@if (_loading)
+{
+  <div class="w-100 text-center mt-8">
+    <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+      Loading
+    </MudText>
+    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+  </div>
+}
+else if (_noVncUri is not null)
+{
+  <div class="w-100 h-100">
+    <iframe class="w-100 h-100" src=@(_noVncUri)></iframe>
+  </div>
+}
+
+@code {
+  private readonly Guid _sessionId = Guid.NewGuid();
+  private readonly string _accessKey = RandomGenerator.CreateAccessToken();
+  private bool _loading = true;
+
+  private Uri? _websocketUri;
+  private Uri? _noVncUri;
+
+  [Parameter]
+  [EditorRequired]
+  public required DeviceViewModel Device { get; init; }
+
+  [CascadingParameter]
+  public required DeviceContentInstance ContentInstance { get; init; }
+
+  [CascadingParameter]
+  public required DeviceContentWindow ContentWindow { get; init; }
+
+  [Inject]
+  public required NavigationManager NavManager { get; init; }
+
+  [Inject]
+  public required IViewerHubConnection ViewerHub { get; init; }
+
+  [Inject]
+  public required IDeviceContentWindowStore WindowStore { get; init; }
+
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+
+  [Inject]
+  public required ILogger<VncFrame> Logger { get; init; }
+
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+
+    if (firstRender)
+    {
+      await RequestStreamingSessionFromAgent();
+    }
+  }
+
+  private void Close()
+  {
+    WindowStore.Remove(ContentInstance);
+  }
+
+  private async Task RequestStreamingSessionFromAgent()
+  {
+    try
+    {
+      Snackbar.Add("Connecting", Severity.Info);
+
+      var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
+
+      var serverUri = new Uri(NavManager.BaseUri);
+      _websocketUri = relayOrigin is not null
+        ? new Uri(relayOrigin, $"/relay/{_sessionId}/{_accessKey}")
+        : new Uri(serverUri, $"relay/{_sessionId}/{_accessKey}").ToWebsocketUri();
+
+      _noVncUri = new Uri(serverUri, 
+        $"novnc/vnc.html?path=relay/{_sessionId}/{_accessKey}" + 
+        "&show_dot=true&resize=scale&autoconnect=true");
+
+      Logger.LogInformation("Creating streaming session.");
+
+      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", _websocketUri.Authority);
+
+      var sessionResult = await ViewerHub.RequestVncSession(
+        Device.Id,
+        _sessionId,
+        _websocketUri);
+
+      if (!sessionResult.IsSuccess)
+      {
+        Snackbar.Add(sessionResult.Reason, Severity.Error);
+        Close();
+        return;
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while requesting streaming session.");
+      Snackbar.Add("An error occurred while requesting streaming session", Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+}

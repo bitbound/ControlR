@@ -42,4 +42,8 @@
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
   </ItemGroup>
+
+	<ItemGroup>
+		<StaticWebAsset Remove="wwwroot/novnc/**" />
+	</ItemGroup>
 </Project>

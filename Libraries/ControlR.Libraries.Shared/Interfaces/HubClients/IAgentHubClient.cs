@@ -8,7 +8,7 @@ public interface IAgentHubClient : IHubClient
 {
   Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto);
   Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto);
-
+  Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<WindowsSession[]> GetWindowsSessions();
   Task<Result> ReceiveTerminalInput(TerminalInputDto dto);
   Task UninstallAgent(string reason);

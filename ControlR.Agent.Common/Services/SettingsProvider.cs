@@ -12,6 +12,8 @@ public interface ISettingsProvider
   Guid DeviceId { get; }
   string InstanceId { get; }
   Uri ServerUri { get; }
+  int VncPort { get; }
+
   string GetAppSettingsPath();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
@@ -36,6 +38,8 @@ internal class SettingsProvider(
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
+
+  public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
 
   public string GetAppSettingsPath()
   {
