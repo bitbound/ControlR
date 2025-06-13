@@ -26,8 +26,8 @@ internal static class ServiceCollectionExtensions
 
   public static IServiceCollection ReplaceService<TInterface, TImplementation>(
     this IServiceCollection services,
-    TImplementation instance,
-    ServiceLifetime lifetime)
+    ServiceLifetime lifetime,
+    TImplementation instance)
     where TImplementation : class, TInterface
     where TInterface : class
   {
