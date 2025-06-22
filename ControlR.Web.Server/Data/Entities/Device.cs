@@ -30,7 +30,7 @@ public class Device : TenantEntityBase
 
   public Architecture OsArchitecture { get; set; }
 
-  [StringLength(100)]
+  [StringLength(300)]
   public string OsDescription { get; set; } = string.Empty;
 
   public SystemPlatform Platform { get; set; }

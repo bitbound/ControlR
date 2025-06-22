@@ -1,4 +1,9 @@
-﻿namespace ControlR.Web.Server.Services;
+﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Reflection;
+
+namespace ControlR.Web.Server.Services;
 
 public interface IDeviceManager
 {
@@ -9,10 +14,15 @@ public interface IDeviceManager
 
 public class DeviceManager(
   AppDb appDb,
-  UserManager<AppUser> userManager) : IDeviceManager
+  UserManager<AppUser> userManager,
+  ILogger<DeviceManager> logger) : IDeviceManager
 {
+  private static readonly BindingFlags _bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
+  private static readonly ConcurrentDictionary<Type, ImmutableDictionary<string, PropertyInfo>> _propertiesCache = [];
+
   private readonly AppDb _appDb = appDb;
   private readonly UserManager<AppUser> _userManager = userManager;
+  private readonly ILogger<DeviceManager> _logger = logger;
 
   public async Task<Device> AddOrUpdate(DeviceDto deviceDto, bool addTagIds = false)
   {
@@ -62,7 +72,9 @@ public class DeviceManager(
     await entry.Reference(x => x.Tenant).LoadAsync();
     await entry.Collection(x => x.Tags!).LoadAsync();
     entry.State = entityState;
-    entry.CurrentValues.SetValuesExcept(
+
+    SetValuesExcept(
+      entry,
       deviceDto,
       nameof(DeviceDto.Alias),
       nameof(DeviceDto.TagIds));
@@ -79,5 +91,50 @@ public class DeviceManager(
     }
 
     await _appDb.SaveChangesAsync();
+  }
+
+  private static void SetValuesExcept<TDto>(
+    EntityEntry entry,
+    TDto dto,
+    params string[] excludeProperties)
+    where TDto : notnull
+  {
+    var dtoProps = _propertiesCache.GetOrAdd(typeof(TDto), t =>
+    {
+      return t
+        .GetProperties(_bindingFlags)
+        .ToImmutableDictionary(x => x.Name);
+    });
+
+    foreach (var prop in entry.Properties)
+    {
+      var maxLength = prop.Metadata.GetMaxLength();
+      var propName = prop.Metadata.Name;
+
+      if (excludeProperties.Contains(propName))
+      {
+        continue;
+      }
+
+      if (!dtoProps.TryGetValue(propName, out var propInfo))
+      {
+        continue;
+      }
+
+      var dtoValue = propInfo.GetValue(dto);
+
+      if (maxLength.HasValue &&
+          maxLength.Value > 0 &&
+          prop.Metadata.ClrType == typeof(string) &&
+          dtoValue is string dtoString &&
+          dtoString.Length > maxLength.Value)
+      {
+        prop.CurrentValue = dtoString[..maxLength.Value];
+      }
+      else
+      {
+        prop.CurrentValue = dtoValue;
+      }
+    }
   }
 }

@@ -7,21 +7,18 @@ namespace ControlR.Web.Client.Components.Pages;
 public partial class Deploy
 {
   private bool _addTags;
+  private DateTime? _inputExpirationDate;
+  private TimeSpan? _inputExpirationTime;
   private string? _installerKey;
   private InstallerKeyType _installerKeyType;
+  private string? _keyExpiration;
   private IEnumerable<TagResponseDto>? _selectedTags;
   private IReadOnlyList<TagResponseDto> _tags = [];
   private Guid? _tenantId;
-  private DateTime? _inputExpirationDate;
-  private TimeSpan? _inputExpirationTime;
-  private string? _keyExpiration;
   private uint _totalUsesAllowed = 1;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
-
-  [Inject]
-  public required TimeProvider TimeProvider { get; init; }
 
   [Inject]
   public required IClipboardManager Clipboard { get; init; }
@@ -31,34 +28,37 @@ public partial class Deploy
 
   [Inject]
   public required NavigationManager NavMan { get; init; }
+
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  //private string MacArm64DeployScript
-  //{
-  //  get
-  //  {
-  //    var downloadUri = new Uri(GetServerUri(), "/downloads/osx-arm64/ControlR.Agent");
-  //    return
-  //      $"sudo rm -f /tmp/ControlR.Agent && " +
-  //      $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
-  //      $"sudo chmod +x /tmp/ControlR.Agent && " +
-  //      $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
-  //  }
-  //}
+  [Inject]
+  public required TimeProvider TimeProvider { get; init; }
+  private string MacArm64DeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/osx-arm64/ControlR.Agent");
+      return
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+    }
+  }
 
-  //private string MacX64DeployScript
-  //{
-  //  get
-  //  {
-  //    var downloadUri = new Uri(GetServerUri(), "/downloads/osx-x64/ControlR.Agent");
-  //    return
-  //      $"sudo rm -f /tmp/ControlR.Agent && " +
-  //      $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
-  //      $"sudo chmod +x /tmp/ControlR.Agent && " +
-  //      $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
-  //  }
-  //}
+  private string MacX64DeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/osx-x64/ControlR.Agent");
+      return
+        $"sudo rm -f /tmp/ControlR.Agent && " +
+        $"sudo curl -o /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo chmod +x /tmp/ControlR.Agent && " +
+        $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
+    }
+  }
 
   private string SelectedTagsText =>
     _selectedTags is null
@@ -110,6 +110,18 @@ public partial class Deploy
     }
   }
 
+  private async Task CopyMacArm64Script()
+  {
+    await Clipboard.SetText(MacArm64DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private async Task CopyMacX64Script()
+  {
+    await Clipboard.SetText(MacX64DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
   private async Task CopyUbuntuScript()
   {
     if (_tenantId is null)
@@ -121,12 +133,6 @@ public partial class Deploy
     await Clipboard.SetText(UbuntuDeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
-
-  //private async Task CopyMacX64Script()
-  //{
-  //  await Clipboard.SetText(MacX64DeployScript);
-  //  Snackbar.Add("Install script copied to clipboard", Severity.Success);
-  //}
   private async Task CopyWindowsScript()
   {
     if (_tenantId is null)
@@ -207,13 +213,6 @@ public partial class Deploy
       _keyExpiration = createResult.Value.Expiration.Value.ToLocalTime().ToString("g");
     }
   }
-
-  //private async Task CopyMacArm64Script()
-  //{
-  //  await Clipboard.SetText(MacArm64DeployScript);
-  //  Snackbar.Add("Install script copied to clipboard", Severity.Success);
-  //}
-
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
