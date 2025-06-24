@@ -51,6 +51,23 @@
                              OnClick="@(() => RemoteControlClicked(context.Item))">
                   Remote Control
                 </MudMenuItem>
+
+                @if (context.Item.Platform == SystemPlatform.Linux)
+                {
+                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
+                               OnClick="@(() => VncConnectClicked(context.Item))">
+                    VNC Proxy
+                  </MudMenuItem>
+                }
+
+                @if (context.Item.Platform == SystemPlatform.MacOs)
+                {
+                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
+                               OnClick="@(() => VncConnectClicked(context.Item))">
+                    Apple ScreenShare
+                  </MudMenuItem>
+                }
+
                 <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)" IconColor="Color.Info"
                              OnClick="@(() => StartTerminal(context.Item))">
                   Terminal

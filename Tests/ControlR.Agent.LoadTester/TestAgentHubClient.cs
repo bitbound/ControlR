@@ -24,6 +24,12 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok(sessionResult).AsTaskResult();
   }
 
+  public Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto)
+  {
+    return Result.Ok().AsTaskResult();
+  }
+
+
   public Task<WindowsSession[]> GetWindowsSessions()
   {
     var session = new WindowsSession

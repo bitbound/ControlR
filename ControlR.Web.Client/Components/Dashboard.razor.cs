@@ -1,7 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Runtime.Versioning;
+﻿using ControlR.Web.Client.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Collections.Immutable;
+using System.Runtime.Versioning;
 
 namespace ControlR.Web.Client.Components;
 
@@ -245,6 +246,7 @@ public partial class Dashboard
         var dialogParams = new DialogParameters { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
         var dialogRef =
           await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+
         var result = await dialogRef.Result;
         if (result is null || result.Canceled)
         {
@@ -262,13 +264,25 @@ public partial class Dashboard
               [nameof(RemoteDisplay.Session)] = remoteControlSession
             });
         }
-
         break;
       default:
         Snackbar.Add("Platform is not supported", Severity.Warning);
         break;
     }
   }
+
+  private Task VncConnectClicked(DeviceViewModel device)
+  {
+    WindowStore.AddContentInstance<VncFrame>(
+      device,
+      DeviceContentInstanceType.VncFrame,
+      new Dictionary<string, object?>
+      {
+        [nameof(VncFrame.Device)] = device
+      });
+    return Task.CompletedTask;
+  }
+
   private async Task RemoveDevice(DeviceViewModel device)
   {
     try

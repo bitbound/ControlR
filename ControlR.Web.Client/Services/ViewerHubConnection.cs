@@ -27,6 +27,11 @@ public interface IViewerHubConnection
     Uri websocketUri,
     int targetSystemSession);
 
+  Task<Result> RequestVncSession(
+   Guid deviceId,
+   Guid sessionId,
+   Uri websocketUri);
+
   Task SendAgentUpdateTrigger(Guid deviceId);
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
@@ -185,6 +190,34 @@ internal class ViewerHubConnection(
         notifyUser);
 
       var result = await _viewerHub.Server.RequestStreamingSession(deviceId, requestDto);
+
+      return result.Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting remote streaming session.");
+      return Result.Fail(ex);
+    }
+  }
+
+  public async Task<Result> RequestVncSession(Guid deviceId, Guid sessionId, Uri websocketUri)
+  {
+    try
+    {
+      if (_viewerHub.ConnectionId is null)
+      {
+        return Result.Fail("Connection has closed.");
+      }
+
+      var notifyUser = await _settings.GetNotifyUserOnSessionStart();
+      var requestDto = new VncSessionRequestDto(
+        sessionId,
+        websocketUri,
+        _viewerHub.ConnectionId,
+        deviceId,
+        notifyUser);
+
+      var result = await _viewerHub.Server.RequestVncSession(deviceId, requestDto);
 
       return result.Log(_logger);
     }

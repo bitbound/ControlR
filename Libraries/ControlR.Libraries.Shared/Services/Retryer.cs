@@ -6,9 +6,10 @@ public interface IRetryer
   Task<T> Retry<T>(Func<Task<T>> func, int tryCount, TimeSpan retryDelay);
 }
 
-public class Retryer : IRetryer
+public class Retryer(TimeProvider timeProvider) : IRetryer
 {
-  public static Retryer Default { get; } = new();
+  private readonly TimeProvider _timeProvider = timeProvider;
+  public static Retryer Default { get; } = new(TimeProvider.System);
 
   public async Task Retry(Func<Task> func, int tryCount, TimeSpan retryDelay)
   {
@@ -25,7 +26,7 @@ public class Retryer : IRetryer
         {
           throw;
         }
-        await Task.Delay(retryDelay);
+        await Task.Delay(retryDelay, _timeProvider);
       }
     }
   }
@@ -44,7 +45,7 @@ public class Retryer : IRetryer
         {
           throw;
         }
-        await Task.Delay(retryDelay);
+        await Task.Delay(retryDelay, _timeProvider);
       }
     }
     throw new InvalidOperationException("Retry should not have reached this point.");

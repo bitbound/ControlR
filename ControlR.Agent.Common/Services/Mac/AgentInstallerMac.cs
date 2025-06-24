@@ -202,10 +202,11 @@ internal class AgentInstallerMac(
 
   private string GetServiceFile()
   {
-    var runCommand = "run";
+    var paramXml = "<string>run</string>\n";
     if (instanceOptions.Value.InstanceId is string instanceId)
     {
-      runCommand += $" -i {instanceId}";
+      paramXml += $"<string>-i</string>\n";
+      paramXml += $"<string>{instanceId}</string>\n";
     }
 
     return
@@ -220,11 +221,11 @@ internal class AgentInstallerMac(
       //$"    <key>StandardErrorPath</key>\n" +
       //$"    <string>/var/log/ControlR/plist-err.log</string>\n" +
       //$"    <key>StandardOutPath</key>\n" +
-      //$"    <string>/var/log/ControlR/plist-std-log</string> \n" +
+      //$"    <string>/var/log/ControlR/plist-std.log</string> \n" +
       $"    <key>ProgramArguments</key>\n" +
       $"    <array>\n" +
       $"        <string>{GetInstallDirectory()}/ControlR.Agent</string>\n" +
-      $"        <string>{runCommand}</string>\n" +
+      $"        {paramXml}" +
       $"    </array>\n" +
       $"</dict>\n" +
       $"</plist>";

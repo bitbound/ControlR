@@ -42,4 +42,9 @@
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
   </ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="novnc\**\*" />
+		<Content Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

@@ -6,6 +6,8 @@ namespace ControlR.Libraries.Shared.Constants;
 
 public static class AppConstants
 {
+  public const int DefaultVncPort = 5900;
+
   public static Uri? ServerUri
   {
     get
@@ -43,7 +45,6 @@ public static class AppConstants
       };
     }
   }
-
   private static Uri DevServerUri { get; } = new("http://localhost:5120");
 
   public static string GetAgentFileDownloadPath(RuntimeId runtime)
