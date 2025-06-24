@@ -30,13 +30,41 @@ public static class ServiceCollectionExtensions
 
     return services;
   }
+
+  public static IServiceCollection ReplaceImplementation<TService, TImplementation>(
+  this IServiceCollection services,
+  ServiceLifetime lifetime,
+  TImplementation instance)
+  where TService : class
+  where TImplementation : class, TService
+  {
+    services.RemoveAll<TService>();
+
+    switch (lifetime)
+    {
+      case ServiceLifetime.Singleton:
+        services.AddSingleton<TService>(instance);
+        break;
+      case ServiceLifetime.Scoped:
+        services.AddScoped<TService>(_ => instance);
+        break;
+      case ServiceLifetime.Transient:
+        services.AddTransient<TService>(_ => instance);
+        break;
+      default:
+        throw new ArgumentOutOfRangeException(nameof(lifetime), lifetime, null);
+    }
+
+    return services;
+  }
+
   public static IServiceCollection ReplaceSingleton<TService, TImplementation>(
     this IServiceCollection services,
     TImplementation instance)
     where TService : class
     where TImplementation : class, TService
   {
-    return services.ReplaceImplementation<TService, TImplementation>(ServiceLifetime.Singleton);
+    return services.ReplaceImplementation<TService, TImplementation>(ServiceLifetime.Singleton, instance);
   }
 
   public static IServiceCollection ReplaceSingleton<TService, TImplementation>(

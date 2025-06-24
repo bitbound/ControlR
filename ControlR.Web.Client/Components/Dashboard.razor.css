@@ -1,5 +1,5 @@
 .child-content-grid {
-    display: grid;
+    display: inline-grid;
     grid-template-columns: min-content auto;
     text-align: left;
     column-gap: 20px;

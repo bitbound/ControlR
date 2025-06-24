@@ -51,23 +51,6 @@
                              OnClick="@(() => RemoteControlClicked(context.Item))">
                   Remote Control
                 </MudMenuItem>
-
-                @if (context.Item.Platform == SystemPlatform.Linux)
-                {
-                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
-                               OnClick="@(() => VncConnectClicked(context.Item))">
-                    VNC Proxy
-                  </MudMenuItem>
-                }
-
-                @if (context.Item.Platform == SystemPlatform.MacOs)
-                {
-                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
-                               OnClick="@(() => VncConnectClicked(context.Item))">
-                    Apple ScreenShare
-                  </MudMenuItem>
-                }
-
                 <MudMenuItem Icon="@(Icons.Material.Filled.Terminal)" IconColor="Color.Info"
                              OnClick="@(() => StartTerminal(context.Item))">
                   Terminal
@@ -187,115 +170,120 @@
       <HierarchyColumn T="DeviceViewModel" />
     </Columns>
 
-
     <ChildRowContent>
       <MudGrid>
-        <MudItem xs="12" sm="6" md="4" Class="text-center">
+        <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             Device Summary
           </MudText>
-          <div class="child-content-grid">
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Name:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.Name
-            </MudText>
+          <div class="w-100">
+            <div class="child-content-grid">
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Name:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.Name
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Id:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.Id
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Id:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.Id
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Alias:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.Alias
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Alias:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.Alias
+              </MudText>
 
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Agent Version:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.AgentVersion
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Agent Version:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.AgentVersion
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Last Seen:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.LastSeen.ToLocalTime()
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Last Seen:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.LastSeen.ToLocalTime()
+              </MudText>
+            </div>
           </div>
         </MudItem>
 
-        <MudItem xs="12" sm="6" md="4" Class="text-center">
+        <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             Hardware
           </MudText>
-          <div class="child-content-grid">
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              CPU Count:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.ProcessorCount
-            </MudText>
+          <div class="w-100">
+            <div class="child-content-grid">
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                CPU Count:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.ProcessorCount
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Architecture:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.OsArchitecture
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Architecture:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.OsArchitecture
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Total Memory:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @(context.Item.TotalMemory.ToString("N2")) GB
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Total Memory:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @(context.Item.TotalMemory.ToString("N2")) GB
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              Total Storage (OS):
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @(context.Item.TotalStorage.ToString("N0")) GB
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Total Storage (OS):
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @(context.Item.TotalStorage.ToString("N0")) GB
+              </MudText>
+            </div>
           </div>
         </MudItem>
-        <MudItem xs="12" sm="6" md="4" Class="text-center">
+        <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             Networking
           </MudText>
-          <div class="child-content-grid">
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              IPv4 Address:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.PublicIpV4
-            </MudText>
+          <div class="w-100">
+            <div class="child-content-grid">
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                IPv4 Address:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.PublicIpV4
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              IPv6 Address:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @context.Item.PublicIpV6
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                IPv6 Address:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @context.Item.PublicIpV6
+              </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-              MAC Addresses:
-            </MudText>
-            <MudText Typo="Typo.body1">
-              @(string.Join(", ", context.Item.MacAddresses))
-            </MudText>
+              <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                MAC Addresses:
+              </MudText>
+              <MudText Typo="Typo.body1">
+                @(string.Join(", ", context.Item.MacAddresses))
+              </MudText>
+            </div>
           </div>
         </MudItem>
 
-        <MudItem xs="12" sm="6" md="4" Class="text-center">
+        <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             CPU Usage
           </MudText>
@@ -307,7 +295,7 @@
 
         </MudItem>
 
-        <MudItem xs="12" sm="6" md="4" Class="text-center">
+        <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
           <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
             Memory Usage
           </MudText>
@@ -322,7 +310,7 @@
 
         @foreach (var drive in context.Item.Drives)
         {
-          <MudItem xs="12" sm="6" md="4" Class="text-center">
+          <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
             <MudText Typo="Typo.h6" Color="Color.Primary" Class="ellipsis-text">
               Hard Drive
             </MudText>
@@ -340,7 +328,7 @@
                 </text>
               </CustomGraphics>
             </MudChart>
-            <div class="d-inline-block">
+            <div class="w-100">
               <div class="child-content-grid">
                 <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                   Name:
@@ -376,7 +364,6 @@
                   </MudText>
                 </MudTooltip>
               </div>
-
             </div>
 
           </MudItem>
