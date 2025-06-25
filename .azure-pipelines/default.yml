@@ -2,7 +2,7 @@
 trigger:
   branches:
     include:
-      - refs/heads/main
+      - main
   paths:
     exclude:
       - .*
