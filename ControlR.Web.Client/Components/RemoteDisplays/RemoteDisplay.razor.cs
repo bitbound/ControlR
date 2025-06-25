@@ -47,8 +47,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     int height,
     byte[] encodedImage);
 
-  [JSImport("sendKeyPress", "RemoteDisplay")]
-  public static partial Task SendKeyPress(string key, string canvasId);
 
   [Inject]
   public required IBusyCounter AppState { get; init; }
@@ -615,7 +613,8 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     if (args.Key is "Enter" or "Backspace")
     {
-      await SendKeyPress(args.Key, _canvasId);
+      await SendKeyEvent(args.Key, true);
+      await SendKeyEvent(args.Key, false);
     }
   }
 

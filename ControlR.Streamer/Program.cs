@@ -69,11 +69,7 @@ rootCommand.SetHandler(async (appDataFolder, websocketUri, notifyUser, sessionId
   var services = builder.Services;
   var logging = builder.Logging;
 
-  var appsettingsFile = SystemEnvironment.Instance.IsDebug ? "appsettings.Development.json" : "appsettings.json";
-  configuration
-    .AddJsonFile(appsettingsFile, true, true)
-    .AddJsonFile(PathConstants.GetAppSettingsPath(appDataFolder), true, true)
-    .AddEnvironmentVariables();
+  configuration.AddEnvironmentVariables();
 
   services.Configure<StartupOptions>(options =>
   {
