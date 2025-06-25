@@ -37,6 +37,7 @@ jobs:
       - task: PowerShell@2
         displayName: Verify Agent Binaries
         inputs:
+          targetType: inline
           script: |
             $TestPaths = @(
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
