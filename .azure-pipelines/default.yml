@@ -11,8 +11,8 @@ trigger:
   batch: True
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
-  - job: ControlR_Build
-    displayName: ControlR Build
+  - job: Windows_Build
+    displayName: Windows Build
     pool:
       name: Default
       #vmImage: windows-latest
@@ -20,28 +20,6 @@ jobs:
       - checkout: self
         clean: true
         fetchDepth: 1
-
-      - task: DownloadSecureFile@1
-        name: pfxCertificate
-        displayName: Download PFX
-        inputs:
-          secureFile: CodeSigningCert.pfx
-
-      - task: PowerShell@2
-        displayName: Import PFX
-        inputs:
-          targetType: inline
-          script: >-
-            $SecurePassword = ConvertTo-SecureString -String "$(CertificatePassword)" -AsPlainText -Force
-
-            Import-PfxCertificate -FilePath "$(pfxCertificate.secureFilePath)" -Password $SecurePassword -CertStoreLocation "Cert:\CurrentUser\My"
-          pwsh: true
-
-      - task: DownloadSecureFile@1
-        name: signtool
-        displayName: Download Signtool
-        inputs:
-          secureFile: 2adac7a0-914f-40fe-bd05-6fcce65f4450
 
       - task: DotNetCoreCLI@2
         displayName: Run Tests
@@ -53,7 +31,7 @@ jobs:
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(signtool.secureFilePath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
+          arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
           pwsh: true
 
       - task: PublishPipelineArtifact@1
