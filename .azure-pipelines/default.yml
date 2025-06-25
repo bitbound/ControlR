@@ -11,8 +11,46 @@ trigger:
   batch: True
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
+  - job: Mac_AppleSilicon_Build
+    displayName: Apple Silicon Build
+    pool:
+      vmImage: macos-latest
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 1
+
+      - task: DotNetCoreCLI@2
+        displayName: Publish ControlR.Agent (ARM64)
+        inputs:
+          command: publish
+          projects: "ControlR.Agent/ControlR.Agent.csproj"
+          arguments: -c Release -r osx-arm64 -o "ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+
+      - task: DotNetCoreCLI@2
+        displayName: Publish ControlR.Agent (x64)
+        inputs:
+          command: publish
+          projects: "ControlR.Agent/ControlR.Agent.csproj"
+          arguments: -c Release -r osx-x64 -o "ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Agent (macOS ARM64)
+        inputs:
+          targetPath: ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent
+          artifact: Agent-macOS-ARM64
+          publishLocation: pipeline
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Agent (macOS x64)
+        inputs:
+          targetPath: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
+          artifact: Agent-macOS-x64
+          publishLocation: pipeline
+
   - job: Windows_Build
     displayName: Windows Build
+    dependsOn: Mac_AppleSilicon_Build
     pool:
       name: Default
       #vmImage: windows-latest
@@ -34,6 +72,20 @@ jobs:
           arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
           pwsh: true
 
+      - task: DownloadPipelineArtifact@2
+        displayName: Download macOS ARM64 Agent
+        inputs:
+          buildType: current
+          artifactName: Agent-macOS-ARM64
+          targetPath: $(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\
+
+      - task: DownloadPipelineArtifact@2
+        displayName: Download macOS x64 Agent
+        inputs:
+          buildType: current
+          artifactName: Agent-macOS-x64
+          targetPath: $(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\
+
       - task: PowerShell@2
         displayName: Verify Agent Binaries
         inputs:
@@ -45,7 +97,7 @@ jobs:
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Streamer.zip",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent"
             )
             foreach ($TestPath in $TestPaths) {
               if (!(Test-Path $TestPath)) {

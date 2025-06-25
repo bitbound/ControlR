@@ -76,11 +76,11 @@ if ($BuildAgent) {
   dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
-  dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"
-  Check-LastExitCode
+  #dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"
+  #Check-LastExitCode
 
-  dotnet publish -r osx-x64 -o "$DownloadsFolder\osx-x64\" $CommonArgs "$Root\ControlR.Agent\"
-  Check-LastExitCode
+  #dotnet publish -r osx-x64 -o "$DownloadsFolder\osx-x64\" $CommonArgs "$Root\ControlR.Agent\"
+  #Check-LastExitCode
 
   Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
