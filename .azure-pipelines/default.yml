@@ -19,6 +19,13 @@ jobs:
         fetchDepth: 1
 
       - task: DotNetCoreCLI@2
+        displayName: Install Blazor WASM workload
+        inputs:
+          command: custom
+          custom: workload
+          arguments: install wasm-tools
+
+      - task: DotNetCoreCLI@2
         displayName: Publish ControlR.Agent (ARM64)
         inputs:
           command: publish
