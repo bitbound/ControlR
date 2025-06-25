@@ -18,35 +18,21 @@ jobs:
         clean: true
         fetchDepth: 1
 
-      - task: DotNetCoreCLI@2
-        displayName: Restore ControlR.Agent for ARM64
-        inputs:
-          command: restore
-          projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: --runtime osx-arm64
-
-      - task: DotNetCoreCLI@2
+      - task: Bash@3
         displayName: Publish ControlR.Agent (ARM64)
         inputs:
-          command: publish
-          projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: -c Release -r osx-arm64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true --no-restore
-          workingDirectory: "$(Build.SourcesDirectory)/ControlR.Agent"
+          targetType: 'inline'
+          script: |
+            dotnet publish -c Release -r osx-arm64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
 
-      - task: DotNetCoreCLI@2
-        displayName: Restore ControlR.Agent for x64
-        inputs:
-          command: restore
-          projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: --runtime osx-x64
-
-      - task: DotNetCoreCLI@2
+      - task: Bash@3
         displayName: Publish ControlR.Agent (x64)
         inputs:
-          command: publish
-          projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: -c Release -r osx-x64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true --no-restore
-          workingDirectory: "$(Build.SourcesDirectory)/ControlR.Agent"
+          targetType: 'inline'
+          script: |
+            dotnet publish -c Release -r osx-x64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
 
       - task: PublishPipelineArtifact@1
         displayName: Publish Agent (macOS ARM64)
