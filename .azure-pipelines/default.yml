@@ -39,12 +39,12 @@ jobs:
         inputs:
           script: |
             $TestPaths = @(
-              "ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
-              "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
-              "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Streamer.zip",
-              "ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
-              "ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
-              "ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Streamer.zip",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
             )
             foreach ($TestPath in $TestPaths) {
               if (!(Test-Path $TestPath)) {
