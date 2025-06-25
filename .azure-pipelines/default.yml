@@ -72,14 +72,14 @@ jobs:
         inputs:
           buildType: current
           artifactName: Agent-macOS-ARM64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Server\wwwroot\downloads\osx-arm64\
+          targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-arm64\
 
       - task: DownloadPipelineArtifact@2
         displayName: Download macOS x64 Agent
         inputs:
           buildType: current
           artifactName: Agent-macOS-x64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Server\wwwroot\downloads\osx-x64\
+          targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
       - task: PowerShell@2
         displayName: Invoke Build.ps1
