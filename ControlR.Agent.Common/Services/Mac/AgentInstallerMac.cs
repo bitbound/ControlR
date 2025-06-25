@@ -161,8 +161,9 @@ internal class AgentInstallerMac(
         psi.Arguments = $"launchctl bootout system {serviceFilePath}";
         await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
       }
-      catch (ProcessStatusException)
+      catch (ProcessStatusException ex)
       {
+        _logger.LogWarning(ex, "Failed to boot out service. It may not be running.");
       }
 
       if (_fileSystem.FileExists(serviceFilePath))
@@ -202,11 +203,11 @@ internal class AgentInstallerMac(
 
   private string GetServiceFile()
   {
-    var paramXml = "<string>run</string>\n";
+    var paramXml = "        <string>run</string>\n";
     if (instanceOptions.Value.InstanceId is string instanceId)
     {
-      paramXml += $"<string>-i</string>\n";
-      paramXml += $"<string>{instanceId}</string>\n";
+      paramXml += $"        <string>-i</string>\n";
+      paramXml += $"        <string>{instanceId}</string>\n";
     }
 
     return
