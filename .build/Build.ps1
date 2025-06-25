@@ -61,7 +61,15 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
 
 if ($BuildAgent) {
-  $CommonArgs = "-c $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true"
+  $CommonArgs = @(
+    "-c", $Configuration,
+    "-p:Version=$CurrentVersion",
+    "-p:FileVersion=$CurrentVersion",
+    "-p:PublishSingleFile=true",
+    "-p:IncludeAllContentForSelfExtract=true",
+    "-p:EnableCompressionInSingleFile=true",
+    "-p:IncludeAppSettingsInSingleFile=true"
+  )
   dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
