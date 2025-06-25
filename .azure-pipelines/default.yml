@@ -67,26 +67,26 @@ jobs:
           command: test
           projects: "**/Tests/**/*Tests.csproj"
 
-      - task: PowerShell@2
-        displayName: Invoke Build.ps1
-        inputs:
-          filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
-          pwsh: true
-
       - task: DownloadPipelineArtifact@2
         displayName: Download macOS ARM64 Agent
         inputs:
           buildType: current
           artifactName: Agent-macOS-ARM64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\
+          targetPath: $(Build.SourcesDirectory)\ControlR.Server\wwwroot\downloads\osx-arm64\
 
       - task: DownloadPipelineArtifact@2
         displayName: Download macOS x64 Agent
         inputs:
           buildType: current
           artifactName: Agent-macOS-x64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\
+          targetPath: $(Build.SourcesDirectory)\ControlR.Server\wwwroot\downloads\osx-x64\
+
+      - task: PowerShell@2
+        displayName: Invoke Build.ps1
+        inputs:
+          filePath: .build/Build.ps1
+          arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
+          pwsh: true
 
       - task: PowerShell@2
         displayName: Verify Agent Binaries
