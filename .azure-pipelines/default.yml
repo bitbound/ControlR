@@ -24,6 +24,7 @@ jobs:
           targetType: 'inline'
           script: |
             dotnet publish -c Release -r osx-arm64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+            sudo codesign --force --deep --sign - "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
           workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
 
       - task: Bash@3
@@ -32,6 +33,7 @@ jobs:
           targetType: 'inline'
           script: |
             dotnet publish -c Release -r osx-x64 -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+            sudo codesign --force --deep --sign - "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
           workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
 
       - task: PublishPipelineArtifact@1
