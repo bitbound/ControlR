@@ -23,14 +23,14 @@ jobs:
         inputs:
           command: publish
           projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: -c Release -r osx-arm64 -o "ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          arguments: -c Release -r osx-arm64 -o "ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - task: DotNetCoreCLI@2
         displayName: Publish ControlR.Agent (x64)
         inputs:
           command: publish
           projects: "ControlR.Agent/ControlR.Agent.csproj"
-          arguments: -c Release -r osx-x64 -o "ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          arguments: -c Release -r osx-x64 -o "ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - task: PublishPipelineArtifact@1
         displayName: Publish Agent (macOS ARM64)

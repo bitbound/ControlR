@@ -66,6 +66,7 @@ if ($BuildAgent) {
     "-p:Version=$CurrentVersion",
     "-p:FileVersion=$CurrentVersion",
     "-p:PublishSingleFile=true",
+    "-p:UseAppHost=true",
     "-p:IncludeAllContentForSelfExtract=true",
     "-p:EnableCompressionInSingleFile=true",
     "-p:IncludeAppSettingsInSingleFile=true"
