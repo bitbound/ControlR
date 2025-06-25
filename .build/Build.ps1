@@ -61,18 +61,18 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
 
 if ($BuildAgent) {
-
-  dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-  Check-LastExitCode
-    
-  dotnet publish --configuration $Configuration -p:PublishProfile=linux-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
+  $CommonArgs = "-c $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true"
+  dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
-  #dotnet publish --configuration $Configuration -p:PublishProfile=osx-arm64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-  #Check-LastExitCode
+  dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
+  Check-LastExitCode
 
-  #dotnet publish --configuration $Configuration -p:PublishProfile=osx-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true  "$Root\ControlR.Agent\"
-  #Check-LastExitCode
+  dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"
+  Check-LastExitCode
+
+  dotnet publish -r osx-x64 -o "$DownloadsFolder\osx-x64\" $CommonArgs "$Root\ControlR.Agent\"
+  Check-LastExitCode
 
   Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"

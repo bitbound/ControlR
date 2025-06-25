@@ -34,6 +34,25 @@ jobs:
           arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
           pwsh: true
 
+      - task: PowerShell@2
+        displayName: Verify Agent Binaries
+        inputs:
+          script: |
+            $TestPaths = @(
+              "ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
+              "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
+              "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Streamer.zip",
+              "ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
+              "ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
+              "ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
+            )
+            foreach ($TestPath in $TestPaths) {
+              if (!(Test-Path $TestPath)) {
+                Write-Error "$TestPath not found."
+                exit 1
+              }
+            }
+
       - task: PublishPipelineArtifact@1
         displayName: Publish Server
         inputs:
