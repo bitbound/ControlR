@@ -5,8 +5,6 @@ trigger:
       - main
   paths:
     exclude:
-      - .*
-      - ControlR.Website/*
       - README.md
   batch: True
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
