@@ -148,6 +148,7 @@ public partial class RemoteDisplay : IAsyncDisposable
     Messenger.UnregisterAll(this);
     await JsModule.InvokeVoidAsync("dispose", _canvasId);
     await _componentClosing.CancelAsync();
+    _componentClosing.Dispose();
     _componentRef?.Dispose();
     GC.SuppressFinalize(this);
   }
@@ -625,20 +626,22 @@ public partial class RemoteDisplay : IAsyncDisposable
       Logger.LogInformation("Creating streaming session.");
 
       var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
-      var accessKey = RandomGenerator.CreateAccessToken();
+      var accessToken = RandomGenerator.CreateAccessToken();
 
-      var serverUri = new Uri(NavManager.BaseUri);
+      var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
 
-      var websocketUri = relayOrigin is not null
-        ? new Uri(relayOrigin, $"/relay/{Session.SessionId}/{accessKey}")
-        : new Uri(serverUri, $"relay/{Session.SessionId}/{accessKey}").ToWebsocketUri();
+      var relayUri = relayOrigin is not null
+        ? new UriBuilder(relayOrigin)
+        : new UriBuilder(serverUri);
 
-      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", websocketUri.Authority);
+      relayUri.Query = $"?sessionId={Session.SessionId}&accessToken={accessToken}&timeout=30";
+
+      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", relayUri.Uri.GetOrigin());
 
       var streamingSessionResult = await ViewerHub.RequestStreamingSession(
         Session.Device.Id,
         Session.SessionId,
-        websocketUri,
+        relayUri.Uri,
         Session.InitialSystemSession);
 
       _statusProgress = -1;
@@ -652,7 +655,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
       await SetStatusMessage("Connecting");
 
-      StartWebsocketStreaming(websocketUri).Forget();
+      StartWebsocketStreaming(relayUri.Uri).Forget();
     }
     catch (Exception ex)
     {

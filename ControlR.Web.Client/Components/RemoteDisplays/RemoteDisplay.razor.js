@@ -350,12 +350,6 @@ export async function initialize(componentRef, canvasId) {
       return;
     }
     ev.preventDefault();
-    const keyPressDto = {
-      dtoType: "keyEvent",
-      isPressed: false,
-      key: ev.key
-    };
-
     state.invokeDotNet("SendKeyEvent", ev.key, false);
   }
   window.addEventListener("keyup", onKeyUp);
@@ -384,14 +378,14 @@ export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, 
   canvasRef.style.width = `${canvasCssWidth}px`;
   canvasRef.style.height = `${canvasCssHeight}px`;
 
-  var clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
-  var clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
+  const clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
+  const clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
 
-  var pinchAdjustX = pinchCenterX / window.innerWidth - .5;
-  var pinchAdjustY = pinchCenterY / window.innerHeight - .5;
+  const pinchAdjustX = pinchCenterX / window.innerWidth - .5;
+  const pinchAdjustY = pinchCenterY / window.innerHeight - .5;
 
-  var scrollByX = widthChange * (clientAdjustedScrollLeftPercent + (pinchAdjustX * contentDiv.clientWidth / contentDiv.scrollWidth));
-  var scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
+  const scrollByX = widthChange * (clientAdjustedScrollLeftPercent + (pinchAdjustX * contentDiv.clientWidth / contentDiv.scrollWidth));
+  const scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
 
   contentDiv.scrollBy(scrollByX, scrollByY);
 }

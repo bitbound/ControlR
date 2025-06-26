@@ -25,25 +25,24 @@ internal class WebSocketRelayMiddleware(
       return;
     }
 
-    var parts = context.Request.Path.Value.Split("/", StringSplitOptions.RemoveEmptyEntries);
-
-    if (parts.Length < 3)
+    if (!context.Request.Query.TryGetValue("sessionId", out var sessionIdValue) ||
+        !Guid.TryParse(sessionIdValue, out var sessionId))
     {
-      SetBadRequest(context, "Path should have at least 3 parts.");
+      SetBadRequest(context, "Invalid or missing session ID.");
       return;
     }
 
-    var sessionParam = parts[^2];
-    var accessToken = parts[^1];
-
-    if (!Guid.TryParse(sessionParam, out var sessionId))
+    if (!context.Request.Query.TryGetValue("accessToken", out var accessTokenParam) ||
+        $"{accessTokenParam}" is not { Length: > 0 } accessToken)
     {
-      SetBadRequest(context, "Session ID is not a valid GUID.");
+      SetBadRequest(context, "Invalid or missing access token.");
       return;
     }
 
     var requestId = Guid.NewGuid();
-    await using var signaler = _streamStore.GetOrAdd(sessionId, id => new SessionSignaler(requestId, accessToken));
+
+    await using var signaler = _streamStore
+      .GetOrAdd(sessionId, id => new SessionSignaler(requestId, accessToken));
 
     if (!signaler.ValidateToken(accessToken))
     {
@@ -60,9 +59,30 @@ internal class WebSocketRelayMiddleware(
       return;
     }
 
+    var waitForPartnerTimeout = TimeSpan.FromSeconds(10);
+
+    if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
+        int.TryParse(timeoutValue, out var timeoutSeconds))
+    {
+      if (timeoutSeconds < 0)
+      {
+        SetBadRequest(context, "Timeout cannot be negative.");
+        return;
+      }
+
+      waitForPartnerTimeout = timeoutSeconds switch
+      {
+        0 => Timeout.InfiniteTimeSpan,
+        _ => TimeSpan.FromSeconds(timeoutSeconds),
+      };
+    }
+
     try
     {
-      await signaler.WaitForPartner(_appLifetime.ApplicationStopping);
+      using var cts = new CancellationTokenSource(waitForPartnerTimeout);
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _appLifetime.ApplicationStopping);
+
+      await signaler.WaitForPartner(linkedCts.Token);
       _ = _streamStore.TryRemove(sessionId, out _);
 
       var websocket = await context.WebSockets.AcceptWebSocketAsync();

@@ -138,7 +138,7 @@ public partial class Terminal : IAsyncDisposable
       return "";
     }
 
-    return _inputHistory.ElementAt(_inputHistoryIndex);
+    return _inputHistory[_inputHistoryIndex];
   }
 
   private async Task HandleTerminalOutputMessage(object subscriber, DtoReceivedMessage<TerminalOutputDto> message)

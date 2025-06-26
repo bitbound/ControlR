@@ -1,12 +1,12 @@
 ﻿/** 
  * @type {WakeLockSentinel}
  */
-var _wakeLock = null;
+let _wakeLock = null;
 
 /**
  * @type {boolean}
  */
-var _wakeEnabled = false;
+let _wakeEnabled = false;
 
 window.addClassName = (element, className) => {
   element.classList.add(className);
@@ -108,7 +108,7 @@ window.startDraggingY = (element, clientY) => {
     return;
   }
 
-  var startTop = Number(clientY);
+  let startTop = Number(clientY);
 
   function pointerMove(ev) {
     if (Math.abs(ev.clientY - startTop) > 10) {

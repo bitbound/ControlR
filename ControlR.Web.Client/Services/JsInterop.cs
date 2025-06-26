@@ -13,7 +13,7 @@ public interface IJsInterop
 
   ValueTask<bool> Confirm(string message);
 
-  ValueTask<int> GetCursorIndex(ElementReference terminalInput);
+  ValueTask<int> GetCursorIndex(ElementReference inputElement);
 
   ValueTask InvokeClick(string elementId);
 

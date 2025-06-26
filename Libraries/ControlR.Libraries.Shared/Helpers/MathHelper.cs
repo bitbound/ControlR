@@ -1,9 +1,11 @@
 ﻿namespace ControlR.Libraries.Shared.Helpers;
+
 public static class MathHelper
 {
-  public static double GetDistanceBetween(double point1X, double point1Y, double point2X, double point2Y)
+  public static double GetDistanceBetween(double x1, double y1, double x2, double y2)
   {
-    return Math.Sqrt(Math.Pow(point1X - point2X, 2) +
-        Math.Pow(point1Y - point2Y, 2));
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return Math.Sqrt(dx * dx + dy * dy);
   }
 }
