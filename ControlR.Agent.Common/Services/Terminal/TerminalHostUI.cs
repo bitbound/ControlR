@@ -22,13 +22,18 @@ internal class TerminalHostUI : PSHostUserInterface
   public override string ReadLine()
   {
     // This handles Read-Host scenarios
-    return _terminalSession.HandleHostReadLine().Result;
+    return ReadLineAsync().GetAwaiter().GetResult();
+  }
+
+  private async Task<string> ReadLineAsync()
+  {
+    return await _terminalSession.HandleHostReadLine();
   }
 
   public override SecureString ReadLineAsSecureString()
   {
-    // For password input - would need special handling
-    var input = ReadLine();
+    // For password input
+    var input = ReadLineAsync().GetAwaiter().GetResult();
     var secureString = new SecureString();
     foreach (char c in input)
     {
@@ -80,16 +85,80 @@ internal class TerminalHostUI : PSHostUserInterface
 
   public override Dictionary<string, PSObject> Prompt(string caption, string message, Collection<FieldDescription> descriptions)
   {
-    // Handle complex prompts - simplified implementation
-    _ = Task.Run(() => _terminalSession.HandleHostPrompt($"{caption}: {message}"));
-    return new Dictionary<string, PSObject>();
+    return PromptAsync(caption, message, descriptions).Result;
+  }
+
+  private async Task<Dictionary<string, PSObject>> PromptAsync(string caption, string message, Collection<FieldDescription> descriptions)
+  {
+    // Send the prompt header
+    if (!string.IsNullOrEmpty(caption))
+    {
+      await _terminalSession.HandleHostPrompt($"{caption}");
+    }
+    if (!string.IsNullOrEmpty(message))
+    {
+      await _terminalSession.HandleHostPrompt($"{message}");
+    }
+
+    var results = new Dictionary<string, PSObject>();
+
+    // Handle each field description
+    foreach (var field in descriptions)
+    {
+      await _terminalSession.HandleHostPrompt($"{field.Label}: ");
+      var input = await _terminalSession.HandleHostReadLine();
+      
+      // Convert to appropriate type based on field attributes
+      if (field.ParameterTypeName.Equals("SecureString", StringComparison.OrdinalIgnoreCase) || 
+          field.Label.ToLower().Contains("password"))
+      {
+        var secureString = new SecureString();
+        foreach (char c in input)
+        {
+          secureString.AppendChar(c);
+        }
+        secureString.MakeReadOnly();
+        results[field.Name] = new PSObject(secureString);
+      }
+      else
+      {
+        results[field.Name] = new PSObject(input);
+      }
+    }
+
+    return results;
   }
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
   {
-    // Simplified credential prompt
-    _ = Task.Run(() => _terminalSession.HandleHostPrompt($"Credential required: {caption} - {message}"));
-    return new PSCredential("user", new SecureString());
+    return PromptForCredentialAsync(caption, message, userName, targetName).Result;
+  }
+
+  private async Task<PSCredential> PromptForCredentialAsync(string caption, string message, string userName, string targetName)
+  {
+    // Send the credential prompt
+    await _terminalSession.HandleHostPrompt($"Credential required: {caption} - {message}");
+    
+    // Prompt for username if not provided
+    if (string.IsNullOrEmpty(userName))
+    {
+      await _terminalSession.HandleHostPrompt("User: ");
+      userName = await _terminalSession.HandleHostReadLine();
+    }
+    
+    // Prompt for password
+    await _terminalSession.HandleHostPrompt("Password: ");
+    var password = await _terminalSession.HandleHostReadLine();
+    
+    // Convert password to SecureString
+    var securePassword = new SecureString();
+    foreach (char c in password)
+    {
+      securePassword.AppendChar(c);
+    }
+    securePassword.MakeReadOnly();
+    
+    return new PSCredential(userName, securePassword);
   }
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
@@ -99,12 +168,52 @@ internal class TerminalHostUI : PSHostUserInterface
 
   public override int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
   {
-    // Handle choice prompts
-    _ = Task.Run(() => _terminalSession.HandleHostPrompt($"{caption}: {message}"));
+    return PromptForChoiceAsync(caption, message, choices, defaultChoice).Result;
+  }
+
+  private async Task<int> PromptForChoiceAsync(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
+  {
+    // Send the choice prompt
+    if (!string.IsNullOrEmpty(caption))
+    {
+      await _terminalSession.HandleHostPrompt($"{caption}");
+    }
+    if (!string.IsNullOrEmpty(message))
+    {
+      await _terminalSession.HandleHostPrompt($"{message}");
+    }
+
+    // Display choices
     for (int i = 0; i < choices.Count; i++)
     {
-      _ = Task.Run(() => _terminalSession.HandleHostPrompt($"[{i}] {choices[i].Label}: {choices[i].HelpMessage}"));
+      var choiceText = $"[{i}] {choices[i].Label}";
+      if (!string.IsNullOrEmpty(choices[i].HelpMessage))
+      {
+        choiceText += $": {choices[i].HelpMessage}";
+      }
+      if (i == defaultChoice)
+      {
+        choiceText += " (default)";
+      }
+      await _terminalSession.HandleHostPrompt(choiceText);
     }
+
+    // Prompt for choice
+    await _terminalSession.HandleHostPrompt($"Choice [0-{choices.Count - 1}] (default is {defaultChoice}): ");
+    var input = await _terminalSession.HandleHostReadLine();
+
+    // Parse the choice
+    if (string.IsNullOrWhiteSpace(input))
+    {
+      return defaultChoice;
+    }
+
+    if (int.TryParse(input.Trim(), out int choice) && choice >= 0 && choice < choices.Count)
+    {
+      return choice;
+    }
+
+    // Invalid choice, return default
     return defaultChoice;
   }
 }

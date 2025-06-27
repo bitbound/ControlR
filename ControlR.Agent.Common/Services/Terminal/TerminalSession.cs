@@ -223,9 +223,27 @@ internal class TerminalSession(
     // This will be called by PowerShell when it needs input (like Read-Host)
     _pendingInputRequest = new TaskCompletionSource<string>();
     
-    // Wait for the next SignalR message (user input)
-    var result = await _pendingInputRequest.Task;
-    return result;
+    // Wait for the next SignalR message (user input) with a reasonable timeout
+    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+    
+    try
+    {
+      var result = await _pendingInputRequest.Task.WaitAsync(cts.Token);
+      return result;
+    }
+    catch (OperationCanceledException)
+    {
+      _pendingInputRequest?.TrySetCanceled();
+      _pendingInputRequest = null;
+      return string.Empty;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while waiting for host input.");
+      _pendingInputRequest?.TrySetException(ex);
+      _pendingInputRequest = null;
+      return string.Empty;
+    }
   }
 
   public void TriggerProcessExited()
