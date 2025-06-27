@@ -6,28 +6,37 @@ using System.Security;
 namespace ControlR.Agent.Common.Services.Terminal;
 
 // Custom PowerShell Host UI for handling interactive input/output
-internal class TerminalHostUI : PSHostUserInterface
+internal class TerminalHostUI(TerminalSession terminalSession) : PSHostUserInterface
 {
-  private readonly TerminalSession _terminalSession;
-  private readonly TerminalRawUI _rawUI;
-
-  public TerminalHostUI(TerminalSession terminalSession)
-  {
-    _terminalSession = terminalSession;
-    _rawUI = new TerminalRawUI();
-  }
+  private readonly TerminalRawUI _rawUI = new TerminalRawUI();
+  private readonly TerminalSession _terminalSession = terminalSession;
 
   public override PSHostRawUserInterface RawUI => _rawUI;
+
+  public override Dictionary<string, PSObject> Prompt(string caption, string message, Collection<FieldDescription> descriptions)
+  {
+    return PromptAsync(caption, message, descriptions).Result;
+  }
+
+  public override int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
+  {
+    return PromptForChoiceAsync(caption, message, choices, defaultChoice).Result;
+  }
+
+  public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
+  {
+    return PromptForCredentialAsync(caption, message, userName, targetName).Result;
+  }
+
+  public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
+  {
+    return PromptForCredential(caption, message, userName, targetName);
+  }
 
   public override string ReadLine()
   {
     // This handles Read-Host scenarios
     return ReadLineAsync().GetAwaiter().GetResult();
-  }
-
-  private async Task<string> ReadLineAsync()
-  {
-    return await _terminalSession.HandleHostReadLine();
   }
 
   public override SecureString ReadLineAsSecureString()
@@ -45,7 +54,8 @@ internal class TerminalHostUI : PSHostUserInterface
 
   public override void Write(string value)
   {
-    _ = Task.Run(() => _terminalSession.SendOutput(value, TerminalOutputKind.StandardOutput));
+    // Use GetAwaiter().GetResult() to ensure the output is sent before continuing
+    _terminalSession.SendOutput(value, TerminalOutputKind.StandardOutput).GetAwaiter().GetResult();
   }
 
   public override void Write(ConsoleColor foregroundColor, ConsoleColor backgroundColor, string value)
@@ -53,26 +63,30 @@ internal class TerminalHostUI : PSHostUserInterface
     Write(value); // Ignore colors for now
   }
 
-  public override void WriteLine(string value)
+  public override void WriteDebugLine(string message)
   {
-    Write(value + Environment.NewLine);
+    Write($"DEBUG: {message}{Environment.NewLine}");
   }
 
   public override void WriteErrorLine(string value)
   {
-    _ = Task.Run(() => _terminalSession.SendOutput(value + Environment.NewLine, TerminalOutputKind.StandardError));
+    // Use GetAwaiter().GetResult() to ensure the error output is sent before continuing
+    _terminalSession.SendOutput(value + Environment.NewLine, TerminalOutputKind.StandardError).GetAwaiter().GetResult();
+  }
+  public override void WriteInformation(InformationRecord record)
+  {
+    Write($"INFO: {record.MessageData}{Environment.NewLine}");
   }
 
-  public override void WriteDebugLine(string message)
+  public override void WriteLine(string value)
   {
-    Write($"DEBUG: {message}{Environment.NewLine}");
+    Write(value + Environment.NewLine);
   }
 
   public override void WriteProgress(long sourceId, ProgressRecord record)
   {
     Write($"[{record.PercentComplete}%] {record.Activity}: {record.StatusDescription}{Environment.NewLine}");
   }
-
   public override void WriteVerboseLine(string message)
   {
     Write($"VERBOSE: {message}{Environment.NewLine}");
@@ -81,11 +95,6 @@ internal class TerminalHostUI : PSHostUserInterface
   public override void WriteWarningLine(string message)
   {
     Write($"WARNING: {message}{Environment.NewLine}");
-  }
-
-  public override Dictionary<string, PSObject> Prompt(string caption, string message, Collection<FieldDescription> descriptions)
-  {
-    return PromptAsync(caption, message, descriptions).Result;
   }
 
   private async Task<Dictionary<string, PSObject>> PromptAsync(string caption, string message, Collection<FieldDescription> descriptions)
@@ -105,12 +114,12 @@ internal class TerminalHostUI : PSHostUserInterface
     // Handle each field description
     foreach (var field in descriptions)
     {
-      await _terminalSession.HandleHostPrompt($"{field.Label}: ");
+      await _terminalSession.HandleHostPrompt($"{field.Name}: ");
       var input = await _terminalSession.HandleHostReadLine();
-      
+
       // Convert to appropriate type based on field attributes
-      if (field.ParameterTypeName.Equals("SecureString", StringComparison.OrdinalIgnoreCase) || 
-          field.Label.ToLower().Contains("password"))
+      if (field.ParameterTypeName.Equals("SecureString", StringComparison.OrdinalIgnoreCase) ||
+          field.Label.Contains("password", StringComparison.CurrentCultureIgnoreCase))
       {
         var secureString = new SecureString();
         foreach (char c in input)
@@ -127,48 +136,6 @@ internal class TerminalHostUI : PSHostUserInterface
     }
 
     return results;
-  }
-
-  public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
-  {
-    return PromptForCredentialAsync(caption, message, userName, targetName).Result;
-  }
-
-  private async Task<PSCredential> PromptForCredentialAsync(string caption, string message, string userName, string targetName)
-  {
-    // Send the credential prompt
-    await _terminalSession.HandleHostPrompt($"Credential required: {caption} - {message}");
-    
-    // Prompt for username if not provided
-    if (string.IsNullOrEmpty(userName))
-    {
-      await _terminalSession.HandleHostPrompt("User: ");
-      userName = await _terminalSession.HandleHostReadLine();
-    }
-    
-    // Prompt for password
-    await _terminalSession.HandleHostPrompt("Password: ");
-    var password = await _terminalSession.HandleHostReadLine();
-    
-    // Convert password to SecureString
-    var securePassword = new SecureString();
-    foreach (char c in password)
-    {
-      securePassword.AppendChar(c);
-    }
-    securePassword.MakeReadOnly();
-    
-    return new PSCredential(userName, securePassword);
-  }
-
-  public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
-  {
-    return PromptForCredential(caption, message, userName, targetName);
-  }
-
-  public override int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
-  {
-    return PromptForChoiceAsync(caption, message, choices, defaultChoice).Result;
   }
 
   private async Task<int> PromptForChoiceAsync(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
@@ -215,5 +182,37 @@ internal class TerminalHostUI : PSHostUserInterface
 
     // Invalid choice, return default
     return defaultChoice;
+  }
+
+  private async Task<PSCredential> PromptForCredentialAsync(string caption, string message, string userName, string targetName)
+  {
+    // Send the credential prompt
+    await _terminalSession.HandleHostPrompt($"Credential required: {caption} - {message}");
+
+    // Prompt for username if not provided
+    if (string.IsNullOrEmpty(userName))
+    {
+      await _terminalSession.HandleHostPrompt("User: ");
+      userName = await _terminalSession.HandleHostReadLine();
+    }
+
+    // Prompt for password
+    await _terminalSession.HandleHostPrompt("Password: ");
+    var password = await _terminalSession.HandleHostReadLine();
+
+    // Convert password to SecureString
+    var securePassword = new SecureString();
+    foreach (char c in password)
+    {
+      securePassword.AppendChar(c);
+    }
+    securePassword.MakeReadOnly();
+
+    return new PSCredential(userName, securePassword);
+  }
+
+  private async Task<string> ReadLineAsync()
+  {
+    return await _terminalSession.HandleHostReadLine();
   }
 }
