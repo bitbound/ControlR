@@ -68,7 +68,19 @@ internal class TerminalSession(
 
     if (forward.HasValue)
     {
+      // If forward is specified, we only return the next result (Tab or Shift + Tab)
       var nextResult = _lastCompletion.GetNextResult(forward.Value);
+      if (nextResult is null)
+      {
+        return new PwshCompletionsResponseDto(
+          ReplacementIndex: _lastCompletion.ReplacementIndex,
+          ReplacementLength: _lastCompletion.ReplacementLength,
+          CompletionMatches: [],
+          HasMorePages: false,
+          TotalCount: 0,
+          CurrentPage: 0);
+      }
+
       var pwshMatch = new PwshCompletionMatch(
         nextResult.CompletionText,
         nextResult.ListItemText,
@@ -84,7 +96,8 @@ internal class TerminalSession(
         CurrentPage: 0);
     }
 
-  var totalCount = _lastCompletion.CompletionMatches.Count;
+    // If no forward is specified, we return a paginated result (Ctrl + Space)
+    var totalCount = _lastCompletion.CompletionMatches.Count;
 
     if (totalCount > PwshCompletionsResponseDto.MaxRetrievableItems)
     {
