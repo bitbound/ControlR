@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;

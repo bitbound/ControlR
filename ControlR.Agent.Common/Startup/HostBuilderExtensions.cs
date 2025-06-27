@@ -20,6 +20,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Bitbound.SimpleIpc;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Agent.Common.Services.Terminal;
 
 namespace ControlR.Agent.Common.Startup;
 

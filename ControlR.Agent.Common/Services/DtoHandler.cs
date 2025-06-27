@@ -1,4 +1,5 @@
 ﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Devices.Native.Services;
 using Microsoft.Extensions.Hosting;
 
