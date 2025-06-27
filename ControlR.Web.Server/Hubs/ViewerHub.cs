@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 
@@ -34,7 +35,7 @@ public class ViewerHub(
     return IsServerAdmin().AsTaskResult();
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+  public async Task<Result> CreateTerminalSession(
     Guid deviceId,
     TerminalSessionRequest requestDto)
   {
@@ -42,7 +43,7 @@ public class ViewerHub(
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail<TerminalSessionRequestResult>("Forbidden.");
+        return Result.Fail("Forbidden.");
       }
 
       return await _agentHub.Clients
@@ -52,10 +53,29 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
-      return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
+      return Result.Fail("An error occurred.");
     }
   }
 
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(Guid deviceId, PwshCompletionsRequestDto request)
+  {
+    try
+    {
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail<PwshCompletionsResponseDto>("Forbidden.");
+      }
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .GetPwshCompletions(request);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting PowerShell command completions.");
+      return Result.Fail<PwshCompletionsResponseDto>("An error occurred.");
+    }
+  }
 
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
@@ -134,7 +154,6 @@ public class ViewerHub(
         return null;
       }
 
-
       var ipInfo = result.Value;
 
       if (ipInfo.Status == IpApiResponseStatus.Fail)
@@ -183,7 +202,6 @@ public class ViewerHub(
     try
     {
       await base.OnConnectedAsync();
-
 
       if (Context.User is null)
       {
@@ -521,7 +539,6 @@ public class ViewerHub(
   {
     return Context.User?.IsInRole(RoleNames.ServerAdministrator) ?? false;
   }
-
 
   private async Task<Result<Device>> TryAuthorizeAgainstDevice(
     Guid deviceId,

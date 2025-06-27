@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
 
@@ -8,10 +9,10 @@ public interface IViewerHub
 {
   Task<bool> CheckIfServerAdministrator();
 
-  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+  Task<Result> CreateTerminalSession(
     Guid deviceId,
     TerminalSessionRequest requestDto);
-
+  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(Guid deviceId, PwshCompletionsRequestDto request);
   Task<Result<ServerStatsDto>> GetServerStats();
 
   Task<Uri?> GetWebSocketRelayOrigin();

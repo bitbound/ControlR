@@ -1,14 +1,17 @@
-﻿using System.Management.Automation;
+﻿using System.Collections;
+using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 
 namespace ControlR.Agent.Common.Services.Terminal;
 
 public interface ITerminalSession : IDisposable
 {
+  event EventHandler? ProcessExited;
   bool IsDisposed { get; }
 
   TerminalSessionKind SessionKind { get; }
-  event EventHandler? ProcessExited;
+  PwshCompletionsResponseDto GetCompletions(string inputText, int currentIndex, bool? forward);
 
   Task<Result> WriteInput(string input, CancellationToken cancellationToken);
 }
@@ -21,18 +24,18 @@ internal class TerminalSession(
   IHubConnection<IAgentHub> hubConnection,
   ILogger<TerminalSession> logger) : ITerminalSession
 {
-  private readonly SemaphoreSlim _writeLock = new(1, 1);
-  private readonly string _viewerConnectionId = viewerConnectionId;
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly ISystemEnvironment _environment = environment;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<TerminalSession> _logger = logger;
-  private PowerShell? _powerShell;
-  private Runspace? _runspace;
-  private TerminalPSHost? _psHost;
+  private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly string _viewerConnectionId = viewerConnectionId;
+  private readonly SemaphoreSlim _writeLock = new(1, 1);
+  private CommandCompletion? _lastCompletion;
+  private string? _lastInputText;
   private TaskCompletionSource<string>? _pendingInputRequest;
-
-  public Guid TerminalId { get; } = terminalId;
+  private PowerShell? _powerShell;
+  private TerminalPSHost? _psHost;
+  private Runspace? _runspace;
 
   public event EventHandler? ProcessExited;
 
@@ -40,10 +43,97 @@ internal class TerminalSession(
 
   public TerminalSessionKind SessionKind { get; private set; } = TerminalSessionKind.PowerShell;
 
+  public Guid TerminalId { get; } = terminalId;
+
   public void Dispose()
   {
     Dispose(true);
     GC.SuppressFinalize(this);
+  }
+  public PwshCompletionsResponseDto GetCompletions(string inputText, int currentIndex, bool? forward)
+  {
+    if (_lastCompletion is null ||
+        inputText != _lastInputText)
+    {
+      _lastInputText = inputText;
+      _lastCompletion = CommandCompletion.CompleteInput(inputText, currentIndex, [], _powerShell);
+    }
+
+    if (forward.HasValue)
+    {
+      _lastCompletion.GetNextResult(forward.Value);
+    }
+
+    var completionMatches = _lastCompletion.CompletionMatches
+      .Select(x => new PwshCompletionMatch(x.CompletionText,
+          x.ListItemText,
+          (PwshCompletionMatchType)x.ResultType,
+          x.ToolTip))
+      .ToArray();
+
+    var completionDto = new PwshCompletionsResponseDto(
+      _lastCompletion.CurrentMatchIndex,
+      _lastCompletion.ReplacementIndex,
+      _lastCompletion.ReplacementLength,
+      completionMatches);
+
+    return completionDto;
+  }
+
+  public async Task HandleHostPrompt(string prompt)
+  {
+    await SendOutput(prompt, TerminalOutputKind.StandardOutput);
+  }
+
+  public async Task<string> HandleHostReadLine()
+  {
+    // This will be called by PowerShell when it needs input (like Read-Host)
+    _pendingInputRequest = new TaskCompletionSource<string>();
+
+    // Wait for the next SignalR message (user input) with a reasonable timeout
+    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+
+    try
+    {
+      var result = await _pendingInputRequest.Task.WaitAsync(cts.Token);
+      return result;
+    }
+    catch (OperationCanceledException)
+    {
+      _pendingInputRequest?.TrySetCanceled();
+      _pendingInputRequest = null;
+      return string.Empty;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while waiting for host input.");
+      _pendingInputRequest?.TrySetException(ex);
+      _pendingInputRequest = null;
+      return string.Empty;
+    }
+  }
+
+  public async Task SendOutput(string output, TerminalOutputKind outputKind)
+  {
+    try
+    {
+      var outputDto = new TerminalOutputDto(
+        TerminalId,
+        output,
+        outputKind,
+        _timeProvider.GetLocalNow());
+
+      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending terminal output.");
+    }
+  }
+
+  public void TriggerProcessExited()
+  {
+    ProcessExited?.Invoke(this, EventArgs.Empty);
   }
 
   public Task<Result> WriteInput(string input, CancellationToken cancellationToken)
@@ -68,6 +158,62 @@ internal class TerminalSession(
     return Result.Ok().AsTaskResult();
   }
 
+  internal async Task Initialize()
+  {
+    try
+    {
+      // Create custom PowerShell host for interactive scenarios
+      _psHost = new TerminalPSHost(this);
+
+      // Create runspace with custom host
+      _runspace = RunspaceFactory.CreateRunspace(_psHost);
+      _runspace.Open();
+
+      // Set working directory
+      _runspace.SessionStateProxy.Path.SetLocation(_environment.StartupDirectory);
+
+      // Create PowerShell instance
+      _powerShell = PowerShell.Create();
+      _powerShell.Runspace = _runspace;
+
+      // Set up event handlers
+      _runspace.StateChanged += Runspace_StateChanged;
+
+      // Send initial prompt
+      await SendOutput($"PowerShell {PSVersionInfo.PSVersion} on {Environment.OSVersion}", TerminalOutputKind.StandardOutput);
+
+      // Platform-specific shell guidance
+      var shellGuidance = _environment.Platform switch
+      {
+        SystemPlatform.Linux => "Type 'bash' to start bash, or use PowerShell commands.",
+        SystemPlatform.MacOs => "Type 'zsh' to start zsh, or use PowerShell commands.",
+        _ => "Use PowerShell commands or launch other shells."
+      };
+      await SendOutput(shellGuidance, TerminalOutputKind.StandardOutput);
+
+      // Send initial prompt
+      await SendPrompt();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error initializing PowerShell session.");
+      throw;
+    }
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (!IsDisposed)
+    {
+      if (disposing)
+      {
+        _powerShell?.Dispose();
+        _runspace?.Dispose();
+      }
+
+      IsDisposed = true;
+    }
+  }
   private async Task ExecutePowerShellCommandAsync(string input, CancellationToken cancellationToken)
   {
     await _writeLock.WaitAsync();
@@ -128,87 +274,12 @@ internal class TerminalSession(
     }
   }
 
-  internal async Task Initialize()
-  {
-    try
-    {
-      // Create custom PowerShell host for interactive scenarios
-      _psHost = new TerminalPSHost(this);
-      
-      // Create runspace with custom host
-      _runspace = RunspaceFactory.CreateRunspace(_psHost);
-      _runspace.Open();
-
-      // Set working directory
-      _runspace.SessionStateProxy.Path.SetLocation(_environment.StartupDirectory);
-
-      // Create PowerShell instance
-      _powerShell = PowerShell.Create();
-      _powerShell.Runspace = _runspace;
-
-      // Set up event handlers
-      _runspace.StateChanged += Runspace_StateChanged;
-
-      // Send initial prompt
-      await SendOutput($"PowerShell {PSVersionInfo.PSVersion} on {Environment.OSVersion}", TerminalOutputKind.StandardOutput);
-      
-      // Platform-specific shell guidance
-      var shellGuidance = _environment.Platform switch
-      {
-        SystemPlatform.Linux => "Type 'bash' to start bash, or use PowerShell commands.",
-        SystemPlatform.MacOs => "Type 'zsh' to start zsh, or use PowerShell commands.",
-        _ => "Use PowerShell commands or launch other shells."
-      };
-      await SendOutput(shellGuidance, TerminalOutputKind.StandardOutput);
-      
-      // Send initial prompt
-      await SendPrompt();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error initializing PowerShell session.");
-      throw;
-    }
-  }
-
-  protected virtual void Dispose(bool disposing)
-  {
-    if (!IsDisposed)
-    {
-      if (disposing)
-      {
-        _powerShell?.Dispose();
-        _runspace?.Dispose();
-      }
-
-      IsDisposed = true;
-    }
-  }
-
   private void Runspace_StateChanged(object? sender, RunspaceStateEventArgs e)
   {
-    if (e.RunspaceStateInfo.State == RunspaceState.Closed || 
+    if (e.RunspaceStateInfo.State == RunspaceState.Closed ||
         e.RunspaceStateInfo.State == RunspaceState.Broken)
     {
       ProcessExited?.Invoke(this, EventArgs.Empty);
-    }
-  }
-
-  public async Task SendOutput(string output, TerminalOutputKind outputKind)
-  {
-    try
-    {
-      var outputDto = new TerminalOutputDto(
-        TerminalId,
-        output,
-        outputKind,
-        _timeProvider.GetLocalNow());
-
-      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending terminal output.");
     }
   }
 
@@ -224,43 +295,5 @@ internal class TerminalSession(
     {
       _logger.LogError(ex, "Error while sending prompt.");
     }
-  }
-
-  public async Task HandleHostPrompt(string prompt)
-  {
-    await SendOutput(prompt, TerminalOutputKind.StandardOutput);
-  }
-
-  public async Task<string> HandleHostReadLine()
-  {
-    // This will be called by PowerShell when it needs input (like Read-Host)
-    _pendingInputRequest = new TaskCompletionSource<string>();
-    
-    // Wait for the next SignalR message (user input) with a reasonable timeout
-    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-    
-    try
-    {
-      var result = await _pendingInputRequest.Task.WaitAsync(cts.Token);
-      return result;
-    }
-    catch (OperationCanceledException)
-    {
-      _pendingInputRequest?.TrySetCanceled();
-      _pendingInputRequest = null;
-      return string.Empty;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while waiting for host input.");
-      _pendingInputRequest?.TrySetException(ex);
-      _pendingInputRequest = null;
-      return string.Empty;
-    }
-  }
-
-  public void TriggerProcessExited()
-  {
-    ProcessExited?.Invoke(this, EventArgs.Empty);
   }
 }

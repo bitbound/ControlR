@@ -1,5 +1,6 @@
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
@@ -17,11 +18,10 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(true);
   }
 
-  public Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto)
+  public Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto)
   {
     Console.WriteLine("Received terminal session request.");
-    var sessionResult = new TerminalSessionRequestResult(TerminalSessionKind.PowerShell);
-    return Result.Ok(sessionResult).AsTaskResult();
+    return Result.Ok().AsTaskResult();
   }
 
   public Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto)
@@ -29,6 +29,15 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok().AsTaskResult();
   }
 
+  public Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
+  {
+    return Task.FromResult(Result.Ok(new PwshCompletionsResponseDto(
+      CurrentMatchIndex: 0,
+      ReplacementIndex: 0,
+      ReplacementLength: 0,
+      CompletionMatches: []
+    )));
+  }
 
   public Task<WindowsSession[]> GetWindowsSessions()
   {

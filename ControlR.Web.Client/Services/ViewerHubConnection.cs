@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -13,8 +14,13 @@ public interface IViewerHubConnection
 
   Task Connect(CancellationToken cancellationToken = default);
 
-  Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(Guid deviceId, Guid terminalId);
-
+  Task<Result> CreateTerminalSession(Guid deviceId, Guid terminalId);
+  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(
+    Guid deviceId,
+    Guid terminalId,
+    string lastCompletionInput,
+    int lastCursorIndex,
+    bool forward);
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebSocketRelayOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
@@ -93,7 +99,7 @@ internal class ViewerHubConnection(
     await _messenger.Send(new HubConnectionStateChangedMessage(_viewerHub.ConnectionState));
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(
+  public async Task<Result> CreateTerminalSession(
     Guid deviceId,
     Guid terminalId)
   {
@@ -106,7 +112,37 @@ internal class ViewerHubConnection(
 
         return await _viewerHub.Server.CreateTerminalSession(deviceId, request);
       },
-      () => Result.Fail<TerminalSessionRequestResult>("Failed to create terminal session."));
+      () => Result.Fail("Failed to create terminal session."));
+  }
+
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(
+    Guid deviceId,
+    Guid terminalId,
+    string lastCompletionInput,
+    int lastCursorIndex,
+    bool forward)
+  {
+    return await TryInvoke(
+      async () =>
+      {
+        Guard.IsNotNullOrWhiteSpace(_viewerHub.ConnectionId);
+
+        var request = new PwshCompletionsRequestDto(
+          deviceId,
+          terminalId,
+          lastCompletionInput,
+          lastCursorIndex,
+          forward);
+
+        var result = await _viewerHub.Server.GetPwshCompletions(deviceId, request);
+        if (!result.IsSuccess)
+        {
+          _logger.LogResult(result);
+        }
+
+        return result;
+      },
+      () => Result.Fail<PwshCompletionsResponseDto>("Failed to get PowerShell command completions."));
   }
 
   public async Task<Result<ServerStatsDto>> GetServerStats()

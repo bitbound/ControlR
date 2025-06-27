@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.Extensions.Hosting;
@@ -73,7 +74,7 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<Result<TerminalSessionRequestResult>> CreateTerminalSession(TerminalSessionRequest requestDto)
+  public async Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto)
   {
     try
     {
@@ -85,7 +86,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
-      return Result.Fail<TerminalSessionRequestResult>("An error occurred.");
+      return Result.Fail("An error occurred.");
     }
   }
 
@@ -100,6 +101,19 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while creating VNC session.");
       return Result.Fail("An error occurred while creating VNC session.");
+    }
+  }
+
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
+  {
+    try
+    {
+      return await _terminalStore.GetPwshCompletions(request);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting PowerShell completions.");
+      return Result.Fail<PwshCompletionsResponseDto>("An error occurred while getting PowerShell completions.");
     }
   }
 

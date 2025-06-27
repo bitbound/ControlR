@@ -80,7 +80,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         nameof(IAgentHubClient.CreateStreamingSession),
         agentHubClient.CreateStreamingSession);
 
-      connection.On<TerminalSessionRequest, Result<TerminalSessionRequestResult>>(
+      connection.On<TerminalSessionRequest, Result>(
         nameof(IAgentHubClient.CreateTerminalSession),
         agentHubClient.CreateTerminalSession);
 

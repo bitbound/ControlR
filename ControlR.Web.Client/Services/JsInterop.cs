@@ -14,6 +14,7 @@ public interface IJsInterop
   ValueTask<bool> Confirm(string message);
 
   ValueTask<int> GetCursorIndex(ElementReference inputElement);
+  ValueTask<int> GetCursorIndexById(string inputElementId);
 
   ValueTask InvokeClick(string elementId);
 
@@ -75,6 +76,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask<int> GetCursorIndex(ElementReference inputElement)
   {
     return jsRuntime.InvokeAsync<int>("getSelectionStart", inputElement);
+  }
+
+  public ValueTask<int> GetCursorIndexById(string inputElementId)
+  {
+    return jsRuntime.InvokeAsync<int>("getSelectionStartById", inputElementId);
   }
 
   public ValueTask InvokeClick(string elementId)
