@@ -1,11 +1,5 @@
-﻿using System.Diagnostics;
-using System.Text;
-using System.Management.Automation;
-using System.Management.Automation.Host;
+﻿using System.Management.Automation;
 using System.Management.Automation.Runspaces;
-using System.Collections.ObjectModel;
-using System.Security;
-using System.Globalization;
 
 namespace ControlR.Agent.Common.Services.Terminal;
 
@@ -80,7 +74,7 @@ internal class TerminalSession(
         _powerShell.AddScript(input);
 
         // Execute the command asynchronously
-        var results = await Task.Run(() => _powerShell.Invoke(), cts.Token);
+        var results = await _powerShell.InvokeAsync().WaitAsync(cts.Token);
 
         // Handle any errors
         if (_powerShell.HadErrors)
@@ -210,7 +204,7 @@ internal class TerminalSession(
     try
     {
       var location = _runspace?.SessionStateProxy.Path.CurrentLocation?.Path ?? _environment.StartupDirectory;
-      var prompt = $"PS {Environment.UserName}@{Environment.MachineName}:{location}> ";
+      var prompt = $"PS {location}> ";
       await SendOutput(prompt, TerminalOutputKind.StandardOutput);
     }
     catch (Exception ex)
