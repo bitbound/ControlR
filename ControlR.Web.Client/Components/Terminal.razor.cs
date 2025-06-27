@@ -167,19 +167,7 @@ public partial class Terminal : IAsyncDisposable
       return;
     }
 
-    if (completion.CurrentMatchIndex < 0 ||
-        completion.CurrentMatchIndex >= completion.CompletionMatches.Length)
-    {
-      Logger.LogWarning(
-        "Current match index {Index} is out of bounds for completions array of length {Length}.",
-        completion.CurrentMatchIndex,
-        completion.CompletionMatches.Length);
-
-      Snackbar.Add("Malformed completion data received", Severity.Error);
-      return;
-    }
-
-    var match = completion.CompletionMatches[completion.CurrentMatchIndex];
+    var match = completion.CompletionMatches[0];
 
     var replacementText = string.Concat(
       _lastCompletionInput[..completion.ReplacementIndex],
@@ -210,13 +198,16 @@ public partial class Terminal : IAsyncDisposable
     // Keep requesting pages until we have all completions
     do
     {
-      var completionResult = await ViewerHub.GetPwshCompletions(
-        Device.Id, 
-        Id, 
-        _lastCompletionInput, 
-        _lastCursorIndex, 
-        false, 
-        currentPage);
+      var requestDto = new PwshCompletionsRequestDto(
+        Device.Id,
+        Id,
+        _lastCompletionInput,
+        _lastCursorIndex,
+        Forward: null,
+        currentPage,
+        PwshCompletionsRequestDto.DefaultPageSize);
+
+      var completionResult = await ViewerHub.GetPwshCompletions(requestDto);
 
       if (!completionResult.IsSuccess)
       {
@@ -247,7 +238,6 @@ public partial class Terminal : IAsyncDisposable
 
     // Create a combined response with all matches
     _currentCompletions = new PwshCompletionsResponseDto(
-      lastResponse.CurrentMatchIndex,
       lastResponse.ReplacementIndex,
       lastResponse.ReplacementLength,
       [.. allMatches],
@@ -274,12 +264,14 @@ public partial class Terminal : IAsyncDisposable
         }
       }
 
-      var completionResult = await ViewerHub.GetPwshCompletions(
+      var requestDto = new PwshCompletionsRequestDto(
         Device.Id,
         Id,
         _lastCompletionInput,
         _lastCursorIndex,
         forward);
+
+      var completionResult = await ViewerHub.GetPwshCompletions(requestDto);
 
       if (!completionResult.IsSuccess)
       {

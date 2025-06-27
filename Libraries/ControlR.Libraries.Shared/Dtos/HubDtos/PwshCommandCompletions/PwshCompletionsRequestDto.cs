@@ -6,8 +6,8 @@ public record PwshCompletionsRequestDto(
   string LastCompletionInput,
   int LastCursorIndex,
   bool? Forward,
-  int Page,
-  int PageSize)
+  int Page = 0,
+  int PageSize = PwshCompletionsRequestDto.DefaultPageSize)
 {
   public const int DefaultPageSize = 50;
 }

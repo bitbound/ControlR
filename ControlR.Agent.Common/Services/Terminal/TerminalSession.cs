@@ -2,6 +2,7 @@
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Common.Services.Terminal;
 
@@ -67,21 +68,33 @@ internal class TerminalSession(
 
     if (forward.HasValue)
     {
-      _lastCompletion.GetNextResult(forward.Value);
+      var nextResult = _lastCompletion.GetNextResult(forward.Value);
+      var pwshMatch = new PwshCompletionMatch(
+        nextResult.CompletionText,
+        nextResult.ListItemText,
+        (PwshCompletionMatchType)nextResult.ResultType,
+        nextResult.ToolTip);
+
+      return new PwshCompletionsResponseDto(
+        ReplacementIndex: _lastCompletion.ReplacementIndex,
+        ReplacementLength: _lastCompletion.ReplacementLength,
+        CompletionMatches: [pwshMatch],
+        HasMorePages: false,
+        TotalCount: 1,
+        CurrentPage: 0);
     }
 
-    var totalCount = _lastCompletion.CompletionMatches.Count;
+  var totalCount = _lastCompletion.CompletionMatches.Count;
 
     if (totalCount > PwshCompletionsResponseDto.MaxRetrievableItems)
     {
       return new PwshCompletionsResponseDto(
-        _lastCompletion.CurrentMatchIndex,
-        _lastCompletion.ReplacementIndex,
-        _lastCompletion.ReplacementLength,
-        [],
-        false,
-        totalCount,
-        page);
+        ReplacementIndex: _lastCompletion.ReplacementIndex,
+        ReplacementLength: _lastCompletion.ReplacementLength,
+        CompletionMatches: [],
+        HasMorePages: false,
+        TotalCount: totalCount,
+        CurrentPage: page);
     }
 
     var pagedMatches = _lastCompletion.CompletionMatches
@@ -99,13 +112,12 @@ internal class TerminalSession(
     var hasMorePages = (page + 1) * pageSize < totalCount;
 
     var completionDto = new PwshCompletionsResponseDto(
-      _lastCompletion.CurrentMatchIndex,
-      _lastCompletion.ReplacementIndex,
-      _lastCompletion.ReplacementLength,
-      pwshCompletions,
-      hasMorePages,
-      totalCount,
-      page);
+      ReplacementIndex: _lastCompletion.ReplacementIndex,
+      ReplacementLength: _lastCompletion.ReplacementLength,
+      CompletionMatches: pwshCompletions,
+      HasMorePages: hasMorePages,
+      TotalCount: totalCount,
+      CurrentPage: page);
 
     return completionDto;
   }

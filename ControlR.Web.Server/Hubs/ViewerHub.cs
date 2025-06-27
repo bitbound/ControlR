@@ -55,11 +55,11 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(Guid deviceId, PwshCompletionsRequestDto request)
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId) is not { IsSuccess: true } authResult)
       {
         return Result.Fail<PwshCompletionsResponseDto>("Forbidden.");
       }

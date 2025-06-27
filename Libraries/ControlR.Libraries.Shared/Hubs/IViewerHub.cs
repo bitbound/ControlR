@@ -12,7 +12,7 @@ public interface IViewerHub
   Task<Result> CreateTerminalSession(
     Guid deviceId,
     TerminalSessionRequest requestDto);
-  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(Guid deviceId, PwshCompletionsRequestDto request);
+  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<Result<ServerStatsDto>> GetServerStats();
 
   Task<Uri?> GetWebSocketRelayOrigin();

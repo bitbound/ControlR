@@ -15,14 +15,8 @@ public interface IViewerHubConnection
   Task Connect(CancellationToken cancellationToken = default);
 
   Task<Result> CreateTerminalSession(Guid deviceId, Guid terminalId);
-  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(
-    Guid deviceId,
-    Guid terminalId,
-    string lastCompletionInput,
-    int lastCursorIndex,
-    bool forward,
-    int page = 0,
-    int pageSize = PwshCompletionsRequestDto.DefaultPageSize);
+  Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto requestDto);
+
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebSocketRelayOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
@@ -117,30 +111,14 @@ internal class ViewerHubConnection(
       () => Result.Fail("Failed to create terminal session."));
   }
 
-  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(
-    Guid deviceId,
-    Guid terminalId,
-    string lastCompletionInput,
-    int lastCursorIndex,
-    bool forward,
-    int page = 0,
-    int pageSize = PwshCompletionsRequestDto.DefaultPageSize)
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto requestDto)
   {
     return await TryInvoke(
       async () =>
       {
         Guard.IsNotNullOrWhiteSpace(_viewerHub.ConnectionId);
 
-        var request = new PwshCompletionsRequestDto(
-          deviceId,
-          terminalId,
-          lastCompletionInput,
-          lastCursorIndex,
-          forward,
-          page,
-          pageSize);
-
-        var result = await _viewerHub.Server.GetPwshCompletions(deviceId, request);
+        var result = await _viewerHub.Server.GetPwshCompletions(requestDto);
         if (!result.IsSuccess)
         {
           _logger.LogResult(result);
