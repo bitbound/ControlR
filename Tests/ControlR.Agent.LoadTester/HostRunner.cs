@@ -127,9 +127,8 @@ public static class HostRunner
       {
         try
         {
-          var version = await client.GetFromJsonAsync<AgentVersionsDto>(new Uri(serverUri, "/downloads/AgentVersions.json"))
-            ?? throw new Exception("Failed to retrieve agent versions from server.");
-          return version.WinX86;
+          var version = await client.GetStringAsync(new Uri(serverUri, "/downloads/AgentVersion.txt"));
+          return Version.Parse(version.Trim());
         }
         catch (Exception ex)
         {

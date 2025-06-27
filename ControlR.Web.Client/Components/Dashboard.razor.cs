@@ -16,7 +16,7 @@ public partial class Dashboard
   };
 
   private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
-  private AgentVersionsDto? _currentAgentVersions;
+  private Version? _agentReleaseVersion;
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private bool _hideOfflineDevices;
@@ -64,7 +64,7 @@ public partial class Dashboard
     using var token = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
-    await SetLatestAgentVersions();
+    await SetLatestAgentVersion();
 
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
     Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
@@ -105,27 +105,10 @@ public partial class Dashboard
 
   private bool IsOutdated(DeviceViewModel device)
   {
-    if (_currentAgentVersions is null)
-    {
-      return false;
-    }
-
-    if (!Version.TryParse(device.AgentVersion, out var agentVersion))
-    {
-      return false;
-    }
-
-    return device.Platform switch
-    {
-      SystemPlatform.Windows => device.OsArchitecture == Architecture.X64 ?
-                !agentVersion.Equals(_currentAgentVersions.WinX64) :
-                !agentVersion.Equals(_currentAgentVersions.WinX86),
-      SystemPlatform.Linux => !agentVersion.Equals(_currentAgentVersions.LinuxX64),
-      SystemPlatform.MacOs => device.OsArchitecture == Architecture.Arm64 ?
-                !agentVersion.Equals(_currentAgentVersions.MacOsArm64) :
-                !agentVersion.Equals(_currentAgentVersions.MacOsX64),
-      _ => false,
-    };
+    return
+      _agentReleaseVersion is not null &&
+      Version.TryParse(device.AgentVersion, out var agentVersion) &&
+      !agentVersion.Equals(_agentReleaseVersion);
   }
 
   private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
@@ -223,7 +206,7 @@ public partial class Dashboard
     {
       _loading = true;
       using var _ = BusyCounter.IncrementBusyCounter();
-      await SetLatestAgentVersions();
+      await SetLatestAgentVersion();
       await InvokeAsync(StateHasChanged);
       await ReloadGridData();
     }
@@ -354,12 +337,12 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while restarting device.");
     }
   }
-  private async Task SetLatestAgentVersions()
+  private async Task SetLatestAgentVersion()
   {
-    var agentVerResult = await ControlrApi.GetCurrentAgentVersions();
+    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
     if (agentVerResult.IsSuccess)
     {
-      _currentAgentVersions = agentVerResult.Value;
+      _agentReleaseVersion = agentVerResult.Value;
     }
   }
 

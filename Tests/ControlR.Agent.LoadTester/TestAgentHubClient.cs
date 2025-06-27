@@ -32,10 +32,12 @@ public class TestAgentHubClient : IAgentHubClient
   public Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
   {
     return Task.FromResult(Result.Ok(new PwshCompletionsResponseDto(
-      CurrentMatchIndex: 0,
       ReplacementIndex: 0,
       ReplacementLength: 0,
-      CompletionMatches: []
+      CompletionMatches: [],
+      HasMorePages: false,
+      TotalCount: 0,
+      CurrentPage: 0
     )));
   }
 
