@@ -3,10 +3,23 @@
     <!-- These API calls take forever. -->
     <NuGetAudit>false</NuGetAudit>
 
-    <WarningsAsErrors>true</WarningsAsErrors>
     <Authors>Jared Goodwin</Authors>
     <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
     <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
     <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+	<PropertyGroup>
+		<!-- TreatWarningsAsErrors can be selectively bypassed here. -->
+		<WarningsNotAsErrors></WarningsNotAsErrors>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Commented code. It can be helpful for examples/docs. -->
+		<NoWarn>S125</NoWarn>
+	</PropertyGroup>
 </Project>
