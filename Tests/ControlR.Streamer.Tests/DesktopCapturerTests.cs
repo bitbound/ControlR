@@ -13,6 +13,7 @@ using Microsoft.Extensions.Time.Testing;
 using System.Text.Json;
 using Xunit.Abstractions;
 using Moq;
+using ControlR.Libraries.DevicesCommon.Services;
 namespace ControlR.Streamer.Tests;
 
 public class DesktopCapturerTests
@@ -23,6 +24,7 @@ public class DesktopCapturerTests
   private readonly DesktopCapturer _capturer;
   private readonly Delayer _delayer;
   private readonly Mock<ICaptureMetrics> _captureMetrics;
+  private readonly Mock<IProcessManager> _processManager;
   private readonly DxOutputGenerator _dxOutputs;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly XunitLogger<DesktopCapturer> _logger;
@@ -42,6 +44,7 @@ public class DesktopCapturerTests
     _win32Interop = new Win32Interop(new XunitLogger<Win32Interop>(outputHelper));
     _delayer = new Delayer(_timeProvider);
     _captureMetrics = new Mock<ICaptureMetrics>();
+    _processManager = new Mock<IProcessManager>();
     _appLifetime = new FakeHostApplicationLifetime(_timeProvider);
     _inputSim = new InputSimulatorWindows(_win32Interop, new XunitLogger<InputSimulatorWindows>(outputHelper));
 
@@ -71,8 +74,8 @@ public class DesktopCapturerTests
       memoryProvider: _memoryProvider,
       win32Interop: _win32Interop,
       captureMetrics: _captureMetrics.Object,
+      processManager: _processManager.Object,
       appLifetime: _appLifetime,
-      startupOptions: new OptionsWrapper<StartupOptions>(_startupOptions),
       logger: _logger);
   }
 

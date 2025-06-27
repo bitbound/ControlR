@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
@@ -71,6 +72,11 @@ public class Win32InteropFake : IWin32Interop
   }
 
   public string GetUsernameFromSessionId(uint sessionId)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool GetWindowRect(nint windowHandle, out Rectangle windowRect)
   {
     throw new NotImplementedException();
   }

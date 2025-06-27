@@ -5,6 +5,7 @@ namespace ControlR.Libraries.Shared.Services;
 
 public interface ISystemEnvironment
 {
+  int CurrentThreadId { get; }
   bool IsDebug { get; }
   bool IsWindows { get; }
   SystemPlatform Platform { get; }
@@ -16,7 +17,7 @@ public interface ISystemEnvironment
 public class SystemEnvironment : ISystemEnvironment
 {
   public static SystemEnvironment Instance { get; } = new();
-
+  public int CurrentThreadId => Environment.CurrentManagedThreadId;
   public bool IsDebug
   {
     get

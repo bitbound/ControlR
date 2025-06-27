@@ -44,6 +44,7 @@ public interface IWin32Interop
   nint GetParentWindow(nint windowHandle);
   bool GetThreadDesktopName(uint threadId, [NotNullWhen(true)] out string? desktopName);
   string GetUsernameFromSessionId(uint sessionId);
+  bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
   Result InvokeKeyEvent(string key, bool isPressed);
@@ -426,6 +427,23 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
 
     return string.Empty;
+  }
+
+  public bool GetWindowRect(nint windowHandle, out Rectangle windowRect)
+  {
+    windowRect = Rectangle.Empty;
+
+    if (!PInvoke.GetWindowRect(new HWND(windowHandle), out var rect))
+    {
+      return false;
+    }
+    windowRect = new Rectangle(
+      rect.X,
+      rect.Y,
+      rect.Width,
+      rect.Height);
+
+    return true;
   }
 
   public bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer)

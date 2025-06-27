@@ -89,6 +89,7 @@ rootCommand.SetHandler(async (appDataFolder, websocketUri, notifyUser, sessionId
   services.AddSingleton<ICaptureMetrics, CaptureMetrics>();
   services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
   services.AddSingleton<IMemoryProvider, MemoryProvider>();
+  services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
   services.AddSingleton<IClipboardManager, ClipboardManager>();
   services.AddSingleton<IDelayer, Delayer>();
   services.AddScreenCapturer();

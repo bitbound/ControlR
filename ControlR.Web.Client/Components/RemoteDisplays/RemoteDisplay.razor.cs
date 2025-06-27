@@ -489,6 +489,16 @@ public partial class RemoteDisplay : IAsyncDisposable
             Snackbar.Add("Remote Windows session switched", Severity.Info);
             break;
           }
+        case DtoType.CaptureMetricsChanged:
+          {
+            var dto = message.GetPayload<CaptureMetricsDto>();
+            Logger.LogInformation("Capture metrics changed: {@Metrics}", dto);
+            foreach (var kvp in dto.ExtraData)
+            {
+              Logger.LogInformation("{Key}: {Value}", kvp.Key, kvp.Value);
+            }
+            break;
+          }
       }
     }
     catch (Exception ex)
@@ -638,6 +648,7 @@ public partial class RemoteDisplay : IAsyncDisposable
         ? new UriBuilder(relayOrigin)
         : new UriBuilder(serverUri);
 
+      relayUri.Path = "/relay";
       relayUri.Query = $"?sessionId={Session.SessionId}&accessToken={accessToken}&timeout=30";
 
       Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", relayUri.Uri.GetOrigin());

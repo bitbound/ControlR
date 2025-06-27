@@ -66,3 +66,4 @@ EnumWindows
 GetParent
 SetParent
 SetWindowPos
+GetWindowRect

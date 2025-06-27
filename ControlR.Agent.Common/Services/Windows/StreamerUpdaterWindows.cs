@@ -157,7 +157,7 @@ internal class StreamerUpdaterWindows(
 
   private async Task ReportDownloadProgress(double progress, string message)
   {
-    var connection = serviceProvider.GetRequiredService<IAgentHubConnection>();
+    var connection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
 
     if (progress == 1 || progress < 0 || progress - _previousProgress > .05)
     {
@@ -174,6 +174,7 @@ internal class StreamerUpdaterWindows(
             message);
 
           await connection
+            .Server
             .SendStreamerDownloadProgress(dto)
             .ConfigureAwait(false);
         }

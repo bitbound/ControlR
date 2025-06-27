@@ -1,9 +1,10 @@
-﻿using Bitbound.SimpleMessenger;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text.Json;
+using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Streamer.Helpers;
 using ControlR.Streamer.Messages;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace ControlR.Streamer.Services;
 
@@ -29,23 +30,37 @@ public interface ICaptureMetrics
 internal sealed class CaptureMetrics(
   TimeProvider timeProvider,
   IMessenger messenger,
+  IWin32Interop win32Interop,
+  ISystemEnvironment systemEnvironment,
+  IScreenGrabber screenGrabber,
+  IProcessManager processManager,
   ILogger<CaptureMetrics> logger) : ICaptureMetrics
 {
+
   public const int DefaultImageQuality = 75;
   public const double MaxMbps = 8;
   public const int MinimumQuality = 20;
   public const double TargetMbps = 3;
-  private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(1);
+  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new(false);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _iterations = [];
+
+  private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+  {
+    WriteIndented = true
+  };
   private readonly ILogger<CaptureMetrics> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly Stopwatch _metricsBroadcastTimer = Stopwatch.StartNew();
+  private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(1);
   private readonly SemaphoreSlim _processLock = new(1, 1);
+  private readonly IProcessManager _processManager = processManager;
+  private readonly IScreenGrabber _screenGrabber = screenGrabber;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly TimeSpan _timerInterval = TimeSpan.FromSeconds(.1);
-  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new(false);
+  private readonly IWin32Interop _win32Interop = win32Interop;
   private CancellationTokenSource? _abortTokenSource;
   private double _fps;
   private double _ips;
@@ -61,7 +76,6 @@ internal sealed class CaptureMetrics(
   public double Mbps => _mbps;
   public int Quality => _quality;
 
-
   public async Task BroadcastMetrics()
   {
     if (_metricsBroadcastTimer.Elapsed > _metricsWindow)
@@ -75,14 +89,19 @@ internal sealed class CaptureMetrics(
         IsUsingGpu,
         Quality);
 
-      var metricsMessage = new DisplayMetricsChangedMessage(
+      var extraData = GetExtraData();
+
+      var metricsDto = new CaptureMetricsDto(
         Mbps,
         Fps,
         Ips,
         IsUsingGpu,
-        Quality);
+        Quality,
+        extraData);
 
-      await _messenger.Send(metricsMessage);
+      var message = new CaptureMetricsChangedMessage(metricsDto);
+
+      await _messenger.Send(message);
     }
   }
 
@@ -119,9 +138,47 @@ internal sealed class CaptureMetrics(
     Disposer.TryDispose(_abortTokenSource);
     _abortTokenSource = null;
   }
+
+  public async Task WaitForBandwidth(CancellationToken cancellationToken)
+  {
+    await _bandwidthAvailableSignal.Wait(cancellationToken);
+  }
   private static double ConvertBytesToMbps(int bytes, TimeSpan timeSpan)
   {
     return bytes / 1024.0 / 1024.0 / timeSpan.TotalSeconds * 8;
+  }
+  private Dictionary<string, string> GetExtraData()
+  {
+
+    _ = _win32Interop.GetCurrentThreadDesktopName(out var threadDesktopName);
+    _ = _win32Interop.GetInputDesktopName(out var inputDesktopName);
+    var screenBounds = _screenGrabber.GetVirtualScreenBounds();
+
+    var extraData = new Dictionary<string, string>
+    {
+      { "Thread ID", $"{_systemEnvironment.CurrentThreadId}" },
+      { "Thread Desktop Name", $"{threadDesktopName}"},
+      { "Input Desktop Name", $"{inputDesktopName}"},
+      { "Screen Bounds", JsonSerializer.Serialize(screenBounds, _jsonSerializerOptions) }
+    };
+
+    var shellProcess = _processManager
+      .GetProcessesByName("ControlR.BackgroundShell")
+      .FirstOrDefault(x => x.SessionId == 0);
+
+    if (shellProcess is not null)
+    {
+      var shellMainWindow = shellProcess.MainWindowHandle;
+      if (!_win32Interop.GetWindowRect(shellMainWindow, out var shellRect))
+      {
+        _logger.LogWarning("Failed to get shell main window rectangle.");
+      }
+      else
+      {
+        extraData.Add("Shell Main Window Rect", JsonSerializer.Serialize(shellRect, _jsonSerializerOptions));
+      }
+    }
+    return extraData;
   }
 
   private void ProcessMetrics(object? state)
@@ -194,9 +251,9 @@ internal sealed class CaptureMetrics(
       while (
           _iterations.TryPeek(out var iteration) &&
           iteration.AddSeconds(1) < _timeProvider.GetUtcNow())
-        {
-          _ = _iterations.TryDequeue(out _);
-        }
+      {
+        _ = _iterations.TryDequeue(out _);
+      }
 
       _ips = _iterations.Count;
 
@@ -218,11 +275,6 @@ internal sealed class CaptureMetrics(
     {
       _processLock.Release();
     }
-  }
-
-  public async Task WaitForBandwidth(CancellationToken cancellationToken)
-  {
-    await _bandwidthAvailableSignal.Wait(cancellationToken);
   }
 
   private record SentPayload(int Size, DateTimeOffset Timestamp);

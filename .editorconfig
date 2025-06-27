@@ -103,7 +103,7 @@ dotnet_naming_rule.instance_fields_should_be_camel_case.severity = error
 dotnet_naming_rule.instance_fields_should_be_camel_case.symbols = instance_fields_non_const
 dotnet_naming_rule.instance_fields_should_be_camel_case.style = instance_field_style
 
-dotnet_naming_symbols.instance_fields_non_const.applicable_accessibilities = private, protected, protected_internal, private_protected
+dotnet_naming_symbols.instance_fields_non_const.applicable_accessibilities = private, private_protected
 dotnet_naming_symbols.instance_fields_non_const.applicable_kinds = field
 dotnet_naming_symbols.instance_fields_non_const.required_modifiers = 
 

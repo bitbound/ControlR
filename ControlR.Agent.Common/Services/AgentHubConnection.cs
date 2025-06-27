@@ -13,8 +13,6 @@ public interface IAgentHubConnection : IAsyncDisposable
   HubConnectionState State { get; }
   Task Connect(CancellationToken cancellationToken);
   Task SendDeviceHeartbeat();
-  Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
-  Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
 }
 
 internal class AgentHubConnection(
@@ -104,24 +102,7 @@ internal class AgentHubConnection(
       _logger.LogError(ex, "Error while sending device update.");
     }
   }
-
-  public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
-  {
-    await _hubConnection.Server.SendStreamerDownloadProgress(progressDto);
-  }
-
-  public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
-  {
-    try
-    {
-      await _hubConnection.Server.SendTerminalOutputToViewer(viewerConnectionId, outputDto);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending output to viewer.");
-    }
-  }
-
+  
   private async Task HubConnection_Reconnected(string? arg)
   {
     await SendDeviceHeartbeat();

@@ -21,7 +21,7 @@ internal class StreamerLauncherWindows(
 {
   private readonly SemaphoreSlim _createSessionLock = new(1, 1);
   private readonly IWin32Interop _win32Interop = win32Interop;
-  private readonly IProcessManager _processes = processes;
+  private readonly IProcessManager _processManager = processes;
   private readonly ISystemEnvironment _environment = environment;
   private readonly IStreamingSessionCache _streamingSessionCache = streamingSessionCache;
   private readonly IFileSystem _fileSystem = fileSystem;
@@ -47,7 +47,7 @@ internal class StreamerLauncherWindows(
         : "Default";
 
       var args =
-        $"--session-id {sessionId} --data-folder {dataFolder} --websocket-uri {websocketUri} --notify-user {notifyViewerOnSessionStart}";
+        $"--session-id {sessionId} --data-folder \"{dataFolder}\" --websocket-uri \"{websocketUri}\" --notify-user {notifyViewerOnSessionStart}";
       if (!string.IsNullOrWhiteSpace(viewerName))
       {
         args += $" --viewer-name=\"{viewerName}\"";
@@ -68,14 +68,41 @@ internal class StreamerLauncherWindows(
         var startupDir = _environment.StartupDirectory;
         var streamerDir = Path.Combine(startupDir, "Streamer");
         var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
+        //var shellPath = Path.Combine(startupDir, "ControlR.BackgroundShell.exe");
+        var shellPath = @"C:\Repos\ControlR.BackgroundShell\ControlR.BackgroundShell\bin\Debug\ControlR.BackgroundShell.exe";
 
-        _win32Interop.CreateInteractiveSystemProcess(
-          commandLine: $"\"{binaryPath}\" {args}",
-          targetSessionId: targetWindowsSession,
-          hiddenWindow: true,
-          startedProcess: out var process);
+        Process? process;
+        bool result;
 
-        if (process is null || process.Id == -1)
+        if (targetWindowsSession == 0)
+        {
+          var backgroundShells = _processManager
+            .GetProcessesByName("ControlR.BackgroundShell")
+            .Where(x => x.SessionId == targetWindowsSession);
+
+          if (!backgroundShells.Any())
+          {
+            if (!_win32Interop.StartProcessInBackgroundSession(shellPath, out _))
+            {
+              return Result.Fail("Failed to start background shell.");
+            }
+          }
+
+          result = _win32Interop.StartProcessInBackgroundSession(
+            commandLine: $"\"{binaryPath}\" {args}",
+            startedProcess: out process);
+        }
+        else
+        {
+          result = _win32Interop.CreateInteractiveSystemProcess(
+            commandLine: $"\"{binaryPath}\" {args}",
+            targetSessionId: targetWindowsSession,
+            hiddenWindow: true,
+            startedProcess: out process);
+        }
+
+
+        if (!result || process is null || process.Id == -1)
         {
           _logger.LogError("Failed to start remote control process. Removing files before next attempt.");
           var streamerZipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
@@ -128,23 +155,23 @@ internal class StreamerLauncherWindows(
       throw new FileNotFoundException("Streamer binary not found.", streamerPath);
     }
 
-    //var psi = new ProcessStartInfo()
-    //{
-    //  FileName = "cmd.exe",
-    //  Arguments = $"/k {streamerPath} {args}",
-    //  WorkingDirectory = Path.GetDirectoryName(streamerPath),
-    //  UseShellExecute = true
-    //};
-
-    var psi = new ProcessStartInfo
+    var psi = new ProcessStartInfo()
     {
-      FileName = streamerPath,
-      Arguments = args,
+      FileName = "cmd.exe",
+      Arguments = $"/k {streamerPath} {args}",
       WorkingDirectory = Path.GetDirectoryName(streamerPath),
       UseShellExecute = true
     };
 
-    return _processes.Start(psi);
+    //var psi = new ProcessStartInfo
+    //{
+    //  FileName = streamerPath,
+    //  Arguments = args,
+    //  WorkingDirectory = Path.GetDirectoryName(streamerPath),
+    //  UseShellExecute = true
+    //};
+
+    return _processManager.Start(psi);
   }
 
   // For debugging.

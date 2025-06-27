@@ -60,6 +60,7 @@ internal sealed class StreamerStreamingClient(
       Messenger.Register<WindowsSessionEndingMessage>(this, HandleWindowsSessionEndingMessage);
       Messenger.Register<WindowsSessionSwitchedMessage>(this, HandleWindowsSessionSwitchedMessage);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
+      Messenger.Register<CaptureMetricsChangedMessage>(this, HandleCaptureMetricsChanged);
       _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
 
       await SendDisplayData();
@@ -82,6 +83,19 @@ internal sealed class StreamerStreamingClient(
         "Error while initializing streaming session. " +
         "Streaming cannot start.  Shutting down.");
       _appLifetime.StopApplication();
+    }
+  }
+
+  private async Task HandleCaptureMetricsChanged(object subscriber, CaptureMetricsChangedMessage message)
+  {
+    try
+    {
+      var wrapper = DtoWrapper.Create(message.MetricsDto, DtoType.CaptureMetricsChanged);
+      await Send(wrapper, _appLifetime.ApplicationStopping);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling capture metrics change.");
     }
   }
 

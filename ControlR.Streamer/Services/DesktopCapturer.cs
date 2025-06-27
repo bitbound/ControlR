@@ -36,7 +36,7 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly IMemoryProvider _memoryProvider;
   private readonly TimeProvider _timeProvider;
   private readonly IScreenGrabber _screenGrabber;
-  private readonly IOptions<StartupOptions> _startupOptions;
+  private readonly IProcessManager _processManager;
   private readonly IWin32Interop _win32Interop;
   private DisplayInfo[] _displays;
   private bool _forceKeyFrame = true;
@@ -54,8 +54,8 @@ internal class DesktopCapturer : IDesktopCapturer
     IMemoryProvider memoryProvider,
     IWin32Interop win32Interop,
     ICaptureMetrics captureMetrics,
+    IProcessManager processManager,
     IHostApplicationLifetime appLifetime,
-    IOptions<StartupOptions> startupOptions,
     ILogger<DesktopCapturer> logger)
   {
     _timeProvider = timeProvider;
@@ -64,7 +64,7 @@ internal class DesktopCapturer : IDesktopCapturer
     _memoryProvider = memoryProvider;
     _win32Interop = win32Interop;
     _captureMetrics = captureMetrics;
-    _startupOptions = startupOptions;
+    _processManager = processManager;
     _appLifetime = appLifetime;
     _logger = logger;
     _displays = [.. _screenGrabber.GetDisplays()];
@@ -148,7 +148,6 @@ internal class DesktopCapturer : IDesktopCapturer
   public Task StartCapturingChanges()
   {
     StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
-    _captureMetrics.Start(_appLifetime.ApplicationStopping);
     return Task.CompletedTask;
   }
 
@@ -282,6 +281,9 @@ internal class DesktopCapturer : IDesktopCapturer
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
   {
+    var isBackgroundSession = _processManager.GetCurrentProcess().SessionId == 0;
+    _captureMetrics.Start(_appLifetime.ApplicationStopping);
+
     while (!cancellationToken.IsCancellationRequested)
     {
       try
@@ -298,7 +300,10 @@ internal class DesktopCapturer : IDesktopCapturer
           continue;
         }
 
-        _win32Interop.SwitchToInputDesktop();
+        if (!isBackgroundSession)
+        {
+          _win32Interop.SwitchToInputDesktop();
+        }
 
         using var captureResult = _screenGrabber.Capture(selectedDisplay, captureCursor: false);
 

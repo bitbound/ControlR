@@ -31,4 +31,5 @@ public enum DtoType
   WindowsSessionSwitched = 37,
   RefreshDeviceInfoRequest = 38,
   Ack = 39,
+  CaptureMetricsChanged = 40,
 }
