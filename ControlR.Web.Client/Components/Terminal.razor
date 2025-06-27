@@ -1,4 +1,5 @@
-﻿@if (_loading)
+﻿@using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions
+@if (_loading)
 {
     <div class="text-center mt-4">
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
@@ -22,20 +23,41 @@ else
             }
         </div>
         <div>
+            @if (_currentCompletions is not null)
+            {
+                <MudAutocomplete @ref="@(_completionsAutoComplete)"
+                                T="PwshCompletionMatch"
+                                OnKeyDown="@(OnCompletionInputKeyDown)"
+                                Clearable="true"
+                                ValueChanged="@(OnCompletionSelected)"
+                                SearchFunc="@SearchCompletions"
+                                ToStringFunc="@(x => x.ListItemText)"
+                                AutoFocus
+                                MaxItems="null"
+                                AnchorOrigin="@(Origin.TopCenter)"
+                                TransformOrigin="(Origin.BottomCenter)">
+                    <ItemTemplate>
+                        @context.ListItemText
+                    </ItemTemplate>
+                    <ItemSelectedTemplate>
+                        @context.ListItemText
+                    </ItemSelectedTemplate>
+                </MudAutocomplete>
+            }
             <MudTextField T="string"
-                          @ref="@(_inputElement)"
-                          InputId="@(_inputElementId)"
-                          @bind-Value="@_inputText"
-                          @bind-Text="@_inputText"
+                          @ref="@(_commandInputElement)"
+                          InputId="@(_commandInputElementId)"
+                          @bind-Value="@_commandInputText"
+                          @bind-Text="@_commandInputText"
                           Label="Enter a command"
                           HelperText="Type a command and press Enter to send"
                           TextUpdateSuppression="false"
-                          Lines="@InputLineCount"
+                          Lines="@CommandInputLineCount"
                           HelperTextOnFocus="true"
                           AutoFocus="true"
                           Immediate="true"
-                          UserAttributes="_inputAttributes"
-                          OnKeyUp="@OnInputKeyUp"
+                          UserAttributes="_commandInputAttributes"
+                          OnKeyDown="@OnInputKeyDown"
                           Class="mt-2" />
         </div>
         <div>

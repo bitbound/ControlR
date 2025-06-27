@@ -7,17 +7,23 @@ namespace ControlR.Web.Client.Components;
 
 public partial class Terminal : IAsyncDisposable
 {
-  private readonly Dictionary<string, object> _inputAttributes = new()
+  private readonly Dictionary<string, object> _commandInputAttributes = new()
   {
     ["autocapitalize"] = "off",
-    ["spellcheck"] = "false"
+    ["spellcheck"] = "false",
+    ["autocomplete"] = "off"
   };
-  private readonly string _inputElementId = $"terminal-input-{Guid.NewGuid()}";
+  private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
   private readonly ConcurrentList<string> _inputHistory = [];
+  private MudTextField<string> _commandInputElement = default!;
+  private string _commandInputText = string.Empty;
+
+  // Provided by UI.  Never null
+  private MudAutocomplete<PwshCompletionMatch> _completionsAutoComplete = default!;
+
+  private PwshCompletionsResponseDto? _currentCompletions;
   private bool _enableMultiline;
-  private MudTextField<string>? _inputElement;
   private int _inputHistoryIndex;
-  private string _inputText = string.Empty;
 
   private string? _lastCompletionInput;
   private int _lastCursorIndex;
@@ -25,9 +31,10 @@ public partial class Terminal : IAsyncDisposable
   private bool _taboutPrevented;
   private ElementReference _terminalOutputContainer;
 
+
+
   [CascadingParameter]
   public required DeviceContentInstance ContentInstance { get; init; }
-
   [Parameter]
   [EditorRequired]
   public required DeviceViewModel Device { get; init; }
@@ -54,7 +61,7 @@ public partial class Terminal : IAsyncDisposable
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
-  private int InputLineCount => _enableMultiline ? 6 : 1;
+  private int CommandInputLineCount => _enableMultiline ? 6 : 1;
 
   private ConcurrentQueue<TerminalOutputDto> Output { get; } = [];
 
@@ -71,14 +78,26 @@ public partial class Terminal : IAsyncDisposable
     }
   }
 
+  public async Task OnCompletionInputKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key.Equals("Escape", StringComparison.OrdinalIgnoreCase))
+    {
+      // Clear completions and focus command input
+      _currentCompletions = null;
+      await _commandInputElement.FocusAsync();
+      await InvokeAsync(StateHasChanged);
+      return;
+    }
+  }
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
 
-    if (_inputElement is not null && !_taboutPrevented)
+    if (_commandInputElement is not null && !_taboutPrevented)
     {
       _taboutPrevented = true;
-      await JsInterop.PreventTabOut(_inputElementId);
+      await JsInterop.PreventTabOut(_commandInputElementId);
     }
   }
 
@@ -155,7 +174,7 @@ public partial class Terminal : IAsyncDisposable
         "Current match index {Index} is out of bounds for completions array of length {Length}.",
         completion.CurrentMatchIndex,
         completion.CompletionMatches.Length);
-        
+
       Snackbar.Add("Malformed completion data received", Severity.Error);
       return;
     }
@@ -163,24 +182,19 @@ public partial class Terminal : IAsyncDisposable
     var match = completion.CompletionMatches[completion.CurrentMatchIndex];
 
     var replacementText = string.Concat(
-        _lastCompletionInput[..completion.ReplacementIndex],
-        match.CompletionText,
-        _lastCompletionInput[(completion.ReplacementIndex + completion.ReplacementLength)..]);
+      _lastCompletionInput[..completion.ReplacementIndex],
+      match.CompletionText,
+      _lastCompletionInput[(completion.ReplacementIndex + completion.ReplacementLength)..]);
 
-    _inputText = replacementText;
-  }
-
-  private async Task DisplayCompletions(PwshCompletionMatch[] completionMatches)
-  {
-    await InvokeAsync(StateHasChanged);
+    _commandInputText = replacementText;
   }
 
   private async Task GetAllCompletions()
   {
     if (string.IsNullOrWhiteSpace(_lastCompletionInput))
     {
-      _lastCompletionInput = _inputText;
-      _lastCursorIndex = await JsInterop.GetCursorIndexById(_inputElementId);
+      _lastCompletionInput = _commandInputText;
+      _lastCursorIndex = await JsInterop.GetCursorIndexById(_commandInputElementId);
       if (_lastCursorIndex < 0)
       {
         Snackbar.Add("Failed to get cursor index for completions", Severity.Error);
@@ -194,7 +208,20 @@ public partial class Terminal : IAsyncDisposable
       Snackbar.Add(completionResult.Reason, Severity.Error);
       return;
     }
-    await DisplayCompletions(completionResult.Value.CompletionMatches);
+
+    if (completionResult.Value.CompletionMatches.Length == 0)
+    {
+      Logger.LogInformation("No completions found for input: {Input}", _lastCompletionInput);
+      return;
+    }
+
+    Logger.LogInformation("Received {Count} completions for input: {Input}",
+      completionResult.Value.CompletionMatches.Length, _lastCompletionInput);
+
+    _currentCompletions = completionResult.Value;
+    await InvokeAsync(StateHasChanged);
+    await _completionsAutoComplete.OpenMenuAsync();
+    await _completionsAutoComplete.FocusAsync();
   }
   private async Task GetNextCompletion(bool forward)
   {
@@ -202,8 +229,8 @@ public partial class Terminal : IAsyncDisposable
     {
       if (string.IsNullOrWhiteSpace(_lastCompletionInput))
       {
-        _lastCompletionInput = _inputText;
-        _lastCursorIndex = await JsInterop.GetCursorIndexById(_inputElementId);
+        _lastCompletionInput = _commandInputText;
+        _lastCursorIndex = await JsInterop.GetCursorIndexById(_commandInputElementId);
         if (_lastCursorIndex < 0)
         {
           Snackbar.Add("Failed to get cursor index for completions", Severity.Error);
@@ -259,7 +286,7 @@ public partial class Terminal : IAsyncDisposable
   }
   private async Task HandleEnterKeyInput(KeyboardEventArgs args)
   {
-    if (string.IsNullOrWhiteSpace(_inputText))
+    if (string.IsNullOrWhiteSpace(_commandInputText))
     {
       return;
     }
@@ -276,17 +303,17 @@ public partial class Terminal : IAsyncDisposable
         _inputHistory.RemoveAt(0);
       }
 
-      _inputText = _inputText.Trim();
-      _inputHistory.Add(_inputText);
+      _commandInputText = _commandInputText.Trim();
+      _inputHistory.Add(_commandInputText);
       _inputHistoryIndex = _inputHistory.Count;
 
-      var result = await ViewerHub.SendTerminalInput(Device.Id, Id, _inputText);
+      var result = await ViewerHub.SendTerminalInput(Device.Id, Id, _commandInputText);
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);
       }
 
-      _inputText = string.Empty;
+      _commandInputText = string.Empty;
     }
     catch (Exception ex)
     {
@@ -314,10 +341,35 @@ public partial class Terminal : IAsyncDisposable
 
     await JsInterop.ScrollToEnd(_terminalOutputContainer);
   }
-
-  private async Task OnInputKeyUp(KeyboardEventArgs args)
+  private async Task OnCompletionSelected(PwshCompletionMatch match)
   {
-    if (_inputElement is null)
+    if (string.IsNullOrWhiteSpace(_lastCompletionInput))
+    {
+      Logger.LogWarning("No last completion input available to apply match.");
+      return;
+    }
+
+    if (_currentCompletions is null)
+    {
+      Logger.LogWarning("Current completions are null, cannot apply match.");
+      return;
+    }
+
+    var replacementText = string.Concat(
+      _lastCompletionInput[.._currentCompletions.ReplacementIndex],
+      match.CompletionText,
+      _lastCompletionInput[(_currentCompletions.ReplacementIndex + _currentCompletions.ReplacementLength)..]);
+
+    _commandInputText = replacementText;
+
+    _currentCompletions = null;
+    await _commandInputElement.FocusAsync();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task OnInputKeyDown(KeyboardEventArgs args)
+  {
+    if (_commandInputElement is null)
     {
       return;
     }
@@ -329,13 +381,13 @@ public partial class Terminal : IAsyncDisposable
 
     if (!_enableMultiline && args.Key.Equals("ArrowUp", StringComparison.OrdinalIgnoreCase))
     {
-      _inputText = GetTerminalHistory(false);
+      _commandInputText = GetTerminalHistory(false);
       return;
     }
 
     if (!_enableMultiline && args.Key.Equals("ArrowDown", StringComparison.OrdinalIgnoreCase))
     {
-      _inputText = GetTerminalHistory(true);
+      _commandInputText = GetTerminalHistory(true);
       return;
     }
 
@@ -355,5 +407,25 @@ public partial class Terminal : IAsyncDisposable
     {
       await GetAllCompletions();
     }
+  }
+
+  private async Task<IEnumerable<PwshCompletionMatch>> SearchCompletions(string value, CancellationToken token)
+  {
+    var _currentMatches = _currentCompletions?.CompletionMatches;
+
+    if (_currentMatches is not { Length: > 0 })
+    {
+      // If no completions are available, return an empty list
+      return await Array.Empty<PwshCompletionMatch>().AsTaskResult();
+    }
+
+    if (string.IsNullOrEmpty(value))
+    {
+      return await _currentMatches.AsTaskResult();
+    }
+
+    return await _currentMatches
+      .Where(x => x.ListItemText.Contains(value, StringComparison.InvariantCultureIgnoreCase))
+      .AsTaskResult();
   }
 }

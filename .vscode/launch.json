@@ -26,7 +26,7 @@
       "preLaunchTask": "build server",
       "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
-      "console": "internalConsole"
+      "console": "internalConsole",
     },
     {
       "name": "LoadTester",
@@ -43,21 +43,29 @@
   ],
   "compounds": [
     {
-      "name": "Server + Compose + Agent",
+      "name": "Full Stack",
       "preLaunchTask": "compose",
-      "configurations": ["Server (https)", "Agent (Run)"],
+      "configurations": [
+        "Server (https)",
+        "Agent (Run)"
+      ],
       "stopAll": true
     },
     {
       "name": "Load Test",
       "preLaunchTask": "compose",
-      "configurations": ["Server (https)", "LoadTester"],
+      "configurations": [
+        "Server (https)",
+        "LoadTester"
+      ],
       "stopAll": true
     },
     {
-      "name": "Server + Compose",
+      "name": "Backend",
       "preLaunchTask": "compose",
-      "configurations": ["Server (https)"],
+      "configurations": [
+        "Server (https)"
+      ],
       "stopAll": true
     }
   ]

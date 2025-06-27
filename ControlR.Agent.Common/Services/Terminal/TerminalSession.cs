@@ -179,17 +179,8 @@ internal class TerminalSession(
       // Set up event handlers
       _runspace.StateChanged += Runspace_StateChanged;
 
-      // Send initial prompt
+      // Send shell information to the viewer
       await SendOutput($"PowerShell {PSVersionInfo.PSVersion} on {Environment.OSVersion}", TerminalOutputKind.StandardOutput);
-
-      // Platform-specific shell guidance
-      var shellGuidance = _environment.Platform switch
-      {
-        SystemPlatform.Linux => "Type 'bash' to start bash, or use PowerShell commands.",
-        SystemPlatform.MacOs => "Type 'zsh' to start zsh, or use PowerShell commands.",
-        _ => "Use PowerShell commands or launch other shells."
-      };
-      await SendOutput(shellGuidance, TerminalOutputKind.StandardOutput);
 
       // Send initial prompt
       await SendPrompt();

@@ -45,6 +45,9 @@ function log(category, message) {
 }
 function preventTabOut(element) {
   element.addEventListener("keydown", ev => {
+    if (!ev.key) {
+      return;
+    }
     if (ev.key.toLowerCase() == "tab") {
       ev.preventDefault();
     }
@@ -74,19 +77,22 @@ function setClipboardText(text) {
  * Try to acquire a wake lock to keep the screen from going to sleep.
  * @param {boolean} isWakeEnabled
  */
-function setScreenWakeLock(isWakeEnabled) {
+async function setScreenWakeLock(isWakeEnabled) {
   _wakeEnabled = isWakeEnabled;
+
   if (!navigator.wakeLock) {
     console.warn("Wake Lock API is not supported on this browser.");
     return;
   }
+
   if (isWakeEnabled) {
     console.log("Requesting screen wake lock.");
     _wakeLock?.release();
-    _wakeLock ??= navigator.wakeLock.request("screen");
+    _wakeLock ??= await navigator.wakeLock.request("screen");
     console.log("Wake lock acquired.");
     return;
   }
+
   console.log("Releasing screen wake lock.");
   _wakeLock?.release();
   _wakeLock = null;
