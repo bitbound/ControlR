@@ -62,7 +62,7 @@ internal class TerminalStore(
       return Result.Fail<PwshCompletionsResponseDto>("Terminal session not found.").AsTaskResult();
     }
 
-    var completions = session.GetCompletions(requestDto.LastCompletionInput, requestDto.LastCursorIndex, requestDto.Forward);
+    var completions = session.GetCompletions(requestDto);
     return Result.Ok(completions).AsTaskResult();
   }
 

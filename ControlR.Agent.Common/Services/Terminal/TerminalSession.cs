@@ -11,7 +11,7 @@ public interface ITerminalSession : IDisposable
   bool IsDisposed { get; }
 
   TerminalSessionKind SessionKind { get; }
-  PwshCompletionsResponseDto GetCompletions(string inputText, int currentIndex, bool? forward);
+  PwshCompletionsResponseDto GetCompletions(PwshCompletionsRequestDto requestDto);
 
   Task<Result> WriteInput(string input, CancellationToken cancellationToken);
 }
@@ -50,8 +50,14 @@ internal class TerminalSession(
     Dispose(true);
     GC.SuppressFinalize(this);
   }
-  public PwshCompletionsResponseDto GetCompletions(string inputText, int currentIndex, bool? forward)
+  public PwshCompletionsResponseDto GetCompletions(PwshCompletionsRequestDto requestDto)
   {
+    var inputText = requestDto.LastCompletionInput;
+    var currentIndex = requestDto.LastCursorIndex;
+    var forward = requestDto.Forward;
+    var page = requestDto.Page;
+    var pageSize = requestDto.PageSize;
+
     if (_lastCompletion is null ||
         inputText != _lastInputText)
     {
@@ -64,18 +70,42 @@ internal class TerminalSession(
       _lastCompletion.GetNextResult(forward.Value);
     }
 
-    var completionMatches = _lastCompletion.CompletionMatches
+    var totalCount = _lastCompletion.CompletionMatches.Count;
+
+    if (totalCount > PwshCompletionsResponseDto.MaxRetrievableItems)
+    {
+      return new PwshCompletionsResponseDto(
+        _lastCompletion.CurrentMatchIndex,
+        _lastCompletion.ReplacementIndex,
+        _lastCompletion.ReplacementLength,
+        [],
+        false,
+        totalCount,
+        page);
+    }
+
+    var pagedMatches = _lastCompletion.CompletionMatches
+      .Skip(page * pageSize)
+      .Take(pageSize)
+      .ToArray();
+
+    var pwshCompletions = pagedMatches
       .Select(x => new PwshCompletionMatch(x.CompletionText,
           x.ListItemText,
           (PwshCompletionMatchType)x.ResultType,
           x.ToolTip))
       .ToArray();
 
+    var hasMorePages = (page + 1) * pageSize < totalCount;
+
     var completionDto = new PwshCompletionsResponseDto(
       _lastCompletion.CurrentMatchIndex,
       _lastCompletion.ReplacementIndex,
       _lastCompletion.ReplacementLength,
-      completionMatches);
+      pwshCompletions,
+      hasMorePages,
+      totalCount,
+      page);
 
     return completionDto;
   }

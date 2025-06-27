@@ -20,7 +20,9 @@ public interface IViewerHubConnection
     Guid terminalId,
     string lastCompletionInput,
     int lastCursorIndex,
-    bool forward);
+    bool forward,
+    int page = 0,
+    int pageSize = PwshCompletionsRequestDto.DefaultPageSize);
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebSocketRelayOrigin();
   Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
@@ -120,7 +122,9 @@ internal class ViewerHubConnection(
     Guid terminalId,
     string lastCompletionInput,
     int lastCursorIndex,
-    bool forward)
+    bool forward,
+    int page = 0,
+    int pageSize = PwshCompletionsRequestDto.DefaultPageSize)
   {
     return await TryInvoke(
       async () =>
@@ -132,7 +136,9 @@ internal class ViewerHubConnection(
           terminalId,
           lastCompletionInput,
           lastCursorIndex,
-          forward);
+          forward,
+          page,
+          pageSize);
 
         var result = await _viewerHub.Server.GetPwshCompletions(deviceId, request);
         if (!result.IsSuccess)

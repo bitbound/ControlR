@@ -5,4 +5,9 @@ public record PwshCompletionsRequestDto(
   Guid TerminalId,
   string LastCompletionInput,
   int LastCursorIndex,
-  bool Forward);
+  bool? Forward,
+  int Page,
+  int PageSize)
+{
+  public const int DefaultPageSize = 50;
+}

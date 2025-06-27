@@ -5,5 +5,11 @@ public record PwshCompletionsResponseDto(
     int CurrentMatchIndex,
     int ReplacementIndex,
     int ReplacementLength,
-    PwshCompletionMatch[] CompletionMatches
-);
+    PwshCompletionMatch[] CompletionMatches,
+    bool HasMorePages = false,
+    int TotalCount = 0,
+    int CurrentPage = 0
+)
+{
+    public const int MaxRetrievableItems = 500;
+};

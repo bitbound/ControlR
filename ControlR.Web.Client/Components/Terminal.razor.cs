@@ -202,23 +202,59 @@ public partial class Terminal : IAsyncDisposable
       }
     }
 
-    var completionResult = await ViewerHub.GetPwshCompletions(Device.Id, Id, _lastCompletionInput, _lastCursorIndex, false);
-    if (!completionResult.IsSuccess)
-    {
-      Snackbar.Add(completionResult.Reason, Severity.Error);
-      return;
-    }
+    // Start with an empty list to collect all completions
+    var allMatches = new List<PwshCompletionMatch>();
+    var currentPage = 0;
+    PwshCompletionsResponseDto? lastResponse = null;
 
-    if (completionResult.Value.CompletionMatches.Length == 0)
+    // Keep requesting pages until we have all completions
+    do
+    {
+      var completionResult = await ViewerHub.GetPwshCompletions(
+        Device.Id, 
+        Id, 
+        _lastCompletionInput, 
+        _lastCursorIndex, 
+        false, 
+        currentPage);
+
+      if (!completionResult.IsSuccess)
+      {
+        Snackbar.Add(completionResult.Reason, Severity.Error);
+        return;
+      }
+
+      if (completionResult.Value.TotalCount >= PwshCompletionsResponseDto.MaxRetrievableItems)
+      {
+        Snackbar.Add($"Too many items to retrieve ({completionResult.Value.TotalCount})", Severity.Warning);
+        return;
+      }
+
+      lastResponse = completionResult.Value;
+      allMatches.AddRange(lastResponse.CompletionMatches);
+      currentPage++;
+
+    } while (lastResponse.HasMorePages);
+
+    if (allMatches.Count == 0)
     {
       Logger.LogInformation("No completions found for input: {Input}", _lastCompletionInput);
       return;
     }
 
     Logger.LogInformation("Received {Count} completions for input: {Input}",
-      completionResult.Value.CompletionMatches.Length, _lastCompletionInput);
+      allMatches.Count, _lastCompletionInput);
 
-    _currentCompletions = completionResult.Value;
+    // Create a combined response with all matches
+    _currentCompletions = new PwshCompletionsResponseDto(
+      lastResponse.CurrentMatchIndex,
+      lastResponse.ReplacementIndex,
+      lastResponse.ReplacementLength,
+      [.. allMatches],
+      false, // No more pages since we collected everything
+      allMatches.Count,
+      0);
+
     await InvokeAsync(StateHasChanged);
     await _completionsAutoComplete.OpenMenuAsync();
     await _completionsAutoComplete.FocusAsync();
@@ -258,7 +294,6 @@ public partial class Terminal : IAsyncDisposable
       Snackbar.Add("An error occurred while getting completions", Severity.Error);
       return;
     }
-
   }
 
   private string GetTerminalHistory(bool forward)
