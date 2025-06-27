@@ -1,8 +1,6 @@
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
-using ControlR.Web.Client.Services.Stores;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Extensions;

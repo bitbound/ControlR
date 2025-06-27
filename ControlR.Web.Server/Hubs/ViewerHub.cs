@@ -16,7 +16,6 @@ public class ViewerHub(
   IServerStatsProvider serverStatsProvider,
   IIpApi ipApi,
   IWsRelayApi wsRelayApi,
-  IStreamStore streamStore,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger) : HubWithItems<IViewerHubClient>, IViewerHub
 {
@@ -27,7 +26,6 @@ public class ViewerHub(
   private readonly IIpApi _ipApi = ipApi;
   private readonly ILogger<ViewerHub> _logger = logger;
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
-  private readonly IStreamStore _streamStore = streamStore;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IWsRelayApi _wsRelayApi = wsRelayApi;
   public Task<bool> CheckIfServerAdministrator()
@@ -92,43 +90,6 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while getting agent count.");
       return Result.Fail<ServerStatsDto>("Failed to get agent count.");
-    }
-  }
-
-  public async IAsyncEnumerable<byte[]> GetStream(Guid streamId)
-  {
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    var sessionResult = await _streamStore.WaitForStreamSession(
-        streamId,
-        Context.ConnectionId,
-        cts.Token);
-
-    if (!sessionResult.IsSuccess)
-    {
-      var toastInfo = new ToastInfo(sessionResult.Reason, MessageSeverity.Error);
-      await Clients.Caller.InvokeToast(toastInfo);
-      yield break;
-    }
-
-    var signaler = sessionResult.Value;
-
-    if (signaler.Stream is null)
-    {
-      _logger.LogError("Stream was null.");
-      yield break;
-    }
-
-    try
-    {
-      await foreach (var chunk in signaler.Stream)
-      {
-        yield return chunk;
-      }
-    }
-    finally
-    {
-      signaler.EndSignal.Set();
-      _logger.LogInformation("Streaming session ended for {sessionId}.", streamId);
     }
   }
 

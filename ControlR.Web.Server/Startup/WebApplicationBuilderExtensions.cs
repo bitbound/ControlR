@@ -185,7 +185,6 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddWebSocketRelay();
-    builder.Services.AddSingleton<IStreamStore, StreamStore>();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
