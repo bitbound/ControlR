@@ -10,7 +10,7 @@ public interface ITerminalSession : IDisposable
   TerminalSessionKind SessionKind { get; }
   event EventHandler? ProcessExited;
 
-  Task<Result> WriteInput(string input, TimeSpan timeout);
+  Task<Result> WriteInput(string input, CancellationToken cancellationToken);
 }
 
 internal class TerminalSession(
@@ -46,7 +46,29 @@ internal class TerminalSession(
     GC.SuppressFinalize(this);
   }
 
-  public async Task<Result> WriteInput(string input, TimeSpan timeout)
+  public Task<Result> WriteInput(string input, CancellationToken cancellationToken)
+  {
+    // Check basic conditions before proceeding
+    if (_powerShell == null || _runspace?.RunspaceStateInfo.State != RunspaceState.Opened)
+    {
+      return Task.FromResult(Result.Fail("PowerShell session is not running."));
+    }
+
+    // Check if we're waiting for input from a Read-Host or similar
+    if (_pendingInputRequest != null)
+    {
+      _pendingInputRequest.SetResult(input);
+      _pendingInputRequest = null;
+      return Task.FromResult(Result.Ok());
+    }
+
+    // Start the PowerShell execution asynchronously and return OK immediately
+    ExecutePowerShellCommandAsync(input, cancellationToken).Forget();
+
+    return Result.Ok().AsTaskResult();
+  }
+
+  private async Task ExecutePowerShellCommandAsync(string input, CancellationToken cancellationToken)
   {
     await _writeLock.WaitAsync();
 
@@ -54,17 +76,8 @@ internal class TerminalSession(
     {
       if (_powerShell == null || _runspace?.RunspaceStateInfo.State != RunspaceState.Opened)
       {
-        throw new InvalidOperationException("PowerShell session is not running.");
-      }
-
-      using var cts = new CancellationTokenSource(timeout);
-
-      // Check if we're waiting for input from a Read-Host or similar
-      if (_pendingInputRequest != null)
-      {
-        _pendingInputRequest.SetResult(input);
-        _pendingInputRequest = null;
-        return Result.Ok();
+        await SendOutput("PowerShell session is not running.", TerminalOutputKind.StandardError);
+        return;
       }
 
       if (!string.IsNullOrWhiteSpace(input))
@@ -74,7 +87,7 @@ internal class TerminalSession(
         _powerShell.AddScript(input);
 
         // Execute the command asynchronously
-        var results = await _powerShell.InvokeAsync().WaitAsync(cts.Token);
+        var results = await _powerShell.InvokeAsync().WaitAsync(cancellationToken);
 
         // Handle any errors
         if (_powerShell.HadErrors)
@@ -96,18 +109,18 @@ internal class TerminalSession(
 
       // Always send a new prompt after command execution
       await SendPrompt();
-
-      return Result.Ok();
     }
-    catch (OperationCanceledException ex)
+    catch (OperationCanceledException)
     {
-      _logger.LogError(ex, "Timed out while executing PowerShell command.");
-      return Result.Fail("Command execution timed out.");
+      _logger.LogWarning("PowerShell command execution timed out.");
+      await SendOutput("Command execution timed out.", TerminalOutputKind.StandardError);
+      await SendPrompt();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while executing PowerShell command.");
-      return Result.Fail("An error occurred during command execution.");
+      _logger.LogError(ex, "Error while executing PowerShell command: {Input}", input);
+      await SendOutput($"Error: {ex.Message}", TerminalOutputKind.StandardError);
+      await SendPrompt();
     }
     finally
     {

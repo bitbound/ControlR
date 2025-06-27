@@ -122,7 +122,10 @@ internal class AgentHubClient(
   {
     try
     {
-      return await _terminalStore.WriteInput(dto.TerminalId, dto.Input);
+      return await _terminalStore.WriteInput(
+        dto.TerminalId,
+        dto.Input,
+        _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {

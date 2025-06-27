@@ -11,7 +11,7 @@ public interface ITerminalStore
 
   bool TryRemove(Guid terminalId, [NotNullWhen(true)] out ITerminalSession? terminalSession);
 
-  Task<Result> WriteInput(Guid terminalId, string input);
+  Task<Result> WriteInput(Guid terminalId, string input, CancellationToken cancellationToken);
 }
 
 internal class TerminalStore(
@@ -67,7 +67,7 @@ internal class TerminalStore(
     return false;
   }
 
-  public async Task<Result> WriteInput(Guid terminalId, string input)
+  public async Task<Result> WriteInput(Guid terminalId, string input, CancellationToken cancellationToken)
   {
     try
     {
@@ -88,7 +88,7 @@ internal class TerminalStore(
         return Result.Fail("Terminal session has ended.");
       }
 
-      return await session.WriteInput(input, TimeSpan.FromSeconds(5));
+      return await session.WriteInput(input, cancellationToken);
     }
     catch (Exception ex)
     {
