@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.FileProviders;
@@ -12,6 +12,7 @@ public class VersionController(IFileProvider phyiscalFileProvider) : ControllerB
 {
   [HttpGet("agent")]
   [OutputCache]
+  [Obsolete("Use '/api/version/agents' instead.")]
   public async Task<ActionResult<Version>> GetCurrentAgentVersion()
   {
     var fileInfo = phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/AgentVersion.txt");
@@ -31,6 +32,30 @@ public class VersionController(IFileProvider phyiscalFileProvider) : ControllerB
     }
 
     return Ok(version);
+  }
+
+  [HttpGet("agents")]
+  [OutputCache]
+  public async Task<ActionResult<AgentVersionsDto>> GetAgentVersions()
+  {
+    var fileInfo = phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/AgentVersions.json");
+
+    if (!fileInfo.Exists || string.IsNullOrWhiteSpace(fileInfo.PhysicalPath))
+    {
+      return NotFound();
+    }
+
+    await using var fs = fileInfo.CreateReadStream();
+    using var sr = new StreamReader(fs);
+    var json = await sr.ReadToEndAsync();
+
+    var versions = JsonSerializer.Deserialize<AgentVersionsDto>(json);
+    if (versions is null)
+    {
+      return NotFound();
+    }
+
+    return Ok(versions);
   }
 
   [HttpGet("server")]

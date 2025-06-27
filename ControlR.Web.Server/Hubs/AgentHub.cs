@@ -1,6 +1,5 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
@@ -36,16 +35,31 @@ public class AgentHub(
     {
       if (Device is { } cachedDeviceDto)
       {
-        var dto = cachedDeviceDto with
-        {
-          IsOnline = false,
-          LastSeen = _timeProvider.GetLocalNow()
-        };
+        // Check if this is still the current connection for this device
+        var currentDevice = await _appDb.Devices
+          .Where(d => d.Id == cachedDeviceDto.Id)
+          .Select(d => d.ConnectionId)
+          .FirstOrDefaultAsync();
 
-        var updateResult = await UpdateDeviceEntity(dto);
-        if (updateResult.IsSuccess)
+        // Only mark offline if this was the current connection
+        if (currentDevice == Context.ConnectionId)
         {
-          await SendDeviceUpdate(updateResult.Value, dto);
+          var dto = cachedDeviceDto with
+          {
+            IsOnline = false,
+            LastSeen = _timeProvider.GetLocalNow()
+          };
+
+          var updateResult = await UpdateDeviceEntity(dto);
+          if (updateResult.IsSuccess)
+          {
+            await SendDeviceUpdate(updateResult.Value, dto);
+          }
+        }
+        else
+        {
+          _logger.LogDebug("Skipping offline update - device has reconnected with connection {CurrentConnectionId}, disconnecting {OldConnectionId}",
+            currentDevice, Context.ConnectionId);
         }
       }
       await base.OnDisconnectedAsync(exception);

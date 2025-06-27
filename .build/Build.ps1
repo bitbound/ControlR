@@ -15,7 +15,9 @@ param (
 
   [switch]$BuildAgent,
 
-  [switch]$BuildStreamer
+  [switch]$BuildStreamer,
+
+  [switch]$UpdateMacVersions
 )
 
 
@@ -74,12 +76,15 @@ if ($BuildAgent) {
   dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
+  dotnet publish -r win-x64 -o "$DownloadsFolder\win-x64\" $CommonArgs "$Root\ControlR.Agent\"
+  Check-LastExitCode
+
   dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
+  # These will need to be built on MacOS for code-signing.
   #dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"
   #Check-LastExitCode
-
   #dotnet publish -r osx-x64 -o "$DownloadsFolder\osx-x64\" $CommonArgs "$Root\ControlR.Agent\"
   #Check-LastExitCode
 
@@ -87,6 +92,24 @@ if ($BuildAgent) {
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
   Check-LastExitCode
 
+  if (!(Test-Path -Path "$DownloadsFolder\AgentVersions.json")){
+    Set-Content -Path "$DownloadsFolder\AgentVersions.json" -Value "{}" -Force -Encoding UTF8
+  }
+  [hashtable]$AgentVersions = Get-Content -Path "$DownloadsFolder\AgentVersions.json" | ConvertFrom-Json
+  if (!$AgentVersions) {
+    $AgentVersions = @{}
+  }
+
+  $AgentVersions["WinX86"] = $CurrentVersion
+  $AgentVersions["WinX64"] = $CurrentVersion
+  $AgentVersions["LinuxX64"] = $CurrentVersion
+
+  if ($UpdateMacVersions) {
+    $AgentVersions["MacOsArm64"] = $CurrentVersion
+    $AgentVersions["MacOsX64"] = $CurrentVersion
+  }
+
+  Set-Content -Path "$DownloadsFolder\AgentVersions.json" -Value ($AgentVersions | ConvertTo-Json) -Force -Encoding UTF8
   Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
 

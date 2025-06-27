@@ -2,7 +2,9 @@
 
 public static class HttpConstants
 {
+  [Obsolete("Use '/api/version/agents' instead.")]
   public const string AgentVersionEndpoint = "/api/version/agent";
+  public const string AgentVersionsEndpoint = "/api/version/agents";
   public const string DevicesEndpoint = "/api/devices";
   public const string DeviceTagsEndpoint = "/api/device-tags";
   public const string InstallerKeysEndpoint = "/api/installer-keys";

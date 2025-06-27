@@ -59,6 +59,7 @@ internal class AgentInstallerLinux(
       if (Libc.Geteuid() != 0)
       {
         _logger.LogError("Install command must be run with sudo.");
+        return;
       }
 
       TryClearDotnetExtractDir();
@@ -75,6 +76,7 @@ internal class AgentInstallerLinux(
         _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
       }
 
+      _logger.LogInformation("Copying agent executable to {TargetPath}.", targetPath);
       await retryer.Retry(
         () =>
         {

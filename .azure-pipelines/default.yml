@@ -10,7 +10,7 @@ trigger:
 name: $(MajorBuild).$(MinorBuild).$(Rev:r).0
 jobs:
   - job: Mac_AppleSilicon_Build
-    displayName: Apple Silicon Build
+    displayName: Apple Build
     pool:
       vmImage: macos-latest
     steps:
@@ -85,7 +85,7 @@ jobs:
         displayName: Invoke Build.ps1
         inputs:
           filePath: .build/Build.ps1
-          arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer
+          arguments: -SignToolPath "$(SignToolPath)" -CertificateThumbprint "$(CertificateThumbprint)" -OutputPath "$(Build.SourcesDirectory)\ControlR.Server\bin\publish" -CurrentVersion "$(Build.BuildNumber)" -BuildAgent -BuildStreamer -UpdateMacVersions
           pwsh: true
 
       - task: PowerShell@2

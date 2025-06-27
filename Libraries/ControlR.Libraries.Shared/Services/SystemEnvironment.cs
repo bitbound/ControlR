@@ -83,8 +83,8 @@ public class SystemEnvironment : ISystemEnvironment
         "win-x64" => RuntimeId.WinX64,
         "win-x86" => RuntimeId.WinX86,
         "linux-x64" => RuntimeId.LinuxX64,
-        "osx-x64" => RuntimeId.OsxX64,
-        "osx-arm64" => RuntimeId.OsxArm64,
+        "osx-x64" => RuntimeId.MacOsX64,
+        "osx-arm64" => RuntimeId.MacOsArm64,
         _ => throw new PlatformNotSupportedException()
       };
     }

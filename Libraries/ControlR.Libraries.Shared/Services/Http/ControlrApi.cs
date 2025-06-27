@@ -30,7 +30,7 @@ public interface IControlrApi
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
-  Task<Result<Version>> GetCurrentAgentVersion();
+  Task<Result<AgentVersionsDto>> GetCurrentAgentVersions();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
@@ -252,13 +252,13 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<Version>> GetCurrentAgentVersion()
+  public async Task<Result<AgentVersionsDto>> GetCurrentAgentVersions()
   {
     return await TryCallApi(async () =>
     {
-      var version = await _client.GetFromJsonAsync<Version>(HttpConstants.AgentVersionEndpoint);
-      _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
-      return version;
+      var versions = await _client.GetFromJsonAsync<AgentVersionsDto>(HttpConstants.AgentVersionsEndpoint);
+      _logger.LogInformation("Latest Agent versions on server: {@LatestAgentVersions}", versions);
+      return versions;
     });
   }
 

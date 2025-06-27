@@ -12,28 +12,28 @@ internal static class PathConstants
 
   public static string GetLogsPath(string? instanceId)
   {
-    string? logsDir;
-
     if (OperatingSystem.IsWindows())
     {
-      logsDir = Path.Combine(
+      var logsDir = Path.Combine(
           Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          "ControlR",
-          "Logs");
+          "ControlR");
+
+      logsDir = AppendSubDirectories(logsDir, instanceId);
+      return Path.Combine(logsDir, "Logs", "ControlR.Agent", "LogFile.log");
     }
     else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
-      logsDir = ElevationCheckerLinux.Instance.IsElevated()
+      var logsDir = ElevationCheckerLinux.Instance.IsElevated()
         ? "/var/log/controlr"
         : "~/.controlr/logs";
+
+      logsDir = AppendSubDirectories(logsDir, instanceId);
+      return Path.Combine(logsDir, "ControlR.Agent", "LogFile.log");
     }
     else
     {
       throw new PlatformNotSupportedException();
     }
-
-    logsDir = AppendSubDirectories(logsDir, instanceId);
-    return Path.Combine(logsDir, "ControlR.Agent", "LogFile.log");
   }
 
   private static string GetSettingsDirectory(string? instanceId)

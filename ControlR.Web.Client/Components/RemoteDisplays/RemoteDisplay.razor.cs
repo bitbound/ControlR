@@ -249,6 +249,10 @@ public partial class RemoteDisplay : IAsyncDisposable
     if (isTouchScreen)
     {
       _controlMode = ControlMode.Touch;
+    }
+
+    if (CurrentBreakpoint <= Breakpoint.Sm)
+    {
       _viewMode = ViewMode.Original;
     }
 

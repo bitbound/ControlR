@@ -60,6 +60,7 @@ internal class AgentInstallerMac(
       if (Libc.Geteuid() != 0)
       {
         _logger.LogError("Install command must be run with sudo.");
+        return;
       }
 
       var installDir = GetInstallDirectory();
@@ -74,6 +75,7 @@ internal class AgentInstallerMac(
         _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
       }
 
+      _logger.LogInformation("Copying agent executable to {TargetPath}.", targetPath);
       await retryer.Retry(
         () =>
         {
@@ -113,7 +115,7 @@ internal class AgentInstallerMac(
 
       _logger.LogInformation("Kickstarting service.");
       psi.Arguments = "launchctl kickstart -k system/dev.jaredg.controlr-agent";
-      _ = _processInvoker.Start(psi);
+      await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
       _logger.LogInformation("Installer finished.");
     }

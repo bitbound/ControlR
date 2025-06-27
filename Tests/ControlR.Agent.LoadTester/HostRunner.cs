@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using ControlR.Agent.LoadTester;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
@@ -14,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using ControlR.Agent.LoadTester.Helpers;
+using System.Net.Http.Json;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Agent.LoadTester;
 public static class HostRunner
@@ -126,8 +127,9 @@ public static class HostRunner
       {
         try
         {
-          var version = await client.GetStringAsync(new Uri(serverUri, "/downloads/AgentVersion.txt"));
-          return Version.Parse(version.Trim());
+          var version = await client.GetFromJsonAsync<AgentVersionsDto>(new Uri(serverUri, "/downloads/AgentVersions.json"))
+            ?? throw new Exception("Failed to retrieve agent versions from server.");
+          return version.WinX86;
         }
         catch (Exception ex)
         {

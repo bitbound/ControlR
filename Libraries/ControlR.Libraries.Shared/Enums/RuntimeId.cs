@@ -4,7 +4,7 @@ public enum RuntimeId
 {
   WinX86,
   WinX64,
-  OsxArm64,
-  OsxX64,
+  MacOsArm64,
+  MacOsX64,
   LinuxX64
 }

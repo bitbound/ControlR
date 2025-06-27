@@ -23,7 +23,6 @@ internal class TerminalSession(
   IHubConnection<IAgentHub> hubConnection,
   ILogger<TerminalSession> logger) : ITerminalSession
 {
-  private readonly StringBuilder _inputBuilder = new();
   private readonly Process _shellProcess = new();
   private readonly SemaphoreSlim _writeLock = new(1, 1);
   private readonly string _viewerConnectionId = viewerConnectionId;
@@ -59,25 +58,16 @@ internal class TerminalSession(
         throw new InvalidOperationException("Shell process is not running.");
       }
 
-      _inputBuilder.Clear();
-      _inputBuilder.Append(input);
       using var cts = new CancellationTokenSource(timeout);
 
-      await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
-      _inputBuilder.Clear();
-
-      if (SessionKind is TerminalSessionKind.Bash or TerminalSessionKind.Sh)
+      // Write the actual input
+      if (!string.IsNullOrEmpty(input))
       {
-        _inputBuilder.Append(@"echo ""$(whoami)@$(cat /etc/hostname):$PWD$""");
-        await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
-        _inputBuilder.Clear();
+        await _shellProcess.StandardInput.WriteLineAsync(input);
       }
 
-      // If the input was not empty, add a newline.
-      if (!string.IsNullOrWhiteSpace(input))
-      {
-        await _shellProcess.StandardInput.WriteLineAsync(_inputBuilder, cts.Token);
-      }
+      // Send prompt command after the input to show current state
+      await WritePromptCommand(cts.Token);
 
       return Result.Ok();
     }
@@ -253,6 +243,26 @@ internal class TerminalSession(
     {
       _logger.LogError(ex, "Error while trying to get pwsh path.");
       return Result.Fail<string>("An error occurred.");
+    }
+  }
+
+  private async Task WritePromptCommand(CancellationToken cancellationToken)
+  {
+    string promptCommand = SessionKind switch
+    {
+      TerminalSessionKind.Bash or TerminalSessionKind.Sh =>
+        @"echo ""$(whoami)@$(cat /etc/hostname):$PWD$""",
+      TerminalSessionKind.Zsh =>
+        @"echo ""$(whoami)@$(hostname):$PWD %""",
+      // PowerShell automatically outputs its prompt, so no manual prompt needed
+      TerminalSessionKind.PowerShell or TerminalSessionKind.WindowsPowerShell => 
+        string.Empty,
+      _ => string.Empty
+    };
+
+    if (!string.IsNullOrEmpty(promptCommand))
+    {
+      await _shellProcess.StandardInput.WriteLineAsync(promptCommand);
     }
   }
 }

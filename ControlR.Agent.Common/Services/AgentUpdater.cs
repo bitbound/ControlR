@@ -14,6 +14,7 @@ internal interface IAgentUpdater : IHostedService
 }
 
 internal class AgentUpdater(
+  TimeProvider timeProvider,
   IControlrApi controlrApi,
   IDownloadsApi downloadsApi,
   IFileSystem fileSystem,
@@ -25,6 +26,7 @@ internal class AgentUpdater(
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
@@ -182,7 +184,7 @@ internal class AgentUpdater(
 
     await CheckForUpdate(stoppingToken);
 
-    using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
+    using var timer = new PeriodicTimer(TimeSpan.FromHours(6), _timeProvider);
 
     while (await timer.WaitForNextTickAsync(stoppingToken))
     {

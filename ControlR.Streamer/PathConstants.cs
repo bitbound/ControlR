@@ -6,10 +6,9 @@ internal static class PathConstants
   {
     var logsDir = Path.Combine(
           Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          "ControlR",
-          "Logs");
+          "ControlR");
     logsDir = AppendSubDirectories(logsDir, appDataFolder);
-    return Path.Combine(logsDir, "ControlR.Streamer", "LogFile.log");
+    return Path.Combine(logsDir, "Logs", "ControlR.Streamer", "LogFile.log");
   }
 
   private static string AppendSubDirectories(string rootDir, string? instanceId)

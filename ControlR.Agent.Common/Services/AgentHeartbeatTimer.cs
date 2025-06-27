@@ -3,21 +3,22 @@
 namespace ControlR.Agent.Common.Services;
 
 internal class AgentHeartbeatTimer(
-    IAgentHubConnection hubConnection,
-    ISystemEnvironment systemEnvironment,
-    ILogger<AgentHeartbeatTimer> logger) : BackgroundService
+  TimeProvider timeProvider,
+  IAgentHubConnection hubConnection,
+  ISystemEnvironment systemEnvironment,
+  ILogger<AgentHeartbeatTimer> logger) : BackgroundService
 {
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IAgentHubConnection _hubConnection = hubConnection;
   private readonly ILogger<AgentHeartbeatTimer> _logger = logger;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
-
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     var delayTime = _systemEnvironment.IsDebug ?
         TimeSpan.FromSeconds(10) :
         TimeSpan.FromMinutes(5);
 
-    using var timer = new PeriodicTimer(delayTime);
+    using var timer = new PeriodicTimer(delayTime, _timeProvider);
     try
     {
       while (await timer.WaitForNextTickAsync(stoppingToken))
