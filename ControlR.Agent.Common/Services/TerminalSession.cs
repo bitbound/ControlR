@@ -36,6 +36,7 @@ internal class TerminalSession(
   private PowerShell? _powerShell;
   private Runspace? _runspace;
   private TerminalPSHost? _psHost;
+  private TaskCompletionSource<string>? _pendingInputRequest;
 
   public Guid TerminalId { get; } = terminalId;
 
@@ -64,6 +65,14 @@ internal class TerminalSession(
 
       using var cts = new CancellationTokenSource(timeout);
 
+      // Check if we're waiting for input from a Read-Host or similar
+      if (_pendingInputRequest != null)
+      {
+        _pendingInputRequest.SetResult(input);
+        _pendingInputRequest = null;
+        return Result.Ok();
+      }
+
       if (!string.IsNullOrWhiteSpace(input))
       {
         // Clear any previous commands and add the new input
@@ -80,14 +89,19 @@ internal class TerminalSession(
           {
             await SendOutput(error.ToString(), TerminalOutputKind.StandardError);
           }
+          // Clear errors after processing to prevent accumulation
+          _powerShell.Streams.Error.Clear();
         }
 
-        // Send results to output (PowerShell will handle prompt automatically)
+        // Send results to output
         foreach (var result in results)
         {
           await SendOutput(result?.ToString() ?? string.Empty, TerminalOutputKind.StandardOutput);
         }
       }
+
+      // Always send a new prompt after command execution
+      await SendPrompt();
 
       return Result.Ok();
     }
@@ -130,8 +144,15 @@ internal class TerminalSession(
 
       // Send initial prompt
       await SendOutput($"PowerShell {PSVersionInfo.PSVersion} on {Environment.OSVersion}", TerminalOutputKind.StandardOutput);
-      await SendOutput($"Working Directory: {_environment.StartupDirectory}", TerminalOutputKind.StandardOutput);
-      await SendOutput("Type 'bash' to start bash, 'zsh' for zsh, or use PowerShell commands.", TerminalOutputKind.StandardOutput);
+      
+      // Platform-specific shell guidance
+      var shellGuidance = _environment.Platform switch
+      {
+        SystemPlatform.Linux => "Type 'bash' to start bash, or use PowerShell commands.",
+        SystemPlatform.MacOs => "Type 'zsh' to start zsh, or use PowerShell commands.",
+        _ => "Use PowerShell commands or launch other shells."
+      };
+      await SendOutput(shellGuidance, TerminalOutputKind.StandardOutput);
       
       // Send initial prompt
       await SendPrompt();
@@ -206,12 +227,11 @@ internal class TerminalSession(
   public async Task<string> HandleHostReadLine()
   {
     // This will be called by PowerShell when it needs input (like Read-Host)
-    // We'll need to implement a mechanism to wait for user input from SignalR
-    await SendOutput("[Waiting for input...]", TerminalOutputKind.StandardOutput);
+    _pendingInputRequest = new TaskCompletionSource<string>();
     
-    // For now, return empty string - in a full implementation, you'd want to
-    // set up a mechanism to wait for the next SignalR message and return that
-    return string.Empty;
+    // Wait for the next SignalR message (user input)
+    var result = await _pendingInputRequest.Task;
+    return result;
   }
 
   public void TriggerProcessExited()
