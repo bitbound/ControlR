@@ -30,7 +30,7 @@ internal class DesktopEchoer(
           throw new PlatformNotSupportedException();
         }
 
-        if (win32Interop.GetInputDesktop(out var desktop))
+        if (win32Interop.GetInputDesktopName(out var desktop))
         {
           return new DesktopResponseDto(desktop.Trim());
         }

@@ -1,15 +1,26 @@
-﻿using ControlR.Devices.Native.Services;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using ControlR.Devices.Native.Services;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
-using System.Diagnostics;
 
 namespace ControlR.Libraries.DevicesNative.Services;
+
 public class Win32InteropFake : IWin32Interop
 {
-  public bool CreateInteractiveSystemProcess(string commandLine, int targetSessionId, bool hiddenWindow, out Process? startedProcess)
+  public bool CreateInteractiveSystemProcess(
+    string commandLine,
+    int targetSessionId,
+    bool hiddenWindow,
+    [NotNullWhen(true)] out Process? startedProcess)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool EnumWindows(Func<nint, bool> windowFunc)
   {
     throw new NotImplementedException();
   }
@@ -39,12 +50,22 @@ public class Win32InteropFake : IWin32Interop
     throw new NotImplementedException();
   }
 
-  public bool GetInputDesktop(out string desktopName)
+  public bool GetCurrentThreadDesktopName(out string currentDesktop)
   {
     throw new NotImplementedException();
   }
 
-  public bool GetThreadDesktop(uint threadId, out string desktopName)
+  public bool GetInputDesktopName(out string desktopName)
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint GetParentWindow(nint windowHandle)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool GetThreadDesktopName(uint threadId, out string desktopName)
   {
     throw new NotImplementedException();
   }
@@ -95,6 +116,21 @@ public class Win32InteropFake : IWin32Interop
   }
 
   public void SetClipboardText(string? text)
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint SetParentWindow(nint windowHandle, nint parentWindowHandle)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool StartProcessInBackgroundSession(string commandLine, [NotNullWhen(true)] out Process? startedProcess)
   {
     throw new NotImplementedException();
   }

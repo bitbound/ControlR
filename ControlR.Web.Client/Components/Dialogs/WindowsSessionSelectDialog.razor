@@ -4,12 +4,31 @@
       Sessions on @(DeviceName):
     </MudText>
 
+    <MudCard Class="mb-3" Outlined>
+      <MudCardContent>
+        <div class="session-card-grid">
+          <div>
+            <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+              Session Name:
+            </MudText>
+          </div>
+          <div>
+            Background
+          </div>
+        </div>
+      </MudCardContent>
+      <MudCardActions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => Submit(0))">
+          Connect
+        </MudButton>
+      </MudCardActions>
+    </MudCard>
+
     @foreach (var session in Sessions)
     {
       <MudCard @key=session Class="mb-3" Outlined>
         <MudCardContent>
-          <div class="d-grid"
-               style="grid-template-columns: auto 1fr; column-gap: 20px; min-width: 250px; align-items: center;">
+          <div class="session-card-grid">
             <div>
               <MudText Typo="Typo.subtitle1" Color="Color.Primary">
                 Session ID:

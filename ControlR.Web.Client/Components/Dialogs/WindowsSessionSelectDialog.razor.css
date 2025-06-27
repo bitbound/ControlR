@@ -1,0 +1,7 @@
+.session-card-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 20px;
+  min-width: 250px;
+  align-items: center;
+}

@@ -12,7 +12,7 @@ internal class InputDesktopReporter(
     logger.LogInformation("Beginning desktop watch.");
 
 
-    if (win32Interop.GetInputDesktop(out var initialInputDesktop))
+    if (win32Interop.GetInputDesktopName(out var initialInputDesktop))
     {
       logger.LogInformation("Initial desktop: {DesktopName}", initialInputDesktop);
     }
@@ -36,13 +36,13 @@ internal class InputDesktopReporter(
       {
         await delayer.Delay(TimeSpan.FromMilliseconds(100), stoppingToken);
 
-        if (!win32Interop.GetInputDesktop(out var inputDesktop))
+        if (!win32Interop.GetInputDesktopName(out var inputDesktop))
         {
           logger.LogError("Failed to get input desktop.");
           break;
         }
 
-        if (!win32Interop.GetCurrentThreadDesktop(out var threadDesktop))
+        if (!win32Interop.GetCurrentThreadDesktopName(out var threadDesktop))
         {
           logger.LogError("Failed to get thread desktop.");
           break;

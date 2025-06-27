@@ -57,3 +57,12 @@ ReleaseDC
 GetSystemMetrics
 EnumDisplaySettings
 GetIconInfo
+OpenWindowStation
+EnumDesktops
+SetProcessWindowStation
+CreateDesktop
+CreateProcess
+EnumWindows
+GetParent
+SetParent
+SetWindowPos
