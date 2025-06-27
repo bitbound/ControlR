@@ -35,8 +35,6 @@ internal class TerminalStore(
         terminalId,
         viewerConnectionId,
         timeProvider,
-        fileSystem,
-        processManager,
         environment,
         hubConnection,
         sessionLogger);
