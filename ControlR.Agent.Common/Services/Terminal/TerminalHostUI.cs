@@ -15,22 +15,22 @@ internal class TerminalHostUI(TerminalSession terminalSession) : PSHostUserInter
 
   public override Dictionary<string, PSObject> Prompt(string caption, string message, Collection<FieldDescription> descriptions)
   {
-    return PromptAsync(caption, message, descriptions).Result;
+    return PromptAsync(caption, message, descriptions).GetAwaiter().GetResult();
   }
 
   public override int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
   {
-    return PromptForChoiceAsync(caption, message, choices, defaultChoice).Result;
+    return PromptForChoiceAsync(caption, message, choices, defaultChoice).GetAwaiter().GetResult();
   }
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
   {
-    return PromptForCredentialAsync(caption, message, userName, targetName).Result;
+    return PromptForCredentialAsync(caption, message, userName, targetName).GetAwaiter().GetResult();
   }
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
   {
-    return PromptForCredential(caption, message, userName, targetName);
+    return PromptForCredentialAsync(caption, message, userName, targetName).GetAwaiter().GetResult();
   }
 
   public override string ReadLine()
