@@ -24,6 +24,7 @@ jobs:
         inputs:
           containerRegistry: 428e5669-4949-4ad6-9e37-730f15b2cad8
           repository: translucency/controlr-relay
+          Dockerfile: ControlR.Web.WebSocketRelay/Dockerfile
           buildContext: $(System.DefaultWorkingDirectory)
           tags: >-
             $(Build.BuildId)

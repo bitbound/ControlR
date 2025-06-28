@@ -69,16 +69,16 @@ else if (_noVncUri is not null)
     {
       Snackbar.Add("Connecting", Severity.Info);
 
-      var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
-
       var serverUri = new Uri(NavManager.BaseUri);
-      _websocketUri = relayOrigin is not null
-        ? new Uri(relayOrigin, $"/relay/{_sessionId}/{_accessKey}")
-        : new Uri(serverUri, $"relay/{_sessionId}/{_accessKey}").ToWebsocketUri();
+      _websocketUri = new Uri(
+          serverUri,
+          $"relay?sessionId={_sessionId}&accessKey={_accessKey}&timeout=30")
+        .ToWebsocketUri();
 
-      _noVncUri = new Uri(serverUri, 
-        $"novnc/vnc.html?path=relay/{_sessionId}/{_accessKey}" + 
-        "&show_dot=true&resize=scale&autoconnect=true");
+      var relayPath = $"relay?sessionId={_sessionId}&accessKey={_accessKey}&timeout=30";
+      var encodedPath = Uri.EscapeDataString(relayPath);
+      _noVncUri = new Uri(serverUri,
+        $"novnc/vnc.html?path={encodedPath}&show_dot=true&resize=scale&autoconnect=true");
 
       Logger.LogInformation("Creating streaming session.");
 
