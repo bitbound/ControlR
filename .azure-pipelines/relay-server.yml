@@ -3,6 +3,9 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - "ControlR.Web.WebSocketRelay/*"
 jobs:
   - job: Relay_Deploy
     displayName: Relay Server Build and Deploy
