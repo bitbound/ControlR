@@ -78,11 +78,22 @@ public partial class Deploy
     }
   }
 
-  private string WindowsDeployScript
+  private string WindowsX86DeployScript
   {
     get
     {
       var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
+      return "$ProgressPreference = \"SilentlyContinue\"; " +
+             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+             $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
+    }
+  }
+
+  private string WindowsX64DeployScript
+  {
+    get
+    {
+      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x64/ControlR.Agent.exe");
       return "$ProgressPreference = \"SilentlyContinue\"; " +
              $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
              $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
@@ -133,7 +144,7 @@ public partial class Deploy
     await Clipboard.SetText(UbuntuDeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
-  private async Task CopyWindowsScript()
+  private async Task CopyWindowsX86Script()
   {
     if (_tenantId is null)
     {
@@ -141,7 +152,19 @@ public partial class Deploy
       return;
     }
 
-    await Clipboard.SetText(WindowsDeployScript);
+    await Clipboard.SetText(WindowsX86DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private async Task CopyWindowsX64Script()
+  {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
+    await Clipboard.SetText(WindowsX64DeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
 

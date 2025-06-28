@@ -38,7 +38,7 @@ public class AgentInstallerKeyManager(
     {
       case InstallerKeyType.UsageBased:
         {
-          _keyCache.Set(keySecret, installerKey);
+          _keyCache.Set(keySecret, installerKey, TimeSpan.FromHours(24));
           break;
         }
       case InstallerKeyType.TimeBased:

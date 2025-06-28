@@ -33,6 +33,12 @@
         <div class="mt-2">
           <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
         </div>
+
+        <div class="mt-2">
+          <MudAlert Severity="Severity.Info">
+            The key will expire after the chosen number of uses or after 24 hours, whichever comes first.
+          </MudAlert>
+        </div>
       }
 
       @if (_installerKeyType == InstallerKeyType.TimeBased)
@@ -75,13 +81,22 @@ else
 
   <div class="mt-10">
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
-      Windows (PowerShell)
+      Windows x86 (PowerShell)
     </MudText>
 
     <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsScript"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX86Script"
                   Adornment="Adornment.End"
-                  Value="WindowsDeployScript" Class="mb-5" />
+                  Value="@WindowsX86DeployScript" Class="mb-5" />
+
+    <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+      Windows x64 (PowerShell)
+    </MudText>
+
+    <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
+                  AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX64Script"
+                  Adornment="Adornment.End"
+                  Value="@WindowsX64DeployScript" Class="mb-5" />
 
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
       Ubuntu (Bash)
