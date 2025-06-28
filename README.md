@@ -53,15 +53,24 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 
 ## Agent OS Support:
 
-### Windows (10/11)
+### Windows 11 (x64, x86)
 
-- Remote control
-- Terminal uses PowerShell 7+ (pwsh.exe) if detected, otherwise PowerShell 5.1 (powershell.exe)
+- Full remote control support
 
-### Ubuntu (latest LTS)
+### Ubuntu x64 (latest LTS)
 
-- No remote control
-- Terminal uses Bash
+- Experimental remote control via VNC
+
+### macOS Apple Silicon (tested on M1 running Sequoia)
+- Experimental remote control via VNC (Apple Screen Sharing)
+- Signed using ad-hoc certificate (this may change in the future)
+
+### macOS Intel (untested)
+- Experimental remote control via VNC (Apple Screen Sharing)
+- Signed using ad-hoc certificate (this may change in the future)
+
+### All Operating Systems
+- Terminal uses embedded cross-platform PowerShell host
 
 ## Permissions
 
@@ -94,6 +103,14 @@ You can also add a connection string for Azure Monitor to see your data there. T
 ControlR has the ability to integrate with geographically-distributed relay servers and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
 
 Relay servers are currently disabled on the public server (https://controlr.app), which is located in Seattle, WA.
+
+## VNC and Apple Screen Sharing (Experimental)
+
+This is an experimental feature that allows you to control Mac and Linux devices using VNC.  The noVNC client is used for the front-end, and the connection is streamed via websockets through the ControlR server, to the agent, then to the VNC server on the device.
+
+Since the connection to the VNC server is over localhost, you can configure the VNC server to bind to the loopback interface, so it's not exposed to the local network.
+
+You can configure the VNC port in the agent's appsettings.json file, under `AppOptions:VncPort`. If it is omitted, it will use the default VNC port of 5900.
 
 ## Screenshots
 
