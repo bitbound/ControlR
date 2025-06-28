@@ -492,10 +492,10 @@ public partial class RemoteDisplay : IAsyncDisposable
         case DtoType.CaptureMetricsChanged:
           {
             var dto = message.GetPayload<CaptureMetricsDto>();
-            Logger.LogInformation("Capture metrics changed: {@Metrics}", dto);
+            Logger.LogDebug("Capture metrics changed: {@Metrics}", dto);
             foreach (var kvp in dto.ExtraData)
             {
-              Logger.LogInformation("{Key}: {Value}", kvp.Key, kvp.Value);
+              Logger.LogDebug("{Key}: {Value}", kvp.Key, kvp.Value);
             }
             break;
           }

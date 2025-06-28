@@ -162,22 +162,6 @@ internal sealed class CaptureMetrics(
       { "Screen Bounds", JsonSerializer.Serialize(screenBounds, _jsonSerializerOptions) }
     };
 
-    var shellProcess = _processManager
-      .GetProcessesByName("ControlR.BackgroundShell")
-      .FirstOrDefault(x => x.SessionId == 0);
-
-    if (shellProcess is not null)
-    {
-      var shellMainWindow = shellProcess.MainWindowHandle;
-      if (!_win32Interop.GetWindowRect(shellMainWindow, out var shellRect))
-      {
-        _logger.LogWarning("Failed to get shell main window rectangle.");
-      }
-      else
-      {
-        extraData.Add("Shell Main Window Rect", JsonSerializer.Serialize(shellRect, _jsonSerializerOptions));
-      }
-    }
     return extraData;
   }
 

@@ -68,39 +68,12 @@ internal class StreamerLauncherWindows(
         var startupDir = _environment.StartupDirectory;
         var streamerDir = Path.Combine(startupDir, "Streamer");
         var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
-        //var shellPath = Path.Combine(startupDir, "ControlR.BackgroundShell.exe");
-        var shellPath = @"C:\Repos\ControlR.BackgroundShell\ControlR.BackgroundShell\bin\Debug\ControlR.BackgroundShell.exe";
 
-        Process? process;
-        bool result;
-
-        if (targetWindowsSession == 0)
-        {
-          var backgroundShells = _processManager
-            .GetProcessesByName("ControlR.BackgroundShell")
-            .Where(x => x.SessionId == targetWindowsSession);
-
-          if (!backgroundShells.Any())
-          {
-            if (!_win32Interop.StartProcessInBackgroundSession(shellPath, out _))
-            {
-              return Result.Fail("Failed to start background shell.");
-            }
-          }
-
-          result = _win32Interop.StartProcessInBackgroundSession(
-            commandLine: $"\"{binaryPath}\" {args}",
-            startedProcess: out process);
-        }
-        else
-        {
-          result = _win32Interop.CreateInteractiveSystemProcess(
+        var result = _win32Interop.CreateInteractiveSystemProcess(
             commandLine: $"\"{binaryPath}\" {args}",
             targetSessionId: targetWindowsSession,
             hiddenWindow: true,
-            startedProcess: out process);
-        }
-
+            startedProcess: out var process);
 
         if (!result || process is null || process.Id == -1)
         {
