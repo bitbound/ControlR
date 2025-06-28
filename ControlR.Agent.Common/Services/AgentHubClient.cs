@@ -93,7 +93,10 @@ internal class AgentHubClient(
   {
     try
     {
-      _logger.LogInformation("VNC session requested.  Request DTO: {@RequestDto}", sessionRequestDto);
+      _logger.LogInformation(
+        "VNC session requested.  Viewer Connection ID: {ConnectionId}.", 
+        sessionRequestDto.ViewerConnectionId);
+
       return await _localProxy.HandleVncSession(sessionRequestDto).ConfigureAwait(false);
     }
     catch (Exception ex)

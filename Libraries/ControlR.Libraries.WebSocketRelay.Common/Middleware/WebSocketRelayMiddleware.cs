@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net.WebSockets;
@@ -100,9 +101,11 @@ internal class WebSocketRelayMiddleware(
 
   private void SetBadRequest(HttpContext context, string message)
   {
-    _logger.LogWarning("Bad request.  Path: {RequestPath}", context.Request.Path);
+    _logger.LogWarning("Bad request. Uri: {RequestUri}}", context.Request.GetDisplayUrl());
     context.Response.StatusCode = StatusCodes.Status400BadRequest;
-    var body = $"{message}\n\nPath should be in the form of '/relay/{{session-id (Guid)}}'.";
+    var body = 
+      $"{message}\n\nPath should be in the form of " +
+      $"'/relay?sessionId={{session-id (Guid)}}&accessToken={{accessToken}}'.";
     context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
   }
 

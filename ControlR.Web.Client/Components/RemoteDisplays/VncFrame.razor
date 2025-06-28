@@ -16,7 +16,7 @@ else if (_noVncUri is not null)
 
 @code {
   private readonly Guid _sessionId = Guid.NewGuid();
-  private readonly string _accessKey = RandomGenerator.CreateAccessToken();
+  private readonly string _accessToken = RandomGenerator.CreateAccessToken();
   private bool _loading = true;
 
   private Uri? _websocketUri;
@@ -72,10 +72,10 @@ else if (_noVncUri is not null)
       var serverUri = new Uri(NavManager.BaseUri);
       _websocketUri = new Uri(
           serverUri,
-          $"relay?sessionId={_sessionId}&accessKey={_accessKey}&timeout=30")
+          $"relay?sessionId={_sessionId}&accessToken={_accessToken}&timeout=30")
         .ToWebsocketUri();
 
-      var relayPath = $"relay?sessionId={_sessionId}&accessKey={_accessKey}&timeout=30";
+      var relayPath = $"relay?sessionId={_sessionId}&accessToken={_accessToken}&timeout=30";
       var encodedPath = Uri.EscapeDataString(relayPath);
       _noVncUri = new Uri(serverUri,
         $"novnc/vnc.html?path={encodedPath}&show_dot=true&resize=scale&autoconnect=true");

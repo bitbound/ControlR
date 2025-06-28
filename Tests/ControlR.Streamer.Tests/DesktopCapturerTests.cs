@@ -49,7 +49,7 @@ public class DesktopCapturerTests
     _inputSim = new InputSimulatorWindows(_win32Interop, new XunitLogger<InputSimulatorWindows>(outputHelper));
 
     var sessionId = Guid.NewGuid();
-    var accessKey = RandomGenerator.CreateAccessToken();
+    var accessToken = RandomGenerator.CreateAccessToken();
 
     _startupOptions = new StartupOptions()
     {
@@ -57,7 +57,7 @@ public class DesktopCapturerTests
       ServerOrigin = new Uri("http://localhost:5120"),
       SessionId = sessionId,
       ViewerName = "Test Viewer",
-      WebSocketUri = new Uri($"ws://localhost:5120/relay/{sessionId}/{accessKey}")
+      WebSocketUri = new Uri($"ws://localhost:5120/relay?sessionId={sessionId}&accessToken={accessToken}")
     };
 
     _screenGrabber = new ScreenGrabber(
