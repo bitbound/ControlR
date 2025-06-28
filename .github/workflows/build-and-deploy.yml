@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Deploy
 
 on:
   workflow_dispatch:
@@ -26,17 +26,6 @@ on:
         description: "Version number (leave empty for auto)"
         required: false
         type: string
-  pull_request:
-    branches: 
-      - main
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - "README.md"
-      - ".github/**"
-      - "ControlR.Web.WebSocketRelay/**"
-      - "Libraries/ControlR.Libraries.WebSocketRelay.Common/**"
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1

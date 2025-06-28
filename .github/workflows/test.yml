@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        type: string
+  pull_request:
+    branches: 
+      - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - ".github/**"
+      - "ControlR.Web.WebSocketRelay/**"
+      - "Libraries/ControlR.Libraries.WebSocketRelay.Common/**"
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
+  MINOR_VERSION: ${{vars.MINOR_VERSION}}
+
+jobs:
+  build:
+    name: Build
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+
+    steps:
+      - name: Show Inputs
+        run: |
+          echo "Inputs: ${{ toJSON(github.event.inputs) }}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Set version
+        id: set_version
+        run: |
+          $version = "${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.${{ github.run_number }}.0"
+          if ("${{ inputs.version }}" -ne "") {
+            $version = "${{ inputs.version }}"
+          }
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Version: $version"
+
+      - name: Run Tests
+        run: dotnet test
