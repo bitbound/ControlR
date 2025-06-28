@@ -2,56 +2,79 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
-using ControlR.Streamer;
 using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR.Client;
 using ControlR.Streamer.Extensions;
 using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.Shared.Helpers;
 
 var sessionIdOption = new Option<Guid>(
-    ["-s", "--session-id"],
-    "The session ID for this streaming session.")
+  "SessionId",
+  ["-s", "--session-id"])
 {
-  IsRequired = true,
+  Required = true,
+  Description = "The session ID for this streaming session."
 };
 
 var appDataFolderOption = new Option<string>(
-    ["-d", "--data-folder"],
-    "The folder name in 'C:\\ProgramData\\ControlR\\' under which logs and other data will be written.")
+  "FolderData",
+  ["-d", "--data-folder"])
 {
-  IsRequired = true
+  Required = true,
+  Description = "The folder name in 'C:\\ProgramData\\ControlR\\' under which logs and other data will be written."
 };
 
-appDataFolderOption.AddValidator(result =>
+appDataFolderOption.Validators.Add(result =>
 {
-  var folderValue = result.GetValueForOption(appDataFolderOption);
-  Guard.IsNotNull(folderValue, nameof(folderValue));
-
+  var folderValue = result.GetRequiredValue(appDataFolderOption);
   var invalidCharacters = Path.GetInvalidFileNameChars().ToHashSet();
   if (folderValue.Any(c => invalidCharacters.Contains(c)))
   {
-    result.ErrorMessage = "The app data folder name contains invalid characters.";
+    result.AddError("The app data folder name contains invalid characters.");
   }
 });
 
 var websocketUriOption = new Option<Uri>(
-    ["-w", "--websocket-uri"],
-    "The websocket URI (including scheme and port) that the streamer should use for video (e.g. wss://my.example.com[:8080]). " +
-    "The port can be ommitted for 80 (http) and 443 (https).")
+  "WebSocketUri",
+  ["-w", "--websocket-uri"])
 {
-  IsRequired = true
+  Required = true,
+  Description = 
+    "The websocket URI (including scheme and port) that the streamer should " +
+    "use for video (e.g. wss://my.example.com[:8080]). " +
+    "The port can be ommitted for 80 (http) and 443 (https).",
+  CustomParser = result =>
+  {
+    if (result.Tokens.Count == 0)
+    {
+      throw new ArgumentException(
+        "The websocket URI is required. Please provide a valid URI including the scheme (e.g. 'wss://').");
+    }
+    var uriArg = result.Tokens[0].Value;
+    if (!Uri.TryCreate(uriArg, UriKind.Absolute, out var uri))
+    {
+      throw new ArgumentException(
+        $"The websocket URI '{uriArg}' is not a valid absolute URI. " +
+        "Please provide a valid URI including the scheme (e.g. 'wss://').");
+    }
+    return uri;
+  }
 };
 
 var notifyUserOption = new Option<bool>(
-    ["-n", "--notify-user"],
-    "Whether to notify the user when a remote control session starts.");
+  "NotifyUser",
+  ["-n", "--notify-user"])
+{
+  Description = "Whether to notify the user when a remote control session starts."
+};
 
 var viewerNameOption = new Option<string?>(
-    ["-vn", "--viewer-name"],
-    "The name of the viewer requesting the session.");
+  "ViewerName",
+  ["-vn", "--viewer-name"])
+{
+  Description = "The name of the viewer requesting the session."
+};
 
 var rootCommand = new RootCommand("The remote control desktop streamer and input simulator for ControlR.")
 {
@@ -62,8 +85,15 @@ var rootCommand = new RootCommand("The remote control desktop streamer and input
     viewerNameOption,
 };
 
-rootCommand.SetHandler(async (appDataFolder, websocketUri, notifyUser, sessionId, viewerName) =>
+
+rootCommand.SetAction(async parseResult =>
 {
+  var appDataFolder = parseResult.GetRequiredValue(appDataFolderOption);
+  var websocketUri = parseResult.GetRequiredValue(websocketUriOption);
+  var notifyUser = parseResult.GetValue(notifyUserOption);
+  var sessionId = parseResult.GetRequiredValue(sessionIdOption);
+  var viewerName = parseResult.GetValue(viewerNameOption);
+
   var builder = Host.CreateApplicationBuilder(args);
   var configuration = builder.Configuration;
   var services = builder.Services;
@@ -107,8 +137,8 @@ rootCommand.SetHandler(async (appDataFolder, websocketUri, notifyUser, sessionId
 
   var host = builder.Build();
   await host.RunAsync();
+});
 
-}, appDataFolderOption, websocketUriOption, notifyUserOption, sessionIdOption, viewerNameOption);
-
-var exitCode = await rootCommand.InvokeAsync(args);
-Environment.Exit(exitCode);
+return await rootCommand
+  .Parse(args)
+  .InvokeAsync();
