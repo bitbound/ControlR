@@ -101,7 +101,7 @@ if ($BuildAgent) {
 if ($BuildStreamer) {
   dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
   Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
+  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
   Check-LastExitCode
   Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 
