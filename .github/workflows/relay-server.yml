@@ -11,12 +11,6 @@ on:
           - preview
           - latest
         default: "preview"
-  push:
-    branches:
-      - main
-    paths:
-      - "ControlR.Web.WebSocketRelay/**"
-      - "Libraries/ControlR.Libraries.WebSocketRelay.Common/**"
 
 env:
   MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
