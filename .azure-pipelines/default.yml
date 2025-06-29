@@ -111,7 +111,7 @@ jobs:
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\novnc\vnc.html",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\novnc\vnc.html"
             )
             foreach ($TestPath in $TestPaths) {
               if (!(Test-Path $TestPath)) {
