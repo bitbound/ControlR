@@ -13,13 +13,13 @@ internal class PowerControlMac(IProcessManager processInvoker) : IPowerControl
     {
       case PowerStateChangeType.Restart:
         {
-          _ = _processInvoker.Start("shutdown", "-r 0", true);
+          _ = _processInvoker.Start("shutdown", "-r now", true);
         }
         break;
 
       case PowerStateChangeType.Shutdown:
         {
-          _ = _processInvoker.Start("shutdown", "-P 0", true);
+          _ = _processInvoker.Start("shutdown", "-h now", true);
         }
         break;
 
