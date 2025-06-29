@@ -45,6 +45,6 @@
 
 	<ItemGroup>
 		<Content Remove="novnc\**\*" />
-		<Content Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
+		<None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>

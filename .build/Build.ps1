@@ -115,3 +115,7 @@ if ($BuildStreamer) {
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
+if (!(Test-Path -Path "$OutputPath\novnc\")) {
+  Write-Host "novnc did not publish.  Copying manually."
+  Copy-Item -Path "$Root\ControlR.Web.Server\novnc" -Destination "$OutputPath\novnc" -Recurse 
+}
