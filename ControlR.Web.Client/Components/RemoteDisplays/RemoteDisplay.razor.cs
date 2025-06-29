@@ -141,16 +141,26 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   public override async ValueTask DisposeAsync()
   {
-    await base.DisposeAsync();
-    _clientOnCloseRegistration?.Dispose();
-    _isDisposed = true;
-    await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
-    Messenger.UnregisterAll(this);
-    await JsModule.InvokeVoidAsync("dispose", _canvasId);
-    await _componentClosing.CancelAsync();
-    _componentClosing.Dispose();
-    _componentRef?.Dispose();
-    GC.SuppressFinalize(this);
+    try
+    {
+      if (_isDisposed)
+      {
+        return;
+      }
+      _isDisposed = true;
+      _clientOnCloseRegistration?.Dispose();
+      await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
+      Messenger.UnregisterAll(this);
+      await JsModule.InvokeVoidAsync("dispose", _canvasId);
+      await _componentClosing.CancelAsync();
+      _componentClosing.Dispose();
+      _componentRef?.Dispose();
+      GC.SuppressFinalize(this);
+    }
+    catch
+    {
+      // Ignore when disposing.
+    }
   }
 
   [JSInvokable]
