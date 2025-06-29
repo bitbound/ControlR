@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Text;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
 
@@ -168,24 +169,6 @@ internal class TerminalSession(
     }
   }
 
-  public async Task SendOutput(string output, TerminalOutputKind outputKind)
-  {
-    try
-    {
-      var outputDto = new TerminalOutputDto(
-        TerminalId,
-        output,
-        outputKind,
-        _timeProvider.GetLocalNow());
-
-      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending terminal output.");
-    }
-  }
-
   public void TriggerProcessExited()
   {
     ProcessExited?.Invoke(this, EventArgs.Empty);
@@ -247,6 +230,24 @@ internal class TerminalSession(
     }
   }
 
+  internal async Task SendOutput(string output, TerminalOutputKind outputKind)
+  {
+    try
+    {
+      var outputDto = new TerminalOutputDto(
+        TerminalId,
+        output,
+        outputKind,
+        _timeProvider.GetLocalNow());
+
+      await _hubConnection.Server.SendTerminalOutputToViewer(_viewerConnectionId, outputDto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending terminal output.");
+    }
+  }
+
   protected virtual void Dispose(bool disposing)
   {
     if (!IsDisposed)
@@ -284,19 +285,21 @@ internal class TerminalSession(
         // Handle any errors
         if (_powerShell.HadErrors)
         {
-          foreach (var error in _powerShell.Streams.Error)
-          {
-            await SendOutput(error.ToString(), TerminalOutputKind.StandardError);
-          }
+          var errorLines = _powerShell.Streams.Error
+            .Select(x => x.ToString())
+            .ToArray();
+
+          await SendOutput(errorLines, TerminalOutputKind.StandardError);
+
           // Clear errors after processing to prevent accumulation
           _powerShell.Streams.Error.Clear();
         }
 
-        // Send results to output
-        foreach (var result in results)
-        {
-          await SendOutput(result?.ToString() ?? string.Empty, TerminalOutputKind.StandardOutput);
-        }
+        var outputLines = results
+          .Select(x => x?.ToString() ?? string.Empty)
+          .ToArray();
+
+        await SendOutput(outputLines, TerminalOutputKind.StandardOutput);
       }
 
       // Always send a new prompt after command execution
@@ -326,6 +329,32 @@ internal class TerminalSession(
         e.RunspaceStateInfo.State == RunspaceState.Broken)
     {
       ProcessExited?.Invoke(this, EventArgs.Empty);
+    }
+  }
+
+  private async Task SendOutput(string[] outputLines, TerminalOutputKind kind)
+  {
+    var outputBuilder = new StringBuilder();
+    var outputSize = 0;
+
+    foreach (var outputLine in outputLines)
+    {
+      outputBuilder.AppendLine(outputLine);
+      outputSize += Encoding.UTF8.GetByteCount(outputLine);
+      // SignalR max message size is 32KB.  This gives us room for
+      // other data on the DTO.
+      if (outputSize > 20_000)
+      {
+        await SendOutput(outputBuilder.ToString(), kind);
+        outputBuilder.Clear();
+        outputSize = 0;
+      }
+    }
+
+    if (outputSize > 0)
+    {
+      await SendOutput(outputBuilder.ToString(), kind);
+      outputBuilder.Clear();
     }
   }
 
