@@ -112,6 +112,8 @@ Since the connection to the VNC server is over localhost, you can configure the 
 
 You can configure the VNC port in the agent's appsettings.json file, under `AppOptions:VncPort`. If it is omitted, it will use the default VNC port of 5900.
 
+If the project gains support, I intend to add full remote control support for Mac.
+
 ## Screenshots
 
 ![Windows Sessions on Desktop](.assets/screenshots/desktop_windows-sessions.png)
