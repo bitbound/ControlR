@@ -59,7 +59,8 @@ jobs:
     steps:
       - checkout: self
         clean: true
-        fetchDepth: 3
+        fetchDepth: 1
+        submodules: recursive
 
       - task: DotNetCoreCLI@2
         displayName: Run Tests
