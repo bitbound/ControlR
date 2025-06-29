@@ -83,6 +83,7 @@ internal class AgentInstallerMac(
           return Task.CompletedTask;
         }, 5, TimeSpan.FromSeconds(1));
 
+      var serviceFileAlreadyExists = _fileSystem.FileExists(GetServiceFilePath());
       var serviceFile = GetServiceFile().Trim();
       var serviceFilePath = GetServiceFilePath();
 
@@ -102,6 +103,20 @@ internal class AgentInstallerMac(
         WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
+
+      if (serviceFileAlreadyExists)
+      {
+        try
+        {
+          _logger.LogInformation("Booting out service.");
+          psi.Arguments = $"launchctl bootout system {serviceFilePath}";
+          await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Error while booting out service.  Continuing optimistically."); 
+        }
+      }
 
       try
       {
@@ -205,7 +220,7 @@ internal class AgentInstallerMac(
 
   private string GetServiceFile()
   {
-    var paramXml = "        <string>run</string>\n";
+    var paramXml = "<string>run</string>\n";
     if (instanceOptions.Value.InstanceId is string instanceId)
     {
       paramXml += $"        <string>-i</string>\n";
@@ -221,8 +236,8 @@ internal class AgentInstallerMac(
       $"    <string>dev.jaredg.controlr-agent</string>\n" +
       $"    <key>KeepAlive</key>\n" +
       $"    <true/>\n" +
-      //$"    <key>StandardErrorPath</key>\n" +
-      //$"    <string>/var/log/ControlR/plist-err.log</string>\n" +
+      $"    <key>StandardErrorPath</key>\n" +
+      $"    <string>/var/log/ControlR/plist-err.log</string>\n" +
       //$"    <key>StandardOutPath</key>\n" +
       //$"    <string>/var/log/ControlR/plist-std.log</string> \n" +
       $"    <key>ProgramArguments</key>\n" +
