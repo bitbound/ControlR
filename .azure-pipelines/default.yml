@@ -96,10 +96,13 @@ jobs:
             $TestPaths = @(
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Agent.exe",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Streamer.zip",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Streamer.zip",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent"
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\novnc\vnc.html",
             )
             foreach ($TestPath in $TestPaths) {
               if (!(Test-Path $TestPath)) {

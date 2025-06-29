@@ -100,12 +100,18 @@ if ($BuildAgent) {
 
 if ($BuildStreamer) {
   dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
-
-  Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
+  Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
   Check-LastExitCode
+  Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
 
-  Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
+
+
+  dotnet publish --configuration $Configuration -p:PublishProfile=win-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
+  Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x64\ControlR.Streamer.exe"
+  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\ControlR.Streamer.exe"
+  Check-LastExitCode
+  Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x64\*" -DestinationPath "$DownloadsFolder\win-x64\ControlR.Streamer.zip" -Force
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"

@@ -76,7 +76,8 @@ public static class AppConstants
   {
     return runtime switch
     {
-      RuntimeId.WinX64 or RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Streamer.zip",
+      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Streamer.zip",
+      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.Streamer.zip",
       _ => throw new PlatformNotSupportedException()
     };
   }
