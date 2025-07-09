@@ -11,12 +11,12 @@
 
   <ItemGroup>
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.6" />
-    <PackageReference Include="MudBlazor" Version="8.8.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.7" />
+    <PackageReference Include="MudBlazor" Version="8.9.0" />
     <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
   </ItemGroup>
 
   <ItemGroup>
