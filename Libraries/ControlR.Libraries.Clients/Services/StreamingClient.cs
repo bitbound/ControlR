@@ -7,6 +7,7 @@ namespace ControlR.Libraries.Clients.Services;
 
 public interface IStreamingClient : IAsyncDisposable, IClosable
 {
+  TimeSpan CurrentLatency { get; }
   WebSocketState State { get; }
   Task Connect(Uri websocketUri, CancellationToken cancellationToken);
   IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler);
@@ -15,12 +16,15 @@ public interface IStreamingClient : IAsyncDisposable, IClosable
 }
 
 public abstract class StreamingClient(
+  TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IDelayer delayer,
   ILogger<StreamingClient> logger) : Closable(logger), IStreamingClient
 {
   protected readonly IMessenger Messenger = messenger;
+  protected readonly TimeProvider TimeProvider = timeProvider;
+
   private readonly CancellationTokenSource _clientDisposingCts = new();
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<StreamingClient> _logger = logger;
@@ -29,6 +33,7 @@ public abstract class StreamingClient(
   private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
   private ClientWebSocket? _client;
+  private TimeSpan _latency;
   private volatile int _sendBufferLength;
 
   private enum MessageType : short
@@ -37,6 +42,7 @@ public abstract class StreamingClient(
     Ack
   }
 
+  public TimeSpan CurrentLatency => _latency;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
 
   protected ClientWebSocket Client => _client ?? throw new InvalidOperationException("Client not initialized.");
@@ -225,11 +231,12 @@ public abstract class StreamingClient(
             {
               var ackDto = receivedWrapper.GetPayload<AckDto>();
               _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
+              _latency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
               break;
             }
           default:
             {
-              await SendAck(totalBytesRead);
+              await SendAck(totalBytesRead, receivedWrapper.SendTimestamp);
               await InvokeMessageHandlers(receivedWrapper, _clientDisposingCts.Token);
               break;
             }
@@ -249,10 +256,9 @@ public abstract class StreamingClient(
 
     await InvokeOnClosed();
   }
-
-  private async Task SendAck(int receivedBytes)
+  private async Task SendAck(int receivedBytes, long sendTimestamp)
   {
-    var ackDto = new AckDto(receivedBytes);
+    var ackDto = new AckDto(receivedBytes, sendTimestamp);
     var wrapper = DtoWrapper.Create(ackDto, DtoType.Ack);
     var wrapperBytes = MessagePackSerializer.Serialize(wrapper);
     await Client.SendAsync(

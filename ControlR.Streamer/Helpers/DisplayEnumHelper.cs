@@ -35,12 +35,14 @@ internal static class DisplaysEnumerationHelper
 {
   private const int Cchdevicename = 32;
 
-  public static IEnumerable<DisplayInfo> GetDisplays()
+  public static List<DisplayInfo> GetDisplays()
   {
     var displays = new List<DisplayInfo>();
 
-    EnumDisplayMonitors(nint.Zero, nint.Zero,
-      delegate (nint hMonitor, nint _, ref Rect _, nint _)
+    EnumDisplayMonitors(
+      nint.Zero,
+      nint.Zero,
+      (nint hMonitor, nint _, ref Rect _, nint _) =>
       {
         var mi = new MonitorInfoEx();
         mi.Size = Marshal.SizeOf(mi);

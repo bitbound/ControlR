@@ -14,6 +14,7 @@ public interface IStreamerStreamingClient : IHostedService
 }
 
 internal sealed class StreamerStreamingClient(
+  TimeProvider timeProvider,
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
@@ -24,7 +25,7 @@ internal sealed class StreamerStreamingClient(
   IDelayer delayer,
   IOptions<StartupOptions> startupOptions,
   ILogger<StreamerStreamingClient> logger)
-  : StreamingClient(messenger, memoryProvider, delayer, logger), IStreamerStreamingClient
+  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IStreamerStreamingClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
@@ -90,7 +91,8 @@ internal sealed class StreamerStreamingClient(
   {
     try
     {
-      var wrapper = DtoWrapper.Create(message.MetricsDto, DtoType.CaptureMetricsChanged);
+      var metricsDto = message.MetricsDto with { Latency = CurrentLatency };
+      var wrapper = DtoWrapper.Create(metricsDto, DtoType.CaptureMetricsChanged);
       await Send(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)

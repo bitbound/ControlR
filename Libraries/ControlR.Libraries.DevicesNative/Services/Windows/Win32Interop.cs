@@ -5,6 +5,8 @@ using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Principal;
+using ControlR.Libraries.DevicesNative.Services.Windows;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
@@ -40,10 +42,12 @@ public interface IWin32Interop
   string? GetClipboardText();
   WindowsCursor GetCurrentCursor();
   bool GetCurrentThreadDesktopName(out string currentDesktop);
+  List<string> GetDesktopNames(string windowStation = "WinSta0");
   bool GetInputDesktopName([NotNullWhen(true)] out string? inputDesktop);
   nint GetParentWindow(nint windowHandle);
   bool GetThreadDesktopName(uint threadId, [NotNullWhen(true)] out string? desktopName);
   string GetUsernameFromSessionId(uint sessionId);
+  List<WindowInfo> GetVisibleWindows();
   bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
@@ -57,8 +61,9 @@ public interface IWin32Interop
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
   bool StartProcessInBackgroundSession(
-   string commandLine,
-   [NotNullWhen(true)] out Process? startedProcess);
+    string commandLine,
+    bool hiddenWindow,
+    [NotNullWhen(true)] out Process? startedProcess);
   bool SwitchToInputDesktop();
   void TypeText(string text);
 }
@@ -68,6 +73,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 {
   private const uint GenericAllRights = 0x10000000;
   private const uint MaximumAllowedRights = 0x2000000;
+  private const uint DESKTOP_ALL = 0x1FFu;
   private const string SeSecurityName = "SeSecurityPrivilege\0";
   private const uint Xbutton1 = 0x0001;
   private const uint Xbutton2 = 0x0002;
@@ -386,6 +392,22 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return GetDesktopName(desktop, out desktopName);
   }
 
+  public List<string> GetDesktopNames(string windowStation = "WinSta0")
+  {
+    using var winsta = PInvoke.OpenWindowStation(windowStation, true, GenericAllRights);
+    var desktopNames = new List<string>();
+    var enumResult = PInvoke.EnumDesktops(
+      winsta,
+      (desktopName, param) =>
+      {
+        desktopNames.Add(desktopName.ToString());
+        return true;
+      },
+      default);
+
+    return desktopNames;
+  }
+
   public bool GetInputDesktopName([NotNullWhen(true)] out string? desktopName)
   {
     var inputDesktop = PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)GenericAllRights);
@@ -427,6 +449,111 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
 
     return string.Empty;
+  }
+
+  private unsafe string GetWindowClassName(HWND hwnd)
+  {
+    var buffer = stackalloc char[256];
+    var length = PInvoke.GetClassName(hwnd, buffer, 256);
+    return length > 0 ? new string(buffer, 0, length) : string.Empty;
+  }
+
+  private static readonly string[] _invalidWindowClassNames =
+  [
+    "Progman",           // Desktop
+    "WorkerW",           // Desktop worker
+    "Shell_TrayWnd",     // Taskbar
+    "DV2ControlHost",    // Windows widgets
+    "Windows.UI.Core.CoreWindow", // UWP system windows
+    "ApplicationFrameWindow", // Some UWP containers
+    "ForegroundStaging", // System staging window
+    "MSCTFIME UI"        // Input method editor
+  ];
+
+  public List<WindowInfo> GetVisibleWindows()
+  {
+    var handles = new List<nint>();
+    var windows = new List<WindowInfo>();
+
+    _ = PInvoke.EnumWindows(
+      (hwnd, lparam) =>
+      {
+        if (hwnd == HWND.Null)
+        {
+          return true;
+        }
+        handles.Add(hwnd);
+        return true;
+      }, 
+      nint.Zero);
+
+    foreach (var item in handles.Index()) 
+    {
+      var hwnd = new HWND(item.Item);
+
+      if (!PInvoke.GetWindowRect(hwnd, out var windowRect))
+      {
+        continue;
+      }
+
+      if (!PInvoke.IsWindowVisible(hwnd))
+      {
+        continue;
+      }
+
+      if (windowRect.Size.IsEmpty)
+      {
+        continue;
+      }
+
+      var className = GetWindowClassName(hwnd);
+
+      if (_invalidWindowClassNames.Contains(className, StringComparer.OrdinalIgnoreCase))
+      {
+        continue;
+      }
+
+      var pwi = new WINDOWINFO
+      {
+        cbSize = (uint)Marshal.SizeOf<WINDOWINFO>()
+      };
+      if (!PInvoke.GetWindowInfo(hwnd, ref pwi))
+      {
+        _logger.LogDebug("Failed to get window info for handle {WindowHandle}. Last Win32 Error: {LastWin32Error}",
+          hwnd,
+          Marshal.GetLastWin32Error());
+      }
+      
+      var windowTextLength = PInvoke.GetWindowTextLength(hwnd);
+      var windowTextSpan = new char[windowTextLength + 1].AsSpan();
+      _ = PInvoke.GetWindowText(hwnd, windowTextSpan);
+      var windowText = new string(windowTextSpan).Trim().TrimEnd('\0');
+
+      var processId = PInvoke.GetWindowThreadProcessId(hwnd);
+      var processName = $"Process-{processId}";
+      try
+      {
+        var windowProcess = Process.GetProcessById((int)processId);
+        processName = windowProcess.ProcessName;
+      }
+      catch
+      {
+        // Ignore.
+      }
+
+      windows.Add(new WindowInfo(
+        hwnd,
+        (int)processId,
+        processName,
+        windowText,
+        windowRect.X,
+        windowRect.Y,
+        windowRect.Width,
+        windowRect.Height,
+        item.Index));
+    }
+
+    return windows;
   }
 
   public bool GetWindowRect(nint windowHandle, out Rectangle windowRect)
@@ -721,16 +848,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   public bool StartProcessInBackgroundSession(
     string commandLine,
+    bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess)
   {
     startedProcess = null;
-    var sa = new SECURITY_ATTRIBUTES()
-    {
-      bInheritHandle = true,
-    };
-    sa.nLength = (uint)Marshal.SizeOf(sa);
-    var saPtr = Marshal.AllocHGlobal((int)sa.nLength);
-    Marshal.StructureToPtr(sa, saPtr, false);
 
     // By default, the following window stations exist in session 0:
     // - WinSta0 (default)
@@ -739,31 +860,31 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     // - Service-0x0-3e5$
     // - msswindowstation
 
-    var openWinstaResult = PInvoke.OpenWindowStation(
-         "WinSta0",
-         true,
-         GenericAllRights);
+    if (!TryCloneSystemPrimaryToken(out var primaryToken))
+    {
+      return false;
+    }
+
+    using var primaryTokenCallback = new CallbackDisposable(primaryToken.Close);
+    uint tokenSize = sizeof(uint);
+    var tokenValue = stackalloc uint[] { 1 };
+
+    if (!PInvoke.SetTokenInformation(primaryToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, tokenValue, tokenSize))
+    {
+      _logger.LogWarning("Failed to set token UI access on duplicated token.");
+      return false;
+    }
+
+    using var openWinstaResult = PInvoke.OpenWindowStation(
+         lpszWinSta: "WinSta0",
+         fInherit: false,
+         dwDesiredAccess: (uint)ACCESS_MASK.WINSTA_ALL_ACCESS);
 
     if (openWinstaResult.IsInvalid)
     {
       LogWin32Error();
       _logger.LogError("Failed to open window station.");
       return false;
-    }
-
-    var enumDesktopsResult = PInvoke.EnumDesktops(
-      openWinstaResult,
-      (desktop, lParam) =>
-      {
-        _logger.LogInformation("Found desktop {Desktop}.", desktop);
-        return true;
-      },
-      nint.Zero);
-
-    if (!enumDesktopsResult)
-    {
-      LogWin32Error();
-      _logger.LogError("Enum desktops failed.");
     }
 
     var setProcessWinstaResult = PInvoke.SetProcessWindowStation(openWinstaResult);
@@ -776,53 +897,76 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
 
     var desktopName = "ControlR_Desktop";
-    using var createDesktopResult = PInvoke.CreateDesktop(
-      desktopName,
-      DESKTOP_CONTROL_FLAGS.DF_ALLOWOTHERACCOUNTHOOK,
-      GenericAllRights,
-      sa);
+    var sa = new SECURITY_ATTRIBUTES();
+    sa.nLength = (uint)Marshal.SizeOf(sa);
 
-    if (createDesktopResult.IsInvalid)
+    _logger.LogInformation("Getting/Creating background desktop: {DesktopName}", desktopName);
+    using var backgroundDesktop = PInvoke.CreateDesktop(
+      lpszDesktop: desktopName,
+      dwFlags: 0,
+      dwDesiredAccess: (uint)ACCESS_MASK.DESKTOP_ALL,
+      lpsa: sa);
+
+    if (backgroundDesktop.IsInvalid)
     {
       LogWin32Error();
       _logger.LogError("Failed to create desktop.");
       return false;
     }
 
-    if (!PInvoke.SwitchDesktop(createDesktopResult))
+    if (!PInvoke.SwitchDesktop(backgroundDesktop))
     {
       LogWin32Error();
       _logger.LogError("Failed to switch desktop.");
       return false;
     }
 
-    if (!PInvoke.SetThreadDesktop(createDesktopResult))
+    if (!PInvoke.SetThreadDesktop(backgroundDesktop))
     {
       LogWin32Error();
       _logger.LogError("Failed to set thread desktop.");
       return false;
     }
 
-    var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
-    var si = new STARTUPINFOW()
+    var desktopPtr = Marshal.StringToHGlobalAuto($"WinSta0\\{desktopName}\0");
+    using var desktopPtrCb = new CallbackDisposable(() => Marshal.FreeHGlobal(desktopPtr));
+
+    var startupInfo = new STARTUPINFOW()
     {
-      lpDesktop = new PWSTR((char*)desktopPtr.ToPointer())
+      lpDesktop = new PWSTR((char*)desktopPtr.ToPointer()),
     };
-    si.cb = (uint)Marshal.SizeOf(si);
+
+    // Flags that specify the priority and creation method of the process.
+    var dwCreationFlags = PROCESS_CREATION_FLAGS.HIGH_PRIORITY_CLASS |
+                          PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT;
+
+    if (hiddenWindow)
+    {
+      dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NO_WINDOW | PROCESS_CREATION_FLAGS.DETACHED_PROCESS;
+      startupInfo.dwFlags = STARTUPINFOW_FLAGS.STARTF_USESHOWWINDOW;
+      startupInfo.wShowWindow = 0;
+    }
+    else
+    {
+      dwCreationFlags |= PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE;
+    }
+
+    startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
 
     var commandLineArray = $"{commandLine}\0".ToCharArray();
     var commandLineSpan = commandLineArray.AsSpan();
-    var createProcessResult = PInvoke.CreateProcess(
-            null,
-            ref commandLineSpan,
-            sa,
-            sa,
-            true,
-            PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE,
-            null,
-            null,
-            in si,
-            out var procInfo);
+    var createProcessResult = PInvoke.CreateProcessAsUser(
+      hToken: primaryToken,
+      lpApplicationName: null,
+      lpCommandLine: ref commandLineSpan,
+      lpProcessAttributes: sa,
+      lpThreadAttributes: sa,
+      bInheritHandles: false,
+      dwCreationFlags: dwCreationFlags,
+      lpEnvironment: null,
+      lpCurrentDirectory: null,
+      lpStartupInfo: in startupInfo,
+      lpProcessInformation: out var procInfo);
 
     if (!createProcessResult)
     {
@@ -830,8 +974,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       _logger.LogError("Failed to create process.");
       return false;
     }
-
-    Marshal.FreeHGlobal(desktopPtr);
 
     startedProcess = Process.GetProcessById((int)procInfo.dwProcessId);
     return true;
@@ -921,7 +1063,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       Thread.Sleep(1);
     }
   }
-
   private static void AddShiftInput(List<INPUT> inputs, ShiftState shiftState, bool isPressed)
   {
     switch (shiftState)
@@ -1442,7 +1583,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     // Otherwise, return the console session.
     return PInvoke.WTSGetActiveConsoleSessionId();
   }
-  private bool TryGetExplorerDuplicateToken(uint sessionId, [NotNullWhen(true)] out SafeFileHandle? primaryToken)
+  private bool TryGetExplorerDuplicateToken(
+    uint sessionId,
+    [NotNullWhen(true)] out SafeFileHandle? primaryToken)
   {
     primaryToken = null;
 
@@ -1502,6 +1645,60 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
+  private bool TryCloneSystemPrimaryToken([NotNullWhen(true)] out SafeFileHandle? primaryToken)
+  {
+    primaryToken = null;
+
+    try
+    {
+      var systemSid = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+      var identity = WindowsIdentity.GetCurrent();
+      if (identity.User?.Equals(systemSid) != true)
+      {
+        _logger.LogError("Current user is not Local System. Cannot clone system token.");
+        return false;
+      }
+
+      var systemProcId = (uint)Environment.ProcessId;
+      
+      // Obtain a handle to the winlogon process;
+      var explorerProcessHandle = PInvoke.OpenProcess(
+        (PROCESS_ACCESS_RIGHTS)MaximumAllowedRights,
+        true,
+        systemProcId);
+
+      // Obtain a handle to the access token of the winlogon process.
+      using var explorerSafeProcHandle = new SafeProcessHandle(explorerProcessHandle, true);
+      if (!PInvoke.OpenProcessToken(
+            explorerSafeProcHandle,
+            TOKEN_ACCESS_MASK.TOKEN_DUPLICATE,
+            out var systemToken))
+      {
+        PInvoke.CloseHandle(explorerProcessHandle);
+        return false;
+      }
+
+      // Copy the access token of the winlogon process; the newly created token will be a primary token.
+      var result = PInvoke.DuplicateTokenEx(
+        systemToken,
+        (TOKEN_ACCESS_MASK)0xFFu,
+        null,
+        SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
+        TOKEN_TYPE.TokenPrimary,
+        out primaryToken);
+
+      PInvoke.CloseHandle(explorerProcessHandle);
+      systemToken.Close();
+      return result;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to duplicate Explorer token.  Last Win32 Error: {LastWin32Error}",
+        Marshal.GetLastWin32Error());
+      return false;
+    }
+  }
+
   private bool TryGetTokenInformation(SafeFileHandle token, TOKEN_INFORMATION_CLASS tokenClass, out nint infoPtr,
     out uint ptrSize)
   {
@@ -1549,7 +1746,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     return true;
   }
-
   [StructLayout(LayoutKind.Explicit)]
   private struct ShortHelper(short value)
   {

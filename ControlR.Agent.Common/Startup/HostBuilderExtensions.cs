@@ -68,6 +68,10 @@ internal static class HostApplicationBuilderExtensions
       .Bind(configuration.GetSection(AgentAppOptions.SectionKey));
 
     services
+      .AddOptions<DeveloperOptions>()
+      .Bind(configuration.GetSection(DeveloperOptions.SectionKey));
+
+    services
       .AddOptions<InstanceOptions>()
       .Bind(configuration.GetSection(InstanceOptions.SectionKey));
 

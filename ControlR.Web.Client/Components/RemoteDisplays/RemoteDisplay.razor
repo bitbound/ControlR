@@ -11,82 +11,160 @@
        @onkeydown="OnVkKeyDown" />
 
 <div class="display-grid">
-    <div class="action-bar pa-2">
-        <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
+  <div class="action-bar pa-2">
+    <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
 
-        <DisplaysMenu Displays="_displays" SelectedDisplay="_selectedDisplay" OnDisplaySelected="ChangeDisplays" />
+    <DisplaysMenu Displays="_displays" SelectedDisplay="_selectedDisplay" OnDisplaySelected="ChangeDisplays" />
 
-        <ClipboardMenu 
-          OnReceiveClipboardClicked="HandleReceiveClipboardClicked" 
-          OnSendClipboardClicked="HandleSendClipboardClicked"
-          OnTypeClipboardClicked="HandleTypeClipboardClicked" />
+    <ClipboardMenu OnReceiveClipboardClicked="HandleReceiveClipboardClicked"
+                   OnSendClipboardClicked="HandleSendClipboardClicked"
+                   OnTypeClipboardClicked="HandleTypeClipboardClicked" />
 
-        <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
-            @if (CurrentBreakpoint < Breakpoint.Sm)
-            {
-                <MudIconButton Icon="@(Icons.Material.Filled.Shield)"
-                               Variant="Variant.Outlined"
-                               OnClick="InvokeCtrlAltDel" />
-            }
-            else
-            {
-                <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" OnClick="InvokeCtrlAltDel">
-                    Ctrl+Alt+Del
-                </MudButton>
-            }
-        </MudTooltip>
+    <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
+      @if (CurrentBreakpoint < Breakpoint.Sm)
+      {
+        <MudIconButton Icon="@(Icons.Material.Filled.Shield)"
+                       Variant="Variant.Outlined"
+                       OnClick="InvokeCtrlAltDel" />
+      }
+      else
+      {
+        <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" OnClick="InvokeCtrlAltDel">
+          Ctrl+Alt+Del
+        </MudButton>
+      }
+    </MudTooltip>
 
-        @if (_controlMode == ControlMode.Touch)
+    @if (_controlMode == ControlMode.Touch)
+    {
+      <MudDivider Vertical FlexItem />
+
+      <MudTooltip Text="Virtual Keyboard" Placement="Placement.Right" Class="z9002">
+        <MudToggleIconButton Variant="Variant.Outlined"
+                             Icon="@(Icons.Material.Filled.Keyboard)"
+                             ToggledColor="Color.Success"
+                             ToggledIcon="@(Icons.Material.Filled.Keyboard)"
+                             ToggledChanged="HandleKeyboardToggled" />
+      </MudTooltip>
+
+      <MudTooltip Text="Scroll Mode" Placement="Placement.Right" Class="z9002">
+        <MudToggleIconButton Variant="Variant.Outlined"
+                             Icon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                             ToggledColor="Color.Success"
+                             ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                             ToggledChanged="HandleScrollModeToggled" />
+      </MudTooltip>
+    }
+
+    <MudFlexBreak />
+
+    <MudTooltip Text="Metrics" Placement="Placement.Left" Class="z9002">
+      <MudToggleIconButton Variant="Variant.Outlined"
+                           Icon="@(Icons.Material.Filled.QueryStats)"
+                           ToggledColor="Color.Success"
+                           ToggledIcon="@(Icons.Material.Filled.QueryStats)"
+                           ToggledChanged="HandleMetricsToggled" />
+    </MudTooltip>
+
+
+  </div>
+  <div class="screen-area"
+       @ref="_screenArea"
+       @ontouchstart="OnTouchStart"
+       @ontouchmove="OnTouchMove"
+       @ontouchcancel="OnTouchCancel"
+       @ontouchend="OnTouchEnd">
+
+    <canvas id="@_canvasId"
+            @ref="_canvasRef"
+            width="@(_selectedDisplay?.Width ?? 0)"
+            height="@(_selectedDisplay?.Height ?? 0)"
+            class='@($"remote-screen {CanvasClasses}")'
+            style="@(CanvasStyle)" />
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+      <div class="text-center message-wrapper">
+        <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom Class="mt-5">
+          @(_statusMessage)
+        </MudText>
+
+        @if (_statusProgress > 0)
         {
-            <MudDivider Vertical FlexItem />
-
-            <MudTooltip Text="Virtual Keyboard" Placement="Placement.Right" Class="z9002">
-                <MudToggleIconButton Variant="Variant.Outlined"
-                                     Icon="@(Icons.Material.Filled.Keyboard)"
-                                     ToggledColor="Color.Success"
-                                     ToggledIcon="@(Icons.Material.Filled.Keyboard)"
-                                     ToggledChanged="HandleKeyboardToggled" />
-            </MudTooltip>
-
-            <MudTooltip Text="Scroll Mode" Placement="Placement.Right" Class="z9002">
-                <MudToggleIconButton Variant="Variant.Outlined"
-                                     Icon="@(Icons.Material.Filled.UnfoldMoreDouble)"
-                                     ToggledColor="Color.Success"
-                                     ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
-                                     ToggledChanged="HandleScrollModeToggled" />
-            </MudTooltip>
+          <MudProgressCircular Min="0" Max="1" Value="_statusProgress" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
         }
-    </div>
-    <div class="screen-area"
-         @ref="_screenArea"
-         @ontouchstart="OnTouchStart"
-         @ontouchmove="OnTouchMove"
-         @ontouchcancel="OnTouchCancel"
-         @ontouchend="OnTouchEnd">
-
-        <canvas id="@_canvasId"
-                @ref="_canvasRef"
-                width="@(_selectedDisplay?.Width ?? 0)"
-                height="@(_selectedDisplay?.Height ?? 0)"
-                class='@($"remote-screen {CanvasClasses}")'
-                style="@(CanvasStyle)" />
-
-        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        else if (_statusProgress < 0)
         {
-            <div class="text-center message-wrapper">
-                <MudText Typo="Typo.h4" Color="MudBlazor.Color.Info" Align="Align.Center" GutterBottom Class="mt-5">
-                    @(_statusMessage)
-                </MudText>
-
-                @if (_statusProgress > 0)
-                {
-                    <MudProgressCircular Min="0" Max="1" Value="_statusProgress" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
-                }
-                else if (_statusProgress < 0)
-                {
-                    <MudProgressCircular Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
-                }
-            </div>
+          <MudProgressCircular Indeterminate Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
         }
-    </div>
+      </div>
+    }
+  </div>
 </div>
+
+@if (_isMetricsEnabled)
+{
+  <div class="metrics-frame">
+    @if (_latestCaptureMetrics is null)
+    {
+      <MudText Typo="Typo.h5">
+        Loading
+      </MudText>
+    }
+    else
+    {
+      <div>
+        Mbps:
+      </div>
+      <div>
+        @($"{_latestCaptureMetrics.Mbps:N2}")
+      </div>
+
+      <div>
+        FPS:
+      </div>
+      <div>
+        @($"{_latestCaptureMetrics.Fps:N2}")
+      </div>
+
+      <div>
+        IPS:
+      </div>
+      <div>
+        @($"{_latestCaptureMetrics.Ips:N2}")
+      </div>
+
+      <div>
+        GPU:
+      </div>
+      <div>
+        @(_latestCaptureMetrics.IsUsingGpu)
+      </div>
+
+      <div>
+        Latency:
+      </div>
+      <div>
+        @($"{_latestCaptureMetrics.Latency.TotalMilliseconds:N2} ms")
+      </div>
+
+
+      <div>
+        Image Quality:
+      </div>
+      <div>
+        @(_latestCaptureMetrics.ImageQuality)
+      </div>
+
+      @foreach (var kvp in _latestCaptureMetrics.ExtraData)
+      {
+        <div>
+          @(kvp.Key):
+        </div>
+        <div>
+          @(kvp.Value)
+        </div>
+      }
+    }
+  </div>
+}

@@ -35,4 +35,10 @@
     <ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Embedded\BackgroundShell\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

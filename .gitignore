@@ -365,3 +365,4 @@ FodyWeavers.xsd
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/appsettings.Development.json
 /ControlR.Streamer/.artifacts/*
+/ControlR.Agent/Embedded/**

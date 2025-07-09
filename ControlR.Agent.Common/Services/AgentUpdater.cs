@@ -23,12 +23,10 @@ internal class AgentUpdater(
   ISettingsProvider settings,
   IHostApplicationLifetime appLifetime,
   IOptions<InstanceOptions> instanceOptions,
-  IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDownloadsApi _downloadsApi = downloadsApi;
@@ -43,8 +41,9 @@ internal class AgentUpdater(
 
   public async Task CheckForUpdate(CancellationToken cancellationToken = default)
   {
-    if (_environmentHelper.IsDebug)
+    if (_settings.DisableAutoUpdate)
     {
+      _logger.LogInformation("Auto-update disabled in developer options.  Skipping update check.");
       return;
     }
 
@@ -115,7 +114,7 @@ internal class AgentUpdater(
 
       _logger.LogInformation("Launching installer.");
 
-      var tenantId = _appOptions.CurrentValue.TenantId;
+      var tenantId = _settings.TenantId;
       var installCommand = $"install -t {tenantId}";
       if (_instanceOptions.Value.InstanceId is { } instanceId)
       {
@@ -177,8 +176,9 @@ internal class AgentUpdater(
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    if (_environmentHelper.IsDebug)
+    if (_settings.DisableAutoUpdate)
     {
+      _logger.LogInformation("Auto-update disabled in developer options.  Skipping update check timer.");
       return;
     }
 

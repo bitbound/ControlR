@@ -83,12 +83,15 @@ internal class AgentInstallerMac(
           return Task.CompletedTask;
         }, 5, TimeSpan.FromSeconds(1));
 
-      var serviceFileAlreadyExists = _fileSystem.FileExists(GetServiceFilePath());
-      var serviceFile = GetServiceFile().Trim();
-      var serviceFilePath = GetServiceFilePath();
+      var agentPlistPath = GetLaunchDaemonFilePath();
+      var agentPlistFile = GetLaunchDaemonFile().Trim();
+      var streamerPlistPath = GetLaunchAgentFilePath();
+      var streamerPlistFile = GetLaunchAgentFile().Trim();
+      var daemonFileAlreadyExists = _fileSystem.FileExists(agentPlistPath);
 
-      _logger.LogInformation("Writing service file.");
-      await _fileSystem.WriteAllTextAsync(serviceFilePath, serviceFile);
+      _logger.LogInformation("Writing plist file.");
+      await _fileSystem.WriteAllTextAsync(agentPlistPath, agentPlistFile);
+      //await _fileSystem.WriteAllTextAsync(streamerPlistPath, streamerPlistFile);
       await UpdateAppSettings(serverUri, tenantId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
@@ -104,12 +107,12 @@ internal class AgentInstallerMac(
         UseShellExecute = true
       };
 
-      if (serviceFileAlreadyExists)
+      if (daemonFileAlreadyExists)
       {
         try
         {
           _logger.LogInformation("Booting out service.");
-          psi.Arguments = $"launchctl bootout system {serviceFilePath}";
+          psi.Arguments = $"launchctl bootout system {agentPlistPath}";
           await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
         }
         catch (Exception ex)
@@ -121,7 +124,7 @@ internal class AgentInstallerMac(
       try
       {
         _logger.LogInformation("Bootstrapping service.");
-        psi.Arguments = $"launchctl bootstrap system {serviceFilePath}";
+        psi.Arguments = $"launchctl bootstrap system {agentPlistPath}";
         await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
       }
       catch (ProcessStatusException)
@@ -162,7 +165,7 @@ internal class AgentInstallerMac(
         _logger.LogError("Uninstall command must be run with sudo.");
       }
 
-      var serviceFilePath = GetServiceFilePath();
+      var serviceFilePath = GetLaunchDaemonFilePath();
 
       var psi = new ProcessStartInfo
       {
@@ -218,7 +221,7 @@ internal class AgentInstallerMac(
     return Path.Combine(dir, instanceOptions.Value.InstanceId);
   }
 
-  private string GetServiceFile()
+  private string GetLaunchDaemonFile()
   {
     var paramXml = "<string>run</string>\n";
     if (instanceOptions.Value.InstanceId is string instanceId)
@@ -249,7 +252,7 @@ internal class AgentInstallerMac(
       $"</plist>";
   }
 
-  private string GetServiceFilePath()
+  private string GetLaunchDaemonFilePath()
   {
     if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
@@ -257,5 +260,44 @@ internal class AgentInstallerMac(
     }
 
     return $"/Library/LaunchDaemons/controlr-agent-{instanceOptions.Value.InstanceId}.plist";
+  }
+
+  private string GetLaunchAgentFile()
+  {
+    var paramXml = "<string>run</string>\n";
+    if (instanceOptions.Value.InstanceId is string instanceId)
+    {
+      paramXml += $"        <string>-i</string>\n";
+      paramXml += $"        <string>{instanceId}</string>\n";
+    }
+
+    return
+      $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+      $"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+      $"<plist version=\"1.0\">\n" +
+      $"<dict>\n" +
+      $"    <key>Label</key>\n" +
+      $"    <string>dev.jaredg.controlr-streamer</string>\n" +
+      $"    <key>KeepAlive</key>\n" +
+      $"    <true/>\n" +
+      $"    <key>StandardErrorPath</key>\n" +
+      $"    <string>/var/log/ControlR/plist-err.log</string>\n" +
+      $"    <key>ProgramArguments</key>\n" +
+      $"    <array>\n" +
+      $"        <string>{GetInstallDirectory()}/Streamer/ControlR.Streamer</string>\n" +
+      $"        {paramXml}" +
+      $"    </array>\n" +
+      $"</dict>\n" +
+      $"</plist>";
+  }
+
+  private string GetLaunchAgentFilePath()
+  {
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    {
+      return "/Library/LaunchAgents/controlr-streamer.plist";
+    }
+
+    return $"/Library/LaunchAgents/controlr-streamer-{instanceOptions.Value.InstanceId}.plist";
   }
 }

@@ -9,11 +9,13 @@ namespace ControlR.Agent.Common.Services;
 
 public interface ISettingsProvider
 {
+  bool CloseStreamerConsoleOnExit { get; }
   Guid DeviceId { get; }
+  bool DisableAutoUpdate { get; }
   string InstanceId { get; }
   Uri ServerUri { get; }
+  Guid TenantId { get; }
   int VncPort { get; }
-
   string GetAppSettingsPath();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
@@ -21,17 +23,22 @@ public interface ISettingsProvider
 
 internal class SettingsProvider(
   IOptionsMonitor<AgentAppOptions> appOptions,
+  IOptionsMonitor<DeveloperOptions> developerOptions,
   IFileSystem fileSystem,
   IOptions<InstanceOptions> instanceOptions) : ISettingsProvider
 {
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
+  private readonly IOptionsMonitor<DeveloperOptions> _developerOptions = developerOptions;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
-  public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
+  public bool CloseStreamerConsoleOnExit =>
+    _developerOptions.CurrentValue.CloseStreamerConsoleOnExit;
 
+  public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
+  public bool DisableAutoUpdate => _developerOptions.CurrentValue.DisableAutoUpdate;
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
 
   public Uri ServerUri =>
@@ -39,8 +46,11 @@ internal class SettingsProvider(
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
 
-  public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
+  public Guid TenantId => _appOptions.CurrentValue.TenantId == default
+    ? throw new InvalidOperationException("Tenant ID is not configured correctly.")
+    : _appOptions.CurrentValue.TenantId;
 
+  public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
   public string GetAppSettingsPath()
   {
     return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);

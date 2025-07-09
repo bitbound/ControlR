@@ -5,8 +5,6 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
-using FocusEventArgs = Microsoft.AspNetCore.Components.Web.FocusEventArgs;
-using TouchEventArgs = Microsoft.AspNetCore.Components.Web.TouchEventArgs;
 
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 
@@ -37,6 +35,8 @@ public partial class RemoteDisplay : IAsyncDisposable
   private ViewMode _viewMode = ViewMode.Stretch;
   private ElementReference _virtualKeyboard;
   private bool _virtualKeyboardToggled;
+  private CaptureMetricsDto? _latestCaptureMetrics;
+  private bool _isMetricsEnabled;
 
   [JSImport("drawFrame", "RemoteDisplay")]
   public static partial Task DrawFrame(
@@ -387,7 +387,10 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-
+  private void HandleMetricsToggled()
+  {
+    _isMetricsEnabled = !_isMetricsEnabled;
+  }
   private async Task HandleReceiveClipboardClicked()
   {
     try
@@ -502,11 +505,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         case DtoType.CaptureMetricsChanged:
           {
             var dto = message.GetPayload<CaptureMetricsDto>();
-            Logger.LogDebug("Capture metrics changed: {@Metrics}", dto);
-            foreach (var kvp in dto.ExtraData)
-            {
-              Logger.LogDebug("{Key}: {Value}", kvp.Key, kvp.Value);
-            }
+            _latestCaptureMetrics = dto;
+            await InvokeAsync(StateHasChanged);
             break;
           }
       }

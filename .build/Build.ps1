@@ -71,6 +71,17 @@ if ($BuildAgent) {
     "-p:IncludeAppSettingsInSingleFile=true"
   )
   
+  
+  # Windows Background Shell
+  dotnet publish -c $Configuration -p:PublishProfile=win-x86 -p:TargetFramework=net481 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -o "$Root\ControlR.Agent\Embedded\BackgroundShell\" "$Root\ControlR.BackgroundShell\"
+  Check-LastExitCode
+  
+  Wait-ForFileToExist -FilePath "$Root\ControlR.Agent\Embedded\BackgroundShell\ControlR.BackgroundShell.exe"
+  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Agent\Embedded\BackgroundShell\ControlR.BackgroundShell.exe"
+  Check-LastExitCode
+
+
+  # Windows Agent
   dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
@@ -85,6 +96,7 @@ if ($BuildAgent) {
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x64\ControlR.Agent.exe"
   Check-LastExitCode
 
+  # Linux Agent
   dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
 
@@ -104,8 +116,6 @@ if ($BuildStreamer) {
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
   Check-LastExitCode
   Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
-
-
 
   dotnet publish --configuration $Configuration -p:PublishProfile=win-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
   Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x64\ControlR.Streamer.exe"

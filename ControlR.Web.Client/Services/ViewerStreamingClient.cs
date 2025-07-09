@@ -30,11 +30,12 @@ public interface IViewerStreamingClient : IStreamingClient
 }
 
 public class ViewerStreamingClient(
+  TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IDelayer delayer,
   ILogger<ViewerStreamingClient> logger)
-  : StreamingClient(messenger, memoryProvider, delayer, logger), IViewerStreamingClient
+  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IViewerStreamingClient
 {
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<ViewerStreamingClient> _logger = logger;

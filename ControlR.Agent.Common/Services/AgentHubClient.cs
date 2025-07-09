@@ -1,12 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Devices.Native.Services;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;
 
@@ -39,7 +41,7 @@ internal class AgentHubClient(
   {
     try
     {
-      if (!_environmentHelper.IsDebug)
+      if (!_settings.DisableAutoUpdate)
       {
         var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
         if (!versionResult)
@@ -61,8 +63,10 @@ internal class AgentHubClient(
       {
         _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
       }
-
-      _logger.LogInformation("Streaming session started.");
+      else
+      {
+        _logger.LogInformation("Streaming session started.");
+      }
 
       return result.IsSuccess;
     }
@@ -94,7 +98,7 @@ internal class AgentHubClient(
     try
     {
       _logger.LogInformation(
-        "VNC session requested.  Viewer Connection ID: {ConnectionId}.", 
+        "VNC session requested.  Viewer Connection ID: {ConnectionId}.",
         sessionRequestDto.ViewerConnectionId);
 
       return await _localProxy.HandleVncSession(sessionRequestDto).ConfigureAwait(false);

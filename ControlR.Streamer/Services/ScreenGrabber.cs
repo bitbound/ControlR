@@ -1,4 +1,7 @@
-﻿using System.Drawing;
+﻿using ControlR.Streamer.Extensions;
+using ControlR.Streamer.Helpers;
+using ControlR.Streamer.Models;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,9 +12,6 @@ using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
 using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ControlR.Streamer.Extensions;
-using ControlR.Streamer.Helpers;
-using ControlR.Streamer.Models;
 
 namespace ControlR.Streamer.Services;
 
@@ -51,6 +51,7 @@ public interface IScreenGrabber
   ///   If successful, the result will contain the <see cref="Bitmap" /> of the capture.
   /// </returns>
   CaptureResult Capture(bool captureCursor = true);
+  CaptureResult CaptureSession0Desktop();
 
   /// <summary>
   ///   Return info about the connected displays.
@@ -71,11 +72,11 @@ internal sealed class ScreenGrabber(
   IWin32Interop win32Interop,
   ILogger<ScreenGrabber> logger) : IScreenGrabber
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IBitmapUtility _bitmapUtility = bitmapUtility;
-  private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly IDxOutputGenerator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabber> _logger = logger;
+  private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IWin32Interop _win32Interop = win32Interop;
 
   public CaptureResult Capture(
     DisplayInfo targetDisplay,
@@ -139,6 +140,80 @@ internal sealed class ScreenGrabber(
     return DisplaysEnumerationHelper.GetDisplays();
   }
 
+  public unsafe CaptureResult CaptureSession0Desktop()
+  {
+    const int WM_USER_CAPTURE_START = 0x8001;
+    const int WM_USER_CAPTURE_END = 0x8002;
+
+    var bounds = GetVirtualScreenBounds();
+    var desktopBitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+    using var desktopGraphics = Graphics.FromImage(desktopBitmap);
+
+    var windowInfos = _win32Interop.GetVisibleWindows();
+    windowInfos.Reverse();
+
+    var shellWindow = windowInfos.FirstOrDefault(x => x.Title == "ControlR Shell");
+    if (shellWindow is not null)
+    {
+      var hwnd = new HWND(shellWindow.WindowHandle);
+      nuint result = 0;
+      PInvoke.SendMessageTimeout(hwnd, WM_USER_CAPTURE_START, 0, 0,
+        SEND_MESSAGE_TIMEOUT_FLAGS.SMTO_NORMAL, 100, &result);
+    }
+
+    try
+    {
+      foreach (var window in windowInfos)
+      {
+        try
+        {
+          var hwnd = new HWND(window.WindowHandle);
+
+          var windowDc = PInvoke.GetWindowDC(hwnd);
+          using var windowBitmap = new Bitmap(window.Width, window.Height, PixelFormat.Format32bppArgb);
+
+          try
+          {
+            using var windowGraphics = Graphics.FromImage(windowBitmap);
+            using var disposableHdc = windowGraphics.GetDisposableHdc();
+            var targetHdc = new HDC(disposableHdc.Value);
+
+            var success = PInvoke.PrintWindow(hwnd, targetHdc, 0);
+
+            if (!success)
+            {
+              _logger.LogDebug("Failed to capture window {WindowHandle}.", window.WindowHandle);
+              return CaptureResult.Fail("Failed to print window.");
+            }
+          }
+          finally
+          {
+            _ = PInvoke.ReleaseDC(hwnd, windowDc);
+          }
+
+          desktopGraphics.DrawImage(windowBitmap, window.X, window.Y);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogDebug(ex, "Failed to capture window {WindowHandle}", window.WindowHandle);
+          return CaptureResult.Fail(ex, $"Failed to capture window {window.WindowHandle}.");
+        }
+      }
+
+      return CaptureResult.Ok(desktopBitmap, false);
+    }
+    finally
+    {
+      if (shellWindow is not null)
+      {
+        var hwnd = new HWND(shellWindow.WindowHandle);
+        nuint result = 0;
+        PInvoke.SendMessageTimeout(hwnd, WM_USER_CAPTURE_END, 0, 0,
+          SEND_MESSAGE_TIMEOUT_FLAGS.SMTO_NORMAL, 500, &result);
+      }
+    }
+  }
+
   public Rectangle GetVirtualScreenBounds()
   {
     var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
@@ -148,103 +223,15 @@ internal sealed class ScreenGrabber(
     return new Rectangle(left, top, width, height);
   }
 
-  private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
-  {
-    var rectSize = (uint)sizeof(RECT);
-    uint bufferSizeNeeded = 0;
-
-    try
-    {
-      outputDuplication.GetFrameDirtyRects(0, out _, out bufferSizeNeeded);
-    }
-    catch
-    {
-      // This can throw transiently.  Ignore.  Buffer size will be 0.
-    }
-
-    if (bufferSizeNeeded == 0)
-    {
-      return [];
-    }
-
-    var numRects = (int)(bufferSizeNeeded / rectSize);
-    var dirtyRects = new Rectangle[numRects];
-
-    var dirtyRectsPtr = stackalloc RECT[numRects];
-    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
-
-    for (var i = 0; i < numRects; i++)
-    {
-      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
-    }
-
-    return dirtyRects;
-  }
-
-  private bool IsDxOutputHealthy(DxOutput dxOutput)
-  {
-    return _timeProvider.GetLocalNow() - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
-  }
-
-  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
-  {
-    try
-    {
-      // Get cursor information to draw on the screenshot.
-      var ci = new CURSORINFO();
-      ci.cbSize = (uint)Marshal.SizeOf(ci);
-      PInvoke.GetCursorInfo(ref ci);
-
-      if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
-      {
-        return Rectangle.Empty;
-      }
-
-      using var icon = Icon.FromHandle(ci.hCursor);
-
-      uint hotspotX = 0;
-      uint hotspotY = 0;
-      var hicon = new HICON(icon.Handle);
-      var iconInfoPtr = stackalloc ICONINFO[1];
-      if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
-      {
-        hotspotX = iconInfoPtr->xHotspot;
-        hotspotY = iconInfoPtr->yHotspot;
-        PInvoke.DestroyIcon(hicon);
-      }
-
-      var virtualScreen = GetVirtualScreenBounds();
-      var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
-      var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
-
-      var targetArea = new Rectangle(x, y, icon.Width, icon.Height);
-      if (!captureArea.Contains(targetArea))
-      {
-        _logger.LogDebug("Cursor is outside of capture area. Skipping.");
-        return Rectangle.Empty;
-      }
-
-      graphics.DrawIcon(icon, x, y);
-
-      return targetArea;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogDebug(ex, "Error while drawing cursor.");
-      return Rectangle.Empty;
-    }
-  }
-
   private CaptureResult GetBitBltCapture(
-    Rectangle captureArea, 
-    bool captureCursor, 
+    Rectangle captureArea,
+    bool captureCursor,
     CaptureResult? dxResult = null)
   {
     try
     {
-      var hwnd = PInvoke.GetDesktopWindow();
-      var screenDc = PInvoke.GetWindowDC(hwnd);
-      using var callback = new CallbackDisposable(() => _ = PInvoke.ReleaseDC(hwnd, screenDc));
+      var screenDc = PInvoke.GetDC(HWND.Null);
+      using var callback = new CallbackDisposable(() => _ = PInvoke.ReleaseDC(HWND.Null, screenDc));
 
       var bitmap = new Bitmap(captureArea.Width, captureArea.Height);
       using var graphics = Graphics.FromImage(bitmap);
@@ -276,7 +263,7 @@ internal sealed class ScreenGrabber(
       return CaptureResult.Fail(exception: ex, dxCaptureResult: dxResult);
     }
   }
-  
+
   private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.GetDxOutput(display.DeviceName);
@@ -425,6 +412,93 @@ internal sealed class ScreenGrabber(
       {
         // Ignore.
       }
+    }
+  }
+
+  private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
+  {
+    var rectSize = (uint)sizeof(RECT);
+    uint bufferSizeNeeded = 0;
+
+    try
+    {
+      outputDuplication.GetFrameDirtyRects(0, out _, out bufferSizeNeeded);
+    }
+    catch
+    {
+      // This can throw transiently.  Ignore.  Buffer size will be 0.
+    }
+
+    if (bufferSizeNeeded == 0)
+    {
+      return [];
+    }
+
+    var numRects = (int)(bufferSizeNeeded / rectSize);
+    var dirtyRects = new Rectangle[numRects];
+
+    var dirtyRectsPtr = stackalloc RECT[numRects];
+    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
+
+    for (var i = 0; i < numRects; i++)
+    {
+      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
+    }
+
+    return dirtyRects;
+  }
+
+  private bool IsDxOutputHealthy(DxOutput dxOutput)
+  {
+    return _timeProvider.GetLocalNow() - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
+  }
+
+  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+  {
+    try
+    {
+      // Get cursor information to draw on the screenshot.
+      var ci = new CURSORINFO();
+      ci.cbSize = (uint)Marshal.SizeOf(ci);
+      PInvoke.GetCursorInfo(ref ci);
+
+      if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+      {
+        return Rectangle.Empty;
+      }
+
+      using var icon = Icon.FromHandle(ci.hCursor);
+
+      uint hotspotX = 0;
+      uint hotspotY = 0;
+      var hicon = new HICON(icon.Handle);
+      var iconInfoPtr = stackalloc ICONINFO[1];
+      if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
+      {
+        hotspotX = iconInfoPtr->xHotspot;
+        hotspotY = iconInfoPtr->yHotspot;
+        PInvoke.DestroyIcon(hicon);
+      }
+
+      var virtualScreen = GetVirtualScreenBounds();
+      var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
+      var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
+
+      var targetArea = new Rectangle(x, y, icon.Width, icon.Height);
+      if (!captureArea.Contains(targetArea))
+      {
+        _logger.LogDebug("Cursor is outside of capture area. Skipping.");
+        return Rectangle.Empty;
+      }
+
+      graphics.DrawIcon(icon, x, y);
+
+      return targetArea;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Error while drawing cursor.");
+      return Rectangle.Empty;
     }
   }
 }

@@ -7,4 +7,5 @@ public record CaptureMetricsDto(
   double Ips,
   bool IsUsingGpu,
   int ImageQuality,
+  TimeSpan Latency,
   Dictionary<string, string> ExtraData);

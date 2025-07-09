@@ -12,7 +12,6 @@ public interface IBitmapUtility
   byte[] EncodeJpeg(Bitmap bitmap, int quality, bool compressOutput = true);
   Bitmap CropBitmap(Bitmap bitmap, Rectangle cropArea);
   Result<Rectangle> GetChangedArea(Bitmap? currentFrame, Bitmap? previousFrame, bool forceFullscreen = false);
-  Task<byte[]> EncodeJpegWinRt(SoftwareBitmap bitmap, double quality);
   public bool IsEmpty(Bitmap bitmap);
 }
 
@@ -48,23 +47,6 @@ public class BitmapUtility : IBitmapUtility
     return ms.ToArray();
   }
 
-
-  public async Task<byte[]> EncodeJpegWinRt(SoftwareBitmap bitmap, double quality)
-  {
-    var propertySet = new BitmapPropertySet();
-    var qualityValue = new BitmapTypedValue(quality, Windows.Foundation.PropertyType.Single);
-    propertySet.Add("ImageQuality", qualityValue);
-
-    using var ms = new MemoryStream();
-    using var ras = ms.AsRandomAccessStream();
-
-    var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, ras, propertySet);
-
-    encoder.SetSoftwareBitmap(bitmap);
-    await encoder.FlushAsync();
-
-    return ms.ToArray();
-  }
 
   public Result<Rectangle> GetChangedArea(Bitmap? currentFrame, Bitmap? previousFrame, bool forceFullscreen = false)
   {

@@ -6,7 +6,6 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Streamer.Extensions;
 using ControlR.Streamer.Models;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Streamer.Services;
 
@@ -28,15 +27,15 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
   private readonly IHostApplicationLifetime _appLifetime;
   private readonly IBitmapUtility _bitmapUtility;
-  private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
   private readonly ICaptureMetrics _captureMetrics;
+  private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
   private readonly AutoResetEventAsync _frameReadySignal = new();
   private readonly AutoResetEventAsync _frameRequestedSignal = new(true);
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
-  private readonly TimeProvider _timeProvider;
-  private readonly IScreenGrabber _screenGrabber;
   private readonly IProcessManager _processManager;
+  private readonly IScreenGrabber _screenGrabber;
+  private readonly TimeProvider _timeProvider;
   private readonly IWin32Interop _win32Interop;
   private DisplayInfo[] _displays;
   private bool _forceKeyFrame = true;
@@ -81,9 +80,10 @@ internal class DesktopCapturer : IDesktopCapturer
       return Task.CompletedTask;
     }
 
-    _lastCpuBitmap?.Dispose();
-    _lastCpuBitmap = null;
+    //_lastCpuBitmap?.Dispose();
+    //_lastCpuBitmap = null;
     _selectedDisplay = newDisplay;
+    _forceKeyFrame = true;
 
     return Task.CompletedTask;
   }
@@ -147,9 +147,33 @@ internal class DesktopCapturer : IDesktopCapturer
 
   public Task StartCapturingChanges()
   {
-    StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
+    var isBackgroundSession = _processManager.GetCurrentProcess().SessionId == 0;
+    if (isBackgroundSession) 
+    {
+      StartCapturingSession0(_appLifetime.ApplicationStopping).Forget();
+    }
+    else
+    {
+      StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
+    }
     _captureMetrics.Start(_appLifetime.ApplicationStopping);
     return Task.CompletedTask;
+  }
+
+  private static Bitmap DownscaleBitmap(Bitmap bitmap, double scale)
+  {
+    var newWidth = (int)(bitmap.Width * scale);
+    var newHeight = (int)(bitmap.Height * scale);
+    var resizedBitmap = new Bitmap(newWidth, newHeight);
+
+    using (var graphics = Graphics.FromImage(resizedBitmap))
+    {
+      graphics.CompositingQuality = CompositingQuality.HighSpeed;
+      graphics.InterpolationMode = InterpolationMode.Low;
+      graphics.DrawImage(bitmap, 0, 0, newWidth, newHeight);
+    }
+
+    return resizedBitmap;
   }
 
   private async Task EncodeCpuCaptureResult(CaptureResult captureResult, int quality, CancellationToken cancellationToken)
@@ -299,10 +323,10 @@ internal class DesktopCapturer : IDesktopCapturer
         }
 
         _win32Interop.SwitchToInputDesktop();
-        
+
         using var captureResult = _screenGrabber.Capture(
-          targetDisplay: selectedDisplay,
-          captureCursor: false);
+              targetDisplay: selectedDisplay,
+              captureCursor: false);
 
         if (captureResult.HadNoChanges)
         {
@@ -352,8 +376,6 @@ internal class DesktopCapturer : IDesktopCapturer
         {
           await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
         }
-
-        await _captureMetrics.BroadcastMetrics();
       }
       catch (OperationCanceledException)
       {
@@ -377,20 +399,80 @@ internal class DesktopCapturer : IDesktopCapturer
       }
     }
   }
-  private static Bitmap DownscaleBitmap(Bitmap bitmap, double scale)
+
+  private async Task StartCapturingSession0(CancellationToken cancellationToken)
   {
-    var newWidth = (int)(bitmap.Width * scale);
-    var newHeight = (int)(bitmap.Height * scale);
-    var resizedBitmap = new Bitmap(newWidth, newHeight);
+    _captureMetrics.SetIsUsingGpu(false);
+    var bounds = _screenGrabber.GetVirtualScreenBounds();
 
-    using (var graphics = Graphics.FromImage(resizedBitmap))
+    while (!cancellationToken.IsCancellationRequested)
     {
-      graphics.CompositingQuality = CompositingQuality.HighSpeed;
-      graphics.InterpolationMode = InterpolationMode.Low;
-      graphics.DrawImage(bitmap, 0, 0, newWidth, newHeight);
-    }
+      try
+      {
+        if (_selectedDisplay is not { } selectedDisplay)
+        {
+          _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
+          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
+          continue;
+        }
 
-    return resizedBitmap;
+        await _frameRequestedSignal.Wait(cancellationToken);
+        await ThrottleCapturing(cancellationToken);
+
+        _captureMetrics.MarkIteration();
+
+        _ = _win32Interop.SwitchToInputDesktop();
+
+        using var captureResult = _screenGrabber.CaptureSession0Desktop();
+
+        if (!captureResult.IsSuccess)
+        {
+          _logger.LogWarning(
+            captureResult.Exception,
+            "Failed to capture latest frame.  Reason: {ResultReason}",
+            captureResult.FailureReason);
+
+          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
+          continue;
+        }
+
+        if (ShouldSendKeyFrame())
+        {
+          EncodeRegion(captureResult.Bitmap, bounds, CaptureMetrics.DefaultImageQuality, isKeyFrame: true);
+          _forceKeyFrame = false;
+          _needsKeyFrame = false;
+          _lastCpuBitmap?.Dispose();
+          _lastCpuBitmap = null;
+          _lastDisplayId = selectedDisplay.DeviceName;
+          _lastMonitorArea = selectedDisplay.MonitorArea;
+          continue;
+        }
+
+
+        _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
+        await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
+      }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("Screen streaming cancelled.");
+        break;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error encoding screen captures.");
+      }
+      finally
+      {
+        if (!_changedRegions.IsEmpty)
+        {
+          _frameReadySignal.Set();
+        }
+        else
+        {
+          _frameRequestedSignal.Set();
+        }
+      }
+    }
   }
   private async Task ThrottleCapturing(CancellationToken cancellationToken)
   {

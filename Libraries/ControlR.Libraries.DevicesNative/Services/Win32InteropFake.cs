@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesNative.Services.Windows;
 using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
@@ -56,6 +57,11 @@ public class Win32InteropFake : IWin32Interop
     throw new NotImplementedException();
   }
 
+  public List<string> GetDesktopNames(string windowStation = "WinSta0")
+  {
+    throw new NotImplementedException();
+  }
+
   public bool GetInputDesktopName(out string desktopName)
   {
     throw new NotImplementedException();
@@ -72,6 +78,11 @@ public class Win32InteropFake : IWin32Interop
   }
 
   public string GetUsernameFromSessionId(uint sessionId)
+  {
+    throw new NotImplementedException();
+  }
+
+  public List<WindowInfo> GetVisibleWindows()
   {
     throw new NotImplementedException();
   }
@@ -136,7 +147,10 @@ public class Win32InteropFake : IWin32Interop
     throw new NotImplementedException();
   }
 
-  public bool StartProcessInBackgroundSession(string commandLine, [NotNullWhen(true)] out Process? startedProcess)
+  public bool StartProcessInBackgroundSession(
+    string commandLine,
+    bool hiddenWindow,
+    [NotNullWhen(true)] out Process? startedProcess)
   {
     throw new NotImplementedException();
   }
@@ -147,6 +161,11 @@ public class Win32InteropFake : IWin32Interop
   }
 
   public void TypeText(string text)
+  {
+    throw new NotImplementedException();
+  }
+
+  public void UpdateDesktopWindow()
   {
     throw new NotImplementedException();
   }

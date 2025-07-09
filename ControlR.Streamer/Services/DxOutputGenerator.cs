@@ -1,4 +1,5 @@
 ﻿using ControlR.Streamer.Extensions;
+using ControlR.Streamer.Helpers;
 using ControlR.Streamer.Models;
 using Microsoft.Extensions.Caching.Memory;
 using System.Runtime.InteropServices;
@@ -7,7 +8,7 @@ using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Direct3D;
 using Windows.Win32.Graphics.Dxgi;
 
-namespace ControlR.Streamer.Helpers;
+namespace ControlR.Streamer.Services;
 
 internal interface IDxOutputGenerator
 {

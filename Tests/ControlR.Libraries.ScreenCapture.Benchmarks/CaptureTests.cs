@@ -5,10 +5,10 @@ using System.Drawing;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Streamer.Services;
-using ControlR.Streamer.Helpers;
 using ControlR.Streamer.Models;
 using ControlR.Streamer.Extensions;
 using ControlR.Devices.Native.Services;
+using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.ScreenCapture.Benchmarks;
 public sealed class CaptureTests
@@ -26,7 +26,12 @@ public sealed class CaptureTests
     _bitmapUtility = new BitmapUtility();
     _dxGenerator = new DxOutputGenerator(_loggerFactory.CreateLogger<DxOutputGenerator>());
     _win32Interop = new Win32Interop(_loggerFactory.CreateLogger<Win32Interop>());
-    _grabber = new ScreenGrabber(TimeProvider.System, _bitmapUtility, _dxGenerator, _win32Interop, _loggerFactory.CreateLogger<ScreenGrabber>());
+    _grabber = new ScreenGrabber(
+      TimeProvider.System, 
+      _bitmapUtility, 
+      _dxGenerator, 
+      _win32Interop,
+      _loggerFactory.CreateLogger<ScreenGrabber>());
     _displays = _grabber.GetDisplays();
   }
 
@@ -239,16 +244,7 @@ public sealed class CaptureTests
       return Task.FromResult(iterations);
     });
 
-    var winRtTps = await GetTimesPerSecond(async () =>
-    {
-      for (var i = 0; i < iterations; i++)
-      {
-        _ = await _bitmapUtility.EncodeJpegWinRt(sb, .7);
-      }
-      return iterations;
-    });
-
-    Console.WriteLine($"Win32 TPS: {tps} | WinRt TPS: {winRtTps}");
+    Console.WriteLine($"Win32 TPS: {tps}");
   }
 
   private static async Task<double> GetTimesPerSecond(Func<Task<int>> func)

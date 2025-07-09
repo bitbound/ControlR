@@ -69,19 +69,57 @@ internal class StreamerLauncherWindows(
         var streamerDir = Path.Combine(startupDir, "Streamer");
         var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
 
-        var result = _win32Interop.CreateInteractiveSystemProcess(
+        Process? process;
+        bool result;
+
+        if (targetWindowsSession == 0)
+        {
+          var shellPath = Path.Combine(
+            _environment.SelfExtractDir,
+            "Embedded",
+            "BackgroundShell",
+            "ControlR.BackgroundShell.exe");
+
+          var backgroundShells = _processManager
+            .GetProcessesByName("ControlR.BackgroundShell")
+            .Where(x => x.SessionId == targetWindowsSession)
+            .ToArray();
+
+          foreach (var shell in backgroundShells)
+          {
+            shell.KillAndDispose();
+          }
+
+          _logger.LogInformation(
+            "Starting background shell for session {SessionId} at {ShellPath}.",
+            targetWindowsSession,
+            shellPath);
+
+          if (!_win32Interop.StartProcessInBackgroundSession(
+                commandLine: shellPath,
+                hiddenWindow: false,
+                startedProcess: out _))
+          {
+            return Result.Fail("Failed to start background shell.");
+          }
+
+          result = _win32Interop.StartProcessInBackgroundSession(
+            commandLine: $"\"{binaryPath}\" {args}",
+            hiddenWindow: true,
+            startedProcess: out process);
+        }
+        else
+        {
+          result = _win32Interop.CreateInteractiveSystemProcess(
             commandLine: $"\"{binaryPath}\" {args}",
             targetSessionId: targetWindowsSession,
             hiddenWindow: true,
-            startedProcess: out var process);
+            startedProcess: out process);
+        }
 
         if (!result || process is null || process.Id == -1)
         {
-          _logger.LogError("Failed to start remote control process. Removing files before next attempt.");
-          var streamerZipPath = Path.Combine(startupDir, AppConstants.StreamerZipFileName);
-          // Delete streamer files so a clean install will be performed on the next attempt.
-          _fileSystem.DeleteDirectory(streamerDir, true);
-          _fileSystem.DeleteFile(streamerZipPath);
+          _logger.LogError("Failed to start remote control process.");
           return Result.Fail("Failed to start remote control process.");
         }
 
@@ -130,19 +168,20 @@ internal class StreamerLauncherWindows(
 
     var psi = new ProcessStartInfo()
     {
-      FileName = "cmd.exe",
-      Arguments = $"/k {streamerPath} {args}",
       WorkingDirectory = Path.GetDirectoryName(streamerPath),
       UseShellExecute = true
     };
 
-    //var psi = new ProcessStartInfo
-    //{
-    //  FileName = streamerPath,
-    //  Arguments = args,
-    //  WorkingDirectory = Path.GetDirectoryName(streamerPath),
-    //  UseShellExecute = true
-    //};
+    if (_settings.CloseStreamerConsoleOnExit)
+    {
+      psi.FileName = streamerPath;
+      psi.Arguments = args;
+    }
+    else
+    {
+      psi.FileName = "cmd.exe";
+      psi.Arguments = $"/k {streamerPath} {args}";
+    }
 
     return _processManager.Start(psi);
   }

@@ -16,8 +16,6 @@ public interface ICaptureMetrics
   bool IsUsingGpu { get; }
   double Mbps { get; }
   int Quality { get; }
-
-  Task BroadcastMetrics();
   void MarkBytesSent(int length);
   void MarkFrameSent();
   void MarkIteration();
@@ -42,6 +40,7 @@ internal sealed class CaptureMetrics(
   public const int MinimumQuality = 20;
   public const double TargetMbps = 3;
   private readonly ManualResetEventAsync _bandwidthAvailableSignal = new(false);
+  private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _iterations = [];
@@ -52,22 +51,20 @@ internal sealed class CaptureMetrics(
   };
   private readonly ILogger<CaptureMetrics> _logger = logger;
   private readonly IMessenger _messenger = messenger;
-  private readonly Stopwatch _metricsBroadcastTimer = Stopwatch.StartNew();
-  private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(1);
+  private readonly TimeSpan _processingInterval = TimeSpan.FromSeconds(.1);
   private readonly SemaphoreSlim _processLock = new(1, 1);
   private readonly IProcessManager _processManager = processManager;
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly TimeSpan _timerInterval = TimeSpan.FromSeconds(.1);
   private readonly IWin32Interop _win32Interop = win32Interop;
   private CancellationTokenSource? _abortTokenSource;
+  private ITimer? _broadcastTimer;
   private double _fps;
   private double _ips;
   private bool _isUsingGpu;
   private double _mbps;
   private ITimer? _processingTimer;
-
   private int _quality = DefaultImageQuality;
   public double Fps => _fps;
   public double Ips => _ips;
@@ -75,35 +72,6 @@ internal sealed class CaptureMetrics(
   public bool IsUsingGpu => _isUsingGpu;
   public double Mbps => _mbps;
   public int Quality => _quality;
-
-  public async Task BroadcastMetrics()
-  {
-    if (_metricsBroadcastTimer.Elapsed > _metricsWindow)
-    {
-      _metricsBroadcastTimer.Restart();
-      _logger.LogDebug(
-        "Mbps: {CurrentMbps:N2} | FPS: {Fps:N2} | IPS (iterations): {IPS:N2} | Using GPU: {IsUsingGpu} | Current Quality: {ImageQuality}",
-        Mbps,
-        Fps,
-        Ips,
-        IsUsingGpu,
-        Quality);
-
-      var extraData = GetExtraData();
-
-      var metricsDto = new CaptureMetricsDto(
-        Mbps,
-        Fps,
-        Ips,
-        IsUsingGpu,
-        Quality,
-        extraData);
-
-      var message = new CaptureMetricsChangedMessage(metricsDto);
-
-      await _messenger.Send(message);
-    }
-  }
 
   public void MarkBytesSent(int length)
   {
@@ -128,14 +96,14 @@ internal sealed class CaptureMetrics(
   public void Start(CancellationToken cancellationToken)
   {
     _abortTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-    _processingTimer = _timeProvider.CreateTimer(ProcessMetrics, null, _timerInterval, _timerInterval);
+    _processingTimer = _timeProvider.CreateTimer(ProcessMetrics, null, _processingInterval, _processingInterval);
+    _broadcastTimer = _timeProvider.CreateTimer(BroadcastMetrics, null, _broadcastInterval, _broadcastInterval);
   }
 
   public void Stop()
   {
     _abortTokenSource?.Cancel();
-    _processingTimer?.Dispose();
-    Disposer.TryDispose(_abortTokenSource);
+    Disposer.TryDispose(_abortTokenSource, _processingTimer, _broadcastTimer);
     _abortTokenSource = null;
   }
 
@@ -143,13 +111,46 @@ internal sealed class CaptureMetrics(
   {
     await _bandwidthAvailableSignal.Wait(cancellationToken);
   }
+
   private static double ConvertBytesToMbps(int bytes, TimeSpan timeSpan)
   {
     return bytes / 1024.0 / 1024.0 / timeSpan.TotalSeconds * 8;
   }
+
+  private async void BroadcastMetrics(object? state)
+  {
+    try
+    {
+      _logger.LogDebug(
+        "Mbps: {CurrentMbps:N2} | FPS: {Fps:N2} | IPS (iterations): {IPS:N2} | Using GPU: {IsUsingGpu} | Current Quality: {ImageQuality}",
+        Mbps,
+        Fps,
+        Ips,
+        IsUsingGpu,
+        Quality);
+
+      var extraData = GetExtraData();
+
+      var metricsDto = new CaptureMetricsDto(
+        Mbps,
+        Fps,
+        Ips,
+        IsUsingGpu,
+        Quality,
+        TimeSpan.Zero,
+        extraData);
+
+      var message = new CaptureMetricsChangedMessage(metricsDto);
+
+      await _messenger.Send(message);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while broadcasting metrics.");
+    }
+  }
   private Dictionary<string, string> GetExtraData()
   {
-
     _ = _win32Interop.GetCurrentThreadDesktopName(out var threadDesktopName);
     _ = _win32Interop.GetInputDesktopName(out var inputDesktopName);
     var screenBounds = _screenGrabber.GetVirtualScreenBounds();
@@ -161,6 +162,22 @@ internal sealed class CaptureMetrics(
       { "Input Desktop Name", $"{inputDesktopName}"},
       { "Screen Bounds", JsonSerializer.Serialize(screenBounds, _jsonSerializerOptions) }
     };
+
+    if (_processManager.GetCurrentProcess().SessionId == 0)
+    {
+      var windowInfos = _win32Interop.GetVisibleWindows();
+      foreach (var item in windowInfos.Index())
+      {
+        extraData.Add($"Window Data ({item.Index})", item.Item.ToString());
+      }
+
+      var desktopNames = _win32Interop.GetDesktopNames();
+      foreach (var item in desktopNames.Index())
+      {
+        extraData.Add($"Desktop ({item.Index})", item.Item);
+      }
+
+    }
 
     return extraData;
   }
@@ -184,14 +201,14 @@ internal sealed class CaptureMetrics(
 
       while (
           _framesSent.TryPeek(out var timestamp) &&
-          timestamp.Add(_metricsWindow) < _timeProvider.GetUtcNow())
+          timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
       {
         _ = _framesSent.TryDequeue(out _);
       }
 
       if (_framesSent.Count >= 2)
       {
-        _fps = _framesSent.Count / _metricsWindow.TotalSeconds;
+        _fps = _framesSent.Count / _broadcastInterval.TotalSeconds;
       }
       else if (_framesSent.Count == 1)
       {
@@ -204,7 +221,7 @@ internal sealed class CaptureMetrics(
 
       while (
         _bytesSent.TryPeek(out var payload) &&
-        payload.Timestamp.Add(_metricsWindow) < _timeProvider.GetUtcNow())
+        payload.Timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
       {
         _ = _bytesSent.TryDequeue(out _);
       }
@@ -212,11 +229,11 @@ internal sealed class CaptureMetrics(
       if (_bytesSent.Count >= 2)
       {
         var bytesSent = _bytesSent.Sum(x => x.Size);
-        _mbps = ConvertBytesToMbps(_bytesSent.Sum(x => x.Size), _metricsWindow);
+        _mbps = ConvertBytesToMbps(_bytesSent.Sum(x => x.Size), _broadcastInterval);
       }
       else if (_bytesSent.Count == 1)
       {
-        _mbps = ConvertBytesToMbps(_bytesSent.First().Size, _metricsWindow);
+        _mbps = ConvertBytesToMbps(_bytesSent.First().Size, _broadcastInterval);
       }
       else
       {
@@ -234,12 +251,24 @@ internal sealed class CaptureMetrics(
 
       while (
           _iterations.TryPeek(out var iteration) &&
-          iteration.AddSeconds(1) < _timeProvider.GetUtcNow())
+          iteration.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
       {
         _ = _iterations.TryDequeue(out _);
       }
 
-      _ips = _iterations.Count;
+
+      if (_iterations.Count >= 2)
+      {
+        _ips = _iterations.Count / _broadcastInterval.TotalSeconds;
+      }
+      else if (_iterations.Count == 1)
+      {
+        _ips = 1;
+      }
+      else
+      {
+        _ips = 0;
+      }
 
       var calculatedQuality = (int)(TargetMbps / _mbps * DefaultImageQuality);
 

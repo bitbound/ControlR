@@ -5,18 +5,26 @@ using Microsoft.Extensions.Hosting;
 namespace ControlR.Streamer.Services;
 
 internal partial class CursorWatcher(
+  ISystemEnvironment systemEnvironment,
   IMessenger messenger,
   IWin32Interop win32Interop,
   IDelayer delayer,
   ILogger<ClipboardManager> logger) : BackgroundService
 {
   private readonly IMessenger _messenger = messenger;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<ClipboardManager> _logger = logger;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
+    if (_systemEnvironment.IsSessionZero())
+    {
+      _logger.LogInformation("Skipping cursor icon watch due to being in session 0.");
+      return;
+    }
+
     var currentCursor = _win32Interop.GetCurrentCursor();
 
     while (!stoppingToken.IsCancellationRequested)

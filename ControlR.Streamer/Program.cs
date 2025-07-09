@@ -6,7 +6,6 @@ using ControlR.Streamer.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR.Client;
-using ControlR.Streamer.Extensions;
 using ControlR.Libraries.DevicesCommon.Extensions;
 
 var sessionIdOption = new Option<Guid>(
@@ -122,7 +121,10 @@ rootCommand.SetAction(async parseResult =>
   services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
   services.AddSingleton<IClipboardManager, ClipboardManager>();
   services.AddSingleton<IDelayer, Delayer>();
-  services.AddScreenCapturer();
+  services
+      .AddSingleton<IBitmapUtility, BitmapUtility>()
+      .AddSingleton<IScreenGrabber, ScreenGrabber>()
+      .AddSingleton<IDxOutputGenerator, DxOutputGenerator>();
   services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
   services.AddHostedService<SystemEventHandler>();
   services.AddHostedService<HostLifetimeEventResponder>();

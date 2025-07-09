@@ -1,25 +1,24 @@
 ﻿using System.Text.Json.Serialization;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 
 namespace ControlR.Libraries.Shared.Dtos;
 
 
-[MessagePackObject]
+[MessagePackObject(keyAsPropertyName: true)]
 public class DtoWrapper
 {
-  [Key(nameof(DtoType))]
   [JsonConverter(typeof(JsonStringEnumConverter))]
   public required DtoType DtoType { get; init; }
 
-  [Key(nameof(Payload))]
   public required byte[] Payload { get; init; }
+  public required long SendTimestamp { get; init; }
 
   public static DtoWrapper Create<T>(T dto, DtoType dtoType)
   {
     return new DtoWrapper()
     {
       DtoType = dtoType,
-      Payload = MessagePackSerializer.Serialize(dto)
+      Payload = MessagePackSerializer.Serialize(dto),
+      SendTimestamp = TimeProvider.System.GetTimestamp()
     };
   }
 
