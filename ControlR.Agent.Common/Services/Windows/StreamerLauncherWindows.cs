@@ -69,53 +69,11 @@ internal class StreamerLauncherWindows(
         var streamerDir = Path.Combine(startupDir, "Streamer");
         var binaryPath = Path.Combine(streamerDir, AppConstants.StreamerFileName);
 
-        Process? process;
-        bool result;
-
-        if (targetWindowsSession == 0)
-        {
-          var shellPath = Path.Combine(
-            _environment.SelfExtractDir,
-            "Embedded",
-            "BackgroundShell",
-            "ControlR.BackgroundShell.exe");
-
-          var backgroundShells = _processManager
-            .GetProcessesByName("ControlR.BackgroundShell")
-            .Where(x => x.SessionId == targetWindowsSession)
-            .ToArray();
-
-          foreach (var shell in backgroundShells)
-          {
-            shell.KillAndDispose();
-          }
-
-          _logger.LogInformation(
-            "Starting background shell for session {SessionId} at {ShellPath}.",
-            targetWindowsSession,
-            shellPath);
-
-          if (!_win32Interop.StartProcessInBackgroundSession(
-                commandLine: shellPath,
-                hiddenWindow: false,
-                startedProcess: out _))
-          {
-            return Result.Fail("Failed to start background shell.");
-          }
-
-          result = _win32Interop.StartProcessInBackgroundSession(
-            commandLine: $"\"{binaryPath}\" {args}",
-            hiddenWindow: true,
-            startedProcess: out process);
-        }
-        else
-        {
-          result = _win32Interop.CreateInteractiveSystemProcess(
-            commandLine: $"\"{binaryPath}\" {args}",
-            targetSessionId: targetWindowsSession,
-            hiddenWindow: true,
-            startedProcess: out process);
-        }
+        var result = _win32Interop.CreateInteractiveSystemProcess(
+          commandLine: $"\"{binaryPath}\" {args}",
+          targetSessionId: targetWindowsSession,
+          hiddenWindow: true,
+          startedProcess: out var process);
 
         if (!result || process is null || process.Id == -1)
         {

@@ -71,16 +71,6 @@ if ($BuildAgent) {
     "-p:IncludeAppSettingsInSingleFile=true"
   )
   
-  
-  # Windows Background Shell
-  dotnet publish -c $Configuration -p:PublishProfile=win-x86 -p:TargetFramework=net481 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion -o "$Root\ControlR.Agent\Embedded\BackgroundShell\" "$Root\ControlR.BackgroundShell\"
-  Check-LastExitCode
-  
-  Wait-ForFileToExist -FilePath "$Root\ControlR.Agent\Embedded\BackgroundShell\ControlR.BackgroundShell.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Agent\Embedded\BackgroundShell\ControlR.BackgroundShell.exe"
-  Check-LastExitCode
-
-
   # Windows Agent
   dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode

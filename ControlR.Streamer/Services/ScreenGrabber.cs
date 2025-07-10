@@ -51,7 +51,6 @@ public interface IScreenGrabber
   ///   If successful, the result will contain the <see cref="Bitmap" /> of the capture.
   /// </returns>
   CaptureResult Capture(bool captureCursor = true);
-  CaptureResult CaptureSession0Desktop();
 
   /// <summary>
   ///   Return info about the connected displays.
@@ -140,7 +139,16 @@ internal sealed class ScreenGrabber(
     return DisplaysEnumerationHelper.GetDisplays();
   }
 
-  public unsafe CaptureResult CaptureSession0Desktop()
+  public Rectangle GetVirtualScreenBounds()
+  {
+    var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
+    var height = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
+    var left = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
+    var top = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
+    return new Rectangle(left, top, width, height);
+  }
+
+  private unsafe CaptureResult CaptureSession0Desktop()
   {
     const int WM_USER_CAPTURE_START = 0x8001;
     const int WM_USER_CAPTURE_END = 0x8002;
@@ -213,16 +221,6 @@ internal sealed class ScreenGrabber(
       }
     }
   }
-
-  public Rectangle GetVirtualScreenBounds()
-  {
-    var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
-    var height = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
-    var left = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
-    var top = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
-    return new Rectangle(left, top, width, height);
-  }
-
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
     bool captureCursor,

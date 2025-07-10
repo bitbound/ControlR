@@ -147,15 +147,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
   public Task StartCapturingChanges()
   {
-    var isBackgroundSession = _processManager.GetCurrentProcess().SessionId == 0;
-    if (isBackgroundSession) 
-    {
-      StartCapturingSession0(_appLifetime.ApplicationStopping).Forget();
-    }
-    else
-    {
-      StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
-    }
+    StartCapturingChangesImpl(_appLifetime.ApplicationStopping).Forget();
     _captureMetrics.Start(_appLifetime.ApplicationStopping);
     return Task.CompletedTask;
   }
@@ -423,7 +415,8 @@ internal class DesktopCapturer : IDesktopCapturer
 
         _ = _win32Interop.SwitchToInputDesktop();
 
-        using var captureResult = _screenGrabber.CaptureSession0Desktop();
+        //using var captureResult = _screenGrabber.CaptureSession0Desktop();
+        using var captureResult = _screenGrabber.Capture(captureCursor: false);
 
         if (!captureResult.IsSuccess)
         {

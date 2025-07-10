@@ -15,7 +15,7 @@
     ]
   },
   {
-    "Name": "Server + Agent",
+    "Name": "Full Stack",
     "Projects": [
       {
         "Path": "ControlR.Agent\\ControlR.Agent.csproj",
