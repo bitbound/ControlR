@@ -20,20 +20,10 @@
                    OnSendClipboardClicked="HandleSendClipboardClicked"
                    OnTypeClipboardClicked="HandleTypeClipboardClicked" />
 
-    <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
-      @if (CurrentBreakpoint < Breakpoint.Sm)
-      {
-        <MudIconButton Icon="@(Icons.Material.Filled.Shield)"
-                       Variant="Variant.Outlined"
-                       OnClick="InvokeCtrlAltDel" />
-      }
-      else
-      {
-        <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" OnClick="InvokeCtrlAltDel">
-          Ctrl+Alt+Del
-        </MudButton>
-      }
-    </MudTooltip>
+    @if (Session.Device.Platform == SystemPlatform.Windows)
+    {
+      <CtrlAltDelMenuButton OnClick="InvokeCtrlAltDel" /> 
+    }
 
     @if (_controlMode == ControlMode.Touch)
     {
@@ -61,6 +51,7 @@
     <MudTooltip Text="Metrics" Placement="Placement.Left" Class="z9002">
       <MudToggleIconButton Variant="Variant.Outlined"
                            Icon="@(Icons.Material.Filled.QueryStats)"
+                           Size="Size.Small"
                            ToggledColor="Color.Success"
                            ToggledIcon="@(Icons.Material.Filled.QueryStats)"
                            ToggledChanged="HandleMetricsToggled" />

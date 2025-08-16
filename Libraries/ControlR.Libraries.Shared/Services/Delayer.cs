@@ -2,7 +2,6 @@
 
 public interface IDelayer
 {
-  Task Delay(TimeSpan delay, CancellationToken cancellationToken = default);
   Task<bool> WaitForAsync(
       Func<bool> condition,
       TimeSpan? pollingDelay = null,
@@ -48,8 +47,4 @@ public class Delayer(TimeProvider timeProvider) : IDelayer
     return condition();
   }
 
-  public async Task Delay(TimeSpan delay, CancellationToken cancellationToken = default)
-  {
-    await Task.Delay(delay, _timeProvider, cancellationToken);
-  }
 }

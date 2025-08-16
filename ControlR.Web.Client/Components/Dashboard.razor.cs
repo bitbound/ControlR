@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 namespace ControlR.Web.Client.Components;
@@ -235,17 +234,18 @@ public partial class Dashboard
     switch (device.Platform)
     {
       case SystemPlatform.Windows:
-        var sessionResult = await ViewerHub.GetWindowsSessions(device.Id);
+      case SystemPlatform.MacOs:
+        var sessionResult = await ViewerHub.GetActiveUiSessions(device.Id);
         if (!sessionResult.IsSuccess)
         {
           Logger.LogResult(sessionResult);
-          Snackbar.Add("Failed to get Windows sessions", Severity.Warning);
+          Snackbar.Add("Failed to get active sessions", Severity.Warning);
           return;
         }
 
-        var dialogParams = new DialogParameters { ["DeviceName"] = device.Name, ["Sessions"] = sessionResult.Value };
+        var dialogParams = new DialogParameters { ["Device"] = device, ["Sessions"] = sessionResult.Value };
         var dialogRef =
-          await DialogService.ShowAsync<WindowsSessionSelectDialog>("Select Target Session", dialogParams);
+          await DialogService.ShowAsync<DesktopSessionSelectDialog>("Select Target Session", dialogParams);
 
         var result = await dialogRef.Result;
         if (result is null || result.Canceled)
@@ -253,9 +253,13 @@ public partial class Dashboard
           return;
         }
 
-        if (result.Data is uint sessionId)
+        if (result.Data is DeviceUiSession session)
         {
-          var remoteControlSession = new RemoteControlSession(device, (int)sessionId);
+          var remoteControlSession = new RemoteControlSession(
+            device,
+            session.SystemSessionId,
+            session.ProcessId);
+
           WindowStore.AddContentInstance<RemoteDisplay>(
             device,
             DeviceContentInstanceType.RemoteControl,

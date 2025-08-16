@@ -15,13 +15,13 @@ param (
 
   [switch]$BuildAgent,
 
-  [switch]$BuildStreamer
+  [switch]$BuildDesktop
 )
 
 
-$InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
-$VsWhere = "$InstallerDir\vswhere.exe"
-$MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
+#$InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+#$VsWhere = "$InstallerDir\vswhere.exe"
+#$MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Web.Server\wwwroot\downloads"
 
@@ -100,18 +100,26 @@ if ($BuildAgent) {
   Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
 }
 
-if ($BuildStreamer) {
-  dotnet publish --configuration $Configuration -p:PublishProfile=win-x86 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
-  Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\win-x86\ControlR.Streamer.exe"
+if ($BuildDesktop) {
+  $DesktopPublishPath = "$Root\ControlR.DesktopClient\bin\publish\"
+  $DesktopCommonArgs = @(
+    "-c", "$($Configuration)_Windows",
+    "--self-contained",
+    "-p:Version=$CurrentVersion",
+    "-p:FileVersion=$CurrentVersion"
+  )
+  
+  dotnet publish -r win-x86 -o "$DesktopPublishPath\win-x86" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
+  Wait-ForFileToExist -FilePath "$DesktopPublishPath\win-x86\ControlR.DesktopClient.exe"
+  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\win-x86\ControlR.DesktopClient.exe"
   Check-LastExitCode
-  Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.Streamer.zip" -Force
+  Compress-Archive -Path "$DesktopPublishPath\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.DesktopClient.zip" -Force
 
-  dotnet publish --configuration $Configuration -p:PublishProfile=win-x64 -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion "$Root\ControlR.Streamer\"
-  Wait-ForFileToExist -FilePath "$Root\ControlR.Streamer\bin\publish\win-x64\ControlR.Streamer.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$Root\ControlR.Streamer\bin\publish\win-x64\ControlR.Streamer.exe"
+  dotnet publish -r win-x64 -o "$DesktopPublishPath\win-x64" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
+  Wait-ForFileToExist -FilePath "$DesktopPublishPath\win-x64\ControlR.DesktopClient.exe"
+  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\win-x64\ControlR.DesktopClient.exe"
   Check-LastExitCode
-  Compress-Archive -Path "$Root\ControlR.Streamer\bin\publish\win-x64\*" -DestinationPath "$DownloadsFolder\win-x64\ControlR.Streamer.zip" -Force
+  Compress-Archive -Path "$DesktopPublishPath\win-x64\*" -DestinationPath "$DownloadsFolder\win-x64\ControlR.DesktopClient.zip" -Force
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"

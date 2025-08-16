@@ -5,5 +5,4 @@ internal enum StartupMode
   Run,
   Install,
   Uninstall,
-  EchoDesktop,
 }

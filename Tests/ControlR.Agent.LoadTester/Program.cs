@@ -76,7 +76,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         return Task.CompletedTask;
       };
 
-      connection.On<StreamerSessionRequestDto, bool>(
+      connection.On<RemoteControlSessionRequestDto, bool>(
         nameof(IAgentHubClient.CreateStreamingSession),
         agentHubClient.CreateStreamingSession);
 
@@ -85,8 +85,8 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         agentHubClient.CreateTerminalSession);
 
       connection.On(
-        nameof(IAgentHubClient.GetWindowsSessions),
-         agentHubClient.GetWindowsSessions);
+        nameof(IAgentHubClient.GetActiveUiSessions),
+         agentHubClient.GetActiveUiSessions);
 
       connection.On<TerminalInputDto, Result>(
         nameof(IAgentHubClient.ReceiveTerminalInput),

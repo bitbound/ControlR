@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Management.Automation;
+﻿using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Text;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Common.Services.Terminal;
 
@@ -24,11 +22,13 @@ internal class TerminalSession(
   TimeProvider timeProvider,
   ISystemEnvironment environment,
   IHubConnection<IAgentHub> hubConnection,
+  ISystemEnvironment systemEnvironment,
   ILogger<TerminalSession> logger) : ITerminalSession
 {
   private readonly ISystemEnvironment _environment = environment;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<TerminalSession> _logger = logger;
+  private readonly ISystemEnvironment _systemEnvironemnt = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly string _viewerConnectionId = viewerConnectionId;
   private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -217,6 +217,12 @@ internal class TerminalSession(
       // Set up event handlers
       _runspace.StateChanged += Runspace_StateChanged;
 
+      if (_systemEnvironemnt.IsWindows)
+      {
+        _powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process");
+        await _powerShell.InvokeAsync();
+      }
+
       // Send shell information to the viewer
       await SendOutput($"PowerShell {PSVersionInfo.PSVersion} on {Environment.OSVersion}", TerminalOutputKind.StandardOutput);
 
@@ -263,7 +269,7 @@ internal class TerminalSession(
   }
   private async Task ExecutePowerShellCommandAsync(string input, CancellationToken cancellationToken)
   {
-    await _writeLock.WaitAsync();
+    await _writeLock.WaitAsync(cancellationToken);
 
     try
     {
@@ -299,7 +305,16 @@ internal class TerminalSession(
           .Select(x => x?.ToString() ?? string.Empty)
           .ToArray();
 
-        await SendOutput(outputLines, TerminalOutputKind.StandardOutput);
+        using var ps = PowerShell.Create();
+        ps.AddScript("$args[0] | Out-String");
+        ps.AddArgument(results);
+        var result = await ps.InvokeAsync();
+
+        var hostOutput = result.Count > 0 ?
+            $"{result[0].BaseObject}" :
+            string.Empty;
+
+        await SendOutput(hostOutput.Split(Environment.NewLine), TerminalOutputKind.StandardOutput);
       }
 
       // Always send a new prompt after command execution
@@ -325,8 +340,7 @@ internal class TerminalSession(
 
   private void Runspace_StateChanged(object? sender, RunspaceStateEventArgs e)
   {
-    if (e.RunspaceStateInfo.State == RunspaceState.Closed ||
-        e.RunspaceStateInfo.State == RunspaceState.Broken)
+    if (e.RunspaceStateInfo.State is RunspaceState.Closed or RunspaceState.Broken)
     {
       ProcessExited?.Invoke(this, EventArgs.Empty);
     }

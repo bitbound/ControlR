@@ -6,15 +6,17 @@
   "configurations": [
     {
       "name": "Agent (Run)",
-      "type": "coreclr",
+      "type": "dotnet",
       "request": "launch",
-      "program": "${workspaceFolder}/ControlR.Agent/bin/Debug/net9.0/ControlR.Agent.dll",
-      "launchSettingsFilePath": "${workspaceFolder}/ControlR.Agent/Properties/launchSettings.json",
-      "launchSettingsProfile": "Run",
       "preLaunchTask": "build agent",
-      "cwd": "${workspaceFolder}/ControlR.Agent",
-      "stopAtEntry": false,
-      "console": "internalConsole"
+      "projectPath": "${workspaceFolder}/ControlR.Agent/ControlR.Agent.csproj"
+    },
+    {
+      "name": "DesktopClient",
+      "type": "dotnet",
+      "request": "launch",
+      "preLaunchTask": "build desktopclient",
+      "projectPath": "${workspaceFolder}/ControlR.DesktopClient/ControlR.DesktopClient.csproj"
     },
     {
       "name": "Server (https)",
@@ -26,6 +28,7 @@
       "preLaunchTask": "build server",
       "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
+      "requireExactSource": false,
       "console": "internalConsole",
     },
     {
@@ -38,6 +41,7 @@
       "preLaunchTask": "build loadtester",
       "cwd": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester",
       "stopAtEntry": false,
+      "requireExactSource": false,
       "console": "internalConsole"
     }
   ],
@@ -47,7 +51,8 @@
       "preLaunchTask": "compose",
       "configurations": [
         "Server (https)",
-        "Agent (Run)"
+        "Agent (Run)",
+        "DesktopClient"
       ],
       "stopAll": true
     },

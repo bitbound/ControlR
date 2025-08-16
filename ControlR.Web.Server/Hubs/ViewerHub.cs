@@ -28,10 +28,6 @@ public class ViewerHub(
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IWsRelayApi _wsRelayApi = wsRelayApi;
-  public Task<bool> CheckIfServerAdministrator()
-  {
-    return IsServerAdmin().AsTaskResult();
-  }
 
   public async Task<Result> CreateTerminalSession(
     Guid deviceId,
@@ -139,7 +135,7 @@ public class ViewerHub(
     }
   }
 
-  public async Task<WindowsSession[]> GetWindowsSessions(Guid deviceId)
+  public async Task<DeviceUiSession[]> GetActiveUiSessions(Guid deviceId)
   {
     try
     {
@@ -149,7 +145,7 @@ public class ViewerHub(
       }
 
       var device = authResult.Value;
-      return await _agentHub.Clients.Client(device.ConnectionId).GetWindowsSessions();
+      return await _agentHub.Clients.Client(device.ConnectionId).GetActiveUiSessions();
     }
     catch (Exception ex)
     {
@@ -268,7 +264,7 @@ public class ViewerHub(
 
   public async Task<Result> RequestStreamingSession(
     Guid deviceId,
-    StreamerSessionRequestDto sessionRequestDto)
+    RemoteControlSessionRequestDto sessionRequestDto)
   {
     try
     {

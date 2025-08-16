@@ -32,9 +32,9 @@ public interface IControlrApi
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
-  Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime);
+  Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
-  Task<Result<ServerSettingsDto>> GetServerSettings();
+  Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result> LogOut();
@@ -268,11 +268,11 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
   }
 
-  public async Task<Result<byte[]>> GetCurrentStreamerHash(RuntimeId runtime)
+  public async Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime)
   {
     try
     {
-      var fileRelativePath = AppConstants.GetStreamerFileDownloadPath(runtime);
+      var fileRelativePath = AppConstants.GetDesktopClientDownloadPath(runtime);
       using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
       using var response = await _client.SendAsync(request);
       response.EnsureSuccessStatusCode();
@@ -280,7 +280,7 @@ public class ControlrApi(
       if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
           values.FirstOrDefault() is not { } hashString)
       {
-        return Result.Fail<byte[]>("Failed to get streamer file hash.");
+        return Result.Fail<byte[]>("Failed to get desktop client file hash.");
       }
 
       var fileHash = Convert.FromHexString(hashString);
@@ -288,7 +288,7 @@ public class ControlrApi(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while checking for new streamer hash.");
+      _logger.LogError(ex, "Error while checking for new desktop client hash.");
       return Result.Fail<byte[]>(ex);
     }
   }
@@ -298,10 +298,10 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint));
   }
 
-  public async Task<Result<ServerSettingsDto>> GetServerSettings()
+  public async Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings()
   {
     return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<ServerSettingsDto>(HttpConstants.ServerSettingsEndpoint));
+      await _client.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.PublicRegistrationSettingsEndpoint));
   }
 
   public async Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName)

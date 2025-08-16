@@ -106,7 +106,7 @@
   {
     await base.OnInitializedAsync();
 
-    var settingsResult = await ControlrApi.GetServerSettings();
+    var settingsResult = await ControlrApi.GetPublicRegistrationSettings();
     if (settingsResult.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;

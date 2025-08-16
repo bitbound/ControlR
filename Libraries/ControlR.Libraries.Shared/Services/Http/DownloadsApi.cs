@@ -7,7 +7,7 @@ public interface IDownloadsApi
   Task<Result> DownloadFile(string downloadUri, string destinationPath);
   Task<Result> DownloadFile(Uri downloadUri, string destinationPath);
 
-  Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress);
+  Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress);
 
 }
 
@@ -39,15 +39,15 @@ public class DownloadsApi(
     return DownloadFile($"{downloadUri}", destinationPath);
   }
 
-  public async Task<Result> DownloadStreamerZip(string destinationPath, string streamerDownloadUri, Func<double, Task>? onDownloadProgress)
+  public async Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress)
   {
     try
     {
-      using var message = new HttpRequestMessage(HttpMethod.Head, streamerDownloadUri);
+      using var message = new HttpRequestMessage(HttpMethod.Head, desktopClientDownloadUri);
       using var response = await _client.SendAsync(message);
       var totalSize = response.Content.Headers.ContentLength ?? 100_000_000; // rough estimate.
 
-      await using var webStream = await _client.GetStreamAsync(streamerDownloadUri);
+      await using var webStream = await _client.GetStreamAsync(desktopClientDownloadUri);
       await using var fs = new ReactiveFileStream(destinationPath, FileMode.Create);
 
       fs.TotalBytesWrittenChanged += async (_, written) =>

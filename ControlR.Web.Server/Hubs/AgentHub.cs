@@ -58,7 +58,8 @@ public class AgentHub(
         }
         else
         {
-          _logger.LogDebug("Skipping offline update - device has reconnected with connection {CurrentConnectionId}, disconnecting {OldConnectionId}",
+          _logger.LogDebug(
+            "Skipping offline update. Device has reconnected with connection {CurrentConnectionId}. Disconnecting {OldConnectionId}.",
             currentDevice, Context.ConnectionId);
         }
       }
@@ -70,9 +71,11 @@ public class AgentHub(
     }
   }
 
-  public async Task SendStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
+  public async Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto)
   {
-    await _viewerHub.Clients.Client(progressDto.ViewerConnectionId).ReceiveStreamerDownloadProgress(progressDto);
+    await _viewerHub.Clients
+      .Client(progressDto.ViewerConnectionId)
+      .ReceiveDesktopClientDownloadProgress(progressDto);
   }
 
   public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
@@ -118,7 +121,7 @@ public class AgentHub(
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
-      deviceDto = UpdateDtoState(deviceDto);
+      deviceDto = UpdateDeviceDtoState(deviceDto);
 
       var updateResult = await UpdateDeviceEntity(deviceDto);
 
@@ -195,7 +198,7 @@ public class AgentHub(
     return updateResult;
   }
 
-  private DeviceDto UpdateDtoState(DeviceDto deviceDto)
+  private DeviceDto UpdateDeviceDtoState(DeviceDto deviceDto)
   {
     deviceDto = deviceDto with
     {

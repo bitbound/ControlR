@@ -8,11 +8,24 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
+	<PropertyGroup>
+		<OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(SelfContained)' == 'true'">
+		<OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
+	</PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="9.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="9.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="9.0.7">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.6.4" />
     <ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
     <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
@@ -24,7 +37,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.7" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -33,7 +45,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.2.0" />
+    <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.2.1" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="QRCoder" Version="1.6.0" />

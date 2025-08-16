@@ -23,6 +23,11 @@
         "DebugTarget": "Run"
       },
       {
+        "Path": "ControlR.DesktopClient\\ControlR.DesktopClient.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
+      },
+      {
         "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
         "Action": "Start",
         "DebugTarget": "https"

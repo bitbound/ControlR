@@ -9,6 +9,7 @@ namespace ControlR.Web.Server.Api;
 [Authorize(Roles = RoleNames.AgentInstaller)]
 public class InstallerKeysController : ControllerBase
 {
+  [HttpPost]
   public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
     [FromBody] CreateInstallerKeyRequestDto requestDto,
     [FromServices] TimeProvider timeProvider,

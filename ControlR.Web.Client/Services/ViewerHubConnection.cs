@@ -19,7 +19,7 @@ public interface IViewerHubConnection
 
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Uri?> GetWebSocketRelayOrigin();
-  Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId);
+  Task<Result<DeviceUiSession[]>> GetActiveUiSessions(Guid deviceId);
 
   Task InvokeCtrlAltDel(Guid deviceId);
   Task RefreshDeviceInfo(Guid deviceId);
@@ -27,7 +27,8 @@ public interface IViewerHubConnection
     Guid deviceId,
     Guid sessionId,
     Uri websocketUri,
-    int targetSystemSession);
+    int targetSystemSession,
+    int targetProcessId);
 
   Task<Result> RequestVncSession(
    Guid deviceId,
@@ -153,17 +154,17 @@ internal class ViewerHubConnection(
       () => null);
   }
 
-  public async Task<Result<WindowsSession[]>> GetWindowsSessions(Guid deviceId)
+  public async Task<Result<DeviceUiSession[]>> GetActiveUiSessions(Guid deviceId)
   {
     try
     {
-      var sessions = await _viewerHub.Server.GetWindowsSessions(deviceId);
+      var sessions = await _viewerHub.Server.GetActiveUiSessions(deviceId);
       return Result.Ok(sessions);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting windows sessions.");
-      return Result.Fail<WindowsSession[]>(ex);
+      _logger.LogError(ex, "Error while getting active sessions.");
+      return Result.Fail<DeviceUiSession[]>(ex);
     }
   }
 
@@ -191,7 +192,8 @@ internal class ViewerHubConnection(
     Guid deviceId,
     Guid sessionId,
     Uri websocketUri,
-    int targetSystemSession)
+    int targetSystemSession,
+    int targetProcessId)
   {
     try
     {
@@ -201,10 +203,11 @@ internal class ViewerHubConnection(
       }
 
       var notifyUser = await _settings.GetNotifyUserOnSessionStart();
-      var requestDto = new StreamerSessionRequestDto(
+      var requestDto = new RemoteControlSessionRequestDto(
         sessionId,
         websocketUri,
         targetSystemSession,
+        targetProcessId,
         _viewerHub.ConnectionId,
         deviceId,
         notifyUser);

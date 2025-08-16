@@ -2,6 +2,7 @@
 using System.Text.Json.Nodes;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Startup;
+using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.Extensions.Options;
 
@@ -9,7 +10,6 @@ namespace ControlR.Agent.Common.Services;
 
 public interface ISettingsProvider
 {
-  bool CloseStreamerConsoleOnExit { get; }
   Guid DeviceId { get; }
   bool DisableAutoUpdate { get; }
   string InstanceId { get; }
@@ -33,10 +33,6 @@ internal class SettingsProvider(
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
-
-  public bool CloseStreamerConsoleOnExit =>
-    _developerOptions.CurrentValue.CloseStreamerConsoleOnExit;
-
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
   public bool DisableAutoUpdate => _developerOptions.CurrentValue.DisableAutoUpdate;
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;

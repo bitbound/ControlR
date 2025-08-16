@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesNative.Linux;
+using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,7 @@ internal class AgentInstallerLinux(
   IDeviceDataGenerator deviceDataGenerator,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
+  IElevationChecker elevationChecker,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
@@ -31,6 +33,7 @@ internal class AgentInstallerLinux(
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
+  private readonly IElevationChecker _elevationChecker = elevationChecker;
 
   public async Task Install(
     Uri? serverUri = null,
@@ -56,7 +59,7 @@ internal class AgentInstallerLinux(
 
       _logger.LogInformation("Install started.");
 
-      if (Libc.Geteuid() != 0)
+      if (!_elevationChecker.IsElevated())
       {
         _logger.LogError("Install command must be run with sudo.");
         return;

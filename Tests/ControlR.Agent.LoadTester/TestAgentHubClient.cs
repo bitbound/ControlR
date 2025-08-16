@@ -12,7 +12,7 @@ namespace ControlR.Agent.LoadTester;
 
 public class TestAgentHubClient : IAgentHubClient
 {
-  public Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto)
+  public Task<bool> CreateStreamingSession(RemoteControlSessionRequestDto dto)
   {
     Console.WriteLine($"Creating streaming session with ID: {dto.SessionId}, Viewer: {dto.ViewerName}");
     return Task.FromResult(true);
@@ -41,13 +41,13 @@ public class TestAgentHubClient : IAgentHubClient
     )));
   }
 
-  public Task<WindowsSession[]> GetWindowsSessions()
+  public Task<DeviceUiSession[]> GetActiveUiSessions()
   {
-    var session = new WindowsSession
+    var session = new DeviceUiSession
     {
-      Id = 1,
+      SystemSessionId = 1,
       Name = "Console",
-      Type = WindowsSessionType.Console,
+      Type = UiSessionType.Console,
       Username = "TestUser"
     };
     return Task.FromResult(new[] { session });

@@ -9,7 +9,8 @@
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "file": "ControlR.sln"
     },
     {
       "label": "build agent",
@@ -20,6 +21,16 @@
       "dependsOn": ["build server"],
       "problemMatcher": [],
       "file": "ControlR.Agent/ControlR.Agent.csproj"
+    },
+    {
+      "label": "build desktopclient",
+      "type": "dotnet",
+      "task": "build",
+      "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": ["build agent"],
+      "problemMatcher": [],
+      "file": "ControlR.DesktopClient/ControlR.DesktopClient.csproj"
     },
     {
       "label": "build server",

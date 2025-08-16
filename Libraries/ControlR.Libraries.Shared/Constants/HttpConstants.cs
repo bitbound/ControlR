@@ -9,7 +9,7 @@ public static class HttpConstants
   public const string InvitesEndpoint = "/api/invites";
   public const string LogoutEndpoint = "/api/logout";
   public const string RolesEndpoint = "/api/roles";
-  public const string ServerSettingsEndpoint = "/api/server-settings";
+  public const string PublicRegistrationSettingsEndpoint = "/api/public-registration-settings";
   public const string ServerVersionEndpoint = "/api/version/server";
   public const string TagsEndpoint = "/api/tags";
   public const string UserPreferencesEndpoint = "/api/user-preferences";

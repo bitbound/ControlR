@@ -39,6 +39,7 @@ public interface IJsInterop
   ValueTask<string> GetClipboardText();
   ValueTask<bool> IsTouchScreen();
   ValueTask SetScreenWakeLock(bool isWakeEnabled);
+  ValueTask SetCursorIndexById(string inputElementId, int cursorPosition);
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -146,5 +147,10 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask SetScreenWakeLock(bool isWakeEnabled)
   {
     return jsRuntime.InvokeVoidAsync("setScreenWakeLock", isWakeEnabled);
+  }
+
+  public ValueTask SetCursorIndexById(string inputElementId, int cursorPosition)
+  {
+    return jsRuntime.InvokeVoidAsync("setSelectionStartById", inputElementId, cursorPosition);
   }
 }

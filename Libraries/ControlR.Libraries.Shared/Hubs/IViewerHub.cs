@@ -7,8 +7,6 @@ namespace ControlR.Libraries.Shared.Hubs;
 
 public interface IViewerHub
 {
-  Task<bool> CheckIfServerAdministrator();
-
   Task<Result> CreateTerminalSession(
     Guid deviceId,
     TerminalSessionRequest requestDto);
@@ -16,9 +14,9 @@ public interface IViewerHub
   Task<Result<ServerStatsDto>> GetServerStats();
 
   Task<Uri?> GetWebSocketRelayOrigin();
-  Task<WindowsSession[]> GetWindowsSessions(Guid deviceId);
+  Task<DeviceUiSession[]> GetActiveUiSessions(Guid deviceId);
 
-  Task<Result> RequestStreamingSession(Guid deviceId, StreamerSessionRequestDto sessionRequestDto);
+  Task<Result> RequestStreamingSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
   Task<Result> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto);
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);

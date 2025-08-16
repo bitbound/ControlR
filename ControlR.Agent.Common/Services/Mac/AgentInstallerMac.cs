@@ -1,12 +1,10 @@
-﻿using System.Diagnostics;
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Options;
+﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesNative.Linux;
+using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Exceptions;
 using ControlR.Libraries.Shared.Services.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -15,10 +13,11 @@ namespace ControlR.Agent.Common.Services.Mac;
 internal class AgentInstallerMac(
   IHostApplicationLifetime lifetime,
   IFileSystem fileSystem,
-  IProcessManager processInvoker,
-  ISystemEnvironment environmentHelper,
+  ISystemEnvironment systemEnvironment,
+  IServiceControl serviceControl,
   IRetryer retryer,
   IControlrApi controlrApi,
+  IEmbeddedResourceAccessor embeddedResourceAccessor,
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
@@ -27,11 +26,13 @@ internal class AgentInstallerMac(
   : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
-  private readonly ISystemEnvironment _environment = environmentHelper;
+  private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
+  private readonly ISystemEnvironment _environment = systemEnvironment;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerMac> _logger = logger;
-  private readonly IProcessManager _processInvoker = processInvoker;
+  private readonly IServiceControl _serviceControl = serviceControl;
 
   public async Task Install(
     Uri? serverUri = null,
@@ -84,14 +85,14 @@ internal class AgentInstallerMac(
         }, 5, TimeSpan.FromSeconds(1));
 
       var agentPlistPath = GetLaunchDaemonFilePath();
-      var agentPlistFile = GetLaunchDaemonFile().Trim();
-      var streamerPlistPath = GetLaunchAgentFilePath();
-      var streamerPlistFile = GetLaunchAgentFile().Trim();
+      var agentPlistFile = (await GetLaunchDaemonFile()).Trim();
+      var desktopPlistPath = GetLaunchAgentFilePath();
+      var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
       var daemonFileAlreadyExists = _fileSystem.FileExists(agentPlistPath);
 
-      _logger.LogInformation("Writing plist file.");
+      _logger.LogInformation("Writing plist files.");
       await _fileSystem.WriteAllTextAsync(agentPlistPath, agentPlistFile);
-      //await _fileSystem.WriteAllTextAsync(streamerPlistPath, streamerPlistFile);
+      await _fileSystem.WriteAllTextAsync(desktopPlistPath, desktopPlistFile);
       await UpdateAppSettings(serverUri, tenantId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
@@ -100,40 +101,13 @@ internal class AgentInstallerMac(
         return;
       }
 
-      var psi = new ProcessStartInfo
-      {
-        FileName = "sudo",
-        WorkingDirectory = "/tmp",
-        UseShellExecute = true
-      };
-
       if (daemonFileAlreadyExists)
       {
-        try
-        {
           _logger.LogInformation("Booting out service.");
-          psi.Arguments = $"launchctl bootout system {agentPlistPath}";
-          await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-        }
-        catch (Exception ex)
-        {
-          _logger.LogWarning(ex, "Error while booting out service.  Continuing optimistically."); 
-        }
+          await _serviceControl.StopAgentService(throwOnFailure: false);
       }
 
-      try
-      {
-        _logger.LogInformation("Bootstrapping service.");
-        psi.Arguments = $"launchctl bootstrap system {agentPlistPath}";
-        await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-      }
-      catch (ProcessStatusException)
-      {
-      }
-
-      _logger.LogInformation("Kickstarting service.");
-      psi.Arguments = "launchctl kickstart -k system/dev.jaredg.controlr-agent";
-      await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      await _serviceControl.StartAgentService(throwOnFailure: true);
 
       _logger.LogInformation("Installer finished.");
     }
@@ -166,29 +140,19 @@ internal class AgentInstallerMac(
       }
 
       var serviceFilePath = GetLaunchDaemonFilePath();
+      var desktopFilePath = GetLaunchAgentFilePath();
 
-      var psi = new ProcessStartInfo
-      {
-        FileName = "sudo",
-        Arguments = $"launchctl bootout system {serviceFilePath}",
-        WorkingDirectory = "/tmp",
-        UseShellExecute = true
-      };
-
-      try
-      {
-        _logger.LogInformation("Booting out service.");
-        psi.Arguments = $"launchctl bootout system {serviceFilePath}";
-        await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-      }
-      catch (ProcessStatusException ex)
-      {
-        _logger.LogWarning(ex, "Failed to boot out service. It may not be running.");
-      }
+       _logger.LogInformation("Booting out service.");
+       await _serviceControl.StopAgentService(throwOnFailure: false);
 
       if (_fileSystem.FileExists(serviceFilePath))
       {
         _fileSystem.DeleteFile(serviceFilePath);
+      }
+
+      if (_fileSystem.FileExists(desktopFilePath))
+      {
+        _fileSystem.DeleteFile(desktopFilePath);
       }
 
       var installDir = GetInstallDirectory();
@@ -210,94 +174,99 @@ internal class AgentInstallerMac(
     }
   }
 
+  private string GetAgentServiceName()
+  {
+    return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? "app.controlr.agent"
+      : $"app.controlr.agent.{_instanceOptions.Value.InstanceId}";
+  }
+
   private string GetInstallDirectory()
   {
     var dir = "/usr/local/bin/ControlR";
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
       return dir;
     }
 
-    return Path.Combine(dir, instanceOptions.Value.InstanceId);
+    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
   }
 
-  private string GetLaunchDaemonFile()
+  private async Task<string> GetLaunchAgentFile()
   {
-    var paramXml = "<string>run</string>\n";
-    if (instanceOptions.Value.InstanceId is string instanceId)
+    var serviceName = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? "app.controlr.desktop"
+      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerMac).Assembly,
+      "ControlR.Agent.Common.Resources.LaunchAgent.plist");
+
+    template = template
+      .Replace("{{SERVICE_NAME}}", serviceName)
+      .Replace("{{INSTALL_DIRECTORY}}", GetInstallDirectory());
+
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      paramXml += $"        <string>-i</string>\n";
-      paramXml += $"        <string>{instanceId}</string>\n";
+      // Remove lines containing {{INSTANCE_ID}} and <string>--instance-id</string>
+      var lines = template.Split('\n');
+      lines = [.. lines.Where(line =>
+        !line.Contains("{{INSTANCE_ID}}") &&
+        !line.Contains("<string>--instance-id</string>"))];
+
+      template = string.Join("\n", lines);
     }
-
-    return
-      $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-      $"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-      $"<plist version=\"1.0\">\n" +
-      $"<dict>\n" +
-      $"    <key>Label</key>\n" +
-      $"    <string>dev.jaredg.controlr-agent</string>\n" +
-      $"    <key>KeepAlive</key>\n" +
-      $"    <true/>\n" +
-      $"    <key>StandardErrorPath</key>\n" +
-      $"    <string>/var/log/ControlR/plist-err.log</string>\n" +
-      //$"    <key>StandardOutPath</key>\n" +
-      //$"    <string>/var/log/ControlR/plist-std.log</string> \n" +
-      $"    <key>ProgramArguments</key>\n" +
-      $"    <array>\n" +
-      $"        <string>{GetInstallDirectory()}/ControlR.Agent</string>\n" +
-      $"        {paramXml}" +
-      $"    </array>\n" +
-      $"</dict>\n" +
-      $"</plist>";
-  }
-
-  private string GetLaunchDaemonFilePath()
-  {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    else
     {
-      return "/Library/LaunchDaemons/controlr-agent.plist";
+      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
     }
-
-    return $"/Library/LaunchDaemons/controlr-agent-{instanceOptions.Value.InstanceId}.plist";
-  }
-
-  private string GetLaunchAgentFile()
-  {
-    var paramXml = "<string>run</string>\n";
-    if (instanceOptions.Value.InstanceId is string instanceId)
-    {
-      paramXml += $"        <string>-i</string>\n";
-      paramXml += $"        <string>{instanceId}</string>\n";
-    }
-
-    return
-      $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-      $"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-      $"<plist version=\"1.0\">\n" +
-      $"<dict>\n" +
-      $"    <key>Label</key>\n" +
-      $"    <string>dev.jaredg.controlr-streamer</string>\n" +
-      $"    <key>KeepAlive</key>\n" +
-      $"    <true/>\n" +
-      $"    <key>StandardErrorPath</key>\n" +
-      $"    <string>/var/log/ControlR/plist-err.log</string>\n" +
-      $"    <key>ProgramArguments</key>\n" +
-      $"    <array>\n" +
-      $"        <string>{GetInstallDirectory()}/Streamer/ControlR.Streamer</string>\n" +
-      $"        {paramXml}" +
-      $"    </array>\n" +
-      $"</dict>\n" +
-      $"</plist>";
+    return template;
   }
 
   private string GetLaunchAgentFilePath()
   {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchAgents/controlr-streamer.plist";
+      return "/Library/LaunchAgents/app.controlr.desktop.plist";
     }
 
-    return $"/Library/LaunchAgents/controlr-streamer-{instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchAgents/app.controlr.desktop.{_instanceOptions.Value.InstanceId}.plist";
+  }
+
+  private async Task<string> GetLaunchDaemonFile()
+  {
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerMac).Assembly,
+      "ControlR.Agent.Common.Resources.LaunchDaemon.plist");
+
+    template = template
+      .Replace("{{SERVICE_NAME}}", GetAgentServiceName())
+      .Replace("{{INSTALL_DIRECTORY}}", GetInstallDirectory());
+
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      // Remove lines containing {{INSTANCE_ID}} and <string>-i</string>
+      var lines = template.Split('\n');
+      lines = [.. lines.Where(line =>
+        !line.Contains("{{INSTANCE_ID}}") &&
+        !line.Contains("<string>-i</string>"))];
+
+      template = string.Join("\n", lines);
+    }
+    else
+    {
+      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
+    }
+    return template;
+  }
+
+  private string GetLaunchDaemonFilePath()
+  {
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      return "/Library/LaunchDaemons/app.controlr.agent.plist";
+    }
+
+    return $"/Library/LaunchDaemons/app.controlr.agent.{_instanceOptions.Value.InstanceId}.plist";
   }
 }

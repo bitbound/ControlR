@@ -34,19 +34,42 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     SeedDatabase(builder);
 
+    ConfigureTenant(builder);
     ConfigureDevices(builder);
-
     ConfigureRoles(builder);
-
     ConfigureTags(builder);
-
     ConfigureUsers(builder);
-
     ConfigureUserPreferences(builder);
-
     ConfigureTenantInvites(builder);
-
     ApplyReflectionBasedConfiguration(builder);
+  }
+  
+  private void ConfigureTenant(ModelBuilder builder)
+  {
+    // Configure cascade delete for all related entities
+    builder.Entity<Tenant>()
+      .HasMany(t => t.Devices)
+      .WithOne(d => d.Tenant)
+      .HasForeignKey(d => d.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.Tags)
+      .WithOne(tag => tag.Tenant)
+      .HasForeignKey(tag => tag.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.Users)
+      .WithOne(u => u.Tenant)
+      .HasForeignKey(u => u.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.TenantInvites)
+      .WithOne(invite => invite.Tenant)
+      .HasForeignKey(invite => invite.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
   }
 
   private void ConfigureTenantInvites(ModelBuilder builder)

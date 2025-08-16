@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace ControlR.Libraries.DevicesCommon.Services;
 
@@ -46,7 +47,10 @@ public interface IFileSystem
   Task<string> ReadAllTextAsync(string path);
 
   Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1);
-
+  
+  [SupportedOSPlatform("linux")]
+  [SupportedOSPlatform("macos")]
+  void SetUnixFileMode(string filePath, UnixFileMode fileMode);
   Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default);
 
   Task WriteAllLines(string path, List<string> lines);
@@ -185,6 +189,13 @@ public class FileSystem : IFileSystem
       }
     }
     await File.WriteAllLinesAsync(filePath, lines);
+  }
+
+  [SupportedOSPlatform("linux")]
+  [SupportedOSPlatform("macos")]
+  public void SetUnixFileMode(string filePath, UnixFileMode fileMode)
+  {
+    File.SetUnixFileMode(filePath, fileMode);
   }
 
   public Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default)

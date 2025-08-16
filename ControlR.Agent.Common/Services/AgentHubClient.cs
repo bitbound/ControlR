@@ -1,24 +1,23 @@
-﻿using System.Diagnostics;
-using System.Runtime.Versioning;
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Options;
+﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Terminal;
-using ControlR.Devices.Native.Services;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Common.Services;
 
 internal class AgentHubClient(
-  ISystemEnvironment environmentHelper,
-  IStreamerLauncher streamerLauncher,
+  ISystemEnvironment systemEnvironment,
   IMessenger messenger,
   ITerminalStore terminalStore,
-  IWin32Interop win32Interop,
-  IStreamerUpdater streamerUpdater,
+  IUiSessionProvider osSessionProvider,
+  IIpcServerStore ipcServerStore,
+  IDesktopClientUpdater streamerUpdater,
   IHostApplicationLifetime appLifetime,
   ISettingsProvider settings,
   IProcessManager processManager,
@@ -26,56 +25,16 @@ internal class AgentHubClient(
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly ILogger<AgentHubClient> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settings = settings;
-  private readonly IStreamerLauncher _streamerLauncher = streamerLauncher;
-  private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
+  private readonly IDesktopClientUpdater _streamerUpdater = streamerUpdater;
   private readonly ITerminalStore _terminalStore = terminalStore;
-  private readonly IWin32Interop _win32Interop = win32Interop;
+  private readonly IUiSessionProvider _osSessionProvider = osSessionProvider;
   private readonly ILocalSocketProxy _localProxy = localProxy;
-
-  public async Task<bool> CreateStreamingSession(StreamerSessionRequestDto dto)
-  {
-    try
-    {
-      if (!_settings.DisableAutoUpdate)
-      {
-        var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
-        if (!versionResult)
-        {
-          return false;
-        }
-      }
-
-      var result = await _streamerLauncher.CreateSession(
-          dto.SessionId,
-          dto.WebsocketUri,
-          dto.ViewerConnectionId,
-          dto.TargetSystemSession,
-          dto.NotifyUserOnSessionStart,
-          dto.ViewerName)
-        .ConfigureAwait(false);
-
-      if (!result.IsSuccess)
-      {
-        _logger.LogError("Failed to get streaming session.  Reason: {reason}", result.Reason);
-      }
-      else
-      {
-        _logger.LogInformation("Streaming session started.");
-      }
-
-      return result.IsSuccess;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while creating streaming session.");
-      return false;
-    }
-  }
+  private readonly IIpcServerStore _ipcServerStore = ipcServerStore;
 
   public async Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto)
   {
@@ -123,12 +82,9 @@ internal class AgentHubClient(
     }
   }
 
-  [SupportedOSPlatform("windows6.0.6000")]
-  public Task<WindowsSession[]> GetWindowsSessions()
+  public async Task<DeviceUiSession[]> GetActiveUiSessions()
   {
-    return _environmentHelper.Platform == SystemPlatform.Windows
-      ? _win32Interop.GetActiveSessions().ToArray().AsTaskResult()
-      : Array.Empty<WindowsSession>().AsTaskResult();
+    return await _osSessionProvider.GetActiveDesktopClients();
   }
 
   public Task ReceiveDto(DtoWrapper dto)
@@ -161,7 +117,7 @@ internal class AgentHubClient(
       _logger.LogInformation("Uninstall command received.  Reason: {reason}", reason);
       var psi = new ProcessStartInfo
       {
-        FileName = _environmentHelper.StartupExePath,
+        FileName = _systemEnvironment.StartupExePath,
         Arguments = $"uninstall -i {_settings.InstanceId}",
         UseShellExecute = true
       };
@@ -174,4 +130,63 @@ internal class AgentHubClient(
 
     return Task.CompletedTask;
   }
+
+  public async Task<bool> CreateStreamingSession(RemoteControlSessionRequestDto dto)
+  {
+    try
+    {
+      if (!_settings.DisableAutoUpdate)
+      {
+        var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
+        if (!versionResult)
+        {
+          return false;
+        }
+      }
+
+      _logger.LogInformation(
+        "Creating streaming session.  Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
+        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+        dto.SessionId,
+        dto.ViewerConnectionId,
+        dto.TargetSystemSession,
+        dto.TargetProcessId);
+
+      if (!_ipcServerStore.TryGetServer(dto.TargetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}.  Cannot create streaming session.",
+          dto.TargetProcessId);
+        return false;
+      }
+
+      var dataFolder = string.IsNullOrWhiteSpace(_settings.InstanceId)
+        ? "Default"
+        : _settings.InstanceId;
+
+      var ipcDto = new RemoteControlRequestIpcDto(
+        dto.SessionId,
+        dto.WebsocketUri,
+        dto.TargetSystemSession,
+        dto.TargetProcessId,
+        dto.ViewerConnectionId,
+        dto.DeviceId,
+        dto.NotifyUserOnSessionStart,
+        dataFolder,
+        dto.ViewerName);
+
+      await ipcServer.Server.Send(ipcDto);
+      _logger.LogInformation(
+        "Streaming session created successfully for process ID {ProcessId}.",
+        dto.TargetProcessId);
+        
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while creating streaming session.");
+      return false;
+    }
+  }
+
 }

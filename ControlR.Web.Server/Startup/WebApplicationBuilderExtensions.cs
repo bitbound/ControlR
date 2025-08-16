@@ -19,8 +19,20 @@ namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
 {
-  public static async Task<WebApplicationBuilder> AddControlrServer(this WebApplicationBuilder builder)
+  public static async Task<WebApplicationBuilder> AddControlrServer(
+    this WebApplicationBuilder builder,
+    bool isOpenApiBuild)
   {
+    if (isOpenApiBuild)
+    {
+      var inMemoryData = new Dictionary<string, string?>
+      {
+        { "AppOptions:UseInMemoryDatabase", "true" },
+        { "AppOptions:InMemoryDatabaseName", "ControlR" }
+      };
+      builder.Configuration.AddInMemoryCollection(inMemoryData);
+    }
+
     // Configure IOptions.
     builder.Configuration.AddEnvironmentVariables("ControlR_");
 
@@ -62,8 +74,8 @@ public static class WebApplicationBuilderExtensions
 
     // Add API services.
     builder.Services.AddControllers();
+    builder.Services.AddOpenApi();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
     builder.Services.AddCors();
 
     // Add authn/authz services.
@@ -256,7 +268,7 @@ public static class WebApplicationBuilderExtensions
           }
           else
           {
-            Console.WriteLine("Invalid KnownProxy IP: {proxy}");
+            Console.WriteLine($"Invalid KnownProxy IP: {proxy}");
           }
         }
       }

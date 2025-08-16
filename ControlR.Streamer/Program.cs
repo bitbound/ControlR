@@ -1,12 +1,7 @@
-﻿using Bitbound.SimpleMessenger;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using System.CommandLine;
-using ControlR.Streamer.Services;
-using ControlR.Libraries.Shared.Services.Buffers;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.SignalR.Client;
-using ControlR.Libraries.DevicesCommon.Extensions;
+using ControlR.DesktopClient.Common;
+using ControlR.DesktopClient.Windows;
 
 var sessionIdOption = new Option<Guid>(
   "SessionId",
@@ -17,7 +12,7 @@ var sessionIdOption = new Option<Guid>(
 };
 
 var appDataFolderOption = new Option<string>(
-  "FolderData",
+  "DataFolder",
   ["-d", "--data-folder"])
 {
   Required = true,
@@ -98,44 +93,15 @@ rootCommand.SetAction(async parseResult =>
   var services = builder.Services;
   var logging = builder.Logging;
 
-  configuration.AddEnvironmentVariables();
-
-  services.Configure<StartupOptions>(options =>
+  builder.AddCommonDesktopServices(options =>
   {
     options.WebSocketUri = websocketUri;
+    options.SessionId = sessionId;
     options.NotifyUser = notifyUser;
     options.ViewerName = viewerName;
-    options.SessionId = sessionId;
   });
 
-  services.AddSingleton<IProcessManager, ProcessManager>();
-  services.AddSingleton<IStreamerStreamingClient, StreamerStreamingClient>();
-  services.AddSingleton(WeakReferenceMessenger.Default);
-  services.AddSingleton(TimeProvider.System);
-  services.AddSingleton<IWin32Interop, Win32Interop>();
-  services.AddSingleton<IToaster, Toaster>();
-  services.AddSingleton<IDesktopCapturer, DesktopCapturer>();
-  services.AddSingleton<ICaptureMetrics, CaptureMetrics>();
-  services.AddSingleton<IInputSimulator, InputSimulatorWindows>();
-  services.AddSingleton<IMemoryProvider, MemoryProvider>();
-  services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
-  services.AddSingleton<IClipboardManager, ClipboardManager>();
-  services.AddSingleton<IDelayer, Delayer>();
-  services
-      .AddSingleton<IBitmapUtility, BitmapUtility>()
-      .AddSingleton<IScreenGrabber, ScreenGrabber>()
-      .AddSingleton<IDxOutputGenerator, DxOutputGenerator>();
-  services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-  services.AddHostedService<SystemEventHandler>();
-  services.AddHostedService<HostLifetimeEventResponder>();
-  services.AddHostedService<InputDesktopReporter>();
-  services.AddHostedService<CursorWatcher>();
-  services.AddHostedService<DtoHandler>();
-  services.AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>());
-
-  builder.BootstrapSerilog(
-    logFilePath: PathConstants.GetLogsPath(appDataFolder),
-    logRetention: TimeSpan.FromDays(7));
+  builder.AddWindowsDesktopServices(appDataFolder);
 
   var host = builder.Build();
   await host.RunAsync();

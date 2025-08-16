@@ -1,12 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <Configurations>Debug;Release</Configurations>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="MessagePack" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.7" />

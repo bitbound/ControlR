@@ -23,7 +23,7 @@ public static class TestAppBuilder
       new KeyValuePair<string, string?>("AppOptions:InMemoryDatabaseName", testDatabaseName)
     ]);
 
-    _ = await builder.AddControlrServer();
+    _ = await builder.AddControlrServer(false);
 
     configure?.Invoke(builder);
 

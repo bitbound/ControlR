@@ -9,10 +9,16 @@
     <DockerServiceName>controlr</DockerServiceName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Mac|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Windows|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Linux|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Mac|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Windows|AnyCPU'" />
   <PropertyGroup>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Linux|AnyCPU'" />
   <ItemGroup>
     <None Include=".env" />
     <None Include="docker-compose.override.yml">

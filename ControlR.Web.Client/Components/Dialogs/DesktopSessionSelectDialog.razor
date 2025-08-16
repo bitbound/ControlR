@@ -1,0 +1,115 @@
+﻿<MudDialog>
+  <DialogContent>
+    <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
+      Sessions on @(Device.Name):
+    </MudText>
+
+    @if (Sessions.Length == 0)
+    {
+      <MudText Typo="Typo.body1" Color="Color.Warning">
+        No sessions available.
+      </MudText>
+      return;
+    }
+
+    @foreach (var session in Sessions)
+    {
+      <MudCard @key=session Class="mb-3" Outlined>
+        <MudCardContent>
+          <div class="session-card-grid">
+            <div>
+              <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                Session ID:
+              </MudText>
+            </div>
+            <div>
+              @(session.SystemSessionId)
+            </div>
+            <div>
+              <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                Process ID:
+              </MudText>
+            </div>
+            <div>
+              @(session.ProcessId)
+            </div>
+            <div>
+              <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                Session Name:
+              </MudText>
+            </div>
+            <div>
+              @(session.Name)
+            </div>
+            <div>
+              <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                User:
+              </MudText>
+            </div>
+            <div>
+              @(session.Username)
+            </div>
+          </div>
+        </MudCardContent>
+        <MudCardActions>
+          <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => Submit(session))">
+            Connect
+          </MudButton>
+        </MudCardActions>
+      </MudCard>
+    }
+  </DialogContent>
+  <DialogActions>
+    <MudButton Color="Color.Info" Class="me-2" OnClick="@(_ => RefreshSessions())">
+      Refresh
+    </MudButton>
+    <MudButton Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
+  </DialogActions>
+</MudDialog>
+
+@code {
+
+  [CascadingParameter]
+  public required IMudDialogInstance MudDialog { get; set; }
+
+  [Parameter]
+  [EditorRequired]
+  public required DeviceViewModel Device { get; set; }
+
+  [Parameter]
+  [EditorRequired]
+  public DeviceUiSession[] Sessions { get; set; } = Array.Empty<DeviceUiSession>();
+
+  [Inject]
+  public required IViewerHubConnection ViewerHub { get; init; }
+
+  [Inject]
+  public required ILogger<DesktopSessionSelectDialog> Logger { get; init; }
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+
+
+  private async Task RefreshSessions()
+  {
+    var sessionResult = await ViewerHub.GetActiveUiSessions(Device.Id);
+    if (!sessionResult.IsSuccess)
+    {
+      Logger.LogResult(sessionResult);
+      Snackbar.Add("Failed to get active sessions", Severity.Warning);
+      return;
+    }
+    Sessions = sessionResult.Value;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void Cancel()
+  {
+    MudDialog.Cancel();
+  }
+
+  private void Submit(DeviceUiSession session)
+  {
+    MudDialog.Close(DialogResult.Ok(session));
+  }
+
+}

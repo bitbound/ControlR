@@ -62,4 +62,4 @@ jobs:
           echo "Version: $version"
 
       - name: Run Tests
-        run: dotnet test
+        run: dotnet test -c Release_Windows

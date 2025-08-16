@@ -6,10 +6,13 @@ using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.Extensions.FileProviders;
+using Scalar.AspNetCore;
+using System.Reflection;
 
+var isOpenApiBuild = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 var builder = WebApplication.CreateBuilder(args);
 
-await builder.AddControlrServer();
+await builder.AddControlrServer(isOpenApiBuild);
 
 var appOptions = builder.Configuration
   .GetSection(AppOptions.SectionKey)
@@ -29,8 +32,8 @@ app.MapDefaultEndpoints();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-  app.UseSwagger();
-  app.UseSwaggerUI();
+  app.MapOpenApi();
+  app.MapScalarApiReference();
   app.UseWebAssemblyDebugging();
   app.UseMigrationsEndPoint();
 }
@@ -89,6 +92,7 @@ else
   await app.ApplyMigrations();
   await app.SetAllDevicesOffline();
   await app.SetAllUsersOffline();
+  await app.RemoveEmptyTenants();
 }
 
 await app.RunAsync();

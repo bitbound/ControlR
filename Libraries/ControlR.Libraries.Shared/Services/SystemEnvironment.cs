@@ -7,6 +7,7 @@ namespace ControlR.Libraries.Shared.Services;
 public interface ISystemEnvironment
 {
   int CurrentThreadId { get; }
+  bool Is64Bit { get; }
   bool IsDebug { get; }
   bool IsWindows { get; }
   SystemPlatform Platform { get; }
@@ -14,6 +15,7 @@ public interface ISystemEnvironment
   string SelfExtractDir { get; }
   string StartupDirectory { get; }
   string StartupExePath { get; }
+
   bool IsSessionZero();
 }
 
@@ -21,6 +23,8 @@ public class SystemEnvironment : ISystemEnvironment
 {
   public static SystemEnvironment Instance { get; } = new();
   public int CurrentThreadId => Environment.CurrentManagedThreadId;
+
+  public bool Is64Bit => Environment.Is64BitOperatingSystem;
   public bool IsDebug
   {
     get
@@ -101,6 +105,7 @@ public class SystemEnvironment : ISystemEnvironment
     throw new DirectoryNotFoundException("Unable to determine startup directory.");
 
   public string StartupExePath { get; } = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();
+
   public bool IsSessionZero()
   {
     return Process.GetCurrentProcess().SessionId == 0;

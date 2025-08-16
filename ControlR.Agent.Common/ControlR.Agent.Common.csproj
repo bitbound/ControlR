@@ -7,7 +7,16 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Bitbound.SimpleIpc" Version="2.3.1" />
+      <None Remove="Resources\LaunchAgent.plist" />
+      <None Remove="Resources\LaunchDaemon.plist" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Resources\LaunchAgent.plist" />
+      <EmbeddedResource Include="Resources\LaunchDaemon.plist" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
@@ -23,7 +32,9 @@
         <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
         <ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
         <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
-        <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesNative\ControlR.Libraries.DevicesNative.csproj" />
+        <ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
+        <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Unix\ControlR.Libraries.NativeInterop.Unix.csproj" />
+        <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
         <ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
     </ItemGroup>
 </Project>

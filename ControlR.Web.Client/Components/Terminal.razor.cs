@@ -408,13 +408,13 @@ public partial class Terminal : IAsyncDisposable
 
     if (!_enableMultiline && args.Key.Equals("ArrowUp", StringComparison.OrdinalIgnoreCase))
     {
-      _commandInputText = GetTerminalHistory(false);
+      await SetCommandInputText(GetTerminalHistory(false));
       return;
     }
 
     if (!_enableMultiline && args.Key.Equals("ArrowDown", StringComparison.OrdinalIgnoreCase))
     {
-      _commandInputText = GetTerminalHistory(true);
+      await SetCommandInputText(GetTerminalHistory(true));
       return;
     }
 
@@ -454,5 +454,12 @@ public partial class Terminal : IAsyncDisposable
     return await _currentMatches
       .Where(x => x.ListItemText.Contains(value, StringComparison.InvariantCultureIgnoreCase))
       .AsTaskResult();
+  }
+
+  private async Task SetCommandInputText(string text)
+  {
+    await _commandInputElement.SetText(text);
+    await Task.Delay(50);
+    await _commandInputElement.SelectRangeAsync(text.Length, text.Length);
   }
 }

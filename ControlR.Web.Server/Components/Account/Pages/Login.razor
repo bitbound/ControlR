@@ -80,7 +80,7 @@
       await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
     }
 
-    var settingsResult = await ServerSettingsApi.GetServerSettings();
+    var settingsResult = await ServerSettingsApi.GetPublicRegistrationSettings();
     if (settingsResult.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;

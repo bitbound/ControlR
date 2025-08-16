@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
-using ControlR.Agent.Common.Options;
+using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;

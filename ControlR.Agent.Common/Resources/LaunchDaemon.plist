@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{SERVICE_NAME}}</string>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/var/log/ControlR/plist-err.log</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{INSTALL_DIRECTORY}}/ControlR.Agent</string>
+        <string>run</string>
+        <string>-i</string>
+        <string>{{INSTANCE_ID}}</string>
+    </array>
+</dict>
+</plist>

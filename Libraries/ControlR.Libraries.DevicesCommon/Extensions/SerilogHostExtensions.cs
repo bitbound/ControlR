@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace ControlR.Libraries.DevicesCommon.Extensions;
@@ -10,6 +12,21 @@ public static class SerilogHostExtensions
       string logFilePath,
       TimeSpan logRetention,
       Action<LoggerConfiguration>? extraLoggerConfig = null)
+  {
+    hostBuilder.Services.BootstrapSerilog(
+        hostBuilder.Configuration,
+        logFilePath,
+        logRetention,
+        extraLoggerConfig);
+
+    return hostBuilder;
+  }
+  public static IServiceCollection BootstrapSerilog(
+    this IServiceCollection services,
+    IConfiguration configuration,
+    string logFilePath,
+    TimeSpan logRetention,
+    Action<LoggerConfiguration>? extraLoggerConfig = null)
   {
     try
     {
@@ -34,14 +51,14 @@ public static class SerilogHostExtensions
       ApplySharedLoggerConfig(loggerConfig);
       Log.Logger = loggerConfig.CreateBootstrapLogger();
 
-      hostBuilder.Services.AddSerilog(
-        (serviceProvider, configuration) =>
+      services.AddSerilog(
+        (serviceProvider, loggerConfig) =>
         {
-          configuration
-            .ReadFrom.Configuration(hostBuilder.Configuration)
+          loggerConfig
+            .ReadFrom.Configuration(configuration)
             .ReadFrom.Services(serviceProvider);
 
-          ApplySharedLoggerConfig(configuration);
+          ApplySharedLoggerConfig(loggerConfig);
         },
         preserveStaticLogger: true);
     }
@@ -49,6 +66,6 @@ public static class SerilogHostExtensions
     {
       Console.WriteLine($"Failed to configure Serilog file logging.  Error: {ex.Message}");
     }
-    return hostBuilder;
+    return services;
   }
 }

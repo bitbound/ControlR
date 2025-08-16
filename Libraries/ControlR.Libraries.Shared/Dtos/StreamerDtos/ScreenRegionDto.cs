@@ -2,8 +2,8 @@
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record ScreenRegionDto(
-    int X,
-    int Y,
-    int Width,
-    int Height,
+    float X,
+    float Y,
+    float Width,
+    float Height,
     byte[] EncodedImage);

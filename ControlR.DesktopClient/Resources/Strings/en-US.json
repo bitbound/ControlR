@@ -1,0 +1,18 @@
+{
+  "YesText": "Yes",
+  "NoText": "No",
+  "CancelText": "Cancel",
+  "OkText": "OK",
+  "SubmitText": "Submit",
+  "ManagedDeviceMessage": "This device is managed by your organization.",
+  "ManagedDeviceTitle": "Managed Device",
+  "MacOsPermissions": "macOS Permissions",
+  "Accessibility": "Accessibility",
+  "Status": "Status:",
+  "Granted": "Granted",
+  "NotGranted": "Not Granted",
+  "AccessibilityPermissionDescription": "Required to remote control your device.",
+  "ScreenRecording": "Screen Recording",
+  "ScreenCapturePermissionDescription": "Required to view your device's screen.",
+  "OpenSettings": "Open Settings"
+}

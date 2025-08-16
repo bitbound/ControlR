@@ -89,8 +89,7 @@ internal class DeviceDataGeneratorBase(
       OsArchitecture = RuntimeInformation.OSArchitecture,
       OsDescription = RuntimeInformation.OSDescription,
       Is64Bit = Environment.Is64BitOperatingSystem,
-      MacAddresses = [.. GetMacAddresses()],
-      IsOnline = true
+      MacAddresses = [.. GetMacAddresses()]
     };
   }
 

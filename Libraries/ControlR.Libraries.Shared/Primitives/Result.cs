@@ -7,7 +7,7 @@ namespace ControlR.Libraries.Shared.Primitives;
 /// <summary>
 /// Describes the success or failure of any kind of operation.
 /// </summary>
-[MessagePackObject(true)]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Result
 {
   [JsonConstructor]
@@ -110,7 +110,7 @@ public class Result
 /// <summary>
 /// Describes the success or failure of any kind of operation.
 /// </summary>
-[MessagePackObject(true)]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Result<T>
 {
   [JsonConstructor]

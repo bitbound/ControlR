@@ -1,0 +1,68 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PackageIcon>appicon.png</PackageIcon>
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\appicon.ico" />
+    <None Remove="Resources\Strings\en-US.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ApplicationDefinition Include="Assets\appicon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\appicon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Strings\en-US.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.2">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)WINDOWS_BUILD(;|$)'))">
+    <ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+  </ItemGroup>
+
+	<ItemGroup Condition="$(Configuration.Contains('Mac'))">
+		<ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(Configuration.Contains('Linux'))">
+		<ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+	</ItemGroup>
+	
+	<ItemGroup>
+    <None Update="Assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+</Project>

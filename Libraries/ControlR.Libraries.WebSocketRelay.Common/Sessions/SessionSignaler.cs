@@ -84,7 +84,7 @@ internal class SessionSignaler : IAsyncDisposable
     }
     catch { }
 
-    DisposeHelper.DisposeAll(
+    Disposer.DisposeAll(
               Websocket1,
               Websocket2);
 

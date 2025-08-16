@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+				xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="ControlR.DesktopClient.Views.MainWindow"
+        x:DataType="vm:IMainWindowViewModel"
+        Icon="/Assets/appicon.ico"
+				Width="400"
+				MinHeight="300"
+				SizeToContent="Height"
+        Title="ControlR Desktop">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <fakes:MainWindowViewModelFake />
+    </Design.DataContext>
+
+	<ContentControl Margin="5" Content="{Binding CurrentViewModel}" />
+</Window>

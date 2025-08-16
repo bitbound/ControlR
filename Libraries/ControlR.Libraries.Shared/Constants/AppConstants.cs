@@ -21,26 +21,27 @@ public static class AppConstants
     }
   }
 
-  public static string StreamerFileName
+  public static string DesktopClientFileName
   {
     get
     {
       return SystemEnvironment.Instance.Platform switch
       {
-        SystemPlatform.Windows => "ControlR.Streamer.exe",
-        SystemPlatform.Linux => "ControlR.Streamer",
+        SystemPlatform.Windows => "ControlR.DesktopClient.exe",
+        SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
         _ => throw new PlatformNotSupportedException()
       };
     }
   }
 
-  public static string StreamerZipFileName
+  public static string DesktopClientZipFileName
   {
     get
     {
       return SystemEnvironment.Instance.Platform switch
       {
-        SystemPlatform.Windows => "ControlR.Streamer.zip",
+        SystemPlatform.Windows => "ControlR.DesktopClient.zip",
+        SystemPlatform.MacOs => "ControlR.app.zip",
         _ => throw new PlatformNotSupportedException()
       };
     }
@@ -72,13 +73,27 @@ public static class AppConstants
     };
   }
 
-  public static string GetStreamerFileDownloadPath(RuntimeId runtime)
+  public static string GetDesktopClientDownloadPath(RuntimeId runtime)
   {
     return runtime switch
     {
-      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Streamer.zip",
-      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.Streamer.zip",
+      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.DesktopClient.zip",
+      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.DesktopClient.zip",
+      RuntimeId.LinuxX64 => "/downloads/linux-x64/ControlR.DesktopClient.zip",
+      RuntimeId.MacOsX64 => "/downloads/osx-x64/ControlR.app.zip",
+      RuntimeId.MacOsArm64 => "/downloads/osx-arm64/ControlR.app.zip",
       _ => throw new PlatformNotSupportedException()
+    };
+  }
+
+  public static string GetDesktopExecutablePath(string startupDirectory)
+  {
+    var desktopDir = Path.Combine(startupDirectory, "DesktopClient");
+
+    return SystemEnvironment.Instance.Platform switch
+    {
+      SystemPlatform.MacOs => Path.Combine(desktopDir, "ControlR.app", "Contents", "MacOS", DesktopClientFileName),
+      _ => Path.Combine(desktopDir, DesktopClientFileName)
     };
   }
 }

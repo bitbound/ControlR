@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,7 @@ internal class TerminalStore(
       var environment = serviceProvider.GetRequiredService<ISystemEnvironment>();
       var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
       var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
+      var systemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
       var sessionLogger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
 
       var terminalSession = new TerminalSession(
@@ -38,6 +40,7 @@ internal class TerminalStore(
         timeProvider,
         environment,
         hubConnection,
+        systemEnvironment,
         sessionLogger);
 
       await terminalSession.Initialize();

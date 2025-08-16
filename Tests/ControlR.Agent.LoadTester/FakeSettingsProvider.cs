@@ -12,7 +12,6 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
 
   public int VncPort => AppConstants.DefaultVncPort;
 
-  public bool CloseStreamerConsoleOnExit => true;
 
   public bool DisableAutoUpdate => true;
 

@@ -20,7 +20,7 @@ internal class AgentHubConnection(
   IHostApplicationLifetime appLifetime,
   IDeviceDataGenerator deviceCreator,
   ISettingsProvider settings,
-  IStreamerUpdater streamerUpdater,
+  IDesktopClientUpdater streamerUpdater,
   IAgentUpdater agentUpdater,
   ILogger<AgentHubConnection> logger)
   : IAgentHubConnection
@@ -31,7 +31,7 @@ internal class AgentHubConnection(
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<AgentHubConnection> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
-  private readonly IStreamerUpdater _streamerUpdater = streamerUpdater;
+  private readonly IDesktopClientUpdater _streamerUpdater = streamerUpdater;
   
   public HubConnectionState State => _hubConnection.ConnectionState;
 

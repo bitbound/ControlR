@@ -5,26 +5,13 @@
     <TargetFramework>net9.0-windows10.0.20348.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationIcon>appicon.ico</ApplicationIcon>
-    <Configurations>Debug;Release</Configurations>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationIcon>appicon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="appicon.ico" />
-    <None Remove="appsettings.Development.json" />
-    <None Remove="appsettings.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="appicon.ico" />
-    <Content Include="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -34,9 +21,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesNative\ControlR.Libraries.DevicesNative.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appicon.ico">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

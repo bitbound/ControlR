@@ -8,7 +8,7 @@ namespace ControlR.Agent.Common.Services.Windows;
 
 public interface IRegistryAccessor
 {
-  void EnableSoftwareSas();
+  void SetSoftwareSasGeneration(bool isEnabled);
   bool GetPromptOnSecureDesktop();
   Result<int> GetRdpPort();
   void SetPromptOnSecureDesktop(bool enabled);
@@ -19,14 +19,22 @@ internal class RegistryAccessor(
   ILogger<RegistryAccessor> logger) : IRegistryAccessor
 {
   [SupportedOSPlatform("windows")]
-  public void EnableSoftwareSas()
+  public void SetSoftwareSasGeneration(bool isEnabled)
   {
     try
     {
       // Set Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
       using var subkey =
         Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
-      subkey?.SetValue("SoftwareSASGeneration", "3", RegistryValueKind.DWord);
+
+      if (isEnabled)
+      {
+        subkey?.SetValue("SoftwareSASGeneration", "3", RegistryValueKind.DWord);
+      }
+      else
+      {
+        subkey?.DeleteValue("SoftwareSASGeneration", false);
+      }
     }
     catch (Exception ex)
     {

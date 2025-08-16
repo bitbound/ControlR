@@ -35,9 +35,9 @@ public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : I
   }
 
 
-  public async Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto)
+  public async Task ReceiveDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto)
   {
-    var message = new DtoReceivedMessage<StreamerDownloadProgressDto>(progressDto);
+    var message = new DtoReceivedMessage<DesktopClientDownloadProgressDto>(progressDto);
     await _messenger.Send(message);
   }
 

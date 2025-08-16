@@ -1,0 +1,190 @@
+﻿using ControlR.DesktopClient.Common.Extensions;
+using ControlR.Libraries.Shared.Primitives;
+using SkiaSharp;
+using System.IO.Compression;
+
+namespace ControlR.DesktopClient.Common.Services;
+
+public interface IImageUtility
+{
+  byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80);
+  byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true);
+  SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea);
+  Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false);
+  public bool IsEmpty(SKBitmap bitmap);
+}
+
+public class ImageUtility : IImageUtility
+{
+  public SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea)
+  {
+    var cropped = new SKBitmap((int)cropArea.Width, (int)cropArea.Height);
+    using var canvas = new SKCanvas(cropped);
+    canvas.DrawBitmap(
+        bitmap,
+        cropArea,
+        new SKRect(0, 0, cropArea.Width, cropArea.Height));
+    return cropped;
+  }
+
+  public byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80)
+  {
+    using var ms = new MemoryStream();
+    bitmap.Encode(ms, format, quality);
+    return ms.ToArray();
+  }
+
+  public byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true)
+  {
+    using var ms = new MemoryStream();
+
+    if (compressOutput)
+    {
+      using var gzipStream = new GZipStream(ms, CompressionLevel.Fastest, true);
+      bitmap.Encode(gzipStream, SKEncodedImageFormat.Jpeg, quality);
+    }
+    else
+    {
+      bitmap.Encode(ms, SKEncodedImageFormat.Jpeg, quality);
+    }
+
+    return ms.ToArray();
+  }
+
+
+  public Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false)
+  {
+    if (currentFrame is null)
+    {
+      return Result.Ok(SKRect.Empty);
+    }
+
+    if (previousFrame is null || forceFullscreen)
+    {
+      return Result.Ok(currentFrame.ToRect());
+    }
+
+    if (currentFrame.Height != previousFrame.Height || currentFrame.Width != previousFrame.Width)
+    {
+      return Result.Fail<SKRect>("Bitmaps are not of equal dimensions.");
+    }
+
+    if (currentFrame.BytesPerPixel != previousFrame.BytesPerPixel)
+    {
+      return Result.Fail<SKRect>("Bitmaps do not have the same pixel size.");
+    }
+
+    var width = currentFrame.Width;
+    var height = currentFrame.Height;
+    int left = int.MaxValue;
+    int top = int.MaxValue;
+    int right = int.MinValue;
+    int bottom = int.MinValue;
+
+    var bytesPerPixel = currentFrame.BytesPerPixel;
+    var totalSize = currentFrame.ByteCount;
+
+    try
+    {
+      unsafe
+      {
+        byte* scan1 = (byte*)currentFrame.GetPixels().ToPointer();
+        byte* scan2 = (byte*)previousFrame.GetPixels().ToPointer();
+
+        for (var row = 0; row < height; row++)
+        {
+          for (var column = 0; column < width; column++)
+          {
+            var index = row * width * bytesPerPixel + column * bytesPerPixel;
+
+            var data1 = scan1 + index;
+            var data2 = scan2 + index;
+
+            if (data1[0] != data2[0] ||
+                data1[1] != data2[1] ||
+                data1[2] != data2[2] ||
+                data1[3] != data2[3])
+            {
+
+              if (row < top)
+              {
+                top = row;
+              }
+              if (row > bottom)
+              {
+                bottom = row;
+              }
+              if (column < left)
+              {
+                left = column;
+              }
+              if (column > right)
+              {
+                right = column;
+              }
+            }
+
+          }
+        }
+
+        if (left <= right && top <= bottom)
+        {
+          left = Math.Max(left - 2, 0);
+          top = Math.Max(top - 2, 0);
+          right = Math.Min(right + 2, width);
+          bottom = Math.Min(bottom + 2, height);
+
+          return Result.Ok(new SKRect(left, top, right, bottom));
+        }
+        else
+        {
+          return Result.Ok(SKRect.Empty);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      return Result.Fail<SKRect>(ex);
+    }
+  }
+  public bool IsEmpty(SKBitmap bitmap)
+  {
+    var height = bitmap.Height;
+    var width = bitmap.Width;
+    var bytesPerPixel = bitmap.BytesPerPixel;
+
+    try
+    {
+      unsafe
+      {
+        byte* scan = (byte*)bitmap.GetPixels().ToPointer();
+
+        for (var row = 0; row < height; row++)
+        {
+          for (var column = 0; column < width; column++)
+          {
+            var index = row * width * bytesPerPixel + column * bytesPerPixel;
+
+            byte* data = scan + index;
+
+            if (data[0] == 0 &&
+                data[1] == 0 &&
+                data[2] == 0 &&
+                data[3] == 0)
+            {
+              continue;
+            }
+
+            return false;
+          }
+        }
+
+        return true;
+      }
+    }
+    catch
+    {
+      return true;
+    }
+  }
+}

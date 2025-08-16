@@ -60,7 +60,8 @@ public class DevicesController : ControllerBase
       logger.LogWarning("Invalid installer key.");
       return BadRequest();
     }
-
+    // Device shouldn't be considered online until it connects to the AgentHub.
+    deviceDto = deviceDto with { IsOnline = false };
     var entity = await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
     return entity.ToDto();
   }
@@ -152,7 +153,7 @@ public class DevicesController : ControllerBase
       [nameof(DeviceDto.UsedStoragePercent)] = d => d.UsedStoragePercent
     };
 
-    if (requestDto.SortDefinitions is { Count: > 0} sortDefs)
+    if (requestDto.SortDefinitions is { Count: > 0 } sortDefs)
     {
       IOrderedQueryable<Device>? orderedQuery = null;
 
@@ -181,7 +182,7 @@ public class DevicesController : ControllerBase
 
       query = orderedQuery ?? query;
     }
-   
+
     // Get the total count of matching items (before pagination)
     var totalCount = await query.CountAsync();
 

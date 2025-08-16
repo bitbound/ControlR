@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>Label</key>
+		<string>{{SERVICE_NAME}}</string>
+		<key>KeepAlive</key>
+		<true />
+		<key>RunAtLoad</key>
+		<true />
+		<key>ProcessType</key>
+		<string>Interactive</string>
+		<key>LimitLoadToSessionType</key>
+		<array>
+			<string>LoginWindow</string>
+			<string>Aqua</string>
+		</array>
+		<key>StandardErrorPath</key>
+		<string>/var/log/ControlR/plist-desktop-err.log</string>
+		<key>ProgramArguments</key>
+		<array>
+			<string>{{INSTALL_DIRECTORY}}/DesktopClient/ControlR.app/Contents/MacOS/ControlR.DesktopClient</string>
+			<string>--instance-id</string>
+			<string>{{INSTANCE_ID}}</string>
+		</array>
+		<key>ExitTimeOut</key>
+		<integer>10</integer>
+		<key>EnableTransactions</key>
+		<true />
+		<key>AbandonProcessGroup</key>
+		<true />
+	</dict>
+</plist>

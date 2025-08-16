@@ -2,13 +2,10 @@
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services;
-using ControlR.Agent.Common.Services.Fakes;
 using ControlR.Agent.Common.Services.Linux;
 using ControlR.Agent.Common.Services.Mac;
 using ControlR.Agent.Common.Services.Windows;
-using ControlR.Devices.Native.Services;
 using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesNative.Services;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
@@ -18,9 +15,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Bitbound.SimpleIpc;
 using ControlR.Web.ServiceDefaults;
 using ControlR.Agent.Common.Services.Terminal;
+using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.Libraries.Ipc;
+using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.NativeInterop.Unix;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -83,7 +84,6 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     services.AddSingleton<IFileSystem, FileSystem>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-    services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
     services.AddSingleton<ILocalSocketProxy, LocalSocketProxy>();
     services.AddSingleton(WeakReferenceMessenger.Default);
     services.AddSingleton(TimeProvider.System);
@@ -92,58 +92,47 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
     services.AddSingleton<IDelayer, Delayer>();
     services.AddSingleton<IRetryer, Retryer>();
-    services.AddSimpleIpc();
+    services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();
     services.AddHostedService<HostLifetimeEventResponder>();
+    services.AddControlrIpc();
     services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
 
     if (startupMode == StartupMode.Run)
     {
       services.AddSingleton<IAgentUpdater, AgentUpdater>();
       services.AddSingleton<ITerminalStore, TerminalStore>();
-      services.AddSingleton<IStreamingSessionCache, StreamingSessionCache>();
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
-      services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
+      services.AddSingleton<IIpcServerStore, IpcServerStore>();
+      services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
 
+      services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
+      services.AddHostedService<IpcServerWatcher>();
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService<AgentHeartbeatTimer>();
-      services.AddHostedService(s => s.GetRequiredService<IStreamerUpdater>());
+      services.AddHostedService(s => s.GetRequiredService<IDesktopClientUpdater>());
       services.AddHostedService<DtoHandler>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {
-        services.AddSingleton<IStreamerLauncher, StreamerLauncherWindows>();
-        services.AddSingleton<IStreamerUpdater, StreamerUpdaterWindows>();
-        services.AddHostedService<StreamingSessionWatcher>();
-      }
-      else if (OperatingSystem.IsLinux())
-      {
-        services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-        services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
+        services.AddHostedService<DesktopClientWatcherWin>();
+        services.AddHostedService<IpcServerInitializerWindows>();
       }
       else if (OperatingSystem.IsMacOS())
       {
-
-        services.AddSingleton<IStreamerUpdater, StreamerUpdaterFake>();
-        services.AddSingleton<IStreamerLauncher, StreamerLauncherFake>();
+        services.AddHostedService<DesktopClientWatcherMac>();
+        services.AddHostedService<IpcServerInitializerMac>();
       }
-      else
-      {
-        throw new PlatformNotSupportedException();
-      }
-    }
-
-    if (startupMode == StartupMode.EchoDesktop)
-    {
-      services.AddSingleton<IDesktopEchoer, DesktopEchoer>();
     }
 
     if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
     {
       services.AddSingleton<IWin32Interop, Win32Interop>();
+      services.AddSingleton<IUiSessionProvider, UiSessionProviderWindows>();
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorWin>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
       services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
+      services.AddSingleton<IServiceControl, ServiceControlWindows>();
       services.AddSingleton<IPowerControl, PowerControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
     }
@@ -151,19 +140,25 @@ internal static class HostApplicationBuilderExtensions
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+      services.AddSingleton<IUiSessionProvider, UiSessionProviderLinux>();
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
+      services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IWin32Interop, Win32InteropFake>();
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
     }
     else if (OperatingSystem.IsMacOS())
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorMac>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+      services.AddSingleton<IUiSessionProvider, UiSessionProviderMac>();
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
+      services.AddSingleton<IServiceControl, ServiceControlMac>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
       services.AddSingleton<IWin32Interop, Win32InteropFake>();
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
     }
     else
     {

@@ -14,6 +14,23 @@ public static class HostExtensions
     }
   }
 
+  public static async Task RemoveEmptyTenants(this IHost host)
+  {
+    await using var scope = host.Services.CreateAsyncScope();
+    await using var context = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var emptyTenants = await context.Tenants
+      .Where(x => x.Users!.Count == 0)
+      .ToListAsync();
+
+    if (emptyTenants.Count == 0)
+    {
+      return;
+    }
+
+    context.Tenants.RemoveRange(emptyTenants);
+    await context.SaveChangesAsync();
+  }
+
   public static async Task SetAllDevicesOffline(this IHost host)
   {
     await using var scope = host.Services.CreateAsyncScope();
@@ -27,7 +44,6 @@ public static class HostExtensions
     await using var context = scope.ServiceProvider.GetRequiredService<AppDb>();
     await context.Users.ExecuteUpdateAsync(calls => calls.SetProperty(d => d.IsOnline, false));
   }
-
   public static async Task AddBuiltInRoles(this IHost host)
   {
     await using var scope = host.Services.CreateAsyncScope();

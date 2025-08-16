@@ -8,7 +8,7 @@ namespace ControlR.Agent.Common.Services.Terminal;
 // Custom PowerShell Host UI for handling interactive input/output
 internal class TerminalHostUI(TerminalSession terminalSession) : PSHostUserInterface
 {
-  private readonly TerminalRawUI _rawUI = new TerminalRawUI();
+  private readonly TerminalRawUI _rawUI = new();
   private readonly TerminalSession _terminalSession = terminalSession;
 
   public override PSHostRawUserInterface RawUI => _rawUI;
@@ -25,12 +25,12 @@ internal class TerminalHostUI(TerminalSession terminalSession) : PSHostUserInter
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
   {
-    return PromptForCredentialAsync(caption, message, userName, targetName).GetAwaiter().GetResult();
+    return PromptForCredentialAsync(caption, message, userName).GetAwaiter().GetResult();
   }
 
   public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
   {
-    return PromptForCredentialAsync(caption, message, userName, targetName).GetAwaiter().GetResult();
+    return PromptForCredentialAsync(caption, message, userName).GetAwaiter().GetResult();
   }
 
   public override string ReadLine()
@@ -184,7 +184,7 @@ internal class TerminalHostUI(TerminalSession terminalSession) : PSHostUserInter
     return defaultChoice;
   }
 
-  private async Task<PSCredential> PromptForCredentialAsync(string caption, string message, string userName, string targetName)
+  private async Task<PSCredential> PromptForCredentialAsync(string caption, string message, string userName)
   {
     // Send the credential prompt
     await _terminalSession.HandleHostPrompt($"Credential required: {caption} - {message}");

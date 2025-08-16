@@ -3,12 +3,6 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Drawing;
 using Microsoft.Extensions.Logging;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Streamer.Services;
-using ControlR.Streamer.Models;
-using ControlR.Streamer.Extensions;
-using ControlR.Devices.Native.Services;
-using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.ScreenCapture.Benchmarks;
 public sealed class CaptureTests

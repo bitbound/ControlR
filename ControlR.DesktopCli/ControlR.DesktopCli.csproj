@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+
+	<PropertyGroup Condition="$(Configuration.Contains('Windows'))">
+		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="$(Configuration.Contains('Mac'))">
+		<DefineConstants>$(DefineConstants);MAC_BUILD</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="$(Configuration.Contains('Linux'))">
+		<DefineConstants>$(DefineConstants);LINUX_BUILD</DefineConstants>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+  </ItemGroup>
+
+	<ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)WINDOWS_BUILD(;|$)'))">
+		<ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(Configuration.Contains('Mac'))">
+		<ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(Configuration.Contains('Linux'))">
+		<ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+	</ItemGroup>
+
+</Project>

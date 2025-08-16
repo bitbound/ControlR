@@ -41,10 +41,10 @@ public partial class RemoteDisplay : IAsyncDisposable
   [JSImport("drawFrame", "RemoteDisplay")]
   public static partial Task DrawFrame(
     string canvasId,
-    int x,
-    int y,
-    int width,
-    int height,
+    float x,
+    float y,
+    float width,
+    float height,
     byte[] encodedImage);
 
 
@@ -266,7 +266,7 @@ public partial class RemoteDisplay : IAsyncDisposable
       _viewMode = ViewMode.Original;
     }
 
-    Messenger.Register<DtoReceivedMessage<StreamerDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
+    Messenger.Register<DtoReceivedMessage<DesktopClientDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
   }
 
@@ -446,7 +446,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   }
 
   private async Task HandleStreamerDownloadProgress(object recipient,
-    DtoReceivedMessage<StreamerDownloadProgressDto> message)
+    DtoReceivedMessage<DesktopClientDownloadProgressDto> message)
   {
     var dto = message.Dto;
 
@@ -667,7 +667,8 @@ public partial class RemoteDisplay : IAsyncDisposable
         Session.Device.Id,
         Session.SessionId,
         relayUri.Uri,
-        Session.InitialSystemSession);
+        Session.TargetSystemSession,
+        Session.TargetProcessId);
 
       _statusProgress = -1;
 

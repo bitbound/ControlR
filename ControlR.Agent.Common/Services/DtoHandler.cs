@@ -1,6 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Terminal;
-using ControlR.Devices.Native.Services;
+using ControlR.Libraries.NativeInterop.Windows;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;

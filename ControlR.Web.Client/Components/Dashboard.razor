@@ -159,6 +159,33 @@
           }
         </CellTemplate>
       </PropertyColumn>
+       <PropertyColumn Property="@(x => x.Platform)" Sortable="true" Filterable="true" Title="Platform">
+         <CellTemplate>
+          @switch (context.Item.Platform)
+           {
+             case SystemPlatform.Windows:
+               <MudTooltip Text="Windows">
+                 <MudIcon Icon="@(Icons.Custom.Brands.MicrosoftWindows)" Color="Color.Info" />
+               </MudTooltip>;
+               break;
+             case SystemPlatform.MacOs:
+               <MudTooltip Text="macOS">
+                 <MudIcon Icon="@(Icons.Custom.Brands.Apple)" Color="Color.Info" />
+               </MudTooltip>;
+               break;
+             case SystemPlatform.Linux:
+               <MudTooltip Text="Linux">
+                 <MudIcon Icon="@(Icons.Custom.Brands.Linux)" Color="Color.Info" />
+               </MudTooltip>;
+               break;
+             default:
+               <MudTooltip Text="Unknown Platform">
+                 <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Warning" />
+               </MudTooltip>;
+               break;
+           }
+         </CellTemplate>
+       </PropertyColumn>
 
       <PropertyColumn Property="x => x!.CurrentUsers" Title="Current Users" Sortable="false" Filterable="false">
         <CellTemplate>

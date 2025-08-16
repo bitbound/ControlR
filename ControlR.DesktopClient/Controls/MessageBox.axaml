@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="ControlR.DesktopClient.Controls.Dialogs.MessageBox"
+        xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+        xmlns:root="using:ControlR.DesktopClient"
+        x:DataType="vm:MessageBoxViewModel"
+        Icon="/Assets/appicon.ico"
+        Title="{Binding Caption}"
+        Topmost="True"
+        ShowActivated="True"
+        SizeToContent="WidthAndHeight" MinWidth="300" MinHeight="100"
+        x:Name="MessageBoxWindow"
+        WindowStartupLocation="CenterScreen">
+
+    <Design.DataContext>
+        <vm:MessageBoxViewModel />
+    </Design.DataContext>
+
+    <StackPanel Margin="10, 20">
+        <TextBlock Text="{Binding Message}"></TextBlock>
+
+        <Grid Margin="0,20,0,0">
+            <Button Classes="Primary" HorizontalAlignment="Right" IsVisible="{Binding IsOkButtonVisible}"
+              Command="{Binding OKCommand}"
+              CommandParameter="{Binding #MessageBoxWindow}"
+              Content="{x:Static root:Localization.OkText}">
+            </Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Classes="Primary" HorizontalAlignment="Right" IsVisible="{Binding AreYesNoButtonsVisible}" Margin="5,0,5,0"
+                  Command="{Binding YesCommand}"
+                  CommandParameter="{Binding #MessageBoxWindow}"
+                  Content="{x:Static root:Localization.YesText}">
+                </Button>
+                <Button HorizontalAlignment="Right" IsVisible="{Binding AreYesNoButtonsVisible}" Margin="5,0,5,0"
+                  Command="{Binding NoCommand}"
+                  CommandParameter="{Binding #MessageBoxWindow}"
+                  Content="{x:Static root:Localization.NoText}">
+                </Button>
+            </StackPanel>
+
+        </Grid>
+
+    </StackPanel>
+</Window>

@@ -1,0 +1,52 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ControlR.DesktopClient.App"
+             xmlns:local="using:ControlR.DesktopClient"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+						 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
+             RequestedThemeVariant="Dark"
+						 xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+						 x:DataType="vm:AppViewModel"
+             Name="ControlR">
+
+	<Application.DataTemplates>
+		<local:ViewLocator/>
+	</Application.DataTemplates>
+	
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="/Resources/Theme.axaml" />
+				<ResourceInclude Source="/Resources/Converters.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
+
+	<Application.Styles>
+		<FluentTheme>
+			<FluentTheme.Palettes>
+				<ColorPaletteResources x:Key="Dark"
+															 Accent="#46AA46"
+															 RegionColor="#0F0F0F"/>
+			</FluentTheme.Palettes>
+		</FluentTheme>
+		<materialIcons:MaterialIconStyles />
+		<StyleInclude Source="/Resources/Styles.axaml" />
+	</Application.Styles>
+
+	
+	<TrayIcon.Icons>
+		<TrayIcons>
+			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR Desktop" Command="{Binding ShowWindowCommand}">
+				<TrayIcon.Menu>
+					<NativeMenu>
+						<NativeMenuItem Header="Show" Command="{Binding ShowWindowCommand}" />
+						<NativeMenuItemSeparator />
+						<NativeMenuItem Header="Exit" Command="{Binding ExitApplicationCommand}" />
+					</NativeMenu>
+				</TrayIcon.Menu>
+			</TrayIcon>
+		</TrayIcons>
+	</TrayIcon.Icons>
+
+</Application>

@@ -25,6 +25,7 @@ function getSelectionStartById(elementId) {
   }
   return element.selectionStart;
 }
+
 function invokeClick(elementId) {
   document.getElementById(elementId).click();
 }
@@ -73,6 +74,7 @@ function scrollToElement(element) {
 function setClipboardText(text) {
   return navigator.clipboard.writeText(text);
 }
+
 /**
  * Try to acquire a wake lock to keep the screen from going to sleep.
  * @param {boolean} isWakeEnabled
@@ -97,6 +99,17 @@ async function setScreenWakeLock(isWakeEnabled) {
   _wakeLock?.release();
   _wakeLock = null;
 }
+
+function setSelectionStartById(elementId, cursorPosition) {
+  /** @type {HTMLInputElement} */
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.warn(`Element with ID ${elementId} not found.`);
+    return -1;
+  }
+  element.setSelectionRange(cursorPosition, cursorPosition, 'none');
+}
+
 function setStyleProperty(element, propertyName, value) {
   element.style[propertyName] = value;
 }

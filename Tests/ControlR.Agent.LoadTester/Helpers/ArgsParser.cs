@@ -42,7 +42,6 @@ internal static class ArgsParser
         if (i + 1 < args.Length && !args[i + 1].StartsWith("--"))
         {
           _args[argName] = args[i + 1].ToLower();
-          i++; // Skip the value
         }
         else
         {

@@ -1,17 +1,19 @@
 <Project>
-  <PropertyGroup>
-    <!-- These API calls take forever. -->
-    <NuGetAudit>false</NuGetAudit>
+	<PropertyGroup>
+		<!-- These API calls take forever. -->
+		<NuGetAudit>false</NuGetAudit>
 
-    <Authors>Jared Goodwin</Authors>
-    <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
-    <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+		<Authors>Jared Goodwin</Authors>
+		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
 		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
+		<Configurations>
+			Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux</Configurations>
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<!-- TreatWarningsAsErrors can be selectively bypassed here. -->
@@ -22,4 +24,28 @@
 		<!-- Commented code. It can be helpful for examples/docs. -->
 		<NoWarn>S125</NoWarn>
 	</PropertyGroup>
+
+	<PropertyGroup Condition="$(Configuration.Contains('Debug'))">
+		<DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$(Configuration.Contains('Release'))">
+		<DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Release'">
+		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$(Configuration.Contains('Windows'))">
+		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$(Configuration.Contains('Mac'))">
+		<DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="$(Configuration.Contains('Linux'))">
+		<DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
+	</PropertyGroup>
+
 </Project>

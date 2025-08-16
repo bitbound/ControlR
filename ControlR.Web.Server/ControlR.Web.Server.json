@@ -1,0 +1,2103 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "ControlR.Web.Server | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/Account/Manage/LinkExternalLogin": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "provider"
+                ],
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "provider"
+                ],
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/Account/Manage/DownloadPersonalData": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/Account/PerformExternalLogin": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "provider",
+                  "returnUrl"
+                ],
+                "type": "object",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "returnUrl": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "provider",
+                  "returnUrl"
+                ],
+                "type": "object",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "returnUrl": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/Account/Logout": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "returnUrl"
+                ],
+                "type": "object",
+                "properties": {
+                  "returnUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "returnUrl"
+                ],
+                "type": "object",
+                "properties": {
+                  "returnUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Devices": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeviceRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeviceRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeviceRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Devices/{deviceId}": {
+      "delete": {
+        "tags": [
+          "Devices"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Devices/search": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSearchRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSearchRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSearchRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSearchResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSearchResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSearchResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/device-tags": {
+      "post": {
+        "tags": [
+          "DeviceTags"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTagAddRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTagAddRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTagAddRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-tags/{deviceId}/{tagId}": {
+      "delete": {
+        "tags": [
+          "DeviceTags"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tagId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installer-keys": {
+      "post": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Invites/accept": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptInvitationResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptInvitationResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptInvitationResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Invites": {
+      "get": {
+        "tags": [
+          "Invites"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantInviteRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantInviteRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantInviteRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Invites/{inviteId}": {
+      "delete": {
+        "tags": [
+          "Invites"
+        ],
+        "parameters": [
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Logout": {
+      "post": {
+        "tags": [
+          "Logout"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { }
+            },
+            "text/json": {
+              "schema": { }
+            },
+            "application/*+json": {
+              "schema": { }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/public-registration-settings": {
+      "get": {
+        "tags": [
+          "PublicRegistrationSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Tags": {
+      "post": {
+        "tags": [
+          "Tags"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tags"
+        ],
+        "parameters": [
+          {
+            "name": "includeLinkedIds",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Tags"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagRenameRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagRenameRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagRenameRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Tags/{tagId}": {
+      "delete": {
+        "tags": [
+          "Tags"
+        ],
+        "parameters": [
+          {
+            "name": "tagId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/user-preferences": {
+      "get": {
+        "tags": [
+          "UserPreferences"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "UserPreferences"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferenceRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferenceRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferenceRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-preferences/{name}": {
+      "get": {
+        "tags": [
+          "UserPreferences"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-roles": {
+      "post": {
+        "tags": [
+          "UserRoles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRoleAddRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRoleAddRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRoleAddRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "UserRoles"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-roles/{userId}": {
+      "get": {
+        "tags": [
+          "UserRoles"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-roles/{userId}/{roleId}": {
+      "delete": {
+        "tags": [
+          "UserRoles"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-tags": {
+      "post": {
+        "tags": [
+          "UserTags"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserTagAddRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserTagAddRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserTagAddRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "UserTags"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-tags/{userId}": {
+      "get": {
+        "tags": [
+          "UserTags"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user-tags/{userId}/{tagId}": {
+      "delete": {
+        "tags": [
+          "UserTags"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tagId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Version/agent": {
+      "get": {
+        "tags": [
+          "Version"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Version/server": {
+      "get": {
+        "tags": [
+          "Version"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "pattern": "^\\d+(\\.\\d+){1,3}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcceptInvitationRequestDto": {
+        "required": [
+          "activationCode",
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "activationCode": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AcceptInvitationResponseDto": {
+        "required": [
+          "isSuccessful"
+        ],
+        "type": "object",
+        "properties": {
+          "isSuccessful": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "Architecture": {
+        "type": "integer"
+      },
+      "CreateDeviceRequestDto": {
+        "required": [
+          "device",
+          "installerKey"
+        ],
+        "type": "object",
+        "properties": {
+          "device": {
+            "$ref": "#/components/schemas/DeviceDto"
+          },
+          "installerKey": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateInstallerKeyRequestDto": {
+        "required": [
+          "keyType"
+        ],
+        "type": "object",
+        "properties": {
+          "keyType": {
+            "$ref": "#/components/schemas/InstallerKeyType"
+          },
+          "expiration": {
+            "type": "string",
+            "format": "date-time",
+            "default": null,
+            "nullable": true
+          },
+          "allowedUses": {
+            "type": "integer",
+            "format": "uint32",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "CreateInstallerKeyResponseDto": {
+        "required": [
+          "tokenType",
+          "accessKey"
+        ],
+        "type": "object",
+        "properties": {
+          "tokenType": {
+            "$ref": "#/components/schemas/InstallerKeyType"
+          },
+          "accessKey": {
+            "type": "string"
+          },
+          "allowedUses": {
+            "type": "integer",
+            "format": "uint32",
+            "default": null,
+            "nullable": true
+          },
+          "expiration": {
+            "type": "string",
+            "format": "date-time",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "DeviceColumnFilter": {
+        "type": "object",
+        "properties": {
+          "propertyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "operator": {
+            "type": "string",
+            "nullable": true
+          },
+          "value": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "DeviceColumnSort": {
+        "type": "object",
+        "properties": {
+          "propertyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "descending": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DeviceDto": {
+        "required": [
+          "name",
+          "agentVersion",
+          "cpuUtilization",
+          "id",
+          "is64Bit",
+          "isOnline",
+          "lastSeen",
+          "osArchitecture",
+          "platform",
+          "processorCount",
+          "connectionId",
+          "osDescription",
+          "tenantId",
+          "totalMemory",
+          "totalStorage",
+          "usedMemory",
+          "usedStorage",
+          "currentUsers",
+          "macAddresses",
+          "publicIpV4",
+          "publicIpV6",
+          "drives"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "agentVersion": {
+            "type": "string"
+          },
+          "cpuUtilization": {
+            "type": "number",
+            "format": "double"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is64Bit": {
+            "type": "boolean"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "osArchitecture": {
+            "$ref": "#/components/schemas/Architecture"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/SystemPlatform"
+          },
+          "processorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "connectionId": {
+            "type": "string"
+          },
+          "osDescription": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "totalMemory": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalStorage": {
+            "type": "number",
+            "format": "double"
+          },
+          "usedMemory": {
+            "type": "number",
+            "format": "double"
+          },
+          "usedStorage": {
+            "type": "number",
+            "format": "double"
+          },
+          "currentUsers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "macAddresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publicIpV4": {
+            "type": "string"
+          },
+          "publicIpV6": {
+            "type": "string"
+          },
+          "drives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Drive"
+            }
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "DeviceSearchRequestDto": {
+        "type": "object",
+        "properties": {
+          "filterDefinitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceColumnFilter"
+            },
+            "nullable": true
+          },
+          "hideOfflineDevices": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "searchText": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortDefinitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceColumnSort"
+            },
+            "nullable": true
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "DeviceSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceDto"
+            },
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "anyDevicesForUser": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DeviceTagAddRequestDto": {
+        "required": [
+          "deviceId",
+          "tagId"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Drive": {
+        "type": "object",
+        "properties": {
+          "driveType": {
+            "$ref": "#/components/schemas/DriveType"
+          },
+          "rootDirectory": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "driveFormat": {
+            "type": "string"
+          },
+          "freeSpace": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalSize": {
+            "type": "number",
+            "format": "double"
+          },
+          "volumeLabel": {
+            "type": "string"
+          }
+        }
+      },
+      "DriveType": {
+        "enum": [
+          "Unknown",
+          "NoRootDirectory",
+          "Removable",
+          "Fixed",
+          "Network",
+          "CDRom",
+          "Ram"
+        ]
+      },
+      "InstallerKeyType": {
+        "type": "integer"
+      },
+      "PublicRegistrationSettings": {
+        "required": [
+          "isPublicRegistrationEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "isPublicRegistrationEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RoleResponseDto": {
+        "required": [
+          "id",
+          "name",
+          "userIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "SystemPlatform": {
+        "type": "integer"
+      },
+      "TagCreateRequestDto": {
+        "required": [
+          "name",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TagType"
+          }
+        }
+      },
+      "TagRenameRequestDto": {
+        "required": [
+          "tagId",
+          "newTagName"
+        ],
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "newTagName": {
+            "type": "string"
+          }
+        }
+      },
+      "TagResponseDto": {
+        "required": [
+          "id",
+          "name",
+          "type",
+          "userIds",
+          "deviceIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TagType"
+          },
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "deviceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "TagType": {
+        "type": "integer"
+      },
+      "TenantInviteRequestDto": {
+        "required": [
+          "inviteeEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "inviteeEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "TenantInviteResponseDto": {
+        "required": [
+          "id",
+          "createdAt",
+          "inviteeEmail",
+          "inviteUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "inviteeEmail": {
+            "type": "string"
+          },
+          "inviteUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "UserPreferenceRequestDto": {
+        "required": [
+          "name",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "UserPreferenceResponseDto": {
+        "required": [
+          "name",
+          "value",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UserResponseDto": {
+        "required": [
+          "id",
+          "userName",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UserRoleAddRequestDto": {
+        "required": [
+          "userId",
+          "roleId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UserTagAddRequestDto": {
+        "required": [
+          "userId",
+          "tagId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "ControlR.Web.Server"
+    },
+    {
+      "name": "Devices"
+    },
+    {
+      "name": "DeviceTags"
+    },
+    {
+      "name": "InstallerKeys"
+    },
+    {
+      "name": "Invites"
+    },
+    {
+      "name": "Logout"
+    },
+    {
+      "name": "PublicRegistrationSettings"
+    },
+    {
+      "name": "Roles"
+    },
+    {
+      "name": "Tags"
+    },
+    {
+      "name": "UserPreferences"
+    },
+    {
+      "name": "UserRoles"
+    },
+    {
+      "name": "Users"
+    },
+    {
+      "name": "UserTags"
+    },
+    {
+      "name": "Version"
+    }
+  ]
+}

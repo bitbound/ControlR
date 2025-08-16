@@ -2,7 +2,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
-using ControlR.Agent.Common.Services.Windows;
 using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
@@ -65,10 +64,10 @@ public static class HostRunner
         });
 
       builder.Services.ReplaceService<IAgentUpdater, FakeAgentUpdater>(ServiceLifetime.Singleton);
-      builder.Services.ReplaceService<IStreamerUpdater, FakeStreamerUpdater>(ServiceLifetime.Singleton);
+      builder.Services.ReplaceService<IDesktopClientUpdater, FakeDesktopClientUpdater>(ServiceLifetime.Singleton);
       builder.Services.ReplaceService<ICpuUtilizationSampler, FakeCpuUtilizationSampler>(ServiceLifetime.Singleton);
       builder.Services.ReplaceService<ISettingsProvider, FakeSettingsProvider>(ServiceLifetime.Singleton, new FakeSettingsProvider(deviceId, serverUri));
-      builder.Services.RemoveImplementation<StreamingSessionWatcher>();
+      builder.Services.RemoveImplementation<IpcServerWatcher>();
       builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
 
       builder.Services.ReplaceService<IDeviceDataGenerator, FakeDeviceDataGenerator>(

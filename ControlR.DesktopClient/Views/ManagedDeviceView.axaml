@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+             xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+             xmlns:root="using:ControlR.DesktopClient"
+             x:Class="ControlR.DesktopClient.Views.ManagedDeviceView"
+             x:DataType="vm:IManagedDeviceViewModel">
+
+  <Design.DataContext>
+    <fakes:ManagedDeviceViewModelFake />
+  </Design.DataContext>
+
+  <Border Margin="10" HorizontalAlignment="Center">
+    <StackPanel>
+      <TextBlock Classes="h1 Primary"
+                 Text="{x:Static root:Localization.ManagedDeviceTitle}"
+                 Margin="0,0,0,20"/>
+      <TextBlock Text="{x:Static root:Localization.ManagedDeviceMessage}"
+                 TextWrapping="Wrap" />
+
+      <StackPanel IsVisible="{Binding IsMacOs}" Margin="0,28,0,0">
+        <TextBlock Classes="h2 Info" Text="{x:Static root:Localization.MacOsPermissions}" />
+
+        <!-- Accessibility -->
+        <Border Classes="Card" Margin="0,20,0,0">
+          <StackPanel>
+            <TextBlock Text="{x:Static root:Localization.Accessibility}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="{x:Static root:Localization.Status}" VerticalAlignment="Center" />
+                <Border CornerRadius="6" Padding="8,2" Background="#E6F4EA" IsVisible="{Binding IsAccessibilityPermissionGranted}">
+                  <TextBlock Text="{x:Static root:Localization.Granted}" Foreground="Green" FontWeight="Bold" />
+                </Border>
+                <Border CornerRadius="6" Padding="8,2" Background="#FDEAEA" IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                  <TextBlock Text="{x:Static root:Localization.NotGranted}" Foreground="Red" FontWeight="Bold" />
+                </Border>
+              </StackPanel>
+              <Button Content="{x:Static root:Localization.OpenSettings}"
+                      Command="{Binding OpenAccessibilitySettingsCommand}"
+                      IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
+                      Margin="16,0,0,0" />
+            </StackPanel>
+            <TextBlock Text="{x:Static root:Localization.AccessibilityPermissionDescription}"
+                       Classes="Small"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <!-- Screen Capture -->
+        <Border Classes="Card" Margin="0,20,0,0">
+          <StackPanel>
+            <TextBlock Text="{x:Static root:Localization.ScreenRecording}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="{x:Static root:Localization.Status}" VerticalAlignment="Center" />
+                <Border CornerRadius="6" Padding="8,2" Background="#E6F4EA" IsVisible="{Binding IsScreenCapturePermissionGranted}">
+                  <TextBlock Text="{x:Static root:Localization.Granted}" Foreground="Green" FontWeight="Bold" />
+                </Border>
+                <Border CornerRadius="6" Padding="8,2" Background="#FDEAEA" IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                  <TextBlock Text="{x:Static root:Localization.NotGranted}" Foreground="Red" FontWeight="Bold" />
+                </Border>
+              </StackPanel>
+              <Button Content="{x:Static root:Localization.OpenSettings}"
+                      Command="{Binding OpenScreenCaptureSettingsCommand}"
+                      IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
+                      Margin="16,0,0,0" />
+            </StackPanel>
+            <TextBlock Text="{x:Static root:Localization.ScreenCapturePermissionDescription}"
+                       Classes="Small"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -8,7 +8,6 @@
     <ApplicationIcon>appicon.ico</ApplicationIcon>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Authors>jaredg</Authors>
-    <Configurations>Debug;Release</Configurations>
     <UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
   </PropertyGroup>
 

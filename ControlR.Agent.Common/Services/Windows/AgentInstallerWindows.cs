@@ -2,8 +2,9 @@
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services.Base;
+using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +32,7 @@ internal class AgentInstallerWindows(
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IElevationChecker _elevationChecker = elevationChecker;
+  private readonly IRegistryAccessor _registryAccessor = registryAccessor;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly IProcessManager _processes = processes;
@@ -127,7 +129,7 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      registryAccessor.EnableSoftwareSas();
+      _registryAccessor.SetSoftwareSasGeneration(true);
 
       Logger.LogInformation("Creating uninstall registry key.");
       CreateUninstallKey();
@@ -202,8 +204,7 @@ internal class AgentInstallerWindows(
       }
 
       // Remove Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-      using var subkey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
-      subkey?.DeleteValue("SoftwareSASGeneration", false);
+      _registryAccessor.SetSoftwareSasGeneration(false);
 
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 

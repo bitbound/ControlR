@@ -147,7 +147,7 @@ public abstract class TcpWebsocketProxyBase(
     finally
     {
       _logger.LogInformation("Proxy session ended.  Session ID: {SessionID}", sessionId);
-      DisposeHelper.DisposeAll(serverConnection, localConnection);
+      Disposer.DisposeAll(serverConnection, localConnection);
     }
   }
 

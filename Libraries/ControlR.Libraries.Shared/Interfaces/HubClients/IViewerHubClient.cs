@@ -10,6 +10,6 @@ public interface IViewerHubClient : IHubClient
   Task InvokeToast(ToastInfo toastInfo);
   Task ReceiveDeviceUpdate(DeviceDto deviceDto);
   Task ReceiveServerStats(ServerStatsDto serverStats);
-  Task ReceiveStreamerDownloadProgress(StreamerDownloadProgressDto progressDto);
+  Task ReceiveDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto);
   Task ReceiveTerminalOutput(TerminalOutputDto output);
 }
