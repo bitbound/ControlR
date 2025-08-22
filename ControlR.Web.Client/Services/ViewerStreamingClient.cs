@@ -9,6 +9,7 @@ namespace ControlR.Web.Client.Services;
 public interface IViewerStreamingClient : IStreamingClient
 {
   Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
+  Task RequestKeyFrame(CancellationToken cancellationToken);
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
 
@@ -47,6 +48,17 @@ public class ViewerStreamingClient(
       {
         var dto = new RequestClipboardTextDto();
         var wrapper = DtoWrapper.Create(dto, DtoType.RequestClipboardText);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
+  public async Task RequestKeyFrame(CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var dto = new RequestKeyFrameDto();
+        var wrapper = DtoWrapper.Create(dto, DtoType.RequestKeyFrame);
         await Send(wrapper, cancellationToken);
       });
   }

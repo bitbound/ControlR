@@ -1,0 +1,70 @@
+﻿@page "/device-access/terminal"
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+@layout DeviceAccessLayout
+
+<div class="h-100">
+  @using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions
+  @if (_loading)
+  {
+   <LoadingIndicator IsVisible Message="Loading"  />
+  }
+  else
+  {
+    <div class="terminal-grid">
+      <div @ref="_terminalOutputContainer" class="terminal-output-container">
+
+        @foreach (var line in TerminalState.Output)
+        {
+          <div @key=(line) class="@(GetOutputColor(line))">
+            @(line.Output)
+          </div>
+        }
+      </div>
+      <div>
+        @if (_currentCompletions is not null)
+        {
+          <MudAutocomplete @ref="@(_completionsAutoComplete)"
+                           T="PwshCompletionMatch"
+                           OnKeyDown="@(OnCompletionInputKeyDown)"
+                           Clearable="true"
+                           ValueChanged="@(OnCompletionSelected)"
+                           SearchFunc="@SearchCompletions"
+                           ToStringFunc="@(x => x?.ListItemText)"
+                           SelectValueOnTab
+                           AutoFocus
+                           MaxItems="null"
+                           AnchorOrigin="@(Origin.TopCenter)"
+                           TransformOrigin="(Origin.BottomCenter)">
+            <ItemTemplate>
+              @context.ListItemText
+            </ItemTemplate>
+            <ItemSelectedTemplate>
+              @context.ListItemText
+            </ItemSelectedTemplate>
+          </MudAutocomplete>
+        }
+        <MudTextField T="string"
+                      @ref="@(_commandInputElement)"
+                      InputId="@(_commandInputElementId)"
+                      @bind-Value="@TerminalState.CommandInputText"
+                      @bind-Text="@TerminalState.CommandInputText"
+                      Label="Enter a command"
+                      HelperText="Type a command and press Enter to send"
+                      TextUpdateSuppression="false"
+                      Lines="@CommandInputLineCount"
+                      HelperTextOnFocus="true"
+                      AutoFocus="true"
+                      Immediate="true"
+                      UserAttributes="_commandInputAttributes"
+                      OnKeyDown="@OnInputKeyDown"
+                      Class="mt-2" />
+      </div>
+      <div>
+        <MudSwitch @bind-Value="TerminalState.EnableMultiline"
+                   Color="Color.Success"
+                   Label="Multiline Input" />
+      </div>
+    </div>
+  }
+
+</div>

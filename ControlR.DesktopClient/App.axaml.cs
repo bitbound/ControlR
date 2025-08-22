@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,8 +8,8 @@ using Avalonia.Markup.Xaml;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient;
 
@@ -21,7 +22,7 @@ public partial class App : Application
   {
     AvaloniaXamlLoader.Load(this);
   }
-
+  
   public override void OnFrameworkInitializationCompleted()
   {
     var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
@@ -52,6 +53,8 @@ public partial class App : Application
 
       StaticServiceProvider.Build(desktop, instanceId);
 
+      ReportAssemblyVersion();
+
       // Start the hosted services on a different thread.
       // This prevents hooks in the current UI thread from blocking
       // SetThreadDesktop when a remote control session starts.
@@ -63,6 +66,7 @@ public partial class App : Application
       // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
       DisableAvaloniaDataAnnotationValidation();
       DataContext = StaticServiceProvider.Instance.GetRequiredService<IAppViewModel>();
+      desktop.MainWindow = StaticServiceProvider.Instance.GetRequiredService<MainWindow>();
     }
     else if (!Design.IsDesignMode)
     {
@@ -85,6 +89,21 @@ public partial class App : Application
       BindingPlugins.DataValidators.Remove(plugin);
     }
   }
+
+  private static void ReportAssemblyVersion()
+  {
+    try
+    {
+      var logger = StaticServiceProvider.Instance.GetRequiredService<ILogger<App>>();
+      var version = Assembly.GetExecutingAssembly().GetName().Version;
+      logger.LogInformation("Desktop UI app initialized.  Assembly version: {AsmVersion}.", version);
+    }
+    catch (Exception ex)
+    {
+      System.Diagnostics.Debug.WriteLine($"Error reporting assembly version: {ex.Message}");
+    }
+  }
+
 
   private async Task StartHostedServices()
   {

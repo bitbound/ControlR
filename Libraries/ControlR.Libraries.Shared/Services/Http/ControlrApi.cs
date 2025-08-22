@@ -15,7 +15,6 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
@@ -24,15 +23,17 @@ public interface IControlrApi
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
+  Task<Result> DeleteUser(Guid userId);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
-  Task<Result<TagResponseDto[]>> GetAllowedTags();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
+  Task<Result<TagResponseDto[]>> GetAllowedTags();
   Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentAgentVersion();
-  Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime);
+  Task<Result<Version>> GetCurrentServerVersion();
+  Task<Result<DeviceDto>> GetDevice(Guid deviceId);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
@@ -42,6 +43,7 @@ public interface IControlrApi
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
+  Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
 }
 
@@ -51,16 +53,6 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
-
-  public async Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request)
-  {
-    return await TryCallApi(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/search", request);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>();
-    });
-  }
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -189,6 +181,15 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result> DeleteUser(Guid userId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.DeleteAsync($"{HttpConstants.UsersEndpoint}/{userId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
   public async IAsyncEnumerable<DeviceDto> GetAllDevices()
   {
     var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceDto>(HttpConstants.DevicesEndpoint);
@@ -201,12 +202,6 @@ public class ControlrApi(
 
       yield return device;
     }
-  }
-
-  public async Task<Result<TagResponseDto[]>> GetAllowedTags()
-  {
-    return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
@@ -226,6 +221,12 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<UserResponseDto[]>(HttpConstants.UsersEndpoint));
+  }
+
+  public async Task<Result<TagResponseDto[]>> GetAllowedTags()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
 
   public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
@@ -262,12 +263,6 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<Version>> GetCurrentServerVersion()
-  {
-    return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
-  }
-
   public async Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime)
   {
     try
@@ -291,6 +286,18 @@ public class ControlrApi(
       _logger.LogError(ex, "Error while checking for new desktop client hash.");
       return Result.Fail<byte[]>(ex);
     }
+  }
+
+  public async Task<Result<Version>> GetCurrentServerVersion()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
+  }
+
+  public async Task<Result<DeviceDto>> GetDevice(Guid deviceId)
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<DeviceDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}"));
   }
   public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
   {
@@ -351,7 +358,6 @@ public class ControlrApi(
     });
   }
 
-
   public async Task<Result> RemoveUserTag(Guid userId, Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -369,6 +375,16 @@ public class ControlrApi(
       using var response = await _client.PutAsJsonAsync($"{HttpConstants.TagsEndpoint}", dto);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<TagResponseDto>();
+    });
+  }
+
+  public async Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/search", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>();
     });
   }
 

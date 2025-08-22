@@ -276,7 +276,7 @@ internal class ViewerHubConnection(
     return await TryInvoke(
       async () =>
       {
-        var request = new TerminalInputDto(terminalId, input);
+        var request = new TerminalInputDto(terminalId, input, string.Empty); // ViewerConnectionId will be set by server
         return await _viewerHub.Server.SendTerminalInput(deviceId, request);
       },
       () => Result.Fail("Failed to send terminal input"));

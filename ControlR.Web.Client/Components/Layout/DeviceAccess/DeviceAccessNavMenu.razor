@@ -1,0 +1,54 @@
+﻿@inject NavigationManager NavMan
+@inject AuthenticationStateProvider AuthState
+@inject ILogger<NavMenu> Logger
+@inject IControlrApi ControlrApi
+@inject ISnackbar Snackbar
+
+<MudNavMenu>
+  <MudNavLink Href="/device-access" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+    Overview
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/remote-control" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ScreenShare">
+    Remote Control
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/terminal" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Terminal">
+    Terminal
+  </MudNavLink>
+
+  @*<MudNavLink Disabled="IsDisabled" Href="/device-access/file-system" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Folder">
+    File System
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/chat" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Chat">
+    Chat
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/processes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MonitorHeart">
+    Processes
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/registry" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dataset">
+    Registry
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/events" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Event">
+    Events
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/services" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SettingsApplications">
+    Services
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href="/device-access/logs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.TextSnippet">
+    Logs
+  </MudNavLink> *@
+</MudNavMenu>
+
+
+
+@code {
+  [Parameter]
+  public bool IsDisabled { get; set; }
+}

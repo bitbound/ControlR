@@ -1,11 +1,11 @@
 ﻿namespace ControlR.Web.Client.Models;
 
 public class RemoteControlSession(
-  DeviceViewModel device,
+  DeviceDto device,
   int targetSystemSession,
   int targetProcessId)
 {
-  public DeviceViewModel Device { get; } = device;
+  public DeviceDto Device { get; } = device;
   public Guid SessionId { get; private set; } = Guid.NewGuid();
   public int TargetProcessId { get; } = targetProcessId;
   public int TargetSystemSession { get; } = targetSystemSession;

@@ -5,6 +5,7 @@ public record PwshCompletionsRequestDto(
   Guid TerminalId,
   string LastCompletionInput,
   int LastCursorIndex,
+  string ViewerConnectionId,
   bool? Forward,
   int Page = 0,
   int PageSize = PwshCompletionsRequestDto.DefaultPageSize)

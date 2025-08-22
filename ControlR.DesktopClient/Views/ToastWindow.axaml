@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ControlR.DesktopClient.Views.ToastWindow"
+        xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+        xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+        x:DataType="vm:IToastWindowViewModel"
+        Title="ControlR"
+        Width="350"
+        WindowStartupLocation="Manual"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+				SystemDecorations="None"
+        SizeToContent="Height">
+
+  <Design.DataContext>
+    <fakes:ToastWindowViewModelFake />
+  </Design.DataContext>
+  
+  <Grid Margin="20">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="Auto" />
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Icon -->
+    <PathIcon Grid.Column="0"
+              Grid.RowSpan="2"
+              Width="24"
+              Height="24"
+              VerticalAlignment="Center"
+              Margin="0,0,12,0"
+              Data="{Binding IconGeometry}"
+              Foreground="{Binding IconBrush}" />
+
+    <!-- Title -->
+    <TextBlock Grid.Column="1"
+               Grid.Row="0"
+               Text="{Binding Title}"
+               FontWeight="Bold"
+               FontSize="14"
+               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+               TextWrapping="Wrap"
+               VerticalAlignment="Top" />
+
+    <!-- Message -->
+    <TextBlock Grid.Column="1"
+               Grid.Row="1"
+               Text="{Binding Message}"
+               FontSize="12"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+               TextWrapping="Wrap"
+               VerticalAlignment="Top"
+               Margin="0,4,0,0" />
+
+    <!-- Close Button -->
+    <Button x:Name="CloseButton"
+            Grid.Column="2"
+            Grid.Row="0"
+            Width="20"
+            Height="20"
+            Padding="0"
+            Background="Transparent"
+            BorderThickness="0"
+            VerticalAlignment="Top"
+            HorizontalAlignment="Right"
+            Click="CloseButton_Click">
+			
+      <PathIcon Data="{StaticResource dismiss_regular}" 
+                Width="12" 
+                Height="12" 
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Button>
+  </Grid>
+</Window>

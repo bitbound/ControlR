@@ -7,14 +7,18 @@ public static class IpcPipeNames
     {
       return GetWindowsPipeName();
     }
-    else if (OperatingSystem.IsMacOS())
+
+    if (OperatingSystem.IsMacOS())
     {
       return GetMacPipeName();
     }
-    else
+
+    if (OperatingSystem.IsLinux())
     {
       return GetLinuxPipeName();
     }
+
+    throw new PlatformNotSupportedException();
   }
 
   public static string GetWindowsPipeName()

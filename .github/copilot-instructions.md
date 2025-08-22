@@ -11,7 +11,6 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - **ControlR.Web.WebSocketRelay** - WebSocket relay service for real-time communication
 - **ControlR.Agent** - Background service/daemon that runs on controlled devices
 - **ControlR.DesktopClient** - Cross-platform Avalonia UI desktop application
-- **ControlR.Streamer** - Screen capture and streaming component
 
 ### Platform-Specific Components
 - **ControlR.DesktopClient.Windows** - Windows-specific desktop client implementations
@@ -39,7 +38,6 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - **SignalR** - Real-time communication
 - **Entity Framework Core** - ORM for database operations
 - **PostgreSQL** - Primary database (with InMemory option for testing)
-- **.NET Aspire** - Cloud-native orchestration for development
 
 ### Frontend  
 - **Blazor WebAssembly** - Client-side web UI framework
@@ -59,7 +57,8 @@ ControlR is a cross-platform solution for remote access and remote control of de
 
 ### Desktop Architecture  
 - **MVVM Pattern** - Model-View-ViewModel for UI separation
-- **Localization** - Localization.cs will pull region-specific strings from `/Resources/Strings/{locale}.json`
+- **Localization** - `Localization.cs` will pull region-specific strings from `/Resources/Strings/{locale}.json`
+  - All text in the UI should be bound to localization keys using `x:Static`
 - **Command Pattern** - For user actions and operations
 - **IMessenger** - Cross-component communication
 - **Service Layer** - Business logic abstraction
@@ -90,44 +89,45 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - Use StyleCop conventions when ordering class members.
 - Prefer var of explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
-- Prefer simplified collection initializers where appropriate (e.g. '[]').
+- Prefer collection expressions where appropriate (e.g. '[]').
+- If an interface only has one implementation, keep the interface and implementation in the same file.
 
 ### Web UI Guidelines
 - Use MudBlazor components where appropriate for the UI.
 - Prefer using code-behind CS files for Razor components instead of using the `@code {}` block in Razor files.
 
 ### Project Organization
-- Follow the established folder structure and naming conventions
-- Keep platform-specific code in appropriate platform projects
-- Use shared libraries for common functionality across projects
-- Maintain clear separation between business logic and UI code
+- Follow the established folder structure and naming conventions.
+- Keep platform-specific code in appropriate platform projects.
+- Use shared libraries for common functionality across projects.
+- DTOs go under `/Libraries/ControlR.Libraries.Shared/Dtos/`, under their respective namespace.
+  - `HubDtos` contain DTOs used in SignalR hubs.
+  - `IpcDtos` contain DTOs used in the IPC connection between `Agent` and `DesktopClient`.
+  - `ServerApi` contains DTOs used in the REST API.
+  - `StreamerDtos` contain DTOs used by remote control, which get routed through the websocket relay.
+- Maintain clear separation between business logic and UI code.
 
 ### Testing Strategy
-- Write unit tests for business logic and services
-- Use integration tests for API endpoints and database operations
-- Include load testing for performance-critical components
-- Maintain test coverage for shared libraries
+- Write unit tests for business logic and services.
+- Maintain test coverage for shared libraries.
 
 ### Security Considerations
-- Always validate and sanitize user inputs
-- Use proper authentication and authorization patterns
-- Implement secure communication protocols
-- Follow OWASP guidelines for web security
-- Properly handle sensitive data and credentials
+- Always validate and sanitize user inputs.
+- Use `AuthorizeAttribute` and `IAuthorizationService` for endpoint authorization.
 
 ### Performance Guidelines
-- Optimize database queries with proper indexing
-- Use async/await patterns for I/O operations
-- Cache frequently accessed data appropriately
+- Optimize database queries with proper indexing.
+- Use async/await patterns for I/O operations.
+- Cache frequently accessed data appropriately.
 
 ### Error Handling
-- Use structured logging with Serilog
-- Implement proper exception handling and recovery
-- Provide meaningful error messages to users
-- Log errors with appropriate context for debugging
+- Use structured logging with Serilog.
+- Implement proper exception handling and recovery.
+- Provide meaningful error messages to users.
+- Log errors with appropriate context for debugging.
 
 ### Documentation
-- Use XML documentation comments for public APIs
-- Maintain README files for complex components
-- Document configuration options and environment variables
-- Keep API documentation up to date
+- Use XML documentation comments for public APIs.
+- Maintain README files for complex components.
+- Document configuration options and environment variables.
+- Keep API documentation up to date.

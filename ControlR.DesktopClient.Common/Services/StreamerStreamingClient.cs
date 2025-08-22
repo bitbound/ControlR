@@ -77,10 +77,10 @@ internal sealed class StreamerStreamingClient(
       if (_startupOptions.Value.NotifyUser)
       {
         var message = _startupOptions.Value.ViewerName is { Length: > 0 } viewerName
-          ? $"{viewerName} has joined your session"
-          : "Remote control session has started";
+          ? $"{viewerName} has connected and is now sharing your screen"
+          : "A device administrator has connected and is now sharing your screen";
 
-        await _toaster.ShowToast("ControlR", message, ToastIcon.Info);
+        await _toaster.ShowToast("Remote Control Session", message, ToastIcon.Info);
       }
 
       StreamScreenToViewer().Forget();
@@ -115,7 +115,7 @@ internal sealed class StreamerStreamingClient(
 
   public async Task StopAsync(CancellationToken cancellationToken)
   {
-    await DisposeAsync();
+    await Close();
     _messageHandlerRegistration?.Dispose();
   }
 
@@ -228,6 +228,12 @@ internal sealed class StreamerStreamingClient(
               _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y,_desktopCapturer.SelectedDisplay,payload.Button, true);
               _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y,_desktopCapturer.SelectedDisplay,payload.Button, false);
             }
+            break;
+          }
+        case DtoType.RequestKeyFrame:
+          {
+            _logger.LogInformation("Received request for key frame.");
+            await _desktopCapturer.RequestKeyFrame();
             break;
           }
         default:

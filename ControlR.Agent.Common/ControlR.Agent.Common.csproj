@@ -18,14 +18,14 @@
 
     <ItemGroup>
         <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
         <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.2" />
-        <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.7" />
+        <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
     </ItemGroup>
 
     <ItemGroup>

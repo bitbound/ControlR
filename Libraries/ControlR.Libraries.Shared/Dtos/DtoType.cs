@@ -32,4 +32,5 @@ public enum DtoType
   RefreshDeviceInfoRequest = 38,
   Ack = 39,
   CaptureMetricsChanged = 40,
+  RequestKeyFrame = 41,
 }

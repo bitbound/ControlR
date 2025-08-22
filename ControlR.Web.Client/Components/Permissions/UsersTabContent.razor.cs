@@ -31,7 +31,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required ITagStore TagStore { get; init; }
+  public required IAdminTagStore TagStore { get; init; }
 
   [Inject]
   public required IUserStore UserStore { get; init; }
@@ -173,5 +173,31 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     }
 
     return false;
+  }
+
+  private async Task DeleteSelectedUser()
+  {
+    if (_selectedUser is null)
+      return;
+
+    try
+    {
+      var result = await ControlrApi.DeleteUser(_selectedUser.Id);
+      if (!result.IsSuccess)
+      {
+        Snackbar.Add(result.Reason, Severity.Error);
+        return;
+      }
+      
+      await UserStore.Refresh();
+      _selectedUser = null;
+      Snackbar.Add("User deleted", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while deleting user.");
+      Snackbar.Add("An error occurred while deleting user", Severity.Error);
+    }
+    await InvokeAsync(StateHasChanged);
   }
 }

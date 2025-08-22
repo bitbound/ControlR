@@ -1,13 +1,16 @@
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
+using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-  public static IServiceCollection AddControlrWebClient(this IServiceCollection services, string baseAddress)
+  public static IServiceCollection AddControlrWebClient(
+    this IServiceCollection services,
+    string baseAddress)
   {
     services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
@@ -26,12 +29,17 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IRetryer, Retryer>();
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddScoped<IScreenWake, ScreenWake>();
+    services.AddScoped<ISessionStorageAccessor, SessionStorageAccessor>();
+    services.AddScoped<IDeviceAccessState, DeviceAccessState>();
+    services.AddScoped<IRemoteControlState, RemoteControlState>();
+    services.AddScoped<ITerminalState, TerminalState>();
+    services.AddScoped<IViewerStreamingClient, ViewerStreamingClient>();
     services.AddTransient<IJsInterop, JsInterop>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-    services.AddTransient<IViewerStreamingClient, ViewerStreamingClient>();
 
     services.AddScoped<IDeviceStore, DeviceStore>();
-    services.AddScoped<ITagStore, TagStore>();
+    services.AddScoped<IUserTagStore, UserTagStore>();
+    services.AddScoped<IAdminTagStore, AdminTagStore>();
     services.AddScoped<IUserStore, UserStore>();
     services.AddScoped<IRoleStore, RoleStore>();
     services.AddScoped<IInviteStore, InviteStore>();
@@ -40,7 +48,7 @@ public static class ServiceCollectionExtensions
 
     return services;
 
-    void ConfigureHttpClient(IServiceProvider services, HttpClient client)
+    void ConfigureHttpClient(IServiceProvider serviceProvider, HttpClient client)
     {
       if (!string.IsNullOrWhiteSpace(baseAddress))
       {

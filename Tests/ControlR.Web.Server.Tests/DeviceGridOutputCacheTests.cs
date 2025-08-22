@@ -3,6 +3,7 @@ using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services;
+using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

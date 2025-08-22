@@ -7,16 +7,12 @@ Open-source, self-hostable remote control and remote access.
 
 Website: https://controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
+DeepWiki: https://deepwiki.com/bitbound/ControlR  
 Discussions: https://github.com/bitbound/ControlR/discussions  
 Project Board: https://github.com/users/bitbound/projects/1
 
-## Quick Start:
+## Quick Start: 
 
-### Public Server
-
-Go to https://controlr.app and create an account.
-
-### Self-Hosted
 
 ```
 wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/docker-compose.yml
@@ -45,7 +41,7 @@ If the public IP for your connected devices are not showing correctly, the probl
 
 ## Multi-tenancy
 
-By default, the server is single-tenant. The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
+By default, the server is single-tenant (although you can organize customer tenants via tags). The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
 
 Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the compose file will allow anyone to create a new account on the server. A new tenant is created for each account that is created this way.
 
@@ -57,17 +53,19 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 
 - Full remote control support
 
-### Ubuntu x64 (latest LTS)
-
-- Experimental remote control via VNC
-
 ### macOS Apple Silicon (tested on M1 running Sequoia)
+- Full remote control support
+  - Controlling the login window is only possible after a user has logged in
 - Experimental remote control via VNC (Apple Screen Sharing)
 - Signed using ad-hoc certificate (this may change in the future)
 
 ### macOS Intel (untested)
 - Experimental remote control via VNC (Apple Screen Sharing)
 - Signed using ad-hoc certificate (this may change in the future)
+- 
+### Ubuntu x64 (latest LTS)
+
+- Experimental remote control via VNC
 
 ### All Operating Systems
 - Terminal uses embedded cross-platform PowerShell host

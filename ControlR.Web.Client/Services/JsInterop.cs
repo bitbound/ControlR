@@ -40,6 +40,7 @@ public interface IJsInterop
   ValueTask<bool> IsTouchScreen();
   ValueTask SetScreenWakeLock(bool isWakeEnabled);
   ValueTask SetCursorIndexById(string inputElementId, int cursorPosition);
+  ValueTask ToggleFullscreen(ElementReference element);
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -152,5 +153,10 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask SetCursorIndexById(string inputElementId, int cursorPosition)
   {
     return jsRuntime.InvokeVoidAsync("setSelectionStartById", inputElementId, cursorPosition);
+  }
+
+  public ValueTask ToggleFullscreen(ElementReference element)
+  {
+     return jsRuntime.InvokeVoidAsync("toggleFullscreen", element);
   }
 }

@@ -60,9 +60,12 @@ public class ViewerHub(
         return Result.Fail<PwshCompletionsResponseDto>("Forbidden.");
       }
 
+      // Create new request with ViewerConnectionId
+      var requestWithViewerConnection = request with { ViewerConnectionId = Context.ConnectionId };
+
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .GetPwshCompletions(request);
+        .GetPwshCompletions(requestWithViewerConnection);
     }
     catch (Exception ex)
     {
@@ -459,9 +462,12 @@ public class ViewerHub(
         return Result.Fail("User is not authorized to send terminal input.");
       }
 
+      // Create new DTO with ViewerConnectionId
+      var dtoWithViewerConnection = dto with { ViewerConnectionId = Context.ConnectionId };
+
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .ReceiveTerminalInput(dto);
+        .ReceiveTerminalInput(dtoWithViewerConnection);
     }
     catch (Exception ex)
     {

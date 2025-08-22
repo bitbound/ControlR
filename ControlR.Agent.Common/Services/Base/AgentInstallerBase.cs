@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
@@ -12,15 +13,91 @@ internal abstract class AgentInstallerBase(
   IControlrApi controlrApi,
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
+  IProcessManager processManager,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerBase> logger)
 {
-  private readonly ISettingsProvider _settingsProvider = settingsProvider;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
+  private readonly ISettingsProvider _settingsProvider = settingsProvider;
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
+  protected IProcessManager ProcessManager { get; } = processManager;
+
+  protected async Task<Result> CreateDeviceOnServer(string? installerKey, Guid[]? tagIds)
+  {
+    if (installerKey is null)
+    {
+      return Result.Ok();
+    }
+
+    var currentOptions = AppOptions.CurrentValue;
+    tagIds ??= [];
+
+    var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
+    device.TenantId = currentOptions.TenantId;
+    device.TagIds = tagIds;
+    var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
+
+    Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
+    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKey);
+    if (createResult.IsSuccess)
+    {
+      Logger.LogInformation("Device created successfully.");
+    }
+    else
+    {
+      Logger.LogError(createResult.Exception, "Device creation failed.  Reason: {Reason}", createResult.Reason);
+    }
+
+    return createResult;
+  }
+
+  protected Result StopProcesses()
+  {
+    try
+    {
+      var procs = ProcessManager
+        .GetProcessesByName("ControlR.Agent")
+        .Where(x => x.Id != Environment.ProcessId);
+
+      foreach (var proc in procs)
+      {
+        try
+        {
+          proc.Kill();
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Failed to kill agent process with ID {AgentProcessId}.", proc.Id);
+        }
+      }
+
+      procs = ProcessManager
+        .GetProcessesByName("ControlR.DesktopClient")
+        .Where(x => x.Id != Environment.ProcessId);
+
+      foreach (var proc in procs)
+      {
+        try
+        {
+          proc.Kill();
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Failed to kill desktop client process with ID {DesktopClientProcessId}.", proc.Id);
+        }
+      }
+
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while stopping service and processes.");
+      return Result.Fail(ex);
+    }
+  }
 
   protected async Task UpdateAppSettings(Uri? serverUri, Guid? tenantId)
   {
@@ -50,34 +127,5 @@ internal abstract class AgentInstallerBase(
 
     Logger.LogInformation("Writing results to disk.");
     await _settingsProvider.UpdateAppOptions(currentOptions);
-  }
-
-  protected async Task<Result> CreateDeviceOnServer(string? installerKey, Guid[]? tagIds)
-  {
-    if (installerKey is null)
-    {
-      return Result.Ok();
-    }
-
-    var currentOptions = AppOptions.CurrentValue;
-    tagIds ??= [];
-
-    var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
-    device.TenantId = currentOptions.TenantId;
-    device.TagIds = tagIds;
-    var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
-
-    Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKey);
-    if (createResult.IsSuccess)
-    {
-      Logger.LogInformation("Device created successfully.");
-    }
-    else
-    {
-      Logger.LogError(createResult.Exception, "Device creation failed.  Reason: {Reason}", createResult.Reason);
-    }
-
-    return createResult;
   }
 }

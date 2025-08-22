@@ -1,0 +1,258 @@
+﻿@layout DeviceAccessLayout
+@page "/device-access"
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+
+<div class="ma-4">
+  <MudGrid>
+    <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
+      <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
+        Device Summary
+      </MudText>
+      <div class="w-100">
+        <div class="child-content-grid">
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Online Status:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @if (DeviceAccessState.CurrentDevice.IsOnline)
+            {
+              <MudTooltip Text="Online">
+                <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
+              </MudTooltip>
+            }
+            else
+            {
+              <MudTooltip Text="Offline">
+                <MudIcon Icon="@(Icons.Material.Filled.Cancel)" Color="@(Color.Error)" />
+              </MudTooltip>
+            }
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Platform:
+          </MudText>
+          <div>
+            @switch (DeviceAccessState.CurrentDevice.Platform)
+            {
+              case SystemPlatform.Windows:
+                <MudTooltip Text="Windows">
+                  <MudIcon Icon="@(Icons.Custom.Brands.MicrosoftWindows)" Color="Color.Info" />
+                </MudTooltip>
+                ;
+                break;
+              case SystemPlatform.MacOs:
+                <MudTooltip Text="macOS">
+                  <MudIcon Icon="@(Icons.Custom.Brands.Apple)" Color="Color.Info" />
+                </MudTooltip>
+                ;
+                break;
+              case SystemPlatform.Linux:
+                <MudTooltip Text="Linux">
+                  <MudIcon Icon="@(Icons.Custom.Brands.Linux)" Color="Color.Info" />
+                </MudTooltip>
+                ;
+                break;
+              default:
+                <MudTooltip Text="Unknown Platform">
+                  <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Warning" />
+                </MudTooltip>
+                ;
+                break;
+            }
+          </div>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Name:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.Name
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Alias:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.Alias
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Id:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.Id
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Agent Version:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.AgentVersion
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Last Seen:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.LastSeen.ToLocalTime()
+          </MudText>
+        </div>
+      </div>
+    </MudItem>
+
+    <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
+      <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
+        Hardware
+      </MudText>
+      <div class="w-100">
+        <div class="child-content-grid">
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            CPU Count:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.ProcessorCount
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Architecture:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.OsArchitecture
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Total Memory:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @(DeviceAccessState.CurrentDevice.TotalMemory.ToString("N2")) GB
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Total Storage (OS):
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @(DeviceAccessState.CurrentDevice.TotalStorage.ToString("N0")) GB
+          </MudText>
+        </div>
+      </div>
+    </MudItem>
+
+    <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center">
+      <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
+        Networking
+      </MudText>
+      <div class="w-100">
+        <div class="child-content-grid">
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            IPv4 Address:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.PublicIpV4
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            IPv6 Address:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.PublicIpV6
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            MAC Addresses:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @(string.Join(", ", DeviceAccessState.CurrentDevice.MacAddresses))
+          </MudText>
+        </div>
+      </div>
+    </MudItem>
+
+    <MudFlexBreak />
+
+    <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
+      <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
+        CPU Usage
+      </MudText>
+      <RadialGauge Value="@(DeviceAccessState.CurrentDevice.CpuUtilization)" MaxValue="1" Width="250px" Height="250px">
+        <MudText Typo="Typo.body1">
+          @(Math.Round(DeviceAccessState.CurrentDevice.CpuUtilization * 100, 2))%
+        </MudText>
+      </RadialGauge>
+
+    </MudItem>
+
+    <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
+      <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
+        Memory Usage
+      </MudText>
+      <RadialGauge Value="@(DeviceAccessState.CurrentDevice.UsedMemoryPercent)" MaxValue="1" Height="250px" Width="250px"
+        Class="text-center">
+        <MudText Typo="Typo.body1">
+          @(Math.Round(DeviceAccessState.CurrentDevice.UsedMemoryPercent * 100, 2))%
+        </MudText>
+      </RadialGauge>
+    </MudItem>
+
+
+    @foreach (var drive in DeviceAccessState.CurrentDevice.Drives)
+    {
+      <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
+        <MudText Typo="Typo.h6" Color="Color.Primary" Class="ellipsis-text">
+          Hard Drive
+        </MudText>
+        <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px" Class="d-inline-block"
+          InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
+          InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
+          <CustomGraphics>
+            <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+              font-size="16">
+              Total
+            </text>
+            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+              font-size="20">
+              @(drive.TotalSize.ToString("N0")) GB
+            </text>
+          </CustomGraphics>
+        </MudChart>
+        <div class="w-100">
+          <div class="child-content-grid">
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Name:
+            </MudText>
+            <MudTooltip Text="@drive.Name">
+              <MudText Typo="Typo.body1" Class="ellipsis-text">
+                @drive.Name
+              </MudText>
+            </MudTooltip>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Volume Label:
+            </MudText>
+            <MudTooltip Text="@drive.VolumeLabel">
+              <MudText Typo="Typo.body1" Class="ellipsis-text">
+                @drive.VolumeLabel
+              </MudText>
+            </MudTooltip>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Format:
+            </MudText>
+            <MudText Typo="Typo.body1">
+              @drive.DriveFormat
+            </MudText>
+
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+              Root Directory:
+            </MudText>
+            <MudTooltip Text="@drive.RootDirectory">
+              <MudText Typo="Typo.body1" Class="ellipsis-text">
+                @drive.RootDirectory
+              </MudText>
+            </MudTooltip>
+          </div>
+        </div>
+
+      </MudItem>
+    }
+
+  </MudGrid>
+</div>

@@ -2,15 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "dotnet: build",
-      "type": "dotnet",
-      "task": "build",
+      "label": "build solution",
+      "type": "shell",
+      "command": "dotnet build ControlR.sln",
       "group": {
         "kind": "build",
         "isDefault": true
       },
       "problemMatcher": [],
-      "file": "ControlR.sln"
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
     },
     {
       "label": "build agent",
@@ -18,7 +20,9 @@
       "task": "build",
       "group": "build",
       "dependsOrder": "sequence",
-      "dependsOn": ["build server"],
+      "dependsOn": [
+        "build server"
+      ],
       "problemMatcher": [],
       "file": "ControlR.Agent/ControlR.Agent.csproj"
     },
@@ -28,7 +32,9 @@
       "task": "build",
       "group": "build",
       "dependsOrder": "sequence",
-      "dependsOn": ["build agent"],
+      "dependsOn": [
+        "build agent"
+      ],
       "problemMatcher": [],
       "file": "ControlR.DesktopClient/ControlR.DesktopClient.csproj"
     },
@@ -48,9 +54,19 @@
       "task": "build",
       "group": "build",
       "dependsOrder": "sequence",
-      "dependsOn": ["build server"],
+      "dependsOn": [
+        "build server"
+      ],
       "problemMatcher": [],
       "file": "Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj"
+    },
+    {
+      "label": "build + compose",
+      "dependsOn": [
+        "build solution",
+        "compose"
+      ],
+      "dependsOrder": "sequence"
     },
     {
       "label": "compose",
@@ -60,7 +76,10 @@
         "up": {
           "detached": true,
           "build": true,
-          "services": ["postgres", "aspire"]
+          "services": [
+            "postgres",
+            "aspire"
+          ]
         },
         "files": [
           "${workspaceFolder}/docker-compose/docker-compose.yml",

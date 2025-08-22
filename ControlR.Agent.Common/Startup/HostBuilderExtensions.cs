@@ -100,6 +100,7 @@ internal static class HostApplicationBuilderExtensions
     if (startupMode == StartupMode.Run)
     {
       services.AddSingleton<IAgentUpdater, AgentUpdater>();
+      services.AddSingleton<ITerminalSessionFactory, TerminalSessionFactory>();
       services.AddSingleton<ITerminalStore, TerminalStore>();
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();

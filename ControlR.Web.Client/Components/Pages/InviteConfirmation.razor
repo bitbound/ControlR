@@ -52,7 +52,7 @@ else
 
         <MudTextField T="string"
                       @bind-Value="_inputModel.Email"
-                      For="@(() => _inputModel.Email)"
+                      For="@(() => _inputModel.Email!)"
                       Label="Your Email Address"
                       InputType="InputType.Email"
                       Placeholder="The email for which the invitation was created"
@@ -64,7 +64,7 @@ else
 
         <MudTextField T="string"
                       @bind-Value="_inputModel.Password"
-                      For="@(() => _inputModel.Password)"
+                      For="@(() => _inputModel.Password!)"
                       Label="Your New Password"
                       InputType="InputType.Password"
                       Placeholder="The new password to use for your account"
@@ -77,7 +77,7 @@ else
 
         <MudTextField T="string"
                       @bind-Value="_inputModel.ConfirmPassword"
-                      For="@(() => _inputModel.ConfirmPassword)"
+                      For="@(() => _inputModel.ConfirmPassword!)"
                       Label="Confirm Password"
                       InputType="InputType.Password"
                       Placeholder="Confirm the above password"
@@ -113,7 +113,7 @@ else
   {
     await base.OnInitializedAsync();
 
-    _editContext = new(_inputModel);
+    _editContext = new EditContext(_inputModel);
     _editContext.OnFieldChanged += (_, _) => _editContext.Validate();
     var authState = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = authState.User.IsAuthenticated();

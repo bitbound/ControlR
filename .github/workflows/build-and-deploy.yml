@@ -135,7 +135,6 @@ jobs:
           $TestPaths = @(
             "./server-publish/wwwroot/downloads/AgentVersion.txt",
             "./server-publish/wwwroot/downloads/win-x86/ControlR.Agent.exe",
-            "./server-publish/wwwroot/downloads/win-x86/ControlR.Streamer.zip",
             "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent",
             "./server-publish/wwwroot/downloads/osx-arm64/ControlR.Agent",
             "./server-publish/wwwroot/downloads/osx-x64/ControlR.Agent",

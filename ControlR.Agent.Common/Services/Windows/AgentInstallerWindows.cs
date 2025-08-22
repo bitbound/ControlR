@@ -28,7 +28,7 @@ internal class AgentInstallerWindows(
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -72,9 +72,16 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      var stopResult = StopProcesses();
+      var stopResult = StopAgentService();
       if (!stopResult.IsSuccess)
       {
+        Logger.LogError("Failed to stop existing agent service. Aborting installation.");
+        return;
+      }
+      stopResult = StopProcesses();
+      if (!stopResult.IsSuccess)
+      {
+        Logger.LogError("Failed to stop existing agent processes. Aborting installation.");
         return;
       }
 
@@ -322,12 +329,11 @@ internal class AgentInstallerWindows(
     return true;
   }
 
-  private Result StopProcesses()
+  private Result StopAgentService()
   {
     try
     {
-      using var existingService =
-        ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == GetServiceName());
+      using var existingService = ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == GetServiceName());
       if (existingService is not null)
       {
         Logger.LogInformation("Existing service found.  CanStop value: {value}", existingService.CanStop);
@@ -343,28 +349,11 @@ internal class AgentInstallerWindows(
         existingService.Stop();
         existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
       }
-
-      var procs = _processes
-        .GetProcessesByName("ControlR.Agent")
-        .Where(x => x.Id != Environment.ProcessId);
-
-      foreach (var proc in procs)
-      {
-        try
-        {
-          proc.Kill();
-        }
-        catch (Exception ex)
-        {
-          Logger.LogError(ex, "Failed to kill agent process with ID {AgentProcessId}.", proc.Id);
-        }
-      }
-
       return Result.Ok();
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while stopping service and processes.");
+      Logger.LogError(ex, "Error while stopping agent service.");
       return Result.Fail(ex);
     }
   }

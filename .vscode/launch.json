@@ -8,14 +8,12 @@
       "name": "Agent (Run)",
       "type": "dotnet",
       "request": "launch",
-      "preLaunchTask": "build agent",
       "projectPath": "${workspaceFolder}/ControlR.Agent/ControlR.Agent.csproj"
     },
     {
       "name": "DesktopClient",
       "type": "dotnet",
       "request": "launch",
-      "preLaunchTask": "build desktopclient",
       "projectPath": "${workspaceFolder}/ControlR.DesktopClient/ControlR.DesktopClient.csproj"
     },
     {
@@ -25,7 +23,6 @@
       "program": "${workspaceFolder}/ControlR.Web.Server/bin/Debug/net9.0/ControlR.Web.Server.dll",
       "launchSettingsFilePath": "${workspaceFolder}/ControlR.Web.Server/Properties/launchSettings.json",
       "launchSettingsProfile": "https",
-      "preLaunchTask": "build server",
       "cwd": "${workspaceFolder}/ControlR.Web.Server",
       "stopAtEntry": false,
       "requireExactSource": false,
@@ -38,7 +35,6 @@
       "program": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester/bin/Debug/net9.0/ControlR.Agent.LoadTester.dll",
       "launchSettingsFilePath": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester/Properties/launchSettings.json",
       "launchSettingsProfile": "local",
-      "preLaunchTask": "build loadtester",
       "cwd": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester",
       "stopAtEntry": false,
       "requireExactSource": false,
@@ -48,7 +44,7 @@
   "compounds": [
     {
       "name": "Full Stack",
-      "preLaunchTask": "compose",
+      "preLaunchTask": "build + compose",
       "configurations": [
         "Server (https)",
         "Agent (Run)",

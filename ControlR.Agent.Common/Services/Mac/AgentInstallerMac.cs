@@ -1,9 +1,9 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Exceptions;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -20,10 +20,11 @@ internal class AgentInstallerMac(
   IEmbeddedResourceAccessor embeddedResourceAccessor,
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
+  IProcessManager processManager,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
@@ -88,7 +89,6 @@ internal class AgentInstallerMac(
       var agentPlistFile = (await GetLaunchDaemonFile()).Trim();
       var desktopPlistPath = GetLaunchAgentFilePath();
       var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
-      var daemonFileAlreadyExists = _fileSystem.FileExists(agentPlistPath);
 
       _logger.LogInformation("Writing plist files.");
       await _fileSystem.WriteAllTextAsync(agentPlistPath, agentPlistFile);
@@ -101,13 +101,7 @@ internal class AgentInstallerMac(
         return;
       }
 
-      if (daemonFileAlreadyExists)
-      {
-          _logger.LogInformation("Booting out service.");
-          await _serviceControl.StopAgentService(throwOnFailure: false);
-      }
-
-      await _serviceControl.StartAgentService(throwOnFailure: true);
+      await _serviceControl.StartAgentService(throwOnFailure: false);
 
       _logger.LogInformation("Installer finished.");
     }

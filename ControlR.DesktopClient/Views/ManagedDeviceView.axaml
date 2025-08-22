@@ -40,7 +40,6 @@
               </StackPanel>
               <Button Content="{x:Static root:Localization.OpenSettings}"
                       Command="{Binding OpenAccessibilitySettingsCommand}"
-                      IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
                       Margin="16,0,0,0" />
             </StackPanel>
             <TextBlock Text="{x:Static root:Localization.AccessibilityPermissionDescription}"
@@ -65,7 +64,6 @@
               </StackPanel>
               <Button Content="{x:Static root:Localization.OpenSettings}"
                       Command="{Binding OpenScreenCaptureSettingsCommand}"
-                      IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
                       Margin="16,0,0,0" />
             </StackPanel>
             <TextBlock Text="{x:Static root:Localization.ScreenCapturePermissionDescription}"

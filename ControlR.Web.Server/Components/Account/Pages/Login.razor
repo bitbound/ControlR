@@ -94,7 +94,7 @@
     var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, true);
     if (result.Succeeded)
     {
-      Logger.LogInformation("User logged in.");
+      Logger.LogInformation("User '{Email}' logged in.", Input.Email);
       RedirectManager.RedirectTo(ReturnUrl);
     }
     else if (result.RequiresTwoFactor)

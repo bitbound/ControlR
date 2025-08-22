@@ -14,5 +14,7 @@
   "AccessibilityPermissionDescription": "Required to remote control your device.",
   "ScreenRecording": "Screen Recording",
   "ScreenCapturePermissionDescription": "Required to view your device's screen.",
+  "Notifications": "Notifications",
+  "NotificationPermissionDescription": "Required to show notifications and alerts.",
   "OpenSettings": "Open Settings"
 }

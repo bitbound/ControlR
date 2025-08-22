@@ -45,10 +45,16 @@ public partial class Dashboard
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required ITagStore TagStore { get; init; }
+  public required IUserTagStore UserTagStore { get; init; }
 
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
+
+  [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
+  public required NavigationManager NavMan { get; init; }
 
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
@@ -110,6 +116,18 @@ public partial class Dashboard
       !agentVersion.Equals(_agentReleaseVersion);
   }
 
+  private async Task LaunchDeviceAccess(DeviceViewModel device)
+  {
+    var uri = $"{NavMan.BaseUri.TrimEnd('/')}/device-access?deviceId={device.Id}";
+    await JsInterop.OpenWindow(uri, "_blank");
+  }
+
+  private async Task LaunchRemoteControl(DeviceViewModel device)
+  {
+    var uri = $"{NavMan.BaseUri.TrimEnd('/')}/device-access/remote-control?deviceId={device.Id}";
+    await JsInterop.OpenWindow(uri, "_blank");
+  }
+
   private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
   {
     if (_loading)
@@ -118,7 +136,7 @@ public partial class Dashboard
       await _componentLoadedSignal.Wait(cts.Token);
     }
 
-    var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < TagStore.Items.Count
+    var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < UserTagStore.Items.Count
         ? _selectedTags.Select(t => t.Id).ToList()
         : null;
 
@@ -229,52 +247,6 @@ public partial class Dashboard
     }
   }
 
-  private async Task RemoteControlClicked(DeviceViewModel device)
-  {
-    switch (device.Platform)
-    {
-      case SystemPlatform.Windows:
-      case SystemPlatform.MacOs:
-        var sessionResult = await ViewerHub.GetActiveUiSessions(device.Id);
-        if (!sessionResult.IsSuccess)
-        {
-          Logger.LogResult(sessionResult);
-          Snackbar.Add("Failed to get active sessions", Severity.Warning);
-          return;
-        }
-
-        var dialogParams = new DialogParameters { ["Device"] = device, ["Sessions"] = sessionResult.Value };
-        var dialogRef =
-          await DialogService.ShowAsync<DesktopSessionSelectDialog>("Select Target Session", dialogParams);
-
-        var result = await dialogRef.Result;
-        if (result is null || result.Canceled)
-        {
-          return;
-        }
-
-        if (result.Data is DeviceUiSession session)
-        {
-          var remoteControlSession = new RemoteControlSession(
-            device,
-            session.SystemSessionId,
-            session.ProcessId);
-
-          WindowStore.AddContentInstance<RemoteDisplay>(
-            device,
-            DeviceContentInstanceType.RemoteControl,
-            new Dictionary<string, object?>
-            {
-              [nameof(RemoteDisplay.Session)] = remoteControlSession
-            });
-        }
-        break;
-      default:
-        Snackbar.Add("Platform is not supported", Severity.Warning);
-        break;
-    }
-  }
-
   private Task VncConnectClicked(DeviceViewModel device)
   {
     WindowStore.AddContentInstance<VncFrame>(
@@ -373,28 +345,6 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while shutting down device.");
     }
   }
-  private void StartTerminal(DeviceViewModel device)
-  {
-    try
-    {
-      var terminalId = Guid.NewGuid();
-
-      WindowStore.AddContentInstance<Terminal>(
-        device,
-        DeviceContentInstanceType.Terminal,
-        new Dictionary<string, object?>
-        {
-          [nameof(Terminal.Id)] = terminalId,
-          [nameof(Terminal.Device)] = device
-        });
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while starting terminal session.");
-      Snackbar.Add("An error occurred while starting the terminal", Severity.Error);
-    }
-  }
-
   private async Task UninstallAgent(DeviceViewModel device)
   {
     try

@@ -11,9 +11,10 @@
 <div>
 
   <PageTitle>Invite</PageTitle>
-  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+
+  <PrimaryTitle>
     Invite
-  </MudText>
+  </PrimaryTitle>
 
   <MudText Typo="Typo.subtitle1" GutterBottom>
     Add new users to your tenant, and manage pending invitations.
@@ -35,7 +36,7 @@
         <DataAnnotationsValidator />
         <MudTextField T="string"
                       @bind-Value="_inputModel.Email"
-                      For="@(() => _inputModel.Email)"
+                      For="@(() => _inputModel.Email!)"
                       Label="Invite New User"
                       InputType="InputType.Email"
                       Placeholder="Enter the email of the new user"

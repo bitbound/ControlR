@@ -2,7 +2,6 @@
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 
 namespace ControlR.Agent.Common.Services.Terminal;
@@ -13,11 +12,11 @@ public interface ITerminalStore
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto requestDto);
   bool TryRemove(Guid terminalId, [NotNullWhen(true)] out ITerminalSession? terminalSession);
 
-  Task<Result> WriteInput(Guid terminalId, string input, CancellationToken cancellationToken);
+  Task<Result> WriteInput(Guid terminalId, string input, string viewerConnectionId, CancellationToken cancellationToken);
 }
 
 internal class TerminalStore(
-  IServiceProvider serviceProvider,
+  ITerminalSessionFactory sessionFactory,
   ILogger<TerminalStore> logger) : ITerminalStore
 {
   private readonly MemoryCache _sessionCache = new(new MemoryCacheOptions());
@@ -26,28 +25,11 @@ internal class TerminalStore(
   {
     try
     {
-      var fileSystem = serviceProvider.GetRequiredService<IFileSystem>();
-      var processManager = serviceProvider.GetRequiredService<IProcessManager>();
-      var environment = serviceProvider.GetRequiredService<ISystemEnvironment>();
-      var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
-      var hubConnection = serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
-      var systemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
-      var sessionLogger = serviceProvider.GetRequiredService<ILogger<TerminalSession>>();
-
-      var terminalSession = new TerminalSession(
-        terminalId,
-        viewerConnectionId,
-        timeProvider,
-        environment,
-        hubConnection,
-        systemEnvironment,
-        sessionLogger);
-
-      await terminalSession.Initialize();
-
-      var entryOptions = GetEntryOptions(terminalSession);
-      _sessionCache.Set(terminalId, terminalSession, entryOptions);
-
+      var sessionResult = await GetOrCreateSession(terminalId, viewerConnectionId);
+      if (!sessionResult.IsSuccess)
+      {
+        return Result.Fail(sessionResult.Reason);
+      }
       return Result.Ok();
     }
     catch (Exception ex)
@@ -57,16 +39,17 @@ internal class TerminalStore(
     }
   }
 
-  public Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto requestDto)
+  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto requestDto)
   {
-    if (!TryGetTerminalSession(requestDto.TerminalId, out var session))
+    var sessionResult = await GetOrCreateSession(requestDto.TerminalId, requestDto.ViewerConnectionId);
+    if (!sessionResult.IsSuccess)
     {
-      logger.LogWarning("No terminal session found for ID: {TerminalId}", requestDto.TerminalId);
-      return Result.Fail<PwshCompletionsResponseDto>("Terminal session not found.").AsTaskResult();
+      logger.LogWarning("Failed to get or create terminal session for ID: {TerminalId}", requestDto.TerminalId);
+      return Result.Fail<PwshCompletionsResponseDto>("Failed to get or create terminal session.");
     }
 
-    var completions = session.GetCompletions(requestDto);
-    return Result.Ok(completions).AsTaskResult();
+    var completions = sessionResult.Value.GetCompletions(requestDto);
+    return Result.Ok(completions);
   }
 
   public bool TryRemove(Guid terminalId, [NotNullWhen(true)] out ITerminalSession? terminalSession)
@@ -83,17 +66,18 @@ internal class TerminalStore(
     return false;
   }
 
-  public async Task<Result> WriteInput(Guid terminalId, string input, CancellationToken cancellationToken)
+  public async Task<Result> WriteInput(Guid terminalId, string input, string viewerConnectionId, CancellationToken cancellationToken)
   {
     try
     {
-      if (!TryGetTerminalSession(terminalId, out var session))
+      var sessionResult = await GetOrCreateSession(terminalId, viewerConnectionId);
+      if (!sessionResult.IsSuccess)
       {
-        logger.LogWarning("No terminal session found for ID: {TerminalId}", terminalId);
-        return Result.Fail("Terminal session not found.");
+        logger.LogWarning("Failed to get or create terminal session for ID: {TerminalId}", terminalId);
+        return Result.Fail("Failed to get or create terminal session.");
       }
 
-      return await session.WriteInput(input, cancellationToken);
+      return await sessionResult.Value.WriteInput(input, cancellationToken);
     }
     catch (Exception ex)
     {
@@ -129,27 +113,43 @@ internal class TerminalStore(
     return entryOptions;
   }
 
-  private bool TryGetTerminalSession(Guid terminalId, [NotNullWhen(true)] out ITerminalSession? terminalSession)
+  private async Task<Result<ITerminalSession>> GetOrCreateSession(
+    Guid terminalId,
+    string viewerConnectionId)
   {
-    terminalSession = null;
-    if (!_sessionCache.TryGetValue(terminalId, out var cachedItem))
+    // First try to get existing session
+    if (_sessionCache.TryGetValue(terminalId, out var cachedItem) &&
+        cachedItem is TerminalSession existingSession &&
+        !existingSession.IsDisposed)
     {
-      return false;
+      return Result.Ok<ITerminalSession>(existingSession);
     }
 
-    if (cachedItem is not TerminalSession session)
-    {
-      _sessionCache.Remove(terminalId);
-      return false;
-    }
-
-    if (session.IsDisposed)
+    // Clean up any invalid cached item
+    if (cachedItem is not null)
     {
       _sessionCache.Remove(terminalId);
-      return false;
     }
 
-    terminalSession = session;
-    return true;
+    // Create new session using factory
+    try
+    {
+      var sessionResult = await sessionFactory.CreateSession(terminalId, viewerConnectionId);
+      if (!sessionResult.IsSuccess)
+      {
+        return Result.Fail<ITerminalSession>(sessionResult.Reason);
+      }
+
+      var terminalSession = (TerminalSession)sessionResult.Value;
+      var entryOptions = GetEntryOptions(terminalSession);
+      _sessionCache.Set(terminalId, terminalSession, entryOptions);
+
+      return Result.Ok<ITerminalSession>(terminalSession);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while creating terminal session for ID: {TerminalId}", terminalId);
+      return Result.Fail<ITerminalSession>("Failed to create terminal session.");
+    }
   }
 }

@@ -1,0 +1,9 @@
+﻿<MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+  @ChildContent
+</MudText>
+
+@code {
+  [Parameter]
+  [EditorRequired]
+  public required RenderFragment ChildContent { get; set; }
+}

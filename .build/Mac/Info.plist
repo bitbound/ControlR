@@ -28,5 +28,9 @@
     <string>NSApplication</string>
     <key>NSRequiresAquaSystemAppearance</key>
     <false/>
+    <key>NSUserNotificationsUsageDescription</key>
+    <string>ControlR uses notifications to inform you about remote control sessions and system events.</string>
+    <key>UNUserNotificationCenterDelegate</key>
+    <string>NSApplication</string>
 </dict>
 </plist>

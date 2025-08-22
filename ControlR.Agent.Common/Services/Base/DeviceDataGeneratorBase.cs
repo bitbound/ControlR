@@ -37,6 +37,7 @@ internal class DeviceDataGeneratorBase(
         .Where(x => x.IsReady)
         .Where(x => x.DriveType == DriveType.Fixed)
         .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
+        .Where(x => !x.RootDirectory.FullName.StartsWith("/System/Volumes/"))
         .Where(x => x.TotalSize > 0)
         .Select(x => new Drive
         {

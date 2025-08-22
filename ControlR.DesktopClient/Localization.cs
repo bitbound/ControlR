@@ -30,6 +30,8 @@ internal static class Localization
   public static string ManagedDeviceTitle => GetString();
   public static string NoText => GetString();
   public static string NotGranted => GetString();
+  public static string Notifications => GetString();
+  public static string NotificationPermissionDescription => GetString();
   public static string OkText => GetString();
   public static string OpenSettings => GetString();
   public static string ScreenCapturePermissionDescription => GetString();

@@ -11,6 +11,8 @@
 				Width="400"
 				MinHeight="300"
 				SizeToContent="Height"
+				ShowInTaskbar="False"
+				WindowState="Minimized"
         Title="ControlR Desktop">
 
     <Design.DataContext>

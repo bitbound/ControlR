@@ -101,6 +101,7 @@ internal class AgentHubClient(
       return await _terminalStore.WriteInput(
         dto.TerminalId,
         dto.Input,
+        dto.ViewerConnectionId,
         _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)

@@ -1,0 +1,20 @@
+<div class="text-center @Class">
+  @if (!string.IsNullOrWhiteSpace(Message))
+  {
+    <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+      @(Message)
+    </MudText>
+  }
+  <MudProgressCircular Color="Color.Info" Indeterminate Size="Size.Large" />
+</div>
+
+@code {
+  [Parameter]
+  public bool IsVisible { get; set; }
+
+  [Parameter]
+  public string? Message { get; set; }
+
+  [Parameter]
+  public string? Class { get; set; }
+}

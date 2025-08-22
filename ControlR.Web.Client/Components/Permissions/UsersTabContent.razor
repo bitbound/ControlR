@@ -28,6 +28,15 @@
 
       </MudList>
     </MudPaper>
+    <div class="d-flex justify-end">
+      <MudTooltip Text="Delete User">
+        <MudIconButton Color="Color.Error"
+                       ButtonType="ButtonType.Button"
+                       Icon="@(Icons.Material.Filled.Delete)"
+                       Disabled="@(_selectedUser == null)"
+                       OnClick="DeleteSelectedUser" />
+      </MudTooltip>
+    </div>
   </MudItem>
   <MudItem md="4" sm="6" xs="12">
     <MudText Typo="Typo.h6" Class="mt-2 mb-4 text-center">

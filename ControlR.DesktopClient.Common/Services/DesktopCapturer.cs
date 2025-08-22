@@ -24,7 +24,7 @@ public interface IDesktopCapturer : IAsyncDisposable
 
   IAsyncEnumerable<ScreenRegionDto> GetChangedRegions();
   Task<IEnumerable<DisplayDto>> GetDisplays();
-
+  Task RequestKeyFrame();
   Task ResetDisplays();
 
   Task StartCapturingChanges();
@@ -44,6 +44,8 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly IMemoryProvider _memoryProvider;
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
+  private CancellationTokenSource? _captureCts;
+  private Task? _captureTask;
   private DisplayInfo[] _displays;
   private bool _disposedValue;
   private bool _forceKeyFrame = true;
@@ -52,8 +54,6 @@ internal class DesktopCapturer : IDesktopCapturer
   private Rectangle? _lastMonitorArea;
   private bool _needsKeyFrame = true;
   private DisplayInfo? _selectedDisplay;
-  private CancellationTokenSource? _captureCts;
-  private Task? _captureTask;
 
   public DesktopCapturer(
     TimeProvider timeProvider,
@@ -170,23 +170,17 @@ internal class DesktopCapturer : IDesktopCapturer
       });
   }
 
+  public Task RequestKeyFrame()
+  {
+    _forceKeyFrame = true;
+    return Task.CompletedTask;
+  }
+
   public async Task ResetDisplays()
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
 
     using var displayLock = await _displayLock.AcquireLock(_appLifetime.ApplicationStopping);
-  }
-
-  private void ResetDisplaysImpl()
-  {
-    _displays = [.. _screenGrabber.GetDisplays()];
-    _selectedDisplay =
-      _displays.FirstOrDefault(x => x.IsPrimary) ??
-      _displays.FirstOrDefault();
-    _lastCpuBitmap?.Dispose();
-    _lastCpuBitmap = null;
-    _lastMonitorArea = null;
-    _forceKeyFrame = true;
   }
 
   public Task StartCapturingChanges()
@@ -308,6 +302,18 @@ internal class DesktopCapturer : IDesktopCapturer
     {
       cropped?.Dispose();
     }
+  }
+
+  private void ResetDisplaysImpl()
+  {
+    _displays = [.. _screenGrabber.GetDisplays()];
+    _selectedDisplay =
+      _displays.FirstOrDefault(x => x.IsPrimary) ??
+      _displays.FirstOrDefault();
+    _lastCpuBitmap?.Dispose();
+    _lastCpuBitmap = null;
+    _lastMonitorArea = null;
+    _forceKeyFrame = true;
   }
 
   private bool ShouldSendKeyFrame()

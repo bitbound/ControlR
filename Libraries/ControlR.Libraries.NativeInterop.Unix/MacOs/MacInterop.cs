@@ -21,6 +21,7 @@ public interface IMacInterop
   void RequestAccessibilityPermission();
   bool IsScreenCapturePermissionGranted();
   void RequestScreenCapturePermission();
+  Result WakeScreen();
 }
 
 public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
@@ -635,6 +636,76 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   public void RequestScreenCapturePermission()
   {
     _ = CoreGraphics.CGRequestScreenCaptureAccess();
+  }
+
+  public Result WakeScreen()
+  {
+    nint assertionType = nint.Zero;
+    nint reasonString = nint.Zero;
+    try
+    {
+      // Create CFString for assertion type
+      assertionType = Foundation.CFStringCreateWithCString(
+        nint.Zero,
+        IOKit.kIOPMAssertionTypePreventUserIdleDisplaySleep,
+        0x08000100); // kCFStringEncodingUTF8
+
+      if (assertionType == nint.Zero)
+      {
+        return Result.Fail("Failed to create assertion type string");
+      }
+
+      // Create CFString for reason
+      reasonString = Foundation.CFStringCreateWithCString(
+        nint.Zero,
+        "ControlR remote control wake",
+        0x08000100); // kCFStringEncodingUTF8
+
+      if (reasonString == nint.Zero)
+      {
+        return Result.Fail("Failed to create reason string");
+      }
+
+      // Create power assertion to wake the screen
+      var result = IOKit.IOPMAssertionCreateWithName(
+        assertionType,
+        IOKit.kIOPMAssertionLevelOn,
+        reasonString,
+        out uint assertionID);
+
+      if (result != IOKit.kIOReturnSuccess)
+      {
+        return Result.Fail($"Failed to create power assertion. IOReturn: {result}");
+      }
+
+      // Brief delay to allow the assertion to take effect
+      Thread.Sleep(100);
+
+      // Release the assertion immediately after creating it
+      // This is enough to wake the screen without keeping it awake permanently
+      var releaseResult = IOKit.IOPMAssertionRelease(assertionID);
+      if (releaseResult != IOKit.kIOReturnSuccess)
+      {
+        _logger.LogWarning("Failed to release power assertion {AssertionID}. IOReturn: {Result}",
+          assertionID, releaseResult);
+      }
+
+      _logger.LogInformation("Screen wake assertion created and released successfully");
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error waking screen");
+      return Result.Fail($"Error waking screen: {ex.Message}");
+    }
+    finally
+    {
+      // Clean up CFString objects
+      if (assertionType != nint.Zero)
+        Foundation.CFRelease(assertionType);
+      if (reasonString != nint.Zero)
+        Foundation.CFRelease(reasonString);
+    }
   }
 
 }

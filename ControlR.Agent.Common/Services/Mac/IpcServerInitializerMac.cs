@@ -76,88 +76,89 @@ internal class IpcServerInitializerMac(
   private async Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken)
   {
     var pipeServer = await _ipcFactory.CreateServer(pipeName);
-    MonitorPipePermissions(pipeName, pipeServer, cancellationToken).Forget();
+    SetPipePermissions(pipeName, pipeServer, cancellationToken).Forget();
     return pipeServer;
   }
 
-  private async Task MonitorPipePermissions(string pipeName, IIpcServer pipeServer, CancellationToken cancellationToken)
+  private async Task SetPipePermissions(string pipeName, IIpcServer pipeServer, CancellationToken cancellationToken)
   {
     var pipePath = pipeName.StartsWith('/')
       ? pipeName // Pipe name is absolute path.
       : $"/tmp/CoreFxPipe_{pipeName}";
 
-    _logger.LogInformation("Starting continuous permission monitoring for LaunchDaemon pipe {PipePath}", pipePath);
+    _logger.LogInformation("Starting pipe permission check for LaunchDaemon pipe {PipePath}", pipePath);
 
 
+    // Wait for pipe file to get created.
     while (!pipeServer.IsDisposed && !cancellationToken.IsCancellationRequested)
     {
-      try
-      {
-        if (_fileSystem.FileExists(pipePath))
-        {
-          // Check current permissions
-          var currentMode = File.GetUnixFileMode(pipePath);
-          var requiredMode = UnixFileMode.UserRead | UnixFileMode.UserWrite |
-                            UnixFileMode.GroupRead | UnixFileMode.GroupWrite;
-
-          if (currentMode != requiredMode)
-          {
-            _logger.LogWarning(
-              "Required pipe permissions of {RequiredMode} do not match current permissions {CurrentMode}. Fixing...",
-              requiredMode,
-              currentMode);
-
-            // Set the required permissions
-            _fileSystem.SetUnixFileMode(pipePath, requiredMode);
-          }
-
-          // Check and set group ownership to staff group if needed
-          try
-          {
-            var currentGroup = _fileSystemUnix.GetFileGroup(pipePath);
-            _logger.LogDebug("Current group for pipe {PipePath}: {CurrentGroup}", pipePath, currentGroup ?? "null");
-            
-            if (string.Equals(currentGroup, "staff", StringComparison.OrdinalIgnoreCase))
-            {
-              // Already owned by staff group, no need to change
-              _logger.LogDebug("Pipe {PipePath} is already owned by staff group", pipePath);
-            }
-            else
-            {
-              _logger.LogInformation("Setting group ownership of pipe {PipePath} from {CurrentGroup} to staff", pipePath, currentGroup ?? "null");
-              var setResult = _fileSystemUnix.SetFileGroup(pipePath, "staff");
-              
-              if (setResult)
-              {
-                _logger.LogDebug("Successfully set group ownership of pipe {PipePath} to staff group", pipePath);
-              }
-              else
-              {
-                _logger.LogWarning("Failed to set group ownership of pipe {PipePath} to staff group.", pipePath);
-              }
-            }
-          }
-          catch (Exception ex)
-          {
-            _logger.LogWarning(ex, "Error setting group ownership of pipe {PipePath} to everyone group", 
-              pipePath);
-          }
-        }
-
-        // Check every 2 seconds
-        await Task.Delay(TimeSpan.FromSeconds(2), _timeProvider, cancellationToken);
-      }
-      catch (OperationCanceledException)
+      if (_fileSystem.FileExists(pipePath))
       {
         break;
       }
-      catch (Exception ex)
-      {
-        _logger.LogWarning(ex, "Error during continuous permission monitoring for {PipePath}", pipePath);
-        await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, cancellationToken); // Wait longer on error
-      }
+
+      await Task.Delay(TimeSpan.FromSeconds(2), _timeProvider, cancellationToken);
     }
 
-    _logger.LogInformation("Stopped continuous permission monitoring for LaunchDaemon pipe {PipePath}", pipePath);
+    try
+    {
+      // Check current permissions
+      var currentMode = File.GetUnixFileMode(pipePath);
+      var requiredMode = UnixFileMode.UserRead | UnixFileMode.UserWrite |
+                        UnixFileMode.GroupRead | UnixFileMode.GroupWrite;
+
+      if (currentMode != requiredMode)
+      {
+        _logger.LogInformation(
+          "Required pipe permissions of {RequiredMode} do not match current permissions {CurrentMode}. Fixing...",
+          requiredMode,
+          currentMode);
+
+        // Set the required permissions
+        _fileSystem.SetUnixFileMode(pipePath, requiredMode);
+      }
+
+      // Check and set group ownership to staff group if needed
+      try
+      {
+        var currentGroup = _fileSystemUnix.GetFileGroup(pipePath);
+        _logger.LogInformation("Current group for pipe {PipePath}: {CurrentGroup}", pipePath, currentGroup ?? "null");
+
+        if (string.Equals(currentGroup, "staff", StringComparison.OrdinalIgnoreCase))
+        {
+          // Already owned by staff group, no need to change
+          _logger.LogInformation("Pipe {PipePath} is already owned by staff group", pipePath);
+        }
+        else
+        {
+          _logger.LogInformation("Setting group ownership of pipe {PipePath} from {CurrentGroup} to staff", pipePath, currentGroup ?? "null");
+          var setResult = _fileSystemUnix.SetFileGroup(pipePath, "staff");
+
+          if (setResult)
+          {
+            _logger.LogInformation("Successfully set group ownership of pipe {PipePath} to staff group", pipePath);
+          }
+          else
+          {
+            _logger.LogWarning("Failed to set group ownership of pipe {PipePath} to staff group.", pipePath);
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Error setting group ownership of pipe {PipePath} to staff group",
+          pipePath);
+      }
+      // Check every 2 seconds
+      await Task.Delay(TimeSpan.FromSeconds(2), _timeProvider, cancellationToken);
+    }
+    catch (OperationCanceledException)
+    {
+      // Normal when host is shutting down.
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Error during pipe permission check for {PipePath}", pipePath);
+    }
   }
 }

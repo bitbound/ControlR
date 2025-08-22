@@ -1,74 +1,56 @@
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.Options;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.DevicesCommon.Services;
 
 namespace ControlR.DesktopClient.Services;
 
 public class IpcClientManager(
   TimeProvider timeProvider,
+  IRemoteControlHostManager remoteControlHostManager,
   IIpcConnectionFactory ipcConnectionFactory,
   IProcessManager processManager,
-  IFileSystem fileSystem,
-  IOptions<DesktopClientOptions> options,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
-  private readonly IOptions<DesktopClientOptions> _options = options;
-  private readonly ILogger<IpcClientManager> _logger = logger;
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
+  private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
+  private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
-  private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    if (OperatingSystem.IsWindows())
-    {
-      // On Windows, use the traditional single pipe approach
-      await HandleWindowsPipes(stoppingToken);
-    }
-    else if (OperatingSystem.IsMacOS())
-    {
-      // On macOS, connect to the pipe for the current user and session
-      await HandleMacPipes(stoppingToken);
-    }
-    else
-    {
-      // On Linux, use the traditional single pipe approach
-      await HandleLinuxPipes(stoppingToken);
-    }
+    await AcceptClientConnections(stoppingToken);
   }
 
-  private async Task HandleWindowsPipes(CancellationToken stoppingToken)
+  private async Task AcceptClientConnections(CancellationToken stoppingToken)
   {
     var processId = _processManager.GetCurrentProcess().Id;
-    var pipeName = IpcPipeNames.GetWindowsPipeName();
+    var pipeName = IpcPipeNames.GetPipeName();
 
     while (!stoppingToken.IsCancellationRequested)
     {
       try
       {
-        _logger.LogInformation("Attempting to connect to Windows IPC server. Pipe Name: {pipeName}", pipeName);
+        _logger.LogInformation("Attempting to connect to IPC server. Pipe Name: {PipeName}", pipeName);
 
         using var client = await _ipcConnectionFactory.CreateClient(".", pipeName);
         client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
-        
+
         if (!await client.Connect(stoppingToken))
         {
           _logger.LogWarning("Failed to connect to IPC server.");
           await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
           continue;
         }
-        
+
         _logger.LogInformation("Connected to IPC server.");
         client.BeginRead(stoppingToken);
         _logger.LogInformation("Read started.");
-        
+
         _logger.LogInformation("Sending client identity attestation. Process ID: {ProcessId}", processId);
         var dto = new IpcClientIdentityAttestationDto(processId);
         await client.Send(dto, stoppingToken);
@@ -78,148 +60,15 @@ public class IpcClientManager(
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error while connecting to Windows IPC server.");
+        _logger.LogError(ex, "Error while connecting to IPC server.");
       }
-      
+
       await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
     }
   }
 
-  private async Task HandleLinuxPipes(CancellationToken stoppingToken)
+  private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
   {
-    var processId = _processManager.GetCurrentProcess().Id;
-    var pipeName = IpcPipeNames.GetLinuxPipeName();
-
-    while (!stoppingToken.IsCancellationRequested)
-    {
-      try
-      {
-        _logger.LogInformation("Attempting to connect to Linux IPC server. Pipe Name: {pipeName}", pipeName);
-
-        using var client = await _ipcConnectionFactory.CreateClient(".", pipeName);
-        client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
-        
-        if (!await client.Connect(stoppingToken))
-        {
-          _logger.LogWarning("Failed to connect to IPC server.");
-          await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
-          continue;
-        }
-        
-        _logger.LogInformation("Connected to IPC server.");
-        client.BeginRead(stoppingToken);
-        _logger.LogInformation("Read started.");
-        
-        _logger.LogInformation("Sending client identity attestation. Process ID: {ProcessId}", processId);
-        var dto = new IpcClientIdentityAttestationDto(processId);
-        await client.Send(dto, stoppingToken);
-
-        _logger.LogInformation("Waiting for connection end.");
-        await client.WaitForConnectionEnd(stoppingToken);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while connecting to Linux IPC server.");
-      }
-      
-      await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
-    }
+     _remoteControlHostManager.StartHost(dto).Forget();
   }
-
-  private async Task HandleMacPipes(CancellationToken stoppingToken)
-  {
-    var processId = _processManager.GetCurrentProcess().Id;
-    var pipeName = IpcPipeNames.GetMacPipeName();
-
-    while (!stoppingToken.IsCancellationRequested)
-    {
-      try
-      {
-        _logger.LogInformation("Attempting to connect to Mac IPC server. Pipe Name: {pipeName}", pipeName);
-
-        using var client = await _ipcConnectionFactory.CreateClient(".", pipeName);
-        client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
-        
-        if (!await client.Connect(stoppingToken))
-        {
-          _logger.LogWarning("Failed to connect to IPC server.");
-          await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
-          continue;
-        }
-        
-        _logger.LogInformation("Connected to IPC server.");
-        client.BeginRead(stoppingToken);
-        _logger.LogInformation("Read started.");
-        
-        _logger.LogInformation("Sending client identity attestation. Process ID: {ProcessId}", processId);
-        var dto = new IpcClientIdentityAttestationDto(processId);
-        await client.Send(dto, stoppingToken);
-
-        _logger.LogInformation("Waiting for connection end.");
-        await client.WaitForConnectionEnd(stoppingToken);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while connecting to Mac IPC server.");
-      }
-      
-      await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
-    }
-  }
-
-  private async void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
-  {
-    try
-    {
-      _logger.LogInformation(
-        "Handling remote control request. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
-        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
-        dto.SessionId,
-        dto.ViewerConnectionId,
-        dto.TargetSystemSession,
-        dto.TargetProcessId,
-        dto.ViewerName);
-
-      var builder = Host.CreateApplicationBuilder();
-      builder.AddCommonDesktopServices(options =>
-      {
-        options.WebSocketUri = dto.WebsocketUri;
-        options.SessionId = dto.SessionId;
-        options.NotifyUser = dto.NotifyUserOnSessionStart;
-        options.ViewerName = dto.ViewerName;
-      });
-
-#if WINDOWS_BUILD
-      builder.AddWindowsDesktopServices(dto.DataFolder);
-#elif MAC_BUILD
-      builder.AddMacDesktopServices(dto.DataFolder);
-#elif LINUX_BUILD
-      builder.AddLinuxDesktopServices(dto.DataFolder);
-#else
-      throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
-#endif
-
-      using var app = builder.Build();
-      await app.RunAsync();
-
-      _logger.LogInformation(
-        "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
-        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
-        dto.SessionId,
-        dto.ViewerConnectionId,
-        dto.TargetSystemSession,
-        dto.TargetProcessId,
-        dto.ViewerName);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while handling remote control request.");
-    }
-    finally
-    {
-      GC.Collect();
-      GC.WaitForPendingFinalizers();
-    }
-  }
-
 }

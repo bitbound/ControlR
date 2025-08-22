@@ -1,0 +1,99 @@
+﻿@inherits LayoutComponentBase
+@attribute [Authorize]
+<link rel="stylesheet" href="/device-access.css" />
+
+<div class="h-100">
+  <MudThemeProvider IsDarkMode Theme="CustomTheme" />
+  <MudPopoverProvider />
+  <MudDialogProvider />
+  <MudSnackbarProvider />
+  <MudLayout>
+    <MudAppBar Elevation="1">
+
+      @if (RendererInfo.IsInteractive)
+      {
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+          OnClick="@(() => ToggleNavDrawer())" />
+      }
+      else
+      {
+        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+          Edge="Edge.Start" />
+      }
+
+      @if (!string.IsNullOrWhiteSpace(_deviceName))
+      {
+        <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="ms-4" Inline>
+          Device:
+        </MudText>
+        <MudText Typo="Typo.subtitle2" Class="ms-1" Inline>
+          @_deviceName
+        </MudText>
+      }
+
+      <MudSpacer />
+
+      @if (!RendererInfo.IsInteractive)
+      {
+        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
+      }
+      else
+      {
+        switch (_hubConnectionState)
+        {
+          case HubConnectionState.Connected:
+            <MudTooltip Text="Connected">
+              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
+            <MudTooltip Text="Reconnecting">
+              <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+          case HubConnectionState.Disconnected:
+            <MudTooltip Text="Disconnected">
+              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
+            </MudTooltip>
+            break;
+        }
+      }
+      <MudTooltip Text="GitHub">
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+          Href="https://github.com/bitbound/controlr/" Target="_blank" />
+
+      </MudTooltip>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+      <MudDrawerHeader Class="pa-4">
+        <MudImage Src=@Assets["icon-192.png"] Height="30" Class="me-2" />
+        <MudText Typo="Typo.h6" Color="Color.Primary">
+          ControlR
+        </MudText>
+      </MudDrawerHeader>
+      <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" />
+    </MudDrawer>
+    <MudMainContent Class="h-100">
+      @if (!RendererInfo.IsInteractive || !string.IsNullOrWhiteSpace(_loadingText))
+      {
+        <LoadingIndicator IsVisible Message="@(_loadingText ?? "Loading")" Class="mt-8" />
+      }
+      else if (!string.IsNullOrWhiteSpace(_errorText))
+      {
+        <MudAlert Severity="Severity.Error" ShowCloseIcon="false" Icon="@(Icons.Material.Filled.Error)">
+          @(_errorText)
+        </MudAlert>
+      }
+      else
+      {
+        if (!string.IsNullOrWhiteSpace(_deviceName))
+        {
+          <PageTitle>
+            ControlR - @(_deviceName)
+          </PageTitle>
+        }
+        @Body
+      }
+    </MudMainContent>
+  </MudLayout>
+</div>

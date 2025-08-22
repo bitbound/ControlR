@@ -15,6 +15,7 @@ using MudBlazor.Services;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
+using ControlR.Web.Server.Services.Users;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions

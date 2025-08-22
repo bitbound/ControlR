@@ -1,6 +1,7 @@
 ﻿using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.Server.Services.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;

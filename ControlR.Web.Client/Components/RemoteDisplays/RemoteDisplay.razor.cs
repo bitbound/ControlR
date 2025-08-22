@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -9,59 +9,38 @@ using Microsoft.JSInterop;
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 
 [SupportedOSPlatform("browser")]
-public partial class RemoteDisplay : IAsyncDisposable
+public partial class RemoteDisplay : JsInteropableComponent
 {
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
-  private readonly SemaphoreSlim _streamLock = new(1, 1);
   private readonly SemaphoreSlim _typeLock = new(1, 1);
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
   private double _canvasCssWidth;
   private ElementReference _canvasRef;
   private double _canvasScale = 1;
-  private IDisposable? _clientOnCloseRegistration;
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
-  private DisplayDto[] _displays = [];
-  private bool _isDisposed;
+  private ElementReference _outerFrameElement;
+  private bool _isMetricsEnabled;
   private bool _isScrollModeEnabled;
   private double _lastPinchDistance = -1;
+  private CaptureMetricsDto? _latestCaptureMetrics;
   private ElementReference _screenArea;
-  private DisplayDto? _selectedDisplay;
-  private string _statusMessage = "Starting remote control session";
-  private double _statusProgress = -1;
   private bool _streamStarted;
   private ViewMode _viewMode = ViewMode.Stretch;
   private ElementReference _virtualKeyboard;
   private bool _virtualKeyboardToggled;
-  private CaptureMetricsDto? _latestCaptureMetrics;
-  private bool _isMetricsEnabled;
-
-  [JSImport("drawFrame", "RemoteDisplay")]
-  public static partial Task DrawFrame(
-    string canvasId,
-    float x,
-    float y,
-    float width,
-    float height,
-    byte[] encodedImage);
-
-
-  [Inject]
-  public required IBusyCounter AppState { get; init; }
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
 
-  [CascadingParameter]
-  public required DeviceContentInstance ContentInstance { get; init; }
-
-  [CascadingParameter]
-  public required DeviceContentWindow ContentWindow { get; init; }
-
   [Inject]
-  public required ISystemEnvironment EnvironmentHelper { get; init; }
+  public required IDeviceAccessState DeviceState { get; init; }
+
+  [Parameter]
+  [EditorRequired]
+  public required bool IsVisible { get; set; }
 
   [Inject]
   public required IJsInterop JsInterop { get; init; }
@@ -69,24 +48,17 @@ public partial class RemoteDisplay : IAsyncDisposable
   [Inject]
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
-  [Inject]
-  public required IMemoryProvider MemoryProvider { get; init; }
-
-  [Inject]
-  public required IMessenger Messenger { get; init; }
-
-  [Inject]
-  public required NavigationManager NavManager { get; init; }
-
-  [Inject]
-  public required IServiceProvider ServiceProvider { get; init; }
 
   [Parameter]
   [EditorRequired]
-  public required RemoteControlSession Session { get; set; }
+  public EventCallback OnDisconnectRequested { get; set; }
 
   [Inject]
-  public required ISettings Settings { get; init; }
+  public required IRemoteControlState RemoteControlState { get; init; }
+
+  [Parameter]
+  [EditorRequired]
+  public required RemoteControlSession Session { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -94,19 +66,14 @@ public partial class RemoteDisplay : IAsyncDisposable
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
 
-
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
-
-  [Inject]
-  public required IDeviceContentWindowStore WindowStore { get; init; }
-
 
   private string CanvasClasses
   {
     get
     {
-      var classNames = $"{_viewMode} {ContentWindow.WindowState}";
+      var classNames = $"{_viewMode}";
       if (_isScrollModeEnabled)
       {
         classNames += " scroll-mode";
@@ -132,48 +99,49 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
+  private string OuterClass =>
+    IsVisible
+      ? string.Empty
+      : "d-none";
+
   private string VirtualKeyboardText
   {
     get => string.Empty;
     set => _ = TypeText(value);
   }
 
+  [JSImport("drawFrame", "RemoteDisplay")]
+  public static partial Task DrawFrame(
+    string canvasId,
+    float x,
+    float y,
+    float width,
+    float height,
+    byte[] encodedImage);
+
+  [JSImport("sendKeyPress", "RemoteDisplay")]
+  public static partial Task SendKeyPress(string key, string canvasId);
 
   public override async ValueTask DisposeAsync()
   {
-    try
-    {
-      if (_isDisposed)
-      {
-        return;
-      }
-      _isDisposed = true;
-      _clientOnCloseRegistration?.Dispose();
-      await StreamingClient.SendCloseStreamingSession(_componentClosing.Token);
-      Messenger.UnregisterAll(this);
-      await JsModule.InvokeVoidAsync("dispose", _canvasId);
-      await _componentClosing.CancelAsync();
-      _componentClosing.Dispose();
-      _componentRef?.Dispose();
-      GC.SuppressFinalize(this);
-    }
-    catch
-    {
-      // Ignore when disposing.
-    }
+    await base.DisposeAsync();
+    await JsModule.InvokeVoidAsync("dispose", _canvasId);
+    await _componentClosing.CancelAsync();
+    _componentRef?.Dispose();
+    GC.SuppressFinalize(this);
   }
 
   [JSInvokable]
   public Task LogError(string message)
   {
-    Logger.LogError("JS Log: {message}", message);
+    Logger.LogError("JS Log: {Message}", message);
     return Task.CompletedTask;
   }
 
   [JSInvokable]
   public Task LogInfo(string message)
   {
-    Logger.LogInformation("JS Log: {message}", message);
+    Logger.LogInformation("JS Log: {Message}", message);
     return Task.CompletedTask;
   }
 
@@ -213,25 +181,17 @@ public partial class RemoteDisplay : IAsyncDisposable
     await StreamingClient.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
   }
 
-
   [JSInvokable]
   public async Task SetCurrentDisplay(DisplayDto display)
   {
-    _selectedDisplay = display;
+    RemoteControlState.SelectedDisplay = display;
     await InvokeAsync(StateHasChanged);
   }
 
   [JSInvokable]
   public async Task SetDisplays(DisplayDto[] displays)
   {
-    _displays = displays;
-    await InvokeAsync(StateHasChanged);
-  }
-
-  [JSInvokable]
-  public async Task SetStatusMessage(string message)
-  {
-    _statusMessage = message;
+    RemoteControlState.DisplayData = displays;
     await InvokeAsync(StateHasChanged);
   }
 
@@ -245,8 +205,6 @@ public partial class RemoteDisplay : IAsyncDisposable
 
       await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
-      await SetStatusMessage("Creating streaming session");
-      await RequestStreamingSessionFromAgent();
     }
   }
 
@@ -266,16 +224,33 @@ public partial class RemoteDisplay : IAsyncDisposable
       _viewMode = ViewMode.Original;
     }
 
-    Messenger.Register<DtoReceivedMessage<DesktopClientDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
     StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
+
+    // The remote control session is already active, and we're switching back to this tab.
+    if (RemoteControlState.SelectedDisplay is { } selectedDisplay)
+    {
+      _canvasCssWidth = selectedDisplay.Width;
+      _canvasCssHeight = selectedDisplay.Height;
+
+      _streamStarted = true;
+
+      await StreamingClient.RequestKeyFrame(_componentClosing.Token);
+    }
+  }
+
+  private static double GetDistance(double x1, double y1, double x2, double y2)
+  {
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return Math.Sqrt(dx * dx + dy * dy);
   }
 
   private async Task ChangeDisplays(DisplayDto display)
   {
     try
     {
-      _selectedDisplay = display;
-      await StreamingClient.SendChangeDisplaysRequest(_selectedDisplay.DisplayId, _componentClosing.Token);
+      RemoteControlState.SelectedDisplay = display;
+      await StreamingClient.SendChangeDisplaysRequest(display.DisplayId, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -284,11 +259,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async Task Close()
-  {
-    WindowStore.Remove(ContentInstance);
-    await DisposeAsync();
-  }
 
   private async Task DrawRegion(ScreenRegionDto dto)
   {
@@ -351,27 +321,39 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
+  private async Task HandleDisconnectClicked()
+  {
+    await OnDisconnectRequested.InvokeAsync();
+  }
+
   private async Task HandleDisplayDataReceived(DisplayDataDto dto)
   {
-    _displays = dto.Displays;
+    RemoteControlState.DisplayData = dto.Displays;
 
-    if (_displays.Length == 0)
+    if (RemoteControlState.DisplayData.Length == 0)
     {
       Snackbar.Add("No displays received", Severity.Error);
-      await Close();
+      await OnDisconnectRequested.InvokeAsync();
       return;
     }
 
-    _selectedDisplay = _displays.FirstOrDefault(x => x.IsPrimary) ?? _displays.First();
+    var selectedDisplay = RemoteControlState.DisplayData
+                            .FirstOrDefault(x => x.IsPrimary)
+                          ?? RemoteControlState.DisplayData[0];
 
-    _canvasCssWidth = _selectedDisplay.Width;
-    _canvasCssHeight = _selectedDisplay.Height;
+    RemoteControlState.SelectedDisplay = selectedDisplay;
+
+    _canvasCssWidth = selectedDisplay.Width;
+    _canvasCssHeight = selectedDisplay.Height;
 
     _streamStarted = true;
-    _statusMessage = string.Empty;
-    _statusProgress = -1;
 
     await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task HandleFullscreenClicked()
+  {
+    await JsInterop.ToggleFullscreen(_outerFrameElement);
   }
 
   private async Task HandleKeyboardToggled()
@@ -391,6 +373,7 @@ public partial class RemoteDisplay : IAsyncDisposable
   {
     _isMetricsEnabled = !_isMetricsEnabled;
   }
+
   private async Task HandleReceiveClipboardClicked()
   {
     try
@@ -430,37 +413,6 @@ public partial class RemoteDisplay : IAsyncDisposable
     }
   }
 
-  private async Task HandleStreamerDisconnected()
-  {
-    if (_isDisposed)
-    {
-      return;
-    }
-
-    _streamStarted = false;
-    _statusProgress = -1;
-    await SetStatusMessage("Creating new streaming session");
-    Session.CreateNewSessionId();
-    await RequestStreamingSessionFromAgent();
-    await InvokeAsync(StateHasChanged);
-  }
-
-  private async Task HandleStreamerDownloadProgress(object recipient,
-    DtoReceivedMessage<DesktopClientDownloadProgressDto> message)
-  {
-    var dto = message.Dto;
-
-    if (dto.StreamingSessionId != Session.SessionId)
-    {
-      return;
-    }
-
-    _statusProgress = dto.Progress;
-    _statusMessage = dto.Message;
-
-    await InvokeAsync(StateHasChanged);
-  }
-
   private async Task HandleStreamerMessageReceived(DtoWrapper message)
   {
     try
@@ -468,47 +420,51 @@ public partial class RemoteDisplay : IAsyncDisposable
       switch (message.DtoType)
       {
         case DtoType.DisplayData:
-          {
-            var dto = message.GetPayload<DisplayDataDto>();
-            await HandleDisplayDataReceived(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<DisplayDataDto>();
+          await HandleDisplayDataReceived(dto);
+          break;
+        }
         case DtoType.ScreenRegion:
-          {
-            var dto = message.GetPayload<ScreenRegionDto>();
-            await DrawRegion(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<ScreenRegionDto>();
+          await DrawRegion(dto);
+          break;
+        }
         case DtoType.ClipboardText:
-          {
-            var dto = message.GetPayload<ClipboardTextDto>();
-            await HandleClipboardTextReceived(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<ClipboardTextDto>();
+          await HandleClipboardTextReceived(dto);
+          break;
+        }
         case DtoType.CursorChanged:
-          {
-            var dto = message.GetPayload<CursorChangedDto>();
-            await HandleCursorChanged(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<CursorChangedDto>();
+          await HandleCursorChanged(dto);
+          break;
+        }
         case DtoType.WindowsSessionEnding:
-          {
-            Snackbar.Add("Remote Windows session ending", Severity.Warning);
-            await Close();
-            break;
-          }
+        {
+          Snackbar.Add("Remote Windows session ending", Severity.Warning);
+          await OnDisconnectRequested.InvokeAsync();
+          break;
+        }
         case DtoType.WindowsSessionSwitched:
-          {
-            Snackbar.Add("Remote Windows session switched", Severity.Info);
-            break;
-          }
+        {
+          Snackbar.Add("Remote Windows session switched", Severity.Info);
+          break;
+        }
         case DtoType.CaptureMetricsChanged:
-          {
-            var dto = message.GetPayload<CaptureMetricsDto>();
-            _latestCaptureMetrics = dto;
-            await InvokeAsync(StateHasChanged);
-            break;
-          }
+        {
+          var dto = message.GetPayload<CaptureMetricsDto>();
+          _latestCaptureMetrics = dto;
+          await InvokeAsync(StateHasChanged);
+          break;
+        }
+        default:
+          Logger.LogWarning("Received unsupported DTO type: {DtoType}", message.DtoType);
+          Snackbar.Add($"Unsupported DTO type: {message.DtoType}", Severity.Warning);
+          break;
       }
     }
     catch (Exception ex)
@@ -548,7 +504,8 @@ public partial class RemoteDisplay : IAsyncDisposable
 
   private async Task InvokeCtrlAltDel()
   {
-    await ViewerHub.InvokeCtrlAltDel(Session.Device.Id);
+    await ViewerHub.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
+    Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
   }
 
   private void OnTouchCancel(TouchEventArgs ev)
@@ -575,16 +532,14 @@ public partial class RemoteDisplay : IAsyncDisposable
         return;
       }
 
-      if (_selectedDisplay is null)
+      if (RemoteControlState.SelectedDisplay is null)
       {
         return;
       }
 
-      var pinchDistance = MathHelper.GetDistanceBetween(
-        ev.Touches[0].PageX,
-        ev.Touches[0].PageY,
-        ev.Touches[1].PageX,
-        ev.Touches[1].PageY);
+      var pinchDistance = GetDistance(
+        ev.Touches[0].PageX, ev.Touches[0].PageY,
+        ev.Touches[1].PageX, ev.Touches[1].PageY);
 
       if (_lastPinchDistance <= 0)
       {
@@ -598,11 +553,11 @@ public partial class RemoteDisplay : IAsyncDisposable
 
       _canvasScale = Math.Max(.25, Math.Min(_canvasScale + pinchChange / 100, 3));
 
-      var newWidth = _selectedDisplay.Width * _canvasScale;
+      var newWidth = RemoteControlState.SelectedDisplay.Width * _canvasScale;
       var widthChange = newWidth - _canvasCssWidth;
       _canvasCssWidth = newWidth;
 
-      var newHeight = _selectedDisplay.Height * _canvasScale;
+      var newHeight = RemoteControlState.SelectedDisplay.Height * _canvasScale;
       var heightChange = newHeight - _canvasCssHeight;
       _canvasCssHeight = newHeight;
 
@@ -638,80 +593,7 @@ public partial class RemoteDisplay : IAsyncDisposable
 
     if (args.Key is "Enter" or "Backspace")
     {
-      await SendKeyEvent(args.Key, true);
-      await SendKeyEvent(args.Key, false);
-    }
-  }
-
-  private async Task RequestStreamingSessionFromAgent()
-  {
-    try
-    {
-      Logger.LogInformation("Creating streaming session.");
-
-      var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
-      var accessToken = RandomGenerator.CreateAccessToken();
-
-      var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
-
-      var relayUri = relayOrigin is not null
-        ? new UriBuilder(relayOrigin)
-        : new UriBuilder(serverUri);
-
-      relayUri.Path = "/relay";
-      relayUri.Query = $"?sessionId={Session.SessionId}&accessToken={accessToken}&timeout=30";
-
-      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", relayUri.Uri.GetOrigin());
-
-      var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-        Session.Device.Id,
-        Session.SessionId,
-        relayUri.Uri,
-        Session.TargetSystemSession,
-        Session.TargetProcessId);
-
-      _statusProgress = -1;
-
-      if (!streamingSessionResult.IsSuccess)
-      {
-        Snackbar.Add(streamingSessionResult.Reason, Severity.Error);
-        await Close();
-        return;
-      }
-
-      await SetStatusMessage("Connecting");
-
-      StartWebsocketStreaming(relayUri.Uri).Forget();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while requesting streaming session.");
-      Snackbar.Add("An error occurred while requesting streaming session", Severity.Error);
-    }
-  }
-
-  private async Task StartWebsocketStreaming(Uri websocketUri)
-  {
-    if (!await _streamLock.WaitAsync(0, _componentClosing.Token))
-    {
-      return;
-    }
-
-    try
-    {
-      await StreamingClient.Connect(websocketUri, _componentClosing.Token);
-      _clientOnCloseRegistration?.Dispose();
-      _clientOnCloseRegistration = StreamingClient.OnClosed(HandleStreamerDisconnected);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while connecting to websocket endpoint.");
-      Snackbar.Add("An error occurred while connecting to streamer", Severity.Error);
-      await Close();
-    }
-    finally
-    {
-      _streamLock.Release();
+      await SendKeyPress(args.Key, _canvasId);
     }
   }
 

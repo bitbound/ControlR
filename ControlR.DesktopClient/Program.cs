@@ -7,8 +7,28 @@ internal sealed class Program
   // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
   // yet and stuff might break.
   [STAThread]
-  public static void Main(string[] args) => BuildAvaloniaApp()
-      .StartWithClassicDesktopLifetime(args);
+  public static void Main(string[] args)
+  {
+    while (true)
+    {
+      try
+      {
+        BuildAvaloniaApp()
+          .StartWithClassicDesktopLifetime(args);
+      }
+      catch (InvalidOperationException ex) when (ex.Message.Contains("RenderTimer"))
+      {
+        Console.WriteLine(
+          "An error occurred internally within Avalonia while activating the RenderTimer. " +
+          "This can occur sometimes when the device is in a low-power mode. " +
+          $"Error: {ex.Message}");
+        
+        Thread.Sleep(5_000);
+        continue;
+      }
+      break;
+    }
+  }
 
   // Avalonia configuration, don't remove; also used by visual designer.
   public static AppBuilder BuildAvaloniaApp()

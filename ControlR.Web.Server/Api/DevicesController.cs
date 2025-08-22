@@ -101,11 +101,35 @@ public class DevicesController : ControllerBase
     {
       var authResult =
         await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+
       if (authResult.Succeeded)
       {
         yield return device.ToDto();
       }
     }
+  }
+
+  [HttpGet("{deviceId:guid}")]
+  public async Task<ActionResult<DeviceDto>> GetDevice(
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromRoute] Guid deviceId)
+  {
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    if (device is null)
+    {
+      return NotFound();
+    }
+
+    var authResult =
+      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      return Forbid();
+    }
+
+    return device.ToDto();
   }
 
   [HttpPost("search")]

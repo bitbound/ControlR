@@ -81,7 +81,7 @@ public static class DeviceAccessByDeviceResourcePolicy
   {
     var authorizationResult = new AuthorizationFailureReason(authzHandler, reason);
     handlerCtx.Fail(authorizationResult);
-    logger.LogWarning("Authorization failure: {Reason}", reason);
+    logger.LogInformation("Authorization failure: {Reason}", reason);
     return false;
   }
 }

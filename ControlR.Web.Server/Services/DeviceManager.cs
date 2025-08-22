@@ -14,15 +14,13 @@ public interface IDeviceManager
 
 public class DeviceManager(
   AppDb appDb,
-  UserManager<AppUser> userManager,
-  ILogger<DeviceManager> logger) : IDeviceManager
+  UserManager<AppUser> userManager) : IDeviceManager
 {
-  private static readonly BindingFlags _bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
+  private const BindingFlags BindingFlags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.FlattenHierarchy;
   private static readonly ConcurrentDictionary<Type, ImmutableDictionary<string, PropertyInfo>> _propertiesCache = [];
 
   private readonly AppDb _appDb = appDb;
   private readonly UserManager<AppUser> _userManager = userManager;
-  private readonly ILogger<DeviceManager> _logger = logger;
 
   public async Task<Device> AddOrUpdate(DeviceDto deviceDto, bool addTagIds = false)
   {
@@ -102,7 +100,7 @@ public class DeviceManager(
     var dtoProps = _propertiesCache.GetOrAdd(typeof(TDto), t =>
     {
       return t
-        .GetProperties(_bindingFlags)
+        .GetProperties(BindingFlags)
         .ToImmutableDictionary(x => x.Name);
     });
 
@@ -123,8 +121,7 @@ public class DeviceManager(
 
       var dtoValue = propInfo.GetValue(dto);
 
-      if (maxLength.HasValue &&
-          maxLength.Value > 0 &&
+      if (maxLength is > 0 &&
           prop.Metadata.ClrType == typeof(string) &&
           dtoValue is string dtoString &&
           dtoString.Length > maxLength.Value)

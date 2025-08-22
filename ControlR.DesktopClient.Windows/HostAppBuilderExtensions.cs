@@ -16,7 +16,6 @@ public static class HostAppBuilderExtensions
   {
     builder.Services
       .AddSingleton<IWin32Interop, Win32Interop>()
-      .AddSingleton<IToaster, ToasterWindows>()
       .AddSingleton<IInputSimulator, InputSimulatorWindows>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()

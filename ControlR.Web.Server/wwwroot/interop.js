@@ -140,8 +140,60 @@ function openWindow(url, target) {
   window.open(url, target);
 }
 
+/**
+ * @param {HTMLElement} element
+ */
+async function toggleFullscreen(element) {
+  if (!element) {
+    return;
+  }
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    try {
+      await element.requestFullscreen();
+    }
+    catch (err) {
+      console.error("Error attempting to enable full-screen mode.");
+      console.error(err);
+    }
+  }
+ }
+
 document.addEventListener("visibilitychange", async () => {
   if (_wakeEnabled && document.visibilityState == "visible") {
     setScreenWakeLock(true);
   }
 });
+
+
+/** Session Storage */
+
+/**
+* 
+* @param {string} key
+*/
+function getFromSessionStorage(key) {
+  return sessionStorage.getItem(key);
+}
+
+/**
+ * 
+ * @param {string} key
+ * @param {string} value
+ */
+function setToSessionStorage(key, value) {
+  sessionStorage.setItem(key, value);
+}
+
+/**
+ * 
+ * @param {string} key
+ */
+function removeFromSessionStorage(key) {
+  return sessionStorage.removeItem(key);
+}
+
+function clearSessionStorage() {
+  return sessionStorage.clear();
+}

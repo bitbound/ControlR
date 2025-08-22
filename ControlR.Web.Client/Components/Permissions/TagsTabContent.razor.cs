@@ -31,7 +31,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required ITagStore TagStore { get; init; }
+  public required IAdminTagStore TagStore { get; init; }
 
   [Inject]
   public required IUserStore UserStore { get; init; }

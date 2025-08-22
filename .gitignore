@@ -364,5 +364,4 @@ FodyWeavers.xsd
 /ControlR.Website/public/downloads/**
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/appsettings.Development.json
-/ControlR.Streamer/.artifacts/*
 .DS_Store

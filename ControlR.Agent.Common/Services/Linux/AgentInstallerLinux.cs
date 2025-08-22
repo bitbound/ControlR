@@ -6,7 +6,6 @@ using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +14,7 @@ namespace ControlR.Agent.Common.Services.Linux;
 internal class AgentInstallerLinux(
   IHostApplicationLifetime lifetime,
   IFileSystem fileSystem,
-  IProcessManager processInvoker,
+  IProcessManager processManager,
   ISystemEnvironment environmentHelper,
   IControlrApi controlrApi,
   IDeviceDataGenerator deviceDataGenerator,
@@ -25,14 +24,13 @@ internal class AgentInstallerLinux(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly ISystemEnvironment _environment = environmentHelper;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
-  private readonly IProcessManager _processInvoker = processInvoker;
   private readonly IElevationChecker _elevationChecker = elevationChecker;
 
   public async Task Install(
@@ -109,11 +107,11 @@ internal class AgentInstallerLinux(
       };
 
       _logger.LogInformation("Enabling service.");
-      await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
       _logger.LogInformation("Restarting service.");
       psi.Arguments = $"systemctl restart {serviceName}";
-      await _processInvoker.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
       _logger.LogInformation("Install completed.");
     }
@@ -147,17 +145,17 @@ internal class AgentInstallerLinux(
 
       var serviceName = GetServiceName();
 
-      await _processInvoker
+      await ProcessManager
         .Start("sudo", $"systemctl stop {serviceName}")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
 
-      await _processInvoker
+      await ProcessManager
         .Start("sudo", $"systemctl disable {serviceName}")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
 
       _fileSystem.DeleteFile(GetServiceFilePath());
 
-      await _processInvoker
+      await ProcessManager
         .Start("sudo", "systemctl daemon-reload")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
 

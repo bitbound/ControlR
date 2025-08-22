@@ -36,13 +36,13 @@ public class AgentHub(
       if (Device is { } cachedDeviceDto)
       {
         // Check if this is still the current connection for this device
-        var currentDevice = await _appDb.Devices
+        var deviceConnectionId = await _appDb.Devices
           .Where(d => d.Id == cachedDeviceDto.Id)
           .Select(d => d.ConnectionId)
           .FirstOrDefaultAsync();
 
         // Only mark offline if this was the current connection
-        if (currentDevice == Context.ConnectionId)
+        if (deviceConnectionId == Context.ConnectionId)
         {
           var dto = cachedDeviceDto with
           {
@@ -60,7 +60,7 @@ public class AgentHub(
         {
           _logger.LogDebug(
             "Skipping offline update. Device has reconnected with connection {CurrentConnectionId}. Disconnecting {OldConnectionId}.",
-            currentDevice, Context.ConnectionId);
+            deviceConnectionId, Context.ConnectionId);
         }
       }
       await base.OnDisconnectedAsync(exception);

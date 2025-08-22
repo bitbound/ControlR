@@ -1,5 +1,6 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.HubDtos;
-[MessagePackObject]
+[MessagePackObject(keyAsPropertyName: true)]
 public record TerminalInputDto(
-    [property: Key(0)] Guid TerminalId,
-    [property: Key(1)] string Input);
+    Guid TerminalId,
+    string Input,
+    string ViewerConnectionId);

@@ -1,12 +1,12 @@
 using Avalonia.Controls;
-using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Views;
 public partial class MainWindow : Window
 {
+  private bool _isFirstShow = true;
+
   public MainWindow()
   {
     InitializeComponent();
@@ -21,9 +21,20 @@ public partial class MainWindow : Window
     navigationProvider.NavigateTo<IManagedDeviceViewModel>();
   }
 
-  private IMainWindowViewModel ViewModel => DataContext as IMainWindowViewModel 
+  private IMainWindowViewModel ViewModel => DataContext as IMainWindowViewModel
     ?? throw new ArgumentNullException(nameof(ViewModel));
 
+  public override void Show()
+  {
+    base.Show();
+    if (_isFirstShow)
+    {
+      _isFirstShow = false;
+      Hide();
+      ShowInTaskbar = true;
+      WindowState = WindowState.Normal;
+    }
+  }
   protected override void OnClosing(WindowClosingEventArgs e)
   {
     e.Cancel = true;
