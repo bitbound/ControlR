@@ -1,17 +1,16 @@
-using ControlR.Libraries.Shared.Constants;
 using ControlR.Web.Server.Authentication;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using ControlR.Web.Client.Authz;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Time.Testing;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Xunit.Abstractions;
@@ -27,12 +26,8 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -51,7 +46,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
     Assert.True(result.Principal.Identity?.IsAuthenticated);
 
     // Check claims
-    var tenantClaim = result.Principal.FindFirst("TenantId");
+    var tenantClaim = result.Principal.FindFirst(UserClaimTypes.TenantId);
     Assert.NotNull(tenantClaim);
     Assert.Equal(tenant.Id.ToString(), tenantClaim.Value);
 
@@ -129,13 +124,10 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     var timeProvider = testApp.TimeProvider;
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -166,12 +158,8 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -194,7 +182,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
     
     // Check all expected claims are present
     var claims = identity.Claims.ToList();
-    Assert.Contains(claims, c => c.Type == "TenantId" && c.Value == tenant.Id.ToString());
+    Assert.Contains(claims, c => c.Type == UserClaimTypes.TenantId && c.Value == tenant.Id.ToString());
     Assert.Contains(claims, c => c.Type == ClaimTypes.Role && c.Value == RoleNames.TenantAdministrator);
   }
 

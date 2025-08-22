@@ -19,12 +19,9 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var request = new CreateApiKeyRequestDto("Test API Key");
 
@@ -51,12 +48,8 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     // Create test data
     var request1 = new CreateApiKeyRequestDto("API Key 1");
@@ -79,12 +72,9 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new CreateApiKeyRequestDto("Original Name");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -109,12 +99,9 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new CreateApiKeyRequestDto("To Be Deleted");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -135,12 +122,8 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new CreateApiKeyRequestDto("Test Key");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
@@ -174,13 +157,10 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var tenant = await testApp.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     var timeProvider = testApp.TimeProvider;
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     var createRequest = new CreateApiKeyRequestDto("Test Key");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);

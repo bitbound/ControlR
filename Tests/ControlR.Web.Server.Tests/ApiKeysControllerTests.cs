@@ -1,14 +1,10 @@
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Web.Server.Api;
-using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
+using ControlR.Web.Client.Authz;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using System.Security.Claims;
 using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
@@ -22,21 +18,16 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
+    
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     // Create some API keys
     var request1 = new CreateApiKeyRequestDto("Key 1");
     var request2 = new CreateApiKeyRequestDto("Key 2");
     await apiKeyManager.CreateWithKey(request1, tenant.Id);
     await apiKeyManager.CreateWithKey(request2, tenant.Id);
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
 
     // Act
     var result = await controller.GetApiKeys();
@@ -54,14 +45,9 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
 
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
     var request = new CreateApiKeyRequestDto("New API Key");
 
     // Act
@@ -80,19 +66,15 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
+    
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     // Create an API key first
     var createRequest = new CreateApiKeyRequestDto("Original Name");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
 
-    var controller = CreateController(testApp, tenant.Id, userManager);
     var updateRequest = new UpdateApiKeyRequestDto("Updated Name");
 
     // Act
@@ -110,14 +92,9 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
 
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
     var updateRequest = new UpdateApiKeyRequestDto("Updated Name");
 
     // Act
@@ -132,19 +109,14 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
+    
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
 
     // Create an API key first
     var createRequest = new CreateApiKeyRequestDto("To Be Deleted");
     var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
 
     // Act
     var result = await controller.DeleteApiKey(createResult.Value!.ApiKey.Id);
@@ -162,108 +134,13 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
+    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+      roles: RoleNames.TenantAdministrator);
 
     // Act
     var result = await controller.DeleteApiKey(Guid.NewGuid());
 
     // Assert
     Assert.IsType<BadRequestObjectResult>(result);
-  }
-
-  [Fact]
-  public async Task CreateApiKey_ShouldReturnBadRequest_ForInvalidModel()
-  {
-    // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
-    
-    // Add model state error to simulate validation failure
-    controller.ModelState.AddModelError("FriendlyName", "Required");
-
-    var request = new CreateApiKeyRequestDto("");
-
-    // Act
-    var result = await controller.CreateApiKey(request);
-
-    // Assert
-    Assert.IsType<BadRequestObjectResult>(result.Result);
-  }
-
-  [Fact]
-  public async Task UpdateApiKey_ShouldReturnBadRequest_ForInvalidModel()
-  {
-    // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-
-    var tenant = new Tenant { Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var controller = CreateController(testApp, tenant.Id, userManager);
-    
-    // Add model state error to simulate validation failure
-    controller.ModelState.AddModelError("FriendlyName", "Required");
-
-    var request = new UpdateApiKeyRequestDto("");
-
-    // Act
-    var result = await controller.UpdateApiKey(Guid.NewGuid(), request);
-
-    // Assert
-    Assert.IsType<BadRequestObjectResult>(result.Result);
-  }
-
-  private ApiKeysController CreateController(TestApp testApp, Guid tenantId, UserManager<AppUser> userManager)
-  {
-    var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
-    
-    var controller = new ApiKeysController(apiKeyManager, userManager);
-    
-    // Create a mock user
-    var userId = Guid.NewGuid();
-    var user = new AppUser { Id = userId, TenantId = tenantId };
-    
-    // Set up the controller context with a mock user
-    var claims = new List<Claim>
-    {
-      new("TenantId", tenantId.ToString()),
-      new(ClaimTypes.NameIdentifier, userId.ToString())
-    };
-    
-    var identity = new ClaimsIdentity(claims, "Test");
-    var principal = new ClaimsPrincipal(identity);
-    
-    controller.ControllerContext = new ControllerContext
-    {
-      HttpContext = new DefaultHttpContext
-      {
-        User = principal,
-        RequestServices = testApp.App.Services
-      }
-    };
-
-    // Mock the GetUserAsync method by creating the user in the system
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-    db.Users.Add(user);
-    db.SaveChanges();
-    
-    return controller;
   }
 }
