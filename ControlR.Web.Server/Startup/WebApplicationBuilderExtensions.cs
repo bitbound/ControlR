@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.Server.Authentication;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -114,6 +115,11 @@ public static class WebApplicationBuilderExtensions
 
     authBuilder.AddIdentityCookies();
 
+    // Add API key authentication
+    authBuilder.AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+      ApiKeyAuthenticationSchemeOptions.DefaultScheme,
+      options => { });
+
     builder.Services
       .AddAuthorizationBuilder()
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
@@ -199,6 +205,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
+    builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
     builder.Host.UseSystemd();

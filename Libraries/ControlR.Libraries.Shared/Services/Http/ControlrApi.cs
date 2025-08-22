@@ -15,16 +15,19 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
+  Task<Result<CreateApiKeyResponseDto>> CreateApiKey(CreateApiKeyRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
 
   Task<Result> DeleteDevice(Guid deviceId);
+  Task<Result> DeleteApiKey(Guid apiKeyId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
   Task<Result> DeleteUser(Guid userId);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
+  Task<Result<ApiKeyDto[]>> GetApiKeys();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
@@ -45,6 +48,7 @@ public interface IControlrApi
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
+  Task<Result<ApiKeyDto>> UpdateApiKey(Guid apiKeyId, UpdateApiKeyRequestDto request);
 }
 
 public class ControlrApi(
@@ -108,6 +112,16 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result<CreateApiKeyResponseDto>> CreateApiKey(CreateApiKeyRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync("api/ApiKeys", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<CreateApiKeyResponseDto>();
+    });
+  }
+
   public async Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto)
   {
     return await TryCallApi(async () =>
@@ -163,6 +177,15 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result> DeleteApiKey(Guid apiKeyId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.DeleteAsync($"api/ApiKeys/{apiKeyId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
   public async Task<Result> DeleteTag(Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -202,6 +225,12 @@ public class ControlrApi(
 
       yield return device;
     }
+  }
+
+  public async Task<Result<ApiKeyDto[]>> GetApiKeys()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<ApiKeyDto[]>("api/ApiKeys"));
   }
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
@@ -396,6 +425,16 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
+  }
+
+  public async Task<Result<ApiKeyDto>> UpdateApiKey(Guid apiKeyId, UpdateApiKeyRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PutAsJsonAsync($"api/ApiKeys/{apiKeyId}", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ApiKeyDto>();
     });
   }
 

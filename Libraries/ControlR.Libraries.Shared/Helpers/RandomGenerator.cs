@@ -11,6 +11,11 @@ public class RandomGenerator
     return GenerateString(64);
   }
 
+  public static string CreateApiKey()
+  {
+    return GenerateString(64);
+  }
+
   public static string CreateDeviceToken()
   {
     return GenerateString(128);

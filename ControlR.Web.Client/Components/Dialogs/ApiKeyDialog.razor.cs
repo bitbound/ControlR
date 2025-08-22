@@ -1,0 +1,42 @@
+using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Web.Client.Services;
+using Microsoft.AspNetCore.Components;
+using MudBlazor;
+
+namespace ControlR.Web.Client.Components.Dialogs;
+
+public partial class ApiKeyDialog
+{
+  [CascadingParameter]
+  public required IMudDialogInstance MudDialog { get; init; }
+
+  [Parameter]
+  public required ApiKeyDto ApiKey { get; set; }
+
+  [Parameter]
+  public required string PlainTextKey { get; set; }
+
+  [Inject]
+  private IClipboardManager ClipboardManager { get; set; } = default!;
+
+  [Inject]
+  private ISnackbar Snackbar { get; set; } = default!;
+
+  private async Task CopyToClipboard()
+  {
+    try
+    {
+      await ClipboardManager.SetText(PlainTextKey);
+      Snackbar.Add("API key copied to clipboard", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add($"Failed to copy to clipboard: {ex.Message}", Severity.Error);
+    }
+  }
+
+  private void Submit()
+  {
+    MudDialog.Close(DialogResult.Ok(true));
+  }
+}

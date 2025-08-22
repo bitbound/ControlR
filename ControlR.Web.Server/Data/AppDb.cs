@@ -22,6 +22,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   }
 
   public required DbSet<Device> Devices { get; init; }
+  public required DbSet<ApiKey> ApiKeys { get; init; }
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
@@ -34,6 +35,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     SeedDatabase(builder);
 
+    ConfigureApiKeys(builder);
     ConfigureTenant(builder);
     ConfigureDevices(builder);
     ConfigureRoles(builder);
@@ -163,6 +165,32 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     {
       builder
         .Entity<Tag>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureApiKeys(ModelBuilder builder)
+  {
+    builder
+      .Entity<ApiKey>()
+      .HasIndex(x => x.HashedKey)
+      .IsUnique();
+
+    builder
+      .Entity<ApiKey>()
+      .Property(x => x.FriendlyName)
+      .HasMaxLength(200);
+
+    builder
+      .Entity<ApiKey>()
+      .Property(x => x.HashedKey)
+      .HasMaxLength(256)
+      .IsRequired();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<ApiKey>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
