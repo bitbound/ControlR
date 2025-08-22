@@ -174,7 +174,7 @@
         }
       }
     },
-    "/api/ApiKeys": {
+    "/api/api-keys": {
       "get": {
         "tags": [
           "ApiKeys"
@@ -259,7 +259,7 @@
         }
       }
     },
-    "/api/ApiKeys/{id}": {
+    "/api/api-keys/{id}": {
       "put": {
         "tags": [
           "ApiKeys"

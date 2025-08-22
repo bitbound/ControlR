@@ -1,10 +1,8 @@
-using ControlR.Web.Server.Authentication;
+using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using ControlR.Web.Client.Authz;
-using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +28,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
     var plainTextKey = createResult.Value!.PlainTextKey;
 
     var context = CreateHttpContext(plainTextKey);
@@ -130,7 +128,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
     var plainTextKey = createResult.Value!.PlainTextKey;
 
     // Advance time
@@ -162,7 +160,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
     var plainTextKey = createResult.Value!.PlainTextKey;
 
     var context = CreateHttpContext(plainTextKey);

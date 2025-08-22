@@ -1,55 +1,26 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Web.Client.Components.Dialogs;
-using ControlR.Web.Client.Services;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class ApiKeys
 {
-  private List<ApiKeyDto> _apiKeys = [];
-  private string _newKeyName = string.Empty;
+  private ApiKeyDto[] _apiKeys = [];
   private bool _isLoading = false;
+  private string _newKeyName = string.Empty;
+  [Inject]
+  public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  private IControlrApi ControlrApi { get; set; } = default!;
+  public required IDialogService DialogService { get; init; }
 
   [Inject]
-  private IDialogService DialogService { get; set; } = default!;
-
-  [Inject]
-  private ISnackbar Snackbar { get; set; } = default!;
+  public required ISnackbar Snackbar { get; init; }
 
   protected override async Task OnInitializedAsync()
   {
     await LoadApiKeys();
-  }
-
-  private async Task LoadApiKeys()
-  {
-    _isLoading = true;
-    try
-    {
-      var result = await ControlrApi.GetApiKeys();
-      if (result.IsSuccess)
-      {
-        _apiKeys = result.Value.ToList();
-      }
-      else
-      {
-        Snackbar.Add($"Failed to load API keys: {result.Reason}", Severity.Error);
-      }
-    }
-    catch (Exception ex)
-    {
-      Snackbar.Add($"Error loading API keys: {ex.Message}", Severity.Error);
-    }
-    finally
-    {
-      _isLoading = false;
-    }
   }
 
   private async Task CreateApiKey()
@@ -62,7 +33,7 @@ public partial class ApiKeys
     {
       var request = new CreateApiKeyRequestDto(_newKeyName.Trim());
       var result = await ControlrApi.CreateApiKey(request);
-      
+
       if (result.IsSuccess)
       {
         // Show the dialog with the new API key
@@ -131,11 +102,78 @@ public partial class ApiKeys
     }
   }
 
+  private async Task LoadApiKeys()
+  {
+    _isLoading = true;
+    try
+    {
+      var result = await ControlrApi.GetApiKeys();
+      if (result.IsSuccess)
+      {
+        _apiKeys = result.Value;
+      }
+      else
+      {
+        Snackbar.Add($"Failed to load API keys: {result.Reason}", Severity.Error);
+      }
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add($"Error loading API keys: {ex.Message}", Severity.Error);
+    }
+    finally
+    {
+      _isLoading = false;
+    }
+  }
   private async Task OnKeyDown(KeyboardEventArgs e)
   {
     if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newKeyName))
     {
       await CreateApiKey();
+    }
+  }
+
+  private async Task RenameApiKey(ApiKeyDto apiKey)
+  {
+    var parameters = new DialogParameters
+    {
+      { "CurrentName", apiKey.FriendlyName }
+    };
+    var dialogOptions = new DialogOptions
+    {
+      CloseButton = true,
+      FullWidth = true,
+      MaxWidth = MaxWidth.ExtraSmall
+    };
+    var newKeyName = await DialogService.ShowPrompt(
+      title: "Rename API Key", 
+      subtitle: $"Rename the '{apiKey.FriendlyName}' key by providing a new name.",
+      inputLabel: "New Name",
+      inputHintText: "Enter a new name for the API key.");
+
+    if (string.IsNullOrWhiteSpace(newKeyName))
+    {
+      return;
+    }
+
+    try
+    {
+      var updateRequest = new UpdateApiKeyRequestDto(newKeyName.Trim());
+      var updateResult = await ControlrApi.UpdateApiKey(apiKey.Id, updateRequest);
+      if (updateResult.IsSuccess)
+      {
+        await LoadApiKeys();
+        Snackbar.Add("API key renamed successfully", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to rename API key: {updateResult.Reason}", Severity.Error);
+      }
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add($"Error renaming API key: {ex.Message}", Severity.Error);
     }
   }
 }

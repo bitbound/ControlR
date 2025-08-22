@@ -26,7 +26,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     var request = new CreateApiKeyRequestDto("Test API Key");
 
     // Act
-    var result = await apiKeyManager.CreateWithKey(request, tenant.Id);
+    var result = await apiKeyManager.CreateKey(request, tenant.Id);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -55,8 +55,8 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     var request1 = new CreateApiKeyRequestDto("API Key 1");
     var request2 = new CreateApiKeyRequestDto("API Key 2");
     
-    await apiKeyManager.CreateWithKey(request1, tenant.Id);
-    await apiKeyManager.CreateWithKey(request2, tenant.Id);
+    await apiKeyManager.CreateKey(request1, tenant.Id);
+    await apiKeyManager.CreateKey(request2, tenant.Id);
 
     // Act
     var result = await apiKeyManager.GetAll();
@@ -77,7 +77,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var createRequest = new CreateApiKeyRequestDto("Original Name");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
 
     var updateRequest = new UpdateApiKeyRequestDto("Updated Name");
 
@@ -104,7 +104,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var createRequest = new CreateApiKeyRequestDto("To Be Deleted");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
 
     // Act
     var result = await apiKeyManager.Delete(createResult.Value!.ApiKey.Id);
@@ -126,7 +126,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
 
     var createRequest = new CreateApiKeyRequestDto("Test Key");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
     var plainTextKey = createResult.Value!.PlainTextKey;
 
     // Act
@@ -149,7 +149,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
 
     // Assert
     Assert.True(result.IsSuccess);
-    Assert.Null(result.Value);
+    Assert.Equal(Guid.Empty, result.Value);
   }
 
   [Fact]
@@ -163,7 +163,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var createRequest = new CreateApiKeyRequestDto("Test Key");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
     var plainTextKey = createResult.Value!.PlainTextKey;
 
     // Advance time

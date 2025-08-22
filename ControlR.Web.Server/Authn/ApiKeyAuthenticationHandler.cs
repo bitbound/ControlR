@@ -1,11 +1,8 @@
-using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Services;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
-namespace ControlR.Web.Server.Authentication;
+namespace ControlR.Web.Server.Authn;
 
 public class ApiKeyAuthenticationSchemeOptions : AuthenticationSchemeOptions
 {
@@ -37,12 +34,12 @@ public class ApiKeyAuthenticationHandler(
     }
 
     var validationResult = await _apiKeyManager.ValidateApiKey(providedApiKey);
-    if (!validationResult.IsSuccess || validationResult.Value is null)
+    if (!validationResult.IsSuccess)
     {
       return AuthenticateResult.Fail("Invalid API key");
     }
 
-    var tenantId = validationResult.Value.Value;
+    var tenantId = validationResult.Value;
 
     var claims = new[]
     {

@@ -1,9 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Services;
-using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,24 +6,33 @@ namespace ControlR.Web.Server.Services;
 
 public interface IApiKeyManager
 {
-  Task<Result<CreateApiKeyResponseDto>> CreateWithKey(CreateApiKeyRequestDto request, Guid tenantId);
+  Task<Result<CreateApiKeyResponseDto>> CreateKey(CreateApiKeyRequestDto request, Guid tenantId);
   Task<Result> Delete(Guid id);
   Task<IEnumerable<ApiKeyDto>> GetAll();
   Task<Result<ApiKeyDto>> Update(Guid id, UpdateApiKeyRequestDto request);
-  Task<Result<Guid?>> ValidateApiKey(string apiKey);
+  /// <summary>
+  /// Validates the provided API key and returns the associated tenant ID if valid.
+  /// </summary>
+  /// <param name="apiKey">The API key to validate.</param>
+  /// <returns>The associated tenant ID if valid, otherwise an error.</returns>
+  Task<Result<Guid>> ValidateApiKey(string apiKey);
 }
 
-public class ApiKeyManager(AppDb appDb, TimeProvider timeProvider) : IApiKeyManager
+public class ApiKeyManager(
+  AppDb appDb,
+  TimeProvider timeProvider,
+  IPasswordHasher<string> passwordHasher) : IApiKeyManager
 {
   private readonly AppDb _appDb = appDb;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IPasswordHasher<string> _passwordHasher = passwordHasher;
 
-  public async Task<Result<CreateApiKeyResponseDto>> CreateWithKey(CreateApiKeyRequestDto request, Guid tenantId)
+  public async Task<Result<CreateApiKeyResponseDto>> CreateKey(CreateApiKeyRequestDto request, Guid tenantId)
   {
     try
     {
       var plainTextKey = RandomGenerator.CreateApiKey();
-      var hashedKey = HashApiKey(plainTextKey);
+      var hashedKey = _passwordHasher.HashPassword(string.Empty, plainTextKey);
 
       var apiKey = new ApiKey
       {
@@ -105,37 +109,37 @@ public class ApiKeyManager(AppDb appDb, TimeProvider timeProvider) : IApiKeyMana
     }
   }
 
-  public async Task<Result<Guid?>> ValidateApiKey(string apiKey)
+  public async Task<Result<Guid>> ValidateApiKey(string apiKey)
   {
     try
     {
-      var hashedKey = HashApiKey(apiKey);
+      var hashedKey = _passwordHasher.HashPassword(string.Empty, apiKey);
       var storedKey = await _appDb.ApiKeys
         .IgnoreQueryFilters()
         .FirstOrDefaultAsync(x => x.HashedKey == hashedKey);
 
       if (storedKey is null)
       {
-        return Result.Ok<Guid?>(null);
+        return Result.Fail<Guid>("Invalid API key");
+      }
+
+      var isValid = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, apiKey) == PasswordVerificationResult.Success;
+
+      if (!isValid)
+      {
+        return Result.Fail<Guid>("Invalid API key");
       }
 
       // Update last used timestamp
       storedKey.LastUsed = _timeProvider.GetUtcNow();
       await _appDb.SaveChangesAsync();
 
-      return Result.Ok<Guid?>(storedKey.TenantId);
+      return Result.Ok(storedKey.TenantId);
     }
     catch (Exception ex)
     {
-      return Result.Fail<Guid?>(ex, "Failed to validate API key");
+      return Result.Fail<Guid>(ex, "Failed to validate API key");
     }
-  }
-
-  private static string HashApiKey(string apiKey)
-  {
-    var keyBytes = Encoding.UTF8.GetBytes(apiKey);
-    var hashBytes = SHA256.HashData(keyBytes);
-    return Convert.ToBase64String(hashBytes);
   }
 
   private static ApiKeyDto MapToDto(ApiKey apiKey)

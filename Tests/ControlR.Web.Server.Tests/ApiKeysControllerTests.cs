@@ -26,8 +26,8 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
     // Create some API keys
     var request1 = new CreateApiKeyRequestDto("Key 1");
     var request2 = new CreateApiKeyRequestDto("Key 2");
-    await apiKeyManager.CreateWithKey(request1, tenant.Id);
-    await apiKeyManager.CreateWithKey(request2, tenant.Id);
+    await apiKeyManager.CreateKey(request1, tenant.Id);
+    await apiKeyManager.CreateKey(request2, tenant.Id);
 
     // Act
     var result = await controller.GetApiKeys();
@@ -73,7 +73,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
 
     // Create an API key first
     var createRequest = new CreateApiKeyRequestDto("Original Name");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
 
     var updateRequest = new UpdateApiKeyRequestDto("Updated Name");
 
@@ -116,7 +116,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
 
     // Create an API key first
     var createRequest = new CreateApiKeyRequestDto("To Be Deleted");
-    var createResult = await apiKeyManager.CreateWithKey(createRequest, tenant.Id);
+    var createResult = await apiKeyManager.CreateKey(createRequest, tenant.Id);
 
     // Act
     var result = await controller.DeleteApiKey(createResult.Value!.ApiKey.Id);

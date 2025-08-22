@@ -116,7 +116,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PostAsJsonAsync("api/ApiKeys", request);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.ApiKeysEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<CreateApiKeyResponseDto>();
     });
@@ -181,7 +181,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.DeleteAsync($"api/ApiKeys/{apiKeyId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.ApiKeysEndpoint}/{apiKeyId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -230,7 +230,7 @@ public class ControlrApi(
   public async Task<Result<ApiKeyDto[]>> GetApiKeys()
   {
     return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<ApiKeyDto[]>("api/ApiKeys"));
+      await _client.GetFromJsonAsync<ApiKeyDto[]>(HttpConstants.ApiKeysEndpoint));
   }
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
@@ -432,7 +432,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PutAsJsonAsync($"api/ApiKeys/{apiKeyId}", request);
+      using var response = await _client.PutAsJsonAsync($"{HttpConstants.ApiKeysEndpoint}/{apiKeyId}", request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<ApiKeyDto>();
     });

@@ -114,19 +114,23 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           .HasDefaultValueSql("gen_random_uuid()");
       }
 
-      var properties = entityType.ClrType
+      var dateTimeOffsetProps = entityType.ClrType
         .GetProperties()
         .Where(p =>
           p.PropertyType == typeof(DateTimeOffset) ||
           p.PropertyType == typeof(DateTimeOffset?));
 
-      foreach (var property in properties)
+      foreach (var property in dateTimeOffsetProps)
       {
-        builder
+        var propertyBuilder = builder
           .Entity(entityType.Name)
           .Property(property.Name)
-          .HasConversion(new PostgresDateTimeOffsetConverter())
-          .HasDefaultValueSql("CURRENT_TIMESTAMP");
+          .HasConversion(new PostgresDateTimeOffsetConverter());
+
+        if (property.PropertyType == typeof(DateTimeOffset?))
+        {
+          propertyBuilder.HasDefaultValueSql("CURRENT_TIMESTAMP");
+        }
       }
     }
   }
@@ -178,13 +182,11 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     builder
       .Entity<ApiKey>()
-      .Property(x => x.FriendlyName)
-      .HasMaxLength(200);
+      .Property(x => x.FriendlyName);
 
     builder
       .Entity<ApiKey>()
       .Property(x => x.HashedKey)
-      .HasMaxLength(256)
       .IsRequired();
 
     if (_tenantId is not null)

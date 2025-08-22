@@ -1,14 +1,9 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.ApiKeysEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class ApiKeysController(
@@ -34,7 +29,7 @@ public class ApiKeysController(
       return BadRequest("User tenant not found");
     }
 
-    var result = await _apiKeyManager.CreateWithKey(request, user.TenantId);
+    var result = await _apiKeyManager.CreateKey(request, user.TenantId);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);

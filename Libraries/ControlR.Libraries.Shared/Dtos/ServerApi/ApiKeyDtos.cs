@@ -10,7 +10,7 @@ public record ApiKeyDto(
 
 public record CreateApiKeyRequestDto(
   [Required]
-  [StringLength(200, MinimumLength = 1)]
+  [StringLength(256, MinimumLength = 1)]
   string FriendlyName);
 
 public record CreateApiKeyResponseDto(
@@ -19,5 +19,5 @@ public record CreateApiKeyResponseDto(
 
 public record UpdateApiKeyRequestDto(
   [Required]
-  [StringLength(200, MinimumLength = 1)]
+  [StringLength(256, MinimumLength = 1)]
   string FriendlyName);

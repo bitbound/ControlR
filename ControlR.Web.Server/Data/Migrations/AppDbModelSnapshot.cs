@@ -17,7 +17,7 @@ namespace ControlR.Web.Server.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.5")
+                .HasAnnotation("ProductVersion", "9.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -34,7 +34,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("AppUserTag");
+                    b.ToTable("AppUserTag", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
@@ -268,7 +268,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Devices");
+                    b.ToTable("Devices", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
@@ -300,7 +300,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "TenantId")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
@@ -320,7 +320,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantInvite", b =>
@@ -351,7 +351,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TenantInvites");
+                    b.ToTable("TenantInvites", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.UserPreference", b =>
@@ -390,7 +390,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "UserId")
                         .IsUnique();
 
-                    b.ToTable("UserPreferences");
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("DeviceTag", b =>
@@ -405,7 +405,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TagsId");
 
-                    b.ToTable("DeviceTag");
+                    b.ToTable("DeviceTag", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -424,7 +424,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys");
+                    b.ToTable("DataProtectionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -600,7 +600,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                             b1.HasKey("DeviceId", "__synthesizedOrdinal");
 
-                            b1.ToTable("Devices");
+                            b1.ToTable("Devices", (string)null);
 
                             b1.ToJson("Drives");
 
