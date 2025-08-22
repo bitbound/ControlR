@@ -33,7 +33,8 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     Assert.NotNull(result.Value);
     Assert.Equal("Test API Key", result.Value.ApiKey.FriendlyName);
     Assert.NotNull(result.Value.PlainTextKey);
-    Assert.Equal(64, result.Value.PlainTextKey.Length); // Should be 64 characters
+    // 32 (GUID hex string) + 1 (:) + 64 (api key)
+    Assert.Equal(97, result.Value.PlainTextKey.Length); // Should be 97 characters
 
     // Verify stored in database
     var storedKey = await db.ApiKeys.FirstOrDefaultAsync(x => x.Id == result.Value.ApiKey.Id);
@@ -148,7 +149,7 @@ public class ApiKeyManagerTests(ITestOutputHelper testOutput)
     var result = await apiKeyManager.ValidateApiKey("invalid-key");
 
     // Assert
-    Assert.True(result.IsSuccess);
+    Assert.False(result.IsSuccess);
     Assert.Equal(Guid.Empty, result.Value);
   }
 

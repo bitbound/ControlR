@@ -58,7 +58,8 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
     var response = Assert.IsType<CreateApiKeyResponseDto>(okResult.Value);
     Assert.Equal("New API Key", response.ApiKey.FriendlyName);
     Assert.NotNull(response.PlainTextKey);
-    Assert.Equal(64, response.PlainTextKey.Length);
+    // 32 (GUID hex string) + 1 (:) + 64 (api key)
+    Assert.Equal(97, response.PlainTextKey.Length); // Should be 97 characters
   }
 
   [Fact]

@@ -32,7 +32,7 @@
              SortMode="SortMode.Single">
   <Columns>
     <PropertyColumn Property="x => x.FriendlyName" Title="Name" />
-    <PropertyColumn Property="x => x.CreatedOn" Title="Created" />
+    <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
     <PropertyColumn Property="x => x.LastUsed" Title="Last Used">
       <CellTemplate>
         @if (context.Item.LastUsed.HasValue)

@@ -89,8 +89,22 @@ public static class WebApplicationBuilderExtensions
     var authBuilder = builder.Services
       .AddAuthentication(options =>
       {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultScheme = CustomSchemes.Smart;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+      })
+      .AddPolicyScheme(CustomSchemes.Smart, "Smart Authentication Scheme", options =>
+      {
+        options.ForwardDefaultSelector = context =>
+        {
+          // If the request has an API key header, use API key authentication
+          if (context.Request.Headers.ContainsKey("x-api-key"))
+          {
+            return ApiKeyAuthenticationSchemeOptions.DefaultScheme;
+          }
+          
+          // Otherwise, use Identity cookies for web UI
+          return IdentityConstants.ApplicationScheme;
+        };
       });
 
     if (!string.IsNullOrWhiteSpace(appOptions.MicrosoftClientId) &&
@@ -122,6 +136,10 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services
       .AddAuthorizationBuilder()
+      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(CustomSchemes.Smart)
+        .RequireAuthenticatedUser()
+        .Build())
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
       .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 

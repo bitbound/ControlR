@@ -5,7 +5,7 @@ namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 public record ApiKeyDto(
   Guid Id,
   string FriendlyName,
-  DateTimeOffset CreatedOn,
+  DateTimeOffset CreatedAt,
   DateTimeOffset? LastUsed);
 
 public record CreateApiKeyRequestDto(

@@ -12,6 +12,5 @@ public class ApiKey : TenantEntityBase
   [Required]
   [StringLength(256)]
   public required string HashedKey { get; set; }
-  public DateTimeOffset CreatedOn { get; set; }
   public DateTimeOffset? LastUsed { get; set; }
 }

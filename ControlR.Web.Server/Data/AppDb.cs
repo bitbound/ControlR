@@ -127,7 +127,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           .Property(property.Name)
           .HasConversion(new PostgresDateTimeOffsetConverter());
 
-        if (property.PropertyType == typeof(DateTimeOffset?))
+        if (property.PropertyType == typeof(DateTimeOffset))
         {
           propertyBuilder.HasDefaultValueSql("CURRENT_TIMESTAMP");
         }

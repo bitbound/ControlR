@@ -1703,7 +1703,7 @@
         "required": [
           "id",
           "friendlyName",
-          "createdOn",
+          "createdAt",
           "lastUsed"
         ],
         "type": "object",
@@ -1715,7 +1715,7 @@
           "friendlyName": {
             "type": "string"
           },
-          "createdOn": {
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           },

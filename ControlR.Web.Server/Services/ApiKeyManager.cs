@@ -38,14 +38,15 @@ public class ApiKeyManager(
       {
         FriendlyName = request.FriendlyName,
         HashedKey = hashedKey,
-        TenantId = tenantId,
-        CreatedOn = _timeProvider.GetUtcNow()
+        TenantId = tenantId
       };
 
       _appDb.ApiKeys.Add(apiKey);
       await _appDb.SaveChangesAsync();
 
-      var response = new CreateApiKeyResponseDto(MapToDto(apiKey), plainTextKey);
+      var hexKey = Convert.ToHexString(apiKey.Id.ToByteArray());
+      var combinedKey = $"{hexKey}:{plainTextKey}";
+      var response = new CreateApiKeyResponseDto(MapToDto(apiKey), combinedKey);
       return Result.Ok(response);
     }
     catch (Exception ex)
@@ -80,7 +81,7 @@ public class ApiKeyManager(
   public async Task<IEnumerable<ApiKeyDto>> GetAll()
   {
     var apiKeys = await _appDb.ApiKeys
-      .OrderByDescending(x => x.CreatedOn)
+      .OrderByDescending(x => x.CreatedAt)
       .ToListAsync();
 
     return apiKeys.Select(MapToDto);
@@ -113,17 +114,25 @@ public class ApiKeyManager(
   {
     try
     {
-      var hashedKey = _passwordHasher.HashPassword(string.Empty, apiKey);
+      var parts = apiKey.Split(':', 2);
+      if (parts.Length != 2)
+      {
+        return Result.Fail<Guid>("Invalid API key format");
+      }
+
+      var keyIdBytes = Convert.FromHexString(parts[0]);
+      var apiKeyId = new Guid(keyIdBytes);
+      
       var storedKey = await _appDb.ApiKeys
         .IgnoreQueryFilters()
-        .FirstOrDefaultAsync(x => x.HashedKey == hashedKey);
+        .FirstOrDefaultAsync(x => x.Id == apiKeyId);
 
       if (storedKey is null)
       {
         return Result.Fail<Guid>("Invalid API key");
       }
 
-      var isValid = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, apiKey) == PasswordVerificationResult.Success;
+      var isValid = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, parts[1]) == PasswordVerificationResult.Success;
 
       if (!isValid)
       {
@@ -147,7 +156,7 @@ public class ApiKeyManager(
     return new ApiKeyDto(
       apiKey.Id,
       apiKey.FriendlyName,
-      apiKey.CreatedOn,
+      apiKey.CreatedAt,
       apiKey.LastUsed);
   }
 }
