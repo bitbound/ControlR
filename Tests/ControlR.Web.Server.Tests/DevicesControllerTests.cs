@@ -32,25 +32,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    // Create test tenant
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    // Create test user
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    // Create test tenant and user
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tag
     var tagId = Guid.NewGuid();
-    db.Tags.Add(new Tag { Id = tagId, Name = "TestTag", TenantId = tenantId });
+    db.Tags.Add(new Tag { Id = tagId, Name = "TestTag", TenantId = tenant.Id });
     await db.SaveChangesAsync();
 
     // Create test devices with varying properties
@@ -70,7 +59,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           ProcessorCount: 8,
           ConnectionId: $"test-connection-id-{i}",
           OsDescription: $"Windows {10 + i}",
-          TenantId: tenantId,
+          TenantId: tenant.Id,
           TotalMemory: 16384,
           TotalStorage: 1024000,
           UsedMemory: 8192 + (i * 100),
@@ -128,19 +117,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with different online status
     for (int i = 0; i < 5; i++)
@@ -158,7 +137,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -220,19 +199,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific combinations for multi-filter testing
     var testData = new[]
@@ -260,7 +229,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: $"conn-{i}",
         OsDescription: data.OsDescription,
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -342,19 +311,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with varying numeric properties
     var cpuValues = new double[] { 0.1, 0.3, 0.5, 0.7, 0.9 }; // 10%, 30%, 50%, 70%, 90%
@@ -373,7 +332,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192 + (i * 1000), // Varying memory usage
@@ -484,20 +443,10 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
     // Create test tenant and user
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test devices with varying string properties
     var devices = new[]
@@ -523,7 +472,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: device.ConnectionId,
         OsDescription: device.OsDescription,
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -603,19 +552,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific patterns for testing
     var testDevices = new[]
@@ -641,7 +580,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: $"conn-{i:D3}",
         OsDescription: device.OsDescription,
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -659,7 +598,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
 
     // Manually set the Alias values since DeviceManager ignores DeviceDto.Alias
-    var devices = await db.Devices.Where(d => d.TenantId == tenantId).ToListAsync();
+    var devices = await db.Devices.Where(d => d.TenantId == tenant.Id).ToListAsync();
     for (int i = 0; i < devices.Count; i++)
     {
       devices[i].Alias = testDevices[i].Alias;
@@ -763,19 +702,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with 0 and non-zero CPU utilization
     var cpuValues = new double[] { 0.0, 0.5, 0.0, 0.8 };
@@ -794,7 +723,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         ProcessorCount: 8,
         ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
-        TenantId: tenantId,
+        TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
         UsedMemory: 8192,
@@ -860,19 +789,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create a test device
     var deviceDto = new DeviceDto(
@@ -888,7 +807,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       ProcessorCount: 8,
       ConnectionId: "conn-001",
       OsDescription: "Windows 11",
-      TenantId: tenantId,
+      TenantId: tenant.Id,
       TotalMemory: 16384,
       TotalStorage: 1024000,
       UsedMemory: 8192,
@@ -960,25 +879,13 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
 
     // Create two tenants
-    var tenant1Id = Guid.NewGuid();
-    var tenant1 = new Tenant { Id = tenant1Id, Name = "Tenant 1" };
-    db.Tenants.Add(tenant1);
-
-    var tenant2Id = Guid.NewGuid();
-    var tenant2 = new Tenant { Id = tenant2Id, Name = "Tenant 2" };
-    db.Tenants.Add(tenant2);
-    await db.SaveChangesAsync();
+    var tenant1 = await testApp.CreateTestTenant("Tenant 1");
+    var tenant2 = await testApp.CreateTestTenant("Tenant 2");
 
     // Create user for tenant 1
-    var userResult = await userCreator.CreateUser("user1@example.com", "T3stP@ssw0rd!", tenant1Id);
-    Assert.True(userResult.Succeeded);
-    var user1 = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user1, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    var user1 = await testApp.CreateTestUser(tenant1.Id, email: "user1@example.com", roles: RoleNames.DeviceSuperUser);
 
     // Create devices for both tenants
     for (int i = 0; i < 5; i++)
@@ -998,7 +905,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           ProcessorCount: 8,
           ConnectionId: $"tenant1-connection-{i}",
           OsDescription: "Windows 10",
-          TenantId: tenant1Id,
+          TenantId: tenant1.Id,
           TotalMemory: 16384,
           TotalStorage: 1024000,
           UsedMemory: 8192,
@@ -1026,7 +933,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           ProcessorCount: 8,
           ConnectionId: $"tenant2-connection-{i}",
           OsDescription: "Windows 10",
-          TenantId: tenant2Id,
+          TenantId: tenant2.Id,
           TotalMemory: 16384,
           TotalStorage: 1024000,
           UsedMemory: 8192,
@@ -1061,7 +968,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     Assert.NotNull(response);
     Assert.NotNull(response.Items);
     Assert.Equal(5, response.Items.Count); // Should only see tenant 1's devices
-    Assert.All(response.Items, device => Assert.Equal(tenant1Id, device.TenantId));
+    Assert.All(response.Items, device => Assert.Equal(tenant1.Id, device.TenantId));
     Assert.All(response.Items, device => Assert.StartsWith("Tenant1", device.Name));
   }
 
@@ -1075,30 +982,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
     var logger = testApp.App.Services.GetRequiredService<ILogger<DevicesController>>();
     var authorizationService = testApp.App.Services.GetRequiredService<IAuthorizationService>();
 
-    // Create test tenant
-    var tenantId = Guid.NewGuid();
-    var tenant = new Tenant { Id = tenantId, Name = "Test Tenant" };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    // Create test user
-    var userResult = await userCreator.CreateUser("test@example.com", "T3stP@ssw0rd!", tenantId);
-    Assert.True(userResult.Succeeded);
-
-    var user = userResult.User;
-
-    var addResult = await userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-    Assert.True(addResult.Succeeded);
+    // Create test tenant and user
+    var tenant = await testApp.CreateTestTenant();
+    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tags
     var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
     foreach (var tagId in tagIds)
     {
-      db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenantId });
+      db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenant.Id });
     }
     await db.SaveChangesAsync();
 
@@ -1119,7 +1014,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           ProcessorCount: 8,
           ConnectionId: $"test-connection-id-{i}",
           OsDescription: $"Windows {10 + i}",
-          TenantId: tenantId,
+          TenantId: tenant.Id,
           TotalMemory: 16384,
           TotalStorage: 1024000,
           UsedMemory: 8192 + (i * 100),

@@ -1,99 +1,102 @@
 ﻿<div>
-    <MudDialog>
-        <TitleContent>
-            <MudText Typo="Typo.h5" Color="Color.Primary">
-                @Title
-            </MudText>
-            @if (!string.IsNullOrWhiteSpace(Subtitle)) 
-            {
-              <MudText Typo="Typo.subtitle1">
-                  @Subtitle
-              </MudText>
-            }
-        </TitleContent>
-        <DialogContent>
-            <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
-                <MudCard Elevation="0">
-                    <MudCardContent>
-                        <MudTextField T="string"
-                                      @bind-Value="_input"
-                                      Label="Response"
-                                      HelperText="@InputHintText"
-                                      Immediate="true"
-                                      InputType="InputType.Text"
-                                      OnKeyDown="InputKeyDown"
-                                      Required
-                                      Validation="(string e) => ValidateInput(e)" />
+  <MudDialog>
+    <TitleContent>
+      <MudText Typo="Typo.h5" Color="Color.Primary">
+        @Title
+      </MudText>
+      @if (!string.IsNullOrWhiteSpace(Subtitle))
+      {
+        <MudText Typo="Typo.subtitle1" Class="mt-2">
+          @Subtitle
+        </MudText>
+      }
+    </TitleContent>
+    <DialogContent>
+      <MudForm @ref="_form" @bind-IsValid="@_formIsValid">
+        <MudCard Elevation="0">
+          <MudCardContent>
+            <MudTextField T="string"
+                          @bind-Value="_input"
+                          Label="@InputLabel"
+                          HelperText="@InputHintText"
+                          Immediate="true"
+                          InputType="InputType.Text"
+                          OnKeyDown="InputKeyDown"
+                          Required
+                          Validation="(string e) => ValidateInput(e)" />
 
-                    </MudCardContent>
-                    <MudCardActions Class="justify-end">
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   Class="me-3"
-                                   OnClick="Cancel">
-                            Cancel
-                        </MudButton>
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   Disabled="!_formIsValid"
-                                   OnClick="Submit">
-                            Submit
-                        </MudButton>
-                    </MudCardActions>
-                </MudCard>
-            </MudForm>
-        </DialogContent>
-    </MudDialog>
+          </MudCardContent>
+          <MudCardActions Class="justify-end">
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Class="me-3"
+                       OnClick="Cancel">
+              Cancel
+            </MudButton>
+            <MudButton ButtonType="ButtonType.Button"
+                       Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       Disabled="!_formIsValid"
+                       OnClick="Submit">
+              Submit
+            </MudButton>
+          </MudCardActions>
+        </MudCard>
+      </MudForm>
+    </DialogContent>
+  </MudDialog>
 
 </div>
 
 @code {
-    private string? _input;
-    private bool _formIsValid;
-    private MudForm? _form;
+  private string? _input;
+  private bool _formIsValid;
+  private MudForm? _form;
 
-    [CascadingParameter]
-    public required IMudDialogInstance MudDialog { get; init; }
+  [CascadingParameter]
+  public required IMudDialogInstance MudDialog { get; init; }
 
-    [Parameter]
-    public string InputHintText { get; set; } = "Enter your response here.";
+  [Parameter]
+  public string InputHintText { get; set; } = "Enter your response here.";
 
-    [Parameter]
-    public string? Subtitle { get; set; }
+  [Parameter]
+  public string InputLabel { get; set; } = "Response";
 
-    [Parameter]
-    public required string Title { get; set; }
+  [Parameter]
+  public string? Subtitle { get; set; }
 
-    private void Cancel()
+  [Parameter]
+  public required string Title { get; set; }
+
+  private void Cancel()
+  {
+    MudDialog.Cancel();
+  }
+
+  private void InputKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter")
     {
-        MudDialog.Cancel();
+      Submit();
+    }
+  }
+
+  private void Submit()
+  {
+    if (_formIsValid)
+    {
+      MudDialog.Close(_input);
+    }
+  }
+
+  private string? ValidateInput(string input)
+  {
+    if (string.IsNullOrWhiteSpace(input))
+    {
+      return "Value is required.";
     }
 
-    private void InputKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-        {
-            Submit();
-        }
-    }
-
-    private void Submit()
-    {
-        if (_formIsValid)
-        {
-            MudDialog.Close(_input);
-        }
-    }
-
-    private string? ValidateInput(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return "Value is required.";
-        }
-
-        return null;
-    }
+    return null;
+  }
 }

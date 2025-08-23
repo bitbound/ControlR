@@ -1,11 +1,7 @@
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Roles;
-using ControlR.Web.Server.Converters;
 using ControlR.Web.Server.Data.Configuration;
-using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using System.Data;
 
 namespace ControlR.Web.Server.Data;
 
@@ -22,11 +18,19 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   }
 
   public required DbSet<Device> Devices { get; init; }
+  public required DbSet<ApiKey> ApiKeys { get; init; }
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
   public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+
+  protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+  {
+    base.ConfigureConventions(configurationBuilder);
+    configurationBuilder.Conventions.Add(_ => new DateTimeOffsetConvention());
+    configurationBuilder.Conventions.Add(_ => new EntityBaseConvention());
+  }
 
   protected override void OnModelCreating(ModelBuilder builder)
   {
@@ -34,6 +38,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     SeedDatabase(builder);
 
+    ConfigureApiKeys(builder);
     ConfigureTenant(builder);
     ConfigureDevices(builder);
     ConfigureRoles(builder);
@@ -41,9 +46,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
-    ApplyReflectionBasedConfiguration(builder);
   }
-  
+
   private void ConfigureTenant(ModelBuilder builder)
   {
     // Configure cascade delete for all related entities
@@ -95,40 +99,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasForeignKey(x => x.RoleId);
   }
 
-  private static void ApplyReflectionBasedConfiguration(ModelBuilder builder)
-  {
-    foreach (var entityType in builder.Model.GetEntityTypes())
-    {
-      if (entityType.IsKeyless)
-      {
-        continue;
-      }
-
-      if (entityType.ClrType.BaseType == typeof(EntityBase))
-      {
-        builder
-          .Entity(entityType.ClrType)
-          .Property(nameof(EntityBase.Id))
-          .HasDefaultValueSql("gen_random_uuid()");
-      }
-
-      var properties = entityType.ClrType
-        .GetProperties()
-        .Where(p =>
-          p.PropertyType == typeof(DateTimeOffset) ||
-          p.PropertyType == typeof(DateTimeOffset?));
-
-      foreach (var property in properties)
-      {
-        builder
-          .Entity(entityType.Name)
-          .Property(property.Name)
-          .HasConversion(new PostgresDateTimeOffsetConverter())
-          .HasDefaultValueSql("CURRENT_TIMESTAMP");
-      }
-    }
-  }
-
   private static void SeedDatabase(ModelBuilder builder)
   {
     var builtInRoles = RoleFactory.GetBuiltInRoles();
@@ -167,6 +137,30 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     }
   }
 
+  private void ConfigureApiKeys(ModelBuilder builder)
+  {
+    builder
+      .Entity<ApiKey>()
+      .HasIndex(x => x.HashedKey)
+      .IsUnique();
+
+    builder
+      .Entity<ApiKey>()
+      .Property(x => x.FriendlyName);
+
+    builder
+      .Entity<ApiKey>()
+      .Property(x => x.HashedKey)
+      .IsRequired();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<ApiKey>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
   private void ConfigureUserPreferences(ModelBuilder builder)
   {
     builder
@@ -184,6 +178,11 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   private void ConfigureUsers(ModelBuilder builder)
   {
+    builder
+      .Entity<AppUser>()
+      .Property(x => x.CreatedAt)
+      .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
     builder
       .Entity<AppUser>()
       .HasMany(x => x.UserRoles)

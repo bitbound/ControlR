@@ -1,0 +1,46 @@
+<div>
+  <MudDialog>
+    <TitleContent>
+      <MudText Typo="Typo.h5" Color="Color.Primary">
+        API Key Created
+      </MudText>
+    </TitleContent>
+    <DialogContent>
+      <MudCard Elevation="0">
+        <MudCardContent>
+          <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <strong>Important:</strong> This API key will only be shown once. Please copy it now and store it securely.
+          </MudAlert>
+
+          <div class="mb-2">
+            <MudText Typo="Typo.subtitle1" Color="@(Color.Info)" Inline>
+              Key Name:
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Class="ms-2" Inline>
+              @ApiKey.FriendlyName
+            </MudText>
+          </div>
+
+          <MudTextField T="string"
+                        Value="@PlainTextKey"
+                        Label="API Key"
+                        ReadOnly="true"
+                        Variant="Variant.Filled"
+                        AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                        Adornment="Adornment.End"
+                        OnAdornmentClick="CopyToClipboard"
+                        Class="mb-4" />
+                        
+        </MudCardContent>
+        <MudCardActions Class="justify-end">
+          <MudButton ButtonType="ButtonType.Submit"
+                     Color="Color.Primary"
+                     OnClick="Submit"
+                     Variant="Variant.Filled">
+            Close
+          </MudButton>
+        </MudCardActions>
+      </MudCard>
+    </DialogContent>
+  </MudDialog>
+</div>

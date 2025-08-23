@@ -1,19 +1,21 @@
-﻿@inject NavigationManager NavMan
+﻿@using ControlR.Web.Client.Services.DeviceAccess
+@inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
+@inject IDeviceAccessState DeviceAccessState
 
 <MudNavMenu>
-  <MudNavLink Href="/device-access" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
     Overview
   </MudNavLink>
 
-  <MudNavLink Disabled="IsDisabled" Href="/device-access/remote-control" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ScreenShare">
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/remote-control?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ScreenShare">
     Remote Control
   </MudNavLink>
 
-  <MudNavLink Disabled="IsDisabled" Href="/device-access/terminal" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Terminal">
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/terminal?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Terminal">
     Terminal
   </MudNavLink>
 

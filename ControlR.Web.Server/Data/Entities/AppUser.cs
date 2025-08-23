@@ -7,24 +7,8 @@ namespace ControlR.Web.Server.Data.Entities;
 
 public class AppUser : IdentityUser<Guid>, ITenantEntityBase
 {
-  private DateTimeOffset _createdAt;
-
-  [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-  public DateTimeOffset CreatedAt
-  {
-    get => _createdAt;
-    set
-    {
-      if (value == default ||
-          _createdAt != default)
-      {
-        return;
-      }
-
-      _createdAt = value;
-    }
-  }
-
+  [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+  public DateTimeOffset CreatedAt { get; set; }
   public bool IsOnline { get; set; }
   public List<Tag>? Tags { get; set; }
   public Tenant? Tenant { get; set; }

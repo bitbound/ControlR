@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Linq.Expressions;
 
-namespace ControlR.Web.Server.Converters;
+namespace ControlR.Web.Server.Data.Configuration;
 
 /// <summary>
 /// <para>

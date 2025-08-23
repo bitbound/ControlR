@@ -6,6 +6,7 @@ public static class DialogServiceExtensions
     this IDialogService dialogService,
     string title,
     string? subtitle = null,
+    string? inputLabel = null,
     string? inputHintText = null,
     MaxWidth maxWidth = MaxWidth.Small)
   {
@@ -22,6 +23,7 @@ public static class DialogServiceExtensions
     {
       { nameof(PromptDialog.Title), title },
       { nameof(PromptDialog.Subtitle), subtitle },
+      { nameof(PromptDialog.InputLabel), inputLabel },
       { nameof(PromptDialog.InputHintText), inputHintText }
     };
 
