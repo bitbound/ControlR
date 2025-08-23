@@ -31,6 +31,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   {
     base.ConfigureConventions(configurationBuilder);
     configurationBuilder.Conventions.Add(_ => new DateTimeOffsetConvention());
+    configurationBuilder.Conventions.Add(_ => new EntityBaseConvention());
   }
 
   protected override void OnModelCreating(ModelBuilder builder)
@@ -47,7 +48,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
-    ApplyReflectionBasedConfiguration(builder);
   }
 
   private void ConfigureTenant(ModelBuilder builder)
@@ -99,26 +99,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasMany(x => x.UserRoles)
       .WithOne()
       .HasForeignKey(x => x.RoleId);
-  }
-
-  private static void ApplyReflectionBasedConfiguration(ModelBuilder builder)
-  {
-    foreach (var entityType in builder.Model.GetEntityTypes())
-    {
-      if (entityType.IsKeyless)
-      {
-        continue;
-      }
-
-      // Handle EntityBase-derived entities
-      if (entityType.ClrType.BaseType == typeof(EntityBase))
-      {
-        builder
-          .Entity(entityType.ClrType)
-          .Property(nameof(EntityBase.Id))
-          .HasDefaultValueSql("gen_random_uuid()");
-      }
-    }
   }
 
   private static void SeedDatabase(ModelBuilder builder)
