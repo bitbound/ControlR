@@ -1,9 +1,7 @@
 using ControlR.Web.Server.Authz.Roles;
 using ControlR.Web.Server.Data.Configuration;
-using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using System.Data;
 
 namespace ControlR.Web.Server.Data;
 
@@ -180,6 +178,11 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   private void ConfigureUsers(ModelBuilder builder)
   {
+    builder
+      .Entity<AppUser>()
+      .Property(x => x.CreatedAt)
+      .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
     builder
       .Entity<AppUser>()
       .HasMany(x => x.UserRoles)

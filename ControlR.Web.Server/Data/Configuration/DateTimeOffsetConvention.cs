@@ -15,11 +15,6 @@ public class DateTimeOffsetConvention : IPropertyAddedConvention
     if (propertyType == typeof(DateTimeOffset) || propertyType == typeof(DateTimeOffset?))
     {
       propertyBuilder.HasConversion(new PostgresDateTimeOffsetConverter());
-
-      if (propertyType == typeof(DateTimeOffset))
-      {
-        propertyBuilder.HasDefaultValueSql("CURRENT_TIMESTAMP");
-      }
     }
   }
 }

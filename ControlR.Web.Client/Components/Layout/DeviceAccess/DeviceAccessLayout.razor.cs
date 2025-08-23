@@ -149,8 +149,6 @@ public partial class DeviceAccessLayout
       Logger.LogError(ex, "Error fetching device details for {DeviceId}", _deviceId);
       return;
     }
-
-    NavManager.Value.NavigateTo(currentUri.AbsolutePath, false);
   }
 
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
