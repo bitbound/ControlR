@@ -1,6 +1,4 @@
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Roles;
-using ControlR.Web.Server.Converters;
 using ControlR.Web.Server.Data.Configuration;
 using ControlR.Web.Server.Data.Entities.Bases;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
@@ -29,6 +27,12 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public required DbSet<UserPreference> UserPreferences { get; init; }
   public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
+  protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+  {
+    base.ConfigureConventions(configurationBuilder);
+    configurationBuilder.Conventions.Add(_ => new DateTimeOffsetConvention());
+  }
+
   protected override void OnModelCreating(ModelBuilder builder)
   {
     base.OnModelCreating(builder);
@@ -45,7 +49,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantInvites(builder);
     ApplyReflectionBasedConfiguration(builder);
   }
-  
+
   private void ConfigureTenant(ModelBuilder builder)
   {
     // Configure cascade delete for all related entities
@@ -106,31 +110,13 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         continue;
       }
 
+      // Handle EntityBase-derived entities
       if (entityType.ClrType.BaseType == typeof(EntityBase))
       {
         builder
           .Entity(entityType.ClrType)
           .Property(nameof(EntityBase.Id))
           .HasDefaultValueSql("gen_random_uuid()");
-      }
-
-      var dateTimeOffsetProps = entityType.ClrType
-        .GetProperties()
-        .Where(p =>
-          p.PropertyType == typeof(DateTimeOffset) ||
-          p.PropertyType == typeof(DateTimeOffset?));
-
-      foreach (var property in dateTimeOffsetProps)
-      {
-        var propertyBuilder = builder
-          .Entity(entityType.Name)
-          .Property(property.Name)
-          .HasConversion(new PostgresDateTimeOffsetConverter());
-
-        if (property.PropertyType == typeof(DateTimeOffset))
-        {
-          propertyBuilder.HasDefaultValueSql("CURRENT_TIMESTAMP");
-        }
       }
     }
   }

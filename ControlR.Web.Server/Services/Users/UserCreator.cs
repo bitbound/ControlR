@@ -72,7 +72,8 @@ public class UserCreator(
     string? password = null,
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
-    Guid? tenantId = null)
+    Guid? tenantId = null,
+    CancellationToken cancellationToken = default)
   {
     try
     {
@@ -89,14 +90,14 @@ public class UserCreator(
         user.Tenant = tenant;
       }
 
-      await _userStore.SetUserNameAsync(user, emailAddress, CancellationToken.None);
+      await _userStore.SetUserNameAsync(user, emailAddress, cancellationToken);
 
       if (_userStore is not IUserEmailStore<AppUser> userEmailStore)
       {
         throw new InvalidOperationException("The user store does not implement the IUserEmailStore<AppUser>.");
       }
 
-      await userEmailStore.SetEmailAsync(user, emailAddress, CancellationToken.None);
+      await userEmailStore.SetEmailAsync(user, emailAddress, cancellationToken);
 
       var identityResult = string.IsNullOrWhiteSpace(password)
         ? await _userManager.CreateAsync(user)

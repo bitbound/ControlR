@@ -34,44 +34,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("AppUserTag");
-                });
-
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("FriendlyName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("HashedKey")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTimeOffset?>("LastUsed")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HashedKey")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("ApiKeys");
+                    b.ToTable("AppUserTag", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
@@ -159,7 +122,9 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -303,7 +268,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Devices");
+                    b.ToTable("Devices", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
@@ -335,7 +300,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "TenantId")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
@@ -355,7 +320,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantInvite", b =>
@@ -386,7 +351,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TenantInvites");
+                    b.ToTable("TenantInvites", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.UserPreference", b =>
@@ -425,7 +390,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "UserId")
                         .IsUnique();
 
-                    b.ToTable("UserPreferences");
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("DeviceTag", b =>
@@ -440,7 +405,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TagsId");
 
-                    b.ToTable("DeviceTag");
+                    b.ToTable("DeviceTag", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -459,7 +424,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys");
+                    b.ToTable("DataProtectionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -580,17 +545,6 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("ApiKeys")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
@@ -646,7 +600,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                             b1.HasKey("DeviceId", "__synthesizedOrdinal");
 
-                            b1.ToTable("Devices");
+                            b1.ToTable("Devices", (string)null);
 
                             b1.ToJson("Drives");
 
@@ -673,7 +627,7 @@ namespace ControlR.Web.Server.Data.Migrations
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantInvite", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("TenantInvites")
+                        .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -780,13 +734,9 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
                 {
-                    b.Navigation("ApiKeys");
-
                     b.Navigation("Devices");
 
                     b.Navigation("Tags");
-
-                    b.Navigation("TenantInvites");
 
                     b.Navigation("Users");
                 });
