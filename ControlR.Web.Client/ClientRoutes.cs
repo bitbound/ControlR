@@ -12,4 +12,5 @@ public static class ClientRoutes
   public const string Permissions = "/permissions";
   public const string ServerStats = "/server-stats";
   public const string Settings = "/settings";
+  public const string TenantSettings = "/tenant-settings";
 }

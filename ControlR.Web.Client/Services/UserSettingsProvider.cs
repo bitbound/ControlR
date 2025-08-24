@@ -26,7 +26,7 @@ internal class Settings(
 
   public async Task<bool> GetHideOfflineDevices()
   {
-    return await GetPref(UserPreferenceNames.HideOfflineDevicesName, true);
+    return await GetPref(UserPreferenceNames.HideOfflineDevices, true);
   }
 
   public async Task SetUserDisplayName(string value)
@@ -36,12 +36,12 @@ internal class Settings(
 
   public async Task SetHideOfflineDevices(bool value)
   {
-    await SetPref(UserPreferenceNames.HideOfflineDevicesName, value);
+    await SetPref(UserPreferenceNames.HideOfflineDevices, value);
   }
 
   public async Task<bool> GetNotifyUserOnSessionStart()
   {
-    return await GetPref(UserPreferenceNames.NotifyUserOnSessionStartName, true);
+    return await GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
   }
 
   public async Task<string> GetUserDisplayName()
@@ -51,7 +51,7 @@ internal class Settings(
 
   public async Task SetNotifyUserOnSessionStart(bool value)
   {
-    await SetPref(UserPreferenceNames.NotifyUserOnSessionStartName, value);
+    await SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
   }
 
 

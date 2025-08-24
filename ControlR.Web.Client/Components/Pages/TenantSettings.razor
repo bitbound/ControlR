@@ -1,0 +1,29 @@
+@attribute [Route(ClientRoutes.TenantSettings)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+
+<PageTitle>
+  Tenant Settings
+</PageTitle>
+
+<PrimaryTitle>
+  Tenant Settings
+</PrimaryTitle>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Show Notification to User
+  </MudText>
+  <MudCheckBox T="bool"
+               @bind-Value:get="_notifyUser"
+               @bind-Value:set="SetNotifyUser"
+               Label="Notify users when a remote control session starts"/>
+</div>
+
+@code {
+  private bool _notifyUser;
+
+  private void SetNotifyUser(bool value)
+  {
+    _notifyUser = value;
+  }
+}
