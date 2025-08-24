@@ -8,7 +8,7 @@ public class LogonTokenModel
   public string? UserIdentifier { get; set; }
   public string? DisplayName { get; set; }
   public string? Email { get; set; }
-  public required string TenantId { get; set; }
+  public required Guid TenantId { get; set; }
   public required DateTimeOffset CreatedAt { get; set; }
   public bool IsConsumed { get; set; }
 }

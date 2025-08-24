@@ -22,8 +22,8 @@ namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
 {
-  public static async Task<WebApplicationBuilder> AddControlrServer(
-    this WebApplicationBuilder builder,
+  public static async Task<IHostApplicationBuilder> AddControlrServer(
+    this IHostApplicationBuilder builder,
     bool isOpenApiBuild)
   {
     if (isOpenApiBuild)
@@ -278,12 +278,10 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
-    builder.Host.UseSystemd();
-
     return builder;
   }
-  public static async Task<WebApplicationBuilder> ConfigureForwardedHeaders(
-    this WebApplicationBuilder builder,
+  public static async Task<IHostApplicationBuilder> ConfigureForwardedHeaders(
+    this IHostApplicationBuilder builder,
     AppOptions appOptions)
   {
     var cloudflareIps = new List<IPNetwork>();
@@ -379,7 +377,7 @@ public static class WebApplicationBuilderExtensions
     return builder;
   }
 
-  private static WebApplicationBuilder AddPostgresDb(this WebApplicationBuilder builder)
+  private static IHostApplicationBuilder AddPostgresDb(this IHostApplicationBuilder builder)
   {
 
     // Add DB services.

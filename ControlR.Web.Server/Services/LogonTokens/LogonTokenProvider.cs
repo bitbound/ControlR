@@ -10,8 +10,8 @@ public interface ILogonTokenProvider
   Task<Result<LogonTokenCreationResult>> CreateTemporaryUserAsync(Guid deviceId, string displayName);
 
   Task<LogonTokenModel> CreateTokenAsync(
-      Guid deviceId,
-    string tenantId,
+    Guid deviceId,
+    Guid tenantId,
     int expirationMinutes = 15,
     string? userIdentifier = null,
     string? displayName = null,
@@ -44,7 +44,7 @@ public class LogonTokenProvider : ILogonTokenProvider
   {
     try
     {
-      var tenantId = Guid.Empty.ToString(); // System tenant
+      var tenantId = Guid.Empty; // System tenant
       var expiresAt = _timeProvider.GetUtcNow().AddHours(24);
 
       var userId = await CreateTemporaryUserAsync(tenantId, displayName, null, expiresAt);
@@ -60,8 +60,8 @@ public class LogonTokenProvider : ILogonTokenProvider
   }
 
   public async Task<LogonTokenModel> CreateTokenAsync(
-      Guid deviceId,
-    string tenantId,
+    Guid deviceId,
+    Guid tenantId,
     int expirationMinutes = 15,
     string? userIdentifier = null,
     string? displayName = null,
@@ -132,10 +132,10 @@ public class LogonTokenProvider : ILogonTokenProvider
 
     return LogonTokenValidationResult.Success(
       validationResult.User.Id,
+      logonToken.TenantId,
       validationResult.User.UserName,
       validationResult.User.UserName,
-      validationResult.User.Email,
-      logonToken.TenantId);
+      validationResult.User.Email);
   }
 
   public async Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token)
@@ -154,10 +154,10 @@ public class LogonTokenProvider : ILogonTokenProvider
 
       var result = LogonTokenValidationResult.Success(
         validationResult.User.Id,
+        validationResult.Token.TenantId,
         validationResult.User.UserName,
         validationResult.User.UserName,
-        validationResult.User.Email,
-        validationResult.Token.TenantId);
+        validationResult.User.Email);
 
       return Result.Ok(result);
     }
@@ -171,14 +171,13 @@ public class LogonTokenProvider : ILogonTokenProvider
   private static string GetCacheKey(string token) => $"logon_token:{token}";
 
   private async Task<Guid> CreateTemporaryUserAsync(
-        string tenantId,
+    Guid tenantId,
     string? displayName,
     string? email,
     DateTimeOffset expiresAt)
   {
     using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-    var tenantGuid = Guid.Parse(tenantId);
     var tempUserId = Guid.NewGuid();
     var tempUserName = $"temp_user_{tempUserId:N}";
 
@@ -189,7 +188,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       NormalizedUserName = tempUserName.ToUpperInvariant(),
       Email = email,
       NormalizedEmail = email?.ToUpperInvariant(),
-      TenantId = tenantGuid,
+      TenantId = tenantId,
       IsTemporary = true,
       TemporaryUserExpiresAt = expiresAt,
       SecurityStamp = Guid.NewGuid().ToString(),
@@ -209,7 +208,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       var displayNamePreference = new UserPreference
       {
         UserId = tempUserId,
-        TenantId = tenantGuid,
+        TenantId = tenantId,
         Name = UserPreferenceNames.UserDisplayName,
         Value = displayName
       };
@@ -259,9 +258,8 @@ public class LogonTokenProvider : ILogonTokenProvider
 
     using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var userGuid = Guid.Parse(logonToken.UserIdentifier);
-    var tenantGuid = Guid.Parse(logonToken.TenantId);
     var user = await dbContext.Users
-      .Where(u => u.Id == userGuid && u.TenantId == tenantGuid)
+      .Where(u => u.Id == userGuid && u.TenantId == logonToken.TenantId)
       .Select(u => new { u.Id, u.UserName, u.Email, u.IsTemporary })
       .FirstOrDefaultAsync();
 

@@ -4,7 +4,7 @@ namespace ControlR.Web.Server.Services.LogonTokens;
 
 public class LogonTokenValidationResult
 {
-  [MemberNotNullWhen(true, nameof(UserId), nameof(UserName))]
+  [MemberNotNullWhen(true, nameof(UserId), nameof(UserName), nameof(TenantId))]
   public bool IsValid { get; set; }
   public string? ErrorMessage { get; set; }
 
@@ -12,14 +12,14 @@ public class LogonTokenValidationResult
   public string? UserName { get; set; }
   public string? DisplayName { get; set; }
   public string? Email { get; set; }
-  public string? TenantId { get; set; }
+  public Guid? TenantId { get; set; }
 
   public static LogonTokenValidationResult Success(
     Guid userId, 
+    Guid tenantId,
     string? userName, 
     string? displayName, 
-    string? email, 
-    string tenantId)
+    string? email)
   {
     return new LogonTokenValidationResult
     {

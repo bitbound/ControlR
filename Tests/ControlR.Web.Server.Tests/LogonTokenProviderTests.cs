@@ -120,7 +120,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
     var deviceId = Guid.NewGuid();
-    var tenantId = Guid.Empty.ToString(); // System tenant
+    var tenantId = Guid.Empty; // System tenant
     var expirationMinutes = 15;
     
     // Create a token that will expire soon

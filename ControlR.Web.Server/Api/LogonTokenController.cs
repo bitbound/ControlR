@@ -1,19 +1,19 @@
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Web.Server.Services.LogonTokens;
-using ControlR.Web.Server.Authn;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("/api/logon-tokens")]
+[Route(HttpConstants.LogonTokensEndpoint)]
 [ApiController]
-[Authorize(AuthenticationSchemes = ApiKeyAuthenticationSchemeOptions.DefaultScheme)]
+[Authorize(Roles = RoleNames.TenantAdministrator)]
 public class LogonTokenController(
-  ILogonTokenProvider logonTokenProvider,
-  UserManager<AppUser> userManager) : ControllerBase
+  UserManager<AppUser> userManager,
+  AppDb appDb,
+  ILogonTokenProvider logonTokenProvider) : ControllerBase
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
+  private readonly AppDb _appDb = appDb;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   [HttpPost]
@@ -25,12 +25,15 @@ public class LogonTokenController(
       return BadRequest("User tenant not found");
     }
 
-    // Validate the device exists and belongs to the user's tenant
-    // TODO: Add device validation here if needed
+    var device = await _appDb.Devices.FindAsync(request.DeviceId);
+    if (device is null || device.TenantId != user.TenantId)
+    {
+      return BadRequest("Device not found");
+    }
 
     var logonToken = await _logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
-      user.TenantId.ToString(),
+      user.TenantId,
       request.ExpirationMinutes,
       request.UserIdentifier,
       request.DisplayName,

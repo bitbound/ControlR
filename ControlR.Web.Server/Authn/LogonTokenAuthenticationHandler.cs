@@ -49,7 +49,7 @@ public class LogonTokenAuthenticationHandler : AuthenticationHandler<LogonTokenA
       new(ClaimTypes.Name, tokenValidation.UserName ?? "External User"),
       new(UserClaimTypes.DeviceId, deviceId.ToString()),
       new(UserClaimTypes.AuthenticationMethod, "LogonToken"),
-      new(UserClaimTypes.TenantId, tokenValidation.TenantId!)
+      new(UserClaimTypes.TenantId, $"{tokenValidation.TenantId}")
     };
 
     if (!string.IsNullOrWhiteSpace(tokenValidation.Email))
