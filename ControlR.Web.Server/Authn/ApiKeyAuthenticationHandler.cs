@@ -47,7 +47,7 @@ public class ApiKeyAuthenticationHandler(
       new Claim(ClaimTypes.Role, RoleNames.TenantAdministrator),
       new Claim(UserClaimTypes.TenantId, tenantId.ToString())
     };
-
+    
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);

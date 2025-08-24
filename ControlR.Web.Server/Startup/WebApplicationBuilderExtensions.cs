@@ -16,6 +16,7 @@ using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
 namespace ControlR.Web.Server.Startup;
 
@@ -100,6 +101,13 @@ public static class WebApplicationBuilderExtensions
       {
         options.ForwardDefaultSelector = context =>
         {
+          // Check for logon token first (for device access integration)
+          if (context.Request.Path.StartsWithSegments("/device-access") &&
+              context.Request.Query.ContainsKey("logonToken"))
+          {
+            return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
+          }
+
           // If the request has an API key header, use API key authentication
           if (context.Request.Headers.ContainsKey("x-api-key"))
           {
@@ -168,6 +176,11 @@ public static class WebApplicationBuilderExtensions
     // Add API key authentication
     authBuilder.AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
       ApiKeyAuthenticationSchemeOptions.DefaultScheme,
+      options => { });
+
+    // Add logon token authentication
+    authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
+      LogonTokenAuthenticationSchemeOptions.DefaultScheme,
       options => { });
 
     builder.Services
@@ -247,6 +260,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
 
     builder.Services.AddOutputCache();
+    builder.Services.AddMemoryCache();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
@@ -258,6 +272,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
+    builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
+    builder.Services.AddHostedService<TemporaryUserCleanupService>();
     builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();

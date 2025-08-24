@@ -52,6 +52,29 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("User does not exist.", handlerCtx, authzHandler, logger);
         }
 
+        // For logon token users, check if the device ID matches the token's device
+        var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
+        if (authMethod == "LogonToken")
+        {
+          var deviceIdClaim = handlerCtx.User.FindFirst(UserClaimTypes.DeviceId)?.Value;
+          if (deviceIdClaim != null && Guid.TryParse(deviceIdClaim, out var tokenDeviceId))
+          {
+            if (device.Id == tokenDeviceId)
+            {
+              logger.LogInformation(
+                "Logon token user {UserId} authorized for device {DeviceId}",
+                userId, device.Id);
+              return true;
+            }
+          }
+          
+          return Fail(
+            "Logon token is not authorized for this device.",
+            handlerCtx,
+            authzHandler,
+            logger);
+        }
+
         await db
           .Update(device)
           .Collection(x => x.Tags!)

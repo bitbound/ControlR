@@ -822,6 +822,55 @@
         }
       }
     },
+    "/api/logon-tokens": {
+      "post": {
+        "tags": [
+          "LogonToken"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogonTokenRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogonTokenRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogonTokenRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogonTokenResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogonTokenResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogonTokenResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Logout": {
       "post": {
         "tags": [
@@ -2250,6 +2299,54 @@
       "InstallerKeyType": {
         "type": "integer"
       },
+      "LogonTokenRequestDto": {
+        "required": [
+          "deviceId"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expirationMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userIdentifier": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "LogonTokenResponseDto": {
+        "required": [
+          "token",
+          "deviceAccessUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "deviceAccessUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PublicRegistrationSettings": {
         "required": [
           "isPublicRegistrationEnabled"
@@ -2552,6 +2649,9 @@
     },
     {
       "name": "Invites"
+    },
+    {
+      "name": "LogonToken"
     },
     {
       "name": "Logout"
