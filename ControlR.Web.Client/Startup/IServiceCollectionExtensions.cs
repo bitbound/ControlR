@@ -20,7 +20,8 @@ public static class ServiceCollectionExtensions
 
     services.AddSingleton(TimeProvider.System);
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
-    services.AddScoped<ISettings, Settings>();
+    services.AddScoped<IUserSettingsProvider, UserSettingsProvider>();
+    services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
     services.AddScoped<IViewerHubConnection, ViewerHubConnection>();

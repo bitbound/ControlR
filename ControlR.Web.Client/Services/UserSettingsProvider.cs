@@ -3,7 +3,7 @@ using System.Net;
 
 namespace ControlR.Web.Client.Services;
 
-public interface ISettings
+public interface IUserSettingsProvider
 {
   Task<bool> GetHideOfflineDevices();
   Task<bool> GetNotifyUserOnSessionStart();
@@ -13,13 +13,13 @@ public interface ISettings
   Task SetNotifyUserOnSessionStart(bool value);
 }
 
-internal class Settings(
+internal class UserSettingsProvider(
   IControlrApi controlrApi,
   ISnackbar snackbar,
-  ILogger<Settings> logger) : ISettings
+  ILogger<UserSettingsProvider> logger) : IUserSettingsProvider
 {
   private readonly IControlrApi _controlrApi = controlrApi;
-  private readonly ILogger<Settings> _logger = logger;
+  private readonly ILogger<UserSettingsProvider> _logger = logger;
 
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
   private readonly ISnackbar _snackbar = snackbar;
@@ -83,7 +83,16 @@ internal class Settings(
         return defaultValue;
       }
 
-      if (Convert.ChangeType(getResult.Value.Value, typeof(T)) is not T typedResult)
+      var targetType = typeof(T);
+
+      if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+      {
+        // Get the underlying type (e.g., bool from bool?)
+        targetType = Nullable.GetUnderlyingType(targetType) ??
+          throw new InvalidOperationException($"Failed to convert setting value to type {targetType.Name}.");
+      }
+
+      if (Convert.ChangeType(getResult.Value.Value, targetType) is not T typedResult)
       {
         return defaultValue;
       }

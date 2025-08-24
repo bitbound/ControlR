@@ -39,7 +39,7 @@ public partial class Dashboard
   public required IMessenger Messenger { get; init; }
 
   [Inject]
-  public required ISettings Settings { get; init; }
+  public required IUserSettingsProvider Settings { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }

@@ -13,6 +13,7 @@ public static class HttpConstants
   public const string PublicRegistrationSettingsEndpoint = "/api/public-registration-settings";
   public const string ServerVersionEndpoint = "/api/version/server";
   public const string TagsEndpoint = "/api/tags";
+  public const string TenantSettingsEndpoint = "/api/tenant-settings";
   public const string UserPreferencesEndpoint = "/api/user-preferences";
   public const string UserRolesEndpoint = "/api/user-roles";
   public const string UsersEndpoint = "/api/users";

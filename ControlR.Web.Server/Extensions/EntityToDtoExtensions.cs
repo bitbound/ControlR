@@ -53,6 +53,11 @@ public static class EntityToDtoExtensions
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
 
+  public static TenantSettingResponseDto ToDto(this TenantSetting tenantSetting)
+  {
+    return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
+  }
+
   public static TagResponseDto ToDto(this Tag tag)
   {
     var userIds = tag

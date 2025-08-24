@@ -22,6 +22,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
+  public required DbSet<TenantSetting> TenantSettings { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
   public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
@@ -43,6 +44,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureDevices(builder);
     ConfigureRoles(builder);
     ConfigureTags(builder);
+    ConfigureTenantSettings(builder);
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
@@ -61,6 +63,12 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasMany(t => t.Tags)
       .WithOne(tag => tag.Tenant)
       .HasForeignKey(tag => tag.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.TenantSettings)
+      .WithOne(setting => setting.Tenant)
+      .HasForeignKey(setting => setting.TenantId)
       .OnDelete(DeleteBehavior.Cascade);
 
     builder.Entity<Tenant>()
@@ -133,6 +141,21 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     {
       builder
         .Entity<Tag>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureTenantSettings(ModelBuilder builder)
+  {
+    builder
+      .Entity<TenantSetting>()
+      .HasIndex(x => new { x.Name, x.TenantId })
+      .IsUnique();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<TenantSetting>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }

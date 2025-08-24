@@ -25,6 +25,7 @@ public interface IControlrApi
   Task<Result> DeleteApiKey(Guid apiKeyId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
+  Task<Result> DeleteTenantSetting(string settingName);
   Task<Result> DeleteUser(Guid userId);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
   Task<Result<ApiKeyDto[]>> GetApiKeys();
@@ -39,6 +40,7 @@ public interface IControlrApi
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
+  Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
   Task<Result> LogOut();
@@ -47,6 +49,7 @@ public interface IControlrApi
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
+  Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<ApiKeyDto>> UpdateApiKey(Guid apiKeyId, UpdateApiKeyRequestDto request);
 }
@@ -425,6 +428,40 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
+  }
+
+  public async Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName)
+  {
+    return await TryGetNullableResponse(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}");
+      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+      {
+        return null;
+      }
+      return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
+    });
+  }
+
+  public async Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue)
+  {
+    return await TryCallApi(async () =>
+    {
+      var request = new TenantSettingRequestDto(settingName, settingValue);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
+    });
+  }
+
+  public async Task<Result> DeleteTenantSetting(string settingName)
+  {
+    return await TryCallApi(async () =>
+    {
+      var url = $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
+      using var response = await _client.DeleteAsync(url);
+      response.EnsureSuccessStatusCode();
     });
   }
 
