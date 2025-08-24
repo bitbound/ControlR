@@ -50,7 +50,7 @@
       <NavMenu />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
-      @if (!RendererInfo.IsInteractive)
+      @if (!RendererInfo.IsInteractive && !_isIdentityPage)
       {
         <div class="w-100 text-center mt-8">
           <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
@@ -79,6 +79,7 @@
 @code {
   private bool _drawerOpen = true;
   private bool _isAuthenticated;
+  private bool _isIdentityPage;
   
   private MudTheme? _customTheme;
 
@@ -98,6 +99,9 @@
     await base.OnInitializedAsync();
 
     _isAuthenticated = await AuthState.IsAuthenticated();
+    _isIdentityPage =
+      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
+      currentUri.PathAndQuery.StartsWith("/Account");
 
     if (RendererInfo.IsInteractive)
     {
