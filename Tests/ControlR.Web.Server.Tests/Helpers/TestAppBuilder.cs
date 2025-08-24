@@ -1,11 +1,15 @@
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Time.Testing;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -33,9 +37,20 @@ public static class TestAppBuilder
     _ = builder.Logging.ClearProviders();
     _ = builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
 
+    // For testing, we need to configure the WebHost for TestServer
+    builder.WebHost.UseTestServer();
+    
+    // Build the app
     var app = builder.Build();
     await app.AddBuiltInRoles();
 
-    return new TestApp(app, timeProvider);
+    // Start the application (required for TestServer)
+    await app.StartAsync();
+
+    // Get the TestServer that was registered by UseTestServer() as IServer
+    var testServer = (TestServer)app.Services.GetRequiredService<IServer>();
+    var httpClient = testServer.CreateClient();
+
+    return new TestApp(app, timeProvider, httpClient, testServer);
   }
 }
