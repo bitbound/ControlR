@@ -66,6 +66,8 @@ internal class FakeDeviceDataGenerator(
       CpuUtilization = _cpuUtilization.Value,
       CurrentUsers = [_currentUser],
       Drives = [_osDrive],
+      LocalIpV4 = "192.168.1.100",
+      LocalIpV6 = "fe80::1234:5678:9abc:def0",
     };
     return _device.AsTaskResult();
   }

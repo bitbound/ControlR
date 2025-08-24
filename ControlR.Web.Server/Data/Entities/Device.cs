@@ -42,6 +42,12 @@ public class Device : TenantEntityBase
   [StringLength(39)]
   public string PublicIpV6 { get; set; } = string.Empty;
 
+  [StringLength(15)]
+  public string LocalIpV4 { get; set; } = string.Empty;
+
+  [StringLength(39)]
+  public string LocalIpV6 { get; set; } = string.Empty;
+
   public List<Tag>? Tags { get; set; }
 
   public double TotalMemory { get; set; }

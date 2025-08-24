@@ -28,6 +28,8 @@ public static class EntityToDtoExtensions
       device.MacAddresses,
       device.PublicIpV4,
       device.PublicIpV6,
+      device.LocalIpV4,
+      device.LocalIpV6,
       device.Drives)
     {
       Alias = device.Alias,

@@ -129,6 +129,8 @@ public static class ConnectionHelper
       CpuUtilization = cpuUtilization,
       CurrentUsers = [currentUser],
       Drives = [osDrive],
+      LocalIpV4 = "192.168.1.100",
+      LocalIpV6 = "fe80::1234:5678:9abc:def0",
     };
 
     var result = device.TryCloneAs<DeviceModel, DeviceDto>();

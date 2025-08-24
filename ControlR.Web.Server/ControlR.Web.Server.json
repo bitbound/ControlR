@@ -2020,6 +2020,8 @@
           "macAddresses",
           "publicIpV4",
           "publicIpV6",
+          "localIpV4",
+          "localIpV6",
           "drives"
         ],
         "type": "object",
@@ -2100,6 +2102,12 @@
             "type": "string"
           },
           "publicIpV6": {
+            "type": "string"
+          },
+          "localIpV4": {
+            "type": "string"
+          },
+          "localIpV6": {
             "type": "string"
           },
           "drives": {

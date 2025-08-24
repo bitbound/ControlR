@@ -60,6 +60,8 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       CurrentUsers: ["User1", "User2"],
       MacAddresses: ["00:00:00:00:00:01"], PublicIpV4: "127.0.0.1",
       PublicIpV6: "::1",
+      LocalIpV4: "10.0.0.1",
+      LocalIpV6: "fe80::1",
       Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }])
     {
       TagIds = tagIds,
@@ -259,6 +261,8 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       MacAddresses: ["00:00:00:00:00:02"],
       PublicIpV4: "192.168.1.1",
       PublicIpV6: "::2",
+      LocalIpV4: "192.168.0.1",
+      LocalIpV6: "fe80::1",
       Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 2048000, FreeSpace = 1024000 }])
     {
       TagIds = tagIds,

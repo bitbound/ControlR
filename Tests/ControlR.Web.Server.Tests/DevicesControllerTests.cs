@@ -68,6 +68,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           MacAddresses: [$"00:00:00:00:00:{i:D2}"],
           PublicIpV4: $"192.168.1.{i}",
           PublicIpV6: $"::1:{i}",
+          LocalIpV4: $"192.168.0.{i}",
+          LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }])
       {
         TagIds = i < 5 ? new[] { tagId }.ToImmutableArray() : null // First 5 devices have the tag
@@ -146,6 +148,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
@@ -238,6 +242,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
@@ -341,6 +347,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
@@ -481,6 +489,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }])
       {
         Alias = device.Alias
@@ -589,6 +599,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }])
       {
         Alias = device.Alias
@@ -732,6 +744,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1",
+        LocalIpV4: $"192.168.0.{i}",
+        LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
@@ -816,6 +830,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       MacAddresses: ["00:00:00:00:00:01"],
       PublicIpV4: "192.168.1.1",
       PublicIpV6: "::1",
+      LocalIpV4: "192.168.0.1",
+      LocalIpV6: "fe80::1",
       Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
     await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
@@ -914,6 +930,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           MacAddresses: ["00:00:00:00:00:01"],
           PublicIpV4: "192.168.1.1",
           PublicIpV6: "::1",
+          LocalIpV4: $"192.168.0.{i}",
+          LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(device1Dto, addTagIds: false);
@@ -942,6 +960,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           MacAddresses: ["00:00:00:00:00:02"],
           PublicIpV4: "192.168.1.2",
           PublicIpV6: "::2",
+          LocalIpV4: $"192.168.0.{i}",
+          LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
       await deviceManager.AddOrUpdate(device2Dto, addTagIds: false);
@@ -1023,6 +1043,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           MacAddresses: [$"00:00:00:00:00:{i:D2}"],
           PublicIpV4: $"192.168.1.{i}",
           PublicIpV6: $"::1:{i}",
+          LocalIpV4: $"192.168.0.{i}",
+          LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }])
       {
         TagIds = i % 3 == 0 ? tagIds : null // Assign tags to every third device

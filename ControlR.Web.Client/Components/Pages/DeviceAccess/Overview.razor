@@ -143,17 +143,31 @@
       <div class="w-100">
         <div class="child-content-grid">
           <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-            IPv4 Address:
+            Public IPv4:
           </MudText>
           <MudText Typo="Typo.body1">
             @DeviceAccessState.CurrentDevice.PublicIpV4
           </MudText>
 
           <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-            IPv6 Address:
+            Public IPv6:
           </MudText>
           <MudText Typo="Typo.body1">
             @DeviceAccessState.CurrentDevice.PublicIpV6
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Local IPv4:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.LocalIpV4
+          </MudText>
+
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Local IPv6:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @DeviceAccessState.CurrentDevice.LocalIpV6
           </MudText>
 
           <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
