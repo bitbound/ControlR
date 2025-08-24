@@ -2,7 +2,6 @@
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavManager
 @inject ILazyDi<IMessenger> Messenger
-@inject ILazyDi<IBusyCounter> BusyCounter
 @inject ILazyDi<IViewerHubConnection> ViewerHub
 @inject ILazyDi<ISnackbar> Snackbar
 @inject ILazyDi<ILogger<MainLayout>> Logger
@@ -33,44 +32,8 @@
 
       <MudSpacer/>
 
-      @if (!RendererInfo.IsInteractive)
-      {
-        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled"/>
-      }
-      else if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
-      {
-        <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
-          <MudProgressCircular Indeterminate StrokeWidth="6"
-                               Size="Size.Small"
-                               Color="Color.Success"
-                               Class="mx-3 mt-1"/>
-        </MudTooltip>
-      }
-      else
-      {
-        switch (_hubConnectionState)
-        {
-          case HubConnectionState.Connected:
-            <MudTooltip Text="Connected">
-              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1"/>
-            </MudTooltip>
-            break;
-          case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
-            <MudTooltip Text="Reconnecting">
-              <MudProgressCircular Indeterminate
-                                   StrokeWidth="6"
-                                   Size="Size.Small"
-                                   Color="Color.Warning"
-                                   Class="mx-3 mt-1"/>
-            </MudTooltip>
-            break;
-          case HubConnectionState.Disconnected:
-            <MudTooltip Text="Disconnected">
-              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1"/>
-            </MudTooltip>
-            break;
-        }
-      }
+      <RealtimeConnectionIndicator />
+
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
                        Color="Color.Inherit"
@@ -84,10 +47,10 @@
                ClipMode="DrawerClipMode.Always"
                Elevation="2">
 
-      <NavMenu IsDisabled="@_isWaitingForWasmLoad"/>
+      <NavMenu />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
-      @if (_isWaitingForWasmLoad)
+      @if (!RendererInfo.IsInteractive)
       {
         <div class="w-100 text-center mt-8">
           <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
@@ -104,11 +67,6 @@
   </MudLayout>
 
   <DeviceContentHarness/>
-
-  @if (_isIdentityPage)
-  {
-    <script src="/Components/Layout/MainLayout.razor.js"></script>
-  }
 </div>
 
 
@@ -120,13 +78,9 @@
 
 @code {
   private bool _drawerOpen = true;
-  private bool _isIdentityPage;
   private bool _isAuthenticated;
-  private bool _isBusy;
-  private bool _isWaitingForWasmLoad = true;
-  private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
+  
   private MudTheme? _customTheme;
-  private int _pendingOperations;
 
   private MudTheme CustomTheme
   {
@@ -145,17 +99,9 @@
 
     _isAuthenticated = await AuthState.IsAuthenticated();
 
-    _isIdentityPage =
-      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
-      currentUri.PathAndQuery.StartsWith("/Account");
-
-    _isWaitingForWasmLoad = !RendererInfo.IsInteractive && !_isIdentityPage;
-
     if (RendererInfo.IsInteractive)
     {
-      Messenger.Value.RegisterEventMessage(this, HandleGeneric);
       Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
-      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
 
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
@@ -166,21 +112,6 @@
     }
   }
 
-  protected override bool ShouldRender()
-  {
-    if (BusyCounter.Exists)
-    {
-      _isBusy = BusyCounter.Value.IsBusy;
-      _pendingOperations = BusyCounter.Value.PendingOperations;
-    }
-
-    if (ViewerHub.Exists)
-    {
-      _hubConnectionState = ViewerHub.Value.ConnectionState;
-    }
-
-    return base.ShouldRender();
-  }
 
   private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)
   {
@@ -202,30 +133,12 @@
     }
   }
 
-  private async Task HandleGeneric(object subscriber, EventMessageKind kind)
-  {
-    switch (kind)
-    {
-      case EventMessageKind.PendingOperationsChanged:
-        await InvokeAsync(StateHasChanged);
-        break;
-      default:
-        return;
-    }
-  }
-
-  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
-  {
-    _hubConnectionState = message.NewState;
-    await InvokeAsync(StateHasChanged);
-  }
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
     Snackbar.Maybe?.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
-
 
   private void ToggleNavDrawer()
   {

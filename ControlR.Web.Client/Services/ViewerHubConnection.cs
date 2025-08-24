@@ -2,6 +2,8 @@
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Services;
@@ -44,6 +46,7 @@ public interface IViewerHubConnection
 
 internal class ViewerHubConnection(
   NavigationManager navMan,
+  IServiceProvider serviceProvider,
   IHubConnection<IViewerHub> viewerHub,
   IBusyCounter busyCounter,
   ISettings settings,
@@ -53,6 +56,7 @@ internal class ViewerHubConnection(
 {
   private readonly IBusyCounter _busyCounter = busyCounter;
   private readonly IDelayer _delayer = delayer;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
   private readonly ILogger<ViewerHubConnection> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly NavigationManager _navMan = navMan;
@@ -79,8 +83,24 @@ internal class ViewerHubConnection(
     while (true)
     {
       var result = await _viewerHub.Connect(
-        new Uri($"{_navMan.BaseUri}hubs/viewer"),
-        true,
+        hubEndpoint: new Uri($"{_navMan.BaseUri}hubs/viewer"),
+        autoRetry: true,
+        configure: (HttpConnectionOptions options) =>
+        {
+          if (!OperatingSystem.IsBrowser())
+          {
+            var httpContextAccessor = _serviceProvider.GetRequiredService<IHttpContextAccessor>();
+            var context = httpContextAccessor.HttpContext;
+            // For server-side Blazor, pass the current user's authentication
+            if (context.User.Identity?.IsAuthenticated == true
+                && context.Request.Headers.TryGetValue("Cookie", out var cookie)
+                && $"{cookie}" is { Length: > 0 } cookieString)
+            {
+              options.Headers.Add("Cookie", cookieString);
+            }
+          }
+
+        },
         cancellationToken: cancellationToken);
 
       if (result)

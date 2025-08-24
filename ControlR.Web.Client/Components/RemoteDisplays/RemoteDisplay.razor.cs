@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
-using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
@@ -8,7 +7,6 @@ using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 
-[SupportedOSPlatform("browser")]
 public partial class RemoteDisplay : JsInteropableComponent
 {
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
@@ -31,6 +29,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private ViewMode _viewMode = ViewMode.Stretch;
   private ElementReference _virtualKeyboard;
   private bool _virtualKeyboardToggled;
+  private IDisposable? _messageHandlerRegistration;
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -55,10 +54,6 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
-
-  [Parameter]
-  [EditorRequired]
-  public required RemoteControlSession Session { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -119,14 +114,11 @@ public partial class RemoteDisplay : JsInteropableComponent
     float height,
     byte[] encodedImage);
 
-  [JSImport("sendKeyPress", "RemoteDisplay")]
-  public static partial Task SendKeyPress(string key, string canvasId);
-
   public override async ValueTask DisposeAsync()
   {
     await base.DisposeAsync();
-    await JsModule.InvokeVoidAsync("dispose", _canvasId);
     await _componentClosing.CancelAsync();
+    _messageHandlerRegistration?.Dispose();
     _componentRef?.Dispose();
     GC.SuppressFinalize(this);
   }
@@ -203,7 +195,10 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       _componentRef = DotNetObjectReference.Create(this);
 
-      await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
+      if (OperatingSystem.IsBrowser())
+      {
+        await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
+      }
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
     }
   }
@@ -224,7 +219,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       _viewMode = ViewMode.Original;
     }
 
-    StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
+    _messageHandlerRegistration = StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
 
     // The remote control session is already active, and we're switching back to this tab.
     if (RemoteControlState.SelectedDisplay is { } selectedDisplay)
@@ -264,7 +259,14 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+      if (OperatingSystem.IsBrowser())
+      {
+        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+      }
+      else
+      {
+        await JsModule.InvokeVoidAsync("drawFrame", _canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+      }
     }
     catch (Exception ex)
     {
@@ -276,7 +278,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      if (dto.SessionId != Session.SessionId)
+      if (dto.SessionId != RemoteControlState.CurrentSession?.SessionId)
       {
         return;
       }
@@ -295,7 +297,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      if (dto.SessionId != Session.SessionId)
+      if (dto.SessionId != RemoteControlState.CurrentSession?.SessionId)
       {
         return;
       }
@@ -378,7 +380,12 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await StreamingClient.RequestClipboardText(Session.SessionId, _componentClosing.Token);
+      if (RemoteControlState.CurrentSession is null)
+      {
+        return;
+      }
+
+      await StreamingClient.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -403,8 +410,13 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
+      if (RemoteControlState.CurrentSession is null)
+      {
+        return;
+      }
+
       Snackbar.Add("Sending clipboard", Severity.Info);
-      await StreamingClient.SendClipboardText(text, Session.SessionId, _componentClosing.Token);
+      await StreamingClient.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -593,7 +605,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
     if (args.Key is "Enter" or "Backspace")
     {
-      await SendKeyPress(args.Key, _canvasId);
+      await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
     }
   }
 

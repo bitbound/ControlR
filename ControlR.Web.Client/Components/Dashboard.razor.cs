@@ -243,7 +243,7 @@ public partial class Dashboard
   {
     if (_dataGrid is not null)
     {
-      await _dataGrid.ReloadServerData();
+      await InvokeAsync(_dataGrid.ReloadServerData);
     }
   }
 

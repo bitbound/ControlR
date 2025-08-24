@@ -70,21 +70,6 @@ class WindowEventHandler {
 
 
 /**
- * 
- * @param {string} canvasId
- */
-export async function dispose(canvasId) {
-  const state = getState(canvasId);
-
-  state.windowEventHandlers.forEach(x => {
-    console.log("Removing event handler: ", x);
-    window.removeEventListener(x.type, x.handler);
-  })
-
-  delete window[canvasId];
-}
-
-/**
  * Draws the encoded image onto the canvas at the specified region.
  * @param {string} canvasId
  * @param {Number} x
@@ -426,10 +411,10 @@ function getDistanceBetween(point1X, point1Y, point2X, point2Y) {
  * @returns {State}
  */
 function getState(canvasId) {
-  if (!window[`state-${canvasId}`]) {
-    window[`state-${canvasId}`] = new State();
+  if (!window[`controlr-canvas-${canvasId}`]) {
+    window[`controlr-canvas-${canvasId}`] = new State();
   }
-  return window[`state-${canvasId}`];
+  return window[`controlr-canvas-${canvasId}`];
 }
 
 

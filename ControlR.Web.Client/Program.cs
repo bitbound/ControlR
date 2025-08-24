@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
-using ControlR.Web.Client.Extensions;
+using ControlR.Web.Client.Startup;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -13,10 +13,6 @@ if (builder.HostEnvironment.IsDevelopment())
 }
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-builder.Services.AddMudServices(config =>
-{
-  config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
-});
 
 builder.Services
   .AddAuthorizationCore(options =>
@@ -25,8 +21,14 @@ builder.Services
   });
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthenticationStateDeserialization();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
-builder.Services.AddControlrWebClient(builder.HostEnvironment.BaseAddress);
+builder.Services.AddControlrWebClient();
 
+builder.Services.AddHttpClient<IControlrApi, ControlrApi>((services, client) =>
+{
+  client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+});
+    
 await builder.Build().RunAsync();

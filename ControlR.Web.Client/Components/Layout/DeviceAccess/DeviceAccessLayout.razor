@@ -32,32 +32,9 @@
       }
 
       <MudSpacer />
+      
+      <RealtimeConnectionIndicator />
 
-      @if (!RendererInfo.IsInteractive)
-      {
-        <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
-      }
-      else
-      {
-        switch (_hubConnectionState)
-        {
-          case HubConnectionState.Connected:
-            <MudTooltip Text="Connected">
-              <MudIcon Color="Color.Success" Icon="@(Icons.Material.Filled.Bolt)" Class="mx-3 mt-1" />
-            </MudTooltip>
-            break;
-          case HubConnectionState.Connecting or HubConnectionState.Reconnecting:
-            <MudTooltip Text="Reconnecting">
-              <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Warning" Class="mx-3 mt-1" />
-            </MudTooltip>
-            break;
-          case HubConnectionState.Disconnected:
-            <MudTooltip Text="Disconnected">
-              <MudIcon Color="Color.Error" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" />
-            </MudTooltip>
-            break;
-        }
-      }
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
           Href="https://github.com/bitbound/controlr/" Target="_blank" />
