@@ -3,19 +3,20 @@ using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.SignalR.Client;
+using MudBlazor.Services;
 
-namespace ControlR.Web.Client.Extensions;
+namespace ControlR.Web.Client.Startup;
 
 public static class ServiceCollectionExtensions
 {
-  public static IServiceCollection AddControlrWebClient(
-    this IServiceCollection services,
-    string baseAddress)
+  public static IServiceCollection AddControlrWebClient(this IServiceCollection services)
   {
-    services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
-    services.AddHttpClient<IDownloadsApi, DownloadsApi>();
+    services.AddMudServices(config =>
+    {
+      config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+    });
 
-    services.AddLazyDi();
+    services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
     services.AddSingleton(TimeProvider.System);
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
@@ -47,13 +48,5 @@ public static class ServiceCollectionExtensions
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
 
     return services;
-
-    void ConfigureHttpClient(IServiceProvider serviceProvider, HttpClient client)
-    {
-      if (!string.IsNullOrWhiteSpace(baseAddress))
-      {
-        client.BaseAddress = new Uri(baseAddress);
-      }
-    }
   }
 }

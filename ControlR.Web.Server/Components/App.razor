@@ -14,17 +14,16 @@
   <link rel="stylesheet" href="@Assets["app.css"]" />
   <link rel="stylesheet" href="@Assets["ControlR.Web.Server.styles.css"]" />
   <ImportMap />
-  <HeadOutlet @rendermode="RenderModeForPage"/>
+  <HeadOutlet @rendermode="PageRenderMode"/>
 </head>
 
 <body>
-  <CascadingValue Value="@RenderModeForPage">
-    <Routes @rendermode="RenderModeForPage"/>
-  </CascadingValue>
+  <Routes @rendermode="PageRenderMode" />
   <script src="_framework/blazor.web.js"></script>
   <script src="_content/MudBlazor/MudBlazor.min.js"></script>
   <script src="_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"></script>
   <script src="interop.js"></script>
+  <script src="customize.js"></script>
 </body>
 
 </html>
@@ -33,9 +32,32 @@
 
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
+  
+  [Inject]
+  private IOptions<DeveloperOptions> DeveloperOptions { get; set; } = default!;
 
-  private IComponentRenderMode? RenderModeForPage => HttpContext.Request.Path.StartsWithSegments("/Account")
-    ? null
-    : InteractiveWebAssembly;
+  private IComponentRenderMode? PageRenderMode
+  {
+    get
+    {
+      if(!HttpContext.AcceptsInteractiveRouting())
+      {
+        return null;
+      }
+
+      switch (DeveloperOptions.Value.RenderMode)
+      {
+        case GlobalRenderMode.Auto:
+          return InteractiveAuto;
+        case GlobalRenderMode.Server:
+          return InteractiveServer;
+        case GlobalRenderMode.WebAssembly:
+          return InteractiveWebAssembly;
+        default:
+          return InteractiveAuto;
+      }
+    }
+  }
+      
 
 }

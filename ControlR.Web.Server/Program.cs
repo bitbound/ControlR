@@ -75,6 +75,7 @@ app.UseWhen(
   {
     app.MapRazorComponents<App>()
       .AddInteractiveWebAssemblyRenderMode()
+      .AddInteractiveServerRenderMode()
       .AddAdditionalAssemblies(typeof(MainLayout).Assembly);
   });
 

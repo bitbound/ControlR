@@ -3,7 +3,6 @@ using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
@@ -17,6 +16,7 @@ using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Client.Startup;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -40,6 +40,9 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services.Configure<AppOptions>(
       builder.Configuration.GetSection(AppOptions.SectionKey));
+
+    builder.Services.Configure<DeveloperOptions>(
+      builder.Configuration.GetSection(DeveloperOptions.SectionKey));
 
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
@@ -70,9 +73,10 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddMudServices();
 
     // Add components.
-    builder.Services
-      .AddRazorComponents()
-      .AddInteractiveWebAssemblyComponents();
+    builder.Services.AddRazorComponents()
+        .AddInteractiveServerComponents()
+        .AddInteractiveWebAssemblyComponents()
+        .AddAuthenticationStateSerialization();
 
     // Add API services.
     builder.Services.AddControllers();
@@ -101,7 +105,7 @@ public static class WebApplicationBuilderExtensions
           {
             return ApiKeyAuthenticationSchemeOptions.DefaultScheme;
           }
-          
+
           // Otherwise, use Identity cookies for web UI
           return IdentityConstants.ApplicationScheme;
         };
@@ -128,6 +132,38 @@ public static class WebApplicationBuilderExtensions
     }
 
     authBuilder.AddIdentityCookies();
+
+    // Add this to your WebApplicationBuilderExtensions.cs
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+      options.Events.OnRedirectToLogin = context =>
+      {
+        // For API requests, return 401 instead of redirecting
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to login page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+
+      options.Events.OnRedirectToAccessDenied = context =>
+      {
+        // For API requests, return 403 instead of redirecting  
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status403Forbidden;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to access denied page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+    });
 
     // Add API key authentication
     authBuilder.AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
@@ -181,7 +217,7 @@ public static class WebApplicationBuilderExtensions
     await builder.ConfigureForwardedHeaders(appOptions);
 
     // Add client services for pre-rendering.
-    builder.Services.AddControlrWebClient(string.Empty);
+    builder.Services.AddControlrWebClient();
 
     // Add HTTP clients.
     builder.Services.AddHttpClient<IIpApi, IpApi>();
@@ -209,7 +245,6 @@ public static class WebApplicationBuilderExtensions
     // Add other services.
 
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
-    builder.Services.AddLazyDi();
 
     builder.Services.AddOutputCache();
     builder.Services.AddHttpContextAccessor();

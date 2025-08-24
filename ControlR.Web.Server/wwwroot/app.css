@@ -54,3 +54,8 @@
   /* Place above content windows. */
   z-index: 9001 !important;
 }
+
+.components-reconnect-dialog {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  color: white !important;
+}
