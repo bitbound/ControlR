@@ -30,6 +30,20 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - **ControlR.Libraries.NativeInterop.Windows** - Windows native interop
 - **ControlR.Libraries.NativeInterop.Unix** - Unix/Linux native interop
 
+## Communication Architecture
+
+### SignalR Hub Pattern
+- **AgentHub** - Receives device heartbeats and forwards data to ViewerHub groups
+- **ViewerHub** - Handles web client connections and remote control requests
+- Agents send `DeviceDto` heartbeats via `UpdateDevice()` which triggers real-time UI updates
+- Hub groups organize connections by tenant, device tags, and user roles for targeted messaging
+
+### Agent-DesktopClient IPC
+- Agent runs as system service/daemon, DesktopClient runs in user sessions
+- Communication via named pipes using `IIpcConnection` abstractions
+- Agent forwards remote control requests to appropriate DesktopClient via `RemoteControlRequestIpcDto`
+- DesktopClient reports back to Agent, which relays to web server via SignalR
+
 ## Technology Stack
 
 ### Backend
@@ -67,6 +81,18 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - **Shared Libraries** - Common functionality across platforms
 - **Platform Abstraction** - Interface-based platform-specific implementations
 - **Conditional Compilation** - Platform-specific code paths
+- **Device Data Generation** - Platform-specific `DeviceDataGenerator` implementations (Windows uses Win32 APIs, Mac/Linux use shell commands)
+
+## Key Development Workflows
+
+### Device Data Collection Pattern
+Device information flows from platform-specific generators:
+- `DeviceDataGeneratorBase` - Shared logic (drives, MAC addresses, local IPs)
+- `DeviceDataGeneratorWin` - Windows-specific (uses Win32Interop for memory/sessions)
+- `DeviceDataGeneratorMac` - macOS-specific (shell commands: `sysctl`, `ps`)
+- `DeviceDataGeneratorLinux` - Linux-specific (reads `/proc/meminfo`, uses `ps`)
+
+All inherit from base and implement `CreateDevice()` → returns `DeviceModel` → converted to `DeviceDto` for transport
 
 ## Key Features
 - **Remote Desktop Control** - Full desktop access and control
@@ -84,6 +110,12 @@ ControlR is a cross-platform solution for remote access and remote control of de
 ### General Coding Standards
 - Use 2 spaces for indentation
 
+### Build and Task System
+- Primary build: `dotnet build ControlR.sln` (VS Code default build task)
+- Component builds follow dependency order: Server → Agent → DesktopClient
+- Docker development via `docker-compose/docker-compose.yml` with required environment variables
+- Use `.vscode/tasks.json` or `ControlR.slnLaunch` launch profiles for common workflows
+
 ### C# Coding Standards
 - Use the latest C# language features and default recommendations.
 - Use StyleCop conventions when ordering class members.
@@ -91,6 +123,11 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Prefer collection expressions where appropriate (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
+
+### Platform-Specific Development
+- Use `[SupportedOSPlatform]` attributes for platform-specific code
+- Conditional compilation symbols: `WINDOWS_BUILD`, `MAC_BUILD`, `LINUX_BUILD`, `UNIX_BUILD`
+- Platform detection via `ISystemEnvironment.Platform` and `RuntimeInformation`
 
 ### Web UI Guidelines
 - Use MudBlazor components where appropriate for the UI.
@@ -106,6 +143,12 @@ ControlR is a cross-platform solution for remote access and remote control of de
   - `ServerApi` contains DTOs used in the REST API.
   - `StreamerDtos` contain DTOs used by remote control, which get routed through the websocket relay.
 - Maintain clear separation between business logic and UI code.
+
+### SignalR Communication Patterns
+- Device heartbeats flow: `Agent` → `AgentHub.UpdateDevice()` → `ViewerHub` groups
+- Remote control requests: `ViewerHub` → `AgentHub` → `IPC` → `DesktopClient`
+- Use hub groups for tenant isolation and role-based access control
+- Group naming pattern: `HubGroupNames.GetTenantDevicesGroupName()`, `GetTagGroupName()`, etc.
 
 ### Testing Strategy
 - Write unit tests for business logic and services.
