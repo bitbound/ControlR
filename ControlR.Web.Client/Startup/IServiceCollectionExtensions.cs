@@ -18,8 +18,6 @@ public static class ServiceCollectionExtensions
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
-    services.AddLazyDi();
-
     services.AddSingleton(TimeProvider.System);
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<ISettings, Settings>();

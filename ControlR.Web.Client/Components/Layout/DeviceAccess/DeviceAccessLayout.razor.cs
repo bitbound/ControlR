@@ -17,28 +17,28 @@ public partial class DeviceAccessLayout
   private string? _loadingText = "Loading";
 
   [Inject]
-  public required ILazyDi<IControlrApi> ControlrApi { get; init; }
+  public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  public required ILazyDi<IDeviceAccessState> DeviceAccessState { get; init; }
+  public required IDeviceAccessState DeviceAccessState { get; init; }
 
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
 
   [Inject]
-  public required ILazyDi<IMessenger> Messenger { get; init; }
+  public required IMessenger Messenger { get; init; }
 
   [Inject]
-  public required ILazyDi<NavigationManager> NavManager { get; init; }
+  public required NavigationManager NavManager { get; init; }
 
   [Inject]
-  public required ILazyDi<ISessionStorageAccessor> SessionStorageAccessor { get; init; }
+  public required ISessionStorageAccessor SessionStorageAccessor { get; init; }
 
   [Inject]
-  public required ILazyDi<ISnackbar> Snackbar { get; init; }
+  public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required ILazyDi<IViewerHubConnection> ViewerHub { get; init; }
+  public required IViewerHubConnection ViewerHub { get; init; }
 
   private MudTheme CustomTheme =>
     _customTheme ??= new MudTheme
@@ -60,12 +60,12 @@ public partial class DeviceAccessLayout
         return true;
       }
 
-      if (DeviceAccessState.Maybe?.IsDeviceLoaded != true)
+      if (DeviceAccessState.IsDeviceLoaded != true)
       {
         return true;
       }
 
-      return !DeviceAccessState.Value.CurrentDevice.IsOnline;
+      return !DeviceAccessState.CurrentDevice.IsOnline;
     }
   }
 
@@ -81,10 +81,10 @@ public partial class DeviceAccessLayout
         _loadingText = "Connecting";
         await InvokeAsync(StateHasChanged);
 
-        Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
-        Messenger.Value.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
-        Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
-        await ViewerHub.Value.Connect();
+        Messenger.Register<ToastMessage>(this, HandleToastMessage);
+        Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
+        Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+        await ViewerHub.Connect();
         await GetDeviceInfo();
       }
     }
@@ -102,14 +102,13 @@ public partial class DeviceAccessLayout
 
   private async Task GetDeviceInfo()
   {
-    var sessionStorage = SessionStorageAccessor.Value;
-    var currentUri = new Uri(NavManager.Value.Uri);
+    var currentUri = new Uri(NavManager.Uri);
     var query = HttpUtility.ParseQueryString(currentUri.Query);
     var deviceIdString = query.Get("deviceId");
 
     if (string.IsNullOrWhiteSpace(deviceIdString))
     {
-      deviceIdString = await sessionStorage.GetItem(DeviceIdSessionStorageKey);
+      deviceIdString = await SessionStorageAccessor.GetItem(DeviceIdSessionStorageKey);
 
       if (string.IsNullOrWhiteSpace(deviceIdString))
       {
@@ -124,23 +123,23 @@ public partial class DeviceAccessLayout
       return;
     }
 
-    await sessionStorage.SetItem(DeviceIdSessionStorageKey, $"{_deviceId}");
+    await SessionStorageAccessor.SetItem(DeviceIdSessionStorageKey, $"{_deviceId}");
 
     try
     {
-      var result = await ControlrApi.Value.GetDevice(_deviceId);
+      var result = await ControlrApi.GetDevice(_deviceId);
       if (!result.IsSuccess || result.Value is null)
       {
         _errorText = "Device not found.";
         return;
       }
 
-      DeviceAccessState.Value.CurrentDevice = result.Value;
+      DeviceAccessState.CurrentDevice = result.Value;
       _deviceName = result.Value.Name;
       _errorText = null;
       if (!result.Value.IsOnline)
       {
-        NavManager.Value.NavigateTo("/device-access", false);
+        NavManager.NavigateTo("/device-access", false);
       }
     }
     catch (Exception ex)
@@ -153,19 +152,19 @@ public partial class DeviceAccessLayout
 
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
-    if (DeviceAccessState.Maybe?.CurrentDevice is null)
+    if (DeviceAccessState.CurrentDevice is null)
     {
       return;
     }
 
-    if (message.Dto.Id == DeviceAccessState.Value.CurrentDevice.Id)
+    if (message.Dto.Id == DeviceAccessState.CurrentDevice.Id)
     {
-      DeviceAccessState.Value.CurrentDevice = message.Dto;
+      DeviceAccessState.CurrentDevice = message.Dto;
       _deviceName = message.Dto.Name;
       if (!message.Dto.IsOnline)
       {
-        Snackbar.Value.Add("Agent went offline", Severity.Warning);
-        NavManager.Value.NavigateTo("/device-access", false);
+        Snackbar.Add("Agent went offline", Severity.Warning);
+        NavManager.NavigateTo("/device-access", false);
       }
 
       await InvokeAsync(StateHasChanged);
@@ -180,7 +179,7 @@ public partial class DeviceAccessLayout
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
-    Snackbar.Maybe?.Add(toast.Message, toast.Severity);
+    Snackbar.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
 

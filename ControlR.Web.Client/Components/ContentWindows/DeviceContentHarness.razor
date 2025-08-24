@@ -1,8 +1,8 @@
 ﻿@using System.Collections.Specialized
 @implements IDisposable
-@inject ILazyDi<IDeviceContentWindowStore> WindowStore
-@inject ILazyDi<IScreenWake> ScreenWake
-@inject ILazyDi<IMessenger> Messenger
+@inject IDeviceContentWindowStore WindowStore
+@inject IScreenWake ScreenWake
+@inject IMessenger Messenger
 
 <div class="device-content-window-harness">
   @foreach (var instance in ContentInstances)
@@ -12,16 +12,22 @@
 </div>
 
 @code {
-  private IReadOnlyList<DeviceContentInstance> ContentInstances => WindowStore.Maybe?.Windows ?? [];
+  private IReadOnlyList<DeviceContentInstance> ContentInstances => WindowStore.Windows;
 
   public void Dispose()
   {
-    Messenger.Maybe?.UnregisterAll(this);
+    if (RendererInfo.IsInteractive)
+    {
+      Messenger.UnregisterAll(this);
+    }
   }
 
   protected override void OnInitialized()
   {
-    Messenger.Maybe?.RegisterEventMessage(this, HandleGenericMessage);
+    if (RendererInfo.IsInteractive)
+    {
+      Messenger.RegisterEventMessage(this, HandleGenericMessage);
+    }
     base.OnInitializedAsync();
   }
 
@@ -32,11 +38,8 @@
 
   private async Task HandleGenericMessage(object subscriber, EventMessageKind messageKind)
   {
-    if (ScreenWake.Exists)
-    {
-      await ScreenWake.Value.SetScreenWakeLock(ContentInstances.Count > 0);
+    await ScreenWake.SetScreenWakeLock(ContentInstances.Count > 0);
     
-    }
     if (messageKind == EventMessageKind.DeviceContentWindowsChanged)
     {
       await InvokeAsync(StateHasChanged);

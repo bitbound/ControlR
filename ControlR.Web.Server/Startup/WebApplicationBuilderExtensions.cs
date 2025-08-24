@@ -245,7 +245,6 @@ public static class WebApplicationBuilderExtensions
     // Add other services.
 
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
-    builder.Services.AddLazyDi();
 
     builder.Services.AddOutputCache();
     builder.Services.AddHttpContextAccessor();

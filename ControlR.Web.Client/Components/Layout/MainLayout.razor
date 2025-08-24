@@ -1,10 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavManager
-@inject ILazyDi<IMessenger> Messenger
-@inject ILazyDi<IViewerHubConnection> ViewerHub
-@inject ILazyDi<ISnackbar> Snackbar
-@inject ILazyDi<ILogger<MainLayout>> Logger
+@inject IMessenger Messenger
+@inject IViewerHubConnection ViewerHub
+@inject ISnackbar Snackbar
+@inject ILogger<MainLayout> Logger
 
 <div>
   <MudThemeProvider IsDarkMode Theme="CustomTheme"/>
@@ -101,13 +101,13 @@
 
     if (RendererInfo.IsInteractive)
     {
-      Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Register<ToastMessage>(this, HandleToastMessage);
 
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Value.Connect();
+        await ViewerHub.Connect();
       }
     }
   }
@@ -123,20 +123,20 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Value.Connect();
+        await ViewerHub.Connect();
       }
     }
     catch (Exception ex)
     {
-      Logger.Value.LogError(ex, "Error while handling authentication state change.");
-      Snackbar.Value.Add("Authentication state change error", Severity.Error);
+      Logger.LogError(ex, "Error while handling authentication state change.");
+      Snackbar.Add("Authentication state change error", Severity.Error);
     }
   }
 
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
-    Snackbar.Maybe?.Add(toast.Message, toast.Severity);
+    Snackbar.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
 

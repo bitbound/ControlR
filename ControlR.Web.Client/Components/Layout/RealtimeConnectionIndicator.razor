@@ -1,6 +1,7 @@
-@inject ILazyDi<IViewerHubConnection> ViewerHub
-@inject ILazyDi<IBusyCounter> BusyCounter
-@inject ILazyDi<IMessenger> Messenger
+@using Microsoft.AspNetCore.Components.RenderTree
+@inject IViewerHubConnection ViewerHub
+@inject IBusyCounter BusyCounter
+@inject IMessenger Messenger
 
 
 @if (!RendererInfo.IsInteractive)
@@ -53,23 +54,19 @@ else
   {
     if (RendererInfo.IsInteractive)
     {
-      Messenger.Value.RegisterEventMessage(this, HandleGeneric);
-      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+      Messenger.RegisterEventMessage(this, HandleGeneric);
+      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
     }
     return base.OnInitializedAsync();
   }
 
   protected override bool ShouldRender()
   {
-    if (BusyCounter.Exists)
+    if (RendererInfo.IsInteractive)
     {
-      _isBusy = BusyCounter.Value.IsBusy;
-      _pendingOperations = BusyCounter.Value.PendingOperations;
-    }
-
-    if (ViewerHub.Exists)
-    {
-      _hubConnectionState = ViewerHub.Value.ConnectionState;
+      _isBusy = BusyCounter.IsBusy;
+      _pendingOperations = BusyCounter.PendingOperations;
+      _hubConnectionState = ViewerHub.ConnectionState;
     }
 
     return base.ShouldRender();
