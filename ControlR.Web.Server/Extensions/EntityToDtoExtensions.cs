@@ -28,6 +28,8 @@ public static class EntityToDtoExtensions
       device.MacAddresses,
       device.PublicIpV4,
       device.PublicIpV6,
+      device.LocalIpV4,
+      device.LocalIpV6,
       device.Drives)
     {
       Alias = device.Alias,
@@ -51,6 +53,11 @@ public static class EntityToDtoExtensions
   public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
   {
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
+  }
+
+  public static TenantSettingResponseDto ToDto(this TenantSetting tenantSetting)
+  {
+    return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
   }
 
   public static TagResponseDto ToDto(this Tag tag)

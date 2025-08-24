@@ -9,5 +9,6 @@ public class Tenant : EntityBase
   public string? Name { get; set; }
   public List<Tag>? Tags { get; set; }
   public List<TenantInvite>? TenantInvites { get; set; }
+  public List<TenantSetting>? TenantSettings { get; set; }
   public List<AppUser>? Users { get; set; }
 }

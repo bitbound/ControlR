@@ -62,6 +62,8 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         MacAddresses: ["00:00:00:00:00:01"],
         PublicIpV4: "192.168.1.1",
         PublicIpV6: "::1:1",
+        LocalIpV4: "192.168.0.1",
+        LocalIpV6: "fe80::1",
         Drives: []);
 
     await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);

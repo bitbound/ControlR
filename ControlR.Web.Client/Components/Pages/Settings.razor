@@ -2,7 +2,8 @@
 @attribute [Authorize]
 
 @inject ISnackbar Snackbar
-@inject ISettings SettingsStore
+@inject IUserSettingsProvider SettingsStore
+@inject ITenantSettingsProvider TenantSettingsProvider
 @inject IClipboardManager ClipboardManager
 @inject AuthenticationStateProvider AuthState
 
@@ -44,9 +45,26 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Show Notification to User
   </MudText>
+  
+  @if (_tenantNotifySetting.HasValue)
+  {
+    <MudAlert Severity="Severity.Info" Class="mb-3">
+      This setting is being enforced by your tenant administrator.
+      @if (_tenantNotifySetting.Value)
+      {
+        <text>Users will always be notified when remote control sessions start.</text>
+      }
+      else
+      {
+        <text>Users will never be notified when remote control sessions start.</text>
+      }
+    </MudAlert>
+  }
+  
   <MudCheckBox T="bool"
                @bind-Value:get="_notifyUser"
                @bind-Value:set="SetNotifyUser"
+               Disabled="_tenantNotifySetting.HasValue"
                Label="Notify users when a remote control session starts"/>
 </div>
 
@@ -56,6 +74,7 @@
   private bool _notifyUser;
   private string _userDisplayName = "";
   private Guid? _tenantId;
+  private bool? _tenantNotifySetting;
 
   protected override async Task OnInitializedAsync()
   {
@@ -65,8 +84,18 @@
       _tenantId = tenantId;
     }
 
+    // Check if tenant has enforced the notify user setting
+    _tenantNotifySetting = await TenantSettingsProvider.GetNotifyUserOnSessionStart();
+    
     _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
     _userDisplayName = await SettingsStore.GetUserDisplayName();
+    
+    // If tenant setting is enforced, override the user setting display
+    if (_tenantNotifySetting.HasValue)
+    {
+      _notifyUser = _tenantNotifySetting.Value;
+    }
+    
     await base.OnInitializedAsync();
   }
 
@@ -78,6 +107,12 @@
 
   private async Task SetNotifyUser(bool value)
   {
+    // Don't allow changes if tenant setting is enforced
+    if (_tenantNotifySetting.HasValue)
+    {
+      return;
+    }
+    
     _notifyUser = value;
     await SettingsStore.SetNotifyUserOnSessionStart(value);
   }

@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Web.Services.Description;
 using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
@@ -50,12 +51,13 @@ internal class AgentUpdater(
 
     using var logScope = _logger.BeginMemberScope();
 
+    using var updateCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
     using var linkedCts =
-      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping);
+      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping, updateCts.Token);
 
-    if (!await _checkForUpdatesLock.WaitAsync(0, linkedCts.Token))
+    if (!await _checkForUpdatesLock.WaitAsync(TimeSpan.FromSeconds(5), linkedCts.Token))
     {
-      _logger.LogWarning("Failed to acquire lock in agent updater.  Aborting check.");
+      _logger.LogWarning("Failed to acquire lock in agent updater within 5 seconds. Another update check may be in progress.");
       return;
     }
 
@@ -64,7 +66,6 @@ internal class AgentUpdater(
       UpdateCheckCompletedSignal.Reset();
 
       _logger.LogInformation("Beginning version check.");
-
 
       var hashResult = await _controlrApi.GetCurrentAgentHash(_environmentHelper.Runtime);
       if (!hashResult.IsSuccess)
@@ -148,7 +149,7 @@ internal class AgentUpdater(
 
         case SystemPlatform.MacOs:
           {
-            await _processInvoker
+             await _processInvoker
               .Start("sudo", $"chmod +x {tempPath}")
               .WaitForExitAsync(linkedCts.Token);
 
@@ -163,6 +164,10 @@ internal class AgentUpdater(
         default:
           throw new PlatformNotSupportedException();
       }
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogInformation(ex, "Timed out during the update check process.");
     }
     catch (Exception ex)
     {

@@ -38,6 +38,10 @@ public class DeviceModel
 
   public string PublicIpV6 { get; set; } = string.Empty;
 
+  public string LocalIpV4 { get; set; } = string.Empty;
+
+  public string LocalIpV6 { get; set; } = string.Empty;
+
   public Guid[]? TagIds { get; set; }
 
   public Guid TenantId { get; set; }

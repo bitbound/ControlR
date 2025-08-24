@@ -294,6 +294,12 @@ public class ViewerHub(
       var displayName = user.UserPreferences
         ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
         ?.Value;
+
+      if (string.IsNullOrWhiteSpace(displayName))
+      {
+        displayName = user.UserName ?? "";
+      }
+
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
 
       _logger.LogInformation(
@@ -310,9 +316,11 @@ public class ViewerHub(
 
       var device = authResult.Value;
 
-      if (string.IsNullOrWhiteSpace(displayName))
+      var notifyUserSetting = _appDb.TenantSettings.FirstOrDefault(x => x.Name == TenantSettingsNames.NotifyUserOnSessionStart);
+      if (notifyUserSetting is not null &&
+          bool.TryParse(notifyUserSetting.Value, out var notifyUser))
       {
-        displayName = user.UserName ?? "";
+        sessionRequestDto = sessionRequestDto with { NotifyUserOnSessionStart = notifyUser };
       }
 
       sessionRequestDto = sessionRequestDto with { ViewerName = displayName };

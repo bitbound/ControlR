@@ -90,7 +90,9 @@ internal class DeviceDataGeneratorBase(
       OsArchitecture = RuntimeInformation.OSArchitecture,
       OsDescription = RuntimeInformation.OSDescription,
       Is64Bit = Environment.Is64BitOperatingSystem,
-      MacAddresses = [.. GetMacAddresses()]
+      MacAddresses = [.. GetMacAddresses()],
+      LocalIpV4 = GetLocalIpV4(),
+      LocalIpV6 = GetLocalIpV6()
     };
   }
 
@@ -132,6 +134,74 @@ internal class DeviceDataGeneratorBase(
     }
 
     return (0, 0);
+  }
+
+  private string GetLocalIpV4()
+  {
+    try
+    {
+      var nics = NetworkInterface.GetAllNetworkInterfaces();
+      
+      var activeNic = nics
+        .Where(c =>
+          c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+          c.OperationalStatus == OperationalStatus.Up)
+        .FirstOrDefault();
+
+      if (activeNic != null)
+      {
+        var ipProperties = activeNic.GetIPProperties();
+        var ipv4Address = ipProperties.UnicastAddresses
+          .FirstOrDefault(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork);
+
+        if (ipv4Address != null)
+        {
+          return ipv4Address.Address.ToString();
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting local IPv4 address.");
+    }
+
+    return string.Empty;
+  }
+
+  private string GetLocalIpV6()
+  {
+    try
+    {
+      var nics = NetworkInterface.GetAllNetworkInterfaces();
+      
+      var activeNic = nics
+        .Where(c =>
+          c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+          c.OperationalStatus == OperationalStatus.Up)
+        .FirstOrDefault();
+
+      if (activeNic != null)
+      {
+        var ipProperties = activeNic.GetIPProperties();
+        var ipv6Address = ipProperties.UnicastAddresses
+          .FirstOrDefault(addr => 
+            addr.Address.AddressFamily == AddressFamily.InterNetworkV6 &&
+            !addr.Address.IsIPv6LinkLocal &&
+            !addr.Address.IsIPv6SiteLocal &&
+            !addr.Address.IsIPv6Teredo);
+
+        if (ipv6Address != null)
+        {
+          return ipv6Address.Address.ToString();
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting local IPv6 address.");
+    }
+
+    return string.Empty;
   }
 
   private List<string> GetMacAddresses()

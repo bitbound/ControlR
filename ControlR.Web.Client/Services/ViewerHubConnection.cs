@@ -49,7 +49,7 @@ internal class ViewerHubConnection(
   IServiceProvider serviceProvider,
   IHubConnection<IViewerHub> viewerHub,
   IBusyCounter busyCounter,
-  ISettings settings,
+  IUserSettingsProvider settings,
   IMessenger messenger,
   IDelayer delayer,
   ILogger<ViewerHubConnection> logger) : IViewerHubConnection
@@ -60,7 +60,7 @@ internal class ViewerHubConnection(
   private readonly ILogger<ViewerHubConnection> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly NavigationManager _navMan = navMan;
-  private readonly ISettings _settings = settings;
+  private readonly IUserSettingsProvider _settings = settings;
   private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
 
   public HubConnectionState ConnectionState => _viewerHub.ConnectionState;

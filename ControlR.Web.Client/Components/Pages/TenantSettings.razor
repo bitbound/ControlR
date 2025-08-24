@@ -1,0 +1,51 @@
+@attribute [Route(ClientRoutes.TenantSettings)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+
+@inject ITenantSettingsProvider TenantSettingsProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>
+  Tenant Settings
+</PageTitle>
+
+<PrimaryTitle>
+  Tenant Settings
+</PrimaryTitle>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Show Notification to User
+  </MudText>
+  <MudText Typo="Typo.body2" Class="mb-3">
+    Controls whether users receive notifications when remote control sessions start.
+  </MudText>
+  
+  <MudRadioGroup T="bool?" Value="_notifyUser" ValueChanged="SetNotifyUser">
+    <MudRadio T="bool?" Value="@((bool?)null)" Color="Color.Primary">
+      Use user setting (let each user decide)
+    </MudRadio>
+    <MudRadio T="bool?" Value="@((bool?)true)" Color="Color.Primary">
+      Always notify users
+    </MudRadio>
+    <MudRadio T="bool?" Value="@((bool?)false)" Color="Color.Primary">
+      Never notify users
+    </MudRadio>
+  </MudRadioGroup>
+</div>
+
+@code {
+  private bool? _notifyUser;
+
+  protected override async Task OnInitializedAsync()
+  {
+    _notifyUser = await TenantSettingsProvider.GetNotifyUserOnSessionStart();
+    await base.OnInitializedAsync();
+  }
+
+  private async Task SetNotifyUser(bool? value)
+  {
+    _notifyUser = value;
+    await TenantSettingsProvider.SetNotifyUserOnSessionStart(value);
+    Snackbar.Add("Setting updated", Severity.Success);
+  }
+}

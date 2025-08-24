@@ -5,6 +5,7 @@
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
+@inject ISystemEnvironment SystemEnvironment
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -36,6 +37,9 @@
     <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.Invite)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">
       Invite
     </MudNavLink>
+    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.TenantSettings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+      Tenant Settings
+    </MudNavLink>
   </AuthorizeView>
   <AuthorizeView Roles="@(RoleNames.ServerAdministrator)">
     <Authorized>
@@ -57,7 +61,7 @@
       <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
-      @if (RendererInfo.IsInteractive)
+      @if (RendererInfo.IsInteractive && SystemEnvironment.Platform == SystemPlatform.Browser)
       {
         <button type="button" class="mud-nav-link mud-ripple" @onclick="HandleLogoutClicked">
           <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout

@@ -3,6 +3,7 @@ using System;
 using ControlR.Web.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20250824164921_Add_TenantSettings")]
+    partial class Add_TenantSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -250,16 +253,6 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LocalIpV4")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)");
-
-                    b.Property<string>("LocalIpV6")
-                        .IsRequired()
-                        .HasMaxLength(39)
-                        .HasColumnType("character varying(39)");
 
                     b.PrimitiveCollection<string[]>("MacAddresses")
                         .IsRequired()
