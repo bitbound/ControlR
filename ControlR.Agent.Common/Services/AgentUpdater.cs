@@ -149,28 +149,15 @@ internal class AgentUpdater(
 
         case SystemPlatform.MacOs:
           {
-            _logger.LogInformation("Setting executable permissions for installer on macOS: {TempPath}", tempPath);
-            await _processInvoker
+             await _processInvoker
               .Start("sudo", $"chmod +x {tempPath}")
               .WaitForExitAsync(linkedCts.Token);
 
-            // Use nohup and disown to properly detach the installer process from the daemon
-            // This ensures the installer survives when this daemon process is killed
-            _logger.LogInformation("Launching detached installer on macOS: {TempPath} {InstallCommand}", tempPath, installCommand);
-
-            try
-            {
-              await _processInvoker.StartAndWaitForExit(
-                "/bin/zsh",
-                $"-c \"nohup {tempPath} {installCommand} > /dev/null 2>&1 & disown\"",
-                true,
-                linkedCts.Token);
-              _logger.LogInformation("Installer successfully launched and detached on macOS.");
-            }
-            catch (OperationCanceledException) when (linkedCts.Token.IsCancellationRequested)
-            {
-              _logger.LogWarning("Shell command timed out after 10 seconds on macOS. Installer may have started successfully.");
-            }
+            await _processInvoker.StartAndWaitForExit(
+              "/bin/zsh",
+              $"-c \"{tempPath} {installCommand} &\"",
+              true,
+              linkedCts.Token);
           }
           break;
 
