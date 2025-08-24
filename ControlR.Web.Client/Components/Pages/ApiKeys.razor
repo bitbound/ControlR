@@ -7,16 +7,20 @@
   API Keys
 </PrimaryTitle>
 
+<MudAlert Severity="Severity.Info" Class="mb-4">
+  API keys should be added to the 'x-api-key' header to authenticate requests.
+</MudAlert>
+
 <MudCard Class="mb-4">
   <MudCardContent>
     <MudGrid>
       <MudItem xs="12" sm="8" Class="d-flex align-end">
         <MudTextField @bind-Value="_newKeyName" Label="Key Name" Placeholder="Enter a friendly name for the API key"
-                      Immediate="true" OnKeyDown="OnKeyDown" Disabled="_isLoading" />
+          Immediate="true" OnKeyDown="OnKeyDown" Disabled="_isLoading" />
       </MudItem>
       <MudItem xs="12" sm="4" Class="d-flex align-end">
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateApiKey"
-                   Disabled="@(string.IsNullOrWhiteSpace(_newKeyName) || _isLoading)" FullWidth="true">
+          Disabled="@(string.IsNullOrWhiteSpace(_newKeyName) || _isLoading)" FullWidth="true">
           Create API Key
         </MudButton>
       </MudItem>
@@ -24,12 +28,8 @@
   </MudCardContent>
 </MudCard>
 
-<MudDataGrid T="ApiKeyDto" 
-             Items="@_apiKeys" 
-             Loading="_isLoading" 
-             ShowColumnOptions="true" 
-             Filterable="true" 
-             SortMode="SortMode.Single">
+<MudDataGrid T="ApiKeyDto" Items="@_apiKeys" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
+  SortMode="SortMode.Single">
   <Columns>
     <PropertyColumn Property="x => x.FriendlyName" Title="Name" />
     <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
@@ -49,12 +49,12 @@
       <CellTemplate>
         <MudTooltip Text="Rename">
           <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small"
-                         OnClick="() => RenameApiKey(context.Item)" />
+            OnClick="() => RenameApiKey(context.Item)" />
         </MudTooltip>
 
         <MudTooltip Text="Delete">
           <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                         OnClick="() => DeleteApiKey(context.Item)" />
+            OnClick="() => DeleteApiKey(context.Item)" />
         </MudTooltip>
       </CellTemplate>
     </TemplateColumn>
