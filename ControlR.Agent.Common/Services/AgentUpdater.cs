@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Web.Services.Description;
 using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
@@ -50,12 +51,13 @@ internal class AgentUpdater(
 
     using var logScope = _logger.BeginMemberScope();
 
+    using var updateCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
     using var linkedCts =
-      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping);
+      CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _appLifetime.ApplicationStopping, updateCts.Token);
 
-    if (!await _checkForUpdatesLock.WaitAsync(0, linkedCts.Token))
+    if (!await _checkForUpdatesLock.WaitAsync(TimeSpan.FromSeconds(5), linkedCts.Token))
     {
-      _logger.LogWarning("Failed to acquire lock in agent updater.  Aborting check.");
+      _logger.LogWarning("Failed to acquire lock in agent updater within 5 seconds. Another update check may be in progress.");
       return;
     }
 
@@ -64,7 +66,6 @@ internal class AgentUpdater(
       UpdateCheckCompletedSignal.Reset();
 
       _logger.LogInformation("Beginning version check.");
-
 
       var hashResult = await _controlrApi.GetCurrentAgentHash(_environmentHelper.Runtime);
       if (!hashResult.IsSuccess)
@@ -148,21 +149,38 @@ internal class AgentUpdater(
 
         case SystemPlatform.MacOs:
           {
+            _logger.LogInformation("Setting executable permissions for installer on macOS: {TempPath}", tempPath);
             await _processInvoker
               .Start("sudo", $"chmod +x {tempPath}")
               .WaitForExitAsync(linkedCts.Token);
 
-            await _processInvoker.StartAndWaitForExit(
-              "/bin/zsh",
-              $"-c \"{tempPath} {installCommand} &\"",
-              true,
-              linkedCts.Token);
+            // Use nohup and disown to properly detach the installer process from the daemon
+            // This ensures the installer survives when this daemon process is killed
+            _logger.LogInformation("Launching detached installer on macOS: {TempPath} {InstallCommand}", tempPath, installCommand);
+
+            try
+            {
+              await _processInvoker.StartAndWaitForExit(
+                "/bin/zsh",
+                $"-c \"nohup {tempPath} {installCommand} > /dev/null 2>&1 & disown\"",
+                true,
+                linkedCts.Token);
+              _logger.LogInformation("Installer successfully launched and detached on macOS.");
+            }
+            catch (OperationCanceledException) when (linkedCts.Token.IsCancellationRequested)
+            {
+              _logger.LogWarning("Shell command timed out after 10 seconds on macOS. Installer may have started successfully.");
+            }
           }
           break;
 
         default:
           throw new PlatformNotSupportedException();
       }
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogInformation(ex, "Timed out during the update check process.");
     }
     catch (Exception ex)
     {
