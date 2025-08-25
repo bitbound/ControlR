@@ -1,19 +1,17 @@
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Time.Testing;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
-public static class TestAppBuilder
+internal static class TestAppBuilder
 {
   public static async Task<TestApp> CreateTestApp(
     ITestOutputHelper testOutput,
@@ -36,21 +34,32 @@ public static class TestAppBuilder
 
     _ = builder.Logging.ClearProviders();
     _ = builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
-
-    // For testing, we need to configure the WebHost for TestServer
-    builder.WebHost.UseTestServer();
-    
+   
     // Build the app
     var app = builder.Build();
-    await app.AddBuiltInRoles();
+    //await app.AddBuiltInRoles();
 
-    // Start the application (required for TestServer)
-    await app.StartAsync();
+    // Get the TestServer for integration/functional tests
+    var factory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(builder =>
+      {
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("AppOptions:UseInMemoryDatabase", "true");
+        builder.UseSetting("AppOptions:InMemoryDatabaseName", testDatabaseName);
 
-    // Get the TestServer that was registered by UseTestServer() as IServer
-    var testServer = (TestServer)app.Services.GetRequiredService<IServer>();
-    var httpClient = testServer.CreateClient();
+        builder.ConfigureServices(services =>
+        {
+          // Replace TimeProvider with FakeTimeProvider in the test server
+          _ = services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
+        });
 
-    return new TestApp(app, timeProvider, httpClient, testServer);
+        builder.ConfigureLogging(logging =>
+        {
+          logging.ClearProviders();
+          logging.AddProvider(new XunitLoggerProvider(testOutput));
+        });
+      });
+
+    return new TestApp(app, timeProvider, factory);
   }
 }

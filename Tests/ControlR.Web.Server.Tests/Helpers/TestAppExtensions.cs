@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
-public static class TestAppExtensions
+internal static class TestAppExtensions
 {    
   /// <summary>
   /// Creates an instance of a controller with the necessary services injected from the TestApp

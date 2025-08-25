@@ -17,12 +17,12 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var httpClient = testApp.HttpClient;
+    var httpClient = await testApp.GetHttpClient();
     var deviceId = Guid.NewGuid();
 
     // Phase 1: Create an API key using the service directly (for simplicity)
     var tenant = await testApp.CreateTestTenant();
-    var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
+    var apiKeyManager = testApp.TestServer.Services.GetRequiredService<IApiKeyManager>();
     var createApiKeyRequest = new CreateApiKeyRequestDto("Test API Key for Logon Token");
     var createResult = await apiKeyManager.CreateKey(createApiKeyRequest, tenant.Id);
     
@@ -39,8 +39,6 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     // Add API key to request headers
     httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
-
-    var content = await httpClient.GetStringAsync("/");
     
     var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
     
