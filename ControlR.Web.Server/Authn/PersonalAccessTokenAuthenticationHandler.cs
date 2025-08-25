@@ -50,7 +50,7 @@ public class PersonalAccessTokenAuthenticationHandler(
     var result = validationResult.Value;
 
     // Load the user by id and build a ClaimsPrincipal similar to other authentication handlers
-    var user = await _userManager.FindByIdAsync(result.UserId!.Value.ToString());
+    var user = await _userManager.FindByIdAsync(result.UserId.Value.ToString());
     if (user is null)
     {
       return AuthenticateResult.Fail("User not found for personal access token");
@@ -58,10 +58,10 @@ public class PersonalAccessTokenAuthenticationHandler(
 
     var claims = new List<Claim>
     {
-      new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-      new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-      new Claim(UserClaimTypes.TenantId, result.TenantId!.Value.ToString()),
-      new Claim(UserClaimTypes.AuthenticationMethod, "PersonalAccessToken")
+      new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+      new(ClaimTypes.Name, user.UserName ?? string.Empty),
+      new(UserClaimTypes.TenantId, result.TenantId!.Value.ToString()),
+      new(UserClaimTypes.AuthenticationMethod, PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme)
     };
 
     if (!string.IsNullOrWhiteSpace(user.Email))

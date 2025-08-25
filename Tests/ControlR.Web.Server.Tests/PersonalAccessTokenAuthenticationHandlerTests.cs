@@ -209,6 +209,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var user = await testApp.App.Services.CreateTestUser();
     var tenantId = user.TenantId;
     var personalAccessTokenManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
+    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await personalAccessTokenManager.CreateToken(createRequest, tenantId, user.Id);
@@ -234,6 +235,11 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     Assert.True(result.Principal.IsInRole(RoleNames.TenantAdministrator));
     Assert.True(result.Principal.IsInRole(RoleNames.DeviceSuperUser));
     Assert.True(result.Principal.IsInRole(RoleNames.AgentInstaller));
+
+    // Assert UserManager<T> works with the resulting principal.
+    var identityUser = await userManager.GetUserAsync(result.Principal);
+    Assert.NotNull(identityUser);
+    Assert.Equal(user.Id, identityUser.Id);
   }
 
   private async Task<PersonalAccessTokenAuthenticationHandler> CreateHandler(TestApp testApp, HttpContext context)
