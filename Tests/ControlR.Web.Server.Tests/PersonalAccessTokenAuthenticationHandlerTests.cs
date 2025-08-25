@@ -266,14 +266,14 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     return handler;
   }
 
-  private static HttpContext CreateHttpContext(string? token)
+  private static DefaultHttpContext CreateHttpContext(string? token)
   {
     var context = new DefaultHttpContext();
 
     if (!string.IsNullOrEmpty(token))
     {
-      // The handler expects an Authorization header with a Bearer token
-      context.Request.Headers["Authorization"] = $"Bearer {token}";
+      // The handler expects a personal access token header
+      context.Request.Headers[PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName] = token;
     }
 
     return context;

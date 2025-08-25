@@ -7,9 +7,9 @@ namespace ControlR.Web.Server.Authn;
 public class PersonalAccessTokenAuthenticationSchemeOptions : AuthenticationSchemeOptions
 {
   public const string DefaultScheme = "PersonalAccessToken";
+  public const string DefaultHeaderName = "x-personal-token";
   public string Scheme => DefaultScheme;
-  public string HeaderName { get; set; } = "Authorization";
-  public string BearerPrefix { get; set; } = "Bearer ";
+  public string HeaderName { get; set; } = DefaultHeaderName;
 }
 
 public class PersonalAccessTokenAuthenticationHandler(
@@ -30,12 +30,12 @@ public class PersonalAccessTokenAuthenticationHandler(
     }
 
     var authHeader = authHeaderValues.FirstOrDefault();
-    if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith(Options.BearerPrefix))
+    if (string.IsNullOrWhiteSpace(authHeader))
     {
       return AuthenticateResult.NoResult();
     }
 
-    var providedPat = authHeader[Options.BearerPrefix.Length..].Trim();
+    var providedPat = authHeader.Trim();
     if (string.IsNullOrWhiteSpace(providedPat))
     {
       return AuthenticateResult.NoResult();

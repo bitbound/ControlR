@@ -1,144 +1,146 @@
-// using ControlR.Libraries.Shared.Constants;
-// using ControlR.Web.Server.Data;
-// using ControlR.Web.Server.Services.LogonTokens;
-// using ControlR.Web.Server.Tests.Helpers;
-// using Microsoft.EntityFrameworkCore;
-// using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Time.Testing;
-// using Xunit.Abstractions;
+using ControlR.Libraries.Shared.Constants;
+using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Services.LogonTokens;
+using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using Xunit.Abstractions;
 
-// namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests;
 
-// public class LogonTokenProviderTests(ITestOutputHelper testOutput)
-// {
-//   private readonly ITestOutputHelper _testOutput = testOutput;
+public class LogonTokenProviderTests(ITestOutputHelper testOutput)
+{
+  private readonly ITestOutputHelper _testOutput = testOutput;
 
-//   [Fact]
-//   public async Task CreateTemporaryUserAsync_CreatesUserWithCorrectProperties()
-//   {
-//     // Arrange
-//     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-//     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-//     using var db = testApp.App.Services.GetRequiredService<AppDb>();
+  [Fact]
+  public async Task CreateTokenAsync_CreatesTokenWithCorrectProperties()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     var deviceId = Guid.NewGuid();
-//     var displayName = "Test Device User";
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
     
-//     // Act
-//     var result = await logonTokenProvider.CreateTemporaryUserAsync(deviceId, displayName);
+    // Act
+    var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
-//     // Assert
-//     Assert.True(result.IsSuccess);
-//     Assert.NotNull(result.Value);
+    // Assert
+    Assert.NotNull(result);
+    Assert.NotEmpty(result.Token);
+    Assert.Equal(deviceId, result.DeviceId);
+    Assert.Equal(tenant.Id, result.TenantId);
+    Assert.Equal(user.Id, result.UserId);
+    Assert.True(result.ExpiresAt > DateTimeOffset.UtcNow);
+    Assert.False(result.IsConsumed);
+  }
 
-//     var user = await db.Users
-//       .Include(u => u.UserPreferences)
-//       .FirstOrDefaultAsync(u => u.Id == result.Value.UserId);
+  [Fact]
+  public async Task CreateTokenAsync_ThrowsForInvalidUser()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     Assert.NotNull(user);
-//     Assert.True(user.IsTemporary);
-//     Assert.NotNull(user.TemporaryUserExpiresAt);
-//     Assert.True(user.TemporaryUserExpiresAt > DateTimeOffset.UtcNow);
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var invalidUserId = Guid.NewGuid();
+    
+    // Act & Assert
+    await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+      await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId));
+  }
 
-//     var displayNamePreference = user!.UserPreferences!
-//       .FirstOrDefault(p => p.Name == UserPreferenceNames.UserDisplayName);
+  [Fact]
+  public async Task ValidateTokenAsync_ReturnsValidResultForValidToken()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     Assert.NotNull(displayNamePreference);
-//     Assert.Equal(displayName, displayNamePreference.Value);
-//   }
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    
+    // Create a token
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
+    
+    // Act
+    var validateResult = await logonTokenProvider.ValidateTokenAsync(token.Token);
+    
+    // Assert
+    Assert.True(validateResult.IsSuccess);
+    Assert.Equal(user.Id, validateResult.Value.UserId);
+    Assert.Equal(tenant.Id, validateResult.Value.TenantId);
+  }
 
-//   [Fact]
-//   public async Task ValidateTokenAsync_ReturnsValidResultForValidToken()
-//   {
-//     // Arrange
-//     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-//     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+  [Fact]
+  public async Task ValidateTokenAsync_ReturnsFailureForInvalidToken()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     var deviceId = Guid.NewGuid();
-//     var displayName = "Test Device User";
+    var invalidToken = "invalid-token";
     
-//     // Create a temporary user and token
-//     var createResult = await logonTokenProvider.CreateTemporaryUserAsync(deviceId, displayName);
-//     Assert.True(createResult.IsSuccess);
+    // Act
+    var result = await logonTokenProvider.ValidateTokenAsync(invalidToken);
     
-//     // Act
-//     var validateResult = await logonTokenProvider.ValidateTokenAsync(createResult.Value.Token);
-    
-//     // Assert
-//     Assert.True(validateResult.IsSuccess);
-//     Assert.Equal(createResult.Value.UserId, validateResult.Value.UserId);
-//   }
+    // Assert
+    Assert.False(result.IsSuccess);
+  }
 
-//   [Fact]
-//   public async Task ValidateTokenAsync_ReturnsFailureForInvalidToken()
-//   {
-//     // Arrange
-//     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-//     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+  [Fact]
+  public async Task ValidateAndConsumeTokenAsync_FailsWhenTokenUsedSecondTime()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     var invalidToken = "invalid-token";
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
     
-//     // Act
-//     var result = await logonTokenProvider.ValidateTokenAsync(invalidToken);
+    // Create a token
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
-//     // Assert
-//     Assert.False(result.IsSuccess);
-//   }
+    // Act - First consumption should succeed
+    var firstValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token.Token, deviceId);
+    
+    // Act - Second consumption should fail
+    var secondValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token.Token, deviceId);
+    
+    // Assert
+    Assert.True(firstValidation.IsValid);
+    Assert.False(secondValidation.IsValid);
+    Assert.Contains("already been used", secondValidation.ErrorMessage);
+  }
 
-//   [Fact]
-//   public async Task ValidateAndConsumeTokenAsync_FailsWhenTokenUsedSecondTime()
-//   {
-//     // Arrange
-//     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-//     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+  [Fact]
+  public async Task ValidateTokenAsync_FailsWhenTokenExpired()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
     
-//     var deviceId = Guid.NewGuid();
-//     var displayName = "Test Device User";
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    var expirationMinutes = 15;
     
-//     // Create a temporary user and token
-//     var createResult = await logonTokenProvider.CreateTemporaryUserAsync(deviceId, displayName);
-//     Assert.True(createResult.IsSuccess);
-//     var token = createResult.Value.Token;
+    // Create a token that will expire soon
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, expirationMinutes);
     
-//     // Act - First consumption should succeed
-//     var firstValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token, deviceId);
+    // Act - Advance time past expiration
+    testApp.TimeProvider.Advance(TimeSpan.FromMinutes(expirationMinutes + 1));
     
-//     // Act - Second consumption should fail
-//     var secondValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token, deviceId);
+    var result = await logonTokenProvider.ValidateTokenAsync(token.Token);
     
-//     // Assert
-//     Assert.True(firstValidation.IsValid);
-//     Assert.False(secondValidation.IsValid);
-//     Assert.Contains("already been used", secondValidation.ErrorMessage);
-//   }
-
-//   [Fact]
-//   public async Task ValidateTokenAsync_FailsWhenTokenExpired()
-//   {
-//     // Arrange
-//     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-//     var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
-//     var deviceId = Guid.NewGuid();
-//     var tenantId = Guid.Empty; // System tenant
-//     var expirationMinutes = 15;
-    
-//     // Create a token that will expire soon
-//     var token = await logonTokenProvider.CreateTokenAsync(
-//       deviceId, 
-//       tenantId, 
-//       expirationMinutes,
-//       userIdentifier: Guid.NewGuid().ToString(),
-//       displayName: "Test User");
-    
-//     // Act - Advance time past expiration
-//     testApp.TimeProvider.Advance(TimeSpan.FromMinutes(expirationMinutes + 1));
-    
-//     var result = await logonTokenProvider.ValidateTokenAsync(token.Token);
-    
-//     // Assert
-//     Assert.False(result.IsSuccess);
-//     Assert.Contains("expired", result.Reason);
-//   }
-// }
+    // Assert
+    Assert.False(result.IsSuccess);
+    Assert.Contains("expired", result.Reason);
+  }
+}
 

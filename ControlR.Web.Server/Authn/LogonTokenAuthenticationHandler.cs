@@ -9,9 +9,11 @@ public class LogonTokenAuthenticationHandler(
   IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
   ILoggerFactory logger,
   UrlEncoder encoder,
-  ILogonTokenProvider logonTokenProvider) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
+  ILogonTokenProvider logonTokenProvider,
+  UserManager<AppUser> userManager) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
+  private readonly UserManager<AppUser> _userManager = userManager;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
@@ -37,18 +39,32 @@ public class LogonTokenAuthenticationHandler(
       return AuthenticateResult.Fail(tokenValidation.ErrorMessage ?? "Invalid logon token");
     }
 
+    // Load the real user from the database to get all their properties and roles
+    var user = await _userManager.FindByIdAsync(tokenValidation.UserId!.Value.ToString());
+    if (user is null)
+    {
+      return AuthenticateResult.Fail("User not found for logon token");
+    }
+
     var claims = new List<Claim>
     {
-      new(ClaimTypes.NameIdentifier, $"{tokenValidation.UserId}"),
-      new(ClaimTypes.Name, tokenValidation.UserName ?? "External User"),
+      new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+      new(ClaimTypes.Name, user.UserName ?? "User"),
       new(UserClaimTypes.DeviceId, deviceId.ToString()),
       new(UserClaimTypes.AuthenticationMethod, "LogonToken"),
-      new(UserClaimTypes.TenantId, $"{tokenValidation.TenantId}")
+      new(UserClaimTypes.TenantId, user.TenantId.ToString())
     };
 
-    if (!string.IsNullOrWhiteSpace(tokenValidation.Email))
+    if (!string.IsNullOrWhiteSpace(user.Email))
     {
-      claims.Add(new Claim(ClaimTypes.Email, tokenValidation.Email));
+      claims.Add(new Claim(ClaimTypes.Email, user.Email));
+    }
+
+    // Add role claims from user manager
+    var roles = await _userManager.GetRolesAsync(user);
+    foreach (var role in roles)
+    {
+      claims.Add(new Claim(ClaimTypes.Role, role));
     }
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);

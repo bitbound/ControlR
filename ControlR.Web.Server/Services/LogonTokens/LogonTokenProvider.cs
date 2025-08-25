@@ -10,10 +10,8 @@ public interface ILogonTokenProvider
   Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    int expirationMinutes = 15,
-    string? userIdentifier = null,
-    string? displayName = null,
-    string? email = null);
+    Guid userId,
+    int expirationMinutes = 15);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId);
   Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token);
@@ -38,14 +36,24 @@ public class LogonTokenProvider : ILogonTokenProvider
     _logger = logger;
   }
 
-  public Task<LogonTokenModel> CreateTokenAsync(
+  public async Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    int expirationMinutes = 15,
-    string? userIdentifier = null,
-    string? displayName = null,
-    string? email = null)
+    Guid userId,
+    int expirationMinutes = 15)
   {
+    // Validate that the user exists and belongs to the tenant
+    using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+    var user = await dbContext.Users
+      .Where(u => u.Id == userId && u.TenantId == tenantId)
+      .Select(u => new { u.Id, u.UserName, u.Email })
+      .FirstOrDefaultAsync();
+
+    if (user is null)
+    {
+      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+    }
+
     var token = RandomGenerator.CreateAccessToken();
     var now = _timeProvider.GetUtcNow();
     var expiresAt = now.AddMinutes(expirationMinutes);
@@ -55,9 +63,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       Token = token,
       DeviceId = deviceId,
       ExpiresAt = expiresAt,
-      UserIdentifier = userIdentifier,
-      DisplayName = displayName,
-      Email = email,
+      UserId = userId,
       TenantId = tenantId,
       CreatedAt = now,
       IsConsumed = false
@@ -68,10 +74,10 @@ public class LogonTokenProvider : ILogonTokenProvider
     _cache.Set(cacheKey, logonToken, expiresAt.DateTime);
 
     _logger.LogInformation(
-      "Created logon token for device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
-      deviceId, tenantId, expiresAt);
+      "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
+      userId, deviceId, tenantId, expiresAt);
 
-    return logonToken.AsTaskResult();
+    return logonToken;
   }
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId)
@@ -100,7 +106,7 @@ public class LogonTokenProvider : ILogonTokenProvider
 
     _logger.LogInformation(
       "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
-      validationResult.User.Id, deviceId);
+      logonToken.UserId, deviceId);
 
     return LogonTokenValidationResult.Success(
       validationResult.User.Id,
@@ -168,17 +174,10 @@ public class LogonTokenProvider : ILogonTokenProvider
       return new TokenValidationResult(false, "Token has expired", logonToken, null);
     }
 
-    // Validate the user exists (either real or temporary)
-    if (string.IsNullOrWhiteSpace(logonToken.UserIdentifier))
-    {
-      _logger.LogWarning("Logon token missing user identifier: {Token}", token);
-      return new TokenValidationResult(false, "Invalid token configuration", logonToken, null);
-    }
-
+    // Validate the user exists in the database
     using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-    var userGuid = Guid.Parse(logonToken.UserIdentifier);
     var user = await dbContext.Users
-      .Where(u => u.Id == userGuid && u.TenantId == logonToken.TenantId)
+      .Where(u => u.Id == logonToken.UserId && u.TenantId == logonToken.TenantId)
       .Select(u => new { u.Id, u.UserName, u.Email })
       .FirstOrDefaultAsync();
 
@@ -186,7 +185,7 @@ public class LogonTokenProvider : ILogonTokenProvider
     {
       _logger.LogWarning(
         "User {UserId} not found in tenant {TenantId} for logon token",
-        logonToken.UserIdentifier, logonToken.TenantId);
+        logonToken.UserId, logonToken.TenantId);
       return new TokenValidationResult(false, "User not found", logonToken, null);
     }
 

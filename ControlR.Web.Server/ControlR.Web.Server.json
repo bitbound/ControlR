@@ -2274,7 +2274,8 @@
       },
       "LogonTokenRequestDto": {
         "required": [
-          "deviceId"
+          "deviceId",
+          "userId"
         ],
         "type": "object",
         "properties": {
@@ -2286,17 +2287,9 @@
             "type": "integer",
             "format": "int32"
           },
-          "userIdentifier": {
+          "userId": {
             "type": "string",
-            "nullable": true
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
+            "format": "uuid"
           }
         }
       },

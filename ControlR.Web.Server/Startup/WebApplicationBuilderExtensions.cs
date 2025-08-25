@@ -108,8 +108,8 @@ public static class WebApplicationBuilderExtensions
             return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
           }
 
-          // If the request has an API key header, use API key authentication
-          if (context.Request.Headers.ContainsKey("x-api-key"))
+          // If the request has a Personal Access Token header, use PAT authentication
+          if (context.Request.Headers.ContainsKey(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName))
           {
             return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
           }

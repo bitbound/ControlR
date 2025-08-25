@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api;
 
 [Route(HttpConstants.LogonTokensEndpoint)]
 [ApiController]
-[Authorize(Roles = RoleNames.TenantAdministrator)]
+[Authorize]
 public class LogonTokenController(
   AppDb appDb,
   ILogonTokenProvider logonTokenProvider) : ControllerBase
@@ -29,13 +29,18 @@ public class LogonTokenController(
       return BadRequest("Device not found");
     }
 
+    // Validate that the user exists and belongs to the same tenant
+    var user = await _appDb.Users.FindAsync(request.UserId);
+    if (user is null || user.TenantId != tenantId)
+    {
+      return BadRequest("User not found or does not belong to this tenant");
+    }
+
     var logonToken = await _logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       tenantId,
-      request.ExpirationMinutes,
-      request.UserIdentifier,
-      request.DisplayName,
-      request.Email);
+      request.UserId,
+      request.ExpirationMinutes);
 
     var deviceAccessUrl = new Uri(
       Request.ToOrigin(),
