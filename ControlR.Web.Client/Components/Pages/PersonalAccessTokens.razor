@@ -7,7 +7,7 @@
 </PrimaryTitle>
 
 <MudAlert Severity="Severity.Info" Class="mb-4">
-  Personal access tokens should be added to the 'x-api-key' header to authenticate requests.
+  Personal access tokens should be added to the 'Authorization' header as a Bearer token to authenticate requests.
 </MudAlert>
 
 <MudCard Class="mb-4">
@@ -27,10 +27,10 @@
   </MudCardContent>
 </MudCard>
 
-<MudDataGrid T="ApiKeyDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
+<MudDataGrid T="PersonalAccessTokenDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
   SortMode="SortMode.Single">
   <Columns>
-    <PropertyColumn Property="x => x.FriendlyName" Title="Name" />
+    <PropertyColumn Property="x => x.Name" Title="Name" />
     <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
     <PropertyColumn Property="x => x.LastUsed" Title="Last Used">
       <CellTemplate>

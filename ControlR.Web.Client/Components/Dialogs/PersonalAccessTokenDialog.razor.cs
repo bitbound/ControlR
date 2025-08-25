@@ -11,7 +11,7 @@ public partial class PersonalAccessTokenDialog
   public required IMudDialogInstance MudDialog { get; init; }
 
   [Parameter]
-  public required ApiKeyDto ApiKey { get; set; }
+  public required PersonalAccessTokenDto PersonalAccessToken { get; set; }
 
   [Parameter]
   public required string PlainTextKey { get; set; }

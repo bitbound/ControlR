@@ -87,6 +87,42 @@ internal static class ServiceExtensions
     
     return user;
   }
+  
+  /// <summary>
+  /// Creates a test user with the specified role and saves it to the database
+  /// </summary>
+  /// <param name="services"></param>
+  /// <param name="email">Optional email, defaults to "test@example.com"</param>
+  /// <param name="roles">Optional roles to assign to the user</param>
+  /// <returns>The created user</returns>
+  public static async Task<AppUser> CreateTestUser(
+    this IServiceProvider services, 
+    string email = "test@example.com", 
+    params string[] roles)
+  {
+    var userCreator = services.GetRequiredService<IUserCreator>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    
+    var userResult = await userCreator.CreateUser(email, "T3stP@ssw0rd!", returnUrl: null);
+    if (!userResult.Succeeded)
+    {
+      throw new InvalidOperationException($"Failed to create test user: {string.Join(", ", userResult.IdentityResult.Errors.Select(e => e.Description))}");
+    }
+    
+    var user = userResult.User;
+    
+    // Add roles if specified
+    foreach (var role in roles)
+    {
+      var addResult = await userManager.AddToRoleAsync(user, role);
+      if (!addResult.Succeeded)
+      {
+        throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+      }
+    }
+    
+    return user;
+  }
 
   /// <summary>
   /// Creates a controller configured with a test user context
@@ -99,9 +135,9 @@ internal static class ServiceExtensions
   {
     var controller = services.CreateController<T>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
-    
+
     await controller.SetControllerUser(user, userManager);
-    
+
     return controller;
   }
 

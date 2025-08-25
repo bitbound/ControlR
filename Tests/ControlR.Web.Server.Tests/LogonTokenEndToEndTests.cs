@@ -22,18 +22,20 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     var deviceId = Guid.NewGuid();
 
-    // Phase 1: Create an API key using the service directly (for simplicity)
-    var tenant = await testApp.TestServer.Services.CreateTestTenant();
+  // Phase 1: Create a tenant, device and a personal access token for a test user
+  var tenant = await testApp.TestServer.Services.CreateTestTenant();
 
-    // Create a device for the tenant
-    await testApp.TestServer.Services.CreateTestDevice(tenant.Id, deviceId);
+  // Create a device for the tenant
+  await testApp.TestServer.Services.CreateTestDevice(tenant.Id, deviceId);
 
-    var apiKeyManager = testApp.TestServer.Services.GetRequiredService<IApiKeyManager>();
-    var createApiKeyRequest = new CreateApiKeyRequestDto("Test API Key for Logon Token");
-    var createResult = await apiKeyManager.CreateKey(createApiKeyRequest, tenant.Id);
-    
-    Assert.True(createResult.IsSuccess, $"API key creation failed: {createResult.Reason}");
-    var apiKey = createResult.Value.PlainTextKey;
+  // Create a test user and issue a personal access token for that user
+  var user = await testApp.TestServer.Services.CreateTestUser(tenant.Id);
+  var patManager = testApp.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
+  var createPatRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key for Logon Token");
+  var createResult = await patManager.CreateToken(createPatRequest, tenant.Id, user.Id);
+
+  Assert.True(createResult.IsSuccess, $"PAT creation failed: {createResult.Reason}");
+  var apiKey = createResult.Value!.PlainTextToken;
 
     // Phase 2: Use the API key to request a logon token via HTTP
     var logonTokenRequest = new LogonTokenRequestDto
@@ -43,8 +45,8 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       DisplayName = "Test User"
     };
 
-    // Add API key to request headers
-    httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+  // Add personal access token to request headers as a Bearer token
+  httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     
     var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
     
@@ -59,8 +61,8 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
     // Phase 3: Use the logon token to access the device-access page (first time - should succeed)
     var deviceAccessUri = logonTokenResult.DeviceAccessUrl;
     
-    // Clear API key header for device access (uses different auth)
-    httpClient.DefaultRequestHeaders.Remove("x-api-key");
+  // Clear Authorization header for device access (uses different auth)
+  httpClient.DefaultRequestHeaders.Authorization = null;
     
     var firstAccessResponse = await httpClient.GetAsync(deviceAccessUri);
     

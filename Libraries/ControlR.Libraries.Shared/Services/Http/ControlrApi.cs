@@ -15,20 +15,20 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result<CreateApiKeyResponseDto>> CreateApiKey(CreateApiKeyRequestDto request);
+  Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
 
   Task<Result> DeleteDevice(Guid deviceId);
-  Task<Result> DeleteApiKey(Guid apiKeyId);
+  Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
   Task<Result> DeleteTenantSetting(string settingName);
   Task<Result> DeleteUser(Guid userId);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
-  Task<Result<ApiKeyDto[]>> GetApiKeys();
+  Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
@@ -51,7 +51,7 @@ public interface IControlrApi
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
-  Task<Result<ApiKeyDto>> UpdateApiKey(Guid apiKeyId, UpdateApiKeyRequestDto request);
+  Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
 }
 
 public class ControlrApi(
@@ -115,13 +115,13 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<CreateApiKeyResponseDto>> CreateApiKey(CreateApiKeyRequestDto request)
+  public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request)
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.ApiKeysEndpoint, request);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.PersonalAccessTokensEndpoint, request);
       response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<CreateApiKeyResponseDto>();
+      return await response.Content.ReadFromJsonAsync<CreatePersonalAccessTokenResponseDto>();
     });
   }
 
@@ -180,11 +180,11 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> DeleteApiKey(Guid apiKeyId)
+  public async Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId)
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.DeleteAsync($"{HttpConstants.ApiKeysEndpoint}/{apiKeyId}");
+      using var response = await _client.DeleteAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}");
       response.EnsureSuccessStatusCode();
     });
   }
@@ -230,10 +230,10 @@ public class ControlrApi(
     }
   }
 
-  public async Task<Result<ApiKeyDto[]>> GetApiKeys()
+  public async Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens()
   {
     return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<ApiKeyDto[]>(HttpConstants.ApiKeysEndpoint));
+      await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.PersonalAccessTokensEndpoint));
   }
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
@@ -465,13 +465,13 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<ApiKeyDto>> UpdateApiKey(Guid apiKeyId, UpdateApiKeyRequestDto request)
+  public async Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request)
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PutAsJsonAsync($"{HttpConstants.ApiKeysEndpoint}/{apiKeyId}", request);
+      using var response = await _client.PutAsJsonAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request);
       response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<ApiKeyDto>();
+      return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>();
     });
   }
 

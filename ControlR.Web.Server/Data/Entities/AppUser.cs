@@ -10,6 +10,7 @@ public class AppUser : IdentityUser<Guid>, ITenantEntityBase
   [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
   public DateTimeOffset CreatedAt { get; set; }
   public bool IsOnline { get; set; }
+  public List<PersonalAccessToken>? PersonalAccessTokens { get; set; }
   public List<Tag>? Tags { get; set; }
   public Tenant? Tenant { get; set; }
   public Guid TenantId { get; set; }

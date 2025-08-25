@@ -1,12 +1,15 @@
+using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class PersonalAccessTokens
 {
-  private ApiKeyDto[] _personalAccessTokens = [];
+  private PersonalAccessTokenDto[] _personalAccessTokens = [];
   private bool _isLoading = false;
   private string _newTokenName = string.Empty;
   [Inject]
@@ -31,16 +34,16 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      var request = new CreateApiKeyRequestDto(_newTokenName.Trim());
-      var result = await ControlrApi.CreateApiKey(request);
+      var request = new CreatePersonalAccessTokenRequestDto(_newTokenName.Trim());
+      var result = await ControlrApi.CreatePersonalAccessToken(request);
 
       if (result.IsSuccess)
       {
         // Show the dialog with the new personal access token
         var parameters = new DialogParameters
         {
-          { nameof(PersonalAccessTokenDialog.ApiKey), result.Value.ApiKey },
-          { nameof(PersonalAccessTokenDialog.PlainTextKey), result.Value.PlainTextKey }
+          { nameof(PersonalAccessTokenDialog.PersonalAccessToken), result.Value.PersonalAccessToken },
+          { nameof(PersonalAccessTokenDialog.PlainTextKey), result.Value.PlainTextToken }
         };
 
         var dialogOptions = new DialogOptions
@@ -72,11 +75,11 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task DeletePersonalAccessToken(ApiKeyDto personalAccessToken)
+  private async Task DeletePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
   {
     var confirmed = await DialogService.ShowMessageBox(
       "Confirm Delete",
-      $"Are you sure you want to delete the personal access token '{personalAccessToken.FriendlyName}'?",
+      $"Are you sure you want to delete the personal access token '{personalAccessToken.Name}'?",
       yesText: "Delete",
       cancelText: "Cancel");
 
@@ -84,7 +87,7 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        var result = await ControlrApi.DeleteApiKey(personalAccessToken.Id);
+        var result = await ControlrApi.DeletePersonalAccessToken(personalAccessToken.Id);
         if (result.IsSuccess)
         {
           await LoadPersonalAccessTokens();
@@ -107,7 +110,7 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.GetApiKeys();
+      var result = await ControlrApi.GetPersonalAccessTokens();
       if (result.IsSuccess)
       {
         _personalAccessTokens = result.Value;
@@ -134,11 +137,11 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task RenamePersonalAccessToken(ApiKeyDto personalAccessToken)
+  private async Task RenamePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
   {
     var parameters = new DialogParameters
     {
-      { "CurrentName", personalAccessToken.FriendlyName }
+      { "CurrentName", personalAccessToken.Name }
     };
     var dialogOptions = new DialogOptions
     {
@@ -148,7 +151,7 @@ public partial class PersonalAccessTokens
     };
     var newTokenName = await DialogService.ShowPrompt(
       title: "Rename Personal Access Token", 
-      subtitle: $"Rename the '{personalAccessToken.FriendlyName}' token by providing a new name.",
+      subtitle: $"Rename the '{personalAccessToken.Name}' token by providing a new name.",
       inputLabel: "New Name",
       inputHintText: "Enter a new name for the personal access token.");
 
@@ -159,8 +162,8 @@ public partial class PersonalAccessTokens
 
     try
     {
-      var updateRequest = new UpdateApiKeyRequestDto(newTokenName.Trim());
-      var updateResult = await ControlrApi.UpdateApiKey(personalAccessToken.Id, updateRequest);
+      var updateRequest = new UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
+      var updateResult = await ControlrApi.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
       if (updateResult.IsSuccess)
       {
         await LoadPersonalAccessTokens();

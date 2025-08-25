@@ -111,7 +111,7 @@ public static class WebApplicationBuilderExtensions
           // If the request has an API key header, use API key authentication
           if (context.Request.Headers.ContainsKey("x-api-key"))
           {
-            return ApiKeyAuthenticationSchemeOptions.DefaultScheme;
+            return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
           }
 
           // Otherwise, use Identity cookies for web UI
@@ -173,9 +173,9 @@ public static class WebApplicationBuilderExtensions
       };
     });
 
-    // Add API key authentication
-    authBuilder.AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
-      ApiKeyAuthenticationSchemeOptions.DefaultScheme,
+    // Add personal access token authentication
+    authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
+      PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
       options => { });
 
     // Add logon token authentication
@@ -273,7 +273,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
-    builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
+    builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
