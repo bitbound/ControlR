@@ -34,45 +34,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("AppUserTag");
-                });
-
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("FriendlyName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("HashedKey")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTimeOffset?>("LastUsed")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HashedKey")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("ApiKeys");
+                    b.ToTable("AppUserTag", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
@@ -142,7 +104,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -156,14 +118,13 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<bool>("IsOnline")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsTemporary")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -184,9 +145,6 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("TemporaryUserExpiresAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -216,8 +174,7 @@ namespace ControlR.Web.Server.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AgentVersion")
                         .IsRequired()
@@ -237,7 +194,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -255,17 +212,9 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset>("LastSeen")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LocalIpV4")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)");
-
-                    b.Property<string>("LocalIpV6")
-                        .IsRequired()
-                        .HasMaxLength(39)
-                        .HasColumnType("character varying(39)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.PrimitiveCollection<string[]>("MacAddresses")
                         .IsRequired()
@@ -319,18 +268,17 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Devices");
+                    b.ToTable("Devices", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -352,7 +300,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "TenantId")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
@@ -363,7 +311,7 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -372,22 +320,21 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantInvite", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ActivationCode")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -404,53 +351,17 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TenantInvites");
-                });
-
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantSetting", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("Name", "TenantId")
-                        .IsUnique();
-
-                    b.ToTable("TenantSettings");
+                    b.ToTable("TenantInvites", (string)null);
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.UserPreference", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -479,7 +390,7 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("Name", "UserId")
                         .IsUnique();
 
-                    b.ToTable("UserPreferences");
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("DeviceTag", b =>
@@ -494,7 +405,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TagsId");
 
-                    b.ToTable("DeviceTag");
+                    b.ToTable("DeviceTag", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -513,7 +424,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys");
+                    b.ToTable("DataProtectionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -634,17 +545,6 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("ApiKeys")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
@@ -700,7 +600,7 @@ namespace ControlR.Web.Server.Data.Migrations
 
                             b1.HasKey("DeviceId", "__synthesizedOrdinal");
 
-                            b1.ToTable("Devices");
+                            b1.ToTable("Devices", (string)null);
 
                             b1.ToJson("Drives");
 
@@ -727,18 +627,7 @@ namespace ControlR.Web.Server.Data.Migrations
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantInvite", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("TenantInvites")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.TenantSetting", b =>
-                {
-                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("TenantSettings")
+                        .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -845,15 +734,9 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
                 {
-                    b.Navigation("ApiKeys");
-
                     b.Navigation("Devices");
 
                     b.Navigation("Tags");
-
-                    b.Navigation("TenantInvites");
-
-                    b.Navigation("TenantSettings");
 
                     b.Navigation("Users");
                 });

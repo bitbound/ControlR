@@ -273,7 +273,6 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
-    builder.Services.AddHostedService<TemporaryUserCleanupService>();
     builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();

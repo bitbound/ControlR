@@ -7,8 +7,6 @@ namespace ControlR.Web.Server.Services.LogonTokens;
 
 public interface ILogonTokenProvider
 {
-  Task<Result<LogonTokenCreationResult>> CreateTemporaryUserAsync(Guid deviceId, string displayName);
-
   Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
@@ -40,26 +38,7 @@ public class LogonTokenProvider : ILogonTokenProvider
     _logger = logger;
   }
 
-  public async Task<Result<LogonTokenCreationResult>> CreateTemporaryUserAsync(Guid deviceId, string displayName)
-  {
-    try
-    {
-      var tenantId = Guid.Empty; // System tenant
-      var expiresAt = _timeProvider.GetUtcNow().AddHours(24);
-
-      var userId = await CreateTemporaryUserAsync(tenantId, displayName, null, expiresAt);
-      var tokenModel = await CreateTokenAsync(deviceId, tenantId, 15 * 60, userId.ToString(), displayName);
-
-      return Result.Ok(new LogonTokenCreationResult(tokenModel.Token, userId));
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Failed to create temporary user for device {DeviceId}", deviceId);
-      return Result.Fail<LogonTokenCreationResult>("Failed to create temporary user");
-    }
-  }
-
-  public async Task<LogonTokenModel> CreateTokenAsync(
+  public Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
     int expirationMinutes = 15,
@@ -70,13 +49,6 @@ public class LogonTokenProvider : ILogonTokenProvider
     var token = RandomGenerator.CreateAccessToken();
     var now = _timeProvider.GetUtcNow();
     var expiresAt = now.AddMinutes(expirationMinutes);
-
-    // If no real user specified, create a temporary user
-    if (string.IsNullOrWhiteSpace(userIdentifier))
-    {
-      var tempUserId = await CreateTemporaryUserAsync(tenantId, displayName, email, expiresAt);
-      userIdentifier = tempUserId.ToString();
-    }
 
     var logonToken = new LogonTokenModel
     {
@@ -99,7 +71,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       "Created logon token for device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
       deviceId, tenantId, expiresAt);
 
-    return logonToken;
+    return logonToken.AsTaskResult();
   }
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId)
@@ -127,8 +99,8 @@ public class LogonTokenProvider : ILogonTokenProvider
     _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
 
     _logger.LogInformation(
-      "Successfully validated and consumed logon token for user {UserId} (temporary: {IsTemporary}) on device {DeviceId}",
-      validationResult.User.Id, validationResult.User.IsTemporary, deviceId);
+      "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
+      validationResult.User.Id, deviceId);
 
     return LogonTokenValidationResult.Success(
       validationResult.User.Id,
@@ -149,8 +121,8 @@ public class LogonTokenProvider : ILogonTokenProvider
       }
 
       _logger.LogInformation(
-        "Successfully validated logon token for user {UserId} (temporary: {IsTemporary})",
-        validationResult.User.Id, validationResult.User.IsTemporary);
+        "Successfully validated logon token for user {UserId}",
+        validationResult.User.Id);
 
       var result = LogonTokenValidationResult.Success(
         validationResult.User.Id,
@@ -170,60 +142,7 @@ public class LogonTokenProvider : ILogonTokenProvider
 
   private static string GetCacheKey(string token) => $"logon_token:{token}";
 
-  private async Task<Guid> CreateTemporaryUserAsync(
-    Guid tenantId,
-    string? displayName,
-    string? email,
-    DateTimeOffset expiresAt)
-  {
-    using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-    var tempUserId = Guid.NewGuid();
-    var tempUserName = $"temp_user_{tempUserId:N}";
-
-    var tempUser = new AppUser
-    {
-      Id = tempUserId,
-      UserName = tempUserName,
-      NormalizedUserName = tempUserName.ToUpperInvariant(),
-      Email = email,
-      NormalizedEmail = email?.ToUpperInvariant(),
-      TenantId = tenantId,
-      IsTemporary = true,
-      TemporaryUserExpiresAt = expiresAt,
-      SecurityStamp = Guid.NewGuid().ToString(),
-      ConcurrencyStamp = Guid.NewGuid().ToString(),
-      EmailConfirmed = false,
-      PhoneNumberConfirmed = false,
-      TwoFactorEnabled = false,
-      LockoutEnabled = false,
-      AccessFailedCount = 0
-    };
-
-    dbContext.Users.Add(tempUser);
-
-    // Add display name as a user preference if provided
-    if (!string.IsNullOrWhiteSpace(displayName))
-    {
-      var displayNamePreference = new UserPreference
-      {
-        UserId = tempUserId,
-        TenantId = tenantId,
-        Name = UserPreferenceNames.UserDisplayName,
-        Value = displayName
-      };
-      dbContext.UserPreferences.Add(displayNamePreference);
-    }
-
-    await dbContext.SaveChangesAsync();
-
-    _logger.LogInformation(
-      "Created temporary user {UserId} for tenant {TenantId}, expires at {ExpiresAt}",
-      tempUserId, tenantId, expiresAt);
-
-    return tempUserId;
-  }
-  private async Task<TokenValidationResult> ValidateTokenInternalAsync(string token)
+   private async Task<TokenValidationResult> ValidateTokenInternalAsync(string token)
   {
     var cacheKey = GetCacheKey(token);
 
@@ -260,7 +179,7 @@ public class LogonTokenProvider : ILogonTokenProvider
     var userGuid = Guid.Parse(logonToken.UserIdentifier);
     var user = await dbContext.Users
       .Where(u => u.Id == userGuid && u.TenantId == logonToken.TenantId)
-      .Select(u => new { u.Id, u.UserName, u.Email, u.IsTemporary })
+      .Select(u => new { u.Id, u.UserName, u.Email })
       .FirstOrDefaultAsync();
 
     if (user is null)
@@ -271,7 +190,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       return new TokenValidationResult(false, "User not found", logonToken, null);
     }
 
-    var userInfo = new UserInfo(user.Id, user.UserName, user.Email, user.IsTemporary);
+    var userInfo = new UserInfo(user.Id, user.UserName, user.Email);
     return new TokenValidationResult(true, null, logonToken, userInfo);
   }
 
@@ -301,5 +220,5 @@ public class LogonTokenProvider : ILogonTokenProvider
     public UserInfo? User { get; }
   }
 
-  private record UserInfo(Guid Id, string? UserName, string? Email, bool IsTemporary);
+  private record UserInfo(Guid Id, string? UserName, string? Email);
 }
