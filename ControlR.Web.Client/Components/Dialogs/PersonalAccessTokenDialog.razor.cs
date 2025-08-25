@@ -5,7 +5,7 @@ using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
-public partial class ApiKeyDialog
+public partial class PersonalAccessTokenDialog
 {
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; init; }
@@ -27,7 +27,7 @@ public partial class ApiKeyDialog
     try
     {
       await ClipboardManager.SetText(PlainTextKey);
-      Snackbar.Add("API key copied to clipboard", Severity.Success);
+      Snackbar.Add("Personal access token copied to clipboard", Severity.Success);
     }
     catch (Exception ex)
     {

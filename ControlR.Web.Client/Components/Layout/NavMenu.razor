@@ -14,6 +14,9 @@
   <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
+  <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.PersonalAccessTokens)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
+    Personal Access Tokens
+  </MudNavLink>
   <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
     Settings
   </MudNavLink>
@@ -28,9 +31,6 @@
         Tenant Admin
       </MudText>
     </div>
-    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.ApiKeys)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
-      API Keys
-    </MudNavLink>
     <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
       Permissions
     </MudNavLink>

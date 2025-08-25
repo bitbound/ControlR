@@ -2,19 +2,19 @@
   <MudDialog>
     <TitleContent>
       <MudText Typo="Typo.h5" Color="Color.Primary">
-        API Key Created
+        Personal Access Token Created
       </MudText>
     </TitleContent>
     <DialogContent>
       <MudCard Elevation="0">
         <MudCardContent>
           <MudAlert Severity="Severity.Warning" Class="mb-4">
-            <strong>Important:</strong> This API key will only be shown once. Please copy it now and store it securely.
+            <strong>Important:</strong> This personal access token will only be shown once. Please copy it now and store it securely.
           </MudAlert>
 
           <div class="mb-2">
             <MudText Typo="Typo.subtitle1" Color="@(Color.Info)" Inline>
-              Key Name:
+              Token Name:
             </MudText>
             <MudText Typo="Typo.subtitle1" Class="ms-2" Inline>
               @ApiKey.FriendlyName
@@ -23,7 +23,7 @@
 
           <MudTextField T="string"
                         Value="@PlainTextKey"
-                        Label="API Key"
+                        Label="Personal Access Token"
                         ReadOnly="true"
                         Variant="Variant.Filled"
                         AdornmentIcon="@Icons.Material.Filled.ContentCopy"

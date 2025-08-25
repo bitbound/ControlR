@@ -1,34 +1,33 @@
-﻿@attribute [Route(ClientRoutes.ApiKeys)]
-@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+﻿@attribute [Route(ClientRoutes.PersonalAccessTokens)]
 
-<PageTitle>API Keys</PageTitle>
+<PageTitle>Personal Access Tokens</PageTitle>
 
 <PrimaryTitle>
-  API Keys
+  Personal Access Tokens
 </PrimaryTitle>
 
 <MudAlert Severity="Severity.Info" Class="mb-4">
-  API keys should be added to the 'x-api-key' header to authenticate requests.
+  Personal access tokens should be added to the 'x-api-key' header to authenticate requests.
 </MudAlert>
 
 <MudCard Class="mb-4">
   <MudCardContent>
     <MudGrid>
       <MudItem xs="12" sm="8" Class="d-flex align-end">
-        <MudTextField @bind-Value="_newKeyName" Label="Key Name" Placeholder="Enter a friendly name for the API key"
+        <MudTextField @bind-Value="_newTokenName" Label="Token Name" Placeholder="Enter a friendly name for the personal access token"
           Immediate="true" OnKeyDown="OnKeyDown" Disabled="_isLoading" />
       </MudItem>
       <MudItem xs="12" sm="4" Class="d-flex align-end">
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateApiKey"
-          Disabled="@(string.IsNullOrWhiteSpace(_newKeyName) || _isLoading)">
-          Create API Key
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreatePersonalAccessToken"
+          Disabled="@(string.IsNullOrWhiteSpace(_newTokenName) || _isLoading)">
+          Create Personal Access Token
         </MudButton>
       </MudItem>
     </MudGrid>
   </MudCardContent>
 </MudCard>
 
-<MudDataGrid T="ApiKeyDto" Items="@_apiKeys" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
+<MudDataGrid T="ApiKeyDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
   SortMode="SortMode.Single">
   <Columns>
     <PropertyColumn Property="x => x.FriendlyName" Title="Name" />
@@ -49,12 +48,12 @@
       <CellTemplate>
         <MudTooltip Text="Rename">
           <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small"
-            OnClick="() => RenameApiKey(context.Item)" />
+            OnClick="() => RenamePersonalAccessToken(context.Item)" />
         </MudTooltip>
 
         <MudTooltip Text="Delete">
           <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-            OnClick="() => DeleteApiKey(context.Item)" />
+            OnClick="() => DeletePersonalAccessToken(context.Item)" />
         </MudTooltip>
       </CellTemplate>
     </TemplateColumn>
