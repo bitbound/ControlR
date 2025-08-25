@@ -1,6 +1,8 @@
 ﻿using System.Web;
+using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
@@ -15,6 +17,7 @@ public partial class DeviceAccessLayout
   private string? _errorText;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private string? _loadingText = "Loading";
+  private bool _isAuthenticated;
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -33,6 +36,9 @@ public partial class DeviceAccessLayout
 
   [Inject]
   public required ISessionStorageAccessor SessionStorageAccessor { get; init; }
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -73,8 +79,15 @@ public partial class DeviceAccessLayout
   {
     try
     {
-      _loadingText = "Loading";
       await base.OnInitializedAsync();
+      _loadingText = "Loading";
+      _isAuthenticated = await AuthState.IsAuthenticated();
+
+      if (!_isAuthenticated)
+      {
+        _errorText = "Authorization is required.";
+        return;
+      }
 
       if (RendererInfo.IsInteractive)
       {

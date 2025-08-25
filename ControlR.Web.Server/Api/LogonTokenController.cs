@@ -9,13 +9,11 @@ namespace ControlR.Web.Server.Api;
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class LogonTokenController(
-  UserManager<AppUser> userManager,
   AppDb appDb,
   ILogonTokenProvider logonTokenProvider) : ControllerBase
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
   private readonly AppDb _appDb = appDb;
-  private readonly UserManager<AppUser> _userManager = userManager;
 
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken([FromBody] LogonTokenRequestDto request)
@@ -40,7 +38,7 @@ public class LogonTokenController(
       request.Email);
 
     var deviceAccessUrl = new Uri(
-      Request.ToOrigin() + 
+      Request.ToOrigin(),
       $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
 
     var response = new LogonTokenResponseDto

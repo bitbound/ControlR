@@ -12,10 +12,9 @@ internal static class ControllerExtensions
   /// <summary>
   /// Sets up the user context for a controller in tests
   /// </summary>
-  /// <param name="testApp">The test application instance</param>
   /// <param name="controller">The controller to configure</param>
   /// <param name="user">The user to set for authorization</param>
-  /// <param name="roles">Optional roles to assign to the user</param>
+  /// <param name="userManager"></param>
   /// <returns>A task representing the async operation</returns>
   public static async Task SetControllerUser(
     this ControllerBase controller,

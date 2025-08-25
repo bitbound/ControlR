@@ -27,15 +27,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
     // Create test tenant and user
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tag
     var tagId = Guid.NewGuid();
@@ -114,14 +114,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with different online status
     for (int i = 0; i < 5; i++)
@@ -198,14 +198,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific combinations for multi-filter testing
     var testData = new[]
@@ -312,14 +312,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with varying numeric properties
     var cpuValues = new double[] { 0.1, 0.3, 0.5, 0.7, 0.9 }; // 10%, 30%, 50%, 70%, 90%
@@ -446,15 +446,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
     // Create test tenant and user
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test devices with varying string properties
     var devices = new[]
@@ -557,14 +557,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific patterns for testing
     var testDevices = new[]
@@ -709,14 +709,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with 0 and non-zero CPU utilization
     var cpuValues = new double[] { 0.0, 0.5, 0.0, 0.8 };
@@ -798,14 +798,14 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create a test device
     var deviceDto = new DeviceDto(
@@ -890,18 +890,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
 
     // Create two tenants
-    var tenant1 = await testApp.CreateTestTenant("Tenant 1");
-    var tenant2 = await testApp.CreateTestTenant("Tenant 2");
+    var tenant1 = await testApp.App.Services.CreateTestTenant("Tenant 1");
+    var tenant2 = await testApp.App.Services.CreateTestTenant("Tenant 2");
 
     // Create user for tenant 1
-    var user1 = await testApp.CreateTestUser(tenant1.Id, email: "user1@example.com", roles: RoleNames.DeviceSuperUser);
+    var user1 = await testApp.App.Services.CreateTestUser(tenant1.Id, email: "user1@example.com", roles: RoleNames.DeviceSuperUser);
 
     // Create devices for both tenants
     for (int i = 0; i < 5; i++)
@@ -997,7 +997,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<DevicesController>();
+    var controller = testApp.App.Services.CreateController<DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
 
     var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
@@ -1006,8 +1006,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var authorizationService = testApp.App.Services.GetRequiredService<IAuthorizationService>();
 
     // Create test tenant and user
-    var tenant = await testApp.CreateTestTenant();
-    var user = await testApp.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tags
     var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();

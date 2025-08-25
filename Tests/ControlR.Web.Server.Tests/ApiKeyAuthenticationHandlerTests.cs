@@ -24,7 +24,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var tenant = await testApp.CreateTestTenant();
+    var tenant = await testApp.App.Services.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");
@@ -122,7 +122,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var tenant = await testApp.CreateTestTenant();
+    var tenant = await testApp.App.Services.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
     var timeProvider = testApp.TimeProvider;
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
@@ -156,7 +156,7 @@ public class ApiKeyAuthenticationHandlerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var tenant = await testApp.CreateTestTenant();
+    var tenant = await testApp.App.Services.CreateTestTenant();
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
 
     var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreateApiKeyRequestDto("Test Key");

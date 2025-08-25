@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
@@ -17,17 +17,23 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var httpClient = await testApp.GetHttpClient();
+    var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
+    using var httpClient = testApp.Factory.CreateClient();
+
     var deviceId = Guid.NewGuid();
 
     // Phase 1: Create an API key using the service directly (for simplicity)
-    var tenant = await testApp.CreateTestTenant();
+    var tenant = await testApp.TestServer.Services.CreateTestTenant();
+
+    // Create a device for the tenant
+    await testApp.TestServer.Services.CreateTestDevice(tenant.Id, deviceId);
+
     var apiKeyManager = testApp.TestServer.Services.GetRequiredService<IApiKeyManager>();
     var createApiKeyRequest = new CreateApiKeyRequestDto("Test API Key for Logon Token");
     var createResult = await apiKeyManager.CreateKey(createApiKeyRequest, tenant.Id);
     
     Assert.True(createResult.IsSuccess, $"API key creation failed: {createResult.Reason}");
-    var apiKey = createResult.Value!.PlainTextKey;
+    var apiKey = createResult.Value.PlainTextKey;
 
     // Phase 2: Use the API key to request a logon token via HTTP
     var logonTokenRequest = new LogonTokenRequestDto
@@ -75,8 +81,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
     Assert.True(
       secondAccessResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
       secondAccessResponse.StatusCode == System.Net.HttpStatusCode.Forbidden ||
-      secondAccessResponse.StatusCode == System.Net.HttpStatusCode.Redirect ||
-      secondAccessResponse.StatusCode == System.Net.HttpStatusCode.Found,
+      secondAccessResponse.StatusCode == System.Net.HttpStatusCode.Redirect,
       $"Expected unauthorized, forbidden, or redirect on second use, but got {secondAccessResponse.StatusCode}");
 
     // Additional verification: Extract token and device ID from URL to verify they match

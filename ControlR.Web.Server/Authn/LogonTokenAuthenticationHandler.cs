@@ -5,19 +5,13 @@ using ControlR.Web.Server.Services.LogonTokens;
 
 namespace ControlR.Web.Server.Authn;
 
-public class LogonTokenAuthenticationHandler : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>
+public class LogonTokenAuthenticationHandler(
+  IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
+  ILoggerFactory logger,
+  UrlEncoder encoder,
+  ILogonTokenProvider logonTokenProvider) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
-  private readonly ILogonTokenProvider _logonTokenProvider;
-
-  public LogonTokenAuthenticationHandler(
-    IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
-    ILoggerFactory logger,
-    UrlEncoder encoder,
-    ILogonTokenProvider logonTokenProvider)
-    : base(options, logger, encoder)
-  {
-    _logonTokenProvider = logonTokenProvider;
-  }
+  private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
@@ -35,7 +29,7 @@ public class LogonTokenAuthenticationHandler : AuthenticationHandler<LogonTokenA
     }
 
     var tokenValidation = await _logonTokenProvider.ValidateAndConsumeTokenAsync(
-      tokenValue!, 
+      $"{tokenValue}", 
       deviceId);
 
     if (!tokenValidation.IsValid)

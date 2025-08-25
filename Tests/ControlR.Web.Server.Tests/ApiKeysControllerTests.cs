@@ -18,7 +18,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
     
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
@@ -45,7 +45,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
 
     var request = new CreateApiKeyRequestDto("New API Key");
@@ -67,7 +67,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
     
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
@@ -93,7 +93,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
 
     var updateRequest = new UpdateApiKeyRequestDto("Updated Name");
@@ -110,7 +110,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
     
     var apiKeyManager = testApp.App.Services.GetRequiredService<IApiKeyManager>();
@@ -135,7 +135,7 @@ public class ApiKeysControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var (controller, tenant, user) = await testApp.CreateControllerWithTestData<ApiKeysController>(
+    var (controller, tenant, user) = await testApp.App.Services.CreateControllerWithTestData<ApiKeysController>(
       roles: RoleNames.TenantAdministrator);
 
     // Act
