@@ -11,9 +11,9 @@ public class TemporaryUserCleanupService : BackgroundService
   private readonly TimeProvider _timeProvider;
 
   public TemporaryUserCleanupService(
+    TimeProvider timeProvider,
     IServiceProvider serviceProvider,
-    ILogger<TemporaryUserCleanupService> logger,
-    TimeProvider timeProvider)
+    ILogger<TemporaryUserCleanupService> logger)
   {
     _serviceProvider = serviceProvider;
     _logger = logger;
@@ -22,39 +22,50 @@ public class TemporaryUserCleanupService : BackgroundService
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    while (!stoppingToken.IsCancellationRequested)
+    // Perform an initial cleanup on startup
+    await CleanupExpiredTemporaryUsers();
+
+    using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5), _timeProvider);
+    try
     {
-      try
+      while (await timer.WaitForNextTickAsync(stoppingToken))
       {
         await CleanupExpiredTemporaryUsers();
-        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken); // Check every 5 minutes
       }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error during temporary user cleanup");
-      }
+    }
+    catch (OperationCanceledException)
+    {
+      // Ignore.  This is expected on shutdown.
     }
   }
 
   private async Task CleanupExpiredTemporaryUsers()
   {
-    using var scope = _serviceProvider.CreateScope();
-    using var dbContext = scope.ServiceProvider.GetRequiredService<AppDb>();
-    
-    var now = _timeProvider.GetUtcNow();
-    var expiredUsers = await dbContext.Users
-      .Include(u => u.UserPreferences) // Ensure preferences are loaded for cascade delete
-      .Where(u => u.IsTemporary && u.TemporaryUserExpiresAt <= now)
-      .ToListAsync();
-
-    if (expiredUsers.Count > 0)
+    try
     {
-      dbContext.Users.RemoveRange(expiredUsers);
-      await dbContext.SaveChangesAsync();
+      using var scope = _serviceProvider.CreateScope();
+      using var dbContext = scope.ServiceProvider.GetRequiredService<AppDb>();
+    
+      var now = _timeProvider.GetUtcNow();
+      var expiredUsers = await dbContext.Users
+        .Include(u => u.UserPreferences) // Ensure preferences are loaded for cascade delete
+        .Where(u => u.IsTemporary && u.TemporaryUserExpiresAt <= now)
+        .ToListAsync();
+
+      if (expiredUsers.Count > 0)
+      {
+        dbContext.Users.RemoveRange(expiredUsers);
+        await dbContext.SaveChangesAsync();
       
-      _logger.LogInformation(
-        "Cleaned up {Count} expired temporary users",
-        expiredUsers.Count);
+        _logger.LogInformation(
+          "Cleaned up {Count} expired temporary users",
+          expiredUsers.Count);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error during temporary user cleanup.");
+      return;
     }
   }
 }
