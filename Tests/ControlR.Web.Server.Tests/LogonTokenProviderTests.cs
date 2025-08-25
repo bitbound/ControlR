@@ -18,8 +18,8 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    var logonTokenProvider = testApp.TestServer.Services.GetRequiredService<ILogonTokenProvider>();
+    using var db = testApp.TestServer.Services.GetRequiredService<AppDb>();
     
     var deviceId = Guid.NewGuid();
     var displayName = "Test Device User";
@@ -52,7 +52,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    var logonTokenProvider = testApp.TestServer.Services.GetRequiredService<ILogonTokenProvider>();
     
     var deviceId = Guid.NewGuid();
     var displayName = "Test Device User";
@@ -74,7 +74,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    var logonTokenProvider = testApp.TestServer.Services.GetRequiredService<ILogonTokenProvider>();
     
     var invalidToken = "invalid-token";
     
@@ -90,7 +90,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    var logonTokenProvider = testApp.TestServer.Services.GetRequiredService<ILogonTokenProvider>();
     
     var deviceId = Guid.NewGuid();
     var displayName = "Test Device User";
@@ -117,7 +117,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    var logonTokenProvider = testApp.TestServer.Services.GetRequiredService<ILogonTokenProvider>();
     
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.Empty; // System tenant

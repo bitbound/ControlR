@@ -7,17 +7,25 @@ using Xunit.Sdk;
 namespace ControlR.Web.Server.Tests.Helpers;
 
 internal class TestApp(
-  WebApplication app,
   FakeTimeProvider timeProvider,
-  WebApplicationFactory<Program> factory) : IAsyncDisposable
+  WebApplicationFactory<Program> factory,
+  WebApplication webApp) : IAsyncDisposable
 {
   private HttpClient? _httpClient;
 
-  public WebApplication App { get; } = app;
-  public IServiceProvider Services => App.Services;
-  public FakeTimeProvider TimeProvider { get; } = timeProvider;
   public WebApplicationFactory<Program> Factory { get; } = factory;
+  public IServiceProvider Services => App.Services;
   public TestServer TestServer => Factory.Server;
+  public FakeTimeProvider TimeProvider { get; } = timeProvider;
+  public WebApplication App { get; } = webApp;
+  public async ValueTask DisposeAsync()
+  {
+    _httpClient?.Dispose();
+    Factory.Dispose();
+    TestServer.Dispose();
+    await App.DisposeAsync();
+    GC.SuppressFinalize(this);
+  }
 
   public async Task<HttpClient> GetHttpClient()
   {
@@ -32,14 +40,5 @@ internal class TestApp(
       // Ignore.
     }
     return _httpClient;
-  }
-
-  public async ValueTask DisposeAsync()
-  {
-    _httpClient?.Dispose();
-    Factory.Dispose();
-    TestServer.Dispose();
-    await App.DisposeAsync();
-    GC.SuppressFinalize(this);
   }
 }

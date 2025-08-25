@@ -1,4 +1,5 @@
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,28 +20,27 @@ public class LogonTokenController(
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken([FromBody] LogonTokenRequestDto request)
   {
-    var user = await _userManager.GetUserAsync(User);
-    if (user is null || user.TenantId == Guid.Empty)
+    if (!User.TryGetTenantId(out var tenantId))
     {
       return BadRequest("User tenant not found");
     }
 
     var device = await _appDb.Devices.FindAsync(request.DeviceId);
-    if (device is null || device.TenantId != user.TenantId)
+    if (device is null || device.TenantId != tenantId)
     {
       return BadRequest("Device not found");
     }
 
     var logonToken = await _logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
-      user.TenantId,
+      tenantId,
       request.ExpirationMinutes,
       request.UserIdentifier,
       request.DisplayName,
       request.Email);
 
     var deviceAccessUrl = new Uri(
-      Request.Scheme + "://" + Request.Host + 
+      Request.ToOrigin() + 
       $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
 
     var response = new LogonTokenResponseDto
