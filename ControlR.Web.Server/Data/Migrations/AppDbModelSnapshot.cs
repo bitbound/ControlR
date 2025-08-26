@@ -37,44 +37,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.ToTable("AppUserTag");
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("FriendlyName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("HashedKey")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTimeOffset?>("LastUsed")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HashedKey")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("ApiKeys");
-                });
-
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -314,6 +276,49 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Devices");
+                });
+
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("HashedKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("LastUsed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HashedKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
@@ -628,17 +633,6 @@ namespace ControlR.Web.Server.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ApiKey", b =>
-                {
-                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
-                        .WithMany("ApiKeys")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
@@ -705,6 +699,25 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Navigation("Drives");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.PersonalAccessToken", b =>
+                {
+                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ControlR.Web.Server.Data.Entities.AppUser", "User")
+                        .WithMany("PersonalAccessTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
@@ -832,6 +845,8 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.AppUser", b =>
                 {
+                    b.Navigation("PersonalAccessTokens");
+
                     b.Navigation("UserPreferences");
 
                     b.Navigation("UserRoles");
@@ -839,8 +854,6 @@ namespace ControlR.Web.Server.Data.Migrations
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>
                 {
-                    b.Navigation("ApiKeys");
-
                     b.Navigation("Devices");
 
                     b.Navigation("Tags");

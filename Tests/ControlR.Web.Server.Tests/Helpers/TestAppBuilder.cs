@@ -1,41 +1,64 @@
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Tests.TestingUtilities;
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Time.Testing;
-using ControlR.Tests.TestingUtilities;
-using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
-using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
+using System.Runtime.CompilerServices;
+using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
-public static class TestAppBuilder
+internal static class TestAppBuilder
 {
   public static async Task<TestApp> CreateTestApp(
     ITestOutputHelper testOutput,
-    [CallerMemberName] string testDatabaseName = "",
-    Action<WebApplicationBuilder>? configure = null)
+    [CallerMemberName] string testDatabaseName = "")
   {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
+
     var builder = WebApplication.CreateBuilder();
+    builder.Environment.EnvironmentName = "Testing";
     _ = builder.Configuration.AddInMemoryCollection(
     [
       new KeyValuePair<string, string?>("AppOptions:UseInMemoryDatabase", "true"),
-      new KeyValuePair<string, string?>("AppOptions:InMemoryDatabaseName", testDatabaseName)
+      new KeyValuePair<string, string?>("AppOptions:InMemoryDatabaseName", $"{testDatabaseName}-app")
     ]);
 
     _ = await builder.AddControlrServer(false);
 
-    configure?.Invoke(builder);
-
-    var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
     _ = builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
-
     _ = builder.Logging.ClearProviders();
     _ = builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
 
+    // Build the app
     var app = builder.Build();
     await app.AddBuiltInRoles();
 
-    return new TestApp(app, timeProvider);
+    // Get the TestServer for integration/functional tests
+    var factory = new WebApplicationFactory<Program>()
+      .WithWebHostBuilder(builder =>
+      {
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("AppOptions:UseInMemoryDatabase", "true");
+        builder.UseSetting("AppOptions:InMemoryDatabaseName", $"{testDatabaseName}-server");
+
+        builder.ConfigureServices(services =>
+        {
+          // Replace TimeProvider with FakeTimeProvider in the test server
+          _ = services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
+        });
+
+        builder.ConfigureLogging(logging =>
+        {
+          logging.ClearProviders();
+          logging.AddProvider(new XunitLoggerProvider(testOutput));
+        });
+      });
+
+    return new TestApp(timeProvider, factory, app);
   }
 }

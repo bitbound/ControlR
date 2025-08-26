@@ -11,6 +11,7 @@ using System.Reflection;
 
 var isOpenApiBuild = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSystemd();
 
 await builder.AddControlrServer(isOpenApiBuild);
 

@@ -1,4 +1,5 @@
 ﻿@page "/Account/Manage/ExternalLogins"
+@using ControlR.Web.Server.Authn
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
@@ -112,6 +113,7 @@
     _currentLogins = await UserManager.GetLoginsAsync(_user);
     _otherLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
       .Where(auth => _currentLogins.All(ul => auth.Name != ul.LoginProvider))
+      .Where(x => x.Name != CustomSchemes.Smart)
       .ToList();
 
     string? passwordHash = null;

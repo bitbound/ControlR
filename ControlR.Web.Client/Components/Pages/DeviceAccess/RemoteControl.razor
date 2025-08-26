@@ -1,6 +1,7 @@
-﻿@page "/device-access/remote-control"
+﻿@layout DeviceAccessLayout
+@page "/device-access/remote-control"
+@attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
-@layout DeviceAccessLayout
 
 <div class="@(OuterDivClass)">
 

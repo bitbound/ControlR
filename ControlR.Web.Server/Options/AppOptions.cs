@@ -16,7 +16,6 @@ public class AppOptions
   public string? MicrosoftClientId { get; init; }
   public string? MicrosoftClientSecret { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }
-  public Uri? ServerBaseUri { get; init; }
   public bool SmtpCheckCertificateRevocation { get; init; } = true;
   public string? SmtpDisplayName { get; init; }
   public string? SmtpEmail { get; init; }

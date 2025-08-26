@@ -3,7 +3,7 @@
 public static class ClientRoutes
 {
   public const string About = "/about";
-  public const string ApiKeys = "/api-keys";
+  public const string PersonalAccessTokens = "/personal-access-tokens";
   public const string Deploy = "/deploy";
   public const string Home = "/";
   public const string Invite = "/invite";

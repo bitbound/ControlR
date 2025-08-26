@@ -119,6 +119,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 ### C# Coding Standards
 - Use the latest C# language features and default recommendations.
 - Use StyleCop conventions when ordering class members.
+- Do not use null-forgiving operator (!) outside of tests.  Handle null checks appropriately. 
 - Prefer var of explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Prefer collection expressions where appropriate (e.g. '[]').
@@ -151,8 +152,10 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 - Group naming pattern: `HubGroupNames.GetTenantDevicesGroupName()`, `GetTagGroupName()`, etc.
 
 ### Testing Strategy
+- Use xUnit for unit testing.
 - Write unit tests for business logic and services.
 - Maintain test coverage for shared libraries.
+- For server tests, use helpers `Tests\ControlR.Web.Server.Tests\Helpers\` when appropriate.
 
 ### Security Considerations
 - Always validate and sanitize user inputs.

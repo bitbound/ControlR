@@ -2,6 +2,7 @@
 
 @inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
+@inject NavigationManager NavManager
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
@@ -13,6 +14,9 @@
   </MudNavLink>
   <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
+  </MudNavLink>
+  <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.PersonalAccessTokens)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
+    Personal Access Tokens
   </MudNavLink>
   <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
     Settings
@@ -28,9 +32,6 @@
         Tenant Admin
       </MudText>
     </div>
-    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.ApiKeys)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
-      API Keys
-    </MudNavLink>
     <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
       Permissions
     </MudNavLink>
@@ -81,11 +82,11 @@
     <NotAuthorized>
       @if (_isPublicRegistrationEnabled)
       {
-        <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+        <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
           Register
         </MudNavLink>
       }
-      <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+      <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>
     </NotAuthorized>
@@ -97,6 +98,7 @@
 
   private string? _currentUrl;
   private bool _isAuthenticated;
+  private bool _isIdentityPage;
   private bool _isPublicRegistrationEnabled;
 
 
@@ -109,6 +111,10 @@
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    _isIdentityPage =
+      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
+      currentUri.PathAndQuery.StartsWith("/Account");
 
     var settingsResult = await ControlrApi.GetPublicRegistrationSettings();
     if (settingsResult.IsSuccess)

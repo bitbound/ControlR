@@ -3,14 +3,18 @@ using ControlR.Web.Server.Data.Entities.Bases;
 
 namespace ControlR.Web.Server.Data.Entities;
 
-public class ApiKey : TenantEntityBase
+public class PersonalAccessToken : TenantEntityBase
 {
   [Required]
   [StringLength(256)]
-  public required string FriendlyName { get; set; }
+  public required string Name { get; set; }
 
   [Required]
   [StringLength(256)]
   public required string HashedKey { get; set; }
   public DateTimeOffset? LastUsed { get; set; }
+  
+  [Required]
+  public required Guid UserId { get; set; }
+  public AppUser? User { get; set; }
 }

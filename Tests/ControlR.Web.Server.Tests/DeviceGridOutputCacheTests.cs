@@ -25,7 +25,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.CreateController<Api.DevicesController>();
+    var controller = testApp.App.Services.CreateController<Api.DevicesController>();
     using var db = testApp.App.Services.GetRequiredService<AppDb>();
     var outputCacheStore = testApp.App.Services.GetRequiredService<IOutputCacheStore>();
     var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();

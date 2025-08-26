@@ -1,6 +1,7 @@
-﻿@page "/device-access/terminal"
+﻿@layout DeviceAccessLayout
+@page "/device-access/terminal"
+@attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
-@layout DeviceAccessLayout
 
 <div class="h-100">
   @using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions

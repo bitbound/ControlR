@@ -59,8 +59,6 @@ services:
       # The Gateway IP here must match the IP address in the above controlr network gateway.
       ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
 
-      ControlR_AppOptions__ServerBaseUri: "http://localhost:8080"
-
       ControlR_AppOptions__RequireUserEmailConfirmation: true
       ControlR_AppOptions__SmtpDisplayName: ""
       ControlR_AppOptions__SmtpEmail: ""

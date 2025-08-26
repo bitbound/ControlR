@@ -18,7 +18,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   }
 
   public required DbSet<Device> Devices { get; init; }
-  public required DbSet<ApiKey> ApiKeys { get; init; }
+  public required DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
@@ -39,7 +39,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     SeedDatabase(builder);
 
-    ConfigureApiKeys(builder);
+    ConfigurePersonalAccessTokens(builder);
     ConfigureTenant(builder);
     ConfigureDevices(builder);
     ConfigureRoles(builder);
@@ -160,26 +160,29 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     }
   }
 
-  private void ConfigureApiKeys(ModelBuilder builder)
+  private void ConfigurePersonalAccessTokens(ModelBuilder builder)
   {
     builder
-      .Entity<ApiKey>()
+      .Entity<PersonalAccessToken>()
       .HasIndex(x => x.HashedKey)
       .IsUnique();
 
     builder
-      .Entity<ApiKey>()
-      .Property(x => x.FriendlyName);
-
-    builder
-      .Entity<ApiKey>()
+      .Entity<PersonalAccessToken>()
       .Property(x => x.HashedKey)
       .IsRequired();
+
+    builder
+      .Entity<PersonalAccessToken>()
+      .HasOne(x => x.User)
+      .WithMany(x => x.PersonalAccessTokens)
+      .HasForeignKey(x => x.UserId)
+      .OnDelete(DeleteBehavior.Cascade);
 
     if (_tenantId is not null)
     {
       builder
-        .Entity<ApiKey>()
+        .Entity<PersonalAccessToken>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
@@ -211,6 +214,13 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasMany(x => x.UserRoles)
       .WithOne()
       .HasForeignKey(x => x.UserId);
+
+    builder
+      .Entity<AppUser>()
+      .HasMany(x => x.UserPreferences)
+      .WithOne(x => x.User)
+      .HasForeignKey(x => x.UserId)
+      .OnDelete(DeleteBehavior.Cascade);
 
     if (_tenantId is not null)
     {

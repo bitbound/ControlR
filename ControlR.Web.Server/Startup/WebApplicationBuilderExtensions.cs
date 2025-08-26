@@ -16,13 +16,14 @@ using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
 {
-  public static async Task<WebApplicationBuilder> AddControlrServer(
-    this WebApplicationBuilder builder,
+  public static async Task<IHostApplicationBuilder> AddControlrServer(
+    this IHostApplicationBuilder builder,
     bool isOpenApiBuild)
   {
     if (isOpenApiBuild)
@@ -100,10 +101,17 @@ public static class WebApplicationBuilderExtensions
       {
         options.ForwardDefaultSelector = context =>
         {
-          // If the request has an API key header, use API key authentication
-          if (context.Request.Headers.ContainsKey("x-api-key"))
+          // Check for logon token first (for device access integration)
+          if (context.Request.Path.StartsWithSegments("/device-access") &&
+              context.Request.Query.ContainsKey("logonToken"))
           {
-            return ApiKeyAuthenticationSchemeOptions.DefaultScheme;
+            return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
+          }
+
+          // If the request has a Personal Access Token header, use PAT authentication
+          if (context.Request.Headers.ContainsKey(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName))
+          {
+            return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
           }
 
           // Otherwise, use Identity cookies for web UI
@@ -165,9 +173,14 @@ public static class WebApplicationBuilderExtensions
       };
     });
 
-    // Add API key authentication
-    authBuilder.AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
-      ApiKeyAuthenticationSchemeOptions.DefaultScheme,
+    // Add personal access token authentication
+    authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
+      PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
+      options => { });
+
+    // Add logon token authentication
+    authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
+      LogonTokenAuthenticationSchemeOptions.DefaultScheme,
       options => { });
 
     builder.Services
@@ -247,6 +260,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityEmailSender>();
 
     builder.Services.AddOutputCache();
+    builder.Services.AddMemoryCache();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
@@ -258,16 +272,15 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
-    builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
+    builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
+    builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 
-    builder.Host.UseSystemd();
-
     return builder;
   }
-  public static async Task<WebApplicationBuilder> ConfigureForwardedHeaders(
-    this WebApplicationBuilder builder,
+  public static async Task<IHostApplicationBuilder> ConfigureForwardedHeaders(
+    this IHostApplicationBuilder builder,
     AppOptions appOptions)
   {
     var cloudflareIps = new List<IPNetwork>();
@@ -363,7 +376,7 @@ public static class WebApplicationBuilderExtensions
     return builder;
   }
 
-  private static WebApplicationBuilder AddPostgresDb(this WebApplicationBuilder builder)
+  private static IHostApplicationBuilder AddPostgresDb(this IHostApplicationBuilder builder)
   {
 
     // Add DB services.
