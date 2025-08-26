@@ -586,7 +586,7 @@ public class ViewerHub(
     return displayName.AsTaskResult();
 
   }
-  private async Task<AppUser> GetRequiredUser(Action<IQueryable<AppUser>>? includeBuilder = null)
+  private async Task<AppUser> GetRequiredUser(Func<IQueryable<AppUser>, IQueryable<AppUser>>? includeBuilder = null)
   {
     if (!TryGetUserId(out var userId))
     {
@@ -595,7 +595,10 @@ public class ViewerHub(
 
     var query = _userManager.Users.AsNoTracking();
 
-    includeBuilder?.Invoke(query);
+    if (includeBuilder is not null)
+    {
+      query = includeBuilder.Invoke(query);
+    }
 
     var user = await query.FirstOrDefaultAsync(x => x.Id == userId);
 

@@ -13,7 +13,7 @@ public class ChatMessageViewModel : ViewModelBase
     TargetSystemSession = dto.TargetSystemSession;
     TargetProcessId = dto.TargetProcessId;
     ViewerConnectionId = dto.ViewerConnectionId;
-    Timestamp = dto.Timestamp;
+    Timestamp = dto.Timestamp.ToLocalTime();
     IsFromViewer = isFromViewer;
   }
 

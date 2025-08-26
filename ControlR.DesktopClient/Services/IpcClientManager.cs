@@ -73,7 +73,15 @@ public class IpcClientManager(
         _logger.LogError(ex, "Error while connecting to IPC server.");
       }
 
-      await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
+      try
+      {
+        await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
+      }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("App shutting down. Stopping IpcClientManager.");
+        break;
+      }
     }
   }
 

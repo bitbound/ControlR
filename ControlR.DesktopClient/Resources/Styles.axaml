@@ -31,4 +31,13 @@
 	<Style Selector="TextBlock.Error">
 		<Setter Property="Foreground" Value="{StaticResource ErrorColor}" />
 	</Style>
+
+	<Style Selector="Button.Info">
+		<Setter Property="Background" Value="{StaticResource InfoColor}" />
+	</Style>
+
+	<Style Selector="Button.Primary">
+		<Setter Property="Background" Value="{StaticResource PrimaryColor}" />
+	</Style>
+
 </Styles>

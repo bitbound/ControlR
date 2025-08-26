@@ -275,7 +275,6 @@ public partial class Chat : ComponentBase, IDisposable
 
       // Clear the input
       ChatState.NewMessage = string.Empty;
-      StateHasChanged();
 
       // Send to the device
       var result = await ViewerHub.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
@@ -285,8 +284,10 @@ public partial class Chat : ComponentBase, IDisposable
         Snackbar.Add("Failed to send message", Severity.Error);
       }
 
+      await InvokeAsync(StateHasChanged);
       // Focus back to input
       await _chatInputElement.FocusAsync();
+      await JsInterop.ScrollToEnd(_chatMessagesContainer);
     }
     catch (Exception ex)
     {

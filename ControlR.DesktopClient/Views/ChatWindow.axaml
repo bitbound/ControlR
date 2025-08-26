@@ -23,9 +23,8 @@
   <Grid RowDefinitions="*,Auto">
     <!-- Messages Area -->
     <ScrollViewer Grid.Row="0" Name="_messagesScrollViewer" 
-                  VerticalScrollBarVisibility="Auto" 
-                  Padding="10">
-      <StackPanel>
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="10">
         <TextBlock Text="{x:Static common:Localization.NoMessagesText}"
                    IsVisible="{Binding !Messages.Count}"
                    HorizontalAlignment="Center"
@@ -46,20 +45,17 @@
                         HorizontalAlignment="Left"
                         Margin="0,0,100,0">
                   <StackPanel>
-                    <TextBlock Text="{Binding SenderName}" 
-                               FontWeight="Bold" 
-                               FontSize="12"
+                    <TextBlock FontSize="10"
                                Margin="0,0,0,4"
-                               Foreground="LightGray" />
+                               Foreground="#8C6ED2">
+                      <Run Text="{Binding SenderName}" />
+                      <Run Text=" - " />
+                      <Run Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+                    </TextBlock>
                     <TextBlock Text="{Binding Message}" 
                                TextWrapping="Wrap"
                                FontSize="14"
                                Foreground="White" />
-                    <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
-                               FontSize="10"
-                               Margin="0,4,0,0"
-                               HorizontalAlignment="Right"
-                               Foreground="LightGray" />
                   </StackPanel>
                 </Border>
                 
@@ -72,20 +68,17 @@
                         HorizontalAlignment="Right"
                         Margin="100,0,0,0">
                   <StackPanel>
-                    <TextBlock Text="{Binding SenderName}" 
-                               FontWeight="Bold" 
-                               FontSize="12"
+                    <TextBlock FontSize="10"
                                Margin="0,0,0,4"
-                               Foreground="LightGray" />
+                               Foreground="#8C6ED2">
+                      <Run Text="{Binding SenderName}" />
+                      <Run Text=" - " />
+                      <Run Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+                    </TextBlock>
                     <TextBlock Text="{Binding Message}" 
                                TextWrapping="Wrap"
                                FontSize="14"
                                Foreground="White" />
-                    <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
-                               FontSize="10"
-                               Margin="0,4,0,0"
-                               HorizontalAlignment="Right"
-                               Foreground="LightGray" />
                   </StackPanel>
                 </Border>
               </Grid>
@@ -119,7 +112,7 @@
                 Content="{x:Static common:Localization.SendText}"
                 HorizontalAlignment="Right"
                 Command="{Binding SendMessageCommand}"
-                Background="#1e3a5f"
+                Background="{StaticResource InfoColor}"
                 Foreground="White"
                 Padding="20,8">
 
