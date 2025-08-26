@@ -6,14 +6,16 @@ using ControlR.Web.Server.Services.LogonTokens;
 namespace ControlR.Web.Server.Authn;
 
 public class LogonTokenAuthenticationHandler(
+  UrlEncoder encoder,
+  UserManager<AppUser> userManager,
+  SignInManager<AppUser> signInManager,
   IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
   ILoggerFactory logger,
-  UrlEncoder encoder,
-  ILogonTokenProvider logonTokenProvider,
-  UserManager<AppUser> userManager) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
+  ILogonTokenProvider logonTokenProvider) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
+  private readonly SignInManager<AppUser> _signInManager = signInManager;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
@@ -70,6 +72,8 @@ public class LogonTokenAuthenticationHandler(
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+    await _signInManager.SignInAsync(user, isPersistent: false, authenticationMethod: IdentityConstants.ApplicationScheme);
 
     return AuthenticateResult.Success(ticket);
   }

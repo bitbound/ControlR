@@ -2,6 +2,7 @@
 
 @inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
+@inject NavigationManager NavManager
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
@@ -81,11 +82,11 @@
     <NotAuthorized>
       @if (_isPublicRegistrationEnabled)
       {
-        <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+        <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
           Register
         </MudNavLink>
       }
-      <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+      <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>
     </NotAuthorized>
@@ -97,6 +98,7 @@
 
   private string? _currentUrl;
   private bool _isAuthenticated;
+  private bool _isIdentityPage;
   private bool _isPublicRegistrationEnabled;
 
 
@@ -109,6 +111,10 @@
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    _isIdentityPage =
+      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
+      currentUri.PathAndQuery.StartsWith("/Account");
 
     var settingsResult = await ControlrApi.GetPublicRegistrationSettings();
     if (settingsResult.IsSuccess)

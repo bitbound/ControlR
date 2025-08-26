@@ -91,6 +91,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     Snackbar.Add("Tag created", Severity.Success);
     await TagStore.AddOrUpdate(new TagViewModel(createResult.Value));
     _newTagName = null;
+    await InvokeAsync(StateHasChanged);
   }
 
   private async Task DeleteSelectedTag()

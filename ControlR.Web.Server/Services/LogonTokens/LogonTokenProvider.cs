@@ -47,13 +47,9 @@ public class LogonTokenProvider : ILogonTokenProvider
     var user = await dbContext.Users
       .Where(u => u.Id == userId && u.TenantId == tenantId)
       .Select(u => new { u.Id, u.UserName, u.Email })
-      .FirstOrDefaultAsync();
-
-    if (user is null)
-    {
-      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
-    }
-
+      .FirstOrDefaultAsync()
+      ?? throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+      
     var token = RandomGenerator.CreateAccessToken();
     var now = _timeProvider.GetUtcNow();
     var expiresAt = now.AddMinutes(expirationMinutes);

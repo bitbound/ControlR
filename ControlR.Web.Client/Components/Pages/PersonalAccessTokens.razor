@@ -7,7 +7,7 @@
 </PrimaryTitle>
 
 <MudAlert Severity="Severity.Info" Class="mb-4">
-  Personal access tokens should be added to the 'Authorization' header as a Bearer token to authenticate requests.
+  Personal access tokens should be added to the 'x-personal-token' header to authenticate requests.
 </MudAlert>
 
 <MudCard Class="mb-4">
@@ -20,7 +20,7 @@
       <MudItem xs="12" sm="4" Class="d-flex align-end">
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreatePersonalAccessToken"
           Disabled="@(string.IsNullOrWhiteSpace(_newTokenName) || _isLoading)">
-          Create Personal Access Token
+          Create PAT
         </MudButton>
       </MudItem>
     </MudGrid>
