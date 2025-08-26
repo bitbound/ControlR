@@ -91,24 +91,8 @@ public class IpcClientManager(
         dto.SenderName,
         dto.SenderEmail);
 
-      // Create or get the chat session
-      if (!_chatSessionManager.IsSessionActive(dto.SessionId))
-      {
-        await _chatSessionManager.CreateChatSession(
-          dto.SessionId,
-          dto.TargetSystemSession,
-          dto.TargetProcessId,
-          dto.ViewerConnectionId);
-      }
-
       // Add the message to the session
       await _chatSessionManager.AddMessage(dto.SessionId, dto);
-
-      // TODO: Show chat UI notification or update existing chat window
-      _logger.LogInformation(
-        "Chat message received from {SenderName}: {Message}",
-        dto.SenderName,
-        dto.Message);
     }
     catch (Exception ex)
     {

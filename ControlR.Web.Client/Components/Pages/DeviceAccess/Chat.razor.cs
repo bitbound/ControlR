@@ -12,6 +12,7 @@ public partial class Chat : ComponentBase, IDisposable
   private MudTextField<string> _chatInputElement = null!;
   private readonly ConcurrentList<ChatMessage> _chatMessages = [];
   private Guid _currentChatSessionId = Guid.NewGuid();
+  private bool _enableMultiline;
   private string? _loadingMessage = "Loading";
   private string _newMessage = string.Empty;
   private DeviceUiSession? _selectedSession;
@@ -44,6 +45,14 @@ public partial class Chat : ComponentBase, IDisposable
       Severity.Error => Icons.Material.Outlined.Error,
       _ => Icons.Material.Outlined.Info
     };
+
+  private int ChatInputLineCount => _enableMultiline
+    ? 6
+    : 1;
+
+  private string ChatInputHelperText => _enableMultiline
+    ? "Type a message and press Ctrl+Enter to send, or Enter for new line"
+    : "Type a message and press Enter to send";
 
   private ChatState CurrentState
   {
@@ -166,7 +175,14 @@ public partial class Chat : ComponentBase, IDisposable
   {
     if (args.Key == "Enter" && !args.ShiftKey)
     {
-      await SendMessage();
+      if (_enableMultiline && args.CtrlKey)
+      {
+        await SendMessage();
+      }
+      else if (!_enableMultiline)
+      {
+        await SendMessage();
+      }
     }
   }
 

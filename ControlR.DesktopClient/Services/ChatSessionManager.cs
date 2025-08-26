@@ -8,53 +8,54 @@ using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Services;
 
+public interface IChatSessionManager
+{
+  Task AddMessage(Guid sessionId, ChatMessageIpcDto message);
+  Task<bool> SendResponse(Guid sessionId, string message);
+  Task CloseChatSession(Guid sessionId);
+  bool IsSessionActive(Guid sessionId);
+}
+
 internal class ChatSessionManager(
-  IProcessManager processManager,
   IIpcClientAccessor ipcClientAccessor,
   ILogger<ChatSessionManager> logger) : IChatSessionManager
 {
   private readonly ConcurrentDictionary<Guid, ChatSession> _activeSessions = new();
-  private readonly IProcessManager _processManager = processManager;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<ChatSessionManager> _logger = logger;
 
-  public Task<Guid> CreateChatSession(Guid sessionId, int targetSystemSession, int targetProcessId, string viewerConnectionId)
-  {
-    var chatSession = new ChatSession
-    {
-      SessionId = sessionId,
-      TargetSystemSession = targetSystemSession,
-      TargetProcessId = targetProcessId,
-      ViewerConnectionId = viewerConnectionId
-    };
-
-    _activeSessions.TryAdd(sessionId, chatSession);
-    
-    _logger.LogInformation(
-      "Chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
-      sessionId,
-      targetSystemSession,
-      targetProcessId);
-
-    return Task.FromResult(sessionId);
-  }
-
   public Task AddMessage(Guid sessionId, ChatMessageIpcDto message)
   {
-    if (_activeSessions.TryGetValue(sessionId, out var session))
-    {
-      session.Messages.Add(message);
-      _logger.LogInformation(
-        "Message added to chat session {SessionId} from {SenderName} ({SenderEmail})",
-        sessionId,
-        message.SenderName,
-        message.SenderEmail);
-    }
-    else
-    {
-      _logger.LogWarning("Chat session {SessionId} not found when adding message", sessionId);
-    }
+    var session = _activeSessions.AddOrUpdate(
+      sessionId,
+      _ =>
+      {
+        var newSession = new ChatSession
+        {
+          SessionId = sessionId,
+          TargetSystemSession = message.TargetSystemSession,
+          TargetProcessId = message.TargetProcessId,
+          ViewerConnectionId = message.ViewerConnectionId,
+          Messages = [message],
+          CreatedAt = DateTimeOffset.Now,
+        };
 
+        _logger.LogInformation(
+          "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+          sessionId,
+          message.TargetSystemSession,
+          message.TargetProcessId);
+
+        return newSession;
+      },
+      (sessionId, existingSession) =>
+      {
+        existingSession.ViewerConnectionId = message.ViewerConnectionId;
+        existingSession.Messages.Add(message);
+        return existingSession;
+      });
+
+    // TODO: Show chat UI notification or update existing chat window
     return Task.CompletedTask;
   }
 
@@ -76,7 +77,7 @@ internal class ChatSessionManager(
     {
       // Get the current user name
       var currentUser = Environment.UserName;
-      
+
       var response = new ChatResponseIpcDto(
         sessionId,
         message,
@@ -85,8 +86,8 @@ internal class ChatSessionManager(
         DateTimeOffset.Now);
 
       // Send back to Agent via IPC
-      await connection!.Send(response);
-      
+      await connection.Send(response);
+
       _logger.LogInformation(
         "Chat response sent from {Username} for session {SessionId}: {Message}",
         currentUser,
@@ -106,7 +107,6 @@ internal class ChatSessionManager(
   {
     if (_activeSessions.TryRemove(sessionId, out var session))
     {
-      session.IsActive = false;
       _logger.LogInformation("Chat session {SessionId} closed", sessionId);
     }
     else
@@ -119,6 +119,6 @@ internal class ChatSessionManager(
 
   public bool IsSessionActive(Guid sessionId)
   {
-    return _activeSessions.TryGetValue(sessionId, out var session) && session.IsActive;
+    return _activeSessions.TryGetValue(sessionId, out _);
   }
 }
