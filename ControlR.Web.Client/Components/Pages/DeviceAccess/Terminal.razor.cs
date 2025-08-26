@@ -26,7 +26,7 @@ public partial class Terminal : IAsyncDisposable
   private ElementReference _terminalOutputContainer;
 
   [Inject]
-  public required IDeviceAccessState DeviceState { get; init; }
+  public required IDeviceState DeviceState { get; init; }
 
   [Inject]
   public required IJsInterop JsInterop { get; init; }

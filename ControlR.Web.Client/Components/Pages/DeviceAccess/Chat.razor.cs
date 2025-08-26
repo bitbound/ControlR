@@ -10,16 +10,15 @@ public partial class Chat : ComponentBase, IDisposable
   private string? _alertMessage;
   private Severity _alertSeverity;
   private MudTextField<string> _chatInputElement = null!;
-  private readonly ConcurrentList<ChatMessage> _chatMessages = [];
   private Guid _currentChatSessionId = Guid.NewGuid();
-  private bool _enableMultiline;
   private string? _loadingMessage = "Loading";
-  private string _newMessage = string.Empty;
-  private DeviceUiSession? _selectedSession;
   private DeviceUiSession[]? _systemSessions;
 
   [Inject]
-  public required IDeviceAccessState DeviceAccessState { get; init; }
+  public required IChatState ChatState { get; init; }
+
+  [Inject]
+  public required IDeviceState DeviceAccessState { get; init; }
 
   [Inject]
   public required ILogger<Chat> Logger { get; init; }
@@ -46,43 +45,43 @@ public partial class Chat : ComponentBase, IDisposable
       _ => Icons.Material.Outlined.Info
     };
 
-  private int ChatInputLineCount => _enableMultiline
+  private int ChatInputLineCount => ChatState.EnableMultiline
     ? 6
     : 1;
 
-  private string ChatInputHelperText => _enableMultiline
+  private string ChatInputHelperText => ChatState.EnableMultiline
     ? "Type a message and press Ctrl+Enter to send, or Enter for new line"
     : "Type a message and press Enter to send";
 
-  private ChatState CurrentState
+  private ChatPageState CurrentState
   {
     get
     {
       if (!string.IsNullOrWhiteSpace(_loadingMessage))
       {
-        return ChatState.Loading;
+        return ChatPageState.Loading;
       }
 
       if (!string.IsNullOrWhiteSpace(_alertMessage))
       {
-        return ChatState.Alert;
+        return ChatPageState.Alert;
       }
 
       if (DeviceAccessState.CurrentDevice.Platform
           is not SystemPlatform.Windows
           and not SystemPlatform.MacOs)
       {
-        return ChatState.UnsupportedOperatingSystem;
+        return ChatPageState.UnsupportedOperatingSystem;
       }
 
-      if (_selectedSession is not null)
+      if (ChatState.SelectedSession is not null)
       {
-        return ChatState.ChatActive;
+        return ChatPageState.ChatActive;
       }
 
       return _systemSessions is not null
-        ? ChatState.SessionSelect
-        : ChatState.Unknown;
+        ? ChatPageState.SessionSelect
+        : ChatPageState.Unknown;
     }
   }
 
@@ -90,7 +89,7 @@ public partial class Chat : ComponentBase, IDisposable
   {
     get
     {
-      if (CurrentState == ChatState.ChatActive)
+      if (CurrentState == ChatPageState.ChatActive)
       {
         return "h-100";
       }
@@ -128,8 +127,8 @@ public partial class Chat : ComponentBase, IDisposable
 
   private void CloseChatSession()
   {
-    _selectedSession = null;
-    _chatMessages.Clear();
+    ChatState.SelectedSession = null;
+    ChatState.ChatMessages.Clear();
     _currentChatSessionId = Guid.Empty;
     StateHasChanged();
   }
@@ -155,7 +154,7 @@ public partial class Chat : ComponentBase, IDisposable
         IsFromViewer = false
       };
 
-      _chatMessages.Add(chatMessage);
+      ChatState.ChatMessages.Add(chatMessage);
 
       // Update the UI
       await InvokeAsync(StateHasChanged);
@@ -175,11 +174,11 @@ public partial class Chat : ComponentBase, IDisposable
   {
     if (args.Key == "Enter" && !args.ShiftKey)
     {
-      if (_enableMultiline && args.CtrlKey)
+      if (ChatState.EnableMultiline && args.CtrlKey)
       {
         await SendMessage();
       }
-      else if (!_enableMultiline)
+      else if (!ChatState.EnableMultiline)
       {
         await SendMessage();
       }
@@ -220,7 +219,7 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task SendMessage()
   {
-    if (string.IsNullOrWhiteSpace(_newMessage) || _selectedSession is null)
+    if (string.IsNullOrWhiteSpace(ChatState.NewMessage) || ChatState.SelectedSession is null)
     {
       return;
     }
@@ -230,25 +229,25 @@ public partial class Chat : ComponentBase, IDisposable
       var chatDto = new ChatMessageHubDto(
         DeviceAccessState.CurrentDevice.Id,
         _currentChatSessionId,
-        _newMessage.Trim(),
+        ChatState.NewMessage.Trim(),
         string.Empty, // SenderName will be set in the hub
         string.Empty, // SenderEmail will be set in the hub
-        _selectedSession.SystemSessionId,
-        _selectedSession.ProcessId,
+        ChatState.SelectedSession.SystemSessionId,
+        ChatState.SelectedSession.ProcessId,
         DateTimeOffset.Now);
 
       // Add the message to our local chat
       var chatMessage = new ChatMessage
       {
-        Message = _newMessage.Trim(),
+        Message = ChatState.NewMessage.Trim(),
         SenderName = "You",
         Timestamp = DateTimeOffset.Now,
         IsFromViewer = true
       };
-      _chatMessages.Add(chatMessage);
+      ChatState.ChatMessages.Add(chatMessage);
 
       // Clear the input
-      _newMessage = string.Empty;
+      ChatState.NewMessage = string.Empty;
       StateHasChanged();
 
       // Send to the device
@@ -273,9 +272,9 @@ public partial class Chat : ComponentBase, IDisposable
   {
     try
     {
-      _selectedSession = session;
+      ChatState.SelectedSession = session;
       _currentChatSessionId = Guid.NewGuid();
-      _chatMessages.Clear();
+      ChatState.ChatMessages.Clear();
 
       Logger.LogInformation(
         "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",
@@ -301,7 +300,7 @@ public partial class Chat : ComponentBase, IDisposable
   }
 }
 
-public enum ChatState
+public enum ChatPageState
 {
   Unknown,
   Loading,
@@ -309,12 +308,4 @@ public enum ChatState
   SessionSelect,
   ChatActive,
   UnsupportedOperatingSystem
-}
-
-public class ChatMessage
-{
-  public bool IsFromViewer { get; set; }
-  public string Message { get; set; } = string.Empty;
-  public string SenderName { get; set; } = string.Empty;
-  public DateTimeOffset Timestamp { get; set; }
 }

@@ -7,19 +7,19 @@
 
   @switch (CurrentState)
   {
-    case ChatState.Loading:
+    case ChatPageState.Loading:
       {
         <LoadingIndicator IsVisible Message="@(_loadingMessage)" />
         break;
       }
-    case ChatState.Alert:
+    case ChatPageState.Alert:
       {
         <MudAlert Severity="@_alertSeverity" Icon="@(AlertIcon)">
           @(_alertMessage)
         </MudAlert>
         break;
       }
-    case ChatState.SessionSelect:
+    case ChatPageState.SessionSelect:
       {
         <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
           System Sessions on @(DeviceAccessState.CurrentDevice.Name):
@@ -93,12 +93,12 @@
 
         break;
       }
-    case ChatState.ChatActive:
+    case ChatPageState.ChatActive:
       {
         <div class="chat-outer-grid">
           <div class="chat-app-bar">
             <MudText Typo="Typo.h6" Color="Color.Primary">
-              Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
+              Chat with @(ChatState.SelectedSession?.Username) (@(ChatState.SelectedSession?.Name))
             </MudText>
             <MudFlexBreak />
 
@@ -109,7 +109,7 @@
           </div>
           <div class="chat-inner-grid">
             <div class="chat-messages">
-              @if (_chatMessages.Count == 0)
+              @if (ChatState.ChatMessages.Count == 0)
               {
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
                   No messages yet. Send a message to start the conversation.
@@ -117,7 +117,7 @@
               }
               else
               {
-                @foreach (var message in _chatMessages)
+                @foreach (var message in ChatState.ChatMessages)
                 {
                   <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
                     <div class="message-header">
@@ -135,13 +135,13 @@
               }
             </div>
             <div class="chat-input">
-              <MudTextField T="string" @ref="@(_chatInputElement)" InputId="@(_chatInputElementId)" @bind-Value="@_newMessage"
-                @bind-Text="@_newMessage" Label="Enter a message" HelperText="@ChatInputHelperText"
+              <MudTextField T="string" @ref="@(_chatInputElement)" InputId="@(_chatInputElementId)" @bind-Value="@ChatState.NewMessage"
+                @bind-Text="@ChatState.NewMessage" Label="Enter a message" HelperText="@ChatInputHelperText"
                 TextUpdateSuppression="false" Lines="@ChatInputLineCount" HelperTextOnFocus="true" Adornment="Adornment.End"
                 AdornmentIcon="@Icons.Material.Filled.Send" AdornmentColor="Color.Info" OnAdornmentClick="@SendMessage"
                 AutoFocus="true" Immediate="true" OnKeyDown="@HandleInputKeyDown" Class="mt-2" />
               <div class="mt-2">
-                <MudSwitch @bind-Value="_enableMultiline"
+                <MudSwitch @bind-Value="ChatState.EnableMultiline"
                            Color="Color.Success"
                            Label="Multiline Input" />
               </div>
@@ -151,14 +151,14 @@
 
         break;
       }
-    case ChatState.UnsupportedOperatingSystem:
+    case ChatPageState.UnsupportedOperatingSystem:
       {
         <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
           Chat is not supported on this operating system.
         </MudAlert>
         break;
       }
-    case ChatState.Unknown:
+    case ChatPageState.Unknown:
     default:
       {
         <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">

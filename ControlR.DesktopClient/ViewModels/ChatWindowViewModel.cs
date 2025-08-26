@@ -1,16 +1,25 @@
+using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Models;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.ViewModels;
 
 public interface IChatWindowViewModel
 {
-  Guid SessionId { get; set; }
+  ChatSession? Session { get; set; }
 
   Task HandleChatWindowClosed();
 }
 
-public class ChatWindowViewModel : ViewModelBase, IChatWindowViewModel
+public class ChatWindowViewModel(
+  IChatSessionManager chatSessionManager,
+  ILogger<ChatWindowViewModel> logger) : ViewModelBase, IChatWindowViewModel
 {
-  public Guid SessionId { get; set; }
+  
+  private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
+  private readonly ILogger<ChatWindowViewModel> _logger = logger;
+
+  public ChatSession? Session { get; set; }
 
   public Task HandleChatWindowClosed()
   {

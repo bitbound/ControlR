@@ -23,7 +23,7 @@ public partial class DeviceAccessLayout
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  public required IDeviceAccessState DeviceAccessState { get; init; }
+  public required IDeviceState DeviceAccessState { get; init; }
 
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }

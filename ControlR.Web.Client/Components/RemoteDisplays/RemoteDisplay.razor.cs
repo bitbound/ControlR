@@ -35,7 +35,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   public required IClipboardManager ClipboardManager { get; init; }
 
   [Inject]
-  public required IDeviceAccessState DeviceState { get; init; }
+  public required IDeviceState DeviceState { get; init; }
 
   [Parameter]
   [EditorRequired]

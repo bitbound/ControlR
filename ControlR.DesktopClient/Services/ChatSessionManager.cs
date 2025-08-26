@@ -36,7 +36,6 @@ internal class ChatSessionManager(
         {
           var chatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
           chatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
-          chatWindow.ViewModel.SessionId = sessionId;
 
           var newSession = new ChatSession
           {
@@ -48,6 +47,8 @@ internal class ChatSessionManager(
             Messages = [message],
             CreatedAt = DateTimeOffset.Now,
           };
+
+          chatWindow.ViewModel.Session = newSession;
 
           _logger.LogInformation(
             "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
@@ -61,9 +62,9 @@ internal class ChatSessionManager(
         {
           if (existingSession.ChatWindow?.PlatformImpl is not { })
           {
-            existingSession.ChatWindow ??= _serviceProvider.GetRequiredService<ChatWindow>();
-            existingSession.ChatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
-            existingSession.ChatWindow.ViewModel.SessionId = sessionId;
+            existingSession.ChatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
+            existingSession.ChatWindow.DataContext = _serviceProvider.GetRequiredService<IChatWindowViewModel>();
+            existingSession.ChatWindow.ViewModel.Session = existingSession;
           }
 
           existingSession.ViewerConnectionId = message.ViewerConnectionId;

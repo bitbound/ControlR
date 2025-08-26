@@ -4,7 +4,7 @@
 @inject ILogger<NavMenu> Logger
 @inject IControlrApi ControlrApi
 @inject ISnackbar Snackbar
-@inject IDeviceAccessState DeviceAccessState
+@inject IDeviceState DeviceAccessState
 
 <MudNavMenu>
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
