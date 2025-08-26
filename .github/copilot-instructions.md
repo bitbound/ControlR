@@ -119,6 +119,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 ### C# Coding Standards
 - Use the latest C# language features and default recommendations.
 - Use StyleCop conventions when ordering class members.
+- Do not use null-forgiving operator (!) outside of tests.  Handle null checks appropriately. 
 - Prefer var of explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Prefer collection expressions where appropriate (e.g. '[]').

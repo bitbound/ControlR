@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace ControlR.Web.Server.Tests.Helpers;
@@ -78,10 +79,14 @@ internal static class ServiceExtensions
     // Add roles if specified
     foreach (var role in roles)
     {
-      var addResult = await userManager.AddToRoleAsync(user, role);
-      if (!addResult.Succeeded)
+      // Skip if already in role to avoid duplicate-role errors in tests
+      if (!await userManager.IsInRoleAsync(user, role))
       {
-        throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+        var addResult = await userManager.AddToRoleAsync(user, role);
+        if (!addResult.Succeeded)
+        {
+          throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+        }
       }
     }
     
@@ -114,10 +119,14 @@ internal static class ServiceExtensions
     // Add roles if specified
     foreach (var role in roles)
     {
-      var addResult = await userManager.AddToRoleAsync(user, role);
-      if (!addResult.Succeeded)
+      // Skip if already in role to avoid duplicate-role errors in tests
+      if (!await userManager.IsInRoleAsync(user, role))
       {
-        throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+        var addResult = await userManager.AddToRoleAsync(user, role);
+        if (!addResult.Succeeded)
+        {
+          throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+        }
       }
     }
     
@@ -157,7 +166,38 @@ internal static class ServiceExtensions
     params string[] roles) where T : ControllerBase
   {
     var tenant = await services.CreateTestTenant(tenantName);
+
+    // If the test caller should NOT be a server administrator, ensure there is at least one
+    // existing user so the next created user will not become the automatic server admin.
+    if (!roles.Contains(RoleNames.ServerAdministrator))
+    {
+      // create a seed user in the tenant so our test user is not the very first user
+      await services.CreateTestUser(tenant.Id, email: "seed@t.local");
+    }
+
     var user = await services.CreateTestUser(tenant.Id, userEmail, roles);
+
+    // Ensure the created controller user does not accidentally hold ServerAdministrator role
+    // unless explicitly requested by the caller.
+    if (!roles.Contains(RoleNames.ServerAdministrator))
+    {
+      var userManager = services.GetRequiredService<UserManager<AppUser>>();
+      if (await userManager.IsInRoleAsync(user, RoleNames.ServerAdministrator))
+      {
+        await userManager.RemoveFromRoleAsync(user, RoleNames.ServerAdministrator);
+      }
+      // Also remove any persisted user-role links directly from the DB to ensure Identity
+      // role lookups reflect the intended test state.
+      using (var db = services.GetRequiredService<AppDb>())
+      {
+        var userEntity = await db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Id == user.Id);
+        if (userEntity is not null && userEntity.UserRoles?.Any() == true)
+        {
+          db.UserRoles.RemoveRange(userEntity.UserRoles);
+          await db.SaveChangesAsync();
+        }
+      }
+    }
     var controller = await services.CreateControllerWithUser<T>(user);
     
     return (controller, tenant, user);

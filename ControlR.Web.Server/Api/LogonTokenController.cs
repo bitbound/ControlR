@@ -8,35 +8,35 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.LogonTokensEndpoint)]
 [ApiController]
 [Authorize]
-public class LogonTokenController(
-  AppDb appDb,
-  ILogonTokenProvider logonTokenProvider) : ControllerBase
+public class LogonTokenController : ControllerBase
 {
-  private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
-  private readonly AppDb _appDb = appDb;
 
   [HttpPost]
-  public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken([FromBody] LogonTokenRequestDto request)
+  public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken(
+    [FromServices] AppDb appDb,
+    [FromServices] ILogonTokenProvider logonTokenProvider,
+    [FromBody] LogonTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
       return BadRequest("User tenant not found");
     }
 
-    var device = await _appDb.Devices.FindAsync(request.DeviceId);
+    var device = await appDb.Devices.FindAsync(request.DeviceId);
     if (device is null || device.TenantId != tenantId)
     {
       return BadRequest("Device not found");
     }
 
     // Validate that the user exists and belongs to the same tenant
-    var user = await _appDb.Users.FindAsync(request.UserId);
+
+    var user = await appDb.Users.FindAsync(request.UserId);
     if (user is null || user.TenantId != tenantId)
     {
       return BadRequest("User not found or does not belong to this tenant");
     }
 
-    var logonToken = await _logonTokenProvider.CreateTokenAsync(
+    var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       tenantId,
       request.UserId,

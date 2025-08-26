@@ -6,36 +6,37 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.PersonalAccessTokensEndpoint)]
 [ApiController]
 [Authorize]
-public class PersonalAccessTokensController(
-  IPersonalAccessTokenManager personalAccessTokenManager,
-  UserManager<AppUser> userManager) : ControllerBase
+public class PersonalAccessTokensController : ControllerBase
 {
-  private readonly IPersonalAccessTokenManager _personalAccessTokenManager = personalAccessTokenManager;
-  private readonly UserManager<AppUser> _userManager = userManager;
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetPersonalAccessTokens()
+  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetPersonalAccessTokens(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager)
   {
-    var user = await _userManager.GetUserAsync(User);
+    var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
       return BadRequest("User not found");
     }
 
-    var personalAccessTokens = await _personalAccessTokenManager.GetForUser(user.Id);
+    var personalAccessTokens = await personalAccessTokenManager.GetForUser(user.Id);
     return Ok(personalAccessTokens);
   }
 
   [HttpPost]
-  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken([FromBody] CreatePersonalAccessTokenRequestDto request)
+  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromBody] CreatePersonalAccessTokenRequestDto request)
   {
-    var user = await _userManager.GetUserAsync(User);
+    var user = await userManager.GetUserAsync(User);
     if (user is null || user.TenantId == Guid.Empty)
     {
       return BadRequest("User tenant not found");
     }
 
-    var result = await _personalAccessTokenManager.CreateToken(request, user.TenantId, user.Id);
+    var result = await personalAccessTokenManager.CreateToken(request, user.TenantId, user.Id);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
@@ -45,15 +46,19 @@ public class PersonalAccessTokensController(
   }
 
   [HttpPut("{id}")]
-  public async Task<ActionResult<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid id, [FromBody] UpdatePersonalAccessTokenRequestDto request)
+  public async Task<ActionResult<PersonalAccessTokenDto>> UpdatePersonalAccessToken(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    Guid id,
+    [FromBody] UpdatePersonalAccessTokenRequestDto request)
   {
-    var user = await _userManager.GetUserAsync(User);
+    var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
       return BadRequest("User not found");
     }
 
-    var result = await _personalAccessTokenManager.Update(id, request, user.Id);
+    var result = await personalAccessTokenManager.Update(id, request, user.Id);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
@@ -63,15 +68,18 @@ public class PersonalAccessTokensController(
   }
 
   [HttpDelete("{id}")]
-  public async Task<ActionResult> DeletePersonalAccessToken(Guid id)
+  public async Task<ActionResult> DeletePersonalAccessToken(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    Guid id)
   {
-    var user = await _userManager.GetUserAsync(User);
+    var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
       return BadRequest("User not found");
     }
 
-    var result = await _personalAccessTokenManager.Delete(id, user.Id);
+    var result = await personalAccessTokenManager.Delete(id, user.Id);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);

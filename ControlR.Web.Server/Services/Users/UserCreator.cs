@@ -3,6 +3,9 @@ using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
 
 namespace ControlR.Web.Server.Services.Users;
 
@@ -22,6 +25,14 @@ public interface IUserCreator
     string emailAddress,
     ExternalLoginInfo externalLoginInfo,
     string? returnUrl);
+  
+  // Overload to create a user within a tenant and optionally assign roles and tags.
+  Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    Guid tenantId,
+    IEnumerable<Guid>? roleIds = null,
+    IEnumerable<Guid>? tagIds = null);
 }
 
 public class UserCreator(
@@ -29,13 +40,15 @@ public class UserCreator(
   NavigationManager navigationManager,
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
-  ILogger<UserCreator> logger) : IUserCreator
+  ILogger<UserCreator> logger,
+  AppDb appDb) : IUserCreator
 {
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
+  private readonly AppDb _appDb = appDb;
 
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,
@@ -65,6 +78,85 @@ public class UserCreator(
       emailAddress,
       password: password,
       tenantId: tenantId);
+  }
+
+  public async Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    Guid tenantId,
+    IEnumerable<Guid>? roleIds = null,
+    IEnumerable<Guid>? tagIds = null)
+  {
+    var result = await CreateUserImpl(
+      emailAddress,
+      password: password,
+      tenantId: tenantId);
+
+    if (!result.Succeeded)
+    {
+      return result;
+    }
+
+    var user = result.User;
+    if (user is null)
+    {
+      return new CreateUserResult(false, IdentityResult.Failed(new IdentityError { Description = "User creation failed - no user returned" }));
+    }
+
+    // Assign roles if provided
+    if (roleIds?.Any() == true)
+    {
+      var roles = await _appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
+      var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
+      var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
+      if (missingRoleIds.Count != 0)
+      {
+        await _userManager.DeleteAsync(user);
+        var err = new IdentityError { Description = $"Roles not found: {string.Join(',', missingRoleIds)}" };
+        return new CreateUserResult(false, IdentityResult.Failed(err));
+      }
+
+      foreach (var role in roles)
+      {
+        if (string.IsNullOrWhiteSpace(role.Name))
+        {
+          await _userManager.DeleteAsync(user);
+          var err = new IdentityError { Description = "Role has no name configured" };
+          return new CreateUserResult(false, IdentityResult.Failed(err));
+        }
+
+        // Add mapping directly to AspNetUserRoles to avoid relying on RoleManager lookups in tests.
+        var exists = await _appDb.UserRoles.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+        if (!exists)
+        {
+          _appDb.UserRoles.Add(new IdentityUserRole<Guid> { UserId = user.Id, RoleId = role.Id });
+          await _appDb.SaveChangesAsync();
+        }
+      }
+    }
+
+    // Assign tags if provided
+    if (tagIds?.Any() == true)
+    {
+      var tags = await _appDb.Tags.Where(t => tagIds.Contains(t.Id)).ToListAsync();
+      var foundTagIds = tags.Select(t => t.Id).ToHashSet();
+      var missingTagIds = tagIds.Except(foundTagIds).ToList();
+      if (missingTagIds.Count != 0)
+      {
+        await _userManager.DeleteAsync(user);
+        var err = new IdentityError { Description = $"Tags not found: {string.Join(',', missingTagIds)}" };
+        return new CreateUserResult(false, IdentityResult.Failed(err));
+      }
+
+      if (tags.Count != 0)
+      {
+        user.Tags = tags;
+        _appDb.Users.Update(user);
+        await _appDb.SaveChangesAsync();
+      }
+    }
+
+    return new CreateUserResult(true, result.IdentityResult, user);
   }
 
   private async Task<CreateUserResult> CreateUserImpl(
