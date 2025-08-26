@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Drawing;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
@@ -36,6 +35,7 @@ internal class ChatSessionManager(
         {
           var chatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
           chatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
+          chatWindow.ViewModel.Messages.Add(new ChatMessageViewModel(message, true));
 
           var newSession = new ChatSession
           {
@@ -44,7 +44,6 @@ internal class ChatSessionManager(
             TargetSystemSession = message.TargetSystemSession,
             TargetProcessId = message.TargetProcessId,
             ViewerConnectionId = message.ViewerConnectionId,
-            Messages = [message],
             CreatedAt = DateTimeOffset.Now,
           };
 
@@ -68,7 +67,7 @@ internal class ChatSessionManager(
           }
 
           existingSession.ViewerConnectionId = message.ViewerConnectionId;
-          existingSession.Messages.Add(message);
+          existingSession.ViewModel.Messages.Add(new ChatMessageViewModel(message, true));
           return existingSession;
         });
 
@@ -134,7 +133,6 @@ internal class ChatSessionManager(
     {
       // Get the current user name
       var currentUser = Environment.UserName;
-
       var response = new ChatResponseIpcDto(
         sessionId,
         message,

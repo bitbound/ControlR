@@ -108,7 +108,7 @@
             </MudTooltip>
           </div>
           <div class="chat-inner-grid">
-            <div class="chat-messages">
+            <div @ref="_chatMessagesContainer" class="chat-messages">
               @if (ChatState.ChatMessages.Count == 0)
               {
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">

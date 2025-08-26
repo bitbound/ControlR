@@ -20,5 +20,13 @@
   "RemoteControlSessionToastTitle": "Remote Control Session",
   "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen",
   "NewChatMessageToastTitle": "New Chat Message",
-  "NewChatMessageToastMessage": "You have a new message from {0}"
+  "NewChatMessageToastMessage": "You have a new message from {0}",
+  "ChatWindowTitle": "Chat with {0}",
+  "ChatWindowDefaultTitle": "ControlR Chat",
+  "ChatWindowClosedSystemMessage": "System Message: User closed the chat window.",
+  "SendMessageText": "Send",
+  "EnterMessagePlaceholder": "Type your message...",
+  "NoMessagesText": "No messages yet. Send a message to start the conversation.",
+  "CloseText": "Close",
+  "SendText": "Send"
 }

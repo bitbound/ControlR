@@ -4,6 +4,131 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ControlR.DesktopClient.ChatWindow"
-        Title="ChatWindow">
-  Welcome to Avalonia!
+        xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+        xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+        xmlns:common="using:ControlR.DesktopClient.Common"
+        x:DataType="vm:IChatWindowViewModel"
+        Icon="/Assets/appicon.ico"
+        Height="600"
+        Width="500"
+        MinHeight="400"
+        MinWidth="350"
+        WindowStartupLocation="CenterScreen"
+        Title="{Binding ChatTitle}">
+
+  <Design.DataContext>
+      <fakes:ChatWindowViewModelFake />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="*,Auto">
+    <!-- Messages Area -->
+    <ScrollViewer Grid.Row="0" Name="_messagesScrollViewer" 
+                  VerticalScrollBarVisibility="Auto" 
+                  Padding="10">
+      <StackPanel>
+        <TextBlock Text="{x:Static common:Localization.NoMessagesText}"
+                   IsVisible="{Binding !Messages.Count}"
+                   HorizontalAlignment="Center"
+                   Margin="0,50"
+                   FontStyle="Italic"
+                   Foreground="Gray" />
+        
+        <ItemsControl ItemsSource="{Binding Messages}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:ChatMessageViewModel">
+              <Grid Margin="0,8">
+                <!-- Viewer message (left aligned - other person) -->
+                <Border IsVisible="{Binding IsFromViewer}"
+                        Padding="12"
+                        CornerRadius="8"
+                        MaxWidth="400"
+                        Background="#2d2d2d"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,100,0">
+                  <StackPanel>
+                    <TextBlock Text="{Binding SenderName}" 
+                               FontWeight="Bold" 
+                               FontSize="12"
+                               Margin="0,0,0,4"
+                               Foreground="LightGray" />
+                    <TextBlock Text="{Binding Message}" 
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               Foreground="White" />
+                    <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
+                               FontSize="10"
+                               Margin="0,4,0,0"
+                               HorizontalAlignment="Right"
+                               Foreground="LightGray" />
+                  </StackPanel>
+                </Border>
+                
+                <!-- Desktop message (right aligned - myself) -->
+                <Border IsVisible="{Binding !IsFromViewer}"
+                        Padding="12"
+                        CornerRadius="8"
+                        MaxWidth="400"
+                        Background="#1e3a5f"
+                        HorizontalAlignment="Right"
+                        Margin="100,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="{Binding SenderName}" 
+                               FontWeight="Bold" 
+                               FontSize="12"
+                               Margin="0,0,0,4"
+                               Foreground="LightGray" />
+                    <TextBlock Text="{Binding Message}" 
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               Foreground="White" />
+                    <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
+                               FontSize="10"
+                               Margin="0,4,0,0"
+                               HorizontalAlignment="Right"
+                               Foreground="LightGray" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Input Area -->
+    <Border Grid.Row="1" 
+            Background="#333"
+            Padding="10"
+            BorderBrush="#555"
+            BorderThickness="0,1,0,0">
+      <Grid RowDefinitions="*,Auto">
+        
+        <!-- Text Input -->
+        <TextBox Grid.Row="0"
+                 x:Name="_chatInputTextBox"
+                 Text="{Binding NewMessage}"
+                 Watermark="{x:Static common:Localization.EnterMessagePlaceholder}"
+                 TextWrapping="Wrap"
+                 MinHeight="40"
+                 MaxHeight="120"
+                 Margin="0,0,0,8"
+                 KeyDown="OnTextBoxKeyDown" />
+
+        <!-- Send Button -->
+        <Button Grid.Row="1"
+                Content="{x:Static common:Localization.SendText}"
+                HorizontalAlignment="Right"
+                Command="{Binding SendMessageCommand}"
+                Background="#1e3a5f"
+                Foreground="White"
+                Padding="20,8">
+
+            <PathIcon Data="{StaticResource send_regular}" 
+                Width="24" 
+                Height="24" 
+                Foreground="{DynamicResource SendRegular}" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
 </Window>

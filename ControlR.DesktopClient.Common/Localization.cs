@@ -21,7 +21,12 @@ public static class Localization
   public static string Accessibility => GetString();
   public static string AccessibilityPermissionDescription => GetString();
   public static string CancelText => GetString();
+  public static string ChatWindowTitle => GetString();
+  public static string ChatWindowDefaultTitle => GetString();
+  public static string ChatWindowClosedSystemMessage => GetString();
+  public static string CloseText => GetString();
   public static string EnterCodePlaceholder => GetString();
+  public static string EnterMessagePlaceholder => GetString();
   public static string GetSupportDescription => GetString();
   public static string GetTechSupportTitle => GetString();
   public static string Granted => GetString();
@@ -30,6 +35,7 @@ public static class Localization
   public static string ManagedDeviceTitle => GetString();
   public static string NewChatMessageToastTitle => GetString();
   public static string NewChatMessageToastMessage => GetString();
+  public static string NoMessagesText => GetString();
   public static string NoText => GetString();
   public static string NotGranted => GetString();
   public static string NotificationPermissionDescription => GetString();
@@ -40,6 +46,8 @@ public static class Localization
   public static string RemoteControlSessionToastTitle => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
   public static string ScreenRecording => GetString();
+  public static string SendMessageText => GetString();
+  public static string SendText => GetString();
   public static string ShareScreenSecurityWarning => GetString();
   public static string Status => GetString();
   public static string SubmitText => GetString();

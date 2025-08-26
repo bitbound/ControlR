@@ -10,6 +10,7 @@ public partial class Chat : ComponentBase, IDisposable
   private string? _alertMessage;
   private Severity _alertSeverity;
   private MudTextField<string> _chatInputElement = null!;
+  private ElementReference _chatMessagesContainer;
   private Guid _currentChatSessionId = Guid.NewGuid();
   private string? _loadingMessage = "Loading";
   private DeviceUiSession[]? _systemSessions;
@@ -19,6 +20,9 @@ public partial class Chat : ComponentBase, IDisposable
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
+
+  [Inject]
+  public required IJsInterop JsInterop { get; init; }
 
   [Inject]
   public required ILogger<Chat> Logger { get; init; }
@@ -101,6 +105,7 @@ public partial class Chat : ComponentBase, IDisposable
 
   public void Dispose()
   {
+    ViewerHub.CloseChatSession(_currentChatSessionId).Forget();
     Messenger.UnregisterAll(this);
     GC.SuppressFinalize(this);
   }
@@ -125,12 +130,12 @@ public partial class Chat : ComponentBase, IDisposable
     await LoadSystemSessions();
   }
 
-  private void CloseChatSession()
+  private async Task CloseChatSession()
   {
     ChatState.SelectedSession = null;
     ChatState.ChatMessages.Clear();
     _currentChatSessionId = Guid.Empty;
-    StateHasChanged();
+    await InvokeAsync(StateHasChanged);
   }
 
   private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
@@ -158,6 +163,8 @@ public partial class Chat : ComponentBase, IDisposable
 
       // Update the UI
       await InvokeAsync(StateHasChanged);
+
+      await JsInterop.ScrollToEnd(_chatMessagesContainer);
 
       Logger.LogInformation(
         "Received chat response from {Username} for session {SessionId}",
