@@ -6,16 +6,16 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class Chat : ComponentBase, IDisposable
 {
+  private readonly string _chatInputElementId = $"chat-input-{Guid.NewGuid()}";
   private string? _alertMessage;
   private Severity _alertSeverity;
+  private MudTextField<string> _chatInputElement = null!;
+  private readonly ConcurrentList<ChatMessage> _chatMessages = [];
+  private Guid _currentChatSessionId = Guid.NewGuid();
   private string? _loadingMessage = "Loading";
   private string _newMessage = string.Empty;
-  private MudTextField<string> _chatInputElement = null!;
-  private DeviceUiSession[]? _systemSessions;
   private DeviceUiSession? _selectedSession;
-  private Guid _currentChatSessionId = Guid.NewGuid();
-  private ConcurrentList<ChatMessage> _chatMessages = [];
-  private readonly string _chatInputElementId = $"chat-input-{Guid.NewGuid()}";
+  private DeviceUiSession[]? _systemSessions;
 
   [Inject]
   public required IDeviceAccessState DeviceAccessState { get; init; }
@@ -60,8 +60,8 @@ public partial class Chat : ComponentBase, IDisposable
       }
 
       if (DeviceAccessState.CurrentDevice.Platform
-        is not SystemPlatform.Windows
-        and not SystemPlatform.MacOs)
+          is not SystemPlatform.Windows
+          and not SystemPlatform.MacOs)
       {
         return ChatState.UnsupportedOperatingSystem;
       }
@@ -75,6 +75,26 @@ public partial class Chat : ComponentBase, IDisposable
         ? ChatState.SessionSelect
         : ChatState.Unknown;
     }
+  }
+
+  private string OuterDivClass
+  {
+    get
+    {
+      if (CurrentState == ChatState.ChatActive)
+      {
+        return "h-100";
+      }
+
+      return "h-100 ma-4";
+    }
+  }
+
+
+  public void Dispose()
+  {
+    Messenger.UnregisterAll(this);
+    GC.SuppressFinalize(this);
   }
 
   protected override async Task OnInitializedAsync()
@@ -97,152 +117,12 @@ public partial class Chat : ComponentBase, IDisposable
     await LoadSystemSessions();
   }
 
-  public void Dispose()
-  {
-    Messenger.UnregisterAll(this);
-    GC.SuppressFinalize(this);
-  }
-
-  private async Task LoadSystemSessions()
-  {
-    try
-    {
-      _loadingMessage = "Loading system sessions...";
-      StateHasChanged();
-
-      var result = await ViewerHub.GetActiveUiSessions(DeviceAccessState.CurrentDevice.Id);
-      if (result.IsSuccess)
-      {
-        _systemSessions = result.Value;
-        _loadingMessage = null;
-
-        if (_systemSessions.Length == 0)
-        {
-          _alertMessage = "No active system sessions found on the target device.";
-          _alertSeverity = Severity.Warning;
-        }
-      }
-      else
-      {
-        _alertMessage = "Failed to load system sessions. Please try again.";
-        _alertSeverity = Severity.Error;
-        _loadingMessage = null;
-      }
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error loading system sessions.");
-      _alertMessage = "An error occurred while loading system sessions.";
-      _alertSeverity = Severity.Error;
-      _loadingMessage = null;
-    }
-    finally
-    {
-      StateHasChanged();
-    }
-  }
-
-  private async Task RefreshSystemSessions()
-  {
-    await LoadSystemSessions();
-  }
-
-  private async Task StartChatSession(DeviceUiSession session)
-  {
-    try
-    {
-      _selectedSession = session;
-      _currentChatSessionId = Guid.NewGuid();
-      _chatMessages.Clear();
-
-      Logger.LogInformation(
-        "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",
-        session.Username,
-        session.SystemSessionId,
-        session.ProcessId);
-
-      _loadingMessage = null;
-      _alertMessage = null;
-      await InvokeAsync(StateHasChanged);
-
-      // Focus the message input
-      await Task.Delay(100);
-      await _chatInputElement.FocusAsync();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error starting chat session.");
-      _alertMessage = "Failed to start chat session.";
-      _alertSeverity = Severity.Error;
-      StateHasChanged();
-    }
-  }
-
   private void CloseChatSession()
   {
     _selectedSession = null;
     _chatMessages.Clear();
     _currentChatSessionId = Guid.Empty;
     StateHasChanged();
-  }
-
-  private async Task SendMessage()
-  {
-    if (string.IsNullOrWhiteSpace(_newMessage) || _selectedSession is null)
-    {
-      return;
-    }
-
-    try
-    {
-      var chatDto = new ChatMessageHubDto(
-        DeviceAccessState.CurrentDevice.Id,
-        _currentChatSessionId,
-        _newMessage.Trim(),
-        string.Empty, // SenderName will be set in the hub
-        string.Empty,  // SenderEmail will be set in the hub
-        _selectedSession.SystemSessionId,
-        _selectedSession.ProcessId,
-        DateTimeOffset.Now);
-
-      // Add the message to our local chat
-      var chatMessage = new ChatMessage
-      {
-        Message = _newMessage.Trim(),
-        SenderName = "You",
-        Timestamp = DateTimeOffset.Now,
-        IsFromViewer = true
-      };
-      _chatMessages.Add(chatMessage);
-
-      // Clear the input
-      _newMessage = string.Empty;
-      StateHasChanged();
-
-      // Send to the device
-      var result = await ViewerHub.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
-      if (!result.IsSuccess)
-      {
-        Logger.LogError("Failed to send chat message: {Error}", result.Exception?.Message);
-        Snackbar.Add("Failed to send message", Severity.Error);
-      }
-
-      // Focus back to input
-      await _chatInputElement.FocusAsync();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error sending chat message.");
-      Snackbar.Add("Error sending message", Severity.Error);
-    }
-  }
-
-  private async Task HandleInputKeyDown(KeyboardEventArgs args)
-  {
-    if (args.Key == "Enter" && !args.ShiftKey)
-    {
-      await SendMessage();
-    }
   }
 
   private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
@@ -282,8 +162,127 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 
-  // TODO: Handle incoming chat responses from desktop client
-  // This would need to be implemented when the reverse communication is set up
+  private async Task HandleInputKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter" && !args.ShiftKey)
+    {
+      await SendMessage();
+    }
+  }
+
+  private async Task LoadSystemSessions()
+  {
+    try
+    {
+      var sessionResult = await ViewerHub.GetActiveUiSessions(DeviceAccessState.CurrentDevice.Id);
+      if (!sessionResult.IsSuccess)
+      {
+        Logger.LogResult(sessionResult);
+        Snackbar.Add("Failed to get active sessions", Severity.Warning);
+        return;
+      }
+
+      _systemSessions = sessionResult.Value;
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error loading system sessions.");
+      _alertMessage = "An error occurred while loading system sessions.";
+      _alertSeverity = Severity.Error;
+    }
+    finally
+    {
+      _loadingMessage = null;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task RefreshSystemSessions()
+  {
+    await LoadSystemSessions();
+  }
+
+  private async Task SendMessage()
+  {
+    if (string.IsNullOrWhiteSpace(_newMessage) || _selectedSession is null)
+    {
+      return;
+    }
+
+    try
+    {
+      var chatDto = new ChatMessageHubDto(
+        DeviceAccessState.CurrentDevice.Id,
+        _currentChatSessionId,
+        _newMessage.Trim(),
+        string.Empty, // SenderName will be set in the hub
+        string.Empty, // SenderEmail will be set in the hub
+        _selectedSession.SystemSessionId,
+        _selectedSession.ProcessId,
+        DateTimeOffset.Now);
+
+      // Add the message to our local chat
+      var chatMessage = new ChatMessage
+      {
+        Message = _newMessage.Trim(),
+        SenderName = "You",
+        Timestamp = DateTimeOffset.Now,
+        IsFromViewer = true
+      };
+      _chatMessages.Add(chatMessage);
+
+      // Clear the input
+      _newMessage = string.Empty;
+      StateHasChanged();
+
+      // Send to the device
+      var result = await ViewerHub.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
+      if (!result.IsSuccess)
+      {
+        Logger.LogError("Failed to send chat message: {Error}", result.Exception?.Message);
+        Snackbar.Add("Failed to send message", Severity.Error);
+      }
+
+      // Focus back to input
+      await _chatInputElement.FocusAsync();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error sending chat message.");
+      Snackbar.Add("Error sending message", Severity.Error);
+    }
+  }
+
+  private async Task StartChatSession(DeviceUiSession session)
+  {
+    try
+    {
+      _selectedSession = session;
+      _currentChatSessionId = Guid.NewGuid();
+      _chatMessages.Clear();
+
+      Logger.LogInformation(
+        "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",
+        session.Username,
+        session.SystemSessionId,
+        session.ProcessId);
+
+      _loadingMessage = null;
+      _alertMessage = null;
+      await InvokeAsync(StateHasChanged);
+
+      // Focus the message input
+      await Task.Delay(100);
+      await _chatInputElement.FocusAsync();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error starting chat session.");
+      _alertMessage = "Failed to start chat session.";
+      _alertSeverity = Severity.Error;
+      StateHasChanged();
+    }
+  }
 }
 
 public enum ChatState
@@ -298,8 +297,8 @@ public enum ChatState
 
 public class ChatMessage
 {
+  public bool IsFromViewer { get; set; }
   public string Message { get; set; } = string.Empty;
   public string SenderName { get; set; } = string.Empty;
   public DateTimeOffset Timestamp { get; set; }
-  public bool IsFromViewer { get; set; }
 }

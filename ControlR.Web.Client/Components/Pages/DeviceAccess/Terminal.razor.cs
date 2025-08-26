@@ -13,6 +13,7 @@ public partial class Terminal : IAsyncDisposable
     ["spellcheck"] = "false",
     ["autocomplete"] = "off"
   };
+
   private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
   private MudTextField<string> _commandInputElement = null!;
 
@@ -21,8 +22,8 @@ public partial class Terminal : IAsyncDisposable
 
   private PwshCompletionsResponseDto? _currentCompletions;
   private bool _loading = true;
-  private ElementReference _terminalOutputContainer;
   private bool _taboutPrevented;
+  private ElementReference _terminalOutputContainer;
 
   [Inject]
   public required IDeviceAccessState DeviceState { get; init; }
@@ -38,13 +39,16 @@ public partial class Terminal : IAsyncDisposable
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+
   [Inject]
   public required ITerminalState TerminalState { get; init; }
 
   [Inject]
   public required IViewerHubConnection ViewerHub { get; init; }
 
-  private int CommandInputLineCount => TerminalState.EnableMultiline ? 6 : 1;
+  private int CommandInputLineCount => TerminalState.EnableMultiline
+    ? 6
+    : 1;
 
   public ValueTask DisposeAsync()
   {
@@ -134,6 +138,7 @@ public partial class Terminal : IAsyncDisposable
 
     return false;
   }
+
   private void ApplyCompletion(PwshCompletionsResponseDto completion)
   {
     if (string.IsNullOrWhiteSpace(TerminalState.LastCompletionInput))
@@ -184,9 +189,8 @@ public partial class Terminal : IAsyncDisposable
         TerminalState.LastCompletionInput,
         TerminalState.LastCursorIndex,
         string.Empty, // ViewerConnectionId will be set by server
-        Forward: null,
-        currentPage,
-        PwshCompletionsRequestDto.DefaultPageSize);
+        null,
+        currentPage);
 
       var completionResult = await ViewerHub.GetPwshCompletions(requestDto);
 
@@ -205,7 +209,6 @@ public partial class Terminal : IAsyncDisposable
       lastResponse = completionResult.Value;
       allMatches.AddRange(lastResponse.CompletionMatches);
       currentPage++;
-
     } while (lastResponse.HasMorePages);
 
     if (allMatches.Count == 0)
@@ -223,13 +226,13 @@ public partial class Terminal : IAsyncDisposable
       lastResponse.ReplacementLength,
       [.. allMatches],
       false, // No more pages since we collected everything
-      allMatches.Count,
-      0);
+      allMatches.Count);
 
     await InvokeAsync(StateHasChanged);
     await _completionsAutoComplete.OpenMenuAsync();
     await _completionsAutoComplete.FocusAsync();
   }
+
   private async Task GetNextCompletion(bool forward)
   {
     try
@@ -260,13 +263,13 @@ public partial class Terminal : IAsyncDisposable
         Snackbar.Add(completionResult.Reason, Severity.Error);
         return;
       }
+
       ApplyCompletion(completionResult.Value);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while getting next command completion.");
       Snackbar.Add("An error occurred while getting completions", Severity.Error);
-      return;
     }
   }
 
@@ -293,6 +296,7 @@ public partial class Terminal : IAsyncDisposable
 
     return TerminalState.InputHistory[TerminalState.InputHistoryIndex];
   }
+
   private async Task HandleEnterKeyInput(KeyboardEventArgs args)
   {
     if (string.IsNullOrWhiteSpace(TerminalState.CommandInputText))
@@ -316,7 +320,8 @@ public partial class Terminal : IAsyncDisposable
       TerminalState.InputHistory.Add(TerminalState.CommandInputText);
       TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
 
-      var result = await ViewerHub.SendTerminalInput(DeviceState.CurrentDevice.Id, TerminalState.Id, TerminalState.CommandInputText);
+      var result = await ViewerHub.SendTerminalInput(DeviceState.CurrentDevice.Id, TerminalState.Id,
+        TerminalState.CommandInputText);
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);
@@ -367,7 +372,8 @@ public partial class Terminal : IAsyncDisposable
     var replacementText = string.Concat(
       TerminalState.LastCompletionInput[.._currentCompletions.ReplacementIndex],
       match.CompletionText,
-      TerminalState.LastCompletionInput[(_currentCompletions.ReplacementIndex + _currentCompletions.ReplacementLength)..]);
+      TerminalState.LastCompletionInput[
+        (_currentCompletions.ReplacementIndex + _currentCompletions.ReplacementLength)..]);
 
     TerminalState.CommandInputText = replacementText;
 

@@ -3,7 +3,7 @@
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
-<div class="h-100 ma-4">
+<div class="@OuterDivClass">
 
   @switch (CurrentState)
   {
@@ -95,64 +95,54 @@
       }
     case ChatState.ChatActive:
       {
-        <div class="chat-grid">
-          <div class="chat-title-bar">
-            <MudPaper Elevation="2">
-              <MudText Typo="Typo.h6" Color="Color.Primary">
-                Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
-              </MudText>
-              <MudButton StartIcon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small"
-                OnClick="CloseChatSession">
-                Close
-              </MudButton>
-            </MudPaper>
+        <div class="chat-outer-grid">
+          <div class="chat-app-bar">
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+              Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
+            </MudText>
+            <MudFlexBreak />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Variant="Variant.Outlined" Color="Color.Error"
+              Size="Size.Small" OnClick="CloseChatSession">
+              Close
+            </MudIconButton>
           </div>
-          <div class="chat-messages">
-            @if (_chatMessages.Count == 0)
-            {
-              <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
-                No messages yet. Send a message to start the conversation.
-              </MudText>
-            }
-            else
-            {
-              @foreach (var message in _chatMessages)
+          <div class="chat-inner-grid">
+            <div class="chat-messages">
+              @if (_chatMessages.Count == 0)
               {
-                <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
-                  <div class="message-header">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                      @(message.SenderName) - @(message.Timestamp.ToString("HH:mm:ss"))
-                    </MudText>
-                  </div>
-                  <div class="message-content">
-                    <MudText Typo="Typo.body1">
-                      @(message.Message)
-                    </MudText>
-                  </div>
-                </div>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
+                  No messages yet. Send a message to start the conversation.
+                </MudText>
               }
-            }
-          </div>
-          <div class="chat-input">
-                    <MudTextField T="string"
-                      @ref="@(_chatInputElement)"
-                      InputId="@(_chatInputElementId)"
-                      @bind-Value="@_newMessage"
-                      @bind-Text="@_newMessage"
-                      Label="Enter a message"
-                      HelperText="Type a message and press Enter to send"
-                      TextUpdateSuppression="false"
-                      HelperTextOnFocus="true"
-                      Adornment="Adornment.End"
-                      AdornmentIcon="@Icons.Material.Filled.Send"
-                      AdornmentColor="Color.Info"
-                      OnAdornmentClick="@SendMessage"
-                      AutoFocus="true"
-                      Immediate="true"
-                      OnKeyDown="@HandleInputKeyDown"
-                      Class="mt-2" />
+              else
+              {
+                @foreach (var message in _chatMessages)
+                {
+                  <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
+                    <div class="message-header">
+                      <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @(message.SenderName) - @(message.Timestamp.ToString("HH:mm:ss"))
+                      </MudText>
+                    </div>
+                    <div class="message-content">
+                      <MudText Typo="Typo.body1">
+                        @(message.Message)
+                      </MudText>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+            <div class="chat-input">
+              <MudTextField T="string" @ref="@(_chatInputElement)" InputId="@(_chatInputElementId)" @bind-Value="@_newMessage"
+                @bind-Text="@_newMessage" Label="Enter a message" HelperText="Type a message and press Enter to send"
+                TextUpdateSuppression="false" HelperTextOnFocus="true" Adornment="Adornment.End"
+                AdornmentIcon="@Icons.Material.Filled.Send" AdornmentColor="Color.Info" OnAdornmentClick="@SendMessage"
+                AutoFocus="true" Immediate="true" OnKeyDown="@HandleInputKeyDown" Class="mt-2" />
+            </div>
           </div>
         </div>
+
         break;
       }
     case ChatState.UnsupportedOperatingSystem:
