@@ -92,7 +92,7 @@
     {
       "label": "jb: Cleanup Active Document",
       "type": "shell",
-      "command": "job codecleanup ${file}",
+      "command": "jb cleanupcode ${file}",
       "problemMatcher": []
     }
   ]
