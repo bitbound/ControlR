@@ -4,17 +4,18 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using Microsoft.Extensions.Logging;
+using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Services;
 
 internal class ChatSessionManager(
   IProcessManager processManager,
-  IIpcResponseSender ipcResponseSender,
+  IIpcClientAccessor ipcClientAccessor,
   ILogger<ChatSessionManager> logger) : IChatSessionManager
 {
   private readonly ConcurrentDictionary<Guid, ChatSession> _activeSessions = new();
   private readonly IProcessManager _processManager = processManager;
-  private readonly IIpcResponseSender _ipcResponseSender = ipcResponseSender;
+  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<ChatSessionManager> _logger = logger;
 
   public Task<Guid> CreateChatSession(Guid sessionId, int targetSystemSession, int targetProcessId, string viewerConnectionId)
@@ -65,6 +66,12 @@ internal class ChatSessionManager(
       return false;
     }
 
+    if (!_ipcClientAccessor.TryGetConnection(out var connection))
+    {
+      _logger.LogWarning("No active IPC connection available to send chat response");
+      return false;
+    }
+
     try
     {
       // Get the current user name
@@ -78,18 +85,15 @@ internal class ChatSessionManager(
         DateTimeOffset.Now);
 
       // Send back to Agent via IPC
-      var result = await _ipcResponseSender.SendChatResponse(response);
+      await connection!.Send(response);
       
-      if (result)
-      {
-        _logger.LogInformation(
-          "Chat response sent from {Username} for session {SessionId}: {Message}",
-          currentUser,
-          sessionId,
-          message);
-      }
+      _logger.LogInformation(
+        "Chat response sent from {Username} for session {SessionId}: {Message}",
+        currentUser,
+        sessionId,
+        message);
 
-      return result;
+      return true;
     }
     catch (Exception ex)
     {
