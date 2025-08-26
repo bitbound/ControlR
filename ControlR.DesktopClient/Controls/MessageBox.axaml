@@ -5,7 +5,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ControlR.DesktopClient.Controls.Dialogs.MessageBox"
         xmlns:vm="using:ControlR.DesktopClient.ViewModels"
-        xmlns:root="using:ControlR.DesktopClient"
+        xmlns:common="using:ControlR.DesktopClient.Common"
         x:DataType="vm:MessageBoxViewModel"
         Icon="/Assets/appicon.ico"
         Title="{Binding Caption}"
@@ -26,18 +26,18 @@
             <Button Classes="Primary" HorizontalAlignment="Right" IsVisible="{Binding IsOkButtonVisible}"
               Command="{Binding OKCommand}"
               CommandParameter="{Binding #MessageBoxWindow}"
-              Content="{x:Static root:Localization.OkText}">
+              Content="{x:Static common:Localization.OkText}">
             </Button>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Classes="Primary" HorizontalAlignment="Right" IsVisible="{Binding AreYesNoButtonsVisible}" Margin="5,0,5,0"
                   Command="{Binding YesCommand}"
                   CommandParameter="{Binding #MessageBoxWindow}"
-                  Content="{x:Static root:Localization.YesText}">
+                  Content="{x:Static common:Localization.YesText}">
                 </Button>
                 <Button HorizontalAlignment="Right" IsVisible="{Binding AreYesNoButtonsVisible}" Margin="5,0,5,0"
                   Command="{Binding NoCommand}"
                   CommandParameter="{Binding #MessageBoxWindow}"
-                  Content="{x:Static root:Localization.NoText}">
+                  Content="{x:Static common:Localization.NoText}">
                 </Button>
             </StackPanel>
 

@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <None Remove="Assets\appicon.ico" />
-    <None Remove="Resources\Strings\en-US.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,10 +26,6 @@
 
   <ItemGroup>
     <Content Include="Assets\appicon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\Strings\en-US.json" />
   </ItemGroup>
 
   <ItemGroup>

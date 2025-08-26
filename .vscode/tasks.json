@@ -88,20 +88,6 @@
       },
       "group": "build",
       "problemMatcher": []
-    },
-    {
-      "label": "jb: Cleanup Active Document",
-      "type": "shell",
-      "command": "jb",
-      "args": [
-        "cleanupcode",
-        "'${workspaceFolder}/ControlR.sln'",
-        "--include='${relativeFile}'",
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
     }
   ]
 }

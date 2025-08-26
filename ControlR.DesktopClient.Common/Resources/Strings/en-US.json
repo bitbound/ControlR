@@ -16,5 +16,7 @@
   "ScreenCapturePermissionDescription": "Required to view your device's screen.",
   "Notifications": "Notifications",
   "NotificationPermissionDescription": "Required to show notifications and alerts.",
-  "OpenSettings": "Open Settings"
+  "OpenSettings": "Open Settings",
+  "RemoteControlSessionToastTitle": "Remote Control Session",
+  "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen"
 }
