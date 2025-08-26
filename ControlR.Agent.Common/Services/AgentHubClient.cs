@@ -155,6 +155,39 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Closing chat session {SessionId} for process ID {ProcessId}",
+        sessionId,
+        targetProcessId);
+
+      if (!_ipcServerStore.TryGetServer(targetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}. Cannot close chat session.",
+          targetProcessId);
+        return Result.Fail("IPC server not found for target process.");
+      }
+
+      var ipcDto = new CloseChatSessionIpcDto(sessionId, targetProcessId);
+      await ipcServer.Server.Send(ipcDto);
+      
+      _logger.LogInformation(
+        "Chat session close request sent to IPC server for process ID {ProcessId}.",
+        targetProcessId);
+        
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while closing chat session {SessionId}.", sessionId);
+      return Result.Fail("An error occurred while closing chat session.");
+    }
+  }
+
   public Task UninstallAgent(string reason)
   {
     try

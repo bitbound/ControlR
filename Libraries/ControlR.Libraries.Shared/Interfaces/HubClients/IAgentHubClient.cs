@@ -14,5 +14,6 @@ public interface IAgentHubClient : IHubClient
   Task<DeviceUiSession[]> GetActiveUiSessions();
   Task<Result> ReceiveTerminalInput(TerminalInputDto dto);
   Task<Result> SendChatMessage(ChatMessageHubDto dto);
+  Task<Result> CloseChatSession(Guid sessionId, int targetProcessId);
   Task UninstallAgent(string reason);
 }

@@ -6,6 +6,6 @@ public interface IChatSessionManager
 {
   Task AddMessage(Guid sessionId, ChatMessageIpcDto message);
   Task<bool> SendResponse(Guid sessionId, string message);
-  Task CloseChatSession(Guid sessionId);
+  Task CloseChatSession(Guid sessionId, bool notifyUser);
   bool IsSessionActive(Guid sessionId);
 }

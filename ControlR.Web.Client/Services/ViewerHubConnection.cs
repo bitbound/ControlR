@@ -39,6 +39,7 @@ public interface IViewerHubConnection
 
   Task SendAgentUpdateTrigger(Guid deviceId);
   Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);
+  Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
@@ -291,6 +292,19 @@ internal class ViewerHubConnection(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending chat message.");
+      return Result.Fail(ex);
+    }
+  }
+
+  public async Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
+  {
+    try
+    {
+      return await _viewerHub.Server.CloseChatSession(deviceId, sessionId, targetProcessId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while closing chat session.");
       return Result.Fail(ex);
     }
   }

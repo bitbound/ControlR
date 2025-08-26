@@ -84,6 +84,8 @@ public class ChatWindowViewModel(
     // Send a system message to notify the viewer that the chat window was closed
     var systemMessage = Localization.ChatWindowClosedSystemMessage;
     var success = await _chatSessionManager.SendResponse(Session.SessionId, systemMessage);
+
+    await _chatSessionManager.CloseChatSession(Session.SessionId, false);
     
     if (success)
     {

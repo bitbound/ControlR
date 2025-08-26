@@ -11,12 +11,26 @@ public class Toaster(ILogger<Toaster> logger) : IToaster
 
   public async Task ShowToast(string title, string message, ToastIcon toastIcon)
   {
-    await ShowToast(title, message, toastIcon, () => Task.CompletedTask);
+    await ShowToastImpl(title, message, toastIcon);
   }
 
   public async Task ShowToast(string title, string message, ToastIcon toastIcon, Func<Task> onClick)
   {
-        try
+    await ShowToastImpl(title, message, toastIcon, onClick);
+  }
+
+  public async Task ShowToast(string title, string message, ToastIcon toastIcon, Action onClick)
+  {
+    await ShowToastImpl(title, message, toastIcon, () =>
+    {
+      onClick();
+      return Task.CompletedTask;
+    });
+  }
+
+  private async Task ShowToastImpl(string title, string message, ToastIcon toastIcon, Func<Task>? onClick = null)
+  {
+    try
     {
       // Ensure we're on the UI thread
       if (Dispatcher.UIThread.CheckAccess())
@@ -36,12 +50,4 @@ public class Toaster(ILogger<Toaster> logger) : IToaster
     }
   }
 
-  public async Task ShowToast(string title, string message, ToastIcon toastIcon, Action onClick)
-  {
-    await ShowToast(title, message, toastIcon, () =>
-    {
-      onClick();
-      return Task.CompletedTask;
-    });
-  }
 }

@@ -29,49 +29,10 @@ internal class ChatSessionManager(
   {
     Dispatcher.UIThread.Invoke(async () =>
     {
-      var session = _activeSessions.AddOrUpdate(
-        sessionId,
-        _ =>
-        {
-          var chatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
-          chatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
-          chatWindow.ViewModel.Messages.Add(new ChatMessageViewModel(message, true));
-
-          var newSession = new ChatSession
-          {
-            ChatWindow = chatWindow,
-            SessionId = sessionId,
-            TargetSystemSession = message.TargetSystemSession,
-            TargetProcessId = message.TargetProcessId,
-            ViewerConnectionId = message.ViewerConnectionId,
-            CreatedAt = DateTimeOffset.Now,
-          };
-
-          chatWindow.ViewModel.Session = newSession;
-
-          _logger.LogInformation(
-            "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
-            sessionId,
-            message.TargetSystemSession,
-            message.TargetProcessId);
-
-          return newSession;
-        },
-        (sessionId, existingSession) =>
-        {
-          if (existingSession.ChatWindow?.PlatformImpl is not { })
-          {
-            existingSession.ChatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
-            existingSession.ChatWindow.DataContext = _serviceProvider.GetRequiredService<IChatWindowViewModel>();
-            existingSession.ChatWindow.ViewModel.Session = existingSession;
-          }
-
-          existingSession.ViewerConnectionId = message.ViewerConnectionId;
-          existingSession.ViewModel.Messages.Add(new ChatMessageViewModel(message, true));
-          return existingSession;
-        });
-
+      var session = AddOrGetSession(sessionId, message);
       Guard.IsNotNull(session.ChatWindow);
+
+      session.Messages.Add(new ChatMessageViewModel(message, true));
 
       if (!session.ChatWindow.IsVisible)
       {
@@ -96,16 +57,31 @@ internal class ChatSessionManager(
     return Task.CompletedTask;
   }
 
-  public Task CloseChatSession(Guid sessionId)
+  public Task CloseChatSession(Guid sessionId, bool notifyUser)
   {
-    if (_activeSessions.TryRemove(sessionId, out var session))
+    Dispatcher.UIThread.Invoke(async () =>
     {
-      _logger.LogInformation("Chat session {SessionId} closed", sessionId);
-    }
-    else
-    {
-      _logger.LogWarning("Chat session {SessionId} not found when closing", sessionId);
-    }
+      if (_activeSessions.TryRemove(sessionId, out var session))
+      {
+        _logger.LogInformation("Chat session {SessionId} closed", sessionId);
+
+        // Close the chat window if it exists
+        session.ChatWindow?.Close();
+
+        if (notifyUser)
+        {
+          // Show toast notification
+          await _toaster.ShowToast(
+            title: Localization.ChatSessionClosedToastTitle,
+            message: Localization.ChatSessionClosedToastMessage,
+            toastIcon: ToastIcon.Info);
+        }
+      }
+      else
+      {
+        _logger.LogWarning("Chat session {SessionId} not found when closing", sessionId);
+      }
+    });
 
     return Task.CompletedTask;
   }
@@ -156,5 +132,49 @@ internal class ChatSessionManager(
       _logger.LogError(ex, "Error sending chat response for session {SessionId}", sessionId);
       return false;
     }
+  }
+
+  private ChatSession AddOrGetSession(Guid sessionId, ChatMessageIpcDto message)
+  {
+    return _activeSessions.AddOrUpdate(
+        sessionId,
+        _ =>
+        {
+          var chatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
+          chatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
+
+          var newSession = new ChatSession
+          {
+            ChatWindow = chatWindow,
+            SessionId = sessionId,
+            TargetSystemSession = message.TargetSystemSession,
+            TargetProcessId = message.TargetProcessId,
+            ViewerConnectionId = message.ViewerConnectionId,
+            CreatedAt = DateTimeOffset.Now,
+          };
+
+          chatWindow.ViewModel.Session = newSession;
+
+          _logger.LogInformation(
+            "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+            sessionId,
+            message.TargetSystemSession,
+            message.TargetProcessId);
+
+          return newSession;
+        },
+        (sessionId, existingSession) =>
+        {
+          if (existingSession.ChatWindow?.PlatformImpl is not { })
+          {
+            existingSession.ChatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
+            existingSession.ChatWindow.DataContext = _serviceProvider.GetRequiredService<IChatWindowViewModel>();
+            existingSession.ChatWindow.ViewModel.Session = existingSession;
+          }
+
+          existingSession.ViewerConnectionId = message.ViewerConnectionId;
+          return existingSession;
+        });
+
   }
 }

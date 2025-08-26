@@ -105,7 +105,13 @@ public partial class Chat : ComponentBase, IDisposable
 
   public void Dispose()
   {
-    ViewerHub.CloseChatSession(_currentChatSessionId).Forget();
+    if (ChatState.SelectedSession is not null)
+    {
+      ViewerHub.CloseChatSession(
+        DeviceAccessState.CurrentDevice.Id,
+        _currentChatSessionId,
+        ChatState.SelectedSession.ProcessId).Forget();
+    }
     Messenger.UnregisterAll(this);
     GC.SuppressFinalize(this);
   }
@@ -132,6 +138,20 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task CloseChatSession()
   {
+    if (ChatState.SelectedSession is not null)
+    {
+      var result = await ViewerHub.CloseChatSession(
+        DeviceAccessState.CurrentDevice.Id,
+        _currentChatSessionId,
+        ChatState.SelectedSession.ProcessId);
+      
+      if (!result.IsSuccess)
+      {
+        Logger.LogError("Failed to close chat session: {Error}", result.Exception?.Message);
+        Snackbar.Add("Failed to close chat session", Severity.Warning);
+      }
+    }
+
     ChatState.SelectedSession = null;
     ChatState.ChatMessages.Clear();
     _currentChatSessionId = Guid.Empty;

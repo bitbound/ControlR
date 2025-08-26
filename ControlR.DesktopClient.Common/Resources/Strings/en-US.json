@@ -18,9 +18,9 @@
   "NotificationPermissionDescription": "Required to show notifications and alerts.",
   "OpenSettings": "Open Settings",
   "RemoteControlSessionToastTitle": "Remote Control Session",
-  "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen",
+  "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen.",
   "NewChatMessageToastTitle": "New Chat Message",
-  "NewChatMessageToastMessage": "You have a new message from {0}",
+  "NewChatMessageToastMessage": "You have a new message from {0}.",
   "ChatWindowTitle": "Chat with {0}",
   "ChatWindowDefaultTitle": "ControlR Chat",
   "ChatWindowClosedSystemMessage": "System Message: User closed the chat window.",
@@ -28,5 +28,7 @@
   "EnterMessagePlaceholder": "Type your message...",
   "NoMessagesText": "No messages yet. Send a message to start the conversation.",
   "CloseText": "Close",
-  "SendText": "Send"
+  "SendText": "Send",
+  "ChatSessionClosedToastTitle": "Chat Session Closed",
+  "ChatSessionClosedToastMessage": "The chat session has been closed by the remote user."
 }

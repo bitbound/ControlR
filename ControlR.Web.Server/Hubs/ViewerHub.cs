@@ -524,7 +524,32 @@ public class ViewerHub(
     }
   }
 
+  public async Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
+  {
+    try
+    {
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return Result.Fail("User is not authorized to close chat sessions.");
+      }
 
+      _logger.LogInformation(
+        "Closing chat session {SessionId} for device {DeviceId} and process {ProcessId}",
+        sessionId,
+        deviceId,
+        targetProcessId);
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .CloseChatSession(sessionId, targetProcessId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", sessionId, deviceId);
+      return Result.Fail("Agent could not be reached.");
+    }
+  }
 
   public async Task UninstallAgent(Guid deviceId, string reason)
   {

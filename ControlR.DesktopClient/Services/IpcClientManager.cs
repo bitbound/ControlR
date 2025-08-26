@@ -19,12 +19,12 @@ public class IpcClientManager(
   IProcessManager processManager,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
-  private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
-  private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
   private readonly IpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
+  private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
+  private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly TimeProvider _timeProvider = timeProvider;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,6 +46,7 @@ public class IpcClientManager(
         using var client = await _ipcConnectionFactory.CreateClient(".", pipeName);
         client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
         client.On<ChatMessageIpcDto>(HandleChatMessage);
+        client.On<CloseChatSessionIpcDto>(HandleCloseChatSession);
 
         if (!await client.Connect(stoppingToken))
         {
@@ -76,11 +77,6 @@ public class IpcClientManager(
     }
   }
 
-  private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
-  {
-     _remoteControlHostManager.StartHost(dto).Forget();
-  }
-
   private async void HandleChatMessage(ChatMessageIpcDto dto)
   {
     try
@@ -98,5 +94,28 @@ public class IpcClientManager(
     {
       _logger.LogError(ex, "Error while handling chat message.");
     }
+  }
+
+  private async void HandleCloseChatSession(CloseChatSessionIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling close chat session request. Session ID: {SessionId}, Process ID: {ProcessId}",
+        dto.SessionId,
+        dto.TargetProcessId);
+
+      // Close the session through the chat session manager
+      await _chatSessionManager.CloseChatSession(dto.SessionId, true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling close chat session request.");
+    }
+  }
+
+  private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
+  {
+    _remoteControlHostManager.StartHost(dto).Forget();
   }
 }

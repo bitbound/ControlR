@@ -24,6 +24,8 @@ public static class Localization
   public static string ChatWindowTitle => GetString();
   public static string ChatWindowDefaultTitle => GetString();
   public static string ChatWindowClosedSystemMessage => GetString();
+  public static string ChatSessionClosedToastTitle => GetString();
+  public static string ChatSessionClosedToastMessage => GetString();
   public static string CloseText => GetString();
   public static string EnterCodePlaceholder => GetString();
   public static string EnterMessagePlaceholder => GetString();
