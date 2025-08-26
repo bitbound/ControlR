@@ -14,10 +14,10 @@ public partial class Terminal : IAsyncDisposable
     ["autocomplete"] = "off"
   };
   private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
-  private MudTextField<string> _commandInputElement = default!;
+  private MudTextField<string> _commandInputElement = null!;
 
   // Provided by UI.  Never null
-  private MudAutocomplete<PwshCompletionMatch> _completionsAutoComplete = default!;
+  private MudAutocomplete<PwshCompletionMatch> _completionsAutoComplete = null!;
 
   private PwshCompletionsResponseDto? _currentCompletions;
   private bool _loading = true;
@@ -61,7 +61,6 @@ public partial class Terminal : IAsyncDisposable
       _currentCompletions = null;
       await _commandInputElement.FocusAsync();
       await InvokeAsync(StateHasChanged);
-      return;
     }
   }
 

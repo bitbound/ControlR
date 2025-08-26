@@ -1,9 +1,6 @@
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
@@ -13,12 +10,12 @@ public partial class Chat : ComponentBase, IDisposable
   private Severity _alertSeverity;
   private string? _loadingMessage = "Loading";
   private string _newMessage = string.Empty;
-  private MudTextField<string> _messageInput = null!;
-
+  private MudTextField<string> _chatInputElement = null!;
   private DeviceUiSession[]? _systemSessions;
   private DeviceUiSession? _selectedSession;
   private Guid _currentChatSessionId = Guid.NewGuid();
-  private List<ChatMessage> _chatMessages = [];
+  private ConcurrentList<ChatMessage> _chatMessages = [];
+  private readonly string _chatInputElementId = $"chat-input-{Guid.NewGuid()}";
 
   [Inject]
   public required IDeviceAccessState DeviceAccessState { get; init; }
@@ -62,10 +59,9 @@ public partial class Chat : ComponentBase, IDisposable
         return ChatState.Alert;
       }
 
-      if (DeviceAccessState.CurrentDevice.Platform 
-        is not SystemPlatform.Windows 
-        and not SystemPlatform.MacOs
-        and not SystemPlatform.Linux)
+      if (DeviceAccessState.CurrentDevice.Platform
+        is not SystemPlatform.Windows
+        and not SystemPlatform.MacOs)
       {
         return ChatState.UnsupportedOperatingSystem;
       }
@@ -81,21 +77,13 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 
-  private string OuterDivClass
-  {
-    get
-    {
-      if (CurrentState == ChatState.ChatActive)
-      {
-        return "h-100";
-      }
-
-      return "h-100 ma-4";
-    }
-  }
-
   protected override async Task OnInitializedAsync()
   {
+    if (!DeviceAccessState.IsDeviceLoaded)
+    {
+      return;
+    }
+
     if (DeviceAccessState.CurrentDevice.Id == Guid.Empty)
     {
       _alertMessage = "No device selected. Please go back and select a device.";
@@ -109,17 +97,10 @@ public partial class Chat : ComponentBase, IDisposable
     await LoadSystemSessions();
   }
 
-  protected override void OnAfterRender(bool firstRender)
-  {
-    if (firstRender)
-    {
-      // Any additional setup after first render
-    }
-  }
-
   public void Dispose()
   {
     Messenger.UnregisterAll(this);
+    GC.SuppressFinalize(this);
   }
 
   private async Task LoadSystemSessions()
@@ -134,7 +115,7 @@ public partial class Chat : ComponentBase, IDisposable
       {
         _systemSessions = result.Value;
         _loadingMessage = null;
-        
+
         if (_systemSessions.Length == 0)
         {
           _alertMessage = "No active system sessions found on the target device.";
@@ -173,7 +154,7 @@ public partial class Chat : ComponentBase, IDisposable
       _selectedSession = session;
       _currentChatSessionId = Guid.NewGuid();
       _chatMessages.Clear();
-      
+
       Logger.LogInformation(
         "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",
         session.Username,
@@ -182,11 +163,11 @@ public partial class Chat : ComponentBase, IDisposable
 
       _loadingMessage = null;
       _alertMessage = null;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
 
       // Focus the message input
       await Task.Delay(100);
-      await _messageInput.FocusAsync();
+      await _chatInputElement.FocusAsync();
     }
     catch (Exception ex)
     {
@@ -214,16 +195,12 @@ public partial class Chat : ComponentBase, IDisposable
 
     try
     {
-      // Get current user info (this would need to be available from a service)
-      var userDisplayName = "Current User"; // TODO: Get from user service
-      var userEmail = "user@example.com"; // TODO: Get from user service
-
       var chatDto = new ChatMessageHubDto(
         DeviceAccessState.CurrentDevice.Id,
         _currentChatSessionId,
         _newMessage.Trim(),
-        userDisplayName,
-        userEmail,
+        string.Empty, // SenderName will be set in the hub
+        string.Empty,  // SenderEmail will be set in the hub
         _selectedSession.SystemSessionId,
         _selectedSession.ProcessId,
         DateTimeOffset.Now);
@@ -232,7 +209,7 @@ public partial class Chat : ComponentBase, IDisposable
       var chatMessage = new ChatMessage
       {
         Message = _newMessage.Trim(),
-        SenderName = userDisplayName,
+        SenderName = "You",
         Timestamp = DateTimeOffset.Now,
         IsFromViewer = true
       };
@@ -251,7 +228,7 @@ public partial class Chat : ComponentBase, IDisposable
       }
 
       // Focus back to input
-      await _messageInput.FocusAsync();
+      await _chatInputElement.FocusAsync();
     }
     catch (Exception ex)
     {
@@ -260,7 +237,7 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 
-  private async Task HandleKeyDown(KeyboardEventArgs args)
+  private async Task HandleInputKeyDown(KeyboardEventArgs args)
   {
     if (args.Key == "Enter" && !args.ShiftKey)
     {
@@ -273,7 +250,7 @@ public partial class Chat : ComponentBase, IDisposable
     try
     {
       var response = message.Dto;
-      
+
       // Only handle responses for the current chat session
       if (response.SessionId != _currentChatSessionId)
       {
@@ -290,10 +267,10 @@ public partial class Chat : ComponentBase, IDisposable
       };
 
       _chatMessages.Add(chatMessage);
-      
+
       // Update the UI
       await InvokeAsync(StateHasChanged);
-      
+
       Logger.LogInformation(
         "Received chat response from {Username} for session {SessionId}",
         response.SenderUsername,

@@ -3,7 +3,7 @@
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
-<div class="@(OuterDivClass)">
+<div class="h-100 ma-4">
 
   @switch (CurrentState)
   {
@@ -14,7 +14,7 @@
       }
     case ChatState.Alert:
       {
-        <MudAlert Severity="_alertSeverity" Icon="@(AlertIcon)">
+        <MudAlert Severity="@_alertSeverity" Icon="@(AlertIcon)">
           @(_alertMessage)
         </MudAlert>
         break;
@@ -26,9 +26,7 @@
         </MudText>
 
         <MudTooltip Text="Refresh System Sessions">
-          <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                     Class="mb-2"
-                     OnClick="RefreshSystemSessions">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mb-2" OnClick="RefreshSystemSessions">
             Refresh Sessions
           </MudButton>
         </MudTooltip>
@@ -97,20 +95,19 @@
       }
     case ChatState.ChatActive:
       {
-        <div class="chat-container">
-          <MudPaper Class="chat-header" Elevation="2">
-            <MudText Typo="Typo.h6" Color="Color.Primary">
-              Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
-            </MudText>
-            <MudButton StartIcon="@Icons.Material.Filled.Close" 
-                       Color="Color.Default" 
-                       Size="Size.Small"
-                       OnClick="CloseChatSession">
-              Close
-            </MudButton>
-          </MudPaper>
-
-          <MudPaper Class="chat-messages" Elevation="1">
+        <div class="chat-grid">
+          <div class="chat-title-bar">
+            <MudPaper Elevation="2">
+              <MudText Typo="Typo.h6" Color="Color.Primary">
+                Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
+              </MudText>
+              <MudButton StartIcon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small"
+                OnClick="CloseChatSession">
+                Close
+              </MudButton>
+            </MudPaper>
+          </div>
+          <div class="chat-messages">
             @if (_chatMessages.Count == 0)
             {
               <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
@@ -135,25 +132,26 @@
                 </div>
               }
             }
-          </MudPaper>
-
-          <MudPaper Class="chat-input" Elevation="2">
-            <MudTextField @bind-Value="_newMessage"
-                          Label="Type your message..."
-                          Variant="Variant.Outlined"
-                          FullWidth
-                          Lines="2"
-                          OnKeyDown="HandleKeyDown"
-                          @ref="_messageInput" />
-            <MudButton StartIcon="@Icons.Material.Filled.Send"
-                       Color="Color.Primary"
-                       Variant="Variant.Filled"
-                       OnClick="SendMessage"
-                       Disabled="@(string.IsNullOrWhiteSpace(_newMessage))"
-                       Class="ml-2">
-              Send
-            </MudButton>
-          </MudPaper>
+          </div>
+          <div class="chat-input">
+                    <MudTextField T="string"
+                      @ref="@(_chatInputElement)"
+                      InputId="@(_chatInputElementId)"
+                      @bind-Value="@_newMessage"
+                      @bind-Text="@_newMessage"
+                      Label="Enter a message"
+                      HelperText="Type a message and press Enter to send"
+                      TextUpdateSuppression="false"
+                      HelperTextOnFocus="true"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.Send"
+                      AdornmentColor="Color.Info"
+                      OnAdornmentClick="@SendMessage"
+                      AutoFocus="true"
+                      Immediate="true"
+                      OnKeyDown="@HandleInputKeyDown"
+                      Class="mt-2" />
+          </div>
         </div>
         break;
       }
@@ -174,61 +172,3 @@
       }
   }
 </div>
-
-<style>
-  .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 200px);
-  }
-
-  .chat-header {
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--mud-palette-divider);
-  }
-
-  .chat-messages {
-    flex: 1;
-    padding: 16px;
-    overflow-y: auto;
-    min-height: 300px;
-  }
-
-  .chat-message {
-    margin-bottom: 16px;
-    padding: 12px;
-    border-radius: 8px;
-  }
-
-  .viewer-message {
-    background-color: var(--mud-palette-primary-lighten);
-    margin-left: 20%;
-  }
-
-  .desktop-message {
-    background-color: var(--mud-palette-surface-lighten);
-    margin-right: 20%;
-  }
-
-  .message-header {
-    margin-bottom: 4px;
-  }
-
-  .chat-input {
-    padding: 16px;
-    display: flex;
-    align-items: end;
-    gap: 8px;
-    border-top: 1px solid var(--mud-palette-divider);
-  }
-
-  .session-card-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    align-items: center;
-  }
-</style>

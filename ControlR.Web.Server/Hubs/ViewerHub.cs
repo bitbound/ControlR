@@ -2,6 +2,7 @@
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 
@@ -447,6 +448,7 @@ public class ViewerHub(
 
     var user = await _userManager
       .Users
+      .AsNoTracking()
       .Include(x => x.Tags!)
       .ThenInclude(x => x.Devices)
       .FirstOrDefaultAsync(x => x.Id == userId);
@@ -502,7 +504,14 @@ public class ViewerHub(
         deviceId,
         dto.SessionId);
 
-      dto = dto with { ViewerConnectionId = Context.ConnectionId };
+      var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
+      var displayName = await GetDisplayName(user, "Admin");
+      dto = dto with
+      {
+        ViewerConnectionId = Context.ConnectionId,
+        SenderName = displayName,
+        SenderEmail = $"{user.Email}"
+      };
 
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
@@ -514,6 +523,8 @@ public class ViewerHub(
       return Result.Fail("Agent could not be reached.");
     }
   }
+
+
 
   public async Task UninstallAgent(Guid deviceId, string reason)
   {
@@ -536,6 +547,37 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while uninstalling agent.");
     }
   }
+  private static Task<string> GetDisplayName(AppUser user, string fallbackName = "Admin")
+  {
+    var displayName = user.UserPreferences
+      ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
+      ?.Value;
+
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+      displayName = user.UserName ?? fallbackName;
+    }
+
+    return displayName.AsTaskResult();
+
+  }
+  private async Task<AppUser> GetRequiredUser(Action<IQueryable<AppUser>>? includeBuilder = null)
+  {
+    if (!TryGetUserId(out var userId))
+    {
+      throw new UnauthorizedAccessException("Failed to get user ID.");
+    }
+
+    var query = _userManager.Users.AsNoTracking();
+
+    includeBuilder?.Invoke(query);
+
+    var user = await query.FirstOrDefaultAsync(x => x.Id == userId);
+
+    Guard.IsNotNull(user);
+    return user;
+  }
+
 
   private bool IsServerAdmin()
   {

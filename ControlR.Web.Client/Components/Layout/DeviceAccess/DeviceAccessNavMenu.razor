@@ -7,7 +7,7 @@
 @inject IDeviceAccessState DeviceAccessState
 
 <MudNavMenu>
-  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
     Overview
   </MudNavLink>
 
