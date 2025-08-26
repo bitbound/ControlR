@@ -35,6 +35,7 @@ public class IpcClientManager(
 
         using var client = await _ipcConnectionFactory.CreateClient(".", pipeName);
         client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
+        client.On<ChatMessageIpcDto>(HandleChatMessage);
 
         if (!await client.Connect(stoppingToken))
         {
@@ -120,6 +121,32 @@ public class IpcClientManager(
     {
       GC.Collect();
       GC.WaitForPendingFinalizers();
+    }
+  }
+
+  private void HandleChatMessage(ChatMessageIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling chat message. Session ID: {SessionId}, Sender: {SenderName} ({SenderEmail}), " +
+        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+        dto.SessionId,
+        dto.SenderName,
+        dto.SenderEmail,
+        dto.TargetSystemSession,
+        dto.TargetProcessId);
+
+      // For DesktopCli, we'll just log the message
+      // The full chat UI implementation will be in DesktopClient
+      _logger.LogInformation(
+        "Chat message from {SenderName}: {Message}",
+        dto.SenderName,
+        dto.Message);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling chat message.");
     }
   }
 }

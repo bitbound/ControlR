@@ -484,6 +484,37 @@ public class ViewerHub(
     }
   }
 
+  public async Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
+  {
+    try
+    {
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return Result.Fail("User is not authorized to send chat messages.");
+      }
+
+      // Log the chat message being sent
+      _logger.LogInformation(
+        "Chat message sent by user {SenderName} ({SenderEmail}) to device {DeviceId} for session {SessionId}",
+        dto.SenderName,
+        dto.SenderEmail,
+        deviceId,
+        dto.SessionId);
+
+      dto = dto with { ViewerConnectionId = Context.ConnectionId };
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .SendChatMessage(dto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending chat message to agent.");
+      return Result.Fail("Agent could not be reached.");
+    }
+  }
+
   public async Task UninstallAgent(Guid deviceId, string reason)
   {
     try

@@ -2,6 +2,8 @@ using System.IO.Pipes;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
@@ -14,8 +16,9 @@ internal class IpcServerInitializerWindows(
   IIpcConnectionFactory ipcFactory,
   IIpcServerStore desktopIpcStore,
   IProcessManager processManager,
+  IAgentHubConnection agentHubConnection,
   ILogger<IpcServerInitializerWindows> logger) 
-  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, logger)
+  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, agentHubConnection, logger)
 {
   private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
 

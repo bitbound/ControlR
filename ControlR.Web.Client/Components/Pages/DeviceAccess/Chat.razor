@@ -1,0 +1,234 @@
+@layout DeviceAccessLayout
+@page "/device-access/chat"
+@attribute [Authorize]
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+
+<div class="@(OuterDivClass)">
+
+  @switch (CurrentState)
+  {
+    case ChatState.Loading:
+      {
+        <LoadingIndicator IsVisible Message="@(_loadingMessage)" />
+        break;
+      }
+    case ChatState.Alert:
+      {
+        <MudAlert Severity="_alertSeverity" Icon="@(AlertIcon)">
+          @(_alertMessage)
+        </MudAlert>
+        break;
+      }
+    case ChatState.SessionSelect:
+      {
+        <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
+          System Sessions on @(DeviceAccessState.CurrentDevice.Name):
+        </MudText>
+
+        <MudTooltip Text="Refresh System Sessions">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                     Class="mb-2"
+                     OnClick="RefreshSystemSessions">
+            Refresh Sessions
+          </MudButton>
+        </MudTooltip>
+
+        @if (_systemSessions is null || _systemSessions.Length == 0)
+        {
+          <MudAlert Severity="Severity.Warning" Icon="@(Icons.Material.Filled.Info)">
+            No system sessions available.
+          </MudAlert>
+        }
+        else
+        {
+          <MudGrid>
+            @foreach (var session in _systemSessions)
+            {
+              <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard @key=session Class="mb-3" Outlined>
+                  <MudCardContent>
+                    <div class="session-card-grid">
+                      <div>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                          Session ID:
+                        </MudText>
+                      </div>
+                      <div>
+                        @(session.SystemSessionId)
+                      </div>
+                      <div>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                          Process ID:
+                        </MudText>
+                      </div>
+                      <div>
+                        @(session.ProcessId)
+                      </div>
+                      <div>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                          Session Name:
+                        </MudText>
+                      </div>
+                      <div>
+                        @(session.Name)
+                      </div>
+                      <div>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                          User:
+                        </MudText>
+                      </div>
+                      <div>
+                        @(session.Username)
+                      </div>
+                    </div>
+                  </MudCardContent>
+                  <MudCardActions>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => StartChatSession(session))">
+                      Start Chat
+                    </MudButton>
+                  </MudCardActions>
+                </MudCard>
+              </MudItem>
+            }
+          </MudGrid>
+        }
+
+        break;
+      }
+    case ChatState.ChatActive:
+      {
+        <div class="chat-container">
+          <MudPaper Class="chat-header" Elevation="2">
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+              Chat with @(_selectedSession?.Username) (@(_selectedSession?.Name))
+            </MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.Close" 
+                       Color="Color.Default" 
+                       Size="Size.Small"
+                       OnClick="CloseChatSession">
+              Close
+            </MudButton>
+          </MudPaper>
+
+          <MudPaper Class="chat-messages" Elevation="1">
+            @if (_chatMessages.Count == 0)
+            {
+              <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
+                No messages yet. Send a message to start the conversation.
+              </MudText>
+            }
+            else
+            {
+              @foreach (var message in _chatMessages)
+              {
+                <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
+                  <div class="message-header">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                      @(message.SenderName) - @(message.Timestamp.ToString("HH:mm:ss"))
+                    </MudText>
+                  </div>
+                  <div class="message-content">
+                    <MudText Typo="Typo.body1">
+                      @(message.Message)
+                    </MudText>
+                  </div>
+                </div>
+              }
+            }
+          </MudPaper>
+
+          <MudPaper Class="chat-input" Elevation="2">
+            <MudTextField @bind-Value="_newMessage"
+                          Label="Type your message..."
+                          Variant="Variant.Outlined"
+                          FullWidth
+                          Lines="2"
+                          OnKeyDown="HandleKeyDown"
+                          @ref="_messageInput" />
+            <MudButton StartIcon="@Icons.Material.Filled.Send"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="SendMessage"
+                       Disabled="@(string.IsNullOrWhiteSpace(_newMessage))"
+                       Class="ml-2">
+              Send
+            </MudButton>
+          </MudPaper>
+        </div>
+        break;
+      }
+    case ChatState.UnsupportedOperatingSystem:
+      {
+        <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
+          Chat is not supported on this operating system.
+        </MudAlert>
+        break;
+      }
+    case ChatState.Unknown:
+    default:
+      {
+        <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
+          Unexpected chat state.
+        </MudAlert>
+        break;
+      }
+  }
+</div>
+
+<style>
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+  }
+
+  .chat-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--mud-palette-divider);
+  }
+
+  .chat-messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    min-height: 300px;
+  }
+
+  .chat-message {
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .viewer-message {
+    background-color: var(--mud-palette-primary-lighten);
+    margin-left: 20%;
+  }
+
+  .desktop-message {
+    background-color: var(--mud-palette-surface-lighten);
+    margin-right: 20%;
+  }
+
+  .message-header {
+    margin-bottom: 4px;
+  }
+
+  .chat-input {
+    padding: 16px;
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    border-top: 1px solid var(--mud-palette-divider);
+  }
+
+  .session-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+</style>

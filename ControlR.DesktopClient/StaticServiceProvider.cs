@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
@@ -89,6 +90,8 @@ internal static class StaticServiceProvider
     services.AddSingleton<MainWindow>();
     services.AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>();
     services.AddSingleton<IDialogProvider, DialogProvider>();
+    services.AddSingleton<IChatSessionManager, ChatSessionManager>();
+    services.AddSingleton<IIpcResponseSender>(provider => provider.GetRequiredService<IpcClientManager>());
     services.AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>();
     services.AddSingleton<IToaster, Toaster>();
     services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();

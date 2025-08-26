@@ -38,6 +38,7 @@ public interface IViewerHubConnection
    Uri websocketUri);
 
   Task SendAgentUpdateTrigger(Guid deviceId);
+  Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType);
   Task<Result> SendTerminalInput(Guid deviceId, Guid terminalId, string input);
   Task SendWakeDevice(string[] macAddresses);
@@ -279,6 +280,19 @@ internal class ViewerHubConnection(
       var wrapper = DtoWrapper.Create(dto, DtoType.TriggerAgentUpdate);
       await _viewerHub.Server.SendDtoToAgent(deviceId, wrapper);
     });
+  }
+
+  public async Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
+  {
+    try
+    {
+      return await _viewerHub.Server.SendChatMessage(deviceId, dto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending chat message.");
+      return Result.Fail(ex);
+    }
   }
 
   public async Task SendPowerStateChange(Guid deviceId, PowerStateChangeType powerStateType)

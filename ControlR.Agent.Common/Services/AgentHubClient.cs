@@ -111,6 +111,50 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task<Result> SendChatMessage(ChatMessageHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Chat message received for device {DeviceId}. Session ID: {SessionId}, " +
+        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+        dto.DeviceId,
+        dto.SessionId,
+        dto.TargetSystemSession,
+        dto.TargetProcessId);
+
+      if (!_ipcServerStore.TryGetServer(dto.TargetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}. Cannot send chat message.",
+          dto.TargetProcessId);
+        return Result.Fail("IPC server not found for target process.");
+      }
+
+      var ipcDto = new ChatMessageIpcDto(
+        dto.SessionId,
+        dto.Message,
+        dto.SenderName,
+        dto.SenderEmail,
+        dto.TargetSystemSession,
+        dto.TargetProcessId,
+        dto.ViewerConnectionId,
+        dto.Timestamp);
+
+      await ipcServer.Server.Send(ipcDto);
+      _logger.LogInformation(
+        "Chat message sent to IPC server for process ID {ProcessId}.",
+        dto.TargetProcessId);
+        
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending chat message to IPC server.");
+      return Result.Fail("An error occurred while sending chat message.");
+    }
+  }
+
   public Task UninstallAgent(string reason)
   {
     try

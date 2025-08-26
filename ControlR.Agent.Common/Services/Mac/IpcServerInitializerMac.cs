@@ -1,4 +1,6 @@
 using System.Runtime.Versioning;
+using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
@@ -15,8 +17,9 @@ internal class IpcServerInitializerMac(
   IProcessManager processManager,
   IFileSystem fileSystem,
   IFileSystemUnix fileSystemUnix,
+  IAgentHubConnection agentHubConnection,
   ILogger<IpcServerInitializerMac> logger) 
-  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, logger)
+  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, agentHubConnection, logger)
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemUnix _fileSystemUnix = fileSystemUnix;

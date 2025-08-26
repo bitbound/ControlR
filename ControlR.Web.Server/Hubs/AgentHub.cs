@@ -78,6 +78,25 @@ public class AgentHub(
       .ReceiveDesktopClientDownloadProgress(progressDto);
   }
 
+  public async Task SendChatResponse(ChatResponseHubDto responseDto)
+  {
+    try
+    {
+      await _viewerHub.Clients
+        .Client(responseDto.ViewerConnectionId)
+        .ReceiveChatResponse(responseDto);
+      
+      _logger.LogInformation(
+        "Chat response forwarded to viewer {ViewerConnectionId} for session {SessionId}",
+        responseDto.ViewerConnectionId,
+        responseDto.SessionId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error forwarding chat response to viewer.");
+    }
+  }
+
   public async Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto)
   {
     try
