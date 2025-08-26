@@ -96,9 +96,12 @@ internal static class StaticServiceProvider
     services.AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>());
     services.AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>();
     services.AddSingleton<IToaster, Toaster>();
-    services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
     services.AddTransient<IMessageBoxViewModel, MessageBoxViewModel>();
     services.AddTransient<ManagedDeviceView>();
+    services.AddTransient<ChatWindow>();
+    services.AddTransient<IChatWindowViewModel, ChatWindowViewModel>();
+    services.AddTransient<ToastWindow>();
+    services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
     services.AddHostedService<IpcClientManager>();
     
     // Cross-platform Avalonia-based toaster

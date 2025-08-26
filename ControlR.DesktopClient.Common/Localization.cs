@@ -28,6 +28,8 @@ public static class Localization
   public static string MacOsPermissions => GetString();
   public static string ManagedDeviceMessage => GetString();
   public static string ManagedDeviceTitle => GetString();
+  public static string NewChatMessageToastTitle => GetString();
+  public static string NewChatMessageToastMessage => GetString();
   public static string NoText => GetString();
   public static string NotGranted => GetString();
   public static string NotificationPermissionDescription => GetString();

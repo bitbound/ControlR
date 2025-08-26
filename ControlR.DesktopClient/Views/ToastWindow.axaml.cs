@@ -1,8 +1,10 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.ViewModels;
+using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.DesktopClient.Views;
 
@@ -14,18 +16,16 @@ public partial class ToastWindow : Window
     InitializeComponent();
   }
 
-  public static async Task<ToastWindow> Show(string title, string message, ToastIcon icon)
+  public static async Task<ToastWindow> Show(string title, string message, ToastIcon icon, Func<Task>? onClick = null)
   {
     return await Dispatcher.UIThread.InvokeAsync(() =>
     {
-      var toastWindow = new ToastWindow();
-      var viewModel = new ToastWindowViewModel
-      {
-        Title = title,
-        Message = message,
-        ToastIcon = icon
-      };
-
+      var toastWindow = StaticServiceProvider.Instance.GetRequiredService<ToastWindow>();
+      var viewModel = StaticServiceProvider.Instance.GetRequiredService<IToastWindowViewModel>();
+      viewModel.Title = title;
+      viewModel.Message = message;
+      viewModel.ToastIcon = icon;
+      viewModel.OnClick = onClick;
       toastWindow.DataContext = viewModel;
       toastWindow.Show();
 
@@ -45,6 +45,17 @@ public partial class ToastWindow : Window
     base.OnOpened(e);
     PositionWindow();
     StartAutoCloseTimer();
+  }
+
+  protected override void OnPointerPressed(PointerPressedEventArgs e)
+  {
+    if (DataContext is IToastWindowViewModel viewModel &&
+        viewModel.OnClick is not null)
+    {
+      viewModel.OnClick.Invoke().Forget();
+      Close();
+    }
+    base.OnPointerPressed(e);
   }
 
   private void CloseButton_Click(object? sender, RoutedEventArgs e)

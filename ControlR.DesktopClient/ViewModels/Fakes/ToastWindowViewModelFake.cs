@@ -56,4 +56,6 @@ public class ToastWindowViewModelFake : IToastWindowViewModel
       return null;
     }
   }
+
+  public Func<Task>? OnClick { get; set; }
 }

@@ -18,5 +18,7 @@
   "NotificationPermissionDescription": "Required to show notifications and alerts.",
   "OpenSettings": "Open Settings",
   "RemoteControlSessionToastTitle": "Remote Control Session",
-  "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen"
+  "RemoteControlSessionToastMessage": "{0} has connected and is now sharing your screen",
+  "NewChatMessageToastTitle": "New Chat Message",
+  "NewChatMessageToastMessage": "You have a new message from {0}"
 }
