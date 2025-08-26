@@ -12,4 +12,8 @@
 	  <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 	  <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 	</ItemGroup>
+	
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\Strings\en-US.json" />
+	</ItemGroup>
 </Project>

@@ -1,6 +1,8 @@
-﻿using ControlR.Libraries.DevicesCommon.Services.Processes;
+﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
@@ -11,12 +13,14 @@ internal abstract class IpcServerInitializerBase(
     IIpcConnectionFactory ipcFactory,
     IIpcServerStore ipcStore,
     IProcessManager processManager,
+    IAgentHubConnection agentHubConnection,
     ILogger logger) : BackgroundService
 {
   protected readonly TimeProvider _timeProvider = timeProvider;
   protected readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
   protected readonly IIpcServerStore _ipcStore = ipcStore;
   protected readonly IProcessManager _processManager = processManager;
+  protected readonly IAgentHubConnection _agentHubConnection = agentHubConnection;
   protected readonly ILogger _logger = logger;
 
   protected async Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
@@ -39,6 +43,27 @@ internal abstract class IpcServerInitializerBase(
         catch (Exception ex)
         {
           _logger.LogError(ex, "Error while processing IPC client identity attestation for process {ProcessId}.", dto.ProcessId);
+        }
+      });
+
+      server.On<ChatResponseIpcDto>(dto =>
+      {
+        try
+        {
+          Task.Run(async () =>
+          {
+            var hubDto = new ChatResponseHubDto(
+              dto.SessionId,
+              dto.Message,
+              dto.SenderUsername,
+              dto.ViewerConnectionId,
+              dto.Timestamp);
+            await _agentHubConnection.SendChatResponse(hubDto);
+          });
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
         }
       });
       server.BeginRead(cancellationToken);

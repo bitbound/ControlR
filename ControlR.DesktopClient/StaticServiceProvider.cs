@@ -1,7 +1,9 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
+using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
@@ -89,11 +91,17 @@ internal static class StaticServiceProvider
     services.AddSingleton<MainWindow>();
     services.AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>();
     services.AddSingleton<IDialogProvider, DialogProvider>();
+    services.AddSingleton<IChatSessionManager, ChatSessionManager>();
+    services.AddSingleton<IpcClientAccessor>();
+    services.AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>());
     services.AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>();
     services.AddSingleton<IToaster, Toaster>();
-    services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
     services.AddTransient<IMessageBoxViewModel, MessageBoxViewModel>();
     services.AddTransient<ManagedDeviceView>();
+    services.AddTransient<ChatWindow>();
+    services.AddTransient<IChatWindowViewModel, ChatWindowViewModel>();
+    services.AddTransient<ToastWindow>();
+    services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
     services.AddHostedService<IpcClientManager>();
     
     // Cross-platform Avalonia-based toaster

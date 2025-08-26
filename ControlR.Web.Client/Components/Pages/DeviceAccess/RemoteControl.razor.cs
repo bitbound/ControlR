@@ -16,7 +16,7 @@ public partial class RemoteControl : ComponentBase
   private DeviceUiSession[]? _systemSessions;
 
   [Inject]
-  public required IDeviceAccessState DeviceAccessState { get; init; }
+  public required IDeviceState DeviceAccessState { get; init; }
 
   [Inject]
   public required ILogger<RemoteControl> Logger { get; init; }

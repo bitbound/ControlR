@@ -65,6 +65,18 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(Result.Ok());
   }
 
+  public Task<Result> SendChatMessage(ChatMessageHubDto dto)
+  {
+    Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");
+    return Task.FromResult(Result.Ok());
+  }
+
+  public Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
+  {
+    Console.WriteLine($"Closing chat session {sessionId} for process {targetProcessId}");
+    return Task.FromResult(Result.Ok());
+  }
+
   public Task UninstallAgent(string reason)
   {
     Console.WriteLine($"Uninstalling agent for reason: {reason}");

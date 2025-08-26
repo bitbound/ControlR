@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
-using Microsoft.Extensions.DependencyInjection;
 using ControlR.DesktopClient.ViewModels;
 
 namespace ControlR.DesktopClient.Controls.Dialogs;
@@ -36,7 +35,6 @@ public partial class MessageBox : Window
         default:
           break;
       }
-
       return await messageBox.ShowDialog<MessageBoxResult>(App.MainWindow);
     });
   }

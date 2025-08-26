@@ -2,6 +2,7 @@
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 
@@ -447,6 +448,7 @@ public class ViewerHub(
 
     var user = await _userManager
       .Users
+      .AsNoTracking()
       .Include(x => x.Tags!)
       .ThenInclude(x => x.Devices)
       .FirstOrDefaultAsync(x => x.Id == userId);
@@ -484,6 +486,71 @@ public class ViewerHub(
     }
   }
 
+  public async Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
+  {
+    try
+    {
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return Result.Fail("User is not authorized to send chat messages.");
+      }
+
+      // Log the chat message being sent
+      _logger.LogInformation(
+        "Chat message sent by user {SenderName} ({SenderEmail}) to device {DeviceId} for session {SessionId}",
+        dto.SenderName,
+        dto.SenderEmail,
+        deviceId,
+        dto.SessionId);
+
+      var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
+      var displayName = await GetDisplayName(user, "Admin");
+      dto = dto with
+      {
+        ViewerConnectionId = Context.ConnectionId,
+        SenderName = displayName,
+        SenderEmail = $"{user.Email}"
+      };
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .SendChatMessage(dto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending chat message to agent.");
+      return Result.Fail("Agent could not be reached.");
+    }
+  }
+
+  public async Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
+  {
+    try
+    {
+      var authResult = await TryAuthorizeAgainstDevice(deviceId);
+      if (!authResult.IsSuccess)
+      {
+        return Result.Fail("User is not authorized to close chat sessions.");
+      }
+
+      _logger.LogInformation(
+        "Closing chat session {SessionId} for device {DeviceId} and process {ProcessId}",
+        sessionId,
+        deviceId,
+        targetProcessId);
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .CloseChatSession(sessionId, targetProcessId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", sessionId, deviceId);
+      return Result.Fail("Agent could not be reached.");
+    }
+  }
+
   public async Task UninstallAgent(Guid deviceId, string reason)
   {
     try
@@ -505,6 +572,40 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while uninstalling agent.");
     }
   }
+  private static Task<string> GetDisplayName(AppUser user, string fallbackName = "Admin")
+  {
+    var displayName = user.UserPreferences
+      ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
+      ?.Value;
+
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+      displayName = user.UserName ?? fallbackName;
+    }
+
+    return displayName.AsTaskResult();
+
+  }
+  private async Task<AppUser> GetRequiredUser(Func<IQueryable<AppUser>, IQueryable<AppUser>>? includeBuilder = null)
+  {
+    if (!TryGetUserId(out var userId))
+    {
+      throw new UnauthorizedAccessException("Failed to get user ID.");
+    }
+
+    var query = _userManager.Users.AsNoTracking();
+
+    if (includeBuilder is not null)
+    {
+      query = includeBuilder.Invoke(query);
+    }
+
+    var user = await query.FirstOrDefaultAsync(x => x.Id == userId);
+
+    Guard.IsNotNull(user);
+    return user;
+  }
+
 
   private bool IsServerAdmin()
   {

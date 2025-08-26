@@ -122,7 +122,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 - Do not use null-forgiving operator (!) outside of tests.  Handle null checks appropriately. 
 - Prefer var of explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
-- Prefer collection expressions where appropriate (e.g. '[]').
+- Always prefer collection expressions to initialize collections (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
 
 ### Platform-Specific Development

@@ -21,5 +21,7 @@ public interface IViewerHub
   Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper);
   Task SendDtoToUserGroups(DtoWrapper wrapper);
   Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto);
+  Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);
+  Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task UninstallAgent(Guid deviceId, string reason);
 }

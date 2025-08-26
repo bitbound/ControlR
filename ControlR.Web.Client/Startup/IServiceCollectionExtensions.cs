@@ -32,9 +32,10 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddScoped<IScreenWake, ScreenWake>();
     services.AddScoped<ISessionStorageAccessor, SessionStorageAccessor>();
-    services.AddScoped<IDeviceAccessState, DeviceAccessState>();
+    services.AddScoped<IDeviceState, DeviceState>();
     services.AddScoped<IRemoteControlState, RemoteControlState>();
     services.AddScoped<ITerminalState, TerminalState>();
+    services.AddScoped<IChatState, ChatState>();
     services.AddScoped<IViewerStreamingClient, ViewerStreamingClient>();
     services.AddTransient<IJsInterop, JsInterop>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();

@@ -12,6 +12,7 @@ public interface IAgentHubConnection : IAsyncDisposable
 {
   HubConnectionState State { get; }
   Task Connect(CancellationToken cancellationToken);
+  Task SendChatResponse(ChatResponseHubDto responseDto);
   Task SendDeviceHeartbeat();
 }
 
@@ -65,6 +66,22 @@ internal class AgentHubConnection(
   public async ValueTask DisposeAsync()
   {
     await _hubConnection.DisposeAsync();
+  }
+
+  public async Task SendChatResponse(ChatResponseHubDto responseDto)
+  {
+    try
+    {
+      await _hubConnection.Server.SendChatResponse(responseDto);
+      _logger.LogInformation(
+        "Chat response sent to server for session {SessionId} from {Username}",
+        responseDto.SessionId,
+        responseDto.SenderUsername);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error sending chat response to server.");
+    }
   }
 
   public async Task SendDeviceHeartbeat()

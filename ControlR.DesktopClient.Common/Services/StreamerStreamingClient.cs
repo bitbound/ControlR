@@ -76,11 +76,12 @@ internal sealed class StreamerStreamingClient(
 
       if (_startupOptions.Value.NotifyUser)
       {
-        var message = _startupOptions.Value.ViewerName is { Length: > 0 } viewerName
-          ? $"{viewerName} has connected and is now sharing your screen"
-          : "A device administrator has connected and is now sharing your screen";
+        var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
+          ? vn
+          : Localization.ADeviceAdministrator;
 
-        await _toaster.ShowToast("Remote Control Session", message, ToastIcon.Info);
+        var message = string.Format(Localization.RemoteControlSessionToastMessage, viewerName);
+        await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
       }
 
       StreamScreenToViewer().Forget();
