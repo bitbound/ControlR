@@ -22,7 +22,6 @@
   overflow-x: auto;
   gap: 10px;
   padding: .75rem;
-  border-radius: 10px;
 }
 
 
@@ -32,7 +31,6 @@
   grid-template-rows: 1fr auto;
   row-gap: 10px;
   overflow: hidden;
-  /*height: calc(100% - .5rem);*/
   height: 100%;
   border-radius: 10px;
   margin: .25rem;
@@ -76,11 +74,16 @@
 }
 
 .viewer-message {
-  background-color: var(--mud-palette-primary-lighten);
+  background-color: #1e3a5f;
   margin-left: 20%;
 }
 
 .desktop-message {
-  background-color: var(--mud-palette-surface-lighten);
+  background-color: #2d2d2d;
   margin-right: 20%;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }

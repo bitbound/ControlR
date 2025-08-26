@@ -122,7 +122,7 @@
                   <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
                     <div class="message-header">
                       <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @(message.SenderName) - @(message.Timestamp.ToString("HH:mm:ss"))
+                        @(message.SenderName) - @(message.Timestamp)
                       </MudText>
                     </div>
                     <div class="message-content">
