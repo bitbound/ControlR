@@ -382,9 +382,9 @@ internal class AgentHubClient(
       _logger.LogInformation("Getting directory contents for {DeviceId}: {DirectoryPath}", 
         requestDto.DeviceId, requestDto.DirectoryPath);
       
-      var entries = await _fileManager.GetDirectoryContents(requestDto.DirectoryPath);
+      var result = await _fileManager.GetDirectoryContents(requestDto.DirectoryPath);
       
-      return Result.Ok(new GetDirectoryContentsResponseDto(entries));
+      return Result.Ok(new GetDirectoryContentsResponseDto(result.Entries, result.DirectoryExists));
     }
     catch (Exception ex)
     {

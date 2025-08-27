@@ -1,5 +1,17 @@
 .file-system-container {
   padding: 16px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  row-gap: 16px;
+}
+
+.address-bar-container {
+  display: flex;
+  align-items: center;
+}
+
+.address-bar {
+  font-family: monospace;
 }
 
 .file-system-grid {

@@ -5,6 +5,19 @@
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
 <div @ref="_containerRef" class="file-system-container h-100">
+    <div class="address-bar-container">
+        <MudTextField @bind-Value="AddressBarValue" 
+                      Label="Address" 
+                      Variant="Variant.Outlined"
+                      Immediate
+                      Adornment="Adornment.End" 
+                      AdornmentIcon="Icons.Material.Filled.SubdirectoryArrowRight"
+                      AdornmentColor="Color.Primary"
+                      OnAdornmentClick="NavigateToAddress"
+                      @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
+                      FullWidth="true" 
+                      Class="address-bar" />
+    </div>
     <div class="file-system-grid">
         <div @ref="_treePanelRef" class="tree-panel">
             <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>

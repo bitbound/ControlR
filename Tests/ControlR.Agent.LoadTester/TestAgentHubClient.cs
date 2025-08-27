@@ -109,6 +109,6 @@ public class TestAgentHubClient : IAgentHubClient
   public Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
   {
     Console.WriteLine($"Getting directory contents for {requestDto.DirectoryPath}");
-    return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([])));
+    return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([], true)));
   }
 }

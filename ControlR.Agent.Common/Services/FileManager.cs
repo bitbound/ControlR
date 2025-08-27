@@ -2,12 +2,15 @@ using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Agent.Common.Services;
 
+public record DirectoryContentsResult(
+  FileSystemEntryDto[] Entries,
+  bool DirectoryExists);
 
 public interface IFileManager
 {
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
-  Task<FileSystemEntryDto[]> GetDirectoryContents(string directoryPath);
+  Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath);
 }
 
 
@@ -91,14 +94,14 @@ internal class FileManager(
     }
   }
 
-  public Task<FileSystemEntryDto[]> GetDirectoryContents(string directoryPath)
+  public Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath)
   {
     try
     {
       if (!_fileSystem.DirectoryExists(directoryPath))
       {
         _logger.LogWarning("Directory does not exist: {DirectoryPath}", directoryPath);
-        return Task.FromResult(Array.Empty<FileSystemEntryDto>());
+        return Task.FromResult(new DirectoryContentsResult(Array.Empty<FileSystemEntryDto>(), false));
       }
 
       var entries = new List<FileSystemEntryDto>();
@@ -161,12 +164,12 @@ internal class FileManager(
 
       entries.AddRange(files);
 
-      return Task.FromResult(entries.ToArray());
+      return Task.FromResult(new DirectoryContentsResult(entries.ToArray(), true));
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error getting directory contents for {DirectoryPath}", directoryPath);
-      return Task.FromResult(Array.Empty<FileSystemEntryDto>());
+      return Task.FromResult(new DirectoryContentsResult(Array.Empty<FileSystemEntryDto>(), false));
     }
   }
 

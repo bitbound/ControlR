@@ -2,6 +2,7 @@ using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Web.Client.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using MudBlazor;
 
@@ -15,6 +16,8 @@ public partial class FileSystem : JsInteropableComponent
   private ElementReference _contentPanelRef;
 
   private string? _selectedPath;
+  private string _addressBarValue = string.Empty;
+  
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
 
@@ -38,9 +41,16 @@ public partial class FileSystem : JsInteropableComponent
       if (_selectedPath != value)
       {
         _selectedPath = value;
+        _addressBarValue = value ?? string.Empty;
         InvokeAsync(async () => await OnSelectedPathChanged(value));
       }
     }
+  }
+
+  public string AddressBarValue
+  {
+    get => _addressBarValue;
+    set => _addressBarValue = value;
   }
 
   [Inject]
@@ -131,11 +141,20 @@ public partial class FileSystem : JsInteropableComponent
       var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
       if (result.IsSuccess && result.Value is not null)
       {
-        DirectoryContents = result.Value.Entries
-          .Select(ConvertToViewModel)
-          .OrderBy(x => !x.IsDirectory) // Directories first
-          .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-          .ToList();
+        if (!result.Value.DirectoryExists)
+        {
+          Snackbar.Add($"Directory '{directoryPath}' was not found.", Severity.Warning);
+          Logger.LogWarning("Directory does not exist: {Path}", directoryPath);
+          DirectoryContents.Clear();
+        }
+        else
+        {
+          DirectoryContents = result.Value.Entries
+            .Select(ConvertToViewModel)
+            .OrderBy(x => !x.IsDirectory) // Directories first
+            .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        }
       }
       else
       {
@@ -177,6 +196,7 @@ public partial class FileSystem : JsInteropableComponent
         if (InitialTreeItems.Count > 0)
         {
           SelectedPath = InitialTreeItems[0].Value;
+          _addressBarValue = SelectedPath ?? string.Empty;
           if (!string.IsNullOrEmpty(SelectedPath))
           {
             await LoadDirectoryContents(SelectedPath);
@@ -212,6 +232,156 @@ public partial class FileSystem : JsInteropableComponent
     {
       SelectedPath = newPath;
       await LoadDirectoryContents(newPath);
+    }
+  }
+
+  private async Task NavigateToAddress()
+  {
+    var targetPath = _addressBarValue?.Trim();
+    if (string.IsNullOrWhiteSpace(targetPath))
+    {
+      return;
+    }
+
+    try
+    {
+      // First, try to get directory contents to validate the path
+      var result = await ControlrApi.GetDirectoryContents(DeviceId, targetPath);
+      if (!result.IsSuccess || result.Value is null)
+      {
+        Snackbar.Add($"Could not navigate to '{targetPath}': {result.Reason}", Severity.Warning);
+        return;
+      }
+
+      // Check if the directory actually exists
+      if (!result.Value.DirectoryExists)
+      {
+        Snackbar.Add($"Directory '{targetPath}' was not found.", Severity.Warning);
+        return;
+      }
+
+      // Path is valid, now build the tree structure to this path
+      await BuildTreeToPath(targetPath);
+      
+      await InvokeAsync(StateHasChanged);
+      await Task.Delay(100); // Small delay to ensure tree is updated
+
+      // Set the selected path (this will also load directory contents)
+      SelectedPath = targetPath;
+      
+      Snackbar.Add($"Navigated to '{targetPath}'", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error navigating to path {Path}", targetPath);
+      Snackbar.Add($"An error occurred while navigating to '{targetPath}'", Severity.Error);
+    }
+  }
+
+  private async Task BuildTreeToPath(string targetPath)
+  {
+    try
+    {
+      // Parse the path into segments
+      var pathSegments = GetPathSegments(targetPath);
+      if (pathSegments.Count == 0)
+      {
+        return;
+      }
+
+      // Find or load the root drive
+      var rootPath = pathSegments[0];
+      var rootItem = InitialTreeItems.FirstOrDefault(x =>
+        string.Equals(x.Value, rootPath, StringComparison.OrdinalIgnoreCase));
+
+      if (rootItem is null)
+      {
+        // Root drive not found, reload root drives
+        await LoadRootDrives();
+        rootItem = InitialTreeItems.FirstOrDefault(x =>
+          string.Equals(x.Value, rootPath, StringComparison.OrdinalIgnoreCase));
+
+        if (rootItem is null)
+        {
+          Logger.LogWarning("Root path {RootPath} not found in drives", rootPath);
+          return;
+        }
+      }
+
+      // Build the tree structure down to the target path
+      var currentItem = rootItem;
+      var currentPath = rootPath;
+
+      for (int i = 1; i < pathSegments.Count; i++)
+      {
+        var nextSegment = pathSegments[i];
+        var nextPath = Path.Combine(currentPath, nextSegment);
+
+        // Ensure current item has its children loaded
+        if (currentItem.Children is null || currentItem.Children.Count == 0)
+        {
+          var children = await LoadServerData(currentItem.Value);
+          currentItem.Children = [.. children];
+        }
+
+        // Find the next item in the children
+        var nextItem = currentItem.Children?.FirstOrDefault(x =>
+          string.Equals(x.Value, nextPath, StringComparison.OrdinalIgnoreCase));
+
+        if (nextItem is null)
+        {
+          Logger.LogWarning("Path segment {NextPath} not found in children of {CurrentPath}", nextPath, currentPath);
+          break;
+        }
+
+        // Expand the current item and move to the next
+        currentItem.Expanded = true;
+        currentItem = nextItem;
+        currentPath = nextPath;
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error building tree to path {Path}", targetPath);
+      Snackbar.Add($"Error navigating to '{targetPath}'", Severity.Error);
+    }
+  }
+
+  private static List<string> GetPathSegments(string path)
+  {
+    if (string.IsNullOrWhiteSpace(path))
+    {
+      return [];
+    }
+
+    // Normalize path separators
+    path = path.Replace('/', Path.DirectorySeparatorChar);
+    
+    // Handle different path formats
+    if (Path.IsPathRooted(path))
+    {
+      var segments = new List<string>();
+      
+      // Add the root (drive or leading separator)
+      var root = Path.GetPathRoot(path);
+      if (!string.IsNullOrEmpty(root))
+      {
+        segments.Add(root);
+        
+        // Get the relative path after the root
+        var relativePath = path.Substring(root.Length);
+        if (!string.IsNullOrEmpty(relativePath))
+        {
+          segments.AddRange(relativePath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries));
+        }
+      }
+      
+      return segments;
+    }
+    else
+    {
+      // Relative path - split by directory separator
+      return path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).ToList();
     }
   }
 
