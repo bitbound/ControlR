@@ -12,11 +12,14 @@ public interface IJsInterop
   ValueTask Alert(string message);
 
   ValueTask<bool> Confirm(string message);
+  ValueTask<string?> CreateBlobUrl(byte[] imageData, string mimeType);
+  ValueTask<string> GetClipboardText();
 
   ValueTask<int> GetCursorIndex(ElementReference inputElement);
   ValueTask<int> GetCursorIndexById(string inputElementId);
 
   ValueTask InvokeClick(string elementId);
+  ValueTask<bool> IsTouchScreen();
 
   ValueTask Log(string categoryName, LogLevel level, string message);
 
@@ -31,15 +34,13 @@ public interface IJsInterop
   ValueTask ScrollToElement(ElementReference element);
 
   ValueTask ScrollToEnd(ElementReference element);
+  ValueTask SetClipboardText(string? text);
+  ValueTask SetCursorIndexById(string inputElementId, int cursorPosition);
+  ValueTask SetScreenWakeLock(bool isWakeEnabled);
 
   ValueTask SetStyleProperty(ElementReference element, string propertyName, string value);
 
   ValueTask StartDraggingY(ElementReference element, double clientY);
-  ValueTask SetClipboardText(string? text);
-  ValueTask<string> GetClipboardText();
-  ValueTask<bool> IsTouchScreen();
-  ValueTask SetScreenWakeLock(bool isWakeEnabled);
-  ValueTask SetCursorIndexById(string inputElementId, int cursorPosition);
   ValueTask ToggleFullscreen(ElementReference element);
 }
 
@@ -65,14 +66,14 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     return jsRuntime.InvokeAsync<bool>("invokeConfirm", message);
   }
 
+  public ValueTask<string?> CreateBlobUrl(byte[] imageData, string mimeType)
+  {
+    return jsRuntime.InvokeAsync<string?>("createBlobUrl", imageData, mimeType);
+  }
+
   public ValueTask<string> GetClipboardText()
   {
     return jsRuntime.InvokeAsync<string>("getClipboardText");
-  }
-
-  public ValueTask<bool> IsTouchScreen()
-  {
-    return jsRuntime.InvokeAsync<bool>("isTouchScreen");
   }
 
   public ValueTask<int> GetCursorIndex(ElementReference inputElement)
@@ -88,6 +89,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask InvokeClick(string elementId)
   {
     return jsRuntime.InvokeVoidAsync("invokeClick", elementId);
+  }
+
+  public ValueTask<bool> IsTouchScreen()
+  {
+    return jsRuntime.InvokeAsync<bool>("isTouchScreen");
   }
 
   public ValueTask Log(string categoryName, LogLevel level, string message)
@@ -135,6 +141,16 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     await jsRuntime.InvokeVoidAsync("setClipboardText", text);
   }
 
+  public ValueTask SetCursorIndexById(string inputElementId, int cursorPosition)
+  {
+    return jsRuntime.InvokeVoidAsync("setSelectionStartById", inputElementId, cursorPosition);
+  }
+
+  public ValueTask SetScreenWakeLock(bool isWakeEnabled)
+  {
+    return jsRuntime.InvokeVoidAsync("setScreenWakeLock", isWakeEnabled);
+  }
+
   public ValueTask SetStyleProperty(ElementReference element, string propertyName, string value)
   {
     return jsRuntime.InvokeVoidAsync("setStyleProperty", element, propertyName, value);
@@ -145,18 +161,8 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     return jsRuntime.InvokeVoidAsync("startDraggingY", element, clientY);
   }
 
-  public ValueTask SetScreenWakeLock(bool isWakeEnabled)
-  {
-    return jsRuntime.InvokeVoidAsync("setScreenWakeLock", isWakeEnabled);
-  }
-
-  public ValueTask SetCursorIndexById(string inputElementId, int cursorPosition)
-  {
-    return jsRuntime.InvokeVoidAsync("setSelectionStartById", inputElementId, cursorPosition);
-  }
-
   public ValueTask ToggleFullscreen(ElementReference element)
   {
-     return jsRuntime.InvokeVoidAsync("toggleFullscreen", element);
+    return jsRuntime.InvokeVoidAsync("toggleFullscreen", element);
   }
 }

@@ -7,7 +7,7 @@
   <DialogContent>
     <MudCard Elevation="0">
       <MudCardContent>
-        @if (IsLoading)
+        @if (_isLoading)
         {
           <div class="text-center my-4">
             <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Medium" />
@@ -16,16 +16,16 @@
             </MudText>
           </div>
         }
-        else if (!string.IsNullOrEmpty(ErrorMessage))
+        else if (!string.IsNullOrEmpty(_errorMessage))
         {
           <MudAlert Severity="Severity.Error" Class="mb-4">
-            @ErrorMessage
+            @_errorMessage
           </MudAlert>
         }
-        else if (!string.IsNullOrEmpty(PreviewImageDataUri))
+        else if (!string.IsNullOrEmpty(_previewImageDataUri))
         {
           <div class="preview-image-container">
-            <img src="@PreviewImageDataUri" 
+            <img src="@_previewImageDataUri" 
                  alt="Desktop Preview" 
                  class="preview-image" />
           </div>
@@ -36,7 +36,7 @@
                    Color="Color.Info"
                    OnClick="RefreshPreview"
                    Variant="Variant.Outlined"
-                   Disabled="IsLoading"
+                   Disabled="_isLoading"
                    StartIcon="@Icons.Material.Filled.Refresh">
           Refresh
         </MudButton>

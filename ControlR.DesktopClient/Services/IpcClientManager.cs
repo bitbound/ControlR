@@ -138,7 +138,7 @@ public class IpcClientManager(
         dto.TargetProcessId);
 
       // Capture all displays (synchronous call)
-      var captureResult = _screenGrabber.Capture(captureCursor: false);
+      using var captureResult = _screenGrabber.Capture(captureCursor: false);
       if (!captureResult.IsSuccess || captureResult.Bitmap is null)
       {
         _logger.LogWarning("Failed to capture displays: {Error}", captureResult.FailureReason);
@@ -156,9 +156,6 @@ public class IpcClientManager(
       _logger.LogInformation(
         "Desktop preview captured successfully. JPEG size: {Size} bytes",
         jpegData.Length);
-
-      // Dispose the bitmap to free memory
-      captureResult.Dispose();
 
       return new DesktopPreviewResponseIpcDto(jpegData, true);
     }

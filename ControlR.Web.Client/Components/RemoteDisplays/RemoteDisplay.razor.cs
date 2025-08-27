@@ -140,6 +140,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyboardStateReset()
   {
+    if (StreamingClient.State != System.Net.WebSockets.WebSocketState.Open)
+    {
+      return;
+    }
+    
     await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
   }
 

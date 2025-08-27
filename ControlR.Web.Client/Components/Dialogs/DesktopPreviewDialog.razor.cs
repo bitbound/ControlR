@@ -31,10 +31,6 @@ public partial class DesktopPreviewDialog : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  public bool IsLoading => _isLoading;
-  public string? ErrorMessage => _errorMessage;
-  public string? PreviewImageDataUri => _previewImageDataUri;
-
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
