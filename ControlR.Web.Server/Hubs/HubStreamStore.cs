@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -6,61 +5,57 @@ namespace ControlR.Web.Server.Hubs;
 
 public interface IHubStreamStore
 {
-  void AddOrUpdate(Guid streamId, HubStreamSignaler signaler, Func<Guid, HubStreamSignaler, HubStreamSignaler> updateFactory);
-
-  HubStreamSignaler GetOrAdd(Guid streamId, Func<Guid, HubStreamSignaler> createFactory);
-  HubStreamSignaler GetOrCreate(Guid streamId);
+  HubStreamSignaler GetOrCreate(Guid streamId, TimeSpan expiration);
 
   bool TryGet(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler);
   bool TryRemove(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler);
-  Task<Result<HubStreamSignaler>> WaitForStreamSession(Guid streamId, string viewerConnectionId, TimeSpan timeout);
 }
 
-public class HubStreamStore(ILogger<HubStreamStore> logger) : IHubStreamStore
+public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryCache) : IHubStreamStore
 {
-  private readonly ConcurrentDictionary<Guid, HubStreamSignaler> _streamingSessions = new();
+  private readonly IMemoryCache _memoryCache = memoryCache;
   private readonly ILogger<HubStreamStore> _logger = logger;
 
-  public void AddOrUpdate(Guid streamId, HubStreamSignaler signaler, Func<Guid, HubStreamSignaler, HubStreamSignaler> updateFactory)
+  public HubStreamSignaler GetOrCreate(Guid streamId, TimeSpan expiration)
   {
-    _streamingSessions.AddOrUpdate(streamId, signaler, updateFactory);
-  }
+    if (_memoryCache.TryGetValue(streamId, out var existing) && existing is HubStreamSignaler signaler)
+    {
+      return signaler;
+    }
 
-  public HubStreamSignaler GetOrAdd(Guid streamId, Func<Guid, HubStreamSignaler> createFactory)
-  {
-    return _streamingSessions.GetOrAdd(streamId, createFactory);
-  }
+    var cacheEntryOptions = new MemoryCacheEntryOptions
+    {
+      AbsoluteExpirationRelativeToNow = expiration,
+      PostEvictionCallbacks = { new PostEvictionCallbackRegistration { EvictionCallback = OnEviction } }
+    };
 
-  public HubStreamSignaler GetOrCreate(Guid streamId)
-  {
-    return _streamingSessions.GetOrAdd(streamId, id => new HubStreamSignaler(id));
+    signaler = new HubStreamSignaler(streamId, () => TryRemove(streamId, out _));
+    return _memoryCache.Set(streamId, signaler, cacheEntryOptions);
   }
 
   public bool TryGet(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler)
   {
-    return _streamingSessions.TryGetValue(streamId, out signaler);
+    return _memoryCache.TryGetValue(streamId, out signaler);
   }
 
   public bool TryRemove(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler)
   {
-    return _streamingSessions.TryRemove(streamId, out signaler);
+    if (_memoryCache.TryGetValue(streamId, out var value) && value is HubStreamSignaler cachedSignaler)
+    {
+      _memoryCache.Remove(streamId);
+      signaler = cachedSignaler;
+      return true;
+    }
+    signaler = null;
+    return false;
   }
 
-  public async Task<Result<HubStreamSignaler>> WaitForStreamSession(Guid streamId, string requesterConnectionId, TimeSpan timeout)
+  private void OnEviction(object key, object? value, EvictionReason reason, object? state)
   {
-    var session = _streamingSessions.GetOrAdd(streamId, key => new HubStreamSignaler(streamId));
-    session.RequesterConnectionId = requesterConnectionId;
-
-    try
+    if (value is HubStreamSignaler signaler)
     {
-      await session.ReadySignal.Wait(timeout);
+      _logger.LogDebug("Stream session {StreamId} evicted from cache. Reason: {Reason}", key, reason);
+      signaler.Dispose();
     }
-    catch (OperationCanceledException)
-    {
-      _logger.LogError("Timed out while waiting for session.");
-      return Result.Fail<HubStreamSignaler>("Timed out while waiting for session.");
-    }
-
-    return Result.Ok(session);
   }
 }
