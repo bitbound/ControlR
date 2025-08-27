@@ -105,8 +105,11 @@
                     </div>
                   </MudCardContent>
                   <MudCardActions>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => StartRemoteControl(session))">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => StartRemoteControl(session))">
                       Connect
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))">
+                      Preview
                     </MudButton>
                   </MudCardActions>
                 </MudCard>

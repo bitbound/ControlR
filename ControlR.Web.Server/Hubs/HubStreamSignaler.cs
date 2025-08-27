@@ -1,6 +1,6 @@
-﻿namespace ControlR.Web.Server.Helpers;
+﻿namespace ControlR.Web.Server.Hubs;
 
-public class StreamSignaler(Guid streamId) : IDisposable
+public class HubStreamSignaler(Guid streamId) : IDisposable
 {
   private bool _disposedValue;
 

@@ -16,6 +16,9 @@ public partial class RemoteControl : ComponentBase
   private DeviceUiSession[]? _systemSessions;
 
   [Inject]
+  public required IControlrApi ControlrApi { get; init; }
+
+  [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
   [Inject]
@@ -189,6 +192,20 @@ public partial class RemoteControl : ComponentBase
     Snackbar.Add("Connection lost", Severity.Warning);
     await GetDeviceSystemSessions();
     await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task PreviewSession(DeviceUiSession deviceUiSession)
+  {
+    try
+    {
+      
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while requesting remote control session preview.");
+      Snackbar.Add("Error while requesting session preview", Severity.Error);
+      await InvokeAsync(StateHasChanged);
+    }
   }
 
   private async Task RefreshSystemSessions()
