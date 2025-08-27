@@ -95,7 +95,7 @@ public class TestAgentHubClient : IAgentHubClient
     Console.WriteLine($"Getting root drives for device {requestDto.DeviceId}");
     var drives = new FileSystemEntryDto[]
     {
-      new("C:", "C:\\", true, 0, DateTimeOffset.Now, false, true, true)
+      new("C:", "C:\\", true, 0, DateTimeOffset.Now, false, true, true, true)
     };
     return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
   }

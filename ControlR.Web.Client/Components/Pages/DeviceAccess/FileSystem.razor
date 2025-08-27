@@ -7,33 +7,30 @@
     <div class="file-system-grid">
         <div class="tree-panel">
             <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>
-            @if (TreeItems.Count == 0 && IsLoading)
+            @if (InitialTreeItems.Count == 0 && IsLoading)
             {
                 <div class="d-flex justify-center align-center" style="height: 200px;">
                     <MudProgressCircular Indeterminate="true" />
                 </div>
             }
-            else if (TreeItems.Count == 0)
+            else if (InitialTreeItems.Count == 0)
             {
                 <MudAlert Severity="Severity.Info">No drives found or unable to load file system.</MudAlert>
             }
             else
             {
-                <MudTreeView @bind-SelectedValue="SelectedPath" T="string" Dense="true">
-                    @foreach (var item in TreeItems)
-                    {
-                        <MudTreeViewItem Value="item.FullPath" Text="@item.Name" Icon="@Icons.Material.Filled.Folder" 
-                                       Expanded="item.IsExpanded" ExpandedChanged="@(async (expanded) => { item.IsExpanded = expanded; await OnNodeExpanded(item, expanded); })">
-                            @if (item.Children.Any())
-                            {
-                                @foreach (var child in item.Children)
-                                {
-                                    <MudTreeViewItem Value="child.FullPath" Text="@child.Name" Icon="@Icons.Material.Filled.Folder" 
-                                                   Expanded="child.IsExpanded" ExpandedChanged="@(async (expanded) => { child.IsExpanded = expanded; await OnNodeExpanded(child, expanded); })" />
-                                }
-                            }
-                        </MudTreeViewItem>
-                    }
+                <MudTreeView ServerData="@LoadServerData" Items="@InitialTreeItems" @bind-SelectedValue="SelectedPath" T="string" Dense="true" ExpandOnDoubleClick>
+                    <ItemTemplate>
+                        <MudTreeViewItem 
+                            Value="@context.Value" 
+                            Text="@context.Text"
+                            Items="@context.Children" 
+                            ItemsChanged="@(new Action<IReadOnlyCollection<TreeItemData<string>>>(items => OnItemsLoaded(context, items)))" 
+                            @bind-Expanded="@context.Expanded"
+                            CanExpand="@context.Expandable"
+                            Icon="@context.Icon" 
+                            LoadingIconColor="Color.Info" />
+                    </ItemTemplate>
                 </MudTreeView>
             }
         </div>
@@ -49,7 +46,7 @@
             else if (!string.IsNullOrEmpty(SelectedPath))
             {
                 <MudDataGrid T="FileSystemEntryViewModel" Items="DirectoryContents" Dense="true" Hover="true"
-                           SortMode="SortMode.Multiple" Filterable="false" Hideable="false" RowsPerPage="50">
+                           SortMode="SortMode.Multiple" Filterable="true" Hideable="false" RowsPerPage="50">
                     <Columns>
                         <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
                             <CellTemplate>

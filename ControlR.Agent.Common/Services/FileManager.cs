@@ -25,7 +25,8 @@ internal class FileManager(
           LastModified: DateTimeOffset.Now,
           IsHidden: false,
           CanRead: true,
-          CanWrite: !drive.DriveType.Equals(DriveType.CDRom)))
+          CanWrite: !drive.DriveType.Equals(DriveType.CDRom),
+          HasSubfolders: HasSubdirectories(drive.RootDirectory.FullName)))
         .ToArray();
 
       return Task.FromResult(drives);
@@ -61,7 +62,8 @@ internal class FileManager(
               LastModified: dirInfo.LastWriteTime,
               IsHidden: dirInfo.Attributes.HasFlag(FileAttributes.Hidden),
               CanRead: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly),
-              CanWrite: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly));
+              CanWrite: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly),
+              HasSubfolders: HasSubdirectories(dirInfo.FullName));
           }
           catch (Exception ex)
           {
@@ -109,7 +111,8 @@ internal class FileManager(
               LastModified: dirInfo.LastWriteTime,
               IsHidden: dirInfo.Attributes.HasFlag(FileAttributes.Hidden),
               CanRead: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly),
-              CanWrite: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly));
+              CanWrite: !dirInfo.Attributes.HasFlag(FileAttributes.ReadOnly),
+              HasSubfolders: HasSubdirectories(dirInfo.FullName));
           }
           catch (Exception ex)
           {
@@ -137,7 +140,8 @@ internal class FileManager(
               LastModified: fileInfo.LastWriteTime,
               IsHidden: fileInfo.Attributes.HasFlag(FileAttributes.Hidden),
               CanRead: true,
-              CanWrite: !fileInfo.Attributes.HasFlag(FileAttributes.ReadOnly));
+              CanWrite: !fileInfo.Attributes.HasFlag(FileAttributes.ReadOnly),
+              HasSubfolders: false); // Files don't have subfolders
           }
           catch (Exception ex)
           {
@@ -156,6 +160,27 @@ internal class FileManager(
     {
       _logger.LogError(ex, "Error getting directory contents for {DirectoryPath}", directoryPath);
       return Task.FromResult(Array.Empty<FileSystemEntryDto>());
+    }
+  }
+
+  private bool HasSubdirectories(string directoryPath)
+  {
+    try
+    {
+      if (!_fileSystem.DirectoryExists(directoryPath))
+      {
+        return false;
+      }
+
+      // Try to get at least one subdirectory to check if any exist
+      var directories = _fileSystem.GetDirectories(directoryPath);
+      return directories.Length > 0;
+    }
+    catch (Exception ex)
+    {
+      // If we can't access the directory (permissions, etc.), assume no subdirectories
+      _logger.LogDebug(ex, "Could not check subdirectories for {DirectoryPath}", directoryPath);
+      return false;
     }
   }
 }

@@ -20,7 +20,7 @@ public partial class FileSystem : ComponentBase
   [SupplyParameterFromQuery]
   public Guid DeviceId { get; set; }
 
-  public List<FileSystemTreeItemViewModel> TreeItems { get; set; } = [];
+  public List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
   public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
   
   private string? _selectedPath;
@@ -69,16 +69,19 @@ public partial class FileSystem : ComponentBase
       var result = await ControlrApi.GetRootDrives(DeviceId);
       if (result.IsSuccess && result.Value is not null)
       {
-        TreeItems = result.Value.Drives
+        InitialTreeItems = result.Value.Drives
           .Where(d => d.IsDirectory)
-          .Select(ConvertToTreeItem)
+          .Select(ConvertToTreeItemData)
           .ToList();
 
         // Select the first drive by default
-        if (TreeItems.Count > 0)
+        if (InitialTreeItems.Count > 0)
         {
-          SelectedPath = TreeItems[0].FullPath;
-          await LoadDirectoryContents(SelectedPath);
+          SelectedPath = InitialTreeItems[0].Value;
+          if (!string.IsNullOrEmpty(SelectedPath))
+          {
+            await LoadDirectoryContents(SelectedPath);
+          }
         }
       }
       else
@@ -99,91 +102,39 @@ public partial class FileSystem : ComponentBase
     }
   }
 
-  private async Task<HashSet<FileSystemTreeItemViewModel>> LoadServerData(FileSystemTreeItemViewModel parentNode)
+  public async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
   {
     try
     {
-      if (!parentNode.IsDirectory || parentNode.HasLoadedChildren)
+      if (string.IsNullOrEmpty(parentValue))
       {
-        return parentNode.Children.ToHashSet();
+        return [];
       }
 
-      parentNode.IsLoading = true;
-      StateHasChanged();
-
-      var result = await ControlrApi.GetSubdirectories(DeviceId, parentNode.FullPath);
+      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
       if (result.IsSuccess && result.Value is not null)
       {
-        parentNode.Children = result.Value.Subdirectories
-          .Select(ConvertToTreeItem)
+        return result.Value.Subdirectories
+          .Select(ConvertToTreeItemData)
           .ToList();
-        
-        parentNode.HasLoadedChildren = true;
       }
       else
       {
         Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}", 
-          parentNode.FullPath, result.Reason);
+          parentValue, result.Reason);
+        return [];
       }
-
-      return parentNode.Children.ToHashSet();
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentNode.FullPath);
+      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentValue);
       return [];
     }
-    finally
-    {
-      parentNode.IsLoading = false;
-      StateHasChanged();
-    }
   }
 
-  private async Task OnNodeExpanded(FileSystemTreeItemViewModel node, bool expanded)
+  private void OnItemsLoaded(TreeItemData<string> treeItemData, IReadOnlyCollection<TreeItemData<string>> children)
   {
-    if (expanded && !node.HasLoadedChildren)
-    {
-      await LoadChildNodes(node);
-    }
-  }
-
-  private async Task LoadChildNodes(FileSystemTreeItemViewModel parentNode)
-  {
-    try
-    {
-      if (!parentNode.IsDirectory || parentNode.HasLoadedChildren)
-      {
-        return;
-      }
-
-      parentNode.IsLoading = true;
-      StateHasChanged();
-
-      var result = await ControlrApi.GetSubdirectories(DeviceId, parentNode.FullPath);
-      if (result.IsSuccess && result.Value is not null)
-      {
-        parentNode.Children = result.Value.Subdirectories
-          .Select(ConvertToTreeItem)
-          .ToList();
-        
-        parentNode.HasLoadedChildren = true;
-      }
-      else
-      {
-        Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}", 
-          parentNode.FullPath, result.Reason);
-      }
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentNode.FullPath);
-    }
-    finally
-    {
-      parentNode.IsLoading = false;
-      StateHasChanged();
-    }
+    treeItemData.Children = children?.ToList();
   }
 
   private async Task LoadDirectoryContents(string directoryPath)
@@ -191,7 +142,7 @@ public partial class FileSystem : ComponentBase
     try
     {
       IsLoadingContents = true;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
 
       var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
       if (result.IsSuccess && result.Value is not null)
@@ -219,26 +170,27 @@ public partial class FileSystem : ComponentBase
     finally
     {
       IsLoadingContents = false;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
     }
   }
 
   private async Task OnSelectedPathChanged(string? newPath)
   {
-    if (!string.IsNullOrEmpty(newPath) && newPath != SelectedPath)
+    if (!string.IsNullOrEmpty(newPath))
     {
       SelectedPath = newPath;
       await LoadDirectoryContents(newPath);
     }
   }
 
-  private static FileSystemTreeItemViewModel ConvertToTreeItem(FileSystemEntryDto dto)
+  private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
   {
-    return new FileSystemTreeItemViewModel
+    return new TreeItemData<string>
     {
-      Name = dto.Name,
-      FullPath = dto.FullPath,
-      IsDirectory = dto.IsDirectory
+      Value = dto.FullPath,
+      Text = dto.Name,
+      Icon = Icons.Material.Filled.Folder,
+      Expandable = dto.IsDirectory && dto.HasSubfolders
     };
   }
 

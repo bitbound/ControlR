@@ -13,7 +13,7 @@
   border: 1px solid var(--mud-palette-divider);
   border-radius: 4px;
   padding: 16px;
-  overflow-y: auto;
+  overflow: auto;
   background-color: var(--mud-palette-background);
 }
 
@@ -21,12 +21,8 @@
   border: 1px solid var(--mud-palette-divider);
   border-radius: 4px;
   padding: 16px;
-  overflow: hidden;
+  overflow-y: auto;
   background-color: var(--mud-palette-background);
-}
-
-.content-panel .mud-data-grid {
-  height: calc(100% - 48px); /* Subtract header height */
 }
 
 @media (max-width: 768px) {

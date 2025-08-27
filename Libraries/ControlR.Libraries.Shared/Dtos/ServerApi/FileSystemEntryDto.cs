@@ -11,4 +11,5 @@ public record FileSystemEntryDto(
   DateTimeOffset LastModified,
   bool IsHidden,
   bool CanRead,
-  bool CanWrite);
+  bool CanWrite,
+  bool HasSubfolders);
