@@ -19,6 +19,7 @@
   grid-template-columns: 300px 5px 1fr;
   gap: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .grid-splitter {
