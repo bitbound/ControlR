@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
@@ -272,5 +273,62 @@ public class AgentHub(
       }
     }
     return deviceDto;
+  }
+
+  public async Task SendFileDownloadStream(Guid streamId, IAsyncEnumerable<byte[]> stream)
+  {
+    try
+    {
+      if (!_hubStreamStore.TryGet(streamId, out var signaler))
+      {
+        _logger.LogWarning("No signaler found for file download stream ID: {StreamId}", streamId);
+        return;
+      }
+
+      _logger.LogInformation("Setting file download stream for stream ID: {StreamId}", streamId);
+      
+      // Set the stream on the signaler - this will trigger the ReadySignal
+      signaler.SetStream(stream, Context.ConnectionId);
+      
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
+      // Wait for the stream to be fully consumed
+      await signaler.EndSignal.Wait(cts.Token);
+
+      _logger.LogInformation("File download stream completed for stream ID: {StreamId}", streamId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling file download stream {StreamId}", streamId);
+      throw;
+    }
+  }
+
+  public async IAsyncEnumerable<byte[]> GetFileUploadStream(FileUploadHubDto dto)
+  {
+    if (!_hubStreamStore.TryGet(dto.StreamId, out var signaler))
+    {
+      yield break;
+    }
+    try
+    {
+
+      _logger.LogInformation("Receiving file upload stream for: {FileName}", dto.FileName);
+
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      // Wait for controller to set the stream
+      await signaler.ReadySignal.Wait(cts.Token);
+
+      Guard.IsNotNull(signaler.Stream);
+
+      // Stream the file data
+      await foreach (var chunk in signaler.Stream)
+      {
+        yield return chunk;
+      }
+    }
+    finally
+    {
+      signaler.EndSignal.Set();
+    }
   }
 }

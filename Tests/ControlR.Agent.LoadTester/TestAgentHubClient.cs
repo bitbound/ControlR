@@ -1,6 +1,7 @@
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
@@ -87,5 +88,51 @@ public class TestAgentHubClient : IAgentHubClient
   {
     Console.WriteLine($"Uninstalling agent for reason: {reason}");
     return Task.CompletedTask;
+  }
+
+  public Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting root drives for device {requestDto.DeviceId}");
+    var drives = new FileSystemEntryDto[]
+    {
+      new("C:", "C:\\", true, 0, DateTimeOffset.Now, false, true, true, true)
+    };
+    return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
+  }
+
+  public Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting subdirectories for {requestDto.DirectoryPath}");
+    return Task.FromResult(Result.Ok(new GetSubdirectoriesResponseDto([])));
+  }
+
+  public Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting directory contents for {requestDto.DirectoryPath}");
+    return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([], true)));
+  }
+
+  public Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)
+  {
+    Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");
+    return Result.Ok().AsTaskResult<Result?>();
+  }
+
+  public Task<Result> SendFileDownload(FileDownloadHubDto dto)
+  {
+    Console.WriteLine($"Received file download request for {dto.FilePath}");
+    return Result.Ok().AsTaskResult();
+  }
+
+  public Task<Result> DeleteFile(FileDeleteHubDto dto)
+  {
+    Console.WriteLine($"Received file delete request for {dto.TargetPath}");
+    return Result.Ok().AsTaskResult();
+  }
+
+  public Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  {
+    Console.WriteLine($"Received create directory request for {dto.DirectoryPath}");
+    return Result.Ok().AsTaskResult();
   }
 }

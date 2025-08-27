@@ -22,6 +22,7 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Agent.Common.Services.FileManager;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -83,6 +84,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddSingleton<IFileManager, FileManager>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddSingleton<ILocalSocketProxy, LocalSocketProxy>();
     services.AddSingleton(WeakReferenceMessenger.Default);

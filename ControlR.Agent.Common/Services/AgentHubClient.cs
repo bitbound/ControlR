@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
-using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,8 @@ internal class AgentHubClient(
   ISettingsProvider settings,
   IProcessManager processManager,
   ILocalSocketProxy localProxy,
+  IFileManager fileManager,
+  IFileSystem fileSystem,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
@@ -37,6 +40,8 @@ internal class AgentHubClient(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ITerminalStore _terminalStore = terminalStore;
+  private readonly IFileManager _fileManager = fileManager;
+  private readonly IFileSystem _fileSystem = fileSystem;
 
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
   {
@@ -242,7 +247,7 @@ internal class AgentHubClient(
           response.ErrorMessage ?? "Unknown error");
         return Result.Fail(response.ErrorMessage ?? "Desktop preview failed on target process.");
       }
-      
+
       // Stream the JPEG data back through SignalR
       _logger.LogInformation(
         "Streaming desktop preview data. JPEG size: {Size} bytes, Stream ID: {StreamId}",
@@ -256,8 +261,6 @@ internal class AgentHubClient(
         [dto.StreamId, chunkedStream],
         cts.Token
       );
-
-      //await _hubConnection.Server.SendDesktopPreviewStream(dto.StreamId, chunkedStream);
 
       _logger.LogInformation(
         "Desktop preview stream sent successfully. Stream ID: {StreamId}",
@@ -335,6 +338,175 @@ internal class AgentHubClient(
     }
 
     return Task.CompletedTask;
+  }
+
+  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting root drives for device {DeviceId}", requestDto.DeviceId);
+
+      var drives = await _fileManager.GetRootDrives();
+
+      return Result.Ok(new GetRootDrivesResponseDto(drives));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting root drives");
+      return Result.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.");
+    }
+  }
+
+  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting subdirectories for {DeviceId}: {DirectoryPath}",
+        requestDto.DeviceId, requestDto.DirectoryPath);
+
+      var subdirectories = await _fileManager.GetSubdirectories(requestDto.DirectoryPath);
+
+      return Result.Ok(new GetSubdirectoriesResponseDto(subdirectories));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting subdirectories for {DirectoryPath}", requestDto.DirectoryPath);
+      return Result.Fail<GetSubdirectoriesResponseDto>("An error occurred while getting subdirectories.");
+    }
+  }
+
+  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting directory contents for {DeviceId}: {DirectoryPath}",
+        requestDto.DeviceId, requestDto.DirectoryPath);
+
+      var result = await _fileManager.GetDirectoryContents(requestDto.DirectoryPath);
+
+      return Result.Ok(new GetDirectoryContentsResponseDto(result.Entries, result.DirectoryExists));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting directory contents for {DirectoryPath}", requestDto.DirectoryPath);
+      return Result.Fail<GetDirectoryContentsResponseDto>("An error occurred while getting directory contents.");
+    }
+  }
+
+  public async Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)
+  {
+    _logger.LogInformation("Downloading file from viewer: {FileName} to {Directory}",
+      dto.FileName, dto.TargetDirectoryPath);
+
+    var targetPath = Path.Join(dto.TargetDirectoryPath, dto.FileName);
+
+    // Check if file already exists and overwrite is not allowed
+    if (_fileSystem.FileExists(targetPath) && !dto.Overwrite)
+    {
+      _logger.LogWarning("File already exists and overwrite is not allowed: {FilePath}", targetPath);
+      return Result.Fail("File already exists");
+    }
+
+    var stream = _hubConnection.Server.GetFileUploadStream(dto);
+    using var fs = _fileSystem.OpenFileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+    await foreach (var chunk in stream)
+    {
+      // Process each chunk (e.g., write to file, buffer, etc.)
+      await fs.WriteAsync(chunk);
+    }
+    return Result.Ok();
+  }
+
+  public async Task<Result> SendFileDownload(FileDownloadHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Sending file download: {FilePath}, Stream ID: {StreamId}",
+        dto.FilePath, dto.StreamId);
+
+      using var resolveResult = await _fileManager.ResolveTargetFilePath(dto.FilePath);
+      if (!resolveResult.IsSuccess || string.IsNullOrEmpty(resolveResult.FileSystemPath))
+      {
+        _logger.LogWarning("Failed to prepare file for download: {FilePath}, Error: {Error}", dto.FilePath, resolveResult.ErrorMessage);
+        return Result.Fail(resolveResult.ErrorMessage ?? "Failed to prepare file for download");
+      }
+
+      // Read the file and create a chunked stream
+      using var fileStream = _fileSystem.OpenFileStream(resolveResult.FileSystemPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+      using var ms = new MemoryStream();
+      await fileStream.CopyToAsync(ms);
+      var chunkStream = CreateChunkedStream(ms.ToArray());
+
+      // Send the stream to the hub
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+      await _hubConnection.Send(
+        nameof(IAgentHub.SendFileDownloadStream),
+        [dto.StreamId, chunkStream],
+        cts.Token
+      );
+
+      _logger.LogInformation("Successfully sent file download stream: {FilePath}", dto.FilePath);
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending file download: {FilePath}", dto.FilePath);
+      return Result.Fail("An error occurred while sending file download.");
+    }
+  }
+
+  public async Task<Result> DeleteFile(FileDeleteHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Delete file system entry: {FilePath}", dto.TargetPath);
+
+      var result = await _fileManager.DeleteFileSystemEntry(dto.TargetPath);
+
+      if (result.IsSuccess)
+      {
+        _logger.LogInformation("Successfully deleted file system entry: {FilePath}", dto.TargetPath);
+        return Result.Ok();
+      }
+      else
+      {
+        _logger.LogWarning("Failed to delete file system entry: {FilePath}, Error: {Error}",
+          dto.TargetPath, result.ErrorMessage);
+        return Result.Fail(result.ErrorMessage ?? "Failed to delete file system entry");
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while deleting file system entry: {FilePath}", dto.TargetPath);
+      return Result.Fail("An error occurred while deleting file system entry.");
+    }
+  }
+
+  public async Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Creating directory: {DirectoryPath}", dto.DirectoryPath);
+
+      var result = await _fileManager.CreateDirectory(dto.DirectoryPath);
+
+      if (result.IsSuccess)
+      {
+        _logger.LogInformation("Successfully created directory: {DirectoryPath}", dto.DirectoryPath);
+        return Result.Ok();
+      }
+      else
+      {
+        _logger.LogWarning("Failed to create directory: {DirectoryPath}, Error: {Error}",
+          dto.DirectoryPath, result.ErrorMessage);
+        return Result.Fail(result.ErrorMessage ?? "Failed to create directory");
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while creating directory: {DirectoryPath}", dto.DirectoryPath);
+      return Result.Fail("An error occurred while creating directory.");
+    }
   }
 
   private static async IAsyncEnumerable<byte[]> CreateChunkedStream(byte[] data)

@@ -1,5 +1,6 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
 
@@ -17,4 +18,11 @@ public interface IAgentHubClient : IHubClient
   Task<Result> SendChatMessage(ChatMessageHubDto dto);
   Task<Result> CloseChatSession(Guid sessionId, int targetProcessId);
   Task UninstallAgent(string reason);
+  Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
+  Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto);
+  Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto);
+  Task<Result?> ReceiveFileUpload(FileUploadHubDto dto);
+  Task<Result> SendFileDownload(FileDownloadHubDto dto);
+  Task<Result> DeleteFile(FileDeleteHubDto dto);
+  Task<Result> CreateDirectory(CreateDirectoryHubDto dto);
 }

@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-
-namespace ControlR.Web.Server.Authz.Policies;
+﻿namespace ControlR.Web.Server.Authz.Policies;
 
 public static class DeviceAccessByDeviceResourcePolicy
 {
