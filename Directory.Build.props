@@ -1,5 +1,7 @@
 <Project>
 	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+
 		<!-- These API calls take forever. -->
 		<NuGetAudit>false</NuGetAudit>
 
@@ -7,7 +9,8 @@
 		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
 		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
-		<TargetFramework>net9.0</TargetFramework>
+		<Company>$(Author)</Company>
+    <Description>Open-source remote control and remote access.</Description>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
