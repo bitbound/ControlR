@@ -1,6 +1,6 @@
-﻿using ControlR.Agent.Common.Services;
+﻿using ControlR.Agent.Common.Options;
+using ControlR.Agent.Common.Services;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Models;
 
 namespace ControlR.Agent.LoadTester;
 internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsProvider
@@ -11,6 +11,7 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
   public Uri ServerUri { get; } = serverUri;
 
   public int VncPort => AppConstants.DefaultVncPort;
+  public int HubDtoChunkSize => 100;
 
 
   public bool DisableAutoUpdate => true;

@@ -96,9 +96,7 @@ public partial class FileSystem : JsInteropableComponent
       var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
       if (result.IsSuccess && result.Value is not null)
       {
-        return result.Value.Subdirectories
-          .Select(ConvertToTreeItemData)
-          .ToList();
+        return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
       }
       else
       {

@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
@@ -106,7 +107,7 @@ public class AgentHub(
     {
       _logger.LogInformation("Receiving desktop preview stream for stream ID: {StreamId}", streamId);
       
-      if (!_hubStreamStore.TryGet(streamId, out var signaler))
+  if (!_hubStreamStore.TryGet<byte[]>(streamId, out var signaler))
       {
         _logger.LogWarning("No signaler found for stream ID: {StreamId}", streamId);
         return;
@@ -279,7 +280,7 @@ public class AgentHub(
   {
     try
     {
-      if (!_hubStreamStore.TryGet(streamId, out var signaler))
+  if (!_hubStreamStore.TryGet<byte[]>(streamId, out var signaler))
       {
         _logger.LogWarning("No signaler found for file download stream ID: {StreamId}", streamId);
         return;
@@ -305,7 +306,7 @@ public class AgentHub(
 
   public async IAsyncEnumerable<byte[]> GetFileUploadStream(FileUploadHubDto dto)
   {
-    if (!_hubStreamStore.TryGet(dto.StreamId, out var signaler))
+  if (!_hubStreamStore.TryGet<byte[]>(dto.StreamId, out var signaler))
     {
       yield break;
     }
@@ -329,6 +330,47 @@ public class AgentHub(
     finally
     {
       signaler.EndSignal.Set();
+    }
+  }
+
+  public async Task SendDirectoryContentsStream(Guid streamId, bool directoryExists, IAsyncEnumerable<FileSystemEntryDto[]> entryChunks)
+  {
+    try
+    {
+      if (!_hubStreamStore.TryGet<FileSystemEntryDto[]>(streamId, out var signaler))
+      {
+        _logger.LogWarning("No signaler found for directory contents stream ID: {StreamId}", streamId);
+        return;
+      }
+      signaler.Metadata = directoryExists;
+      signaler.SetStream(entryChunks, Context.ConnectionId);
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+      await signaler.EndSignal.Wait(cts.Token);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling directory contents stream {StreamId}", streamId);
+      throw;
+    }
+  }
+
+  public async Task SendSubdirectoriesStream(Guid streamId, IAsyncEnumerable<FileSystemEntryDto[]> subdirectoryChunks)
+  {
+    try
+    {
+      if (!_hubStreamStore.TryGet<FileSystemEntryDto[]>(streamId, out var signaler))
+      {
+        _logger.LogWarning("No signaler found for subdirectories stream ID: {StreamId}", streamId);
+        return;
+      }
+      signaler.SetStream(subdirectoryChunks, Context.ConnectionId);
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+      await signaler.EndSignal.Wait(cts.Token);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling subdirectories stream {StreamId}", streamId);
+      throw;
     }
   }
 }

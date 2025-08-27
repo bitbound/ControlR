@@ -100,16 +100,18 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
   }
 
-  public Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  // Removed legacy GetSubdirectories/GetDirectoryContents methods (now always streamed).
+
+  public Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
   {
-    Console.WriteLine($"Getting subdirectories for {requestDto.DirectoryPath}");
-    return Task.FromResult(Result.Ok(new GetSubdirectoriesResponseDto([])));
+    Console.WriteLine($"Streaming directory contents for {dto.DirectoryPath} (stream {dto.StreamId})");
+    return Result.Ok().AsTaskResult();
   }
 
-  public Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  public Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
   {
-    Console.WriteLine($"Getting directory contents for {requestDto.DirectoryPath}");
-    return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([], true)));
+    Console.WriteLine($"Streaming subdirectories for {dto.DirectoryPath} (stream {dto.StreamId})");
+    return Result.Ok().AsTaskResult();
   }
 
   public Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)

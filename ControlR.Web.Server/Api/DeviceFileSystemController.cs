@@ -1,5 +1,6 @@
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +75,7 @@ public class DeviceFileSystemController : ControllerBase
     [FromBody] GetSubdirectoriesRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+  [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DeviceFileSystemController> logger,
     CancellationToken cancellationToken)
@@ -106,24 +108,45 @@ public class DeviceFileSystemController : ControllerBase
       return BadRequest("Device is not currently connected.");
     }
 
+    var streamId = Guid.NewGuid();
+    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId, TimeSpan.FromMinutes(5));
     try
     {
+      var streamRequest = new SubdirectoriesStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
       var result = await agentHub.Clients.Client(device.ConnectionId)
-        .GetSubdirectories(request);
+        .StreamSubdirectories(streamRequest);
 
-      if (result.IsSuccess)
+      if (!result.IsSuccess)
       {
-        return Ok(result.Value);
+        logger.LogWarning("Failed to initiate subdirectories stream for device {DeviceId} path {DirectoryPath}: {Reason}",
+          request.DeviceId, request.DirectoryPath, result.Reason);
+        return BadRequest(result.Reason);
       }
 
-      logger.LogWarning("Failed to get subdirectories for device {DeviceId} path {DirectoryPath}: {Reason}", 
-        request.DeviceId, request.DirectoryPath, result.Reason);
-      return BadRequest(result.Reason);
+      await signaler.ReadySignal.Wait(cancellationToken);
+      if (signaler.Stream is null)
+      {
+        logger.LogWarning("No stream received for subdirectories request on device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
+        return StatusCode(StatusCodes.Status404NotFound);
+      }
+
+      var entries = new List<FileSystemEntryDto>();
+      await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+      {
+        entries.AddRange(chunk);
+      }
+      // Signal that we've consumed the stream
+      signaler.EndSignal.Set();
+      return Ok(new GetSubdirectoriesResponseDto(entries.ToArray()));
+    }
+    catch (OperationCanceledException)
+    {
+      logger.LogWarning("Subdirectories stream canceled/timed out for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
+      return StatusCode(StatusCodes.Status408RequestTimeout);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting subdirectories for device {DeviceId} path {DirectoryPath}", 
-        request.DeviceId, request.DirectoryPath);
+      logger.LogError(ex, "Error while streaming subdirectories for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
       return StatusCode(500, "An error occurred while retrieving subdirectories.");
     }
   }
@@ -133,6 +156,7 @@ public class DeviceFileSystemController : ControllerBase
     [FromBody] GetDirectoryContentsRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+  [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DeviceFileSystemController> logger,
     CancellationToken cancellationToken)
@@ -165,24 +189,47 @@ public class DeviceFileSystemController : ControllerBase
       return BadRequest("Device is not currently connected.");
     }
 
+    var streamId = Guid.NewGuid();
+    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId, TimeSpan.FromMinutes(5));
     try
     {
-      var result = await agentHub.Clients.Client(device.ConnectionId)
-        .GetDirectoryContents(request);
+      var streamRequest = new DirectoryContentsStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
+      var result = await agentHub.Clients
+        .Client(device.ConnectionId)
+        .StreamDirectoryContents(streamRequest);
 
-      if (result.IsSuccess)
+      if (!result.IsSuccess)
       {
-        return Ok(result.Value);
+        logger.LogWarning("Failed to initiate directory contents stream for device {DeviceId} path {DirectoryPath}: {Reason}",
+          request.DeviceId, request.DirectoryPath, result.Reason);
+        return BadRequest(result.Reason);
       }
 
-      logger.LogWarning("Failed to get directory contents for device {DeviceId} path {DirectoryPath}: {Reason}", 
-        request.DeviceId, request.DirectoryPath, result.Reason);
-      return BadRequest(result.Reason);
+      await signaler.ReadySignal.Wait(cancellationToken);
+      
+      if (signaler.Stream is null)
+      {
+        logger.LogWarning("No stream received for directory contents request on device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
+        return StatusCode(StatusCodes.Status404NotFound);
+      }
+
+      var entries = new List<FileSystemEntryDto>();
+      await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+      {
+        entries.AddRange(chunk);
+      }
+      signaler.EndSignal.Set();
+      var directoryExists = signaler.Metadata is bool b && b;
+      return Ok(new GetDirectoryContentsResponseDto(entries.ToArray(), directoryExists));
+    }
+    catch (OperationCanceledException)
+    {
+      logger.LogWarning("Directory contents stream canceled/timed out for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
+      return StatusCode(StatusCodes.Status408RequestTimeout);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error while getting directory contents for device {DeviceId} path {DirectoryPath}", 
-        request.DeviceId, request.DirectoryPath);
+      logger.LogError(ex, "Error while streaming directory contents for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
       return StatusCode(500, "An error occurred while retrieving directory contents.");
     }
   }

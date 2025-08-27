@@ -19,8 +19,8 @@ public interface IAgentHubClient : IHubClient
   Task<Result> CloseChatSession(Guid sessionId, int targetProcessId);
   Task UninstallAgent(string reason);
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
-  Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto);
-  Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto);
+  Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
+  Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);
   Task<Result?> ReceiveFileUpload(FileUploadHubDto dto);
   Task<Result> SendFileDownload(FileDownloadHubDto dto);
   Task<Result> DeleteFile(FileDeleteHubDto dto);

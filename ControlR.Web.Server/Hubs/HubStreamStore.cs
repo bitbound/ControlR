@@ -5,10 +5,9 @@ namespace ControlR.Web.Server.Hubs;
 
 public interface IHubStreamStore
 {
-  HubStreamSignaler GetOrCreate(Guid streamId, TimeSpan expiration);
-
-  bool TryGet(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler);
-  bool TryRemove(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler);
+  HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration);
+  bool TryGet<T>(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler<T>? signaler);
+  bool TryRemove(Guid streamId, [NotNullWhen(true)] out IHubStreamSignaler? signaler);
 }
 
 public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryCache) : IHubStreamStore
@@ -16,11 +15,17 @@ public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryC
   private readonly IMemoryCache _memoryCache = memoryCache;
   private readonly ILogger<HubStreamStore> _logger = logger;
 
-  public HubStreamSignaler GetOrCreate(Guid streamId, TimeSpan expiration)
+  public HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration)
   {
-    if (_memoryCache.TryGetValue(streamId, out var existing) && existing is HubStreamSignaler signaler)
+    if (_memoryCache.TryGetValue(streamId, out var existing) && existing is HubStreamSignaler<T> typedExisting)
     {
-      return signaler;
+      return typedExisting;
+    }
+    if (_memoryCache.TryGetValue(streamId, out existing) && existing is IHubStreamSignaler wrongType)
+    {
+      // Remove existing wrong-typed signaler to avoid type mismatch
+      _memoryCache.Remove(streamId);
+      wrongType.Dispose();
     }
 
     var cacheEntryOptions = new MemoryCacheEntryOptions
@@ -29,18 +34,24 @@ public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryC
       PostEvictionCallbacks = { new PostEvictionCallbackRegistration { EvictionCallback = OnEviction } }
     };
 
-    signaler = new HubStreamSignaler(streamId, () => TryRemove(streamId, out _));
+    var signaler = new HubStreamSignaler<T>(streamId, () => TryRemove(streamId, out _));
     return _memoryCache.Set(streamId, signaler, cacheEntryOptions);
   }
 
-  public bool TryGet(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler)
+  public bool TryGet<T>(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler<T>? signaler)
   {
-    return _memoryCache.TryGetValue(streamId, out signaler);
+    if (_memoryCache.TryGetValue(streamId, out var value) && value is HubStreamSignaler<T> typed)
+    {
+      signaler = typed;
+      return true;
+    }
+    signaler = null;
+    return false;
   }
 
-  public bool TryRemove(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler? signaler)
+  public bool TryRemove(Guid streamId, [NotNullWhen(true)] out IHubStreamSignaler? signaler)
   {
-    if (_memoryCache.TryGetValue(streamId, out var value) && value is HubStreamSignaler cachedSignaler)
+    if (_memoryCache.TryGetValue(streamId, out var value) && value is IHubStreamSignaler cachedSignaler)
     {
       _memoryCache.Remove(streamId);
       signaler = cachedSignaler;
@@ -52,7 +63,7 @@ public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryC
 
   private void OnEviction(object key, object? value, EvictionReason reason, object? state)
   {
-    if (value is HubStreamSignaler signaler)
+    if (value is IHubStreamSignaler signaler)
     {
       _logger.LogDebug("Stream session {StreamId} evicted from cache. Reason: {Reason}", key, reason);
       signaler.Dispose();

@@ -357,39 +357,48 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  // Removed legacy non-streaming GetSubdirectories/GetDirectoryContents hub methods in favor of streaming variants.
+
+  public async Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
   {
     try
     {
-      _logger.LogInformation("Getting subdirectories for {DeviceId}: {DirectoryPath}",
-        requestDto.DeviceId, requestDto.DirectoryPath);
+      _logger.LogInformation("Streaming directory contents for {DeviceId}: {DirectoryPath}", dto.DeviceId, dto.DirectoryPath);
 
-      var subdirectories = await _fileManager.GetSubdirectories(requestDto.DirectoryPath);
+      var result = await _fileManager.GetDirectoryContents(dto.DirectoryPath);
+      var chunkSize = _settings.HubDtoChunkSize;
+      var chunks = CreateChunks(result.Entries, chunkSize); // configurable chunk size
 
-      return Result.Ok(new GetSubdirectoriesResponseDto(subdirectories));
+      await _hubConnection.Server.SendDirectoryContentsStream(
+        dto.StreamId,
+        result.DirectoryExists,
+        chunks);
+
+      return Result.Ok();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting subdirectories for {DirectoryPath}", requestDto.DirectoryPath);
-      return Result.Fail<GetSubdirectoriesResponseDto>("An error occurred while getting subdirectories.");
+      _logger.LogError(ex, "Error streaming directory contents for {DirectoryPath}", dto.DirectoryPath);
+      return Result.Fail("An error occurred while streaming directory contents.");
     }
   }
 
-  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  public async Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
   {
     try
     {
-      _logger.LogInformation("Getting directory contents for {DeviceId}: {DirectoryPath}",
-        requestDto.DeviceId, requestDto.DirectoryPath);
+      _logger.LogInformation("Streaming subdirectories for {DeviceId}: {DirectoryPath}", dto.DeviceId, dto.DirectoryPath);
+      var subdirs = await _fileManager.GetSubdirectories(dto.DirectoryPath);
+      var chunkSize = _settings.HubDtoChunkSize;
+      var chunks = CreateChunks(subdirs, chunkSize);
 
-      var result = await _fileManager.GetDirectoryContents(requestDto.DirectoryPath);
-
-      return Result.Ok(new GetDirectoryContentsResponseDto(result.Entries, result.DirectoryExists));
+      await _hubConnection.Server.SendSubdirectoriesStream(dto.StreamId, chunks);
+      return Result.Ok();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting directory contents for {DirectoryPath}", requestDto.DirectoryPath);
-      return Result.Fail<GetDirectoryContentsResponseDto>("An error occurred while getting directory contents.");
+      _logger.LogError(ex, "Error streaming subdirectories for {DirectoryPath}", dto.DirectoryPath);
+      return Result.Fail("An error occurred while streaming subdirectories.");
     }
   }
 
@@ -415,6 +424,26 @@ internal class AgentHubClient(
       await fs.WriteAsync(chunk);
     }
     return Result.Ok();
+  }
+
+  private static async IAsyncEnumerable<T[]> CreateChunks<T>(IEnumerable<T> source, int chunkSize)
+  {
+    if (chunkSize <= 0) chunkSize = 400;
+    var buffer = new List<T>(chunkSize);
+    foreach (var item in source)
+    {
+      buffer.Add(item);
+      if (buffer.Count >= chunkSize)
+      {
+        yield return buffer.ToArray();
+        buffer.Clear();
+        await Task.Yield();
+      }
+    }
+    if (buffer.Count > 0)
+    {
+      yield return buffer.ToArray();
+    }
   }
 
   public async Task<Result> SendFileDownload(FileDownloadHubDto dto)

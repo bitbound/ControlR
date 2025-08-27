@@ -184,7 +184,7 @@ public class FileOperationsController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate(streamId, TimeSpan.FromMinutes(30));
+  using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
 
     var downloadRequest = new FileDownloadHubDto(streamId, filePath);
 
@@ -293,7 +293,7 @@ public class FileOperationsController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate(streamId, TimeSpan.FromMinutes(30));
+  using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
 
     var uploadRequest = new FileUploadHubDto(
       streamId,

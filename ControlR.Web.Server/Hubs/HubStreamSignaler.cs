@@ -1,6 +1,17 @@
 ﻿namespace ControlR.Web.Server.Hubs;
 
-public class HubStreamSignaler(Guid streamId, Action? onDispose = null) : IDisposable
+public interface IHubStreamSignaler : IDisposable
+{
+  Guid StreamId { get; }
+  ManualResetEventAsync EndSignal { get; }
+  ManualResetEventAsync ReadySignal { get; }
+  string RequesterConnectionId { get; }
+  string ResponderConnectionId { get; }
+  Type ItemType { get; }
+  object? Metadata { get; set; }
+}
+
+public class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null) : IHubStreamSignaler
 {
   private readonly Action? _onDispose = onDispose;
   private bool _disposedValue;
@@ -9,34 +20,33 @@ public class HubStreamSignaler(Guid streamId, Action? onDispose = null) : IDispo
   public ManualResetEventAsync ReadySignal { get; } = new();
   public string RequesterConnectionId { get; internal set; } = string.Empty;
   public string ResponderConnectionId { get; internal set; } = string.Empty;
-  public IAsyncEnumerable<byte[]>? Stream { get; internal set; }
-  public Guid StreamId { get; init; } = streamId;
+  public IAsyncEnumerable<T>? Stream { get; internal set; }
+  public Guid StreamId { get; } = streamId;
+  public Type ItemType => typeof(T);
+  public object? Metadata { get; set; }
 
-  public void Dispose()
-  {
-    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    Dispose(disposing: true);
-    GC.SuppressFinalize(this);
-  }
-
-  public void SetStream(IAsyncEnumerable<byte[]> stream, string responderConnectionId)
+  public void SetStream(IAsyncEnumerable<T> stream, string responderConnectionId)
   {
     ResponderConnectionId = responderConnectionId;
     Stream = stream;
     ReadySignal.Set();
   }
 
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
   protected virtual void Dispose(bool disposing)
   {
-    if (!_disposedValue)
+    if (_disposedValue) return;
+    if (disposing)
     {
-      if (disposing)
-      {
-        EndSignal.Dispose();
-        ReadySignal.Dispose();
-        _onDispose?.Invoke();
-      }
-      _disposedValue = true;
+      EndSignal.Dispose();
+      ReadySignal.Dispose();
+      _onDispose?.Invoke();
     }
+    _disposedValue = true;
   }
 }

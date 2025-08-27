@@ -28,7 +28,7 @@ internal sealed class ProxyInvocationHandler<THub, TClient>(HubConnection<THub, 
   {
     // This isn't ideal and shouldn't be used on servers. I couldn't
     // get the channel to bind when wrapped in a Task. However, this
-    // library will be used on clients, and he ProxyGenerator ensures
+    // library will be used on clients, and the ProxyGenerator ensures
     // that the hub method is also synchronous.  So the invoke should
     // return the reader immediately and not tie up a thread for long.
     if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)

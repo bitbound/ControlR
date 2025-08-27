@@ -10,6 +10,8 @@ public interface IAgentHub
   Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto);
   Task SendDesktopPreviewStream(Guid streamId, IAsyncEnumerable<byte[]> jpegChunks);
   Task SendFileDownloadStream(Guid streamId, IAsyncEnumerable<byte[]> fileChunks);
+  Task SendDirectoryContentsStream(Guid streamId, bool directoryExists, IAsyncEnumerable<FileSystemEntryDto[]> entryChunks);
+  Task SendSubdirectoriesStream(Guid streamId, IAsyncEnumerable<FileSystemEntryDto[]> subdirectoryChunks);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
   Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto);
 }

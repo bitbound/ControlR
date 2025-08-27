@@ -16,6 +16,7 @@ public interface ISettingsProvider
   Uri ServerUri { get; }
   Guid TenantId { get; }
   int VncPort { get; }
+  int HubDtoChunkSize { get; }
   string GetAppSettingsPath();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
@@ -47,6 +48,9 @@ internal class SettingsProvider(
     : _appOptions.CurrentValue.TenantId;
 
   public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
+  public int HubDtoChunkSize => _appOptions.CurrentValue.HubDtoChunkSize is > 0
+    ? _appOptions.CurrentValue.HubDtoChunkSize.Value
+    : 100;
   public string GetAppSettingsPath()
   {
     return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);

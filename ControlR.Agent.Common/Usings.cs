@@ -12,3 +12,4 @@ global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.Libraries.Shared.Hubs;
 global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Signalr.Client;
+global using ControlR.Agent.Common.Options;
