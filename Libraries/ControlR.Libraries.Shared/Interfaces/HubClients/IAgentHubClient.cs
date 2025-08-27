@@ -24,4 +24,5 @@ public interface IAgentHubClient : IHubClient
   Task<Result?> ReceiveFileUpload(FileUploadHubDto dto);
   Task<Result> SendFileDownload(FileDownloadHubDto dto);
   Task<Result> DeleteFile(FileDeleteHubDto dto);
+  Task<Result> CreateDirectory(CreateDirectoryHubDto dto);
 }

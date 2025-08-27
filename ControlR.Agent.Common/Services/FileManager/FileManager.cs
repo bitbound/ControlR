@@ -6,6 +6,7 @@ namespace ControlR.Agent.Common.Services.FileManager;
 
 public interface IFileManager
 {
+  Task<FileReferenceResult> CreateDirectory(string directoryPath);
   Task<FileReferenceResult> DeleteFileSystemEntry(string targetPath);
   Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath);
   Task<FileSystemEntryDto[]> GetRootDrives();
@@ -20,6 +21,36 @@ internal class FileManager(
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<FileManager> _logger = logger;
+
+  public Task<FileReferenceResult> CreateDirectory(string directoryPath)
+  {
+    try
+    {
+      if (string.IsNullOrWhiteSpace(directoryPath))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("Directory path cannot be empty"));
+      }
+
+      if (_fileSystem.DirectoryExists(directoryPath))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("Directory already exists"));
+      }
+
+      if (_fileSystem.FileExists(directoryPath))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("A file with the same name already exists"));
+      }
+
+      _fileSystem.CreateDirectory(directoryPath);
+      _logger.LogInformation("Successfully created directory: {DirectoryPath}", directoryPath);
+      return Task.FromResult(FileReferenceResult.Ok(directoryPath));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error creating directory: {DirectoryPath}", directoryPath);
+      return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+    }
+  }
 
   public Task<FileReferenceResult> DeleteFileSystemEntry(string targetPath)
   {

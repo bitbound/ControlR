@@ -1,6 +1,7 @@
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Web.Client.Components;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
@@ -39,6 +40,7 @@ public partial class FileSystem : JsInteropableComponent
   public bool IsUploadInProgress { get; set; }
   public bool IsDownloadInProgress { get; set; }
   public bool IsDeleteInProgress { get; set; }
+  public bool IsNewFolderInProgress { get; set; }
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
@@ -542,9 +544,8 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var downloadUrl = $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}";
-      
+
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
-      
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
     }
     catch (Exception ex)
@@ -625,6 +626,85 @@ public partial class FileSystem : JsInteropableComponent
     {
       Logger.LogError(ex, "Error deleting item {ItemName}", item.Name);
       throw;
+    }
+  }
+
+  private async Task OnRefreshClick()
+  {
+    if (string.IsNullOrEmpty(SelectedPath))
+    {
+      await LoadRootDrives();
+    }
+    else
+    {
+      await LoadDirectoryContents(SelectedPath);
+    }
+  }
+
+  private async Task OnNewFolderClick()
+  {
+    if (string.IsNullOrEmpty(SelectedPath))
+    {
+      Snackbar.Add("Please select a directory first", Severity.Warning);
+      return;
+    }
+
+    try
+    {
+      var folderName = await DialogService.ShowPrompt(
+        "Create New Folder",
+        "Enter the name for the new folder:",
+        "Folder Name",
+        "Enter folder name here");
+
+      if (string.IsNullOrWhiteSpace(folderName))
+      {
+        return; // User cancelled or provided empty name
+      }
+
+      // Validate folder name
+      var invalidChars = Path.GetInvalidFileNameChars();
+      if (folderName.Any(c => invalidChars.Contains(c)))
+      {
+        var invalidCharList = string.Join(", ", folderName.Where(c => invalidChars.Contains(c)).Distinct());
+        Snackbar.Add($"Folder name contains invalid characters: {invalidCharList}", Severity.Warning);
+        return;
+      }
+
+      var fullPath = Path.Combine(SelectedPath, folderName);
+      
+      // Check if directory already exists by checking current directory contents
+      if (DirectoryContents.Any(item => item.IsDirectory && 
+          string.Equals(item.Name, folderName, StringComparison.OrdinalIgnoreCase)))
+      {
+        Snackbar.Add("A folder with that name already exists", Severity.Warning);
+        return;
+      }
+
+      IsNewFolderInProgress = true;
+      StateHasChanged();
+
+      // Create the directory using the API
+      var result = await ControlrApi.CreateDirectory(DeviceId, fullPath);
+      if (result.IsSuccess)
+      {
+        Snackbar.Add($"Successfully created folder '{folderName}'", Severity.Success);
+        await LoadDirectoryContents(SelectedPath);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to create folder: {result.Reason}", Severity.Error);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error creating new folder");
+      Snackbar.Add("An error occurred while creating the folder", Severity.Error);
+    }
+    finally
+    {
+      IsNewFolderInProgress = false;
+      StateHasChanged();
     }
   }
 }

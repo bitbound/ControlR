@@ -17,13 +17,13 @@
           <MudCardContent>
             <MudTextField T="string"
                           @bind-Value="_input"
+                          @ref="_inputRef"
                           Label="@InputLabel"
                           HelperText="@InputHintText"
                           Immediate="true"
                           InputType="InputType.Text"
                           OnKeyDown="InputKeyDown"
-                          Required
-                          Validation="(string e) => ValidateInput(e)" />
+                          Required />
 
           </MudCardContent>
           <MudCardActions Class="justify-end">
@@ -50,24 +50,36 @@
 </div>
 
 @code {
-  private string? _input;
-  private bool _formIsValid;
-  private MudForm? _form;
+    private string? _input;
+    private bool _formIsValid;
+    private MudForm? _form;
+    private MudTextField<string> _inputRef = null!;
 
-  [CascadingParameter]
-  public required IMudDialogInstance MudDialog { get; init; }
+    [CascadingParameter]
+    public required IMudDialogInstance MudDialog { get; init; }
 
-  [Parameter]
-  public string InputHintText { get; set; } = "Enter your response here.";
+    [Parameter]
+    public string InputHintText { get; set; } = "Enter your response here.";
 
-  [Parameter]
-  public string InputLabel { get; set; } = "Response";
+    [Parameter]
+    public string InputLabel { get; set; } = "Response";
 
-  [Parameter]
-  public string? Subtitle { get; set; }
+    [Parameter]
+    public string? Subtitle { get; set; }
 
-  [Parameter]
-  public required string Title { get; set; }
+    [Parameter]
+    public required string Title { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+      await base.OnAfterRenderAsync(firstRender);
+      if (firstRender)
+      {
+        // AutoFocus property causes it to blur and show red, for some reason.
+        await Task.Delay(100);
+        await _inputRef.FocusAsync();
+      }
+    }
 
   private void Cancel()
   {
@@ -88,15 +100,5 @@
     {
       MudDialog.Close(_input);
     }
-  }
-
-  private string? ValidateInput(string input)
-  {
-    if (string.IsNullOrWhiteSpace(input))
-    {
-      return "Value is required.";
-    }
-
-    return null;
   }
 }

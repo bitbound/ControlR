@@ -16,6 +16,7 @@ public interface IControlrApi
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
+  Task<Result> CreateDirectory(Guid deviceId, string directoryPath);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
@@ -118,6 +119,16 @@ public class ControlrApi(
     {
       var requestDto = new CreateDeviceRequestDto(device, installerKey);
       using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result> CreateDirectory(Guid deviceId, string directoryPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var requestDto = new CreateDirectoryRequestDto(deviceId, directoryPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/create-directory/{deviceId}", requestDto);
       response.EnsureSuccessStatusCode();
     });
   }

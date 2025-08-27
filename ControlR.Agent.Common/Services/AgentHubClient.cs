@@ -470,6 +470,33 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Creating directory: {DirectoryPath}", dto.DirectoryPath);
+
+      var result = await _fileManager.CreateDirectory(dto.DirectoryPath);
+      
+      if (result.IsSuccess)
+      {
+        _logger.LogInformation("Successfully created directory: {DirectoryPath}", dto.DirectoryPath);
+        return Result.Ok();
+      }
+      else
+      {
+        _logger.LogWarning("Failed to create directory: {DirectoryPath}, Error: {Error}", 
+          dto.DirectoryPath, result.ErrorMessage);
+        return Result.Fail(result.ErrorMessage ?? "Failed to create directory");
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while creating directory: {DirectoryPath}", dto.DirectoryPath);
+      return Result.Fail("An error occurred while creating directory.");
+    }
+  }
+
   private static async IAsyncEnumerable<byte[]> CreateChunkedStream(byte[] data)
   {
     const int chunkSize = 30 * 1024; // 30KB chunks

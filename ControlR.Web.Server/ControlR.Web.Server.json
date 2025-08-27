@@ -249,6 +249,49 @@
         }
       }
     },
+    "/api/device-file-operations/create-directory/{deviceId}": {
+      "post": {
+        "tags": [
+          "FileOperations"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDirectoryRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDirectoryRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDirectoryRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/device-file-operations/download/{deviceId}": {
       "get": {
         "tags": [
@@ -2225,6 +2268,22 @@
             "$ref": "#/components/schemas/DeviceDto"
           },
           "installerKey": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateDirectoryRequestDto": {
+        "required": [
+          "deviceId",
+          "directoryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "directoryPath": {
             "type": "string"
           }
         }

@@ -75,6 +75,70 @@ public class FileOperationsController : ControllerBase
     }
   }
 
+  [HttpPost("create-directory/{deviceId:guid}")]
+  public async Task<IActionResult> CreateDirectory(
+    [FromRoute] Guid deviceId,
+    [FromBody] CreateDirectoryRequestDto request,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] ILogger<FileOperationsController> logger,
+    CancellationToken cancellationToken)
+  {
+    if (string.IsNullOrWhiteSpace(request.DirectoryPath))
+    {
+      return BadRequest("Directory path is required.");
+    }
+
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
+      return BadRequest("Device is not currently connected.");
+    }
+
+    var createDirectoryRequest = new CreateDirectoryHubDto(request.DirectoryPath);
+
+    try
+    {
+      await agentHub.Clients
+        .Client(device.ConnectionId)
+        .CreateDirectory(createDirectoryRequest);
+
+      logger.LogInformation("Directory creation requested for {DirectoryPath} on device {DeviceId}",
+        request.DirectoryPath, deviceId);
+
+      return Ok(new { Message = "Directory creation completed", DirectoryPath = request.DirectoryPath });
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error creating directory {DirectoryPath} on device {DeviceId}",
+        request.DirectoryPath, deviceId);
+      return StatusCode(500, "An error occurred during directory creation.");
+    }
+  }
+
   [HttpGet("download/{deviceId:guid}")]
   public async Task<IActionResult> DownloadFile(
     [FromRoute] Guid deviceId,

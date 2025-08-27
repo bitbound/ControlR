@@ -45,36 +45,52 @@
       <div class="d-flex justify-space-between align-center mb-3">
         <MudText Typo="Typo.h6">Contents</MudText>
         <div class="file-operations-toolbar">
-          @if (CurrentBreakpoint < Breakpoint.Sm)
+          @if (CurrentBreakpoint < Breakpoint.Md)
           {
             <MudTooltip Text="Upload File">
-              <MudIconButton Icon="@Icons.Material.Filled.Upload" Color="Color.Info" Size="Size.Small"
+              <MudIconButton Icon="@Icons.Material.Filled.Upload" Color="Color.Default" Size="Size.Small"
                 OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)" />
             </MudTooltip>
             <MudTooltip Text="Download">
-              <MudIconButton Icon="@Icons.Material.Filled.Download" Color="Color.Info" Size="Size.Small"
+              <MudIconButton Icon="@Icons.Material.Filled.Download" Color="Color.Default" Size="Size.Small"
                 OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)" />
             </MudTooltip>
             <MudTooltip Text="Delete">
               <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
                 OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)" />
             </MudTooltip>
+            <MudTooltip Text="New Folder">
+              <MudIconButton Icon="@Icons.Material.Filled.CreateNewFolder" Color="Color.Default" Size="Size.Small"
+                OnClick="OnNewFolderClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)" />
+            </MudTooltip>
           }
           else
           {
-            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Upload" Class="me-2"
-              OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)">
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+              Class="me-2" Size="Size.Small" OnClick="OnUploadFileClick"
+              Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)">
               Upload
             </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Download" Class="me-2"
-              OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)">
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Download"
+              Class="me-2" Size="Size.Small" OnClick="OnDownloadClick"
+              Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)">
               Download
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
-              OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)">
+              Class="me-2" Size="Size.Small" OnClick="OnDeleteClick"
+              Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)">
               Delete
             </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.CreateNewFolder"
+              Class="me-2" Size="Size.Small" OnClick="OnNewFolderClick"
+              Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)">
+              New Folder
+            </MudButton>
           }
+          <MudTooltip Text="Refresh">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Info" Size="Size.Small"
+              OnClick="OnRefreshClick" Disabled="@IsLoadingContents" />
+          </MudTooltip>
         </div>
       </div>
       @if (IsLoadingContents)

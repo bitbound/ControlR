@@ -129,4 +129,10 @@ public class TestAgentHubClient : IAgentHubClient
     Console.WriteLine($"Received file delete request for {dto.TargetPath}");
     return Result.Ok().AsTaskResult();
   }
+
+  public Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  {
+    Console.WriteLine($"Received create directory request for {dto.DirectoryPath}");
+    return Result.Ok().AsTaskResult();
+  }
 }
