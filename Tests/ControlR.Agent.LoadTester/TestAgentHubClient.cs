@@ -126,7 +126,7 @@ public class TestAgentHubClient : IAgentHubClient
 
   public Task<Result> DeleteFile(FileDeleteHubDto dto)
   {
-    Console.WriteLine($"Received file delete request for {dto.FilePath}");
+    Console.WriteLine($"Received file delete request for {dto.TargetPath}");
     return Result.Ok().AsTaskResult();
   }
 }

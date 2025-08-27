@@ -6,11 +6,6 @@ public record FileUploadHubDto(
   string FileName,
   long FileSize);
 
-public record FileDownloadHubDto(
-  Guid StreamId,
-  string FilePath,
-  bool IsDirectory);
+public record FileDownloadHubDto(Guid StreamId, string FilePath);
 
-public record FileDeleteHubDto(
-  string FilePath,
-  bool IsDirectory);
+public record FileDeleteHubDto(string TargetPath);

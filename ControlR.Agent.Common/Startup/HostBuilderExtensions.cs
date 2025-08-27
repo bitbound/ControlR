@@ -22,6 +22,7 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Agent.Common.Services.FileManager;
 
 namespace ControlR.Agent.Common.Startup;
 
