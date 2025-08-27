@@ -1,4 +1,5 @@
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,10 +10,10 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class DesktopPreviewController : ControllerBase
 {
-  [HttpGet("{deviceId:guid}/{sessionId:int}")]
+  [HttpGet("{deviceId:guid}/{targetProcessId:int}")]
   public async Task<IActionResult> GetDesktopPreview(
     [FromRoute]Guid deviceId,
-    [FromRoute] int sessionId,
+    [FromRoute] int targetProcessId,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -44,9 +45,13 @@ public class DesktopPreviewController : ControllerBase
     var requesterId = Guid.NewGuid();
     var streamId = Guid.NewGuid();
     using var signaler = hubStreamStore.GetOrCreate(streamId, TimeSpan.FromMinutes(10));
-    var desktopPreviewRequestDto = new DesktopPreviewRequestDto()
+    
+    var desktopPreviewRequestDto = new DesktopPreviewRequestDto(
+      requesterId,
+      streamId,
+      targetProcessId);
 
-    agentHub.Clients
+    await agentHub.Clients
       .Client(device.ConnectionId)
       .RequestDesktopPreview(desktopPreviewRequestDto);
 
@@ -60,6 +65,21 @@ public class DesktopPreviewController : ControllerBase
       return StatusCode(StatusCodes.Status408RequestTimeout);
     }
 
-    return Ok();
+    if (signaler.Stream is null)
+    {
+      logger.LogWarning("No stream available for desktop preview request on device {DeviceId}.", deviceId);
+      return StatusCode(StatusCodes.Status404NotFound);
+    }
+
+    // Set response content type for JPEG image
+    Response.ContentType = "image/jpeg";
+    
+    // Stream the bytes directly to the response
+    await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+    {
+      await Response.Body.WriteAsync(chunk, cancellationToken);
+    }
+
+    return new EmptyResult();
   }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Web.Client.Components.Dialogs;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 
@@ -20,6 +21,9 @@ public partial class RemoteControl : ComponentBase
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
+
+  [Inject]
+  public required IDialogService DialogService { get; init; }
 
   [Inject]
   public required ILogger<RemoteControl> Logger { get; init; }
@@ -198,7 +202,23 @@ public partial class RemoteControl : ComponentBase
   {
     try
     {
-      
+      var parameters = new DialogParameters
+      {
+        { nameof(DesktopPreviewDialog.Device), DeviceAccessState.CurrentDevice },
+        { nameof(DesktopPreviewDialog.Session), deviceUiSession }
+      };
+
+      var dialogOptions = new DialogOptions
+      {
+        BackdropClick = false,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large
+      };
+
+      await DialogService.ShowAsync<DesktopPreviewDialog>(
+        $"Desktop Preview - {deviceUiSession.Name}", 
+        parameters, 
+        dialogOptions);
     }
     catch (Exception ex)
     {

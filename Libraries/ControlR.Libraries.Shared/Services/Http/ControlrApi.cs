@@ -52,6 +52,7 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
+  Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
 }
 
 public class ControlrApi(
@@ -472,6 +473,16 @@ public class ControlrApi(
       using var response = await _client.PutAsJsonAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>();
+    });
+  }
+
+  public async Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}");
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadAsByteArrayAsync();
     });
   }
 

@@ -96,6 +96,7 @@ internal static class StaticServiceProvider
     services.AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>());
     services.AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>();
     services.AddSingleton<IToaster, Toaster>();
+    services.AddSingleton<IImageUtility, ImageUtility>();
     services.AddTransient<IMessageBoxViewModel, MessageBoxViewModel>();
     services.AddTransient<ManagedDeviceView>();
     services.AddTransient<ChatWindow>();
@@ -105,14 +106,25 @@ internal static class StaticServiceProvider
     services.AddHostedService<IpcClientManager>();
     
     // Cross-platform Avalonia-based toaster
-    services.AddSingleton<IToaster, Services.Toaster>();
+    services.AddSingleton<IToaster, Toaster>();
+
+#if WINDOWS_BUILD
+    services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>();
+    services.AddSingleton<IWin32Interop, Win32Interop>();
+    services.AddSingleton<IDxOutputGenerator, DxOutputGenerator>();
+#endif
 
 #if UNIX_BUILD
     services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
 #endif
 
+#if LINUX_BUILD
+    services.AddSingleton<IScreenGrabber, ScreenGrabberLinux>();
+#endif
+
 #if MAC_BUILD
     services.AddHostedService<PermissionsInitializerMac>();
+    services.AddSingleton<IScreenGrabber, ScreenGrabberMac>();
     services.AddSingleton<IMacInterop, MacInterop>();
 #endif
 

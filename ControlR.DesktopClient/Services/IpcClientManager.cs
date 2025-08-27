@@ -17,6 +17,8 @@ public class IpcClientManager(
   IpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
   IProcessManager processManager,
+  IScreenGrabber screenGrabber,
+  IImageUtility imageUtility,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
@@ -26,6 +28,8 @@ public class IpcClientManager(
   private readonly IProcessManager _processManager = processManager;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IScreenGrabber _screenGrabber = screenGrabber;
+  private readonly IImageUtility _imageUtility = imageUtility;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -47,6 +51,7 @@ public class IpcClientManager(
         client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
         client.On<ChatMessageIpcDto>(HandleChatMessage);
         client.On<CloseChatSessionIpcDto>(HandleCloseChatSession);
+        client.On<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(HandleDesktopPreviewRequest);
 
         if (!await client.Connect(stoppingToken))
         {
@@ -119,6 +124,48 @@ public class IpcClientManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling close chat session request.");
+    }
+  }
+
+  private DesktopPreviewResponseIpcDto HandleDesktopPreviewRequest(DesktopPreviewRequestIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling desktop preview request. Requester ID: {RequesterId}, Stream ID: {StreamId}, Process ID: {ProcessId}",
+        dto.RequesterId,
+        dto.StreamId,
+        dto.TargetProcessId);
+
+      // Capture all displays (synchronous call)
+      var captureResult = _screenGrabber.Capture(captureCursor: false);
+      if (!captureResult.IsSuccess || captureResult.Bitmap is null)
+      {
+        _logger.LogWarning("Failed to capture displays: {Error}", captureResult.FailureReason);
+        return new DesktopPreviewResponseIpcDto([], false, captureResult.FailureReason);
+      }
+
+      // Encode as JPEG
+      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75); // 75% quality
+      if (jpegData is null || jpegData.Length == 0)
+      {
+        _logger.LogWarning("Failed to encode JPEG: No data returned");
+        return new DesktopPreviewResponseIpcDto([], false, "Failed to encode JPEG");
+      }
+
+      _logger.LogInformation(
+        "Desktop preview captured successfully. JPEG size: {Size} bytes",
+        jpegData.Length);
+
+      // Dispose the bitmap to free memory
+      captureResult.Dispose();
+
+      return new DesktopPreviewResponseIpcDto(jpegData, true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling desktop preview request.");
+      return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
     }
   }
 

@@ -7,6 +7,7 @@ public interface IAgentHub
 {
   Task SendChatResponse(ChatResponseHubDto responseDto);
   Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto);
+  Task SendDesktopPreviewStream(Guid streamId, IAsyncEnumerable<byte[]> jpegChunks);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
   Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto);
 }

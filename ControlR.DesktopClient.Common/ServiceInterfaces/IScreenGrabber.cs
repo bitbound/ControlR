@@ -10,13 +10,13 @@ public interface IScreenGrabber
   /// </summary>
   /// <param name="targetDisplay">The display to capture.  Retrieve current displays from <see cref="GetDisplays" />. </param>
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
-  /// <param name="tryUseDirectX">Whether to attempt using DirectX (DXGI) for getting the capture.</param>
-  /// <param name="directXTimeout">
-  ///   The amount of time, in milliseconds, to allow DirectX to attempt to capture the screen.
+  /// <param name="tryUseGpuAcceleration">Whether to attempt using GPU acceleration (e.g. DirectX) for getting the capture.</param>
+  /// <param name="gpuCaptureTimeout">
+  ///   The amount of time, in milliseconds, to allow GPU acceleration to attempt to capture the screen.
   ///   If no screen changes have occurred within this time, the capture will time out.
   /// </param>
-  /// <param name="allowFallbackToBitBlt">
-  ///   Whether to allow fallback to BitBlt for capture, which is not DirectX-accelerated, in the event of timeout or
+  /// <param name="allowFallbackToCpu">
+  ///   Whether to allow fallback to CPU-based capture, which is not GPU-accelerated, in the event of timeout or
   ///   exception.
   /// </param>
   /// <returns>
@@ -26,12 +26,12 @@ public interface IScreenGrabber
   CaptureResult Capture(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
-    bool tryUseDirectX = true,
-    int directXTimeout = 50,
-    bool allowFallbackToBitBlt = true);
+    bool tryUseGpuAcceleration = true,
+    int gpuCaptureTimeout = 50,
+    bool allowFallbackToCpu = true);
 
   /// <summary>
-  ///   Gets a capture of all displays.  This method is not DirectX-accelerated.
+  ///   Gets a capture of all displays.  This method is not GPU-accelerated.
   /// </summary>
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
   /// <returns>

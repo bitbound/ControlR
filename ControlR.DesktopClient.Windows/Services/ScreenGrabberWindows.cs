@@ -38,9 +38,9 @@ internal sealed class ScreenGrabberWindows(
   public CaptureResult Capture(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
-    bool tryUseDirectX = true,
-    int directXTimeout = 50,
-    bool allowFallbackToBitBlt = true)
+    bool tryUseGpuAcceleration = true,
+    int gpuCaptureTimeout = 50,
+    bool allowFallbackToCpu = true)
   {
     try
     {
@@ -53,7 +53,7 @@ internal sealed class ScreenGrabberWindows(
 
       SwitchToInputDesktop();
 
-      if (!tryUseDirectX)
+      if (!tryUseGpuAcceleration)
       {
         return GetBitBltCapture(display.MonitorArea, captureCursor);
       }
@@ -65,14 +65,14 @@ internal sealed class ScreenGrabberWindows(
         return dxResult;
       }
 
-      if (dxResult.DxTimedOut && allowFallbackToBitBlt)
+      if (dxResult.DxTimedOut && allowFallbackToCpu)
       {
         return GetBitBltCapture(display.MonitorArea, captureCursor, dxResult);
       }
 
       if (!dxResult.IsSuccess || dxResult.Bitmap is null || _bitmapUtility.IsEmpty(dxResult.Bitmap))
       {
-        if (!allowFallbackToBitBlt)
+        if (!allowFallbackToCpu)
         {
           return dxResult;
         }

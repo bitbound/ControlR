@@ -174,7 +174,39 @@
         }
       }
     },
-    "/api/Devices": {
+    "/api/desktop-preview/{deviceId}/{targetProcessId}": {
+      "get": {
+        "tags": [
+          "DesktopPreview"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetProcessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/devices": {
       "post": {
         "tags": [
           "Devices"
@@ -259,7 +291,7 @@
         }
       }
     },
-    "/api/Devices/{deviceId}": {
+    "/api/devices/{deviceId}": {
       "delete": {
         "tags": [
           "Devices"
@@ -320,7 +352,7 @@
         }
       }
     },
-    "/api/Devices/search": {
+    "/api/devices/search": {
       "post": {
         "tags": [
           "Devices"
@@ -2713,6 +2745,9 @@
   "tags": [
     {
       "name": "ControlR.Web.Server"
+    },
+    {
+      "name": "DesktopPreview"
     },
     {
       "name": "Devices"
