@@ -155,7 +155,6 @@ public class FileOperationsController : ControllerBase
     using var signaler = hubStreamStore.GetOrCreate(streamId, TimeSpan.FromMinutes(30));
 
     var downloadRequest = new FileDownloadHubDto(
-      Guid.NewGuid(), // RequesterId
       streamId,
       filePath,
       false); // IsDirectory - we'll detect this on the agent side

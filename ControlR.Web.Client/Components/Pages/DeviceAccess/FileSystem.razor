@@ -5,109 +5,108 @@
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
 <div @ref="_containerRef" class="file-system-container h-100">
-    <div class="address-bar-container">
-        <MudTextField @bind-Value="AddressBarValue" 
-                      Label="Address" 
-                      Variant="Variant.Outlined"
-                      Immediate
-                      Adornment="Adornment.End" 
-                      AdornmentIcon="Icons.Material.Filled.SubdirectoryArrowRight"
-                      AdornmentColor="Color.Primary"
-                      OnAdornmentClick="NavigateToAddress"
-                      @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
-                      FullWidth="true" 
-                      Class="address-bar" />
-    </div>
-    <div class="file-system-grid">
-        <div @ref="_treePanelRef" class="tree-panel">
-            <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>
-            @if (InitialTreeItems.Count == 0 && IsLoading)
-            {
-                <div class="d-flex justify-center align-center" style="height: 200px;">
-                    <MudProgressCircular Indeterminate="true" />
-                </div>
-            }
-            else if (InitialTreeItems.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">No drives found or unable to load file system.</MudAlert>
-            }
-            else
-            {
-                <MudTreeView ServerData="@LoadServerData" Items="@InitialTreeItems" @bind-SelectedValue="SelectedPath" T="string" Dense="true" ExpandOnDoubleClick>
-                    <ItemTemplate>
-                        <MudTreeViewItem 
-                            Value="@context.Value" 
-                            Text="@context.Text"
-                            Items="@context.Children" 
-                            ItemsChanged="@(new Action<IReadOnlyCollection<TreeItemData<string>>>(items => OnItemsLoaded(context, items)))" 
-                            @bind-Expanded="@context.Expanded"
-                            CanExpand="@context.Expandable"
-                            Icon="@context.Icon" 
-                            LoadingIconColor="Color.Info" />
-                    </ItemTemplate>
-                </MudTreeView>
-            }
+  <div class="address-bar-container">
+    <MudTextField @bind-Value="AddressBarValue" Label="Address" Variant="Variant.Outlined" Immediate
+      Adornment="Adornment.End" AdornmentIcon="Icons.Material.Filled.SubdirectoryArrowRight"
+      AdornmentColor="Color.Primary" OnAdornmentClick="NavigateToAddress"
+      @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
+      FullWidth="true" Class="address-bar" />
+  </div>
+  <div class="file-system-grid">
+    <div @ref="_treePanelRef" class="tree-panel">
+      <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>
+      @if (InitialTreeItems.Count == 0 && IsLoading)
+      {
+        <div class="d-flex justify-center align-center" style="height: 200px;">
+          <MudProgressCircular Indeterminate="true" />
         </div>
-        
-        <div @ref="_splitterRef" class="grid-splitter"></div>
-        
-        <div @ref="_contentPanelRef" class="content-panel">
-            <div class="d-flex justify-space-between align-center mb-3">
-                <MudText Typo="Typo.h6">Contents</MudText>
-                <div class="file-operations-toolbar">
-                    <MudTooltip Text="Upload File">
-                        <MudIconButton Icon="@Icons.Material.Filled.Upload" 
-                                     Color="Color.Primary" 
-                                     Size="Size.Small"
-                                     OnClick="OnUploadFileClick"
-                                     Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)" />
-                    </MudTooltip>
-                    <MudTooltip Text="Download">
-                        <MudIconButton Icon="@Icons.Material.Filled.Download" 
-                                     Color="Color.Primary" 
-                                     Size="Size.Small"
-                                     OnClick="OnDownloadClick"
-                                     Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)" />
-                    </MudTooltip>
-                    <MudTooltip Text="Delete">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                     Color="Color.Error" 
-                                     Size="Size.Small"
-                                     OnClick="OnDeleteClick"
-                                     Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)" />
-                    </MudTooltip>
-                </div>
-            </div>
-            @if (IsLoadingContents)
-            {
-                <div class="d-flex justify-center align-center" style="height: 200px;">
-                    <MudProgressCircular Indeterminate="true" />
-                </div>
-            }
-            else if (!string.IsNullOrEmpty(SelectedPath))
-            {
-                <MudDataGrid T="FileSystemEntryViewModel" Items="DirectoryContents" Dense="true" Hover="true"
-                           SortMode="SortMode.Multiple" Filterable="true" Hideable="false" RowsPerPage="50"
-                           RowStyleFunc="@GetRowStyle" RowClick="@OnRowClick" 
-                           MultiSelection="true" SelectOnRowClick="false" @bind-SelectedItems="SelectedItems">
-                    <Columns>
-                        <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
-                            <CellTemplate>
-                                <MudIcon Icon="@context.Item.Icon" Size="Size.Small" />
-                            </CellTemplate>
-                        </PropertyColumn>
-                        <PropertyColumn Property="x => x.Name" Title="Name" />
-                        <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
-                        <PropertyColumn Property="x => x.LastModified" Title="Modified" />
-                    </Columns>
-                </MudDataGrid>
-            }
-            else
-            {
-                <MudAlert Severity="Severity.Info">Select a folder to view its contents.</MudAlert>
-            }
-        </div>
+      }
+      else if (InitialTreeItems.Count == 0)
+      {
+        <MudAlert Severity="Severity.Info">No drives found or unable to load file system.</MudAlert>
+      }
+      else
+      {
+        <MudTreeView ServerData="@LoadServerData" Items="@InitialTreeItems" @bind-SelectedValue="SelectedPath" T="string"
+          Dense="true" ExpandOnDoubleClick>
+          <ItemTemplate>
+            <MudTreeViewItem Value="@context.Value" Text="@context.Text" Items="@context.Children"
+              ItemsChanged="@(new Action<IReadOnlyCollection<TreeItemData<string>>>(items => OnItemsLoaded(context, items)))"
+              @bind-Expanded="@context.Expanded" CanExpand="@context.Expandable" Icon="@context.Icon"
+              LoadingIconColor="Color.Info" />
+          </ItemTemplate>
+        </MudTreeView>
+      }
     </div>
+
+    <div @ref="_splitterRef" class="grid-splitter"></div>
+
+    <div @ref="_contentPanelRef" class="content-panel">
+      <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">Contents</MudText>
+        <div class="file-operations-toolbar">
+          @if (CurrentBreakpoint < Breakpoint.Sm)
+          {
+            <MudTooltip Text="Upload File">
+              <MudIconButton Icon="@Icons.Material.Filled.Upload" Color="Color.Info" Size="Size.Small"
+                OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)" />
+            </MudTooltip>
+            <MudTooltip Text="Download">
+              <MudIconButton Icon="@Icons.Material.Filled.Download" Color="Color.Info" Size="Size.Small"
+                OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)" />
+            </MudTooltip>
+            <MudTooltip Text="Delete">
+              <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)" />
+            </MudTooltip>
+          }
+          else
+          {
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Upload" Class="me-2"
+              OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)">
+              Upload
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Download" Class="me-2"
+              OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)">
+              Download
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+              OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)">
+              Delete
+            </MudButton>
+          }
+        </div>
+      </div>
+      @if (IsLoadingContents)
+      {
+        <div class="d-flex justify-center align-center" style="height: 200px;">
+          <MudProgressCircular Indeterminate="true" />
+        </div>
+      }
+      else if (!string.IsNullOrEmpty(SelectedPath))
+      {
+        <MudDataGrid T="FileSystemEntryViewModel" Items="DirectoryContents" @bind-SelectedItems="SelectedItems"
+          Dense="true" Hover="true" SortMode="SortMode.Multiple" Filterable="true" Hideable="false" RowsPerPage="50"
+          MultiSelection="true" SelectOnRowClick="true" RowClass="cursor-pointer">
+          <Columns>
+            <SelectColumn T="FileSystemEntryViewModel" />
+            <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
+              <CellTemplate>
+                <MudIcon Icon="@context.Item.Icon" Size="Size.Small" />
+              </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
+            <PropertyColumn Property="x => x.LastModified" Title="Modified" />
+          </Columns>
+        </MudDataGrid>
+      }
+      else
+      {
+        <MudAlert Severity="Severity.Info">Select a folder to view its contents.</MudAlert>
+      }
+    </div>
+  </div>
 </div>
 
 <!-- Hidden file input for uploads -->

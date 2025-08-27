@@ -97,6 +97,7 @@ public partial class FileSystem : JsInteropableComponent
 
   protected override async Task OnInitializedAsync()
   {
+    await base.OnInitializedAsync();
     if (DeviceId == Guid.Empty)
     {
       Snackbar.Add("Device ID is required", Severity.Error);
@@ -108,6 +109,7 @@ public partial class FileSystem : JsInteropableComponent
 
   protected override async Task OnParametersSetAsync()
   {
+    await base.OnParametersSetAsync();
     if (DeviceId != Guid.Empty && !IsLoading)
     {
       await LoadRootDrives();
@@ -239,49 +241,8 @@ public partial class FileSystem : JsInteropableComponent
   {
     if (!string.IsNullOrEmpty(newPath))
     {
-      SelectedPath = newPath;
+      SelectedItems.Clear();
       await LoadDirectoryContents(newPath);
-    }
-  }
-
-  private async Task OnRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
-  {
-    var item = args.Item;
-    if (item?.IsDirectory == true && !string.IsNullOrEmpty(item.FullPath))
-    {
-      await NavigateToDirectory(item.FullPath);
-    }
-  }
-
-  private string GetRowStyle(FileSystemEntryViewModel item, int index)
-  {
-    if (item.IsDirectory)
-    {
-      return "cursor: pointer;";
-    }
-    return string.Empty;
-  }
-
-  private async Task NavigateToDirectory(string directoryPath)
-  {
-    try
-    {
-      // Update address bar
-      _addressBarValue = directoryPath;
-      
-      // Build tree to this path if needed
-      await BuildTreeToPath(directoryPath);
-      
-      await InvokeAsync(StateHasChanged);
-      await Task.Delay(100); // Small delay to ensure tree is updated
-
-      // Set the selected path (this will also load directory contents)
-      SelectedPath = directoryPath;
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error navigating to directory {Path}", directoryPath);
-      Snackbar.Add($"An error occurred while navigating to '{directoryPath}'", Severity.Error);
     }
   }
 
@@ -524,7 +485,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       Guard.IsNotNull(SelectedPath);
-      
+
       using var fileStream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB limit
       var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType);
       
@@ -580,7 +541,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-      var downloadUrl = $"/api/file-operations/{DeviceId}/download?filePath={Uri.EscapeDataString(item.FullPath)}";
+      var downloadUrl = $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}";
       
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       

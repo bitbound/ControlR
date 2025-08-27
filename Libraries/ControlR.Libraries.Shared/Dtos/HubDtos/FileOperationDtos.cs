@@ -7,7 +7,6 @@ public record FileUploadHubDto(
   long FileSize);
 
 public record FileDownloadHubDto(
-  Guid RequesterId,
   Guid StreamId,
   string FilePath,
   bool IsDirectory);
