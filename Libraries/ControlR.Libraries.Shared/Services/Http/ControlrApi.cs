@@ -53,6 +53,9 @@ public interface IControlrApi
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
+  Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId);
+  Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
+  Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
 }
 
 public class ControlrApi(
@@ -483,6 +486,39 @@ public class ControlrApi(
       using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}");
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadAsByteArrayAsync();
+    });
+  }
+
+  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetRootDrivesRequestDto(deviceId);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/root-drives", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetRootDrivesResponseDto>();
+    });
+  }
+
+  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetSubdirectoriesRequestDto(deviceId, directoryPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/subdirectories", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetSubdirectoriesResponseDto>();
+    });
+  }
+
+  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetDirectoryContentsRequestDto(deviceId, directoryPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/contents", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
     });
   }
 

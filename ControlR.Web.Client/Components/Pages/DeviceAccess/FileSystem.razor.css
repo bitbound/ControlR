@@ -1,0 +1,41 @@
+.file-system-container {
+  padding: 16px;
+}
+
+.file-system-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 15px;
+  height: 100%;
+}
+
+.tree-panel {
+  border: 1px solid var(--mud-palette-divider);
+  border-radius: 4px;
+  padding: 16px;
+  overflow-y: auto;
+  background-color: var(--mud-palette-background);
+}
+
+.content-panel {
+  border: 1px solid var(--mud-palette-divider);
+  border-radius: 4px;
+  padding: 16px;
+  overflow: hidden;
+  background-color: var(--mud-palette-background);
+}
+
+.content-panel .mud-data-grid {
+  height: calc(100% - 48px); /* Subtract header height */
+}
+
+@media (max-width: 768px) {
+  .file-system-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .tree-panel {
+    max-height: 300px;
+  }
+}

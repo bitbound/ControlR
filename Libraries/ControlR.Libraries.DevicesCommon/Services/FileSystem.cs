@@ -24,6 +24,9 @@ public interface IFileSystem
   bool FileExists(string path);
   string[] GetDirectories(string path);
   string[] GetFiles(string path);
+  DriveInfo[] GetDrives();
+  FileInfo GetFileInfo(string filePath);
+  DirectoryInfo GetDirectoryInfo(string directoryPath);
 
   public string[] GetFiles(string path, string searchPattern);
 
@@ -130,6 +133,21 @@ public class FileSystem : IFileSystem
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions)
   {
     return Directory.GetFiles(path, searchPattern, enumerationOptions);
+  }
+
+  public DriveInfo[] GetDrives()
+  {
+    return DriveInfo.GetDrives();
+  }
+
+  public FileInfo GetFileInfo(string filePath)
+  {
+    return new FileInfo(filePath);
+  }
+
+  public DirectoryInfo GetDirectoryInfo(string directoryPath)
+  {
+    return new DirectoryInfo(directoryPath);
   }
 
   public FileVersionInfo GetFileVersionInfo(string filePath)

@@ -1,6 +1,7 @@
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Extensions;
@@ -87,5 +88,27 @@ public class TestAgentHubClient : IAgentHubClient
   {
     Console.WriteLine($"Uninstalling agent for reason: {reason}");
     return Task.CompletedTask;
+  }
+
+  public Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting root drives for device {requestDto.DeviceId}");
+    var drives = new FileSystemEntryDto[]
+    {
+      new("C:", "C:\\", true, 0, DateTimeOffset.Now, false, true, true)
+    };
+    return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
+  }
+
+  public Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting subdirectories for {requestDto.DirectoryPath}");
+    return Task.FromResult(Result.Ok(new GetSubdirectoriesResponseDto([])));
+  }
+
+  public Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  {
+    Console.WriteLine($"Getting directory contents for {requestDto.DirectoryPath}");
+    return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([])));
   }
 }

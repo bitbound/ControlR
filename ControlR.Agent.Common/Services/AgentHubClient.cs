@@ -5,6 +5,7 @@ using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Interfaces.HubClients;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,7 @@ internal class AgentHubClient(
   ISettingsProvider settings,
   IProcessManager processManager,
   ILocalSocketProxy localProxy,
+  IFileManager fileManager,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
@@ -37,6 +39,7 @@ internal class AgentHubClient(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ITerminalStore _terminalStore = terminalStore;
+  private readonly IFileManager _fileManager = fileManager;
 
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
   {
@@ -335,6 +338,59 @@ internal class AgentHubClient(
     }
 
     return Task.CompletedTask;
+  }
+
+  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting root drives for device {DeviceId}", requestDto.DeviceId);
+      
+      var drives = await _fileManager.GetRootDrives();
+      
+      return Result.Ok(new GetRootDrivesResponseDto(drives));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting root drives");
+      return Result.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.");
+    }
+  }
+
+  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting subdirectories for {DeviceId}: {DirectoryPath}", 
+        requestDto.DeviceId, requestDto.DirectoryPath);
+      
+      var subdirectories = await _fileManager.GetSubdirectories(requestDto.DirectoryPath);
+      
+      return Result.Ok(new GetSubdirectoriesResponseDto(subdirectories));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting subdirectories for {DirectoryPath}", requestDto.DirectoryPath);
+      return Result.Fail<GetSubdirectoriesResponseDto>("An error occurred while getting subdirectories.");
+    }
+  }
+
+  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto)
+  {
+    try
+    {
+      _logger.LogInformation("Getting directory contents for {DeviceId}: {DirectoryPath}", 
+        requestDto.DeviceId, requestDto.DirectoryPath);
+      
+      var entries = await _fileManager.GetDirectoryContents(requestDto.DirectoryPath);
+      
+      return Result.Ok(new GetDirectoryContentsResponseDto(entries));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting directory contents for {DirectoryPath}", requestDto.DirectoryPath);
+      return Result.Fail<GetDirectoryContentsResponseDto>("An error occurred while getting directory contents.");
+    }
   }
 
   private static async IAsyncEnumerable<byte[]> CreateChunkedStream(byte[] data)

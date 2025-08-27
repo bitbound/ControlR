@@ -206,6 +206,102 @@
         }
       }
     },
+    "/api/device-file-system/root-drives": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRootDrivesRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRootDrivesRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetRootDrivesRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/subdirectories": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSubdirectoriesRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSubdirectoriesRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSubdirectoriesRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/contents": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/devices": {
       "post": {
         "tags": [
@@ -2387,6 +2483,50 @@
           "Ram"
         ]
       },
+      "GetDirectoryContentsRequestDto": {
+        "required": [
+          "deviceId",
+          "directoryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "directoryPath": {
+            "type": "string"
+          }
+        }
+      },
+      "GetRootDrivesRequestDto": {
+        "required": [
+          "deviceId"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GetSubdirectoriesRequestDto": {
+        "required": [
+          "deviceId",
+          "directoryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "directoryPath": {
+            "type": "string"
+          }
+        }
+      },
       "InstallerKeyType": {
         "type": "integer"
       },
@@ -2748,6 +2888,9 @@
     },
     {
       "name": "DesktopPreview"
+    },
+    {
+      "name": "DeviceFileSystem"
     },
     {
       "name": "Devices"
