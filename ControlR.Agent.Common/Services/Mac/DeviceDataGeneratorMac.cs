@@ -97,42 +97,6 @@ internal class DeviceDataGeneratorMac(
       return (0, 0);
     }
   }
-
-  private async Task<double> GetCpuUtilization()
-  {
-    try
-    {
-      var result = await _processService.GetProcessOutput("zsh", "-c \"ps -A -o %cpu\"");
-
-      if (!result.IsSuccess)
-      {
-        _logger.LogResult(result);
-        return 0;
-      }
-
-      double cpuPercent = 0;
-      result
-        .Value
-        .Split(Environment.NewLine)
-        .ToList()
-        .ForEach(x =>
-        {
-          if (double.TryParse(x, out var result))
-          {
-            cpuPercent += result;
-          }
-        });
-
-      return cpuPercent / Environment.ProcessorCount / 100;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting CPU utilization.");
-    }
-
-    return 0;
-  }
-
   private async Task<string[]> GetCurrentUser()
   {
     var result = await _processService.GetProcessOutput("users", "");

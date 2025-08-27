@@ -169,7 +169,7 @@ internal class FileManager(
     try
     {
       var drives = _fileSystem.GetDrives()
-        .Where(d => d.IsReady)
+        .Where(d => d.IsReady && d.DriveType == DriveType.Fixed && d.TotalSize > 0)
         .Select(drive => new FileSystemEntryDto(
           Name: drive.Name,
           FullPath: drive.RootDirectory.FullName,
