@@ -1,8 +1,15 @@
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Agent.Common.Services;
+
+
+public interface IFileManager
+{
+  Task<FileSystemEntryDto[]> GetRootDrives();
+  Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
+  Task<FileSystemEntryDto[]> GetDirectoryContents(string directoryPath);
+}
+
 
 internal class FileManager(
   IFileSystem fileSystem,

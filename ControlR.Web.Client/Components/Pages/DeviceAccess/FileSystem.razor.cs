@@ -7,25 +7,25 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class FileSystem : ComponentBase
 {
+
+  private string? _selectedPath;
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
-
-  [Inject]
-  public required ISnackbar Snackbar { get; set; }
-
-  [Inject]
-  public required ILogger<FileSystem> Logger { get; set; }
 
   [Parameter]
   [SupplyParameterFromQuery]
   public Guid DeviceId { get; set; }
+  public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
 
   public List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
-  public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
-  
-  private string? _selectedPath;
-  public string? SelectedPath 
-  { 
+
+  public bool IsLoading { get; set; }
+  public bool IsLoadingContents { get; set; }
+
+  [Inject]
+  public required ILogger<FileSystem> Logger { get; set; }
+  public string? SelectedPath
+  {
     get => _selectedPath;
     set
     {
@@ -36,9 +36,39 @@ public partial class FileSystem : ComponentBase
       }
     }
   }
-  
-  public bool IsLoading { get; set; }
-  public bool IsLoadingContents { get; set; }
+
+  [Inject]
+  public required ISnackbar Snackbar { get; set; }
+
+  public async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
+  {
+    try
+    {
+      if (string.IsNullOrEmpty(parentValue))
+      {
+        return [];
+      }
+
+      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
+      if (result.IsSuccess && result.Value is not null)
+      {
+        return result.Value.Subdirectories
+          .Select(ConvertToTreeItemData)
+          .ToList();
+      }
+      else
+      {
+        Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}",
+          parentValue, result.Reason);
+        return [];
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentValue);
+      return [];
+    }
+  }
 
   protected override async Task OnInitializedAsync()
   {
@@ -56,6 +86,69 @@ public partial class FileSystem : ComponentBase
     if (DeviceId != Guid.Empty && !IsLoading)
     {
       await LoadRootDrives();
+    }
+  }
+
+  private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
+  {
+    return new TreeItemData<string>
+    {
+      Value = dto.FullPath,
+      Text = dto.Name,
+      Icon = Icons.Material.Filled.Folder,
+      Expandable = dto.IsDirectory && dto.HasSubfolders
+    };
+  }
+
+  private static FileSystemEntryViewModel ConvertToViewModel(FileSystemEntryDto dto)
+  {
+    return new FileSystemEntryViewModel
+    {
+      Name = dto.Name,
+      FullPath = dto.FullPath,
+      IsDirectory = dto.IsDirectory,
+      Size = dto.Size,
+      LastModified = dto.LastModified,
+      IsHidden = dto.IsHidden,
+      CanRead = dto.CanRead,
+      CanWrite = dto.CanWrite
+    };
+  }
+
+  private async Task LoadDirectoryContents(string directoryPath)
+  {
+    try
+    {
+      IsLoadingContents = true;
+      await InvokeAsync(StateHasChanged);
+
+      var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
+      if (result.IsSuccess && result.Value is not null)
+      {
+        DirectoryContents = result.Value.Entries
+          .Select(ConvertToViewModel)
+          .OrderBy(x => !x.IsDirectory) // Directories first
+          .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+          .ToList();
+      }
+      else
+      {
+        Snackbar.Add($"Failed to load directory contents: {result.Reason}", Severity.Warning);
+        Logger.LogWarning("Failed to load directory contents for {Path}: {Error}",
+          directoryPath, result.Reason);
+        DirectoryContents.Clear();
+      }
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add("An error occurred while loading directory contents", Severity.Error);
+      Logger.LogError(ex, "Exception while loading directory contents for {Path}", directoryPath);
+      DirectoryContents.Clear();
+    }
+    finally
+    {
+      IsLoadingContents = false;
+      await InvokeAsync(StateHasChanged);
     }
   }
 
@@ -102,76 +195,9 @@ public partial class FileSystem : ComponentBase
     }
   }
 
-  public async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
-  {
-    try
-    {
-      if (string.IsNullOrEmpty(parentValue))
-      {
-        return [];
-      }
-
-      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
-      if (result.IsSuccess && result.Value is not null)
-      {
-        return result.Value.Subdirectories
-          .Select(ConvertToTreeItemData)
-          .ToList();
-      }
-      else
-      {
-        Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}", 
-          parentValue, result.Reason);
-        return [];
-      }
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentValue);
-      return [];
-    }
-  }
-
   private void OnItemsLoaded(TreeItemData<string> treeItemData, IReadOnlyCollection<TreeItemData<string>> children)
   {
     treeItemData.Children = children?.ToList();
-  }
-
-  private async Task LoadDirectoryContents(string directoryPath)
-  {
-    try
-    {
-      IsLoadingContents = true;
-      await InvokeAsync(StateHasChanged);
-
-      var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
-      if (result.IsSuccess && result.Value is not null)
-      {
-        DirectoryContents = result.Value.Entries
-          .Select(ConvertToViewModel)
-          .OrderBy(x => !x.IsDirectory) // Directories first
-          .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-          .ToList();
-      }
-      else
-      {
-        Snackbar.Add($"Failed to load directory contents: {result.Reason}", Severity.Warning);
-        Logger.LogWarning("Failed to load directory contents for {Path}: {Error}", 
-          directoryPath, result.Reason);
-        DirectoryContents.Clear();
-      }
-    }
-    catch (Exception ex)
-    {
-      Snackbar.Add("An error occurred while loading directory contents", Severity.Error);
-      Logger.LogError(ex, "Exception while loading directory contents for {Path}", directoryPath);
-      DirectoryContents.Clear();
-    }
-    finally
-    {
-      IsLoadingContents = false;
-      await InvokeAsync(StateHasChanged);
-    }
   }
 
   private async Task OnSelectedPathChanged(string? newPath)
@@ -181,31 +207,5 @@ public partial class FileSystem : ComponentBase
       SelectedPath = newPath;
       await LoadDirectoryContents(newPath);
     }
-  }
-
-  private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
-  {
-    return new TreeItemData<string>
-    {
-      Value = dto.FullPath,
-      Text = dto.Name,
-      Icon = Icons.Material.Filled.Folder,
-      Expandable = dto.IsDirectory && dto.HasSubfolders
-    };
-  }
-
-  private static FileSystemEntryViewModel ConvertToViewModel(FileSystemEntryDto dto)
-  {
-    return new FileSystemEntryViewModel
-    {
-      Name = dto.Name,
-      FullPath = dto.FullPath,
-      IsDirectory = dto.IsDirectory,
-      Size = dto.Size,
-      LastModified = dto.LastModified,
-      IsHidden = dto.IsHidden,
-      CanRead = dto.CanRead,
-      CanWrite = dto.CanWrite
-    };
   }
 }
