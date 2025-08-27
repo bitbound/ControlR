@@ -23,11 +23,11 @@
     Chat
   </MudNavLink>
 
-
-  @*<MudNavLink Disabled="IsDisabled" Href="/device-access/file-system" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Folder">
+  <MudNavLink Disabled="IsDisabled"  Href='@($"/device-access/file-system?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Folder">
     File System
   </MudNavLink>
 
+  @*
   <MudNavLink Disabled="IsDisabled" Href="/device-access/processes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MonitorHeart">
     Processes
   </MudNavLink>
