@@ -31,6 +31,9 @@ public partial class DesktopPreviewDialog : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
+  [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -47,7 +50,7 @@ public partial class DesktopPreviewDialog : ComponentBase
       await InvokeAsync(StateHasChanged);
 
       var result = await ControlrApi.GetDesktopPreview(Device.Id, Session.ProcessId);
-      
+
       if (result.IsSuccess && result.Value.Length > 0)
       {
         var base64Image = Convert.ToBase64String(result.Value);

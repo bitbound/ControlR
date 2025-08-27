@@ -7,6 +7,7 @@ using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace ControlR.DesktopClient.Services;
 
@@ -146,7 +147,7 @@ public class IpcClientManager(
       }
 
       // Encode as JPEG
-      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75); // 75% quality
+      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75, compressOutput: false); // 75% quality
       if (jpegData is null || jpegData.Length == 0)
       {
         _logger.LogWarning("Failed to encode JPEG: No data returned");

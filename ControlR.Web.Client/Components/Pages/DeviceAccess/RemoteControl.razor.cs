@@ -212,7 +212,7 @@ public partial class RemoteControl : ComponentBase
       {
         BackdropClick = false,
         FullWidth = true,
-        MaxWidth = MaxWidth.Large
+        MaxWidth = MaxWidth.ExtraExtraLarge,
       };
 
       await DialogService.ShowAsync<DesktopPreviewDialog>(
