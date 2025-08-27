@@ -140,6 +140,20 @@ jobs:
           artifactName: DesktopClient-macOS-x64
           targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
+      - task: DotNetCoreCLI@2
+        displayName: Pack ControlR.ApiClient (Release)
+        inputs:
+          command: 'build'
+          packagesToPack: 'ControlR.ApiClient/ControlR.ApiClient.csproj'
+          arguments: '-c Release -p:Version=$(Build.BuildNumber)'
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish ApiClient NuGet
+        inputs:
+          targetPath: 'ControlR.ApiClient\bin\Release\ControlR.ApiClient.$(Build.BuildNumber).nupkg'
+          artifact: ApiClientNuGet
+          publishLocation: pipeline
+
       - task: PowerShell@2
         displayName: Invoke Build.ps1
         inputs:
@@ -148,20 +162,6 @@ jobs:
           pwsh: true
           errorActionPreference: stop
           failOnStderr: true
-
-      - task: DotNetCoreCLI@2
-        displayName: Pack ControlR.ApiClient (Release)
-        inputs:
-          command: 'build'
-          packagesToPack: 'ControlR.ApiClient/ControlR.ApiClient.csproj'
-          arguments: '-c Release -o "$(Build.SourcesDirectory)\ControlR.ApiClient\bin" -p:Version=$(Build.BuildNumber)'
-
-      - task: PublishPipelineArtifact@1
-        displayName: Publish ApiClient NuGet
-        inputs:
-          targetPath: 'ControlR.ApiClient\bin\ControlR.ApiClient.$(Build.BuildNumber).nupkg'
-          artifact: ApiClientNuGet
-          publishLocation: pipeline
 
       - task: PowerShell@2
         displayName: Verify Agent Binaries
