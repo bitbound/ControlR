@@ -8,7 +8,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.DeviceFileOperationsEndpoint)]
 [ApiController]
 [Authorize]
-public class FileOperationsController : ControllerBase
+public class DeviceFileOperationsController : ControllerBase
 {
 
   [HttpDelete("delete/{deviceId:guid}")]
@@ -18,7 +18,7 @@ public class FileOperationsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<FileOperationsController> logger,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.FilePath))
@@ -82,7 +82,7 @@ public class FileOperationsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<FileOperationsController> logger,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.DirectoryPath))
@@ -147,7 +147,7 @@ public class FileOperationsController : ControllerBase
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<FileOperationsController> logger,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(filePath))
@@ -256,7 +256,7 @@ public class FileOperationsController : ControllerBase
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<FileOperationsController> logger,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken = default)
   {
     if (file is null || file.Length == 0)
