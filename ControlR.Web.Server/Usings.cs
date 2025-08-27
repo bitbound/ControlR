@@ -25,3 +25,4 @@ global using Microsoft.Extensions.Options;
 global using ControlR.Web.Server.Hubs;
 global using ControlR.Libraries.Shared.Enums;
 global using ControlR.Web.Server.RateLimiting;
+global using ControlR.Web.Client.Extensions;

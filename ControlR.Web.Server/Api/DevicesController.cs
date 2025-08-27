@@ -1,10 +1,11 @@
 using System.Linq.Expressions;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 using MudBlazor;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.DevicesEndpoint)]
 [ApiController]
 [Authorize]
 public class DevicesController : ControllerBase

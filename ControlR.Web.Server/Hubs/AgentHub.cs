@@ -13,11 +13,13 @@ public class AgentHub(
   IDeviceManager deviceManager,
   IOptions<AppOptions> appOptions,
   IOutputCacheStore outputCacheStore,
+  IHubStreamStore hubStreamStore,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
+  private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly TimeProvider _timeProvider = timeProvider;
@@ -94,6 +96,37 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error forwarding chat response to viewer.");
+    }
+  }
+
+  public async Task SendDesktopPreviewStream(Guid streamId, IAsyncEnumerable<byte[]> jpegChunks)
+  {
+    try
+    {
+      _logger.LogInformation("Receiving desktop preview stream for stream ID: {StreamId}", streamId);
+      
+      if (!_hubStreamStore.TryGet(streamId, out var signaler))
+      {
+        _logger.LogWarning("No signaler found for stream ID: {StreamId}", streamId);
+        return;
+      }
+
+      _logger.LogInformation(
+        "Setting desktop preview stream for stream ID: {StreamId}",
+        streamId);
+
+      // Set the stream on the signaler - this will trigger the ReadySignal
+      signaler.SetStream(jpegChunks, Context.ConnectionId);
+      
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+      // Wait for the stream to be fully consumed
+      await signaler.EndSignal.Wait(cts.Token);
+
+      _logger.LogInformation("Desktop preview stream completed for stream ID: {StreamId}", streamId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while receiving desktop preview stream for stream ID: {StreamId}", streamId);
     }
   }
 

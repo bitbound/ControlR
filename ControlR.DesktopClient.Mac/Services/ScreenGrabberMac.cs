@@ -12,7 +12,7 @@ public class ScreenGrabberMac(ILogger<ScreenGrabberMac> logger) : IScreenGrabber
 {
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
 
-  public CaptureResult Capture(DisplayInfo targetDisplay, bool captureCursor = true, bool tryUseDirectX = true, int directXTimeout = 50, bool allowFallbackToBitBlt = true)
+  public CaptureResult Capture(DisplayInfo targetDisplay, bool captureCursor = true, bool tryUseGpuAcceleration = true, int gpuCaptureTimeout = 50, bool allowFallbackToCpu = true)
   {
     try
     {

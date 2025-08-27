@@ -17,9 +17,9 @@ internal class IpcServerInitializerMac(
   IProcessManager processManager,
   IFileSystem fileSystem,
   IFileSystemUnix fileSystemUnix,
-  IAgentHubConnection agentHubConnection,
+  IHubConnection<IAgentHub> hubConnection,
   ILogger<IpcServerInitializerMac> logger) 
-  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, agentHubConnection, logger)
+  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemUnix _fileSystemUnix = fileSystemUnix;

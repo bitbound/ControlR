@@ -11,6 +11,33 @@ let _wakeEnabled = false;
 function addClassName(element, className) {
   element.classList.add(className);
 }
+/**
+ * Create a blob URL from image data
+ * @param {Uint8Array} imageData - The image data
+ * @param {string} mimeType - The MIME type (e.g., 'image/jpeg')
+ * @returns {string} The blob URL
+ */
+function createBlobUrl(imageData, mimeType) {
+  try {
+    // Create blob and return URL
+    const blob = new Blob([imageData], { type: mimeType });
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error('Error creating blob URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Revoke a blob URL to free memory
+ * @param {string} blobUrl - The blob URL to revoke
+ */
+function revokeBlobUrl(blobUrl) {
+  if (blobUrl && blobUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 function getClipboardText() {
   return navigator.clipboard.readText();
 }

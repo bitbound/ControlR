@@ -16,9 +16,9 @@ internal class IpcServerInitializerWindows(
   IIpcConnectionFactory ipcFactory,
   IIpcServerStore desktopIpcStore,
   IProcessManager processManager,
-  IAgentHubConnection agentHubConnection,
+  IHubConnection<IAgentHub> hubConnection,
   ILogger<IpcServerInitializerWindows> logger) 
-  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, agentHubConnection, logger)
+  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
   private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
 

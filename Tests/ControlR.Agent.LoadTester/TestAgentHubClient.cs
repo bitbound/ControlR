@@ -65,6 +65,12 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(Result.Ok());
   }
 
+  public Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto)
+  {
+    Console.WriteLine($"Desktop preview requested. Requester: {dto.RequesterId}, Stream: {dto.StreamId}, Process: {dto.TargetProcessId}");
+    return Task.FromResult(Result.Ok());
+  }
+
   public Task<Result> SendChatMessage(ChatMessageHubDto dto)
   {
     Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");

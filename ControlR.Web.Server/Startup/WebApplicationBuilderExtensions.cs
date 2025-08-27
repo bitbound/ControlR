@@ -270,6 +270,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
+    builder.Services.AddSingleton<IHubStreamStore, HubStreamStore>();
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();

@@ -3,6 +3,7 @@
 #if WINDOWS_BUILD
 global using ControlR.DesktopClient.Windows;
 global using ControlR.DesktopClient.Windows.Services;
+global using ControlR.Libraries.NativeInterop.Windows;
 #elif MAC_BUILD
 global using ControlR.DesktopClient.Mac;
 global using ControlR.DesktopClient.Mac.Services;

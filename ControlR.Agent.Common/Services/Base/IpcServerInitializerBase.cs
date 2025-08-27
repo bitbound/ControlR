@@ -13,14 +13,14 @@ internal abstract class IpcServerInitializerBase(
     IIpcConnectionFactory ipcFactory,
     IIpcServerStore ipcStore,
     IProcessManager processManager,
-    IAgentHubConnection agentHubConnection,
+    IHubConnection<IAgentHub> hubConnection,
     ILogger logger) : BackgroundService
 {
   protected readonly TimeProvider _timeProvider = timeProvider;
   protected readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
   protected readonly IIpcServerStore _ipcStore = ipcStore;
   protected readonly IProcessManager _processManager = processManager;
-  protected readonly IAgentHubConnection _agentHubConnection = agentHubConnection;
+  protected readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   protected readonly ILogger _logger = logger;
 
   protected async Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
@@ -46,26 +46,30 @@ internal abstract class IpcServerInitializerBase(
         }
       });
 
-      server.On<ChatResponseIpcDto>(dto =>
+      server.On<ChatResponseIpcDto>(async dto =>
       {
         try
         {
-          Task.Run(async () =>
-          {
-            var hubDto = new ChatResponseHubDto(
-              dto.SessionId,
-              dto.Message,
-              dto.SenderUsername,
-              dto.ViewerConnectionId,
-              dto.Timestamp);
-            await _agentHubConnection.SendChatResponse(hubDto);
-          });
+          var responseDto = new ChatResponseHubDto(
+            dto.SessionId,
+            dto.Message,
+            dto.SenderUsername,
+            dto.ViewerConnectionId,
+            dto.Timestamp);
+
+          await _hubConnection.Server.SendChatResponse(responseDto);
+
+          _logger.LogInformation(
+            "Chat response sent to server for session {SessionId} from {Username}",
+            responseDto.SessionId,
+            responseDto.SenderUsername);
         }
         catch (Exception ex)
         {
           _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
         }
       });
+      
       server.BeginRead(cancellationToken);
       await signal.Wait(linkedCts.Token);
     }

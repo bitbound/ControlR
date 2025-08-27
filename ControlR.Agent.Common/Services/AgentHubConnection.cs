@@ -1,7 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +11,6 @@ public interface IAgentHubConnection : IAsyncDisposable
 {
   HubConnectionState State { get; }
   Task Connect(CancellationToken cancellationToken);
-  Task SendChatResponse(ChatResponseHubDto responseDto);
   Task SendDeviceHeartbeat();
 }
 
@@ -66,22 +64,6 @@ internal class AgentHubConnection(
   public async ValueTask DisposeAsync()
   {
     await _hubConnection.DisposeAsync();
-  }
-
-  public async Task SendChatResponse(ChatResponseHubDto responseDto)
-  {
-    try
-    {
-      await _hubConnection.Server.SendChatResponse(responseDto);
-      _logger.LogInformation(
-        "Chat response sent to server for session {SessionId} from {Username}",
-        responseDto.SessionId,
-        responseDto.SenderUsername);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error sending chat response to server.");
-    }
   }
 
   public async Task SendDeviceHeartbeat()

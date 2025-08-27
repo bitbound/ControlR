@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Web.Client.Components.Dialogs;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 
@@ -16,7 +17,13 @@ public partial class RemoteControl : ComponentBase
   private DeviceUiSession[]? _systemSessions;
 
   [Inject]
+  public required IControlrApi ControlrApi { get; init; }
+
+  [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
+
+  [Inject]
+  public required IDialogService DialogService { get; init; }
 
   [Inject]
   public required ILogger<RemoteControl> Logger { get; init; }
@@ -189,6 +196,36 @@ public partial class RemoteControl : ComponentBase
     Snackbar.Add("Connection lost", Severity.Warning);
     await GetDeviceSystemSessions();
     await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task PreviewSession(DeviceUiSession deviceUiSession)
+  {
+    try
+    {
+      var parameters = new DialogParameters
+      {
+        { nameof(DesktopPreviewDialog.Device), DeviceAccessState.CurrentDevice },
+        { nameof(DesktopPreviewDialog.Session), deviceUiSession }
+      };
+
+      var dialogOptions = new DialogOptions
+      {
+        BackdropClick = false,
+        FullWidth = true,
+        MaxWidth = MaxWidth.ExtraExtraLarge,
+      };
+
+      await DialogService.ShowAsync<DesktopPreviewDialog>(
+        $"Desktop Preview - {deviceUiSession.Name}", 
+        parameters, 
+        dialogOptions);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while requesting remote control session preview.");
+      Snackbar.Add("Error while requesting session preview", Severity.Error);
+      await InvokeAsync(StateHasChanged);
+    }
   }
 
   private async Task RefreshSystemSessions()

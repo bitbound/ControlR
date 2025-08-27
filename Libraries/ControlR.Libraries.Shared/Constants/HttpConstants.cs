@@ -6,6 +6,7 @@ public static class HttpConstants
   public const string PersonalAccessTokensEndpoint = "/api/personal-access-tokens";
   public const string DevicesEndpoint = "/api/devices";
   public const string DeviceTagsEndpoint = "/api/device-tags";
+  public const string DesktopPreviewEndpoint = "/api/desktop-preview";
   public const string InstallerKeysEndpoint = "/api/installer-keys";
   public const string InvitesEndpoint = "/api/invites";
   public const string LogonTokensEndpoint = "/api/logon-tokens";
