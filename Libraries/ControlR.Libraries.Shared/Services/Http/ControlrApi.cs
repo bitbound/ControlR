@@ -59,7 +59,6 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
-  Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType);
   Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType, bool overwrite);
 }
 

@@ -1,12 +1,8 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Services.Http;
-using ControlR.Web.Client.Components;
 using ControlR.Web.Client.Extensions;
+using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
-using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
@@ -27,9 +23,12 @@ public partial class FileSystem : JsInteropableComponent
   [Inject]
   public required IDialogService DialogService { get; set; }
 
-  [Parameter]
-  [SupplyParameterFromQuery]
-  public Guid DeviceId { get; set; }
+  [Inject]
+  public required IDeviceState DeviceState { get; init; }
+
+  public Guid DeviceId => DeviceState.IsDeviceLoaded
+    ? DeviceState.CurrentDevice.Id 
+    : Guid.Empty;
   
   public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
   public HashSet<FileSystemEntryViewModel> SelectedItems { get; set; } = [];
