@@ -1,12 +1,18 @@
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
+using ControlR.Web.Client.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
-public partial class FileSystem : ComponentBase
+public partial class FileSystem : JsInteropableComponent
 {
+  private ElementReference _containerRef;
+  private ElementReference _splitterRef;
+  private ElementReference _treePanelRef;
+  private ElementReference _contentPanelRef;
 
   private string? _selectedPath;
   [Inject]
@@ -207,5 +213,33 @@ public partial class FileSystem : ComponentBase
       SelectedPath = newPath;
       await LoadDirectoryContents(newPath);
     }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+    
+    if (firstRender)
+    {
+      await JsModuleReady.Wait(CancellationToken.None);
+      await JsModule.InvokeVoidAsync("initializeGridSplitter", _containerRef, _splitterRef, _treePanelRef, _contentPanelRef);
+    }
+  }
+
+  public override async ValueTask DisposeAsync()
+  {
+    try
+    {
+      if (JsModuleReady.IsSet)
+      {
+        await JsModule.InvokeVoidAsync("dispose");
+      }
+    }
+    catch (JSDisconnectedException)
+    {
+      // Ignore if the JS runtime is already disconnected
+    }
+    
+    await base.DisposeAsync();
   }
 }

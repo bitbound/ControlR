@@ -1,11 +1,12 @@
 @layout DeviceAccessLayout
 @page "/device-access/file-system"
 @attribute [Authorize]
+@inherits JsInteropableComponent
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
-<div class="file-system-container h-100">
+<div @ref="_containerRef" class="file-system-container h-100">
     <div class="file-system-grid">
-        <div class="tree-panel">
+        <div @ref="_treePanelRef" class="tree-panel">
             <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>
             @if (InitialTreeItems.Count == 0 && IsLoading)
             {
@@ -35,7 +36,9 @@
             }
         </div>
         
-        <div class="content-panel">
+        <div @ref="_splitterRef" class="grid-splitter"></div>
+        
+        <div @ref="_contentPanelRef" class="content-panel">
             <MudText Typo="Typo.h6" Class="mb-3">Contents</MudText>
             @if (IsLoadingContents)
             {
