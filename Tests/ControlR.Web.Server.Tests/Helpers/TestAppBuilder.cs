@@ -1,13 +1,10 @@
-using ControlR.Libraries.Shared.Extensions;
+using System.Runtime.CompilerServices;
 using ControlR.Tests.TestingUtilities;
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
-using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests.Helpers;
@@ -38,27 +35,6 @@ internal static class TestAppBuilder
     var app = builder.Build();
     await app.AddBuiltInRoles();
 
-    // Get the TestServer for integration/functional tests
-    var factory = new WebApplicationFactory<Program>()
-      .WithWebHostBuilder(builder =>
-      {
-        builder.UseEnvironment("Testing");
-        builder.UseSetting("AppOptions:UseInMemoryDatabase", "true");
-        builder.UseSetting("AppOptions:InMemoryDatabaseName", $"{testDatabaseName}-server");
-
-        builder.ConfigureServices(services =>
-        {
-          // Replace TimeProvider with FakeTimeProvider in the test server
-          _ = services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
-        });
-
-        builder.ConfigureLogging(logging =>
-        {
-          logging.ClearProviders();
-          logging.AddProvider(new XunitLoggerProvider(testOutput));
-        });
-      });
-
-    return new TestApp(timeProvider, factory, app);
+    return new TestApp(timeProvider, app);
   }
 }

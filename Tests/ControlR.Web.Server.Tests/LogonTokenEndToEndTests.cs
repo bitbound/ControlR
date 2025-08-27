@@ -17,7 +17,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   public async Task LogonTokenFlow_EndToEnd_ShouldWorkOnceAndFailOnSecondUse()
   {
     // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var testApp = await TestWebServerBuilder.CreateTestServer(_testOutput);
     var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
     using var httpClient = testApp.Factory.CreateClient();
 

@@ -12,13 +12,13 @@
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
     Home
   </MudNavLink>
-  <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
+  <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
-  <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.PersonalAccessTokens)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
+  <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.PersonalAccessTokens)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
     Access Tokens
   </MudNavLink>
-  <MudNavLink Disabled="!RendererInfo.IsInteractive || !_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+  <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
     Settings
   </MudNavLink>
 
@@ -32,13 +32,13 @@
         Tenant Admin
       </MudText>
     </div>
-    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
+    <MudNavLink Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
       Permissions
     </MudNavLink>
-    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.Invite)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">
+    <MudNavLink Href="@(ClientRoutes.Invite)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">
       Invite
     </MudNavLink>
-    <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.TenantSettings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+    <MudNavLink Href="@(ClientRoutes.TenantSettings)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
       Tenant Settings
     </MudNavLink>
   </AuthorizeView>
@@ -49,7 +49,7 @@
           Server Admin
         </MudText>
       </div>
-      <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="@(ClientRoutes.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
+      <MudNavLink Href="@(ClientRoutes.ServerStats)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">
         Server Stats
       </MudNavLink>
     </Authorized>
@@ -59,7 +59,7 @@
 
   <AuthorizeView>
     <Authorized>
-      <MudNavLink Disabled="!RendererInfo.IsInteractive" Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+      <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
       @if (RendererInfo.IsInteractive && SystemEnvironment.Platform == SystemPlatform.Browser)
@@ -82,11 +82,11 @@
     <NotAuthorized>
       @if (_isPublicRegistrationEnabled)
       {
-        <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+        <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
           Register
         </MudNavLink>
       }
-      <MudNavLink Disabled="!RendererInfo.IsInteractive && !_isIdentityPage" Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+      <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
         Login
       </MudNavLink>
     </NotAuthorized>
@@ -98,7 +98,6 @@
 
   private string? _currentUrl;
   private bool _isAuthenticated;
-  private bool _isIdentityPage;
   private bool _isPublicRegistrationEnabled;
 
 
@@ -112,18 +111,15 @@
   {
     await base.OnInitializedAsync();
 
-    _isIdentityPage =
-      Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
-      currentUri.PathAndQuery.StartsWith("/Account");
-
     var settingsResult = await ControlrApi.GetPublicRegistrationSettings();
     if (settingsResult.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
     }
-
+    
     var state = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = state.User.IsAuthenticated();
+
     AuthState.AuthenticationStateChanged += HandleAuthStateChanged;
     _currentUrl = NavMan.ToBaseRelativePath(NavMan.Uri);
     NavMan.LocationChanged += OnLocationChanged;
