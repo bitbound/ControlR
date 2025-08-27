@@ -60,6 +60,7 @@ public interface IControlrApi
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
   Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType);
+  Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType, bool overwrite);
 }
 
 public class ControlrApi(
@@ -561,6 +562,11 @@ public class ControlrApi(
 
   public async Task<Result> UploadFile(Guid deviceId, string targetDirectory, string fileName, Stream fileStream, string contentType)
   {
+    return await UploadFile(deviceId, targetDirectory, fileName, fileStream, contentType, overwrite: false);
+  }
+
+  public async Task<Result> UploadFile(Guid deviceId, string targetDirectory, string fileName, Stream fileStream, string contentType, bool overwrite)
+  {
     return await TryCallApi(async () =>
     {
       using var formData = new MultipartFormDataContent();
@@ -575,6 +581,7 @@ public class ControlrApi(
       formData.Add(streamContent, "file", fileName);
       formData.Add(new StringContent(deviceId.ToString()), "deviceId");
       formData.Add(new StringContent(targetDirectory), "targetDirectory");
+      formData.Add(new StringContent(overwrite.ToString()), "overwrite");
 
       using var response = await _client.PostAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload", formData);
       response.EnsureSuccessStatusCode();

@@ -488,8 +488,30 @@ public partial class FileSystem : JsInteropableComponent
     {
       Guard.IsNotNull(SelectedPath);
 
+      // Check if file already exists in current directory contents
+      var existingFile = DirectoryContents?.FirstOrDefault(f => 
+        !f.IsDirectory && string.Equals(f.Name, file.Name, StringComparison.OrdinalIgnoreCase));
+
+      if (existingFile != null)
+      {
+        // Show confirmation dialog for overwriting
+        var confirmed = await DialogService.ShowMessageBox(
+          "File Already Exists",
+          $"The file '{file.Name}' already exists in the selected directory. Do you want to overwrite it?",
+          yesText: "Overwrite",
+          cancelText: "Cancel");
+
+        if (confirmed != true)
+        {
+          // User cancelled, don't upload
+          Logger.LogInformation("User cancelled overwrite for file {FileName}", file.Name);
+          return;
+        }
+      
+      }
+
       using var fileStream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB limit
-      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType);
+      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, overwrite: true);
       
       if (!result.IsSuccess)
       {

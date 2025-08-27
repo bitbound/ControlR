@@ -12,7 +12,7 @@ public interface IFileManager
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
   Task<FileReferenceResult> ResolveTargetFilePath(string targetPath);
-  Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream);
+  Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false);
 }
 
 internal class FileManager(
@@ -267,7 +267,7 @@ internal class FileManager(
     }
   }
 
-  public async Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream)
+  public async Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false)
   {
     try
     {
@@ -279,7 +279,7 @@ internal class FileManager(
       var targetFilePath = Path.Combine(targetDirectoryPath, fileName);
 
       // Check if file already exists
-      if (_fileSystem.FileExists(targetFilePath))
+      if (_fileSystem.FileExists(targetFilePath) && !overwrite)
       {
         return FileReferenceResult.Fail("File already exists");
       }

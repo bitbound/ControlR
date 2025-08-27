@@ -191,9 +191,16 @@ public class FileOperationsController : ControllerBase
     try
     {
       // Request the file from the agent
-      await agentHub.Clients
+      var requestResult = await agentHub.Clients
         .Client(device.ConnectionId)
         .SendFileDownload(downloadRequest);
+
+      if (!requestResult.IsSuccess)
+      {
+        logger.LogWarning("File download request failed for {FilePath} on device {DeviceId}.",
+          filePath, deviceId);
+        return StatusCode(StatusCodes.Status500InternalServerError);
+      }
 
       // Wait for the agent to start streaming
       await signaler.ReadySignal.Wait(cancellationToken);
@@ -244,12 +251,13 @@ public class FileOperationsController : ControllerBase
     [FromForm] IFormFile file,
     [FromForm] Guid deviceId,
     [FromForm] string targetDirectory,
+    [FromForm] bool overwrite,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<FileOperationsController> logger,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken = default)
   {
     if (file is null || file.Length == 0)
     {
@@ -291,7 +299,8 @@ public class FileOperationsController : ControllerBase
       streamId,
       targetDirectory,
       file.FileName,
-      file.Length);
+      file.Length,
+      overwrite);
 
     try
     {

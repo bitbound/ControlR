@@ -4,7 +4,8 @@ public record FileUploadHubDto(
   Guid StreamId,
   string TargetDirectoryPath,
   string FileName,
-  long FileSize);
+  long FileSize,
+  bool Overwrite = false);
 
 public record FileDownloadHubDto(Guid StreamId, string FilePath);
 

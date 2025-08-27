@@ -379,6 +379,14 @@
                         "type": "string"
                       }
                     }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "overwrite": {
+                        "type": "boolean"
+                      }
+                    }
                   }
                 ]
               }
