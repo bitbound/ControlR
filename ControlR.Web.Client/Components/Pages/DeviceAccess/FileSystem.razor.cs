@@ -2,6 +2,7 @@ using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Web.Client.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using MudBlazor;
@@ -14,6 +15,7 @@ public partial class FileSystem : JsInteropableComponent
   private ElementReference _splitterRef;
   private ElementReference _treePanelRef;
   private ElementReference _contentPanelRef;
+  private InputFile _fileInputRef = default!;
 
   private string? _selectedPath;
   private string _addressBarValue = string.Empty;
@@ -21,15 +23,22 @@ public partial class FileSystem : JsInteropableComponent
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
 
+  [Inject]
+  public required IDialogService DialogService { get; set; }
+
   [Parameter]
   [SupplyParameterFromQuery]
   public Guid DeviceId { get; set; }
+  
   public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
-
+  public HashSet<FileSystemEntryViewModel> SelectedItems { get; set; } = [];
   public List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
 
   public bool IsLoading { get; set; }
   public bool IsLoadingContents { get; set; }
+  public bool IsUploadInProgress { get; set; }
+  public bool IsDownloadInProgress { get; set; }
+  public bool IsDeleteInProgress { get; set; }
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
@@ -452,5 +461,209 @@ public partial class FileSystem : JsInteropableComponent
     }
     
     await base.DisposeAsync();
+  }
+
+  private async Task OnUploadFileClick()
+  {
+    try
+    {
+      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error triggering file input click");
+      Snackbar.Add("Failed to open file picker", Severity.Error);
+    }
+  }
+
+  private async Task OnFilesSelected(InputFileChangeEventArgs e)
+  {
+    if (string.IsNullOrEmpty(SelectedPath))
+    {
+      Snackbar.Add("Please select a directory first", Severity.Warning);
+      return;
+    }
+
+    if (e.FileCount == 0)
+    {
+      return;
+    }
+
+    IsUploadInProgress = true;
+    StateHasChanged();
+
+    var uploadTasks = new List<Task>();
+    
+    foreach (var file in e.GetMultipleFiles(10)) // Limit to 10 files
+    {
+      uploadTasks.Add(UploadSingleFile(file));
+    }
+
+    try
+    {
+      await Task.WhenAll(uploadTasks);
+      Snackbar.Add($"Successfully uploaded {e.FileCount} file(s)", Severity.Success);
+      
+      // Refresh directory contents
+      await LoadDirectoryContents(SelectedPath);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error during file upload");
+      Snackbar.Add("One or more files failed to upload", Severity.Error);
+    }
+    finally
+    {
+      IsUploadInProgress = false;
+      StateHasChanged();
+    }
+  }
+
+  private async Task UploadSingleFile(IBrowserFile file)
+  {
+    try
+    {
+      Guard.IsNotNull(SelectedPath);
+      
+      using var fileStream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB limit
+      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType);
+      
+      if (!result.IsSuccess)
+      {
+        Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
+        throw new Exception($"Upload failed: {result.Reason}");
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
+      throw;
+    }
+  }
+
+  private async Task OnDownloadClick()
+  {
+    if (SelectedItems.Count == 0)
+    {
+      Snackbar.Add("Please select files or folders to download", Severity.Warning);
+      return;
+    }
+
+    IsDownloadInProgress = true;
+    StateHasChanged();
+
+    try
+    {
+      if (SelectedItems.Count == 1)
+      {
+        var item = SelectedItems.First();
+        await DownloadSingleItem(item);
+      }
+      else
+      {
+        Snackbar.Add("Multiple file download not supported yet. Please select one item at a time.", Severity.Info);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error during download");
+      Snackbar.Add("Download failed", Severity.Error);
+    }
+    finally
+    {
+      IsDownloadInProgress = false;
+      StateHasChanged();
+    }
+  }
+
+  private async Task DownloadSingleItem(FileSystemEntryViewModel item)
+  {
+    try
+    {
+      var downloadUrl = $"/api/file-operations/{DeviceId}/download?filePath={Uri.EscapeDataString(item.FullPath)}";
+      
+      await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
+      
+      Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error downloading {ItemName}", item.Name);
+      throw;
+    }
+  }
+
+  private async Task OnDeleteClick()
+  {
+    if (SelectedItems.Count == 0)
+    {
+      Snackbar.Add("Please select files or folders to delete", Severity.Warning);
+      return;
+    }
+
+    var itemNames = string.Join(", ", SelectedItems.Select(x => x.Name));
+    var message = SelectedItems.Count == 1 
+      ? $"Are you sure you want to delete '{SelectedItems.First().Name}'?" 
+      : $"Are you sure you want to delete {SelectedItems.Count} items? ({itemNames})";
+
+    var result = await DialogService.ShowMessageBox(
+      "Confirm Delete",
+      message,
+      yesText: "Delete",
+      cancelText: "Cancel");
+
+    if (result != true)
+    {
+      return;
+    }
+
+    IsDeleteInProgress = true;
+    StateHasChanged();
+
+    var deleteTasks = new List<Task>();
+    
+    foreach (var item in SelectedItems.ToList())
+    {
+      deleteTasks.Add(DeleteSingleItem(item));
+    }
+
+    try
+    {
+      await Task.WhenAll(deleteTasks);
+      Snackbar.Add($"Successfully deleted {SelectedItems.Count} item(s)", Severity.Success);
+      
+      // Clear selection and refresh directory contents
+      SelectedItems.Clear();
+      await LoadDirectoryContents(SelectedPath!);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error during deletion");
+      Snackbar.Add("One or more items failed to delete", Severity.Error);
+    }
+    finally
+    {
+      IsDeleteInProgress = false;
+      StateHasChanged();
+    }
+  }
+
+  private async Task DeleteSingleItem(FileSystemEntryViewModel item)
+  {
+    try
+    {
+      var result = await ControlrApi.DeleteFile(DeviceId, item.FullPath, item.IsDirectory);
+      
+      if (!result.IsSuccess)
+      {
+        Logger.LogError("Delete failed for {ItemName}: {Error}", item.Name, result.Reason);
+        throw new Exception($"Delete failed: {result.Reason}");
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error deleting item {ItemName}", item.Name);
+      throw;
+    }
   }
 }

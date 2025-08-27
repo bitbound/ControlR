@@ -15,20 +15,21 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
+  Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
 
   Task<Result> DeleteDevice(Guid deviceId);
+  Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory);
   Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
   Task<Result> DeleteTenantSetting(string settingName);
   Task<Result> DeleteUser(Guid userId);
+  Task<Result<Stream>> DownloadFile(Guid deviceId, string filePath);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
-  Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
@@ -37,9 +38,14 @@ public interface IControlrApi
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentServerVersion();
+  Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
+  Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
+  Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
+  Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId);
+  Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
@@ -52,10 +58,7 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
-  Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
-  Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId);
-  Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
-  Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
+  Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType);
 }
 
 public class ControlrApi(
@@ -119,16 +122,6 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request)
-  {
-    return await TryCallApi(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.PersonalAccessTokensEndpoint, request);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<CreatePersonalAccessTokenResponseDto>();
-    });
-  }
-
   public async Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto)
   {
     return await TryCallApi(async () =>
@@ -136,6 +129,16 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.InstallerKeysEndpoint, dto);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<CreateInstallerKeyResponseDto>();
+    });
+  }
+
+  public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.PersonalAccessTokensEndpoint, request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<CreatePersonalAccessTokenResponseDto>();
     });
   }
 
@@ -184,6 +187,19 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new { FilePath = filePath, IsDirectory = isDirectory };
+      using var response = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"{HttpConstants.DeviceFileOperationsEndpoint}/delete/{deviceId}")
+      {
+        Content = JsonContent.Create(dto)
+      });
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
   public async Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId)
   {
     return await TryCallApi(async () =>
@@ -211,12 +227,32 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result> DeleteTenantSetting(string settingName)
+  {
+    return await TryCallApi(async () =>
+    {
+      var url = $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
+      using var response = await _client.DeleteAsync(url);
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
   public async Task<Result> DeleteUser(Guid userId)
   {
     return await TryCallApi(async () =>
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.UsersEndpoint}/{userId}");
       response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result<Stream>> DownloadFile(Guid deviceId, string filePath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var response = await _client.GetAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/download/{deviceId}?filePath={Uri.EscapeDataString(filePath)}");
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadAsStreamAsync();
     });
   }
 
@@ -232,12 +268,6 @@ public class ControlrApi(
 
       yield return device;
     }
-  }
-
-  public async Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens()
-  {
-    return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.PersonalAccessTokensEndpoint));
   }
 
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
@@ -330,10 +360,31 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
   }
 
+  public async Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}");
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadAsByteArrayAsync();
+    });
+  }
+
   public async Task<Result<DeviceDto>> GetDevice(Guid deviceId)
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<DeviceDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}"));
+  }
+
+  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetDirectoryContentsRequestDto(deviceId, directoryPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/contents", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
+    });
   }
   public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
   {
@@ -341,10 +392,51 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint));
   }
 
+  public async Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.PersonalAccessTokensEndpoint));
+  }
+
   public async Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.PublicRegistrationSettingsEndpoint));
+  }
+
+  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetRootDrivesRequestDto(deviceId);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/root-drives", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetRootDrivesResponseDto>();
+    });
+  }
+
+  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetSubdirectoriesRequestDto(deviceId, directoryPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/subdirectories", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<GetSubdirectoriesResponseDto>();
+    });
+  }
+
+  public async Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName)
+  {
+    return await TryGetNullableResponse(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}");
+      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+      {
+        return null;
+      }
+      return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
+    });
   }
 
   public async Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName)
@@ -424,30 +516,6 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue)
-  {
-    return await TryCallApi(async () =>
-    {
-      var request = new UserPreferenceRequestDto(preferenceName, preferenceValue);
-      using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
-    });
-  }
-
-  public async Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName)
-  {
-    return await TryGetNullableResponse(async () =>
-    {
-      using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}");
-      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-      {
-        return null;
-      }
-      return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
-    });
-  }
-
   public async Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue)
   {
     return await TryCallApi(async () =>
@@ -459,13 +527,14 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> DeleteTenantSetting(string settingName)
+  public async Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue)
   {
     return await TryCallApi(async () =>
     {
-      var url = $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
-      using var response = await _client.DeleteAsync(url);
+      var request = new UserPreferenceRequestDto(preferenceName, preferenceValue);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
     });
   }
 
@@ -479,46 +548,25 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId)
+  public async Task<Result> UploadFile(Guid deviceId, string targetDirectory, string fileName, Stream fileStream, string contentType)
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}");
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadAsByteArrayAsync();
-    });
-  }
+      using var formData = new MultipartFormDataContent();
 
-  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId)
-  {
-    return await TryCallApi(async () =>
-    {
-      var dto = new GetRootDrivesRequestDto(deviceId);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/root-drives", dto);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<GetRootDrivesResponseDto>();
-    });
-  }
+      var streamContent = new StreamContent(fileStream);
+      if (string.IsNullOrWhiteSpace(contentType))
+      {
+        contentType = "application/octet-stream";
+      }
+      streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
-  public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)
-  {
-    return await TryCallApi(async () =>
-    {
-      var dto = new GetSubdirectoriesRequestDto(deviceId, directoryPath);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/subdirectories", dto);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<GetSubdirectoriesResponseDto>();
-    });
-  }
+      formData.Add(streamContent, "file", fileName);
+      formData.Add(new StringContent(deviceId.ToString()), "deviceId");
+      formData.Add(new StringContent(targetDirectory), "targetDirectory");
 
-  public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath)
-  {
-    return await TryCallApi(async () =>
-    {
-      var dto = new GetDirectoryContentsRequestDto(deviceId, directoryPath);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/contents", dto);
+      using var response = await _client.PostAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload", formData);
       response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
     });
   }
 

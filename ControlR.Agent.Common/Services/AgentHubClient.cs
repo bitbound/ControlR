@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -260,8 +259,6 @@ internal class AgentHubClient(
         cts.Token
       );
 
-      //await _hubConnection.Server.SendDesktopPreviewStream(dto.StreamId, chunkedStream);
-
       _logger.LogInformation(
         "Desktop preview stream sent successfully. Stream ID: {StreamId}",
         dto.StreamId);
@@ -390,6 +387,104 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while getting directory contents for {DirectoryPath}", requestDto.DirectoryPath);
       return Result.Fail<GetDirectoryContentsResponseDto>("An error occurred while getting directory contents.");
+    }
+  }
+
+  public async Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)
+  {
+      _logger.LogInformation("Downloading file from viewer: {FileName} to {Directory}", 
+        dto.FileName, dto.TargetDirectoryPath);
+
+      var stream = _hubConnection.Server.GetFileUploadStream(dto);
+      var targetPath = Path.Join(dto.TargetDirectoryPath, dto.FileName);
+      using var fs = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+      await foreach (var chunk in stream)
+      {
+        // Process each chunk (e.g., write to file, buffer, etc.)
+        await fs.WriteAsync(chunk);
+      }
+      return Result.Ok();
+  }
+
+  public async Task<Result> SendFileDownload(FileDownloadHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Sending file download: {FilePath}, Stream ID: {StreamId}, Is Directory: {IsDirectory}", 
+        dto.FilePath, dto.StreamId, dto.IsDirectory);
+
+      var prepareResult = await _fileManager.PrepareFileForDownload(dto.FilePath, dto.IsDirectory);
+      if (!prepareResult.IsSuccess || string.IsNullOrEmpty(prepareResult.TempFilePath))
+      {
+        _logger.LogWarning("Failed to prepare file for download: {FilePath}, Error: {Error}", dto.FilePath, prepareResult.ErrorMessage);
+        return Result.Fail(prepareResult.ErrorMessage ?? "Failed to prepare file for download");
+      }
+
+      try
+      {
+        // Read the file and create a chunked stream
+        var fileBytes = await File.ReadAllBytesAsync(prepareResult.TempFilePath);
+        var chunkStream = CreateChunkedStream(fileBytes);
+
+        // Send the stream to the hub
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        await _hubConnection.Send(
+          nameof(IAgentHub.SendFileDownloadStream),
+          [dto.StreamId, chunkStream],
+          cts.Token
+        );
+
+        _logger.LogInformation("Successfully sent file download stream: {FilePath}", dto.FilePath);
+        return Result.Ok();
+      }
+      finally
+      {
+        // Clean up temporary file if it was created for a directory
+        if (dto.IsDirectory && File.Exists(prepareResult.TempFilePath))
+        {
+          try
+          {
+            File.Delete(prepareResult.TempFilePath);
+            _logger.LogDebug("Deleted temporary ZIP file: {TempFilePath}", prepareResult.TempFilePath);
+          }
+          catch (Exception cleanupEx)
+          {
+            _logger.LogWarning(cleanupEx, "Failed to delete temporary ZIP file: {TempFilePath}", prepareResult.TempFilePath);
+          }
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending file download: {FilePath}", dto.FilePath);
+      return Result.Fail("An error occurred while sending file download.");
+    }
+  }
+
+  public async Task<Result> DeleteFile(FileDeleteHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Deleting {ItemType}: {FilePath}", dto.IsDirectory ? "directory" : "file", dto.FilePath);
+
+      var result = await _fileManager.DeleteFile(dto.FilePath, dto.IsDirectory);
+      
+      if (result.IsSuccess)
+      {
+        _logger.LogInformation("Successfully deleted {ItemType}: {FilePath}", dto.IsDirectory ? "directory" : "file", dto.FilePath);
+        return Result.Ok();
+      }
+      else
+      {
+        _logger.LogWarning("Failed to delete {ItemType}: {FilePath}, Error: {Error}", 
+          dto.IsDirectory ? "directory" : "file", dto.FilePath, result.ErrorMessage);
+        return Result.Fail(result.ErrorMessage ?? "Failed to delete file");
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while deleting {ItemType}: {FilePath}", dto.IsDirectory ? "directory" : "file", dto.FilePath);
+      return Result.Fail("An error occurred while deleting file.");
     }
   }
 

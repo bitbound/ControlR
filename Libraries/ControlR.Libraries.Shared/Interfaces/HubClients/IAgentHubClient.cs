@@ -21,4 +21,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
   Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(GetSubdirectoriesRequestDto requestDto);
   Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto requestDto);
+  Task<Result?> ReceiveFileUpload(FileUploadHubDto dto);
+  Task<Result> SendFileDownload(FileDownloadHubDto dto);
+  Task<Result> DeleteFile(FileDeleteHubDto dto);
 }

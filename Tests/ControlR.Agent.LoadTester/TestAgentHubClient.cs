@@ -111,4 +111,22 @@ public class TestAgentHubClient : IAgentHubClient
     Console.WriteLine($"Getting directory contents for {requestDto.DirectoryPath}");
     return Task.FromResult(Result.Ok(new GetDirectoryContentsResponseDto([], true)));
   }
+
+  public Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)
+  {
+    Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");
+    return Result.Ok().AsTaskResult<Result?>();
+  }
+
+  public Task<Result> SendFileDownload(FileDownloadHubDto dto)
+  {
+    Console.WriteLine($"Received file download request for {dto.FilePath}");
+    return Result.Ok().AsTaskResult();
+  }
+
+  public Task<Result> DeleteFile(FileDeleteHubDto dto)
+  {
+    Console.WriteLine($"Received file delete request for {dto.FilePath}");
+    return Result.Ok().AsTaskResult();
+  }
 }
