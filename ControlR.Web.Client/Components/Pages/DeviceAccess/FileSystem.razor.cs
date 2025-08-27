@@ -376,12 +376,8 @@ public partial class FileSystem : JsInteropableComponent
         // Select the first drive by default
         if (InitialTreeItems.Count > 0)
         {
-          SelectedPath = InitialTreeItems[0].Value;
           _addressBarValue = SelectedPath ?? string.Empty;
-          if (!string.IsNullOrEmpty(SelectedPath))
-          {
-            await LoadDirectoryContents(SelectedPath);
-          }
+          SelectedPath = InitialTreeItems[0].Value;
         }
       }
       else
