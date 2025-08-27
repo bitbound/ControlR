@@ -9,6 +9,7 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 public partial class FileSystem : JsInteropableComponent
 {
   private string _addressBarValue = string.Empty;
+  private string _searchText = string.Empty;
   private ElementReference _containerRef;
   private ElementReference _contentPanelRef;
   private InputFile _fileInputRef = default!;
