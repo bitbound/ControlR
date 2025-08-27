@@ -7,6 +7,7 @@
 		<Description>The API client for ControlR, an open-source remote control and remote access solution.</Description>
 		<PackageIcon>appicon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
