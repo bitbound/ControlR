@@ -115,6 +115,9 @@
             <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
             <PropertyColumn Property="x => x.LastModified" Title="Modified" />
           </Columns>
+          <PagerContent>
+            <MudDataGridPager T="FileSystemEntryViewModel" />
+          </PagerContent>
         </MudDataGrid>
       }
       else

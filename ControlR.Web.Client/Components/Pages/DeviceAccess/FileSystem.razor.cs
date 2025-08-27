@@ -249,7 +249,7 @@ public partial class FileSystem : JsInteropableComponent
 
   private async Task NavigateToAddress()
   {
-    var targetPath = _addressBarValue?.Trim();
+    var targetPath = _addressBarValue.Trim();
     if (string.IsNullOrWhiteSpace(targetPath))
     {
       return;
@@ -488,7 +488,7 @@ public partial class FileSystem : JsInteropableComponent
       Guard.IsNotNull(SelectedPath);
 
       // Check if file already exists in current directory contents
-      var existingFile = DirectoryContents?.FirstOrDefault(f => 
+      var existingFile = DirectoryContents.FirstOrDefault(f => 
         !f.IsDirectory && string.Equals(f.Name, file.Name, StringComparison.OrdinalIgnoreCase));
 
       if (existingFile != null)
