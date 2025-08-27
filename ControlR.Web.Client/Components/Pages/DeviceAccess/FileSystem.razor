@@ -62,7 +62,8 @@
             else if (!string.IsNullOrEmpty(SelectedPath))
             {
                 <MudDataGrid T="FileSystemEntryViewModel" Items="DirectoryContents" Dense="true" Hover="true"
-                           SortMode="SortMode.Multiple" Filterable="true" Hideable="false" RowsPerPage="50">
+                           SortMode="SortMode.Multiple" Filterable="true" Hideable="false" RowsPerPage="50"
+                           RowStyleFunc="@GetRowStyle" RowClick="@OnRowClick">
                     <Columns>
                         <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
                             <CellTemplate>

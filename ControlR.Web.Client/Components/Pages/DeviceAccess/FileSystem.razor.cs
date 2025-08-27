@@ -235,6 +235,47 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private async Task OnRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
+  {
+    var item = args.Item;
+    if (item?.IsDirectory == true && !string.IsNullOrEmpty(item.FullPath))
+    {
+      await NavigateToDirectory(item.FullPath);
+    }
+  }
+
+  private string GetRowStyle(FileSystemEntryViewModel item, int index)
+  {
+    if (item.IsDirectory)
+    {
+      return "cursor: pointer;";
+    }
+    return string.Empty;
+  }
+
+  private async Task NavigateToDirectory(string directoryPath)
+  {
+    try
+    {
+      // Update address bar
+      _addressBarValue = directoryPath;
+      
+      // Build tree to this path if needed
+      await BuildTreeToPath(directoryPath);
+      
+      await InvokeAsync(StateHasChanged);
+      await Task.Delay(100); // Small delay to ensure tree is updated
+
+      // Set the selected path (this will also load directory contents)
+      SelectedPath = directoryPath;
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error navigating to directory {Path}", directoryPath);
+      Snackbar.Add($"An error occurred while navigating to '{directoryPath}'", Severity.Error);
+    }
+  }
+
   private async Task NavigateToAddress()
   {
     var targetPath = _addressBarValue?.Trim();
