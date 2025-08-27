@@ -2,6 +2,7 @@ using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.Services.DeviceAccess.Chat;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor.Services;
 

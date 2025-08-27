@@ -152,9 +152,9 @@ jobs:
       - task: DotNetCoreCLI@2
         displayName: Pack ControlR.ApiClient (Release)
         inputs:
-          command: 'pack'
+          command: 'build'
           packagesToPack: 'ControlR.ApiClient/ControlR.ApiClient.csproj'
-          arguments: '-c Release -o "$(Build.SourcesDirectory)\ControlR.ApiClient\bin" /p:Version=$(Build.BuildNumber)'
+          arguments: '-c Release -o "$(Build.SourcesDirectory)\ControlR.ApiClient\bin" -p:Version=$(Build.BuildNumber)'
 
       - task: PublishPipelineArtifact@1
         displayName: Publish ApiClient NuGet

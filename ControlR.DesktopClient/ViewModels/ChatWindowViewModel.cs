@@ -3,6 +3,7 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Models;
 using Microsoft.Extensions.Logging;
 
@@ -21,10 +22,12 @@ public interface IChatWindowViewModel
 
 public class ChatWindowViewModel(
   IChatSessionManager chatSessionManager,
+  IToaster toaster,
   ILogger<ChatWindowViewModel> logger) : ViewModelBase, IChatWindowViewModel
 {
   
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
+  private readonly IToaster _toaster = toaster;
   private readonly ILogger<ChatWindowViewModel> _logger = logger;
   private string _newMessage = string.Empty;
 
@@ -60,7 +63,7 @@ public class ChatWindowViewModel(
 
     // Send the response via the chat session manager
     var success = await _chatSessionManager.SendResponse(Session.SessionId, message);
-    
+
     if (success)
     {
       NewMessage = string.Empty;
@@ -71,6 +74,7 @@ public class ChatWindowViewModel(
       // Remove the message if sending failed
       Messages.Remove(messageViewModel);
       _logger.LogWarning("Failed to send message for session {SessionId}", Session.SessionId);
+      await _toaster.ShowToast("Send Failure", "Failed to send message", ToastIcon.Error);
     }
   }
 

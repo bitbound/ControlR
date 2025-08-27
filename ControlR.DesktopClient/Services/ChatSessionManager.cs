@@ -117,7 +117,12 @@ internal class ChatSessionManager(
         DateTimeOffset.Now);
 
       // Send back to Agent via IPC
-      await connection.Send(response);
+      var invokeResult = await connection.Invoke<ChatResponseIpcDto, bool>(response);
+      if (!invokeResult.IsSuccess || !invokeResult.Value)
+      {
+        _logger.LogWarning("IPC client reported failure sending chat response for session {SessionId}", sessionId);
+        return false;
+      }
 
       _logger.LogInformation(
         "Chat response sent from {Username} for session {SessionId}: {Message}",

@@ -46,7 +46,7 @@ internal abstract class IpcServerInitializerBase(
         }
       });
 
-      server.On<ChatResponseIpcDto>(async dto =>
+      server.On<ChatResponseIpcDto, Task<bool>>(async dto =>
       {
         try
         {
@@ -58,15 +58,17 @@ internal abstract class IpcServerInitializerBase(
             dto.Timestamp);
 
           await _hubConnection.Server.SendChatResponse(responseDto);
-
+          
           _logger.LogInformation(
             "Chat response sent to server for session {SessionId} from {Username}",
             responseDto.SessionId,
             responseDto.SenderUsername);
+          return true;
         }
         catch (Exception ex)
         {
           _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
+          return false;
         }
       });
       

@@ -1,4 +1,5 @@
 using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.Services.DeviceAccess.Chat;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -11,9 +12,9 @@ public partial class Chat : ComponentBase, IDisposable
   private Severity _alertSeverity;
   private MudTextField<string> _chatInputElement = null!;
   private ElementReference _chatMessagesContainer;
-  private Guid _currentChatSessionId = Guid.NewGuid();
   private string? _loadingMessage = "Loading";
   private DeviceUiSession[]? _systemSessions;
+  private IDisposable? _stateChangeHandler;
 
   [Inject]
   public required IChatState ChatState { get; init; }
@@ -26,9 +27,6 @@ public partial class Chat : ComponentBase, IDisposable
 
   [Inject]
   public required ILogger<Chat> Logger { get; init; }
-
-  [Inject]
-  public required IMessenger Messenger { get; init; }
 
   [Inject]
   public required NavigationManager NavManager { get; init; }
@@ -105,14 +103,7 @@ public partial class Chat : ComponentBase, IDisposable
 
   public void Dispose()
   {
-    if (ChatState.SelectedSession is not null)
-    {
-      ViewerHub.CloseChatSession(
-        DeviceAccessState.CurrentDevice.Id,
-        _currentChatSessionId,
-        ChatState.SelectedSession.ProcessId).Forget();
-    }
-    Messenger.UnregisterAll(this);
+    _stateChangeHandler?.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -130,10 +121,21 @@ public partial class Chat : ComponentBase, IDisposable
       return;
     }
 
-    // Register for incoming chat responses
-    Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
+    _stateChangeHandler = ChatState.OnStateChanged(HandleChatStateChanged);
 
     await LoadSystemSessions();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+    // If this is the first render and we have existing messages, scroll to end after a short delay
+    // to ensure the DOM is fully rendered with content.
+    if (firstRender && ChatState.ChatMessages.Count > 0)
+    {
+      await Task.Delay(50);
+      await JsInterop.ScrollToEnd(_chatMessagesContainer);
+    }
   }
 
   private async Task CloseChatSession()
@@ -142,9 +144,9 @@ public partial class Chat : ComponentBase, IDisposable
     {
       var result = await ViewerHub.CloseChatSession(
         DeviceAccessState.CurrentDevice.Id,
-        _currentChatSessionId,
+        ChatState.SessionId,
         ChatState.SelectedSession.ProcessId);
-      
+
       if (!result.IsSuccess)
       {
         Logger.LogError("Failed to close chat session: {Error}", result.Exception?.Message);
@@ -154,48 +156,17 @@ public partial class Chat : ComponentBase, IDisposable
 
     ChatState.SelectedSession = null;
     ChatState.ChatMessages.Clear();
-    _currentChatSessionId = Guid.Empty;
+    ChatState.SessionId = Guid.Empty;
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
+  private async Task HandleChatStateChanged()
   {
-    try
-    {
-      var response = message.Dto;
-
-      // Only handle responses for the current chat session
-      if (response.SessionId != _currentChatSessionId)
-      {
-        return;
-      }
-
-      // Add the response to our chat messages
-      var chatMessage = new ChatMessage
-      {
-        Message = response.Message,
-        SenderName = response.SenderUsername,
-        Timestamp = response.Timestamp,
-        IsFromViewer = false
-      };
-
-      ChatState.ChatMessages.Add(chatMessage);
-
       // Update the UI
       await InvokeAsync(StateHasChanged);
-
       await JsInterop.ScrollToEnd(_chatMessagesContainer);
-
-      Logger.LogInformation(
-        "Received chat response from {Username} for session {SessionId}",
-        response.SenderUsername,
-        response.SessionId);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error handling received chat response");
-    }
   }
+
 
   private async Task HandleInputKeyDown(KeyboardEventArgs args)
   {
@@ -255,7 +226,7 @@ public partial class Chat : ComponentBase, IDisposable
     {
       var chatDto = new ChatMessageHubDto(
         DeviceAccessState.CurrentDevice.Id,
-        _currentChatSessionId,
+        ChatState.SessionId,
         ChatState.NewMessage.Trim(),
         string.Empty, // SenderName will be set in the hub
         string.Empty, // SenderEmail will be set in the hub
@@ -300,9 +271,8 @@ public partial class Chat : ComponentBase, IDisposable
   {
     try
     {
+      ChatState.Clear();
       ChatState.SelectedSession = session;
-      _currentChatSessionId = Guid.NewGuid();
-      ChatState.ChatMessages.Clear();
 
       Logger.LogInformation(
         "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",

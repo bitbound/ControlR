@@ -2,12 +2,18 @@ namespace ControlR.Web.Client.Services.DeviceAccess;
 
 public interface IStateBase
 {
+  Task NotifyStateChanged();
   IDisposable OnStateChanged(Func<Task> callback);
 }
 public abstract class StateBase(ILogger<StateBase> logger) : IStateBase
 {
   private readonly ConcurrentList<Func<Task>> _changeHandlers = [];
   private readonly ILogger<StateBase> _logger = logger;
+
+  public virtual Task NotifyStateChanged()
+  {
+    return InvokeChangeHandlers();
+  }
 
   public virtual IDisposable OnStateChanged(Func<Task> callback)
   {
@@ -16,11 +22,6 @@ public abstract class StateBase(ILogger<StateBase> logger) : IStateBase
     {
       _changeHandlers.Remove(callback);
     });
-  }
-
-  protected virtual Task NotifyStateChanged()
-  {
-    return InvokeChangeHandlers();
   }
 
   private async Task InvokeChangeHandlers()

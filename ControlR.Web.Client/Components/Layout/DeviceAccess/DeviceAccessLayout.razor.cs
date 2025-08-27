@@ -1,13 +1,14 @@
 ﻿using System.Web;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.Services.DeviceAccess.Chat;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
 
-public partial class DeviceAccessLayout
+public partial class DeviceAccessLayout : IAsyncDisposable
 {
   private const string DeviceIdSessionStorageKey = "controlr-device-id";
   private MudTheme? _customTheme;
@@ -16,8 +17,14 @@ public partial class DeviceAccessLayout
   private bool _drawerOpen = true;
   private string? _errorText;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
-  private string? _loadingText = "Loading";
   private bool _isAuthenticated;
+  private string? _loadingText = "Loading";
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
+
+  [Inject]
+  public required IChatState ChatState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -36,9 +43,6 @@ public partial class DeviceAccessLayout
 
   [Inject]
   public required ISessionStorageAccessor SessionStorageAccessor { get; init; }
-
-  [Inject]
-  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -75,6 +79,20 @@ public partial class DeviceAccessLayout
     }
   }
 
+  public async ValueTask DisposeAsync()
+  {
+    if (ChatState.SelectedSession is not null)
+    {
+      await ViewerHub.CloseChatSession(
+        DeviceAccessState.CurrentDevice.Id,
+        ChatState.SessionId,
+        ChatState.SelectedSession.ProcessId);
+    }
+    ChatState.Clear();
+    Messenger.UnregisterAll(this);
+    GC.SuppressFinalize(this);
+  }
+
   protected override async Task OnInitializedAsync()
   {
     try
@@ -97,6 +115,8 @@ public partial class DeviceAccessLayout
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
         Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+        Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
+
         await ViewerHub.Connect();
         await GetDeviceInfo();
       }
@@ -160,6 +180,34 @@ public partial class DeviceAccessLayout
       _errorText = "Failed to fetch device details.";
       Logger.LogError(ex, "Error fetching device details for {DeviceId}", _deviceId);
       return;
+    }
+  }
+
+  private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
+  {
+    var response = message.Dto;
+
+    // Only handle responses for the current chat session
+    if (response.SessionId != ChatState.SessionId)
+    {
+      return;
+    }
+
+    // Add the response to our chat messages
+    var chatMessage = new ChatMessage
+    {
+      Message = response.Message,
+      SenderName = response.SenderUsername,
+      Timestamp = response.Timestamp,
+      IsFromViewer = false
+    };
+
+    ChatState.ChatMessages.Add(chatMessage);
+    await InvokeAsync(ChatState.NotifyStateChanged);
+
+    if (!NavManager.Uri.Contains("/chat"))
+    {
+      Snackbar.Add("New chat message received", Severity.Info);
     }
   }
 

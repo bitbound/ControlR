@@ -150,7 +150,12 @@ internal class FileManager(
 
       entries.AddRange(files);
 
-      return Task.FromResult(new DirectoryContentsResult(entries.ToArray(), true));
+      var sortedEntries = entries
+        .OrderBy(entry => entry.IsDirectory)
+        .ThenBy(entry => entry.Name)
+        .ToArray();
+
+      return Task.FromResult(new DirectoryContentsResult(sortedEntries, true));
     }
     catch (Exception ex)
     {
@@ -221,6 +226,7 @@ internal class FileManager(
         })
         .Where(entry => entry is not null)
         .Cast<FileSystemEntryDto>()
+        .OrderBy(entry => entry.Name)
         .ToArray();
 
       return Task.FromResult(directories);
