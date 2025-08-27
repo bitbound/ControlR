@@ -1,8 +1,17 @@
 <MudDialog>
   <TitleContent>
-    <MudText Typo="Typo.h5" Color="Color.Primary">
-      Desktop Preview - @Device.Name
-    </MudText>
+    <div class="d-flex align-center justify-space-between">
+      <MudText Typo="Typo.h5" Color="Color.Primary">
+        Desktop Preview - @Device.Name
+      </MudText>
+      
+      <MudTooltip Text="Close Preview">
+        <MudIconButton Icon="@Icons.Material.Filled.Close"
+              Color="Color.Error"
+              OnClick="Close"
+              Size="Size.Medium" />
+      </MudTooltip>
+    </div>
   </TitleContent>
   <DialogContent>
     <MudCard Elevation="0">

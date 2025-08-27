@@ -58,10 +58,11 @@ public class PersonalAccessTokenAuthenticationHandler(
 
     var claims = new List<Claim>
     {
+      new(UserClaimTypes.UserId, user.Id.ToString()),
+      new(UserClaimTypes.TenantId, user.TenantId.ToString()),
       new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-      new(ClaimTypes.Name, user.UserName ?? string.Empty),
-      new(UserClaimTypes.TenantId, result.TenantId!.Value.ToString()),
-      new(UserClaimTypes.AuthenticationMethod, PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme)
+      new(ClaimTypes.Name, user.UserName ?? "User"),
+      new(UserClaimTypes.AuthenticationMethod, PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme),
     };
 
     if (!string.IsNullOrWhiteSpace(user.Email))

@@ -1,5 +1,4 @@
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +21,11 @@ public class LogonTokenController : ControllerBase
       return BadRequest("User tenant not found");
     }
 
+    if (!User.TryGetUserId(out var userId))
+    {
+      return BadRequest("User ID not found");
+    }
+
     var device = await appDb.Devices.FindAsync(request.DeviceId);
     if (device is null || device.TenantId != tenantId)
     {
@@ -30,7 +34,7 @@ public class LogonTokenController : ControllerBase
 
     // Validate that the user exists and belongs to the same tenant
 
-    var user = await appDb.Users.FindAsync(request.UserId);
+    var user = await appDb.Users.FindAsync(userId);
     if (user is null || user.TenantId != tenantId)
     {
       return BadRequest("User not found or does not belong to this tenant");
@@ -39,7 +43,7 @@ public class LogonTokenController : ControllerBase
     var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       tenantId,
-      request.UserId,
+      userId,
       request.ExpirationMinutes);
 
     var deviceAccessUrl = new Uri(

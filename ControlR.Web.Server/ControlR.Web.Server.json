@@ -2763,8 +2763,7 @@
       },
       "LogonTokenRequestDto": {
         "required": [
-          "deviceId",
-          "userId"
+          "deviceId"
         ],
         "type": "object",
         "properties": {
@@ -2775,10 +2774,6 @@
           "expirationMinutes": {
             "type": "integer",
             "format": "int32"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
           }
         }
       },

@@ -42,7 +42,7 @@ public class LogonTokenAuthenticationHandler(
     }
 
     // Load the real user from the database to get all their properties and roles
-    var user = await _userManager.FindByIdAsync(tokenValidation.UserId!.Value.ToString());
+    var user = await _userManager.FindByIdAsync(tokenValidation.UserId.Value.ToString());
     if (user is null)
     {
       return AuthenticateResult.Fail("User not found for logon token");
@@ -50,11 +50,12 @@ public class LogonTokenAuthenticationHandler(
 
     var claims = new List<Claim>
     {
+      new(UserClaimTypes.UserId, user.Id.ToString()),
+      new(UserClaimTypes.TenantId, user.TenantId.ToString()),
       new(ClaimTypes.NameIdentifier, user.Id.ToString()),
       new(ClaimTypes.Name, user.UserName ?? "User"),
+      new(UserClaimTypes.AuthenticationMethod, LogonTokenAuthenticationSchemeOptions.DefaultScheme),
       new(UserClaimTypes.DeviceId, deviceId.ToString()),
-      new(UserClaimTypes.AuthenticationMethod, "LogonToken"),
-      new(UserClaimTypes.TenantId, user.TenantId.ToString())
     };
 
     if (!string.IsNullOrWhiteSpace(user.Email))

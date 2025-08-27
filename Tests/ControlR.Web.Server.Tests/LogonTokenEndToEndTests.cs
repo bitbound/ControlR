@@ -43,7 +43,6 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
     {
       DeviceId = deviceId,
       ExpirationMinutes = 15,
-      UserId = user.Id
     };
 
     // Add personal access token to request headers
