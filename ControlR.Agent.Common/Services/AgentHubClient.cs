@@ -401,14 +401,14 @@ internal class AgentHubClient(
     var targetPath = Path.Join(dto.TargetDirectoryPath, dto.FileName);
 
     // Check if file already exists and overwrite is not allowed
-    if (File.Exists(targetPath) && !dto.Overwrite)
+    if (_fileSystem.FileExists(targetPath) && !dto.Overwrite)
     {
       _logger.LogWarning("File already exists and overwrite is not allowed: {FilePath}", targetPath);
       return Result.Fail("File already exists");
     }
 
     var stream = _hubConnection.Server.GetFileUploadStream(dto);
-    using var fs = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+    using var fs = _fileSystem.OpenFileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
     await foreach (var chunk in stream)
     {
       // Process each chunk (e.g., write to file, buffer, etc.)
