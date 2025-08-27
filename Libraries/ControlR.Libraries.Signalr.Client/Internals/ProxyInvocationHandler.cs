@@ -48,6 +48,12 @@ internal sealed class ProxyInvocationHandler<THub, TClient>(HubConnection<THub, 
   {
     await hubConnection.Connection.InvokeCoreAsync(method.Name, args);
   }
+  public async Task SendAsync(MethodInfo method, object[] args)
+  {
+    // For methods with client-to-server streaming params (IAsyncEnumerable<T>),
+    // SignalR requires SendCoreAsync (no return) instead of InvokeCoreAsync.
+    await hubConnection.Connection.SendCoreAsync(method.Name, args);
+  }
   public IAsyncEnumerable<T> Stream<T>(MethodInfo method, object[] args)
   {
     if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)

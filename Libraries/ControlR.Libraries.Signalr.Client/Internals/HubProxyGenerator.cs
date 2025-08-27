@@ -73,6 +73,7 @@ internal static class HubProxyGenerator
   {
     var parameters = method.GetParameters();
     var parameterTypes = Array.ConvertAll(parameters, p => p.ParameterType);
+  var hasClientToServerStreamParam = parameters.Any(p => IsClientToServerStreamParam(p.ParameterType));
 
     var methodBuilder = typeBuilder.DefineMethod(
         method.Name,
@@ -113,11 +114,28 @@ internal static class HubProxyGenerator
 
     if (method.ReturnType == typeof(Task))
     {
+      // If the method has a client-to-server streaming parameter we must use SendAsync.
+      var targetMethodName = hasClientToServerStreamParam ? nameof(IInvocationHandler.SendAsync) : nameof(IInvocationHandler.InvokeVoidAsync);
       methodIL.Emit(
         OpCodes.Callvirt,
         typeof(IInvocationHandler)
-          .GetMethod(nameof(IInvocationHandler.InvokeVoidAsync))
-          ?? throw new DynamicObjectGenerationException("InvokeVoidAsync method not found on proxy implementation."));
+          .GetMethod(targetMethodName)
+          ?? throw new DynamicObjectGenerationException($"{targetMethodName} method not found on proxy implementation."));
+    }
+    else if (method.ReturnType == typeof(void))
+    {
+      if (!hasClientToServerStreamParam)
+      {
+        throw GetInvalidReturnTypeEx(method.ReturnType); // We only allow void when streaming params are present.
+      }
+      // Wrap SendAsync(Task) and ignore result; emit call then return.
+      methodIL.Emit(
+        OpCodes.Callvirt,
+        typeof(IInvocationHandler)
+          .GetMethod(nameof(IInvocationHandler.SendAsync))
+          ?? throw new DynamicObjectGenerationException("SendAsync method not found on proxy implementation."));
+      // Discard the returned Task (fire-and-forget). Optionally could Wait but that's discouraged.
+      methodIL.Emit(OpCodes.Pop);
     }
     else if (method.ReturnType.IsGenericType)
     {
@@ -150,6 +168,10 @@ internal static class HubProxyGenerator
   private static bool IsAsyncEnumerable(Type returnType)
   {
     return returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+  }
+  private static bool IsClientToServerStreamParam(Type paramType)
+  {
+    return paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
   }
 
   private static bool IsChannelReader(Type returnType)
