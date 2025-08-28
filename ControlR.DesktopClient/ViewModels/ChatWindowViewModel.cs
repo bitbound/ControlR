@@ -55,10 +55,9 @@ public class ChatWindowViewModel(
     }
 
     var message = NewMessage.Trim();
-    var currentUser = Environment.UserName;
     
     // Add the message to our local collection immediately
-    var messageViewModel = new ChatMessageViewModel(message, currentUser, false);
+    var messageViewModel = new ChatMessageViewModel(message, "You", false);
     Messages.Add(messageViewModel);
 
     // Send the response via the chat session manager
