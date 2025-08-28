@@ -251,7 +251,7 @@ public static class WebApplicationBuilderExtensions
         options.RequestHeaders.Add("CF-RAY");
         options.RequestHeaders.Add("CF-IPCountry");
         options.RequestHeaders.Add("CDN-Loop");
-        options.LoggingFields = HttpLoggingFields.All;
+        options.LoggingFields = HttpLoggingFields.All ^ HttpLoggingFields.RequestQuery;
       });
     }
 

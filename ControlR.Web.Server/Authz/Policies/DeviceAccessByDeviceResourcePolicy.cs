@@ -54,18 +54,19 @@ public static class DeviceAccessByDeviceResourcePolicy
         var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
         if (authMethod == "LogonToken")
         {
-          var deviceIdClaim = handlerCtx.User.FindFirst(UserClaimTypes.DeviceId)?.Value;
-          if (deviceIdClaim != null && Guid.TryParse(deviceIdClaim, out var tokenDeviceId))
+          // Prefer the new scoped claim; fall back to legacy DeviceId claim if absent.
+          var scopedDeviceIdValue = handlerCtx.User.FindFirst(UserClaimTypes.DeviceSessionScope)?.Value;
+          if (scopedDeviceIdValue != null && Guid.TryParse(scopedDeviceIdValue, out var tokenDeviceId))
           {
             if (device.Id == tokenDeviceId)
             {
               logger.LogInformation(
-                "Logon token user {UserId} authorized for device {DeviceId}",
+                "Logon token user {UserId} authorized for scoped device {DeviceId}",
                 userId, device.Id);
               return true;
             }
           }
-          
+
           return Fail(
             "Logon token is not authorized for this device.",
             handlerCtx,

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Helpers;
@@ -11,36 +12,30 @@ public interface ILogonTokenProvider
     Guid deviceId,
     Guid tenantId,
     Guid userId,
-    int expirationMinutes = 15);
+    int expirationMinutes = 5);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId);
   Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token);
 }
 
-
-public class LogonTokenProvider : ILogonTokenProvider
+public class LogonTokenProvider(
+  TimeProvider timeProvider,
+  IMemoryCache cache,
+  IDbContextFactory<AppDb> dbContextFactory,
+  ILogger<LogonTokenProvider> logger) : ILogonTokenProvider
 {
-  private readonly IMemoryCache _cache;
-  private readonly IDbContextFactory<AppDb> _dbContextFactory;
-  private readonly ILogger<LogonTokenProvider> _logger;
-  private readonly TimeProvider _timeProvider;
-  public LogonTokenProvider(
-    TimeProvider timeProvider,
-    IMemoryCache cache,
-    IDbContextFactory<AppDb> dbContextFactory,
-    ILogger<LogonTokenProvider> logger)
-  {
-    _cache = cache;
-    _timeProvider = timeProvider;
-    _dbContextFactory = dbContextFactory;
-    _logger = logger;
-  }
+  // Per-token async locks to ensure single-consumption race safety
+  private static readonly ConcurrentDictionary<string, SemaphoreSlim> _tokenLocks = new();
+  private readonly IMemoryCache _cache = cache;
+  private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
+  private readonly ILogger<LogonTokenProvider> _logger = logger;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   public async Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
     Guid userId,
-    int expirationMinutes = 15)
+    int expirationMinutes = 5)
   {
     // Validate that the user exists and belongs to the tenant
     using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -49,7 +44,7 @@ public class LogonTokenProvider : ILogonTokenProvider
       .Select(u => new { u.Id, u.UserName, u.Email })
       .FirstOrDefaultAsync()
       ?? throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
-      
+
     var token = RandomGenerator.CreateAccessToken();
     var now = _timeProvider.GetUtcNow();
     var expiresAt = now.AddMinutes(expirationMinutes);
@@ -78,38 +73,57 @@ public class LogonTokenProvider : ILogonTokenProvider
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId)
   {
-    var validationResult = await ValidateTokenInternalAsync(token);
-    if (!validationResult.IsSuccess)
+    var semaphore = _tokenLocks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
+    await semaphore.WaitAsync();
+    try
     {
-      return LogonTokenValidationResult.Failure(validationResult.ErrorMessage!);
+      // Re-validate inside critical section to avoid TOCTOU race
+      var validationResult = await ValidateTokenInternalAsync(token);
+      if (!validationResult.IsSuccess)
+      {
+        return LogonTokenValidationResult.Failure(validationResult.ErrorMessage!);
+      }
+
+      var logonToken = validationResult.Token;
+
+      if (logonToken.DeviceId != deviceId)
+      {
+        _logger.LogWarning(
+          "Device ID mismatch for token {Token}. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
+          token, logonToken.DeviceId, deviceId);
+        return LogonTokenValidationResult.Failure("Token is not valid for this device");
+      }
+
+      if (logonToken.IsConsumed)
+      {
+        return LogonTokenValidationResult.Failure("Token has already been used");
+      }
+
+      // Mark token as consumed and update cache atomically
+      logonToken.IsConsumed = true;
+      var cacheKey = GetCacheKey(token);
+      _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
+
+      _logger.LogInformation(
+        "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
+        logonToken.UserId, deviceId);
+
+      return LogonTokenValidationResult.Success(
+        validationResult.User.Id,
+        logonToken.TenantId,
+        validationResult.User.UserName,
+        validationResult.User.UserName,
+        validationResult.User.Email);
     }
-
-    var logonToken = validationResult.Token;
-
-    // Check if token matches the device
-    if (logonToken.DeviceId != deviceId)
+    finally
     {
-      _logger.LogWarning(
-        "Device ID mismatch for token {Token}. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
-        token, logonToken.DeviceId, deviceId);
-      return LogonTokenValidationResult.Failure("Token is not valid for this device");
+      semaphore.Release();
+      // Cleanup dictionary to prevent unbounded growth
+      if (semaphore.CurrentCount == 1)
+      {
+        _tokenLocks.TryRemove(token, out _);
+      }
     }
-
-    // Mark token as consumed and update cache
-    logonToken.IsConsumed = true;
-    var cacheKey = GetCacheKey(token);
-    _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
-
-    _logger.LogInformation(
-      "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
-      logonToken.UserId, deviceId);
-
-    return LogonTokenValidationResult.Success(
-      validationResult.User.Id,
-      logonToken.TenantId,
-      validationResult.User.UserName,
-      validationResult.User.UserName,
-      validationResult.User.Email);
   }
 
   public async Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token)
@@ -144,7 +158,7 @@ public class LogonTokenProvider : ILogonTokenProvider
 
   private static string GetCacheKey(string token) => $"logon_token:{token}";
 
-   private async Task<TokenValidationResult> ValidateTokenInternalAsync(string token)
+  private async Task<TokenValidationResult> ValidateTokenInternalAsync(string token)
   {
     var cacheKey = GetCacheKey(token);
 
@@ -211,7 +225,7 @@ public class LogonTokenProvider : ILogonTokenProvider
     [MemberNotNullWhen(true, nameof(Token), nameof(User))]
     public bool IsSuccess { get; }
     public LogonTokenModel? Token { get; }
-    
+
     public UserInfo? User { get; }
   }
 

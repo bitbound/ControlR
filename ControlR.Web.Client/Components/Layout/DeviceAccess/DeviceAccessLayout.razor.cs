@@ -107,6 +107,21 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         return;
       }
 
+      // If authenticated and logonToken/deviceId are present in URL, navigate to clean URL (omit secret token)
+      if (RendererInfo.IsInteractive)
+      {
+        var uri = new Uri(NavManager.Uri);
+        if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("logonToken", StringComparison.OrdinalIgnoreCase))
+        {
+          var basePath = uri.GetLeftPart(UriPartial.Path);
+          var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+          query.Remove("logonToken");
+          // Rebuild remaining query string (retain deviceId and any future params)
+          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys!.Select(k => $"{k}={query[k]}") ) : string.Empty;
+          NavManager.NavigateTo(basePath + remaining, replace: true);
+        }
+      }
+
       if (RendererInfo.IsInteractive)
       {
         _loadingText = "Connecting";

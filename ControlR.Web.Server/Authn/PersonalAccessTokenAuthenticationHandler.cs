@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Authn;
 
@@ -21,6 +22,9 @@ public class PersonalAccessTokenAuthenticationHandler(
 {
   private readonly IPersonalAccessTokenManager _personalAccessTokenManager = personalAccessTokenManager;
   private readonly UserManager<AppUser> _userManager = userManager;
+  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
+  private const int MaxFailures = 5;
+  private static readonly TimeSpan _failureWindow = TimeSpan.FromMinutes(5);
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
@@ -41,9 +45,21 @@ public class PersonalAccessTokenAuthenticationHandler(
       return AuthenticateResult.NoResult();
     }
 
+    // Basic rate limiting keyed by token prefix (ID part) or remote IP fallback
+    string keyPart = providedPat.Split(':', 2).FirstOrDefault() ?? "unknown";
+    var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var failureKey = $"patfail:{keyPart}:{remoteIp}";
+  if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) && failureCount >= MaxFailures)
+    {
+      return AuthenticateResult.Fail("Too many failed token attempts. Try again later.");
+    }
+
     var validationResult = await _personalAccessTokenManager.ValidateToken(providedPat);
     if (!validationResult.IsSuccess || !validationResult.Value.IsValid)
     {
+      // Increment failure counter
+      var newCount = (failureCount + 1);
+  _failureCache.Set(failureKey, newCount, _failureWindow);
       return AuthenticateResult.Fail("Invalid personal access token");
     }
 
@@ -55,6 +71,15 @@ public class PersonalAccessTokenAuthenticationHandler(
     {
       return AuthenticateResult.Fail("User not found for personal access token");
     }
+
+    // Check lockout status
+    if (await _userManager.IsLockedOutAsync(user))
+    {
+      return AuthenticateResult.Fail("User account is locked");
+    }
+
+    // Successful auth resets failure counter
+    _failureCache.Remove(failureKey);
 
     var claims = new List<Claim>
     {

@@ -19,13 +19,13 @@ public class LogonTokenAuthenticationHandler(
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
-    if (!Request.Query.TryGetValue("logonToken", out var tokenValue) || 
+    if (!Request.Query.TryGetValue("logonToken", out var tokenValue) ||
         string.IsNullOrWhiteSpace(tokenValue))
     {
       return AuthenticateResult.NoResult();
     }
 
-    if (!Request.Query.TryGetValue("deviceId", out var deviceIdValue) || 
+    if (!Request.Query.TryGetValue("deviceId", out var deviceIdValue) ||
         string.IsNullOrWhiteSpace(deviceIdValue) ||
         !Guid.TryParse(deviceIdValue, out var deviceId))
     {
@@ -33,7 +33,7 @@ public class LogonTokenAuthenticationHandler(
     }
 
     var tokenValidation = await _logonTokenProvider.ValidateAndConsumeTokenAsync(
-      $"{tokenValue}", 
+      $"{tokenValue}",
       deviceId);
 
     if (!tokenValidation.IsValid)
@@ -55,7 +55,8 @@ public class LogonTokenAuthenticationHandler(
       new(ClaimTypes.NameIdentifier, user.Id.ToString()),
       new(ClaimTypes.Name, user.UserName ?? "User"),
       new(UserClaimTypes.AuthenticationMethod, LogonTokenAuthenticationSchemeOptions.DefaultScheme),
-      new(UserClaimTypes.DeviceId, deviceId.ToString()),
+      // Explicit single-device session scope claim
+      new(UserClaimTypes.DeviceSessionScope, deviceId.ToString()),
     };
 
     if (!string.IsNullOrWhiteSpace(user.Email))
@@ -74,7 +75,8 @@ public class LogonTokenAuthenticationHandler(
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-    await _signInManager.SignInAsync(user, isPersistent: false, authenticationMethod: IdentityConstants.ApplicationScheme);
+    // Persist the constructed principal (with device-scoped claims) into the application cookie
+    await Context.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
     return AuthenticateResult.Success(ticket);
   }

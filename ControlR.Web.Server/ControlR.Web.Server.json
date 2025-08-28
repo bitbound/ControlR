@@ -209,7 +209,7 @@
     "/api/device-file-operations/delete/{deviceId}": {
       "delete": {
         "tags": [
-          "FileOperations"
+          "DeviceFileOperations"
         ],
         "parameters": [
           {
@@ -252,7 +252,7 @@
     "/api/device-file-operations/create-directory/{deviceId}": {
       "post": {
         "tags": [
-          "FileOperations"
+          "DeviceFileOperations"
         ],
         "parameters": [
           {
@@ -295,7 +295,7 @@
     "/api/device-file-operations/download/{deviceId}": {
       "get": {
         "tags": [
-          "FileOperations"
+          "DeviceFileOperations"
         ],
         "parameters": [
           {
@@ -325,7 +325,7 @@
     "/api/device-file-operations/upload": {
       "post": {
         "tags": [
-          "FileOperations"
+          "DeviceFileOperations"
         ],
         "requestBody": {
           "content": {
@@ -3116,7 +3116,7 @@
       "name": "DesktopPreview"
     },
     {
-      "name": "FileOperations"
+      "name": "DeviceFileOperations"
     },
     {
       "name": "DeviceFileSystem"
