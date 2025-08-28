@@ -30,5 +30,6 @@
   "CloseText": "Close",
   "SendText": "Send",
   "ChatSessionClosedToastTitle": "Chat Session Closed",
-  "ChatSessionClosedToastMessage": "The chat session has been closed by the remote user."
+  "ChatSessionClosedToastMessage": "The chat session has been closed by the remote user.",
+  "You": "You"
 }

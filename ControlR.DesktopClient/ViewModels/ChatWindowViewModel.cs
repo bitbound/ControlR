@@ -57,7 +57,7 @@ public class ChatWindowViewModel(
     var message = NewMessage.Trim();
     
     // Add the message to our local collection immediately
-    var messageViewModel = new ChatMessageViewModel(message, "You", false);
+    var messageViewModel = new ChatMessageViewModel(message, Localization.You, false);
     Messages.Add(messageViewModel);
 
     // Send the response via the chat session manager

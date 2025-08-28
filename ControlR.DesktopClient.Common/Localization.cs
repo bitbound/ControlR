@@ -54,6 +54,7 @@ public static class Localization
   public static string Status => GetString();
   public static string SubmitText => GetString();
   public static string YesText => GetString();
+  public static string You => GetString();
 
   public static void SetCulture(string culture)
   {
