@@ -3,6 +3,7 @@
 Open-source, self-hostable remote control and remote access.
 
 [![Tests](https://github.com/bitbound/ControlR/actions/workflows/test.yml/badge.svg)](https://github.com/bitbound/ControlR/actions/workflows/test.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
 Website: https://controlr.app  
