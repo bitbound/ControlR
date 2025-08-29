@@ -9,7 +9,8 @@
       <MudCard Elevation="0">
         <MudCardContent>
           <MudAlert Severity="Severity.Warning" Class="mb-4">
-            <strong>Important:</strong> This personal access token will only be shown once. Please copy it now and store it securely.
+            <strong>Important:</strong> This personal access token will only be shown once. Please copy it now and store
+            it securely.
           </MudAlert>
 
           <div class="mb-2">
@@ -21,26 +22,17 @@
             </MudText>
           </div>
 
-          <MudTextField T="string"
-                        Value="@PlainTextKey"
-                        Label="Personal Access Token"
-                        ReadOnly="true"
-                        Variant="Variant.Filled"
-                        AdornmentIcon="@Icons.Material.Filled.ContentCopy"
-                        Adornment="Adornment.End"
-                        OnAdornmentClick="CopyToClipboard"
-                        Class="mb-4" />
-                        
+          <MudTextField T="string" Value="@PlainTextKey" Label="Personal Access Token" ReadOnly="true"
+            Variant="Variant.Filled" AdornmentIcon="@Icons.Material.Filled.ContentCopy" Adornment="Adornment.End"
+            OnAdornmentClick="CopyToClipboard" Class="mb-4" />
+
         </MudCardContent>
-        <MudCardActions Class="justify-end">
-          <MudButton ButtonType="ButtonType.Submit"
-                     Color="Color.Primary"
-                     OnClick="Submit"
-                     Variant="Variant.Filled">
-            Close
-          </MudButton>
-        </MudCardActions>
       </MudCard>
     </DialogContent>
+    <DialogActions>
+      <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" OnClick="Submit" Variant="Variant.Filled">
+        Close
+      </MudButton>
+    </DialogActions>
   </MudDialog>
 </div>

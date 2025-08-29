@@ -4,58 +4,40 @@
       <MudText Typo="Typo.h5" Color="Color.Primary">
         Desktop Preview - @Device.Name
       </MudText>
-      
+
       <MudTooltip Text="Close Preview">
-        <MudIconButton Icon="@Icons.Material.Filled.Close"
-              Color="Color.Error"
-              OnClick="Close"
-              Size="Size.Medium" />
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="Close" Size="Size.Medium" />
       </MudTooltip>
     </div>
   </TitleContent>
   <DialogContent>
-    <MudCard Elevation="0">
-      <MudCardContent>
-        @if (_isLoading)
-        {
-          <div class="text-center my-4">
-            <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Medium" />
-            <MudText Typo="Typo.body2" Class="mt-2">
-              Loading preview...
-            </MudText>
-          </div>
-        }
-        else if (!string.IsNullOrEmpty(_errorMessage))
-        {
-          <MudAlert Severity="Severity.Error" Class="mb-4">
-            @_errorMessage
-          </MudAlert>
-        }
-        else if (!string.IsNullOrEmpty(_previewImageDataUri))
-        {
-          <div class="preview-image-container">
-            <img src="@_previewImageDataUri" 
-                 alt="Desktop Preview" 
-                 class="preview-image" />
-          </div>
-        }
-      </MudCardContent>
-      <MudCardActions Class="justify-space-between">
-        <MudButton ButtonType="ButtonType.Button"
-                   Color="Color.Info"
-                   OnClick="RefreshPreview"
-                   Variant="Variant.Outlined"
-                   Disabled="_isLoading"
-                   StartIcon="@Icons.Material.Filled.Refresh">
-          Refresh
-        </MudButton>
-        <MudButton ButtonType="ButtonType.Submit"
-                   Color="Color.Default"
-                   OnClick="Close"
-                   Variant="Variant.Filled">
-          Close
-        </MudButton>
-      </MudCardActions>
-    </MudCard>
+    @if (_isLoading)
+    {
+      <div class="text-center my-4">
+        <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Medium" />
+        <MudText Typo="Typo.body2" Class="mt-2">
+          Loading preview...
+        </MudText>
+      </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+      <MudAlert Severity="Severity.Error" Class="mb-4">
+        @_errorMessage
+      </MudAlert>
+    }
+    else if (!string.IsNullOrEmpty(_previewImageDataUri))
+    {
+      <img src="@_previewImageDataUri" alt="Desktop Preview" />
+    }
   </DialogContent>
+  <DialogActions>
+    <MudButton ButtonType="ButtonType.Button" Color="Color.Info" OnClick="RefreshPreview" Variant="Variant.Outlined"
+      Disabled="_isLoading" StartIcon="@Icons.Material.Filled.Refresh" Class="me-4">
+      Refresh
+    </MudButton>
+    <MudButton ButtonType="ButtonType.Submit" Color="Color.Default" OnClick="Close" Variant="Variant.Filled">
+      Close
+    </MudButton>
+  </DialogActions>
 </MudDialog>
