@@ -9,10 +9,10 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 public partial class FileSystem : JsInteropableComponent
 {
   private string _addressBarValue = string.Empty;
-  private string _searchText = string.Empty;
   private ElementReference _containerRef;
   private ElementReference _contentPanelRef;
   private InputFile _fileInputRef = default!;
+  private string _searchText = string.Empty;
 
   private string? _selectedPath;
   private ElementReference _splitterRef;
@@ -178,35 +178,79 @@ public partial class FileSystem : JsInteropableComponent
       return [];
     }
 
-    // Normalize path separators
-    path = path.Replace('/', Path.DirectorySeparatorChar);
+    // Detect if this is a Windows-style absolute path (e.g., C:\folder or \\server\share)
+    var isWindowsAbsolutePath = (path.Length >= 3 && char.IsLetter(path[0]) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) ||
+                               (path.StartsWith("\\\\") || path.StartsWith("//"));
 
-    // Handle different path formats
-    if (Path.IsPathRooted(path))
+    // Detect if this is a Unix-style absolute path (starts with /)
+    var isUnixAbsolutePath = path.StartsWith('/');
+
+    var segments = new List<string>();
+
+    if (isWindowsAbsolutePath)
     {
-      var segments = new List<string>();
+      // Handle Windows-style paths
+      string root;
+      string remainingPath;
 
-      // Add the root (drive or leading separator)
-      var root = Path.GetPathRoot(path);
-      if (!string.IsNullOrEmpty(root))
+      if (path.StartsWith("\\\\") || path.StartsWith("//"))
       {
-        segments.Add(root);
-
-        // Get the relative path after the root
-        var relativePath = path[root.Length..];
-        if (!string.IsNullOrEmpty(relativePath))
+        // UNC path (\\server\share)
+        var normalizedPath = path.Replace('/', '\\');
+        var parts = normalizedPath.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
         {
-          segments.AddRange(relativePath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries));
+          root = $"\\\\{parts[0]}\\{parts[1]}\\";
+          remainingPath = string.Join("\\", parts.Skip(2));
+        }
+        else
+        {
+          root = normalizedPath;
+          remainingPath = string.Empty;
         }
       }
+      else
+      {
+        // Drive letter path (C:\folder)
+        root = path[..3]; // C:\ or C:/
+        remainingPath = path.Length > 3 ? path[3..] : string.Empty;
+      }
 
-      return segments;
+      // Normalize the root separator
+      root = root.Replace('/', '\\');
+      segments.Add(root);
+
+      // Add remaining path segments
+      if (!string.IsNullOrEmpty(remainingPath))
+      {
+        var pathSegments = remainingPath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        segments.AddRange(pathSegments);
+      }
+    }
+    else if (isUnixAbsolutePath)
+    {
+      // Handle Unix-style paths
+      segments.Add("/");
+      var pathSegments = path[1..].Split('/', StringSplitOptions.RemoveEmptyEntries);
+      segments.AddRange(pathSegments);
     }
     else
     {
-      // Relative path - split by directory separator
-      return path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).ToList();
+      // Relative path - split by any directory separator
+      var pathSegments = path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+      segments.AddRange(pathSegments);
     }
+
+    return segments;
+  }
+
+  private static string NormalizePath(string path)
+  {
+    if (string.IsNullOrEmpty(path))
+      return string.Empty;
+    
+    // Replace all forward slashes with backslashes and remove duplicate separators
+    return path.Replace('/', '\\').Replace("\\\\", "\\");
   }
 
   private async Task BuildTreeToPath(string targetPath)
@@ -246,7 +290,10 @@ public partial class FileSystem : JsInteropableComponent
       for (int i = 1; i < pathSegments.Count; i++)
       {
         var nextSegment = pathSegments[i];
-        var nextPath = Path.Combine(currentPath, nextSegment);
+        
+        // Build the next path using consistent separator logic
+        // Always use backslashes for Windows paths to match server responses
+        var nextPath = (currentPath?.TrimEnd('\\', '/') ?? string.Empty) + "\\" + nextSegment;
 
         // Ensure current item has its children loaded
         if (currentItem.Children is null || currentItem.Children.Count == 0)
@@ -255,9 +302,9 @@ public partial class FileSystem : JsInteropableComponent
           currentItem.Children = [.. children];
         }
 
-        // Find the next item in the children
+        // Find the next item in the children - normalize both paths for comparison
         var nextItem = currentItem.Children?.FirstOrDefault(x =>
-          string.Equals(x.Value, nextPath, StringComparison.OrdinalIgnoreCase));
+          string.Equals(NormalizePath(x.Value ?? string.Empty), NormalizePath(nextPath), StringComparison.OrdinalIgnoreCase));
 
         if (nextItem is null)
         {
@@ -268,7 +315,7 @@ public partial class FileSystem : JsInteropableComponent
         // Expand the current item and move to the next
         currentItem.Expanded = true;
         currentItem = nextItem;
-        currentPath = nextPath;
+        currentPath = nextItem.Value; // Use the actual value from the server
       }
     }
     catch (Exception ex)
