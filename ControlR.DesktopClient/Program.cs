@@ -3,6 +3,8 @@
 namespace ControlR.DesktopClient;
 internal sealed class Program
 {
+  private static AppBuilder? _appBuilder;
+
   // Initialization code. Don't use any Avalonia, third-party APIs or any
   // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
   // yet and stuff might break.
@@ -13,8 +15,8 @@ internal sealed class Program
     {
       try
       {
-        BuildAvaloniaApp()
-          .StartWithClassicDesktopLifetime(args);
+        _appBuilder ??= BuildAvaloniaApp();
+        _appBuilder.StartWithClassicDesktopLifetime(args);
       }
       catch (InvalidOperationException ex) when (ex.Message.Contains("RenderTimer"))
       {
