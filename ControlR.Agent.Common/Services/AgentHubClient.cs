@@ -461,7 +461,7 @@ internal class AgentHubClient(
       }
 
       // Read the file and create a chunked stream
-      using var fileStream = _fileSystem.OpenFileStream(resolveResult.FileSystemPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+      using var fileStream = _fileSystem.OpenFileStream(resolveResult.FileSystemPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
       using var ms = new MemoryStream();
       await fileStream.CopyToAsync(ms);
       var chunkStream = CreateChunkedStream(ms.ToArray());
