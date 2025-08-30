@@ -313,6 +313,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "fileName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

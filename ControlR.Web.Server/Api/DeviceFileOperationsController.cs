@@ -143,6 +143,7 @@ public class DeviceFileOperationsController : ControllerBase
   public async Task<IActionResult> DownloadFile(
     [FromRoute] Guid deviceId,
     [FromQuery] string filePath,
+    [FromQuery] string? fileName,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -212,15 +213,18 @@ public class DeviceFileOperationsController : ControllerBase
       }
 
       // Determine file name for download
-      var fileName = Path.GetFileName(filePath);
-      if (string.IsNullOrWhiteSpace(fileName))
+      var downloadFileName = !string.IsNullOrWhiteSpace(fileName) 
+        ? fileName 
+        : Path.GetFileName(filePath);
+        
+      if (string.IsNullOrWhiteSpace(downloadFileName))
       {
-        fileName = "download";
+        downloadFileName = "download";
       }
 
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
-      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{downloadFileName}\"");
 
       // Stream the file content to the response
       await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))

@@ -179,8 +179,13 @@ public partial class FileSystem : JsInteropableComponent
     }
 
     // Detect if this is a Windows-style absolute path (e.g., C:\folder or \\server\share)
-    var isWindowsAbsolutePath = (path.Length >= 3 && char.IsLetter(path[0]) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) ||
-                               (path.StartsWith("\\\\") || path.StartsWith("//"));
+    var isWindowsAbsolutePath =
+      (path.Length >= 3 &&
+        char.IsLetter(path[0]) &&
+        path[1] == ':' && (path[2] == '\\' ||
+        path[2] == '/')) ||
+      path.StartsWith("\\\\") ||
+      path.StartsWith("//");
 
     // Detect if this is a Unix-style absolute path (starts with /)
     var isUnixAbsolutePath = path.StartsWith('/');
@@ -348,7 +353,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-      var downloadUrl = $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}";
+      var downloadUrl = $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
