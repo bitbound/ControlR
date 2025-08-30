@@ -11,4 +11,6 @@ public record FileDownloadHubDto(Guid StreamId, string FilePath);
 
 public record FileDeleteHubDto(string TargetPath);
 
-public record CreateDirectoryHubDto(string DirectoryPath);
+public record CreateDirectoryHubDto(string ParentPath, string DirectoryName);
+
+public record ValidateFilePathHubDto(string DirectoryPath, string FileName);

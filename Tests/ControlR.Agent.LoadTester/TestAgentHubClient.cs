@@ -134,7 +134,24 @@ public class TestAgentHubClient : IAgentHubClient
 
   public Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
   {
-    Console.WriteLine($"Received create directory request for {dto.DirectoryPath}");
+    Console.WriteLine($"Received create directory request for {dto.DirectoryName} in {dto.ParentPath}");
     return Result.Ok().AsTaskResult();
+  }
+
+  public Task<ValidateFilePathResponseDto> ValidateFilePath(ValidateFilePathHubDto dto)
+  {
+    Console.WriteLine($"Received validate file path request for {dto.FileName} in {dto.DirectoryPath}");
+    return Task.FromResult(new ValidateFilePathResponseDto(true));
+  }
+
+  public Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
+  {
+    Console.WriteLine($"Received get path segments request for {dto.TargetPath}");
+    return Task.FromResult(new PathSegmentsResponseDto
+    {
+      Success = true,
+      PathExists = true,
+      PathSegments = ["C:", "Users", "TestUser", "Documents"]
+    });
   }
 }

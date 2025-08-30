@@ -206,49 +206,6 @@
         }
       }
     },
-    "/api/device-file-operations/delete/{deviceId}": {
-      "delete": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/device-file-operations/create-directory/{deviceId}": {
       "post": {
         "tags": [
@@ -280,6 +237,49 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateDirectoryRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-operations/delete/{deviceId}": {
+      "delete": {
+        "tags": [
+          "DeviceFileOperations"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileDeleteRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileDeleteRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileDeleteRequestDto"
               }
             }
           },
@@ -408,6 +408,113 @@
         }
       }
     },
+    "/api/device-file-operations/validate-path/{deviceId}": {
+      "post": {
+        "tags": [
+          "DeviceFileOperations"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/contents": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/path-segments": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPathSegmentsRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPathSegmentsRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPathSegmentsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/device-file-system/root-drives": {
       "post": {
         "tags": [
@@ -460,38 +567,6 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/GetSubdirectoriesRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/device-file-system/contents": {
-      "post": {
-        "tags": [
-          "DeviceFileSystem"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetDirectoryContentsRequestDto"
               }
             }
           },
@@ -2290,7 +2365,8 @@
       "CreateDirectoryRequestDto": {
         "required": [
           "deviceId",
-          "directoryPath"
+          "parentPath",
+          "directoryName"
         ],
         "type": "object",
         "properties": {
@@ -2298,7 +2374,10 @@
             "type": "string",
             "format": "uuid"
           },
-          "directoryPath": {
+          "parentPath": {
+            "type": "string"
+          },
+          "directoryName": {
             "type": "string"
           }
         }
@@ -2737,6 +2816,22 @@
           }
         }
       },
+      "GetPathSegmentsRequestDto": {
+        "required": [
+          "deviceId",
+          "targetPath"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetPath": {
+            "type": "string"
+          }
+        }
+      },
       "GetRootDrivesRequestDto": {
         "required": [
           "deviceId"
@@ -3110,6 +3205,26 @@
           "tagId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "ValidateFilePathRequestDto": {
+        "required": [
+          "deviceId",
+          "directoryPath",
+          "fileName"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "directoryPath": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
           }
         }
       }

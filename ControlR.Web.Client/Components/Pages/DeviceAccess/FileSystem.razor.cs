@@ -145,6 +145,11 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private static string CombinePaths(string path1, string path2, string pathSeparator)
+  {
+    return $"{path1.TrimEnd(pathSeparator.ToCharArray())}{pathSeparator}{path2.TrimStart(pathSeparator.ToCharArray())}";
+  }
+
   private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
   {
     return new TreeItemData<string>
@@ -171,165 +176,88 @@ public partial class FileSystem : JsInteropableComponent
     };
   }
 
-  private static List<string> GetPathSegments(string path)
-  {
-    if (string.IsNullOrWhiteSpace(path))
-    {
-      return [];
-    }
-
-    // Detect if this is a Windows-style absolute path (e.g., C:\folder or \\server\share)
-    var isWindowsAbsolutePath =
-      (path.Length >= 3 &&
-        char.IsLetter(path[0]) &&
-        path[1] == ':' && (path[2] == '\\' ||
-        path[2] == '/')) ||
-      path.StartsWith("\\\\") ||
-      path.StartsWith("//");
-
-    // Detect if this is a Unix-style absolute path (starts with /)
-    var isUnixAbsolutePath = path.StartsWith('/');
-
-    var segments = new List<string>();
-
-    if (isWindowsAbsolutePath)
-    {
-      // Handle Windows-style paths
-      string root;
-      string remainingPath;
-
-      if (path.StartsWith("\\\\") || path.StartsWith("//"))
-      {
-        // UNC path (\\server\share)
-        var normalizedPath = path.Replace('/', '\\');
-        var parts = normalizedPath.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
-        {
-          root = $"\\\\{parts[0]}\\{parts[1]}\\";
-          remainingPath = string.Join("\\", parts.Skip(2));
-        }
-        else
-        {
-          root = normalizedPath;
-          remainingPath = string.Empty;
-        }
-      }
-      else
-      {
-        // Drive letter path (C:\folder)
-        root = path[..3]; // C:\ or C:/
-        remainingPath = path.Length > 3 ? path[3..] : string.Empty;
-      }
-
-      // Normalize the root separator
-      root = root.Replace('/', '\\');
-      segments.Add(root);
-
-      // Add remaining path segments
-      if (!string.IsNullOrEmpty(remainingPath))
-      {
-        var pathSegments = remainingPath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
-        segments.AddRange(pathSegments);
-      }
-    }
-    else if (isUnixAbsolutePath)
-    {
-      // Handle Unix-style paths
-      segments.Add("/");
-      var pathSegments = path[1..].Split('/', StringSplitOptions.RemoveEmptyEntries);
-      segments.AddRange(pathSegments);
-    }
-    else
-    {
-      // Relative path - split by any directory separator
-      var pathSegments = path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
-      segments.AddRange(pathSegments);
-    }
-
-    return segments;
-  }
-
-  private static string NormalizePath(string path)
-  {
-    if (string.IsNullOrEmpty(path))
-      return string.Empty;
-    
-    // Replace all forward slashes with backslashes and remove duplicate separators
-    return path.Replace('/', '\\').Replace("\\\\", "\\");
-  }
-
-  private async Task BuildTreeToPath(string targetPath)
+  private async Task<bool> BuildTreeToPath(string targetPath)
   {
     try
     {
-      // Parse the path into segments
-      var pathSegments = GetPathSegments(targetPath);
-      if (pathSegments.Count == 0)
+      // Get path segments from the agent to validate and parse the path correctly
+      var pathSegmentsResult = await ControlrApi.GetPathSegments(DeviceId, targetPath);
+      
+      if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {
-        return;
+        Logger.LogWarning("Failed to get path segments for {TargetPath}: {ErrorMessage}", 
+          targetPath, pathSegmentsResult.Reason);
+        Snackbar.Add($"Error validating path '{targetPath}'", Severity.Error);
+        return false;
       }
 
-      // Find or load the root drive
-      var rootPath = pathSegments[0];
-      var rootItem = InitialTreeItems.FirstOrDefault(x =>
-        string.Equals(x.Value, rootPath, StringComparison.OrdinalIgnoreCase));
-
-      if (rootItem is null)
+      var responseDto = pathSegmentsResult.Value;
+      
+      if (!responseDto.Success)
       {
-        // Root drive not found, reload root drives
-        await LoadRootDrives();
-        rootItem = InitialTreeItems.FirstOrDefault(x =>
-          string.Equals(x.Value, rootPath, StringComparison.OrdinalIgnoreCase));
-
-        if (rootItem is null)
-        {
-          Logger.LogWarning("Root path {RootPath} not found in drives", rootPath);
-          return;
-        }
+        Logger.LogWarning("Path segments request failed for {TargetPath}: {Error}", 
+          targetPath, responseDto.ErrorMessage);
+        Snackbar.Add($"Error validating path '{targetPath}': {responseDto.ErrorMessage}", Severity.Error);
+        return false;
       }
 
-      // Build the tree structure down to the target path
-      var currentItem = rootItem;
-      var currentPath = rootPath;
-
-      for (int i = 1; i < pathSegments.Count; i++)
+      if (!responseDto.PathExists)
       {
-        var nextSegment = pathSegments[i];
+        Logger.LogWarning("Path {TargetPath} does not exist", targetPath);
+        Snackbar.Add($"Path '{targetPath}' not found", Severity.Warning);
+        return false;
+      }
+
+      // Build the tree hierarchy using the path segments from the agent
+      var segments = responseDto.PathSegments;
+      if (segments.Length == 0)
+      {
+        Logger.LogWarning("No path segments returned for {TargetPath}", targetPath);
+        Snackbar.Add($"Error validating path '{targetPath}'", Severity.Error);
+        return false;
+      }
+
+      // Build the path progressively and ensure each level exists in the tree
+      var currentPath = segments[0]; // Start with root
+      var currentItems = InitialTreeItems;
+
+      // Navigate through each segment, expanding the tree as needed
+      for (var i = 1; i < segments.Length; i++)
+      {
+        var segmentToFind = segments[i];
         
-        // Build the next path using consistent separator logic
-        // Always use backslashes for Windows paths to match server responses
-        var nextPath = (currentPath?.TrimEnd('\\', '/') ?? string.Empty) + "\\" + nextSegment;
-
-        // Ensure current item has its children loaded
-        if (currentItem.Children is null || currentItem.Children.Count == 0)
+        // Find the parent item that contains our next segment
+        var parentItem = FindTreeItem(currentItems, currentPath);
+        if (parentItem is null)
         {
-          var children = await LoadServerData(currentItem.Value);
-          currentItem.Children = [.. children];
-        }
-
-        // Find the next item in the children - normalize both paths for comparison
-        var nextItem = currentItem.Children?.FirstOrDefault(x =>
-          string.Equals(NormalizePath(x.Value ?? string.Empty), NormalizePath(nextPath), StringComparison.OrdinalIgnoreCase));
-
-        if (nextItem is null)
-        {
-          Logger.LogWarning("Path segment {NextPath} not found in children of {CurrentPath}", nextPath, currentPath);
+          Logger.LogWarning("Could not find tree item for path segment {PathSegment}", currentPath);
+          Snackbar.Add($"Error navigating to '{targetPath}'", Severity.Error);
           break;
         }
 
-        // Expand the current item and move to the next
-        currentItem.Expanded = true;
-        currentItem = nextItem;
-        currentPath = nextItem.Value; // Use the actual value from the server
+        parentItem.Expanded = true;
+
+        // If children aren't loaded yet, load them
+        if (parentItem.Children is not { Count: > 0})
+        {
+          var children = await LoadServerData(parentItem.Value);
+          parentItem.Children = [.. children];
+        }
+
+        currentPath = CombinePaths(currentPath, segmentToFind, responseDto.PathSeparator);
+        currentItems = parentItem.Children;
       }
+      
+      StateHasChanged();
+      return true;
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error building tree to path {Path}", targetPath);
       Snackbar.Add($"Error navigating to '{targetPath}'", Severity.Error);
+      return false;
     }
   }
-
   private async Task DeleteSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -365,6 +293,13 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
+  {
+    if (items == null) return null;
+    
+    return items.FirstOrDefault(item => 
+      string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
+  }
   private async Task LoadDirectoryContents(string directoryPath)
   {
     try
@@ -461,8 +396,12 @@ public partial class FileSystem : JsInteropableComponent
 
     try
     {
-      // Path is valid, now build the tree structure to this path
-      await BuildTreeToPath(targetPath);
+      // Simply try to navigate to the path - let the agent validate it
+      var buildResult = await BuildTreeToPath(targetPath);
+      if (!buildResult)
+      {
+        return;
+      }
 
       await InvokeAsync(StateHasChanged);
       await Task.Delay(100); // Small delay to ensure tree is updated
@@ -638,30 +577,11 @@ public partial class FileSystem : JsInteropableComponent
         return; // User cancelled or provided empty name
       }
 
-      // Validate folder name
-      var invalidChars = Path.GetInvalidFileNameChars();
-      if (folderName.Any(c => invalidChars.Contains(c)))
-      {
-        var invalidCharList = string.Join(", ", folderName.Where(c => invalidChars.Contains(c)).Distinct());
-        Snackbar.Add($"Folder name contains invalid characters: {invalidCharList}", Severity.Warning);
-        return;
-      }
-
-      var fullPath = Path.Combine(SelectedPath, folderName);
-
-      // Check if directory already exists by checking current directory contents
-      if (DirectoryContents.Any(item => item.IsDirectory &&
-          string.Equals(item.Name, folderName, StringComparison.OrdinalIgnoreCase)))
-      {
-        Snackbar.Add("A folder with that name already exists", Severity.Warning);
-        return;
-      }
-
       IsNewFolderInProgress = true;
       StateHasChanged();
 
-      // Create the directory using the API
-      var result = await ControlrApi.CreateDirectory(DeviceId, fullPath);
+      // Create the directory using the new API structure
+      var result = await ControlrApi.CreateDirectory(DeviceId, SelectedPath, folderName);
       if (result.IsSuccess)
       {
         Snackbar.Add($"Successfully created folder '{folderName}'", Severity.Success);

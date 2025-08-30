@@ -16,7 +16,8 @@ public interface IControlrApi
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
-  Task<Result> CreateDirectory(Guid deviceId, string directoryPath);
+  Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName);
+  Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
@@ -42,6 +43,7 @@ public interface IControlrApi
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
   Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
+  Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
   Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
@@ -123,13 +125,25 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> CreateDirectory(Guid deviceId, string directoryPath)
+  public async Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName)
   {
     return await TryCallApi(async () =>
     {
-      var requestDto = new CreateDirectoryRequestDto(deviceId, directoryPath);
+      var requestDto = new CreateDirectoryRequestDto(deviceId, parentPath, directoryName);
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/create-directory/{deviceId}", requestDto);
       response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName)
+  {
+    return await TryCallApi(async () =>
+    {
+      var requestDto = new ValidateFilePathRequestDto(deviceId, directoryPath, fileName);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/validate-path/{deviceId}", requestDto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ?? 
+        new ValidateFilePathResponseDto(false, "Failed to deserialize response");
     });
   }
 
@@ -397,6 +411,18 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
     });
   }
+
+  public async Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath)
+  {
+    return await TryCallApi(async () =>
+    {
+      var dto = new GetPathSegmentsRequestDto(deviceId, targetPath);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/path-segments", dto);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<PathSegmentsResponseDto>();
+    });
+  }
+
   public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
   {
     return await TryCallApi(async () =>

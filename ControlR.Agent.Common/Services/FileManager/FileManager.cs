@@ -6,13 +6,16 @@ namespace ControlR.Agent.Common.Services.FileManager;
 
 public interface IFileManager
 {
+  Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName);
   Task<FileReferenceResult> CreateDirectory(string directoryPath);
   Task<FileReferenceResult> DeleteFileSystemEntry(string targetPath);
   Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath);
+  Task<PathSegmentsResponseDto> GetPathSegments(string targetPath);
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
   Task<FileReferenceResult> ResolveTargetFilePath(string targetPath);
   Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false);
+  Task<ValidateFilePathResponseDto> ValidateFilePath(string directoryPath, string fileName);
 }
 
 internal class FileManager(
@@ -21,6 +24,38 @@ internal class FileManager(
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<FileManager> _logger = logger;
+
+  public Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName)
+  {
+    try
+    {
+      if (string.IsNullOrWhiteSpace(parentPath))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("Parent path cannot be empty"));
+      }
+
+      if (string.IsNullOrWhiteSpace(directoryName))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("Directory name cannot be empty"));
+      }
+
+      // Validate parent directory exists
+      if (!_fileSystem.DirectoryExists(parentPath))
+      {
+        return Task.FromResult(FileReferenceResult.Fail("Parent directory does not exist"));
+      }
+
+      // Combine paths using the platform-appropriate path separator
+      var directoryPath = Path.Combine(parentPath, directoryName);
+
+      return CreateDirectory(directoryPath);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error creating directory: {DirectoryName} in {ParentPath}", directoryName, parentPath);
+      return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+    }
+  }
 
   public Task<FileReferenceResult> CreateDirectory(string directoryPath)
   {
@@ -359,6 +394,115 @@ internal class FileManager(
       // If we can't access the directory (permissions, etc.), assume no subdirectories
       _logger.LogDebug(ex, "Could not check subdirectories for {DirectoryPath}", directoryPath);
       return false;
+    }
+  }
+
+  public Task<ValidateFilePathResponseDto> ValidateFilePath(string directoryPath, string fileName)
+  {
+    try
+    {
+      if (string.IsNullOrWhiteSpace(directoryPath))
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "Directory path cannot be empty"));
+      }
+
+      if (string.IsNullOrWhiteSpace(fileName))
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "File name cannot be empty"));
+      }
+
+      // Check if directory exists
+      if (!_fileSystem.DirectoryExists(directoryPath))
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "Directory does not exist"));
+      }
+
+      // Check for invalid characters in file name
+      var invalidChars = Path.GetInvalidFileNameChars();
+      if (fileName.IndexOfAny(invalidChars) >= 0)
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "File name contains invalid characters"));
+      }
+
+      // Combine paths to get full file path
+      var fullPath = Path.Combine(directoryPath, fileName);
+
+      // Check if file already exists
+      if (_fileSystem.FileExists(fullPath))
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "File already exists"));
+      }
+
+      // Check if a directory with the same name exists
+      if (_fileSystem.DirectoryExists(fullPath))
+      {
+        return Task.FromResult(new ValidateFilePathResponseDto(false, "A directory with the same name already exists"));
+      }
+
+      return Task.FromResult(new ValidateFilePathResponseDto(true));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error validating file path: {FileName} in {DirectoryPath}", fileName, directoryPath);
+      return Task.FromResult(new ValidateFilePathResponseDto(false, $"Error validating path: {ex.Message}"));
+    }
+  }
+
+  public Task<PathSegmentsResponseDto> GetPathSegments(string targetPath)
+  {
+    try
+    {
+      if (string.IsNullOrWhiteSpace(targetPath))
+      {
+        return Task.FromResult(new PathSegmentsResponseDto
+        {
+          Success = false,
+          PathExists = false,
+          PathSegments = [],
+          ErrorMessage = "Target path cannot be empty"
+        });
+      }
+
+      // Check if the path exists
+      var pathExists = _fileSystem.DirectoryExists(targetPath);
+
+      // Split the path into segments
+      var normalizedPath = Path.GetFullPath(targetPath);
+      var pathSegments = new List<string>();
+
+      // Get the root (drive or root directory)
+      var root = Path.GetPathRoot(normalizedPath);
+      if (!string.IsNullOrEmpty(root))
+      {
+        pathSegments.Add(root);
+      }
+
+      // Get the remaining path segments
+      var relativePath = Path.GetRelativePath(root ?? string.Empty, normalizedPath);
+      if (!string.IsNullOrEmpty(relativePath) && relativePath != ".")
+      {
+        var segments = relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], 
+          StringSplitOptions.RemoveEmptyEntries);
+        pathSegments.AddRange(segments);
+      }
+
+      return Task.FromResult(new PathSegmentsResponseDto
+      {
+        Success = true,
+        PathExists = pathExists,
+        PathSegments = [.. pathSegments]
+      });
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting path segments for: {TargetPath}", targetPath);
+      return Task.FromResult(new PathSegmentsResponseDto
+      {
+        Success = false,
+        PathExists = false,
+        PathSegments = [],
+        ErrorMessage = $"Error getting path segments: {ex.Message}"
+      });
     }
   }
 }
