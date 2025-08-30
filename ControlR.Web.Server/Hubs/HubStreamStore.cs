@@ -17,17 +17,24 @@ public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryC
 
   public HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration)
   {
-    if (_memoryCache.TryGetValue(streamId, out var existing) && existing is HubStreamSignaler<T> typedExisting)
+    if (_memoryCache.TryGetValue(streamId, out var existing))
     {
-      return typedExisting;
-    }
-    if (_memoryCache.TryGetValue(streamId, out existing) && existing is IHubStreamSignaler wrongType)
-    {
-      // Remove existing wrong-typed signaler to avoid type mismatch
-      _memoryCache.Remove(streamId);
-      wrongType.Dispose();
-    }
+      if (existing is HubStreamSignaler<T> typedExisting)
+      {
+        return typedExisting;
+      }
 
+      _logger.LogWarning("Stream session {StreamId} requested with mismatched type. Existing: {ExistingType}, Requested: {RequestedType}",
+        streamId, existing?.GetType().FullName, typeof(T).FullName);
+        
+      _memoryCache.Remove(streamId);
+
+      if (existing is IDisposable disposable)
+      {
+        disposable.Dispose();
+      }
+    }
+    
     var cacheEntryOptions = new MemoryCacheEntryOptions
     {
       AbsoluteExpirationRelativeToNow = expiration,

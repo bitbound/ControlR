@@ -5,14 +5,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Authn;
 
-public class PersonalAccessTokenAuthenticationSchemeOptions : AuthenticationSchemeOptions
-{
-  public const string DefaultScheme = "PersonalAccessToken";
-  public const string DefaultHeaderName = "x-personal-token";
-  public string Scheme => DefaultScheme;
-  public string HeaderName { get; set; } = DefaultHeaderName;
-}
-
 public class PersonalAccessTokenAuthenticationHandler(
   UrlEncoder encoder,
   UserManager<AppUser> userManager,
@@ -46,10 +38,10 @@ public class PersonalAccessTokenAuthenticationHandler(
     }
 
     // Basic rate limiting keyed by token prefix (ID part) or remote IP fallback
-    string keyPart = providedPat.Split(':', 2).FirstOrDefault() ?? "unknown";
+    var keyPart = providedPat.Split(':', 2).FirstOrDefault() ?? "unknown";
     var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     var failureKey = $"patfail:{keyPart}:{remoteIp}";
-  if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) && failureCount >= MaxFailures)
+    if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) && failureCount >= MaxFailures)
     {
       return AuthenticateResult.Fail("Too many failed token attempts. Try again later.");
     }
@@ -58,8 +50,8 @@ public class PersonalAccessTokenAuthenticationHandler(
     if (!validationResult.IsSuccess || !validationResult.Value.IsValid)
     {
       // Increment failure counter
-      var newCount = (failureCount + 1);
-  _failureCache.Set(failureKey, newCount, _failureWindow);
+      var newCount = failureCount + 1;
+      _failureCache.Set(failureKey, newCount, _failureWindow);
       return AuthenticateResult.Fail("Invalid personal access token");
     }
 

@@ -220,7 +220,7 @@ public class DeviceFileSystemController : ControllerBase
       }
       signaler.EndSignal.Set();
       var directoryExists = signaler.Metadata is bool b && b;
-      return Ok(new GetDirectoryContentsResponseDto(entries.ToArray(), directoryExists));
+      return Ok(new GetDirectoryContentsResponseDto([.. entries], directoryExists));
     }
     catch (OperationCanceledException)
     {

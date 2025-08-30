@@ -8,14 +8,12 @@ namespace ControlR.Web.Server.Authn;
 public class LogonTokenAuthenticationHandler(
   UrlEncoder encoder,
   UserManager<AppUser> userManager,
-  SignInManager<AppUser> signInManager,
   IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
   ILoggerFactory logger,
   ILogonTokenProvider logonTokenProvider) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
-  private readonly SignInManager<AppUser> _signInManager = signInManager;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
