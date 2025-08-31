@@ -89,6 +89,30 @@ Role Descriptions:
   - Able to manage and see stats for the server
   - This does not allow access to other tenants' devices or users
 
+## API Spec
+An OpenAPI spec is created with each build of the server and committed to the repository.  It can be found [here](/ControlR.Web.Server/ControlR.Web.Server.json), or within the artifacts for each GitHub release.  You can use this file to generate API clients in any language.
+
+While debugging, you can also browse the API at https://localhost:7033/scalar/ or https://localhost:7033/openapi/v1.json.
+
+## Personal Access Tokens
+
+Personal Access Tokens (PATs) allow you to authenticate with the ControlR API as your user account without using a username and password. They can be used for integrations, scripts, automation, and other scenarios where you need to authenticate programmatically.
+
+To create a PAT, follow these steps:
+
+1. Go to the **Access Tokens** page in the ControlR web interface.
+2. Enter a friendly name for your token.
+3. Click the **Create PAT** button.
+4. Copy the generated token. **Make sure to store it securely**, as it will never be shown again.
+5. Add the token to the `x-personal-token` header in your API requests.
+
+## Logon Tokens
+Logon Tokens are time-limited, single-use tokens that allow you to create an authenticated browser session with a **specific device**.  Coupled with PATs, this allows you to create an integration that can opens a browser tab to access a particular device.
+
+See the `/api/logon-tokens` endpoint in the API spec.  A successful response includes the full URL, including the logon token, that can be opened in the browser to access the target device.
+
+Remember that the token is single-use, so the URL can only be accessed once.
+
 ## Metrics
 
 Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface is exposed on port 18888, and it's secured by the `aspireToken` value.
