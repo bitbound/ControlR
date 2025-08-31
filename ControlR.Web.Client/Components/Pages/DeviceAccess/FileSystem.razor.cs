@@ -2,6 +2,7 @@ using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
@@ -182,20 +183,20 @@ public partial class FileSystem : JsInteropableComponent
     {
       // Get path segments from the agent to validate and parse the path correctly
       var pathSegmentsResult = await ControlrApi.GetPathSegments(DeviceId, targetPath);
-      
+
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {
-        Logger.LogWarning("Failed to get path segments for {TargetPath}: {ErrorMessage}", 
+        Logger.LogWarning("Failed to get path segments for {TargetPath}: {ErrorMessage}",
           targetPath, pathSegmentsResult.Reason);
         Snackbar.Add($"Error validating path '{targetPath}'", Severity.Error);
         return false;
       }
 
       var responseDto = pathSegmentsResult.Value;
-      
+
       if (!responseDto.Success)
       {
-        Logger.LogWarning("Path segments request failed for {TargetPath}: {Error}", 
+        Logger.LogWarning("Path segments request failed for {TargetPath}: {Error}",
           targetPath, responseDto.ErrorMessage);
         Snackbar.Add($"Error validating path '{targetPath}': {responseDto.ErrorMessage}", Severity.Error);
         return false;
@@ -225,7 +226,7 @@ public partial class FileSystem : JsInteropableComponent
       for (var i = 1; i < segments.Length; i++)
       {
         var segmentToFind = segments[i];
-        
+
         // Find the parent item that contains our next segment
         var parentItem = FindTreeItem(currentItems, currentPath);
         if (parentItem is null)
@@ -238,7 +239,7 @@ public partial class FileSystem : JsInteropableComponent
         parentItem.Expanded = true;
 
         // If children aren't loaded yet, load them
-        if (parentItem.Children is not { Count: > 0})
+        if (parentItem.Children is not { Count: > 0 })
         {
           var children = await LoadServerData(parentItem.Value);
           parentItem.Children = [.. children];
@@ -247,7 +248,7 @@ public partial class FileSystem : JsInteropableComponent
         currentPath = CombinePaths(currentPath, segmentToFind, responseDto.PathSeparator);
         currentItems = parentItem.Children;
       }
-      
+
       StateHasChanged();
       return true;
     }
@@ -296,9 +297,21 @@ public partial class FileSystem : JsInteropableComponent
   private TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
   {
     if (items == null) return null;
-    
-    return items.FirstOrDefault(item => 
+
+    return items.FirstOrDefault(item =>
       string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
+  }
+
+  private void HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
+  {
+    if (args.MouseEventArgs.CtrlKey)
+    {
+      SelectedItems.Add(args.Item);
+    }
+    else
+    {
+      SelectedPath = args.Item.FullPath;
+    }
   }
   private async Task LoadDirectoryContents(string directoryPath)
   {
