@@ -14,6 +14,7 @@ public class LogonTokenController : ControllerBase
   public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken(
     [FromServices] AppDb appDb,
     [FromServices] ILogonTokenProvider logonTokenProvider,
+    [FromServices] IAuthorizationService authorizationService,
     [FromBody] LogonTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -38,6 +39,12 @@ public class LogonTokenController : ControllerBase
     if (user is null || user.TenantId != tenantId)
     {
       return BadRequest("User not found or does not belong to this tenant");
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+    if (!authResult.Succeeded)
+    {
+      return Forbid();
     }
 
     var logonToken = await logonTokenProvider.CreateTokenAsync(

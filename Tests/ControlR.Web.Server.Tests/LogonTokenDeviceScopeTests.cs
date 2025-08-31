@@ -24,14 +24,13 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
     var otherDeviceId = Guid.NewGuid();
 
     // Setup tenant + devices + user
-    var tenant = await testApp.TestServer.Services.CreateTestTenant();
-    await testApp.TestServer.Services.CreateTestDevice(tenant.Id, primaryDeviceId);
-    await testApp.TestServer.Services.CreateTestDevice(tenant.Id, otherDeviceId);
-    var user = await testApp.TestServer.Services.CreateTestUser(tenant.Id);
+    var user = await testApp.TestServer.Services.CreateTestUser();
+    await testApp.TestServer.Services.CreateTestDevice(user.TenantId, primaryDeviceId);
+    await testApp.TestServer.Services.CreateTestDevice(user.TenantId, otherDeviceId);
 
     // Create PAT
     var patManager = testApp.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var patCreate = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), tenant.Id, user.Id);
+    var patCreate = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), user.TenantId, user.Id);
     Assert.True(patCreate.IsSuccess, patCreate.Reason);
     var pat = patCreate.Value.PlainTextToken;
 

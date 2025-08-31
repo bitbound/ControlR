@@ -1,4 +1,6 @@
-﻿namespace ControlR.Web.Server.Authz.Policies;
+﻿using ControlR.Web.Server.Authn;
+
+namespace ControlR.Web.Server.Authz.Policies;
 
 public static class DeviceAccessByDeviceResourcePolicy
 {
@@ -27,15 +29,46 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("Device does not belong to this tenant.", handlerCtx, authzHandler, logger);
         }
 
+        if (!handlerCtx.User.TryGetUserId(out var userId))
+        {
+          return Fail("User ID claim is missing.", handlerCtx, authzHandler, logger);
+        }
+
+
+        // For logon token users, check if the device ID matches the token's device
+        var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
+        if (authMethod == LogonTokenAuthenticationSchemeOptions.DefaultScheme)
+        {
+          // Prefer the new scoped claim; fall back to legacy DeviceId claim if absent.
+          var scopedDeviceIdValue = handlerCtx.User.FindFirst(UserClaimTypes.DeviceSessionScope)?.Value;
+          if (Guid.TryParse(scopedDeviceIdValue, out var tokenDeviceId))
+          {
+            if (device.Id == tokenDeviceId)
+            {
+              logger.LogInformation(
+                "Logon token user {UserId} authorized for scoped device {DeviceId}",
+                userId, device.Id);
+              return true;
+            }
+            else
+            {
+              logger.LogWarning(
+                "Logon token user {UserId} not authorized for scoped device {DeviceId}",
+                userId, device.Id);
+            }
+          }
+
+          return Fail(
+            "Logon token is not authorized for this device.",
+            handlerCtx,
+            authzHandler,
+            logger);
+        }
+
         if (handlerCtx.User.IsInRole(RoleNames.TenantAdministrator) ||
             handlerCtx.User.IsInRole(RoleNames.DeviceSuperUser))
         {
           return true;
-        }
-
-        if (!handlerCtx.User.TryGetUserId(out var userId))
-        {
-          return Fail("User ID claim is missing.", handlerCtx, authzHandler, logger);
         }
 
         await using var scope = sp.CreateAsyncScope();
@@ -48,30 +81,6 @@ public static class DeviceAccessByDeviceResourcePolicy
         if (user is null)
         {
           return Fail("User does not exist.", handlerCtx, authzHandler, logger);
-        }
-
-        // For logon token users, check if the device ID matches the token's device
-        var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
-        if (authMethod == "LogonToken")
-        {
-          // Prefer the new scoped claim; fall back to legacy DeviceId claim if absent.
-          var scopedDeviceIdValue = handlerCtx.User.FindFirst(UserClaimTypes.DeviceSessionScope)?.Value;
-          if (scopedDeviceIdValue != null && Guid.TryParse(scopedDeviceIdValue, out var tokenDeviceId))
-          {
-            if (device.Id == tokenDeviceId)
-            {
-              logger.LogInformation(
-                "Logon token user {UserId} authorized for scoped device {DeviceId}",
-                userId, device.Id);
-              return true;
-            }
-          }
-
-          return Fail(
-            "Logon token is not authorized for this device.",
-            handlerCtx,
-            authzHandler,
-            logger);
         }
 
         await db
