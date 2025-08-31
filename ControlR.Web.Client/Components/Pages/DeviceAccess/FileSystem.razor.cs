@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
@@ -302,7 +303,7 @@ public partial class FileSystem : JsInteropableComponent
       string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
   }
 
-  private void HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
+  private async Task HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
   {
     if (args.MouseEventArgs.CtrlKey)
     {
@@ -310,7 +311,8 @@ public partial class FileSystem : JsInteropableComponent
     }
     else
     {
-      SelectedPath = args.Item.FullPath;
+      AddressBarValue = args.Item.FullPath;
+      await NavigateToAddress();
     }
   }
   private async Task LoadDirectoryContents(string directoryPath)

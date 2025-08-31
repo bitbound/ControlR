@@ -8,7 +8,7 @@
 <div @ref="_containerRef" class="file-system-container h-100">
   <div class="address-bar-container">
     <MudTextField @bind-Value="AddressBarValue" Label="Address" Variant="Variant.Outlined" Immediate
-      Adornment="Adornment.End" AdornmentIcon="Icons.Material.Filled.SubdirectoryArrowRight"
+      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
       AdornmentColor="Color.Primary" OnAdornmentClick="NavigateToAddress"
       @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
       FullWidth="true" Class="address-bar" />
