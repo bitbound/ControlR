@@ -57,12 +57,15 @@ public partial class FileSystem : JsInteropableComponent
     get => _selectedPath;
     set
     {
-      if (_selectedPath != value)
+      if (string.IsNullOrWhiteSpace(value) ||
+          _selectedPath == value)
       {
-        _selectedPath = value;
-        _addressBarValue = value ?? string.Empty;
-        InvokeAsync(async () => await OnSelectedPathChanged(value));
+        return;
       }
+
+      _selectedPath = value;
+      _addressBarValue = value;
+      InvokeAsync(async () => await OnSelectedPathChanged(value));
     }
   }
 
@@ -136,15 +139,6 @@ public partial class FileSystem : JsInteropableComponent
     }
 
     await LoadRootDrives();
-  }
-
-  protected override async Task OnParametersSetAsync()
-  {
-    await base.OnParametersSetAsync();
-    if (DeviceId != Guid.Empty && !IsLoading)
-    {
-      await LoadRootDrives();
-    }
   }
 
   private static string CombinePaths(string path1, string path2, string pathSeparator)
@@ -404,6 +398,7 @@ public partial class FileSystem : JsInteropableComponent
   private async Task NavigateToAddress()
   {
     var targetPath = _addressBarValue.Trim();
+
     if (string.IsNullOrWhiteSpace(targetPath))
     {
       return;

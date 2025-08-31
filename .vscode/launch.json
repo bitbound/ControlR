@@ -35,6 +35,18 @@
       "console": "internalConsole"
     },
     {
+      "name": "Server (wasm debug)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "browser": "edge",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "hosted": true,
+      "program": "${workspaceFolder}/ControlR.Web.Server/bin/Debug/net9.0/ControlR.Web.Server.dll",
+      "cwd": "${workspaceFolder}/ControlR.Web.Server",
+    },
+    {
       "name": "LoadTester",
       "type": "coreclr",
       "request": "launch",
@@ -61,6 +73,21 @@
         "order": 0
       }
     },
+      {
+      "name": "Full Stack (wasm debug)",
+      "preLaunchTask": "build + compose",
+      "configurations": [
+        "Server (wasm debug)",
+        "Agent (Run)",
+        "DesktopClient"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 1
+      }
+    },
     {
       "name": "Load Test",
       "preLaunchTask": "build + compose",
@@ -72,7 +99,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 1
+        "order": 2
       }
     },
     {
@@ -85,7 +112,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 2
+        "order": 3
       }
     }
   ]
