@@ -6,7 +6,7 @@ public interface IChatState : IStateBase
   Guid SessionId { get; set; }
   bool EnableMultiline { get; set; }
   string NewMessage { get; set; }
-  DeviceUiSession? SelectedSession { get; set; }
+  DeviceUiSession? CurrentSession { get; set; }
 
   void Clear();
 }
@@ -15,14 +15,14 @@ public class ChatState(ILogger<ChatState> logger) : StateBase(logger), IChatStat
 {
   public ConcurrentList<ChatMessage> ChatMessages { get; } = [];
 
-  public Guid SessionId { get; set; } = Guid.NewGuid();
+  public Guid SessionId { get; set; }
   public bool EnableMultiline { get; set; }
   public string NewMessage { get; set; } = string.Empty;
-  public DeviceUiSession? SelectedSession { get; set; }
+  public DeviceUiSession? CurrentSession { get; set; }
 
   public void Clear()
   {
-    SelectedSession = null;
+    CurrentSession = null;
     ChatMessages.Clear();
     SessionId = Guid.Empty;
     NotifyStateChanged();

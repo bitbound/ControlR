@@ -81,12 +81,12 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
   public async ValueTask DisposeAsync()
   {
-    if (ChatState.SelectedSession is not null)
+    if (ChatState.CurrentSession is not null)
     {
       await ViewerHub.CloseChatSession(
         DeviceAccessState.CurrentDevice.Id,
         ChatState.SessionId,
-        ChatState.SelectedSession.ProcessId);
+        ChatState.CurrentSession.ProcessId);
     }
     ChatState.Clear();
     Messenger.UnregisterAll(this);

@@ -50,16 +50,10 @@ public static class DeviceAccessByDeviceResourcePolicy
                 userId, device.Id);
               return true;
             }
-            else
-            {
-              logger.LogWarning(
-                "Logon token user {UserId} not authorized for scoped device {DeviceId}",
-                userId, device.Id);
-            }
           }
 
           return Fail(
-            "Logon token is not authorized for this device.",
+            $"Logon token user {userId} is not authorized for device {device.Id}.",
             handlerCtx,
             authzHandler,
             logger);
@@ -112,7 +106,7 @@ public static class DeviceAccessByDeviceResourcePolicy
   {
     var authorizationResult = new AuthorizationFailureReason(authzHandler, reason);
     handlerCtx.Fail(authorizationResult);
-    logger.LogInformation("Authorization failure: {Reason}", reason);
+    logger.LogDebug("Authorization failure: {Reason}", reason);
     return false;
   }
 }

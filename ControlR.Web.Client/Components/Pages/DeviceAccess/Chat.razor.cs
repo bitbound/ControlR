@@ -76,7 +76,7 @@ public partial class Chat : ComponentBase, IDisposable
         return ChatPageState.UnsupportedOperatingSystem;
       }
 
-      if (ChatState.SelectedSession is not null)
+      if (ChatState.CurrentSession is not null)
       {
         return ChatPageState.ChatActive;
       }
@@ -140,12 +140,12 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task CloseChatSession()
   {
-    if (ChatState.SelectedSession is not null)
+    if (ChatState.CurrentSession is not null)
     {
       var result = await ViewerHub.CloseChatSession(
         DeviceAccessState.CurrentDevice.Id,
         ChatState.SessionId,
-        ChatState.SelectedSession.ProcessId);
+        ChatState.CurrentSession.ProcessId);
 
       if (!result.IsSuccess)
       {
@@ -154,9 +154,7 @@ public partial class Chat : ComponentBase, IDisposable
       }
     }
 
-    ChatState.SelectedSession = null;
-    ChatState.ChatMessages.Clear();
-    ChatState.SessionId = Guid.Empty;
+    ChatState.Clear();
     await InvokeAsync(StateHasChanged);
   }
 
@@ -217,7 +215,7 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task SendMessage()
   {
-    if (string.IsNullOrWhiteSpace(ChatState.NewMessage) || ChatState.SelectedSession is null)
+    if (string.IsNullOrWhiteSpace(ChatState.NewMessage) || ChatState.CurrentSession is null)
     {
       return;
     }
@@ -230,8 +228,8 @@ public partial class Chat : ComponentBase, IDisposable
         ChatState.NewMessage.Trim(),
         string.Empty, // SenderName will be set in the hub
         string.Empty, // SenderEmail will be set in the hub
-        ChatState.SelectedSession.SystemSessionId,
-        ChatState.SelectedSession.ProcessId,
+        ChatState.CurrentSession.SystemSessionId,
+        ChatState.CurrentSession.ProcessId,
         DateTimeOffset.Now);
 
       // Add the message to our local chat
@@ -272,7 +270,8 @@ public partial class Chat : ComponentBase, IDisposable
     try
     {
       ChatState.Clear();
-      ChatState.SelectedSession = session;
+      ChatState.CurrentSession = session;
+      ChatState.SessionId = Guid.NewGuid();
 
       Logger.LogInformation(
         "Starting chat session with {Username} on session {SessionId}, process {ProcessId}",
