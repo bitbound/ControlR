@@ -123,6 +123,7 @@
                      RowsPerPage="50"
                      MultiSelection="true"
                      RowClick="HandleFileSystemRowClick"
+                     SelectOnRowClick="@false"
                      RowClass="cursor-pointer"
                      QuickFilter="JsonValueFilter.GetQuickFilter<FileSystemEntryViewModel>(_searchText, Logger)">
           <Columns>

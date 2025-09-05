@@ -299,9 +299,16 @@ public partial class FileSystem : JsInteropableComponent
 
   private async Task HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
   {
-    if (args.MouseEventArgs.CtrlKey)
+    if (args.MouseEventArgs.CtrlKey || !args.Item.IsDirectory)
     {
-      SelectedItems.Add(args.Item);
+      if (SelectedItems.Contains(args.Item))
+      {
+        SelectedItems.Remove(args.Item);
+      }
+      else
+      {
+        SelectedItems.Add(args.Item);
+      }
     }
     else
     {
@@ -418,8 +425,6 @@ public partial class FileSystem : JsInteropableComponent
 
       // Set the selected path (this will also load directory contents)
       SelectedPath = targetPath;
-
-      Snackbar.Add($"Navigated to '{targetPath}'", Severity.Success);
     }
     catch (Exception ex)
     {
