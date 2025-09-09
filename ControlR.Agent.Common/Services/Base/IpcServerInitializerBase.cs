@@ -52,6 +52,7 @@ internal abstract class IpcServerInitializerBase(
         {
           var responseDto = new ChatResponseHubDto(
             dto.SessionId,
+            dto.DesktopUiProcessId,
             dto.Message,
             dto.SenderUsername,
             dto.ViewerConnectionId,

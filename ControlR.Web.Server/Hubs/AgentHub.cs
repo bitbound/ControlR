@@ -101,6 +101,7 @@ public class AgentHub(
         "Viewer {ViewerConnectionId} for chat session {SessionId} is no longer connected.",
         responseDto.ViewerConnectionId,
         responseDto.SessionId);
+      await Clients.Caller.CloseChatSession(responseDto.SessionId, responseDto.DesktopUiProcessId);
       return false;
     }
     catch (Exception ex)

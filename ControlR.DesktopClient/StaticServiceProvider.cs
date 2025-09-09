@@ -85,6 +85,7 @@ internal static class StaticServiceProvider
     services.AddSingleton(TimeProvider.System);
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
     services.AddSingleton<INavigationProvider, NavigationProvider>();
     services.AddSingleton<IAppViewModel, AppViewModel>();
     services.AddSingleton<IMainWindowViewModel, MainWindowViewModel>();

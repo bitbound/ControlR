@@ -9,6 +9,7 @@ using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
@@ -16,6 +17,7 @@ namespace ControlR.DesktopClient.Services;
 internal class ChatSessionManager(
   IServiceProvider serviceProvider,
   IIpcClientAccessor ipcClientAccessor,
+  ISystemEnvironment systemEnvironment,
   IToaster toaster,
   ILogger<ChatSessionManager> logger) : IChatSessionManager
 {
@@ -23,6 +25,7 @@ internal class ChatSessionManager(
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<ChatSessionManager> _logger = logger;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
 
   public Task AddMessage(Guid sessionId, ChatMessageIpcDto message)
@@ -119,6 +122,7 @@ internal class ChatSessionManager(
 #endif
       var response = new ChatResponseIpcDto(
         sessionId,
+        _systemEnvironment.ProcessId,
         message,
         currentUser,
         session.ViewerConnectionId,

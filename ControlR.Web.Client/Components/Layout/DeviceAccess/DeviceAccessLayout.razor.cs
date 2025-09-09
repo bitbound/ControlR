@@ -83,11 +83,10 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   {
     if (ChatState.CurrentSession is not null)
     {
-      await Task.Yield();
-      // await ViewerHub.CloseChatSession(
-      //   DeviceAccessState.CurrentDevice.Id,
-      //   ChatState.SessionId,
-      //   ChatState.CurrentSession.ProcessId);
+      await ViewerHub.CloseChatSession(
+        DeviceAccessState.CurrentDevice.Id,
+        ChatState.SessionId,
+        ChatState.CurrentSession.ProcessId);
     }
     ChatState.Clear();
     Messenger.UnregisterAll(this);
@@ -118,7 +117,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
           var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
           query.Remove("logonToken");
           // Rebuild remaining query string (retain deviceId and any future params)
-          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys!.Select(k => $"{k}={query[k]}") ) : string.Empty;
+          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys!.Select(k => $"{k}={query[k]}")) : string.Empty;
           NavManager.NavigateTo(basePath + remaining, replace: true);
         }
       }

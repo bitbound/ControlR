@@ -11,6 +11,7 @@ public interface ISystemEnvironment
   bool IsDebug { get; }
   bool IsWindows { get; }
   SystemPlatform Platform { get; }
+  int ProcessId { get; }
   RuntimeId Runtime { get; }
   string SelfExtractDir { get; }
   string StartupDirectory { get; }
@@ -81,6 +82,8 @@ public class SystemEnvironment : ISystemEnvironment
       return SystemPlatform.Unknown;
     }
   }
+
+  public int ProcessId => Environment.ProcessId;
 
   public RuntimeId Runtime
   {
