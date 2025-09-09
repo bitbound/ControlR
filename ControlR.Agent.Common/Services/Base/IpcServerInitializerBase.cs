@@ -57,13 +57,12 @@ internal abstract class IpcServerInitializerBase(
             dto.ViewerConnectionId,
             dto.Timestamp);
 
-          await _hubConnection.Server.SendChatResponse(responseDto);
-          
           _logger.LogInformation(
-            "Chat response sent to server for session {SessionId} from {Username}",
+            "Sending chat response for session {SessionId} from {Username}",
             responseDto.SessionId,
             responseDto.SenderUsername);
-          return true;
+
+          return await _hubConnection.Server.SendChatResponse(responseDto);
         }
         catch (Exception ex)
         {

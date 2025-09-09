@@ -115,10 +115,7 @@ public abstract class StreamingClient(
       throw new ArgumentException("Cannot send ACK DTOs with this method.  Use SendAck instead.");
     }
 
-    if (!await WaitForSendBuffer(cancellationToken))
-    {
-      return;
-    }
+    await WaitForSendBuffer(cancellationToken);
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
@@ -293,11 +290,11 @@ public abstract class StreamingClient(
       true,
       cancellationToken);
   }
-  private async Task<bool> WaitForSendBuffer(CancellationToken cancellationToken)
+  private async Task WaitForSendBuffer(CancellationToken cancellationToken)
   {
     if (_sendBufferLength < _maxSendBufferLength)
     {
-      return true;
+      return;
     }
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -308,12 +305,9 @@ public abstract class StreamingClient(
         pollingDelay: TimeSpan.FromMilliseconds(25),
         cancellationToken: linkedCts.Token);
 
-    if (waitResult)
+    if (!waitResult)
     {
-      return true;
+      _logger.LogError("Timed out while waiting for send buffer to drain.");
     }
-
-    _logger.LogError("Timed out while waiting for send buffer to drain.");
-    return false;
   }
 }

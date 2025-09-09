@@ -6,7 +6,7 @@ namespace ControlR.Libraries.Shared.Hubs;
 public interface IAgentHub
 {
   IAsyncEnumerable<byte[]> GetFileUploadStream(FileUploadHubDto dto);
-  Task SendChatResponse(ChatResponseHubDto responseDto);
+  Task<bool> SendChatResponse(ChatResponseHubDto responseDto);
   Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto);
   Task SendDesktopPreviewStream(Guid streamId, IAsyncEnumerable<byte[]> jpegChunks);
   Task SendFileDownloadStream(Guid streamId, IAsyncEnumerable<byte[]> fileChunks);

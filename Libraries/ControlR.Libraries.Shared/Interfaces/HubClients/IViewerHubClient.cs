@@ -12,5 +12,5 @@ public interface IViewerHubClient : IHubClient
   Task ReceiveServerStats(ServerStatsDto serverStats);
   Task ReceiveDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto);
   Task ReceiveTerminalOutput(TerminalOutputDto output);
-  Task ReceiveChatResponse(ChatResponseHubDto dto);
+  Task<bool> ReceiveChatResponse(ChatResponseHubDto dto);
 }

@@ -47,8 +47,9 @@ public class ViewerHubClient(IMessenger messenger, IDeviceStore deviceStore) : I
     await _messenger.Send(new DtoReceivedMessage<TerminalOutputDto>(output));
   }
 
-  public async Task ReceiveChatResponse(ChatResponseHubDto dto)
+  public async Task<bool> ReceiveChatResponse(ChatResponseHubDto dto)
   {
-    await _messenger.Send(new DtoReceivedMessage<ChatResponseHubDto>(dto));
+    var exceptions = await _messenger.Send(new DtoReceivedMessage<ChatResponseHubDto>(dto));
+    return exceptions.Count == 0;
   }
 }

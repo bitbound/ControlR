@@ -82,22 +82,31 @@ public class AgentHub(
       .ReceiveDesktopClientDownloadProgress(progressDto);
   }
 
-  public async Task SendChatResponse(ChatResponseHubDto responseDto)
+  public async Task<bool> SendChatResponse(ChatResponseHubDto responseDto)
   {
     try
     {
-      await _viewerHub.Clients
-        .Client(responseDto.ViewerConnectionId)
-        .ReceiveChatResponse(responseDto);
-      
       _logger.LogInformation(
-        "Chat response forwarded to viewer {ViewerConnectionId} for session {SessionId}",
+        "Sending chat response to viewer {ViewerConnectionId} for session {SessionId}",
         responseDto.ViewerConnectionId,
         responseDto.SessionId);
+
+      return await _viewerHub.Clients
+        .Client(responseDto.ViewerConnectionId)
+        .ReceiveChatResponse(responseDto);
+    }
+    catch (IOException ex) when (ex.Message.Contains("does not exist"))
+    {
+      _logger.LogWarning(
+        "Viewer {ViewerConnectionId} for chat session {SessionId} is no longer connected.",
+        responseDto.ViewerConnectionId,
+        responseDto.SessionId);
+      return false;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error forwarding chat response to viewer.");
+      return false;
     }
   }
 

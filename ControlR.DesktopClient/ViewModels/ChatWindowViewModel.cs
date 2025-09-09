@@ -25,7 +25,7 @@ public class ChatWindowViewModel(
   IToaster toaster,
   ILogger<ChatWindowViewModel> logger) : ViewModelBase, IChatWindowViewModel
 {
-  
+
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
   private readonly IToaster _toaster = toaster;
   private readonly ILogger<ChatWindowViewModel> _logger = logger;
@@ -35,13 +35,13 @@ public class ChatWindowViewModel(
 
   public ObservableCollection<ChatMessageViewModel> Messages { get; } = [];
 
-  public string NewMessage 
-  { 
+  public string NewMessage
+  {
     get => _newMessage;
     set => SetProperty(ref _newMessage, value);
   }
 
-  public string ChatTitle => Session is not null 
+  public string ChatTitle => Session is not null
     ? string.Format(Localization.ChatWindowTitle, Session.ViewerConnectionId)
     : Localization.ChatWindowDefaultTitle;
 
@@ -55,23 +55,20 @@ public class ChatWindowViewModel(
     }
 
     var message = NewMessage.Trim();
-    
-    // Add the message to our local collection immediately
-    var messageViewModel = new ChatMessageViewModel(message, Localization.You, false);
-    Messages.Add(messageViewModel);
 
     // Send the response via the chat session manager
     var success = await _chatSessionManager.SendResponse(Session.SessionId, message);
 
     if (success)
     {
+      // Add the message to our local collection immediately
+      var messageViewModel = new ChatMessageViewModel(message, Localization.You, false);
+      Messages.Add(messageViewModel);
       NewMessage = string.Empty;
       _logger.LogDebug("Message sent successfully for session {SessionId}", Session.SessionId);
     }
     else
     {
-      // Remove the message if sending failed
-      Messages.Remove(messageViewModel);
       _logger.LogWarning("Failed to send message for session {SessionId}", Session.SessionId);
       await _toaster.ShowToast("Send Failure", "Failed to send message", ToastIcon.Error);
     }
@@ -89,7 +86,7 @@ public class ChatWindowViewModel(
     var success = await _chatSessionManager.SendResponse(Session.SessionId, systemMessage);
 
     await _chatSessionManager.CloseChatSession(Session.SessionId, false);
-    
+
     if (success)
     {
       _logger.LogDebug("Chat window closed system message sent for session {SessionId}", Session.SessionId);

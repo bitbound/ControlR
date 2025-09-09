@@ -58,12 +58,19 @@
 }
 
 .content-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
   border: 1px solid var(--mud-palette-divider);
   border-radius: 4px;
   padding: 16px;
-  overflow-y: auto;
+  overflow-y: hidden;
   background-color: var(--mud-palette-background);
   margin-left: 8px;
+}
+
+.content-panel .file-system-grid-cell {
+  overflow: auto;
 }
 
 @media (max-width: 768px) {
@@ -75,9 +82,9 @@
   .grid-splitter {
     display: none;
   }
-  
+
   .tree-panel {
-    max-height: 300px;
+    max-height: 30vh;
     margin-right: 0;
     margin-bottom: 8px;
   }

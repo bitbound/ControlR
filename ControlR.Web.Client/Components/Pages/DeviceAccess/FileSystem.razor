@@ -104,48 +104,50 @@
           </MudTooltip>
         </div>
       </div>
-      @if (IsLoadingContents)
-      {
-        <div class="d-flex justify-center align-center" style="height: 200px;">
-          <MudProgressCircular Indeterminate="true" />
-        </div>
-      }
-      else if (!string.IsNullOrEmpty(SelectedPath))
-      {
-        <MudDataGrid T="FileSystemEntryViewModel"
-                     Items="DirectoryContents"
-                     @bind-SelectedItems="SelectedItems"
-                     Dense="true"
-                     Hover="true"
-                     SortMode="SortMode.Multiple"
-                     Filterable="true"
-                     Hideable="false"
-                     RowsPerPage="50"
-                     MultiSelection="true"
-                     RowClick="HandleFileSystemRowClick"
-                     SelectOnRowClick="@false"
-                     RowClass="cursor-pointer"
-                     QuickFilter="JsonValueFilter.GetQuickFilter<FileSystemEntryViewModel>(_searchText, Logger)">
-          <Columns>
-            <SelectColumn T="FileSystemEntryViewModel" />
-            <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
-              <CellTemplate>
-                <MudIcon Icon="@context.Item.Icon" Size="Size.Small" />
-              </CellTemplate>
-            </PropertyColumn>
-            <PropertyColumn Property="x => x.Name" Title="Name" />
-            <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
-            <PropertyColumn Property="x => x.LastModified" Title="Modified" />
-          </Columns>
-          <PagerContent>
-            <MudDataGridPager T="FileSystemEntryViewModel" />
-          </PagerContent>
-        </MudDataGrid>
-      }
-      else
-      {
-        <MudAlert Severity="Severity.Info">Select a folder to view its contents.</MudAlert>
-      }
+      <div class="file-system-grid-cell">
+        @if (IsLoadingContents)
+        {
+          <div class="d-flex justify-center align-center" style="height: 200px;">
+            <MudProgressCircular Indeterminate="true" />
+          </div>
+        }
+        else if (!string.IsNullOrEmpty(SelectedPath))
+        {
+          <MudDataGrid T="FileSystemEntryViewModel"
+                      Items="DirectoryContents"
+                      @bind-SelectedItems="SelectedItems"
+                      Dense="true"
+                      Hover="true"
+                      SortMode="SortMode.Multiple"
+                      Filterable="true"
+                      Hideable="false"
+                      RowsPerPage="50"
+                      MultiSelection="true"
+                      RowClick="HandleFileSystemRowClick"
+                      SelectOnRowClick="@false"
+                      RowClass="cursor-pointer"
+                      QuickFilter="JsonValueFilter.GetQuickFilter<FileSystemEntryViewModel>(_searchText, Logger)">
+            <Columns>
+              <SelectColumn T="FileSystemEntryViewModel" />
+              <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
+                <CellTemplate>
+                  <MudIcon Icon="@context.Item.Icon" Size="Size.Small" />
+                </CellTemplate>
+              </PropertyColumn>
+              <PropertyColumn Property="x => x.Name" Title="Name" />
+              <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
+              <PropertyColumn Property="x => x.LastModified" Title="Modified" />
+            </Columns>
+            <PagerContent>
+              <MudDataGridPager T="FileSystemEntryViewModel" />
+            </PagerContent>
+          </MudDataGrid>
+        }
+        else
+        {
+          <MudAlert Severity="Severity.Info">Select a folder to view its contents.</MudAlert>
+        }
+      </div>
     </div>
   </div>
 </div>
