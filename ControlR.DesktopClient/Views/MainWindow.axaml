@@ -1,18 +1,18 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ControlR.DesktopClient.ViewModels"
-				xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+        xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ControlR.DesktopClient.Views.MainWindow"
         x:DataType="vm:IMainWindowViewModel"
         Icon="/Assets/appicon.ico"
-				Width="400"
-				MinHeight="300"
-				SizeToContent="Height"
-				ShowInTaskbar="False"
-				WindowState="Minimized"
+        Width="400"
+        MinHeight="300"
+        SizeToContent="Height"
+        ShowInTaskbar="False"
+        WindowState="Minimized"
         Title="ControlR Desktop">
 
     <Design.DataContext>
@@ -21,5 +21,5 @@
         <fakes:MainWindowViewModelFake />
     </Design.DataContext>
 
-	<ContentControl Margin="5" Content="{Binding CurrentViewModel}" />
+    <ContentControl Margin="5" Content="{Binding CurrentViewModel}" />
 </Window>

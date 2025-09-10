@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Client.ViewModels;
-
-namespace ControlR.Web.Client.Services.Stores;
+﻿namespace ControlR.Web.Client.Services.Stores;
 
 public interface IAdminTagStore : IStoreBase<TagViewModel>
 { }

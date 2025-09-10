@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
-using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Linux;
 using ControlR.Agent.Common.Services.Mac;

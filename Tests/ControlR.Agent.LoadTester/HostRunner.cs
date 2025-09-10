@@ -12,8 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using ControlR.Agent.LoadTester.Helpers;
-using System.Net.Http.Json;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Agent.LoadTester;
 public static class HostRunner

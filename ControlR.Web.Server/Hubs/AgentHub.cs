@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;

@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Api;

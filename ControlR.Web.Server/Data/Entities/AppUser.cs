@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using ControlR.Web.Server.Data.Entities.Bases;
-using Microsoft.AspNetCore.Identity;
 
 
 namespace ControlR.Web.Server.Data.Entities;

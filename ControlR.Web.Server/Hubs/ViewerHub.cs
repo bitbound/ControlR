@@ -3,7 +3,6 @@ using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;

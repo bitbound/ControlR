@@ -1,6 +1,3 @@
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Services.Http;
-using ControlR.Web.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Dialogs;

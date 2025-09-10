@@ -1,8 +1,6 @@
 ﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using Microsoft.Extensions.Hosting;
-using System.Net.Sockets;
-using System.Net.WebSockets;
 
 namespace ControlR.Agent.Common.Services;
 

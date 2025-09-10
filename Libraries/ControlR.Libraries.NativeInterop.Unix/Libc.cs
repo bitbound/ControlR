@@ -1,5 +1,4 @@
-﻿  using System;
-  using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
   #pragma warning disable IDE0079 // Remove unnecessary suppression
   #pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time

@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
-
-namespace ControlR.Libraries.Shared.Interfaces.HubClients;
+﻿namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 
 public interface IHubClient
 {

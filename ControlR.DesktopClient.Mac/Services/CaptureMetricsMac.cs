@@ -1,4 +1,3 @@
-using System;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;

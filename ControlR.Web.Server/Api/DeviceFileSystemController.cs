@@ -1,9 +1,7 @@
 using ControlR.Libraries.Shared.Constants;
-using Microsoft.AspNetCore.Authorization;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Api;
 

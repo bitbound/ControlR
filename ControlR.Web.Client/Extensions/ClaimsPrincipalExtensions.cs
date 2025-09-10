@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Authz;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 namespace ControlR.Web.Client.Extensions;
 

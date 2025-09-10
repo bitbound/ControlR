@@ -1,5 +1,4 @@
 ﻿using MessagePack;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;

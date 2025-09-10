@@ -1,16 +1,13 @@
-using System.Threading.Tasks;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class FileSystem : JsInteropableComponent
 {
-  private string _addressBarValue = string.Empty;
   private ElementReference _containerRef;
   private ElementReference _contentPanelRef;
   private InputFile _fileInputRef = default!;
@@ -20,11 +17,7 @@ public partial class FileSystem : JsInteropableComponent
   private ElementReference _splitterRef;
   private ElementReference _treePanelRef;
 
-  public string AddressBarValue
-  {
-    get => _addressBarValue;
-    set => _addressBarValue = value;
-  }
+  public string AddressBarValue { get; set; } = string.Empty;
 
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
@@ -51,7 +44,9 @@ public partial class FileSystem : JsInteropableComponent
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
+
   public HashSet<FileSystemEntryViewModel> SelectedItems { get; set; } = [];
+
   public string? SelectedPath
   {
     get => _selectedPath;
@@ -64,7 +59,7 @@ public partial class FileSystem : JsInteropableComponent
       }
 
       _selectedPath = value;
-      _addressBarValue = value;
+      AddressBarValue = value;
       InvokeAsync(async () => await OnSelectedPathChanged(value));
     }
   }
@@ -80,6 +75,7 @@ public partial class FileSystem : JsInteropableComponent
       {
         await JsModule.InvokeVoidAsync("dispose");
       }
+
       GC.SuppressFinalize(this);
     }
     catch (JSDisconnectedException)
@@ -104,12 +100,10 @@ public partial class FileSystem : JsInteropableComponent
       {
         return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
       }
-      else
-      {
-        Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}",
-          parentValue, result.Reason);
-        return [];
-      }
+
+      Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}",
+        parentValue, result.Reason);
+      return [];
     }
     catch (Exception ex)
     {
@@ -125,7 +119,8 @@ public partial class FileSystem : JsInteropableComponent
     if (firstRender)
     {
       await JsModuleReady.Wait(CancellationToken.None);
-      await JsModule.InvokeVoidAsync("initializeGridSplitter", _containerRef, _splitterRef, _treePanelRef, _contentPanelRef);
+      await JsModule.InvokeVoidAsync("initializeGridSplitter", _containerRef, _splitterRef, _treePanelRef,
+        _contentPanelRef);
     }
   }
 
@@ -254,6 +249,18 @@ public partial class FileSystem : JsInteropableComponent
       return false;
     }
   }
+
+  private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(TreeItemData<string> treeItem)
+  {
+    return EventCallback.Factory.Create<IReadOnlyCollection<TreeItemData<string?>>?>(this, children =>
+    {
+      treeItem.Children = children
+        ?.Where(x => x.Value is not null)
+        .Cast<TreeItemData<string>>()
+        .ToList();
+    });
+  }
+
   private async Task DeleteSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -277,7 +284,8 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-      var downloadUrl = $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
+      var downloadUrl =
+        $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
@@ -291,7 +299,10 @@ public partial class FileSystem : JsInteropableComponent
 
   private TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
   {
-    if (items == null) return null;
+    if (items == null)
+    {
+      return null;
+    }
 
     return items.FirstOrDefault(item =>
       string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
@@ -324,7 +335,7 @@ public partial class FileSystem : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
 
       var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
-      if (result.IsSuccess && result.Value is not null)
+      if (result is { IsSuccess: true, Value: not null })
       {
         if (!result.Value.DirectoryExists)
         {
@@ -370,7 +381,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
 
       var result = await ControlrApi.GetRootDrives(DeviceId);
-      if (result.IsSuccess && result.Value is not null)
+      if (result is { IsSuccess: true, Value: not null })
       {
         InitialTreeItems = result.Value.Drives
           .Where(d => d.IsDirectory)
@@ -380,7 +391,7 @@ public partial class FileSystem : JsInteropableComponent
         // Select the first drive by default
         if (InitialTreeItems.Count > 0)
         {
-          _addressBarValue = SelectedPath ?? string.Empty;
+          AddressBarValue = SelectedPath ?? string.Empty;
           SelectedPath = InitialTreeItems[0].Value;
         }
       }
@@ -404,7 +415,7 @@ public partial class FileSystem : JsInteropableComponent
 
   private async Task NavigateToAddress()
   {
-    var targetPath = _addressBarValue.Trim();
+    var targetPath = AddressBarValue.Trim();
 
     if (string.IsNullOrWhiteSpace(targetPath))
     {
@@ -449,7 +460,7 @@ public partial class FileSystem : JsInteropableComponent
     var result = await DialogService.ShowMessageBox(
       "Confirm Delete",
       message,
-      yesText: "Delete",
+      "Delete",
       cancelText: "Cancel");
 
     if (result != true)
@@ -541,7 +552,7 @@ public partial class FileSystem : JsInteropableComponent
 
     var uploadTasks = new List<Task>();
 
-    foreach (var file in e.GetMultipleFiles(10)) // Limit to 10 files
+    foreach (var file in e.GetMultipleFiles()) // Limit to 10 files
     {
       uploadTasks.Add(UploadSingleFile(file));
     }
@@ -564,11 +575,6 @@ public partial class FileSystem : JsInteropableComponent
       IsUploadInProgress = false;
       StateHasChanged();
     }
-  }
-
-  private void OnItemsLoaded(TreeItemData<string> treeItemData, IReadOnlyCollection<TreeItemData<string>> children)
-  {
-    treeItemData.Children = children?.ToList();
   }
 
   private async Task OnNewFolderClick()
@@ -669,7 +675,7 @@ public partial class FileSystem : JsInteropableComponent
         var confirmed = await DialogService.ShowMessageBox(
           "File Already Exists",
           $"The file '{file.Name}' already exists in the selected directory. Do you want to overwrite it?",
-          yesText: "Overwrite",
+          "Overwrite",
           cancelText: "Cancel");
 
         if (confirmed != true)
@@ -678,11 +684,10 @@ public partial class FileSystem : JsInteropableComponent
           Logger.LogInformation("User cancelled overwrite for file {FileName}", file.Name);
           return;
         }
-
       }
 
-      using var fileStream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB limit
-      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, overwrite: true);
+      using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
+      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
 
       if (!result.IsSuccess)
       {

@@ -1,7 +1,6 @@
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using SkiaSharp;
 using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace ControlR.DesktopClient.Mac.Helpers;
 

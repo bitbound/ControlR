@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace ControlR.Libraries.DevicesCommon.Services.Processes;
+﻿namespace ControlR.Libraries.DevicesCommon.Services.Processes;
 
 public static class ProcessExtensions
 {

@@ -1,4 +1,3 @@
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using System.Collections.Concurrent;
 
 namespace ControlR.Web.Client.Services.DeviceAccess;

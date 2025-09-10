@@ -8,10 +8,10 @@
 <div @ref="_containerRef" class="file-system-container h-100">
   <div class="address-bar-container">
     <MudTextField @bind-Value="AddressBarValue" Label="Address" Variant="Variant.Outlined" Immediate
-      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
-      AdornmentColor="Color.Primary" OnAdornmentClick="NavigateToAddress"
-      @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
-      FullWidth="true" Class="address-bar" />
+                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
+                  AdornmentColor="Color.Primary" OnAdornmentClick="NavigateToAddress"
+                  @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
+                  FullWidth="true" Class="address-bar" />
   </div>
   <div class="file-system-grid">
     <div @ref="_treePanelRef" class="tree-panel">
@@ -29,12 +29,12 @@
       else
       {
         <MudTreeView ServerData="@LoadServerData" Items="@InitialTreeItems" @bind-SelectedValue="SelectedPath" T="string"
-          Dense="true" ExpandOnDoubleClick>
+                     Dense="true" ExpandOnDoubleClick>
           <ItemTemplate>
             <MudTreeViewItem Value="@context.Value" Text="@context.Text" Items="@context.Children"
-              ItemsChanged="@(new Action<IReadOnlyCollection<TreeItemData<string>>>(items => OnItemsLoaded(context, items)))"
-              @bind-Expanded="@context.Expanded" CanExpand="@context.Expandable" Icon="@context.Icon"
-              LoadingIconColor="Color.Info" />
+                             ItemsChanged="@(CreateItemsChangedCallback(context))"
+                             @bind-Expanded="@context.Expanded" CanExpand="@context.Expandable" Icon="@context.Icon"
+                             LoadingIconColor="Color.Info" />
           </ItemTemplate>
         </MudTreeView>
       }
@@ -60,47 +60,47 @@
           {
             <MudTooltip Text="Upload File">
               <MudIconButton Icon="@Icons.Material.Filled.Upload" Color="Color.Default" Size="Size.Small"
-                OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)" />
+                             OnClick="OnUploadFileClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)" />
             </MudTooltip>
             <MudTooltip Text="Download">
               <MudIconButton Icon="@Icons.Material.Filled.Download" Color="Color.Default" Size="Size.Small"
-                OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)" />
+                             OnClick="OnDownloadClick" Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)" />
             </MudTooltip>
             <MudTooltip Text="Delete">
               <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)" />
+                             OnClick="OnDeleteClick" Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)" />
             </MudTooltip>
             <MudTooltip Text="New Folder">
               <MudIconButton Icon="@Icons.Material.Filled.CreateNewFolder" Color="Color.Default" Size="Size.Small"
-                OnClick="OnNewFolderClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)" />
+                             OnClick="OnNewFolderClick" Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)" />
             </MudTooltip>
           }
           else
           {
             <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
-              Class="me-2" Size="Size.Small" OnClick="OnUploadFileClick"
-              Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)">
+                       Class="me-2" Size="Size.Small" OnClick="OnUploadFileClick"
+                       Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsUploadInProgress)">
               Upload
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Download"
-              Class="me-2" Size="Size.Small" OnClick="OnDownloadClick"
-              Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)">
+                       Class="me-2" Size="Size.Small" OnClick="OnDownloadClick"
+                       Disabled="@(SelectedItems.Count == 0 || IsDownloadInProgress)">
               Download
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
-              Class="me-2" Size="Size.Small" OnClick="OnDeleteClick"
-              Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)">
+                       Class="me-2" Size="Size.Small" OnClick="OnDeleteClick"
+                       Disabled="@(SelectedItems.Count == 0 || IsDeleteInProgress)">
               Delete
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.CreateNewFolder"
-              Class="me-2" Size="Size.Small" OnClick="OnNewFolderClick"
-              Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)">
+                       Class="me-2" Size="Size.Small" OnClick="OnNewFolderClick"
+                       Disabled="@(string.IsNullOrEmpty(SelectedPath) || IsNewFolderInProgress)">
               New Folder
             </MudButton>
           }
           <MudTooltip Text="Refresh">
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Info" Size="Size.Small"
-              OnClick="OnRefreshClick" Disabled="@IsLoadingContents" />
+                           OnClick="OnRefreshClick" Disabled="@IsLoadingContents" />
           </MudTooltip>
         </div>
       </div>
@@ -114,19 +114,19 @@
         else if (!string.IsNullOrEmpty(SelectedPath))
         {
           <MudDataGrid T="FileSystemEntryViewModel"
-                      Items="DirectoryContents"
-                      @bind-SelectedItems="SelectedItems"
-                      Dense="true"
-                      Hover="true"
-                      SortMode="SortMode.Multiple"
-                      Filterable="true"
-                      Hideable="false"
-                      RowsPerPage="50"
-                      MultiSelection="true"
-                      RowClick="HandleFileSystemRowClick"
-                      SelectOnRowClick="@false"
-                      RowClass="cursor-pointer"
-                      QuickFilter="JsonValueFilter.GetQuickFilter<FileSystemEntryViewModel>(_searchText, Logger)">
+                       Items="DirectoryContents"
+                       @bind-SelectedItems="SelectedItems"
+                       Dense="true"
+                       Hover="true"
+                       SortMode="SortMode.Multiple"
+                       Filterable="true"
+                       Hideable="false"
+                       RowsPerPage="50"
+                       MultiSelection="true"
+                       RowClick="HandleFileSystemRowClick"
+                       SelectOnRowClick="@false"
+                       RowClass="cursor-pointer"
+                       QuickFilter="JsonValueFilter.GetQuickFilter<FileSystemEntryViewModel>(_searchText, Logger)">
             <Columns>
               <SelectColumn T="FileSystemEntryViewModel" />
               <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">

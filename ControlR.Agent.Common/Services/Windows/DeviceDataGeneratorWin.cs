@@ -2,7 +2,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesNative.Windows;
 using ControlR.Libraries.NativeInterop.Windows;
 using Microsoft.Extensions.Options;
 

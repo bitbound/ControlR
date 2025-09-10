@@ -1,5 +1,4 @@
-﻿@using System.ComponentModel.DataAnnotations
-@attribute [Route(ClientRoutes.Invite)]
+﻿@attribute [Route(ClientRoutes.Invite)]
 @attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
 @inject ILogger<Invite> Logger
 @inject IInviteStore InviteStore

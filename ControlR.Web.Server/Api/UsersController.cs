@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ControlR.Web.Client.Extensions;
 using ControlR.Web.Server.Services.Users;
 
 namespace ControlR.Web.Server.Api;

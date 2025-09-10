@@ -3,4 +3,4 @@
 namespace ControlR.Agent.Common.IpcDtos;
 
 [MessagePackObject]
-public record ShutdownRequestDto();
+public record ShutdownRequestDto;

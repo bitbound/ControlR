@@ -2,4 +2,4 @@
 namespace ControlR.Agent.Common.IpcDtos;
 
 [MessagePackObject]
-public record DesktopRequestDto();
+public record DesktopRequestDto;

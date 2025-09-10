@@ -1,4 +1,4 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.HubDtos;
 
 [MessagePackObject]
-public record RefreshDeviceInfoRequestDto();
+public record RefreshDeviceInfoRequestDto;

@@ -1,5 +1,4 @@
 ﻿using MessagePack;
-using System;
 using System.Runtime.Serialization;
 
 namespace ControlR.Libraries.Ipc;

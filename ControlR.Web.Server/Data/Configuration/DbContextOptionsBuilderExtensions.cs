@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Security.Claims;
 
 namespace ControlR.Web.Server.Data.Configuration;

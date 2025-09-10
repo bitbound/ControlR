@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 
 namespace ControlR.DesktopClient.Views;
+
 public partial class MainWindow : Window
 {
   private bool _isFirstShow = true;
@@ -13,7 +14,7 @@ public partial class MainWindow : Window
   }
 
   public MainWindow(
-    IMainWindowViewModel viewModel, 
+    IMainWindowViewModel viewModel,
     INavigationProvider navigationProvider)
   {
     DataContext = viewModel;
@@ -22,19 +23,22 @@ public partial class MainWindow : Window
   }
 
   private IMainWindowViewModel ViewModel => DataContext as IMainWindowViewModel
-    ?? throw new ArgumentNullException(nameof(ViewModel));
+                                            ?? throw new ArgumentNullException(nameof(ViewModel));
 
   public override void Show()
   {
     base.Show();
-    if (_isFirstShow)
+    if (!_isFirstShow)
     {
-      _isFirstShow = false;
-      Hide();
-      ShowInTaskbar = true;
-      WindowState = WindowState.Normal;
+      return;
     }
+
+    _isFirstShow = false;
+    Hide();
+    ShowInTaskbar = true;
+    WindowState = WindowState.Normal;
   }
+
   protected override void OnClosing(WindowClosingEventArgs e)
   {
     e.Cancel = true;

@@ -1,5 +1,3 @@
-using ControlR.DesktopClient.Common.Startup;
-
 namespace ControlR.DesktopClient.Common.Options;
 
 public class DesktopClientOptions

@@ -1,5 +1,4 @@
 ﻿using System.Security.Cryptography;
-using System.Web.Services.Description;
 using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;

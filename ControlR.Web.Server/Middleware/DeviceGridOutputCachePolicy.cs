@@ -1,9 +1,8 @@
-using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Middleware;
 
-public class DeviceGridOutputCachePolicy() : IOutputCachePolicy
+public class DeviceGridOutputCachePolicy : IOutputCachePolicy
 {
   private readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(30);
 

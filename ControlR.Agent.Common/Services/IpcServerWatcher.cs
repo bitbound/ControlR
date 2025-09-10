@@ -1,5 +1,4 @@
-﻿using System.Runtime.Versioning;
-using ControlR.Libraries.Shared.Helpers;
+﻿using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;

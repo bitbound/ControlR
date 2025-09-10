@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ControlR.Libraries.DevicesNative.Windows;
+namespace ControlR.Libraries.NativeInterop.Windows;
 
 public static class WtsApi32
 {

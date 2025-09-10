@@ -17,7 +17,7 @@ internal class DeviceDataGeneratorBase(
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly ILogger<DeviceDataGeneratorBase> _logger = logger;
 
-  public string GetAgentVersion()
+  protected string GetAgentVersion()
   {
     var version = typeof(DeviceDataGeneratorBase).Assembly.GetName().Version?.ToString();
     if (!string.IsNullOrWhiteSpace(version))
@@ -29,30 +29,33 @@ internal class DeviceDataGeneratorBase(
     return "0.0.0.0";
   }
 
-  public IReadOnlyList<Drive> GetAllDrives()
+  protected IReadOnlyList<Drive> GetAllDrives()
   {
     try
     {
-      return [.. DriveInfo.GetDrives()
-        .Where(x => x.IsReady)
-        .Where(x => x.DriveType == DriveType.Fixed)
-        .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
-        .Where(x => !x.RootDirectory.FullName.StartsWith("/System/Volumes/"))
-        .Where(x => x.TotalSize > 0)
-        .Select(x => new Drive
-        {
-          DriveFormat = x.DriveFormat,
-          DriveType = x.DriveType,
-          Name = x.Name,
-          RootDirectory = x.RootDirectory.FullName,
-          FreeSpace = x.TotalFreeSpace > 0
-            ? Math.Round((double)(x.TotalFreeSpace / 1024 / 1024 / 1024), 2)
-            : 0,
-          TotalSize = x.TotalSize > 0
-            ? Math.Round((double)(x.TotalSize / 1024 / 1024 / 1024), 2)
-            : 0,
-          VolumeLabel = x.VolumeLabel
-        })];
+      return
+      [
+        .. DriveInfo.GetDrives()
+          .Where(x => x.IsReady)
+          .Where(x => x.DriveType == DriveType.Fixed)
+          .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
+          .Where(x => !x.RootDirectory.FullName.StartsWith("/System/Volumes/"))
+          .Where(x => x.TotalSize > 0)
+          .Select(x => new Drive
+          {
+            DriveFormat = x.DriveFormat,
+            DriveType = x.DriveType,
+            Name = x.Name,
+            RootDirectory = x.RootDirectory.FullName,
+            FreeSpace = x.TotalFreeSpace > 0
+              ? Math.Round((double)x.TotalFreeSpace / 1024 / 1024 / 1024, 2)
+              : 0,
+            TotalSize = x.TotalSize > 0
+              ? Math.Round((double)x.TotalSize / 1024 / 1024 / 1024, 2)
+              : 0,
+            VolumeLabel = x.VolumeLabel
+          })
+      ];
     }
     catch (Exception ex)
     {
@@ -61,7 +64,7 @@ internal class DeviceDataGeneratorBase(
     }
   }
 
-  public DeviceModel GetDeviceBase(
+  protected DeviceModel GetDeviceBase(
     Guid deviceId,
     string[] currentUsers,
     IReadOnlyList<Drive> drives,
@@ -71,7 +74,6 @@ internal class DeviceDataGeneratorBase(
     double totalMemory,
     string agentVersion)
   {
-
     return new DeviceModel
     {
       Id = deviceId,
@@ -96,11 +98,11 @@ internal class DeviceDataGeneratorBase(
     };
   }
 
-  public (double usedStorage, double totalStorage) GetSystemDriveInfo()
+  protected (double usedStorage, double totalStorage) GetSystemDriveInfo()
   {
     try
     {
-      DriveInfo? systemDrive = null;
+      DriveInfo? systemDrive;
 
       var allDrives = DriveInfo.GetDrives();
 
@@ -119,11 +121,11 @@ internal class DeviceDataGeneratorBase(
           x.RootDirectory.FullName == Path.GetPathRoot(Environment.CurrentDirectory));
       }
 
-      if (systemDrive != null && systemDrive.TotalSize > 0 && systemDrive.TotalFreeSpace > 0)
+      if (systemDrive is { TotalSize: > 0, TotalFreeSpace: > 0 })
       {
-        var totalStorage = Math.Round((double)(systemDrive.TotalSize / 1024 / 1024 / 1024), 2);
+        var totalStorage = Math.Round((double)systemDrive.TotalSize / 1024 / 1024 / 1024, 2);
         var usedStorage =
-          Math.Round((double)((systemDrive.TotalSize - systemDrive.TotalFreeSpace) / 1024 / 1024 / 1024), 2);
+          Math.Round(((double)systemDrive.TotalSize - systemDrive.TotalFreeSpace) / 1024 / 1024 / 1024, 2);
 
         return (usedStorage, totalStorage);
       }
@@ -141,12 +143,10 @@ internal class DeviceDataGeneratorBase(
     try
     {
       var nics = NetworkInterface.GetAllNetworkInterfaces();
-      
+
       var activeNic = nics
-        .Where(c =>
-          c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-          c.OperationalStatus == OperationalStatus.Up)
-        .FirstOrDefault();
+        .FirstOrDefault(c => c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                             c.OperationalStatus == OperationalStatus.Up);
 
       if (activeNic != null)
       {
@@ -173,22 +173,17 @@ internal class DeviceDataGeneratorBase(
     try
     {
       var nics = NetworkInterface.GetAllNetworkInterfaces();
-      
+
       var activeNic = nics
-        .Where(c =>
-          c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-          c.OperationalStatus == OperationalStatus.Up)
-        .FirstOrDefault();
+        .FirstOrDefault(c => c.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                             c.OperationalStatus == OperationalStatus.Up);
 
       if (activeNic != null)
       {
         var ipProperties = activeNic.GetIPProperties();
         var ipv6Address = ipProperties.UnicastAddresses
-          .FirstOrDefault(addr => 
-            addr.Address.AddressFamily == AddressFamily.InterNetworkV6 &&
-            !addr.Address.IsIPv6LinkLocal &&
-            !addr.Address.IsIPv6SiteLocal &&
-            !addr.Address.IsIPv6Teredo);
+          .FirstOrDefault(addr =>
+            addr.Address is { AddressFamily: AddressFamily.InterNetworkV6, IsIPv6LinkLocal: false, IsIPv6SiteLocal: false, IsIPv6Teredo: false });
 
         if (ipv6Address != null)
         {
@@ -227,7 +222,7 @@ internal class DeviceDataGeneratorBase(
         var ipProperties = adapter.GetIPProperties();
 
         var unicastAddresses = ipProperties.UnicastAddresses;
-        if (!unicastAddresses.Any(temp => temp.Address.AddressFamily == AddressFamily.InterNetwork))
+        if (unicastAddresses.All(temp => temp.Address.AddressFamily != AddressFamily.InterNetwork))
         {
           continue;
         }

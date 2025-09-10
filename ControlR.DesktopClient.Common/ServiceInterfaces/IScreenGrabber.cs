@@ -1,5 +1,6 @@
 ﻿using ControlR.DesktopClient.Common.Models;
 using System.Drawing;
+using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 
@@ -21,7 +22,7 @@ public interface IScreenGrabber
   /// </param>
   /// <returns>
   ///   A result object indicating whether the capture was successful.
-  ///   If successful, the result will contain the <see cref="Bitmap" /> of the capture.
+  ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
   CaptureResult Capture(
     DisplayInfo targetDisplay,
@@ -36,7 +37,7 @@ public interface IScreenGrabber
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
   /// <returns>
   ///   A result object indicating whether the capture was successful.
-  ///   If successful, the result will contain the <see cref="Bitmap" /> of the capture.
+  ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
   CaptureResult Capture(bool captureCursor = true);
 

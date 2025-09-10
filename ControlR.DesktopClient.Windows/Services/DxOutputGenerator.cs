@@ -2,7 +2,6 @@
 using ControlR.DesktopClient.Windows.Models;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using Windows.Win32;

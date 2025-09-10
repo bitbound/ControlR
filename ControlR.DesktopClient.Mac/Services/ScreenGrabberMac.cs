@@ -1,4 +1,3 @@
-using System;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;

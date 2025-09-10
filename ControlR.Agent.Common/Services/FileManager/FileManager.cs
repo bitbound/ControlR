@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 
 namespace ControlR.Agent.Common.Services.FileManager;

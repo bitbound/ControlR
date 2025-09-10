@@ -1,7 +1,6 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Views;
-using Microsoft.Extensions.DependencyInjection;
 using System.Windows.Input;
 
 namespace ControlR.DesktopClient.ViewModels;

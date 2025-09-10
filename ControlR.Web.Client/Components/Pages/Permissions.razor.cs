@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Services.Stores;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages;
 

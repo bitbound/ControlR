@@ -1,7 +1,5 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;

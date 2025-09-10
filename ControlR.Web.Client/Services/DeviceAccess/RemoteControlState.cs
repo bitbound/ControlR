@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-
-namespace ControlR.Web.Client.Services.DeviceAccess;
+﻿namespace ControlR.Web.Client.Services.DeviceAccess;
 
 public interface IRemoteControlState
 {

@@ -1,7 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Win32;
 
 namespace ControlR.Agent.Common.Services.Windows;

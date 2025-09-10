@@ -1,5 +1,4 @@
-﻿using ControlR.Agent.Common.Services;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ControlR.Agent.LoadTester.Helpers;

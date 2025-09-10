@@ -1,6 +1,4 @@
 ﻿using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Windows.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

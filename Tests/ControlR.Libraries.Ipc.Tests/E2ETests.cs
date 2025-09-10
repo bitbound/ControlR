@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;

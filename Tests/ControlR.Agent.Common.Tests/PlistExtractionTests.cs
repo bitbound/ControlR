@@ -1,4 +1,3 @@
-using System;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Agent.Common.Services;
 using System.Reflection;

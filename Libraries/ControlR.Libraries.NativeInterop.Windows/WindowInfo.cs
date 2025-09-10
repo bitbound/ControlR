@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace ControlR.Libraries.DevicesNative.Services.Windows;
+namespace ControlR.Libraries.NativeInterop.Windows;
 public record WindowInfo(
   nint WindowHandle,
   int ProcessId,

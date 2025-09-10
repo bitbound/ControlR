@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Ipc;
 
 namespace ControlR.DesktopClient.Common.Services;

@@ -1,6 +1,5 @@
 ﻿using System.Net.WebSockets;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Web.Client.Components.Dialogs;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 

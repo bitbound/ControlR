@@ -1,6 +1,4 @@
 using System.Runtime.Versioning;
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;

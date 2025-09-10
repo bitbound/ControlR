@@ -1,10 +1,7 @@
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Middleware;
-using ControlR.Web.Server.Services;
-using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
-using Moq;
 using System.Security.Claims;
 using Xunit.Abstractions;
 

@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.DevicesNative.Services.Windows;
+﻿namespace ControlR.Libraries.NativeInterop.Windows;
 
 [Flags]
 public enum ACCESS_MASK : uint

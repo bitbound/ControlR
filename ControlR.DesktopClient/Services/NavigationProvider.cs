@@ -1,5 +1,4 @@
 ﻿using ControlR.DesktopClient.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.DesktopClient.Services;
 

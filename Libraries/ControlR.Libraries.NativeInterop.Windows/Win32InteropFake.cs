@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.DevicesNative.Services.Windows;
-using ControlR.Libraries.DevicesNative.Windows;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;

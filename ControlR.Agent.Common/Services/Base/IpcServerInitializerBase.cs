@@ -1,20 +1,18 @@
-﻿using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
+﻿using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services.Base;
 
 internal abstract class IpcServerInitializerBase(
-    TimeProvider timeProvider,
-    IIpcConnectionFactory ipcFactory,
-    IIpcServerStore ipcStore,
-    IProcessManager processManager,
-    IHubConnection<IAgentHub> hubConnection,
-    ILogger logger) : BackgroundService
+  TimeProvider timeProvider,
+  IIpcConnectionFactory ipcFactory,
+  IIpcServerStore ipcStore,
+  IProcessManager processManager,
+  IHubConnection<IAgentHub> hubConnection,
+  ILogger logger) : BackgroundService
 {
   protected readonly TimeProvider _timeProvider = timeProvider;
   protected readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
@@ -23,14 +21,11 @@ internal abstract class IpcServerInitializerBase(
   protected readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   protected readonly ILogger _logger = logger;
 
-  protected async Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
+  protected Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
   {
     try
     {
       _logger.LogInformation("Accepted IPC connection.  Waiting for PID attestation.");
-      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-      using var signal = new ManualResetEventAsync();
       server.On<IpcClientIdentityAttestationDto>(dto =>
       {
         try
@@ -38,11 +33,11 @@ internal abstract class IpcServerInitializerBase(
           _logger.LogInformation("Received IPC client identity attestation for process {ProcessId}.", dto.ProcessId);
           var process = _processManager.GetProcessById(dto.ProcessId);
           _ipcStore.AddServer(process, server);
-          signal.Set();
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Error while processing IPC client identity attestation for process {ProcessId}.", dto.ProcessId);
+          _logger.LogError(ex, "Error while processing IPC client identity attestation for process {ProcessId}.",
+            dto.ProcessId);
         }
       });
 
@@ -71,14 +66,15 @@ internal abstract class IpcServerInitializerBase(
           return false;
         }
       });
-      
+
       server.BeginRead(cancellationToken);
-      await signal.Wait(linkedCts.Token);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling IPC connection.");
       Disposer.DisposeAll(server);
     }
+
+    return Task.CompletedTask;
   }
 }

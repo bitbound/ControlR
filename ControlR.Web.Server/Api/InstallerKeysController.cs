@@ -1,6 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 

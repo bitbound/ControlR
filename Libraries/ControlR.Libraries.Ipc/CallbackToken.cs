@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ControlR.Libraries.Ipc;
+﻿namespace ControlR.Libraries.Ipc;
 
 public readonly struct CallbackToken : IEquatable<CallbackToken>
 {

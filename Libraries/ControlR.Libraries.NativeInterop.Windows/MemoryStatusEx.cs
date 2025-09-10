@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ControlR.Libraries.DevicesNative.Windows;
+namespace ControlR.Libraries.NativeInterop.Windows;
 
 /// <summary>
 /// contains information about the current state of both physical and virtual memory, including extended memory
@@ -10,7 +10,7 @@ public struct MemoryStatusEx
 {
 
   /// <summary>
-  /// Initializes a new instance of the <see cref="T:MEMORYSTATUSEX"/> class.
+  /// Initializes a new instance of the <see cref="T:MemoryStatusEx"/> class.
   /// </summary>
   public MemoryStatusEx()
   {

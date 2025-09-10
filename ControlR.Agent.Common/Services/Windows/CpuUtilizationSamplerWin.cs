@@ -1,5 +1,4 @@
-﻿using ControlR.Agent.Common.Services;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 

@@ -1,4 +1,3 @@
-using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -7,7 +6,6 @@ using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 namespace ControlR.DesktopClient.Services;
 
