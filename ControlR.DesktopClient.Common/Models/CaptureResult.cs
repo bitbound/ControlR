@@ -10,14 +10,11 @@ public sealed class CaptureResult : IDisposable
 
   public Rectangle[] DirtyRects { get; init; } = [];
   public CaptureResult? PreviousResult { get; init; }
-  public bool DxTimedOut { get; init; }
   public Exception? Exception { get; init; }
   public string FailureReason { get; init; } = string.Empty;
 
   [MemberNotNullWhen(true, nameof(Exception))]
   public bool HadException => Exception is not null;
-
-  public bool HadNoChanges { get; init; }
 
   [MemberNotNull(nameof(Bitmap))]
   public bool IsSuccess { get; init; }
@@ -49,23 +46,6 @@ public sealed class CaptureResult : IDisposable
     };
   }
 
-  public static CaptureResult NoAccumulatedFrames()
-  {
-    return new CaptureResult()
-    {
-      FailureReason = "No frames were accumulated.",
-      DxTimedOut = true,
-    };
-  }
-
-  public static CaptureResult NoChanges()
-  {
-    return new CaptureResult()
-    {
-      HadNoChanges = true
-    };
-  }
-
   public static CaptureResult Ok(
     SKBitmap bitmap, 
     bool isUsingGpu, 
@@ -86,8 +66,7 @@ public sealed class CaptureResult : IDisposable
   {
     return new CaptureResult()
     {
-      FailureReason = "Timed out while waiting for next frame",
-      DxTimedOut = true,
+      FailureReason = "Timed out while waiting for next frame.",
     };
   }
 }

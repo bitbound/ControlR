@@ -1,96 +1,97 @@
 ﻿.screen-area {
-  overflow: auto;
-  position: relative;
-  height: 100% !important;
+    overflow: auto;
+    position: relative;
+    height: 100% !important;
 }
 
 /* apply overscroll-behavior only when supported (avoids issues on Safari iOS <16) */
 @supports (overscroll-behavior: contain) {
-  .screen-area {
-    overscroll-behavior: contain;
-  }
+    .screen-area {
+        overscroll-behavior: contain;
+    }
 }
 
 @supports (scrollbar-color: auto) {
-  .screen-area {
-    scrollbar-color: auto;
-    scrollbar-width: auto;
-  }
+    .screen-area {
+        scrollbar-color: auto;
+        scrollbar-width: auto;
+    }
 }
 
 .display-grid {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
 }
 
 .action-bar {
-  display: flex;
-  background-color: rgba(0, 0, 0, 0.25);
-  align-items: center;
-  white-space: nowrap;
-  overflow-x: auto;
-  gap: 10px;
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.25);
+    align-items: center;
+    white-space: nowrap;
+    overflow-x: auto;
+    gap: 10px;
 }
 
 
 .remote-screen {
-  position: absolute;
-  touch-action: pan-x pan-y;
-  object-fit: fill;
-  cursor: default;
-  -webkit-user-select: none;
-  user-select: none;
+    position: absolute;
+    touch-action: pan-x pan-y;
+    object-fit: fill;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .remote-screen.fit {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  width: unset !important;
-  height: unset !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: unset !important;
+    height: unset !important;
 }
 
 .remote-screen.stretch {
-  width: 100% !important;
-  height: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .virtual-keyboard {
-  position: absolute;
-  opacity: 0;
-  left: -10000px;
-  top: -10000px;
-  z-index: -1;
+    position: absolute;
+    opacity: 0;
+    left: -10000px;
+    top: -10000px;
+    z-index: -1;
 }
 
 .metrics-frame {
-  position: absolute;
-  display: grid;
-  right: 0;
-  bottom: 0;
-  padding: 10px;
-  grid-template-columns: auto 1fr;
-  column-gap: 10px;
-  text-align: left;
-  font-size: 0.8em;
-  white-space: nowrap;
-  background-color: rgba(0, 0, 0, 0.5);
-  -webkit-user-select: none;
-  user-select: none;
-  max-height: 50%;
-  max-width: 50%;
-  overflow-y: auto;
+    position: absolute;
+    display: grid;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    text-align: left;
+    font-size: 0.8em;
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.5);
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+    max-height: 50%;
+    max-width: 50%;
+    overflow-y: auto;
 }
 
 .metrics-frame div:nth-child(even) {
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  white-space: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 /* typical phone screen resolution */
-@media only screen and (max-width : 667px) {
-  .metrics-frame {
-    max-width: unset;
-  }
+@media only screen and (max-width: 667px) {
+    .metrics-frame {
+        max-width: unset;
+    }
 }

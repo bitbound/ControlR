@@ -1,16 +1,19 @@
-﻿using System.Drawing;
+﻿using System.Collections.Concurrent;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Windows.Extensions;
 using ControlR.DesktopClient.Windows.Helpers;
-using ControlR.DesktopClient.Windows.Models;
 using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Direct3D11;
@@ -28,8 +31,11 @@ internal sealed class ScreenGrabberWindows(
   IWin32Interop win32Interop,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
+  private const string AllDisplaysKey = "__ALL__";
   private readonly IImageUtility _bitmapUtility = bitmapUtility;
   private readonly IDxOutputGenerator _dxOutputGenerator = dxOutputGenerator;
+  // Cache last CPU (BitBlt) captures per display so we can build dirty rectangles when DX capture fails
+  private readonly ConcurrentDictionary<string, SKBitmap> _lastCpuFrames = new();
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWin32Interop _win32Interop = win32Interop;
@@ -37,10 +43,7 @@ internal sealed class ScreenGrabberWindows(
 
   public CaptureResult Capture(
     DisplayInfo targetDisplay,
-    bool captureCursor = true,
-    bool tryUseGpuAcceleration = true,
-    int gpuCaptureTimeout = 50,
-    bool allowFallbackToCpu = true)
+    bool captureCursor = true)
   {
     try
     {
@@ -53,34 +56,14 @@ internal sealed class ScreenGrabberWindows(
 
       SwitchToInputDesktop();
 
-      if (!tryUseGpuAcceleration)
-      {
-        return GetBitBltCapture(display.MonitorArea, captureCursor);
-      }
-
       var dxResult = GetDirectXCapture(display, captureCursor);
 
-      if (dxResult.HadNoChanges)
+      if (dxResult.IsSuccess)
       {
         return dxResult;
       }
 
-      if (dxResult.DxTimedOut && allowFallbackToCpu)
-      {
-        return GetBitBltCapture(display.MonitorArea, captureCursor, dxResult);
-      }
-
-      if (!dxResult.IsSuccess || dxResult.Bitmap is null || _bitmapUtility.IsEmpty(dxResult.Bitmap))
-      {
-        if (!allowFallbackToCpu)
-        {
-          return dxResult;
-        }
-
-        return GetBitBltCapture(display.MonitorArea, captureCursor, dxResult);
-      }
-
-      return dxResult;
+      return GetBitBltCapture(display.MonitorArea, captureCursor, null, display.DeviceName);
     }
     catch (Exception ex)
     {
@@ -92,7 +75,7 @@ internal sealed class ScreenGrabberWindows(
   public CaptureResult Capture(bool captureCursor = true)
   {
     SwitchToInputDesktop();
-    return GetBitBltCapture(GetVirtualScreenBounds(), captureCursor);
+    return GetBitBltCapture(GetVirtualScreenBounds(), captureCursor, deviceKey: AllDisplaysKey);
   }
 
   public IEnumerable<DisplayInfo> GetDisplays()
@@ -185,7 +168,8 @@ internal sealed class ScreenGrabberWindows(
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
     bool captureCursor,
-    CaptureResult? dxResult = null)
+    CaptureResult? dxResult = null,
+    string? deviceKey = null)
   {
     try
     {
@@ -211,7 +195,48 @@ internal sealed class ScreenGrabberWindows(
         _ = TryDrawCursor(graphics, captureArea);
       }
 
-      return CaptureResult.Ok(bitmap.ToSKBitmap(), isUsingGpu: false);
+      var skBitmap = bitmap.ToSKBitmap();
+      var key = deviceKey ?? AllDisplaysKey;
+
+      // Build dirty rect(s) from diff with previous frame if available
+      Rectangle[] dirtyRects = [];
+      if (_lastCpuFrames.TryGetValue(key, out var previous))
+      {
+        try
+        {
+          var diff = _bitmapUtility.GetChangedArea(skBitmap, previous);
+          if (diff.IsSuccess && !diff.Value.IsEmpty)
+          {
+            dirtyRects =
+            [
+               diff.Value.ToRectangle()
+            ];
+          }
+        }
+        catch (Exception ex)
+        {
+          _logger.LogDebug(ex, "Failed to compute dirty rect diff for BitBlt capture.");
+        }
+      }
+
+      if (dirtyRects.Length == 0)
+      {
+        // First frame -> whole frame dirty
+        dirtyRects = [new Rectangle(0, 0, skBitmap.Width, skBitmap.Height)];
+      }
+
+      // Store copy for next diff (independent of returned bitmap lifecycle)
+      var currentCopy = skBitmap.Copy();
+      _lastCpuFrames.AddOrUpdate(
+        key,
+        currentCopy,
+        (_, old) =>
+        {
+          old.Dispose();
+          return currentCopy;
+        });
+
+      return CaptureResult.Ok(skBitmap, isUsingGpu: false, dirtyRects: dirtyRects, dxCaptureResult: dxResult);
     }
     catch (Exception ex)
     {
@@ -239,34 +264,22 @@ internal sealed class ScreenGrabberWindows(
       var deviceContext = dxOutput.DeviceContext;
       var bounds = new Rectangle(0, 0, dxOutput.Bounds.Width, dxOutput.Bounds.Height);
 
-      outputDuplication.AcquireNextFrame(50, out var duplicateFrameInfo, out var screenResource);
+      TryHelper.TryAll(outputDuplication.ReleaseFrame);
+      outputDuplication.AcquireNextFrame(0, out var duplicateFrameInfo, out var screenResource);
 
       if (duplicateFrameInfo.AccumulatedFrames == 0)
       {
-        try
-        {
-          outputDuplication.ReleaseFrame();
-        }
-        catch
-        {
-          // No-op;
-        }
-
-        return IsDxOutputHealthy(dxOutput)
-          ? CaptureResult.NoChanges()
-          : CaptureResult.NoAccumulatedFrames();
+        return dxOutput.LastCapture is not null
+          ? CaptureResult.Ok(dxOutput.LastCapture.ToSKBitmap(), isUsingGpu: true)
+          : CaptureResult.TimedOut();
       }
 
-      using var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+      var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
       var bitmapData = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, bitmap.PixelFormat);
       var bitmapDataPointer = bitmapData.Scan0;
 
-      Rectangle[] dirtyRects;
-
       unsafe
       {
-        dirtyRects = GetDirtyRects(outputDuplication);
-
         var textureDescription = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
         ID3D11Texture2D_unmanaged* texture2dPtr;
         device.CreateTexture2D(textureDescription, null, &texture2dPtr);
@@ -317,9 +330,11 @@ internal sealed class ScreenGrabberWindows(
       }
 
       dxOutput.LastSuccessfulCapture = _timeProvider.GetLocalNow();
+      var dirtyRects = GetDirtyRects(outputDuplication);
 
       if (!captureCursor)
       {
+        dxOutput.SetLastCapture(bitmap);
         return CaptureResult.Ok(bitmap.ToSKBitmap(), true, dirtyRects);
       }
 
@@ -341,12 +356,13 @@ internal sealed class ScreenGrabberWindows(
         dxOutput.LastCursorArea = Rectangle.Empty;
       }
 
+      dxOutput.SetLastCapture(bitmap);
       return CaptureResult.Ok(bitmap.ToSKBitmap(), true, dirtyRects);
     }
     catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
     {
-      return IsDxOutputHealthy(dxOutput)
-        ? CaptureResult.NoChanges()
+      return dxOutput.LastCapture is not null
+        ? CaptureResult.Ok(dxOutput.LastCapture.ToSKBitmap(), true)
         : CaptureResult.TimedOut();
     }
     catch (COMException ex)
@@ -360,17 +376,6 @@ internal sealed class ScreenGrabberWindows(
       _dxOutputGenerator.RefreshOutput();
       _logger.LogError(ex, "Error while capturing with DirectX.");
       return CaptureResult.Fail(ex);
-    }
-    finally
-    {
-      try
-      {
-        dxOutput.OutputDuplication.ReleaseFrame();
-      }
-      catch
-      {
-        // Ignore.
-      }
     }
   }
 
@@ -405,11 +410,6 @@ internal sealed class ScreenGrabberWindows(
     }
 
     return dirtyRects;
-  }
-
-  private bool IsDxOutputHealthy(DxOutput dxOutput)
-  {
-    return _timeProvider.GetLocalNow() - dxOutput.LastSuccessfulCapture < TimeSpan.FromSeconds(1.5);
   }
 
   private void SwitchToInputDesktop()

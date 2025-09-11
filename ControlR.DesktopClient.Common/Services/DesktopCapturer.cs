@@ -49,7 +49,6 @@ internal class DesktopCapturer : IDesktopCapturer
   private DisplayInfo[] _displays;
   private bool _disposedValue;
   private bool _forceKeyFrame = true;
-  private SKBitmap? _lastCpuBitmap;
   private string? _lastDisplayId;
   private Rectangle? _lastMonitorArea;
   private bool _needsKeyFrame = true;
@@ -126,7 +125,6 @@ internal class DesktopCapturer : IDesktopCapturer
     Disposer.DisposeAll(
       _frameReadySignal,
       _frameRequestedSignal,
-      _lastCpuBitmap,
       _captureCts);
 
     GC.SuppressFinalize(this);
@@ -201,53 +199,17 @@ internal class DesktopCapturer : IDesktopCapturer
     return bitmap.Resize(imageInfo, default(SKSamplingOptions));
   }
 
-  private async Task EncodeCpuCaptureResult(CaptureResult captureResult, int quality, CancellationToken cancellationToken)
+  private Task EncodeCaptureResult(CaptureResult captureResult, int quality)
   {
     if (!captureResult.IsSuccess)
     {
-      return;
+      return Task.CompletedTask;
     }
 
-    try
-    {
-      var diffResult = _bitmapUtility.GetChangedArea(captureResult.Bitmap, _lastCpuBitmap);
-      if (!diffResult.IsSuccess)
-      {
-        _logger.LogError(diffResult.Exception, "Failed to get changed area.  Reason: {ErrorReason}", diffResult.Reason);
-        await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
-        return;
-      }
-
-      var diffArea = diffResult.Value;
-      if (diffArea.IsEmpty)
-      {
-        await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
-        return;
-      }
-
-      EncodeRegion(
-        bitmap: captureResult.Bitmap,
-        region: diffArea,
-        quality: quality);
-    }
-    finally
-    {
-      _lastCpuBitmap?.Dispose();
-      _lastCpuBitmap = captureResult.Bitmap.Copy();
-    }
-  }
-
-  private async Task EncodeGpuCaptureResult(CaptureResult captureResult, int quality)
-  {
-    if (!captureResult.IsSuccess)
-    {
-      return;
-    }
-
+    // If there are no dirty rects, nothing changed.
     if (captureResult.DirtyRects.Length == 0)
     {
-      await Task.Delay(_afterFailureDelay, _timeProvider);
-      return;
+      return Task.CompletedTask;
     }
 
     var bitmapArea = captureResult.Bitmap.ToRect();
@@ -265,11 +227,9 @@ internal class DesktopCapturer : IDesktopCapturer
         continue;
       }
 
-      EncodeRegion(
-        bitmap: captureResult.Bitmap,
-        region: intersect,
-        quality: quality);
+      EncodeRegion(captureResult.Bitmap, intersect, quality);
     }
+    return Task.CompletedTask;
   }
 
   private void EncodeRegion(SKBitmap bitmap, SKRect region, int quality, bool isKeyFrame = false)
@@ -310,8 +270,6 @@ internal class DesktopCapturer : IDesktopCapturer
     _selectedDisplay =
       _displays.FirstOrDefault(x => x.IsPrimary) ??
       _displays.FirstOrDefault();
-    _lastCpuBitmap?.Dispose();
-    _lastCpuBitmap = null;
     _lastMonitorArea = null;
     _forceKeyFrame = true;
   }
@@ -365,9 +323,10 @@ internal class DesktopCapturer : IDesktopCapturer
               targetDisplay: selectedDisplay,
               captureCursor: false);
 
-        if (captureResult.HadNoChanges)
+        if (captureResult.IsSuccess && captureResult.DirtyRects.Length == 0)
         {
-          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
+          // Nothing changed, so skip encoding.
+          await Task.Delay(TimeSpan.FromMilliseconds(10), _timeProvider, cancellationToken);
           continue;
         }
 
@@ -383,7 +342,7 @@ internal class DesktopCapturer : IDesktopCapturer
           continue;
         }
 
-        if (!captureResult.IsUsingGpu && _captureMetrics.IsUsingGpu)
+        if (captureResult.IsUsingGpu != _captureMetrics.IsUsingGpu)
         {
           // We've switched from GPU to CPU capture, so we need to force a keyframe.
           _forceKeyFrame = true;
@@ -396,8 +355,6 @@ internal class DesktopCapturer : IDesktopCapturer
           EncodeRegion(captureResult.Bitmap, captureResult.Bitmap.ToRect(), CaptureMetricsBase.DefaultImageQuality, isKeyFrame: true);
           _forceKeyFrame = false;
           _needsKeyFrame = false;
-          _lastCpuBitmap?.Dispose();
-          _lastCpuBitmap = null;
           _lastDisplayId = selectedDisplay.DeviceName;
           _lastMonitorArea = selectedDisplay.MonitorArea;
           continue;
@@ -405,14 +362,7 @@ internal class DesktopCapturer : IDesktopCapturer
 
         _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
 
-        if (captureResult.IsUsingGpu)
-        {
-          await EncodeGpuCaptureResult(captureResult, _captureMetrics.Quality);
-        }
-        else
-        {
-          await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
-        }
+  await EncodeCaptureResult(captureResult, _captureMetrics.Quality);
       }
       catch (OperationCanceledException)
       {
@@ -477,15 +427,13 @@ internal class DesktopCapturer : IDesktopCapturer
           EncodeRegion(captureResult.Bitmap, bounds.ToRect(), CaptureMetricsBase.DefaultImageQuality, isKeyFrame: true);
           _forceKeyFrame = false;
           _needsKeyFrame = false;
-          _lastCpuBitmap?.Dispose();
-          _lastCpuBitmap = null;
           _lastDisplayId = selectedDisplay.DeviceName;
           _lastMonitorArea = selectedDisplay.MonitorArea;
           continue;
         }
 
         _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
-        await EncodeCpuCaptureResult(captureResult, _captureMetrics.Quality, cancellationToken);
+  await EncodeCaptureResult(captureResult, _captureMetrics.Quality);
       }
       catch (OperationCanceledException)
       {

@@ -18,4 +18,13 @@ public static class SkiaSharpExtensions
       rectangle.X + rectangle.Width,
       rectangle.Y + rectangle.Height);
   }
+
+  public static Rectangle ToRectangle(this SKRect rect)
+  {
+    return new Rectangle(
+      (int)rect.Left,
+      (int)rect.Top,
+      (int)(rect.Right - rect.Left),
+      (int)(rect.Bottom - rect.Top));
+  }
 }

@@ -6,7 +6,9 @@ namespace ControlR.DesktopClient.Linux.Services;
 
 internal class ScreenGrabberLinux : IScreenGrabber
 {
-  public CaptureResult Capture(DisplayInfo targetDisplay, bool captureCursor = true, bool tryUseGpuAcceleration = true, int gpuCaptureTimeout = 50, bool allowFallbackToCpu = true)
+  public CaptureResult Capture(
+    DisplayInfo targetDisplay,
+    bool captureCursor = true)
   {
     throw new NotImplementedException();
   }

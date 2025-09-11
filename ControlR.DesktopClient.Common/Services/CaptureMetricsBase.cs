@@ -30,7 +30,7 @@ public class CaptureMetricsBase(
   protected readonly IScreenGrabber _screenGrabber = screenGrabber;
   protected readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
-  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new(false);
+  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new();
   private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
@@ -186,7 +186,6 @@ public class CaptureMetricsBase(
 
       if (_bytesSent.Count >= 2)
       {
-        var bytesSent = _bytesSent.Sum(x => x.Size);
         _mbps = ConvertBytesToMbps(_bytesSent.Sum(x => x.Size), _broadcastInterval);
       }
       else if (_bytesSent.Count == 1)
@@ -228,7 +227,9 @@ public class CaptureMetricsBase(
         _ips = 0;
       }
 
-      var calculatedQuality = (int)(TargetMbps / _mbps * DefaultImageQuality);
+      var calculatedQuality = _mbps > 0 ? 
+         (int)(TargetMbps / _mbps * DefaultImageQuality) : 
+         DefaultImageQuality;
 
       _quality = calculatedQuality < _quality ?
          Math.Max(calculatedQuality, MinimumQuality) :
@@ -244,7 +245,7 @@ public class CaptureMetricsBase(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while processing metrics.");
+      _logger.LogError(ex, "Unexpected error while processing metrics.");
     }
     finally
     {

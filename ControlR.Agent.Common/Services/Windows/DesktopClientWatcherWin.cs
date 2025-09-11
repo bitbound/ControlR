@@ -214,8 +214,7 @@ internal class DesktopClientWatcherWin(
     {
       WorkingDirectory = Path.GetDirectoryName(desktopClientPath),
       UseShellExecute = true,
-      FileName = desktopClientPath,
-      Arguments = "--startup-mode Child"
+      FileName = desktopClientPath
     };
 
     _processManager.Start(psi);

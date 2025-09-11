@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Helpers;
 using Windows.Win32.Graphics.Direct3D11;
 using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
@@ -16,12 +17,15 @@ internal sealed class DxOutput(
   DXGI_MODE_ROTATION rotation)
   : IDisposable
 {
+
+  private Bitmap? _lastCapture;
   public IDXGIAdapter1 Adapter { get; } = adapter;
   public Rectangle Bounds { get; } = bounds;
   public ID3D11Device Device { get; } = device;
   public ID3D11DeviceContext DeviceContext { get; } = deviceContext;
   public string DeviceName { get; } = deviceName;
   public bool IsDisposed { get; private set; }
+  public Bitmap? LastCapture => _lastCapture;
 
   public Rectangle LastCursorArea { get; set; }
   public DateTimeOffset LastSuccessfulCapture { get; set; }
@@ -37,25 +41,20 @@ internal sealed class DxOutput(
 
     IsDisposed = true;
 
-    try
-    {
-      OutputDuplication.ReleaseFrame();
-    }
-    catch
-    {
-    }
-
-    try
-    {
-      Marshal.FinalReleaseComObject(OutputDuplication);
-      Marshal.FinalReleaseComObject(DeviceContext);
-      Marshal.FinalReleaseComObject(Device);
-      Marshal.FinalReleaseComObject(Adapter);
-    }
-    catch
-    {
-    }
+    TryHelper.TryAll(
+      () => LastCapture?.Dispose(),
+      OutputDuplication.ReleaseFrame,
+      () => Marshal.FinalReleaseComObject(OutputDuplication),
+      () => Marshal.FinalReleaseComObject(DeviceContext),
+      () => Marshal.FinalReleaseComObject(Device),
+      () => Marshal.FinalReleaseComObject(Adapter));
 
     GC.SuppressFinalize(this);
+  }
+
+  public void SetLastCapture(Bitmap bitmap)
+  {
+    _lastCapture?.Dispose();
+    _lastCapture = bitmap;
   }
 }
