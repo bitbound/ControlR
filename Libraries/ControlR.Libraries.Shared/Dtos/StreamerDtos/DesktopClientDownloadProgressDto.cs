@@ -2,7 +2,7 @@
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record DesktopClientDownloadProgressDto(
-    Guid StreamingSessionId,
+    Guid RemoteControlSessionId,
     string ViewerConnectionId,
     double Progress,
     string Message);

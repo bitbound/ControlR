@@ -12,10 +12,10 @@ namespace ControlR.Agent.LoadTester;
 
 public class TestAgentHubClient : IAgentHubClient
 {
-  public Task<bool> CreateStreamingSession(RemoteControlSessionRequestDto dto)
+  public Task<Result> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     Console.WriteLine($"Creating streaming session with ID: {dto.SessionId}, Viewer: {dto.ViewerName}");
-    return Task.FromResult(true);
+    return Task.FromResult(Result.Ok());
   }
 
   public Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto)

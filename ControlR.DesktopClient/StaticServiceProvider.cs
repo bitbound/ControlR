@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
@@ -8,11 +9,9 @@ using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
 using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -45,15 +44,7 @@ internal static class StaticServiceProvider
     this IServiceCollection services,
     string? instanceId = null)
   {
-    // Confiuguration
-    var instanceOptionsData = new Dictionary<string, string?>();
-    if (!string.IsNullOrEmpty(instanceId))
-    {
-      instanceOptionsData["InstanceOptions:InstanceId"] = instanceId.SanitizeForFileSystem();
-    }
-
     var configuration = new ConfigurationBuilder()
-      .AddInMemoryCollection(instanceOptionsData)
       .AddEnvironmentVariables()
       .Build();
 
@@ -77,42 +68,41 @@ internal static class StaticServiceProvider
       options.InstanceId = instanceId;
     });
 
-    services.Configure<InstanceOptions>(
-      configuration.GetSection(InstanceOptions.SectionKey));
-
     // Services
-    services.AddControlrIpc();
-    services.AddSingleton(TimeProvider.System);
-    services.AddSingleton<IProcessManager, ProcessManager>();
-    services.AddSingleton<IFileSystem, FileSystem>();
-    services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
-    services.AddSingleton<INavigationProvider, NavigationProvider>();
-    services.AddSingleton<IAppViewModel, AppViewModel>();
-    services.AddSingleton<IMainWindowViewModel, MainWindowViewModel>();
-    services.AddSingleton<MainWindow>();
-    services.AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>();
-    services.AddSingleton<IDialogProvider, DialogProvider>();
-    services.AddSingleton<IChatSessionManager, ChatSessionManager>();
-    services.AddSingleton<IpcClientAccessor>();
-    services.AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>());
-    services.AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>();
-    services.AddSingleton<IToaster, Toaster>();
-    services.AddSingleton<IImageUtility, ImageUtility>();
-    services.AddTransient<IMessageBoxViewModel, MessageBoxViewModel>();
-    services.AddTransient<ManagedDeviceView>();
-    services.AddTransient<ChatWindow>();
-    services.AddTransient<IChatWindowViewModel, ChatWindowViewModel>();
-    services.AddTransient<ToastWindow>();
-    services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
-    services.AddHostedService<IpcClientManager>();
+    services.AddControlrIpc()
+      .AddSingleton(TimeProvider.System)
+      .AddSingleton(WeakReferenceMessenger.Default)
+      .AddSingleton<IProcessManager, ProcessManager>()
+      .AddSingleton<IFileSystem, FileSystem>()
+      .AddSingleton<ISystemEnvironment, SystemEnvironment>()
+      .AddSingleton<INavigationProvider, NavigationProvider>()
+      .AddSingleton<IAppViewModel, AppViewModel>()
+      .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
+      .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()
+      .AddSingleton<IDialogProvider, DialogProvider>()
+      .AddSingleton<IChatSessionManager, ChatSessionManager>()
+      .AddSingleton<IpcClientAccessor>()
+      .AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>())
+      .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
+      .AddSingleton<IToaster, Toaster>()
+      .AddSingleton<IImageUtility, ImageUtility>()
+      .AddTransient<MainWindow>()
+      .AddTransient<IMessageBoxViewModel, MessageBoxViewModel>()
+      .AddTransient<ManagedDeviceView>()
+      .AddTransient<ChatWindow>()
+      .AddTransient<IChatWindowViewModel, ChatWindowViewModel>()
+      .AddTransient<ToastWindow>()
+      .AddTransient<IToastWindowViewModel, ToastWindowViewModel>()
+      .AddHostedService<IpcClientManager>()
+      // Cross-platform Avalonia-based toaster
+      .AddSingleton<IToaster, Toaster>();
     
-    // Cross-platform Avalonia-based toaster
-    services.AddSingleton<IToaster, Toaster>();
 
 #if WINDOWS_BUILD
     services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>();
     services.AddSingleton<IWin32Interop, Win32Interop>();
-    services.AddSingleton<IDxOutputGenerator, DxOutputGenerator>();
+    services.AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>();
+    services.AddSingleton<IDisplayManager, DisplayManagerWindows>();
 #endif
 
 #if UNIX_BUILD
@@ -120,13 +110,15 @@ internal static class StaticServiceProvider
 #endif
 
 #if LINUX_BUILD
-    services.AddSingleton<IScreenGrabber, ScreenGrabberLinux>();
+    services.AddSingleton<IScreenGrabber, ScreenGrabberX11>();
+    services.AddSingleton<IDisplayManager, DisplayManagerX11>();
 #endif
 
 #if MAC_BUILD
     services.AddHostedService<PermissionsInitializerMac>();
     services.AddSingleton<IScreenGrabber, ScreenGrabberMac>();
     services.AddSingleton<IMacInterop, MacInterop>();
+    services.AddSingleton<IDisplayManager, DisplayManagerMac>();
 #endif
 
     return services;

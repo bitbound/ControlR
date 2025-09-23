@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using ControlR.Agent.Common.Startup;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.Extensions.Options;
 

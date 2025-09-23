@@ -1,6 +1,8 @@
-﻿using System.Net.WebSockets;
+﻿using System.Drawing;
+using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
+using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
@@ -16,12 +18,12 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Common.Services;
 
-public interface IStreamerStreamingClient : IHostedService
+public interface IDesktopStreamingClient : IHostedService
 {
   Task SendCurrentClipboardText();
 }
 
-internal sealed class StreamerStreamingClient(
+internal sealed class DesktopStreamingClient(
   TimeProvider timeProvider,
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
@@ -30,20 +32,23 @@ internal sealed class StreamerStreamingClient(
   IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
+  IDisplayManager displayManager,
   IDelayer delayer,
   IOptions<StreamingSessionOptions> startupOptions,
-  ILogger<StreamerStreamingClient> logger)
-  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IStreamerStreamingClient
+  ILogger<DesktopStreamingClient> logger)
+  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IDesktopStreamingClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturer;
+  private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
-  private readonly ILogger<StreamerStreamingClient> _logger = logger;
+  private readonly ILogger<DesktopStreamingClient> _logger = logger;
   private readonly IOptions<StreamingSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
 
   private IDisposable? _messageHandlerRegistration;
+  private Task? _streamTask;
 
   public async Task SendCurrentClipboardText()
   {
@@ -84,7 +89,7 @@ internal sealed class StreamerStreamingClient(
         await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
       }
 
-      StreamScreenToViewer().Forget();
+      _streamTask = StreamScreenToViewer(_appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {
@@ -93,6 +98,16 @@ internal sealed class StreamerStreamingClient(
         "Error while initializing streaming session. " +
         "Streaming cannot start.  Shutting down.");
       _appLifetime.StopApplication();
+    }
+  }
+
+  public async Task StopAsync(CancellationToken cancellationToken)
+  {
+    await Close();
+    _messageHandlerRegistration?.Dispose();
+    if (_streamTask is not null)
+    {
+      await _streamTask.WaitAsync(cancellationToken);
     }
   }
 
@@ -112,12 +127,6 @@ internal sealed class StreamerStreamingClient(
     {
       _logger.LogError(ex, "Error while handling capture metrics change.");
     }
-  }
-
-  public async Task StopAsync(CancellationToken cancellationToken)
-  {
-    await Close();
-    _messageHandlerRegistration?.Dispose();
   }
 
   private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
@@ -140,7 +149,7 @@ internal sealed class StreamerStreamingClient(
 
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
   {
-    await _desktopCapturer.ResetDisplays();
+    await _displayManager.ReloadDisplays();
     await SendDisplayData();
   }
 
@@ -167,8 +176,12 @@ internal sealed class StreamerStreamingClient(
         case DtoType.WheelScroll:
           {
             var payload = wrapper.GetPayload<WheelScrollDto>();
-            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
-            _inputSimulator.ScrollWheel(point.X, point.Y, _desktopCapturer.SelectedDisplay, (int)payload.ScrollY, (int)payload.ScrollX);
+            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
+            if (displayPoint == null)
+            {
+              break;
+            }
+            _inputSimulator.ScrollWheel(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, (int)payload.ScrollY, (int)payload.ScrollX);
             break;
           }
         case DtoType.KeyEvent:
@@ -204,30 +217,42 @@ internal sealed class StreamerStreamingClient(
         case DtoType.MovePointer:
           {
             var payload = wrapper.GetPayload<MovePointerDto>();
-            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
-            _inputSimulator.MovePointer(point.X, point.Y, _desktopCapturer.SelectedDisplay, MovePointerType.Absolute);
+            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
+            if (displayPoint == null)
+            {
+              break;
+            }
+            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
             break;
           }
         case DtoType.MouseButtonEvent:
           {
             var payload = wrapper.GetPayload<MouseButtonEventDto>();
-            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
-            _inputSimulator.MovePointer(point.X, point.Y, _desktopCapturer.SelectedDisplay, MovePointerType.Absolute);
-            _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, _desktopCapturer.SelectedDisplay, payload.Button, payload.IsPressed);
+            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
+            if (displayPoint == null)
+            {
+              break;
+            }
+            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
+            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, payload.IsPressed);
             break;
           }
         case DtoType.MouseClick:
           {
             var payload = wrapper.GetPayload<MouseClickDto>();
-            var point = await _desktopCapturer.ConvertPercentageLocationToAbsolute(payload.PercentX, payload.PercentY);
-            _inputSimulator.MovePointer(point.X, point.Y, _desktopCapturer.SelectedDisplay, MovePointerType.Absolute);
-            _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, _desktopCapturer.SelectedDisplay, payload.Button, true);
-            _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y, _desktopCapturer.SelectedDisplay, payload.Button, false);
+            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
+            if (displayPoint == null)
+            {
+              break;
+            }
+            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
+            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, true);
+            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, false);
 
             if (payload.IsDoubleClick)
             {
-              _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y,_desktopCapturer.SelectedDisplay,payload.Button, true);
-              _inputSimulator.InvokeMouseButtonEvent(point.X, point.Y,_desktopCapturer.SelectedDisplay,payload.Button, false);
+              _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, true);
+              _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, false);
             }
             break;
           }
@@ -244,7 +269,7 @@ internal sealed class StreamerStreamingClient(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while handling signed DTO.");
+      _logger.LogError(ex, "Error while handling DTO.");
     }
   }
 
@@ -276,12 +301,11 @@ internal sealed class StreamerStreamingClient(
     }
   }
 
-
   private async Task SendDisplayData()
   {
     try
     {
-      var displays = await _desktopCapturer.GetDisplays();
+      var displays = await _displayManager.GetDisplays();
       var dto = new DisplayDataDto([.. displays]);
 
       var wrapper = DtoWrapper.Create(dto, DtoType.DisplayData);
@@ -301,15 +325,15 @@ internal sealed class StreamerStreamingClient(
     }
   }
 
-  private async Task StreamScreenToViewer()
+  private async Task StreamScreenToViewer(CancellationToken cancellationToken)
   {
-    await _desktopCapturer.StartCapturingChanges();
+    await _desktopCapturer.StartCapturingChanges(cancellationToken);
 
-    while (State == WebSocketState.Open && !_appLifetime.ApplicationStopping.IsCancellationRequested)
+    while (State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
     {
       try
       {
-        await foreach (var region in _desktopCapturer.GetChangedRegions())
+        await foreach (var region in _desktopCapturer.GetCaptureStream(cancellationToken))
         {
           var wrapper = DtoWrapper.Create(region, DtoType.ScreenRegion);
           await Send(wrapper, _appLifetime.ApplicationStopping);
@@ -333,4 +357,28 @@ internal sealed class StreamerStreamingClient(
     _logger.LogInformation("Streaming session ended.  Shutting down.");
     _appLifetime.StopApplication();
   }
+
+  private async Task<DisplayPointResult?> TryGetSelectedDisplayPoint(double percentX, double percentY)
+  {
+    if (!_desktopCapturer.TryGetSelectedDisplay(out var selectedDisplay))
+    {
+      _logger.LogWarning("Selected display is invalid. Unable to process viewer request.");
+      return null;
+    }
+
+    var point = await _displayManager.ConvertPercentageLocationToAbsolute(
+        selectedDisplay.DeviceName,
+        percentX,
+        percentY);
+
+    if (point.IsEmpty)
+    {
+      _logger.LogWarning("Unable to convert percentage location to absolute coordinates.");
+      return null;
+    }
+
+    return new DisplayPointResult(selectedDisplay, point);
+  }
+
+  private record DisplayPointResult(DisplayInfo Display, Point Point);
 }

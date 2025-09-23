@@ -17,10 +17,12 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IInputSimulator, InputSimulatorWindows>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
+      .AddSingleton<IDisplayManager, DisplayManagerWindows>()
       .AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
-      .AddSingleton<IDxOutputGenerator, DxOutputGenerator>()
+      .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()
+      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
       .AddHostedService<CursorWatcher>();
 
     builder.BootstrapSerilog(

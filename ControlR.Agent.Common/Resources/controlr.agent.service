@@ -1,0 +1,13 @@
+[Unit]
+Description=ControlR is an open-source remote control and remote access solution.
+
+[Service]
+WorkingDirectory={{INSTALL_DIRECTORY}}
+ExecStart={{INSTALL_DIRECTORY}}/ControlR.Agent run{{INSTANCE_ARGS}}
+Restart=always
+StartLimitIntervalSec=0
+Environment=DOTNET_ENVIRONMENT=Production
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

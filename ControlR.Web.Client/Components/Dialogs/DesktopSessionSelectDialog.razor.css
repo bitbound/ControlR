@@ -4,4 +4,5 @@
   column-gap: 20px;
   min-width: 250px;
   align-items: center;
+  overflow: hidden;
 }

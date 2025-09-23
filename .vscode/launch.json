@@ -21,7 +21,7 @@
       "cwd": "${workspaceFolder}/ControlR.DesktopClient",
       "launchSettingsProfile": "Run",
       "stopAtEntry": false,
-      "console": "internalConsole"
+      "console": "internalConsole",
     },
     {
       "name": "Server (https)",

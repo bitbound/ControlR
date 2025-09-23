@@ -66,7 +66,17 @@ function invokePrompt(message) {
   return prompt(message);
 }
 function isTouchScreen() {
-  return navigator.maxTouchPoints > 0 && navigator.maxTouchPoints !== 256;
+  // Check for touch points support
+  if (navigator.maxTouchPoints > 0) {
+    return true;
+  }
+  
+  // Fallback for older browsers
+  if ('ontouchstart' in window || window.TouchEvent) {
+    return true;
+  }
+  
+  return false;
 }
 function log(category, message) {
   console.log("Got: ", category, message);

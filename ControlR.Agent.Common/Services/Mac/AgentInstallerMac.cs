@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
@@ -83,7 +82,9 @@ internal class AgentInstallerMac(
         {
           _fileSystem.CopyFile(exePath, targetPath, true);
           return Task.CompletedTask;
-        }, 5, TimeSpan.FromSeconds(1));
+        },
+        tryCount: 5,
+        retryDelay: TimeSpan.FromSeconds(1));
 
       var agentPlistPath = GetLaunchDaemonFilePath();
       var agentPlistFile = (await GetLaunchDaemonFile()).Trim();

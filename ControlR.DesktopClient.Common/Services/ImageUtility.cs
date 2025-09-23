@@ -1,17 +1,18 @@
-﻿using ControlR.DesktopClient.Common.Extensions;
+﻿using System.IO.Compression;
+using ControlR.DesktopClient.Common.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using SkiaSharp;
-using System.IO.Compression;
 
 namespace ControlR.DesktopClient.Common.Services;
 
 public interface IImageUtility
 {
+  public bool IsEmpty(SKBitmap bitmap);
+  SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea);
+  SKBitmap DownscaleBitmap(SKBitmap bitmap, double scale);
   byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80);
   byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true);
-  SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea);
   Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false);
-  public bool IsEmpty(SKBitmap bitmap);
 }
 
 public class ImageUtility : IImageUtility
@@ -25,6 +26,14 @@ public class ImageUtility : IImageUtility
         cropArea,
         new SKRect(0, 0, cropArea.Width, cropArea.Height));
     return cropped;
+  }
+
+  public SKBitmap DownscaleBitmap(SKBitmap bitmap, double scale)
+  {
+    var newWidth = (int)(bitmap.Width * scale);
+    var newHeight = (int)(bitmap.Height * scale);
+    var imageInfo = new SKImageInfo(newWidth, newHeight);
+    return bitmap.Resize(imageInfo, default(SKSamplingOptions));
   }
 
   public byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80)
@@ -50,7 +59,6 @@ public class ImageUtility : IImageUtility
 
     return ms.ToArray();
   }
-
 
   public Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false)
   {

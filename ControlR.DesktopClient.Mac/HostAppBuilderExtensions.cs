@@ -17,12 +17,14 @@ public static class HostAppBuilderExtensions
   {
     builder.Services
       .AddSingleton<IMacInterop, MacInterop>()
+      .AddSingleton<IDisplayManager, DisplayManagerMac>()
       .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
       .AddSingleton<IClipboardManager, ClipboardManagerMac>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsMac>()
       .AddSingleton<IInputSimulator, InputSimulatorMac>()
       .AddSingleton<IFileSystemUnix, FileSystemUnix>()
-      .AddHostedService<ScreenWakerMac>();
+      .AddHostedService<ScreenWakerMac>()
+      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>());
     
     builder.BootstrapSerilog(
       logFilePath: PathConstants.GetLogsPath(appDataFolder),

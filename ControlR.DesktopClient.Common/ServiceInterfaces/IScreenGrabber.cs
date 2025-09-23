@@ -15,7 +15,7 @@ public interface IScreenGrabber
   ///   A result object indicating whether the capture was successful.
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
-  CaptureResult Capture(
+  CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true);
 
@@ -27,16 +27,5 @@ public interface IScreenGrabber
   ///   A result object indicating whether the capture was successful.
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
-  CaptureResult Capture(bool captureCursor = true);
-
-  /// <summary>
-  ///   Return info about the connected displays.
-  /// </summary>
-  /// <returns></returns>
-  IEnumerable<DisplayInfo> GetDisplays();
-
-  /// <summary>
-  ///   Returns the area encompassing all displays.
-  /// </summary>
-  Rectangle GetVirtualScreenBounds();
+  CaptureResult CaptureAllDisplays(bool captureCursor = true);
 }

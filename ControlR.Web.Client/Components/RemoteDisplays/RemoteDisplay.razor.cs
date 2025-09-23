@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Web.Client.Components.Pages.DeviceAccess;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -20,16 +21,13 @@ public partial class RemoteDisplay : JsInteropableComponent
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
   private ElementReference _outerFrameElement;
-  private bool _isMetricsEnabled;
-  private bool _isScrollModeEnabled;
   private double _lastPinchDistance = -1;
   private CaptureMetricsDto? _latestCaptureMetrics;
   private ElementReference _screenArea;
   private bool _streamStarted;
-  private ViewMode _viewMode = ViewMode.Stretch;
   private ElementReference _virtualKeyboard;
-  private bool _virtualKeyboardToggled;
   private IDisposable? _messageHandlerRegistration;
+  private IDisposable? _remoteControlStateChangedToken;
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -68,8 +66,8 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     get
     {
-      var classNames = $"{_viewMode}";
-      if (_isScrollModeEnabled)
+      var classNames = $"{RemoteControlState.ViewMode}";
+      if (RemoteControlState.IsScrollModeToggled)
       {
         classNames += " scroll-mode";
       }
@@ -120,6 +118,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     await _componentClosing.CancelAsync();
     _messageHandlerRegistration?.Dispose();
     _componentRef?.Dispose();
+    _remoteControlStateChangedToken?.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -144,7 +143,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       return;
     }
-    
+
     await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
   }
 
@@ -212,16 +211,14 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     await base.OnInitializedAsync();
 
-    var isTouchScreen = await JsInterop.IsTouchScreen();
-
-    if (isTouchScreen)
-    {
-      _controlMode = ControlMode.Touch;
-    }
-
     if (CurrentBreakpoint <= Breakpoint.Sm)
     {
-      _viewMode = ViewMode.Original;
+      var isTouchScreen = await JsInterop.IsTouchScreen();
+
+      if (isTouchScreen)
+      {
+        _controlMode = ControlMode.Touch;
+      }
     }
 
     _messageHandlerRegistration = StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
@@ -236,6 +233,16 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       await StreamingClient.RequestKeyFrame(_componentClosing.Token);
     }
+
+    if (RemoteControlState.IsVirtualKeyboardToggled)
+    {
+      await _virtualKeyboard.FocusAsync();
+    }
+
+    _remoteControlStateChangedToken = RemoteControlState.OnStateChanged(async () =>
+    {
+      await InvokeAsync(StateHasChanged);
+    });
   }
 
   private static double GetDistance(double x1, double y1, double x2, double y2)
@@ -365,8 +372,8 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private async Task HandleKeyboardToggled()
   {
-    _virtualKeyboardToggled = !_virtualKeyboardToggled;
-    if (_virtualKeyboardToggled)
+    RemoteControlState.IsVirtualKeyboardToggled = !RemoteControlState.IsVirtualKeyboardToggled;
+    if (RemoteControlState.IsVirtualKeyboardToggled)
     {
       await _virtualKeyboard.FocusAsync();
     }
@@ -378,7 +385,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private void HandleMetricsToggled()
   {
-    _isMetricsEnabled = !_isMetricsEnabled;
+    RemoteControlState.IsMetricsEnabled = !RemoteControlState.IsMetricsEnabled;
   }
 
   private async Task HandleReceiveClipboardClicked()
@@ -401,7 +408,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private void HandleScrollModeToggled(bool isEnabled)
   {
-    _isScrollModeEnabled = isEnabled;
+    RemoteControlState.IsScrollModeToggled = isEnabled;
   }
 
   private async Task HandleSendClipboardClicked()
@@ -437,47 +444,47 @@ public partial class RemoteDisplay : JsInteropableComponent
       switch (message.DtoType)
       {
         case DtoType.DisplayData:
-        {
-          var dto = message.GetPayload<DisplayDataDto>();
-          await HandleDisplayDataReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<DisplayDataDto>();
+            await HandleDisplayDataReceived(dto);
+            break;
+          }
         case DtoType.ScreenRegion:
-        {
-          var dto = message.GetPayload<ScreenRegionDto>();
-          await DrawRegion(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ScreenRegionDto>();
+            await DrawRegion(dto);
+            break;
+          }
         case DtoType.ClipboardText:
-        {
-          var dto = message.GetPayload<ClipboardTextDto>();
-          await HandleClipboardTextReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ClipboardTextDto>();
+            await HandleClipboardTextReceived(dto);
+            break;
+          }
         case DtoType.CursorChanged:
-        {
-          var dto = message.GetPayload<CursorChangedDto>();
-          await HandleCursorChanged(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<CursorChangedDto>();
+            await HandleCursorChanged(dto);
+            break;
+          }
         case DtoType.WindowsSessionEnding:
-        {
-          Snackbar.Add("Remote Windows session ending", Severity.Warning);
-          await OnDisconnectRequested.InvokeAsync();
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session ending", Severity.Warning);
+            await OnDisconnectRequested.InvokeAsync();
+            break;
+          }
         case DtoType.WindowsSessionSwitched:
-        {
-          Snackbar.Add("Remote Windows session switched", Severity.Info);
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session switched", Severity.Info);
+            break;
+          }
         case DtoType.CaptureMetricsChanged:
-        {
-          var dto = message.GetPayload<CaptureMetricsDto>();
-          _latestCaptureMetrics = dto;
-          await InvokeAsync(StateHasChanged);
-          break;
-        }
+          {
+            var dto = message.GetPayload<CaptureMetricsDto>();
+            _latestCaptureMetrics = dto;
+            await InvokeAsync(StateHasChanged);
+            break;
+          }
         default:
           Logger.LogWarning("Received unsupported DTO type: {DtoType}", message.DtoType);
           Snackbar.Add($"Unsupported DTO type: {message.DtoType}", Severity.Warning);
@@ -513,7 +520,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
   {
-    if (_virtualKeyboardToggled)
+    if (RemoteControlState.IsVirtualKeyboardToggled)
     {
       await _virtualKeyboard.FocusAsync();
     }
@@ -539,7 +546,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      if (_isScrollModeEnabled)
+      if (RemoteControlState.IsScrollModeToggled)
       {
         return;
       }
@@ -566,7 +573,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
 
-      _viewMode = ViewMode.Original;
+      RemoteControlState.ViewMode = ViewMode.Original;
 
       _canvasScale = Math.Max(.25, Math.Min(_canvasScale + pinchChange / 100, 3));
 

@@ -18,7 +18,6 @@ using ControlR.Web.ServiceDefaults;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
@@ -125,6 +124,11 @@ internal static class HostApplicationBuilderExtensions
         services.AddHostedService<DesktopClientWatcherMac>();
         services.AddHostedService<IpcServerInitializerMac>();
       }
+      else if (OperatingSystem.IsLinux())
+      {
+        services.AddHostedService<DesktopClientWatcherLinux>();
+        services.AddHostedService<IpcServerInitializerLinux>();
+      }
     }
 
     if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
@@ -142,9 +146,10 @@ internal static class HostApplicationBuilderExtensions
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceDataGeneratorLinux>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-      services.AddSingleton<IUiSessionProvider, UiSessionProviderLinux>();
+      services.AddSingleton<IUiSessionProvider, UiSessionProviderX11>();
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
+      services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IWin32Interop, Win32InteropFake>();

@@ -1,32 +1,25 @@
-using System.Collections.Concurrent;
-using System.Drawing;
-using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
 public class ScreenGrabberMac(
-  ILogger<ScreenGrabberMac> logger,
-  IImageUtility imageUtility) : IScreenGrabber
+  IDisplayManager displayManager,
+  ILogger<ScreenGrabberMac> logger) : IScreenGrabber
 {
-  private const string AllDisplaysKey = "__ALL__";
-  private readonly IImageUtility _imageUtility = imageUtility;
-  private readonly ConcurrentDictionary<string, SKBitmap> _lastFrames = new();
+  private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
 
-  public CaptureResult Capture(
+  public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true)
   {
     try
     {
-      return CaptureDisplay(targetDisplay, captureCursor);
+      return CaptureDisplayImpl(targetDisplay, captureCursor);
     }
     catch (Exception ex)
     {
@@ -35,11 +28,11 @@ public class ScreenGrabberMac(
     }
   }
 
-  public CaptureResult Capture(bool captureCursor = true)
+  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
   {
     try
     {
-      return CaptureAllDisplays(captureCursor);
+      return CaptureAllDisplaysImpl(captureCursor);
     }
     catch (Exception ex)
     {
@@ -48,43 +41,11 @@ public class ScreenGrabberMac(
     }
   }
 
-  public IEnumerable<DisplayInfo> GetDisplays()
-  {
-    return DisplaysEnumerationHelper.GetDisplays();
-  }
-
-  public Rectangle GetVirtualScreenBounds()
+  private CaptureResult CaptureAllDisplaysImpl(bool captureCursor)
   {
     try
     {
-      var displays = GetDisplays().ToList();
-      if (displays.Count == 0)
-      {
-        return Rectangle.Empty;
-      }
-
-      var minX = displays.Min(d => d.MonitorArea.Left);
-      var minY = displays.Min(d => d.MonitorArea.Top);
-      var maxX = displays.Max(d => d.MonitorArea.Right);
-      var maxY = displays.Max(d => d.MonitorArea.Bottom);
-
-      return new Rectangle(minX, minY, maxX - minX, maxY - minY);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error getting virtual screen bounds.");
-      // Return main display bounds as fallback
-      var mainDisplayId = CoreGraphics.CGMainDisplayID();
-      var bounds = CoreGraphics.CGDisplayBounds(mainDisplayId);
-      return bounds.ToRectangle();
-    }
-  }
-
-  private CaptureResult CaptureAllDisplays(bool captureCursor)
-  {
-    try
-    {
-      var virtualBounds = GetVirtualScreenBounds();
+      var virtualBounds = _displayManager.GetVirtualScreenBounds();
 
       if (virtualBounds.IsEmpty)
       {
@@ -116,35 +77,7 @@ public class ScreenGrabberMac(
           _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
         }
 
-        var key = AllDisplaysKey;
-        Rectangle[] dirtyRects = [];
-        if (_lastFrames.TryGetValue(key, out var previous))
-        {
-          try
-          {
-            var diff = _imageUtility.GetChangedArea(bitmap, previous);
-            if (diff.IsSuccess && !diff.Value.IsEmpty)
-            {
-              dirtyRects =
-              [
-                 diff.Value.ToRectangle()
-              ];
-            }
-          }
-          catch (Exception ex)
-          {
-            _logger.LogDebug(ex, "Failed to compute dirty rect diff for macOS virtual capture.");
-          }
-        }
-
-        if (dirtyRects.Length == 0)
-        {
-          dirtyRects = [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
-        }
-
-        var copy = bitmap.Copy();
-        _lastFrames.AddOrUpdate(key, copy, (_, old) => { old.Dispose(); return copy; });
-        return CaptureResult.Ok(bitmap, isUsingGpu: false, dirtyRects: dirtyRects);
+        return CaptureResult.Ok(bitmap, isUsingGpu: false);
       }
       finally
       {
@@ -158,7 +91,7 @@ public class ScreenGrabberMac(
     }
   }
 
-  private CaptureResult CaptureDisplay(DisplayInfo display, bool captureCursor)
+  private CaptureResult CaptureDisplayImpl(DisplayInfo display, bool captureCursor)
   {
     nint cgImageRef = nint.Zero;
 
@@ -191,35 +124,7 @@ public class ScreenGrabberMac(
         _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
       }
 
-      var key = display.DeviceName;
-      Rectangle[] dirtyRects = [];
-      if (_lastFrames.TryGetValue(key, out var previous))
-      {
-        try
-        {
-          var diff = _imageUtility.GetChangedArea(bitmap, previous);
-          if (diff.IsSuccess && !diff.Value.IsEmpty)
-          {
-            dirtyRects =
-            [
-              diff.Value.ToRectangle()
-            ];
-          }
-        }
-        catch (Exception ex)
-        {
-          _logger.LogDebug(ex, "Failed to compute dirty rect diff for macOS capture.");
-        }
-      }
-      
-      if (dirtyRects.Length == 0)
-      {
-        dirtyRects = [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
-      }
-
-      var copy = bitmap.Copy();
-      _lastFrames.AddOrUpdate(key, copy, (_, old) => { old.Dispose(); return copy; });
-      return CaptureResult.Ok(bitmap, isUsingGpu: false, dirtyRects: dirtyRects);
+      return CaptureResult.Ok(bitmap, isUsingGpu: false);
     }
     catch (Exception ex)
     {

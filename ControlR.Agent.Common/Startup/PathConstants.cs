@@ -25,7 +25,7 @@ internal static class PathConstants
     {
       var logsDir = ElevationCheckerLinux.Instance.IsElevated()
         ? "/var/log/controlr"
-        : "~/.controlr/logs";
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr", "logs");
 
       logsDir = AppendSubDirectories(logsDir, instanceId);
       return Path.Combine(logsDir, "ControlR.Agent", "LogFile.log");
@@ -52,7 +52,7 @@ internal static class PathConstants
 
       var rootDir = ElevationCheckerLinux.Instance.IsElevated()
         ? "/etc/controlr"
-        : "~/.controlr";
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
 
       return AppendSubDirectories(rootDir, instanceId);
     }

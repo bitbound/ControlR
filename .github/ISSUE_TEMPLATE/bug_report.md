@@ -33,13 +33,17 @@ Steps to reproduce the behavior:
 ### Client Info
 
 Browser:  
+Language/Locale of Browser:  
+
 Agent Version:  
-Agent OS:
+Agent OS:  
+Language/Locale of Agent OS:  
 
 ### Host Info (if self-hosting)
 
 Host OS:  
-Docker image tag:
+Language/Locale of Host OS:  
+Docker image tag:  
 
 Other relevant info:
 

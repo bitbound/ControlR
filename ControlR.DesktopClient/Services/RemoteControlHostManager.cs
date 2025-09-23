@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
@@ -46,13 +47,13 @@ public class RemoteControlHostManager(
 
       builder.Services.AddSingleton<IToaster, Toaster>();
       builder.Services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
-
 #if WINDOWS_BUILD
       builder.AddWindowsDesktopServices(requestDto.DataFolder);
 #elif MAC_BUILD
       builder.AddMacDesktopServices(requestDto.DataFolder);
 #elif LINUX_BUILD
       builder.AddLinuxDesktopServices(requestDto.DataFolder);
+      builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
 #else
       throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
 #endif

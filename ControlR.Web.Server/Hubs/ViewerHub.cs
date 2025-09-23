@@ -325,16 +325,9 @@ public class ViewerHub(
 
       sessionRequestDto = sessionRequestDto with { ViewerName = displayName };
 
-      var sessionSuccess = await _agentHub.Clients
+      return await _agentHub.Clients
         .Client(device.ConnectionId)
-        .CreateStreamingSession(sessionRequestDto);
-
-      if (!sessionSuccess)
-      {
-        return Result.Fail("Failed to request a streaming session from the agent.");
-      }
-
-      return Result.Ok();
+        .CreateRemoteControlSession(sessionRequestDto);
     }
     catch (Exception ex)
     {

@@ -103,7 +103,7 @@ if ($BuildAgent) {
 if ($BuildDesktop) {
   $DesktopPublishPath = "$Root\ControlR.DesktopClient\bin\publish\"
   $DesktopCommonArgs = @(
-    "-c", "$($Configuration)_Windows",
+    "-c", $Configuration,
     "--self-contained",
     "-p:Version=$CurrentVersion",
     "-p:FileVersion=$CurrentVersion"
@@ -120,6 +120,10 @@ if ($BuildDesktop) {
   &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\win-x64\ControlR.DesktopClient.exe"
   Check-LastExitCode
   Compress-Archive -Path "$DesktopPublishPath\win-x64\*" -DestinationPath "$DownloadsFolder\win-x64\ControlR.DesktopClient.zip" -Force
+
+  # Linux Desktop Client
+  dotnet publish -r linux-x64 -o "$DesktopPublishPath\linux-x64" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
+  Compress-Archive -Path "$DesktopPublishPath\linux-x64\*" -DestinationPath "$DownloadsFolder\linux-x64\ControlR.DesktopClient.zip" -Force
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"

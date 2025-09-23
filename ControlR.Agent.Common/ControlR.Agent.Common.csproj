@@ -9,23 +9,27 @@
     <ItemGroup>
       <None Remove="Resources\LaunchAgent.plist" />
       <None Remove="Resources\LaunchDaemon.plist" />
+      <None Remove="Resources\controlr.agent.service" />
+      <None Remove="Resources\controlr.desktop.service" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Include="Resources\LaunchAgent.plist" />
       <EmbeddedResource Include="Resources\LaunchDaemon.plist" />
+      <EmbeddedResource Include="Resources\controlr.agent.service" />
+      <EmbeddedResource Include="Resources\controlr.desktop.service" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.14" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
-        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.2" />
-        <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
+        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.3" />
+        <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.9" />
     </ItemGroup>
 
     <ItemGroup>

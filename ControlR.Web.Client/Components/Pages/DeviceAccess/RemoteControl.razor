@@ -24,8 +24,7 @@
           @switch (_downloadProgress)
           {
             case >= 0:
-              <MudProgressCircular Min="0" Max="1" Value="_downloadProgress" Color="Color.Info"
-                                   Size="Size.Large" />
+              <MudProgressCircular Min="0" Max="1" Value="_downloadProgress" Color="Color.Info" Size="Size.Large" />
               break;
             case < 0:
               <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Large" />
@@ -39,6 +38,13 @@
         <MudAlert Severity="_alertSeverity" Icon="@(AlertIcon)">
           @(_alertMessage)
         </MudAlert>
+
+        <MudTooltip Text="Reload">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mt-2" OnClick="Reload">
+             Reload
+          </MudButton>
+        </MudTooltip>
+
         break;
       }
     case SignalingState.SessionSelect:
@@ -48,9 +54,7 @@
         </MudText>
 
         <MudTooltip Text="Refresh System Sessions">
-          <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                     Class="mb-2"
-                     OnClick="RefreshSystemSessions">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mb-2" OnClick="RefreshSystemSessions">
             Refresh Sessions
           </MudButton>
         </MudTooltip>
@@ -108,7 +112,8 @@
                     <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="@(_ => StartRemoteControl(session))">
                       Connect
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))" Class="ms-4">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))"
+                      Class="ms-4">
                       Preview
                     </MudButton>
                   </MudCardActions>
@@ -120,7 +125,7 @@
 
         break;
       }
-      case SignalingState.UnsupportedOperatingSystem:
+    case SignalingState.UnsupportedOperatingSystem:
       {
         <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
           Unsupported operating system.
@@ -136,6 +141,5 @@
         break;
       }
   }
-  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested" 
-                 IsVisible="IsRemoteDisplayVisible" />
+  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested" IsVisible="IsRemoteDisplayVisible" />
 </div>

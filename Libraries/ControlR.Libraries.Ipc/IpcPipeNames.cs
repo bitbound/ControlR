@@ -1,50 +1,46 @@
 ﻿namespace ControlR.Libraries.Ipc;
 public static class IpcPipeNames
 {
-  public static string GetPipeName()
+  public static string GetPipeName(string? instanceId)
   {
     if (OperatingSystem.IsWindows())
     {
-      return GetWindowsPipeName();
+      return GetWindowsPipeName(instanceId);
     }
 
-    if (OperatingSystem.IsMacOS())
+    if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
     {
-      return GetMacPipeName();
-    }
-
-    if (OperatingSystem.IsLinux())
-    {
-      return GetLinuxPipeName();
+      return GetUnixPipeName(instanceId);
     }
 
     throw new PlatformNotSupportedException();
   }
 
-  public static string GetWindowsPipeName()
+  public static string GetWindowsPipeName(string? instanceId)
   {
 #if DEBUG
-    return "controlr-ipc-server-debug";
+    var pipeName = "controlr-ipc-server-debug";
 #else
-    return "controlr-ipc-server";
+    var pipeName = "controlr-ipc-server";
 #endif
+    if (string.IsNullOrWhiteSpace(instanceId))
+    {
+      return pipeName;
+    }
+    return $"{pipeName}-{instanceId.Replace(".", "-")}";
   }
 
-  public static string GetMacPipeName()
+  public static string GetUnixPipeName(string? instanceId)
   {
 #if DEBUG
-    return "/tmp/controlr-ipc-server-debug";
+    var pipeName = "/tmp/controlr-ipc-server-debug";
 #else
-    return "/tmp/controlr-ipc-server";
+    var pipeName = "/tmp/controlr-ipc-server";
 #endif
-  }
-
-  public static string GetLinuxPipeName()
-  {
-#if DEBUG
-    return "/tmp/controlr-ipc-server-debug";
-#else
-    return "/tmp/controlr-ipc-server";
-#endif
+    if (string.IsNullOrWhiteSpace(instanceId))
+    {
+      return pipeName;
+    }
+    return $"{pipeName}-{instanceId.Replace(".", "-")}";
   }
 }

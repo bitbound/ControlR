@@ -13,9 +13,9 @@
 
   <div class="display-grid">
     <div class="action-bar pa-2">
-      <ViewModeMenu ViewMode="_viewMode" OnViewModeSelected="@((viewMode) => _viewMode = viewMode)" />
+      <ViewModeMenu />
 
-      <DisplaysMenu Displays="RemoteControlState.DisplayData" SelectedDisplay="RemoteControlState.SelectedDisplay" OnDisplaySelected="ChangeDisplays" />
+      <DisplaysMenu Displays="@RemoteControlState.DisplayData" SelectedDisplay="RemoteControlState.SelectedDisplay" OnDisplaySelected="ChangeDisplays" />
 
       <ClipboardMenu OnReceiveClipboardClicked="HandleReceiveClipboardClicked"
                      OnSendClipboardClicked="HandleSendClipboardClicked"
@@ -54,6 +54,7 @@
                                Size="Size.Small"
                                ToggledColor="Color.Success"
                                ToggledIcon="@(Icons.Material.Filled.Keyboard)"
+                               Toggled="RemoteControlState.IsVirtualKeyboardToggled"
                                ToggledChanged="HandleKeyboardToggled" />
         </MudTooltip>
 
@@ -63,6 +64,7 @@
                                Size="Size.Small"
                                ToggledColor="Color.Success"
                                ToggledIcon="@(Icons.Material.Filled.UnfoldMoreDouble)"
+                               Toggled="RemoteControlState.IsScrollModeToggled"
                                ToggledChanged="HandleScrollModeToggled" />
         </MudTooltip>
       }
@@ -75,6 +77,7 @@
                              Size="Size.Small"
                              ToggledColor="Color.Success"
                              ToggledIcon="@(Icons.Material.Filled.QueryStats)"
+                             Toggled="RemoteControlState.IsMetricsEnabled"
                              ToggledChanged="HandleMetricsToggled" />
       </MudTooltip>
 
@@ -110,7 +113,7 @@
     </div>
   </div>
 
-  @if (_isMetricsEnabled)
+  @if (RemoteControlState.IsMetricsEnabled)
   {
     <div class="metrics-frame">
       @if (_latestCaptureMetrics is null)
@@ -133,13 +136,6 @@
         </div>
         <div>
           @($"{_latestCaptureMetrics.Fps:N2}")
-        </div>
-
-        <div>
-          IPS:
-        </div>
-        <div>
-          @($"{_latestCaptureMetrics.Ips:N2}")
         </div>
 
         <div>

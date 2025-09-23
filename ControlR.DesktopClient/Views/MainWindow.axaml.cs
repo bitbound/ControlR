@@ -6,7 +6,6 @@ namespace ControlR.DesktopClient.Views;
 
 public partial class MainWindow : Window
 {
-  private bool _isFirstShow = true;
 
   public MainWindow()
   {
@@ -25,24 +24,9 @@ public partial class MainWindow : Window
   private IMainWindowViewModel ViewModel => DataContext as IMainWindowViewModel
                                             ?? throw new ArgumentNullException(nameof(ViewModel));
 
-  public override void Show()
-  {
-    base.Show();
-    if (!_isFirstShow)
-    {
-      return;
-    }
-
-    _isFirstShow = false;
-    Hide();
-    ShowInTaskbar = true;
-    WindowState = WindowState.Normal;
-  }
-
   protected override void OnClosing(WindowClosingEventArgs e)
   {
-    e.Cancel = true;
-    Hide();
+    ViewModel.SetMainWindowNull();
     base.OnClosing(e);
   }
 }

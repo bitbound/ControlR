@@ -42,6 +42,7 @@ public static class AppConstants
       {
         SystemPlatform.Windows => "ControlR.DesktopClient.zip",
         SystemPlatform.MacOs => "ControlR.app.zip",
+        SystemPlatform.Linux => "ControlR.DesktopClient.zip",
         _ => throw new PlatformNotSupportedException()
       };
     }

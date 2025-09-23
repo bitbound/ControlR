@@ -7,13 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
-public class CaptureMetricsMac(
-  TimeProvider timeProvider,
-  IMessenger messenger,
-  ISystemEnvironment systemEnvironment,
-  IScreenGrabber screenGrabber,
-  IProcessManager processManager,
-  ILogger<CaptureMetricsBase> logger) : CaptureMetricsBase(timeProvider, messenger, systemEnvironment, screenGrabber, processManager, logger), ICaptureMetrics
+public class CaptureMetricsMac(IServiceProvider serviceProvider) : CaptureMetricsBase(serviceProvider), ICaptureMetrics
 {
   
 }

@@ -12,6 +12,14 @@ internal class DeviceDataGeneratorBase(
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<DeviceDataGeneratorBase> logger)
 {
+  private static readonly HashSet<string> _excludedDrivePrefixes =
+  [
+    "/System/Volumes/",
+    "/snap/",
+    "/boot/",
+    "/var/lib/docker/"
+  ];
+  
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
@@ -39,7 +47,7 @@ internal class DeviceDataGeneratorBase(
           .Where(x => x.IsReady)
           .Where(x => x.DriveType == DriveType.Fixed)
           .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
-          .Where(x => !x.RootDirectory.FullName.StartsWith("/System/Volumes/"))
+          .Where(x => !_excludedDrivePrefixes.Contains(x.RootDirectory.FullName))
           .Where(x => x.TotalSize > 0)
           .Select(x => new Drive
           {

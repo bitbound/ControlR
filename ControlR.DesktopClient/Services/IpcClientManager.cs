@@ -1,3 +1,4 @@
+using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -6,6 +7,7 @@ using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Services;
 
@@ -18,6 +20,7 @@ public class IpcClientManager(
   IProcessManager processManager,
   IScreenGrabber screenGrabber,
   IImageUtility imageUtility,
+  IOptions<DesktopClientOptions> desktopClientOptions,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
@@ -29,6 +32,7 @@ public class IpcClientManager(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly IImageUtility _imageUtility = imageUtility;
+  private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -38,7 +42,7 @@ public class IpcClientManager(
   private async Task AcceptClientConnections(CancellationToken stoppingToken)
   {
     var processId = _processManager.GetCurrentProcess().Id;
-    var pipeName = IpcPipeNames.GetPipeName();
+    var pipeName = IpcPipeNames.GetPipeName(_desktopClientOptions.Value.InstanceId);
 
     while (!stoppingToken.IsCancellationRequested)
     {
@@ -71,6 +75,11 @@ public class IpcClientManager(
         _logger.LogInformation("Waiting for connection end.");
         await client.WaitForConnectionEnd(stoppingToken);
         _ipcClientAccessor.SetConnection(null);
+      }
+      catch (OperationCanceledException ex)
+      {
+        _logger.LogInformation(ex, "App shutting down. Stopping IpcClientManager.");
+        break;
       }
       catch (Exception ex)
       {
@@ -137,7 +146,7 @@ public class IpcClientManager(
         dto.TargetProcessId);
 
       // Capture all displays (synchronous call)
-      using var captureResult = _screenGrabber.Capture(captureCursor: false);
+      using var captureResult = _screenGrabber.CaptureAllDisplays(captureCursor: false);
       if (!captureResult.IsSuccess || captureResult.Bitmap is null)
       {
         _logger.LogWarning("Failed to capture displays: {Error}", captureResult.FailureReason);

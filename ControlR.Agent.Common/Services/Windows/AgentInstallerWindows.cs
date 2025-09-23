@@ -3,7 +3,6 @@ using System.Runtime.Versioning;
 using System.ServiceProcess;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;

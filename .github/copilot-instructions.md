@@ -109,6 +109,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 
 ### General Coding Standards
 - Use 2 spaces for indentation
+- Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name
 
 ### Build and Task System
 - Primary build: `dotnet build ControlR.sln` (VS Code default build task)

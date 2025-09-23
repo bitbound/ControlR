@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.DevicesCommon.Options;
+﻿namespace ControlR.Agent.Common.Options;
 public class InstanceOptions
 {
   public const string SectionKey = "InstanceOptions";

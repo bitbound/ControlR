@@ -46,9 +46,10 @@ internal class DesktopClientUpdater(
     }
 
     if (_systemEnvironment.Platform != SystemPlatform.Windows &&
-        _systemEnvironment.Platform != SystemPlatform.MacOs)
+        _systemEnvironment.Platform != SystemPlatform.MacOs &&
+        _systemEnvironment.Platform != SystemPlatform.Linux)
     {
-      _logger.LogInformation("Desktop client update check is only supported on Windows and MacOS platforms. Current platform: {Platform}", _systemEnvironment.Platform);
+      _logger.LogInformation("Desktop client update check is only supported on Windows, MacOS, and Linux platforms. Current platform: {Platform}", _systemEnvironment.Platform);
       return false;
     }
 
@@ -125,9 +126,10 @@ internal class DesktopClientUpdater(
     }
 
     if (_systemEnvironment.Platform != SystemPlatform.Windows &&
-        _systemEnvironment.Platform != SystemPlatform.MacOs)
+        _systemEnvironment.Platform != SystemPlatform.MacOs &&
+        _systemEnvironment.Platform != SystemPlatform.Linux)
     {
-      _logger.LogInformation("Desktop client update check is only supported on Windows and MacOS platforms. Current platform: {Platform}", _systemEnvironment.Platform);
+      _logger.LogInformation("Desktop client update check is only supported on Windows, MacOS, and Linux platforms. Current platform: {Platform}", _systemEnvironment.Platform);
       return;
     }
 
@@ -145,7 +147,7 @@ internal class DesktopClientUpdater(
   {
     try
     {
-      if (_systemEnvironment.Platform == SystemPlatform.MacOs)
+      if (_systemEnvironment.Platform == SystemPlatform.MacOs || _systemEnvironment.Platform == SystemPlatform.Linux)
       {
         await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       }
@@ -173,7 +175,7 @@ internal class DesktopClientUpdater(
 
       await SetDesktopClientPermissions(desktopDir);
 
-      if (_systemEnvironment.Platform == SystemPlatform.MacOs)
+      if (_systemEnvironment.Platform == SystemPlatform.MacOs || _systemEnvironment.Platform == SystemPlatform.Linux)
       {
         await _serviceControl.StartDesktopClientService(throwOnFailure: false);
       }
@@ -188,21 +190,15 @@ internal class DesktopClientUpdater(
 
   private string GetDesktopZipUri()
   {
-    switch (_systemEnvironment.Runtime)
+    return _systemEnvironment.Runtime switch
     {
-      case RuntimeId.WinX64:
-        return $"{_settings.ServerUri}downloads/win-x64/{AppConstants.DesktopClientZipFileName}";
-      case RuntimeId.WinX86:
-        return $"{_settings.ServerUri}downloads/win-x86/{AppConstants.DesktopClientZipFileName}";
-      case RuntimeId.MacOsX64:
-        return $"{_settings.ServerUri}downloads/osx-x64/{AppConstants.DesktopClientZipFileName}";
-      case RuntimeId.MacOsArm64:
-        return $"{_settings.ServerUri}downloads/osx-arm64/{AppConstants.DesktopClientZipFileName}";
-      case RuntimeId.LinuxX64:
-        return $"{_settings.ServerUri}downloads/linux-x64/{AppConstants.DesktopClientZipFileName}";
-      default:
-        throw new PlatformNotSupportedException($"Unsupported runtime ID: {_systemEnvironment.Runtime}");
-    }
+      RuntimeId.WinX64 => $"{_settings.ServerUri}downloads/win-x64/{AppConstants.DesktopClientZipFileName}",
+      RuntimeId.WinX86 => $"{_settings.ServerUri}downloads/win-x86/{AppConstants.DesktopClientZipFileName}",
+      RuntimeId.MacOsX64 => $"{_settings.ServerUri}downloads/osx-x64/{AppConstants.DesktopClientZipFileName}",
+      RuntimeId.MacOsArm64 => $"{_settings.ServerUri}downloads/osx-arm64/{AppConstants.DesktopClientZipFileName}",
+      RuntimeId.LinuxX64 => $"{_settings.ServerUri}downloads/linux-x64/{AppConstants.DesktopClientZipFileName}",
+      _ => throw new PlatformNotSupportedException($"Unsupported runtime ID: {_systemEnvironment.Runtime}"),
+    };
   }
 
   private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
@@ -282,6 +278,19 @@ internal class DesktopClientUpdater(
           _logger.LogWarning("Failed to set executable permissions on Mac app bundle: {Error}", chmodResult.Reason);
         }
       }      
+    }
+    else if (_systemEnvironment.Platform == SystemPlatform.Linux)
+    {
+      // Ensure the Linux executable has correct permissions
+      var linuxExecutablePath = Path.Combine(desktopDir, AppConstants.DesktopClientFileName);
+      if (_fileSystem.FileExists(linuxExecutablePath))
+      {
+        var chmodResult = await _processManager.GetProcessOutput("chmod", "+x " + linuxExecutablePath, 5000);
+        if (!chmodResult.IsSuccess)
+        {
+          _logger.LogWarning("Failed to set executable permissions on Linux executable: {Error}", chmodResult.Reason);
+        }
+      }
     }
   }
 }

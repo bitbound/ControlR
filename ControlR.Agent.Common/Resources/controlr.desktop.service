@@ -1,0 +1,17 @@
+[Unit]
+Description=ControlR Desktop Client provides user session interface for remote control.
+After=graphical-session.target
+
+[Service]
+WorkingDirectory=/usr/local/bin/ControlR/c.jaredg.dev/DesktopClient
+ExecStart=/usr/local/bin/ControlR/c.jaredg.dev/DesktopClient/ControlR.DesktopClient --instance-id c.jaredg.dev
+Type=simple
+Environment=DOTNET_ENVIRONMENT=Production
+TimeoutStopSec=15
+KillSignal=SIGTERM
+KillMode=process
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical-session.target

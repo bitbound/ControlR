@@ -30,7 +30,7 @@
 
   [Parameter]
   [EditorRequired]
-  public Func<DeviceDto, bool> IsDeviceToggled { get; set; }
+  public required Func<DeviceDto, bool> IsDeviceToggled { get; set; }
 
   [Parameter]
   public EventCallback<(DeviceDto, bool)> DeviceToggled { get; set; }

@@ -28,27 +28,17 @@
 		<NoWarn>S125</NoWarn>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="$(Configuration.Contains('Debug'))">
-		<DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
-	</PropertyGroup>
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
+    <DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+  </PropertyGroup>
 
-	<PropertyGroup Condition="$(Configuration.Contains('Release'))">
-		<DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-	</PropertyGroup>
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
+    <DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
+  </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Release'">
-		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
-	</PropertyGroup>
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
+    <DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
+  </PropertyGroup>
 
-	<PropertyGroup Condition="$(Configuration.Contains('Windows'))">
-		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="$(Configuration.Contains('Mac'))">
-		<DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('Linux'))">
-		<DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
-	</PropertyGroup>
 
 </Project>

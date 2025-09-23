@@ -14,7 +14,7 @@ public static class PathConstants
   {
     var logsDir = Libc.Geteuid() == 0
        ? "/var/log/controlr"
-       : "~/.controlr/logs";
+       : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr", "logs");
 
     logsDir = AppendSubDirectories(logsDir, instanceId);
     return Path.Combine(logsDir, "ControlR.DesktopClient", "LogFile.log");
@@ -24,7 +24,7 @@ public static class PathConstants
   {
     var rootDir = Libc.Geteuid() == 0
       ? "/etc/controlr"
-      : "~/.controlr";
+      : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
 
     return AppendSubDirectories(rootDir, instanceId);
   }

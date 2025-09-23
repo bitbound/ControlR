@@ -11,9 +11,7 @@
         Width="400"
         MinHeight="300"
         SizeToContent="Height"
-        ShowInTaskbar="False"
-        WindowState="Minimized"
-        Title="ControlR Desktop">
+        Title="ControlR">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,

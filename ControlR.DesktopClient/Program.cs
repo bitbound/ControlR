@@ -25,6 +25,7 @@ internal sealed class Program
           "This can occur sometimes when the device is in a low-power mode. " +
           $"Error: {ex.Message}");
         
+        _appBuilder = null;
         Thread.Sleep(5_000);
         continue;
       }

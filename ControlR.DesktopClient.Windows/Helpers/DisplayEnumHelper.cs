@@ -78,8 +78,10 @@ internal static class DisplaysEnumerationHelper
         var display = displays[i];
         display.DisplayName = $"Screen {i}";
 
-        if (PInvoke.EnumDisplaySettings(display.DeviceName, ENUM_DISPLAY_SETTINGS_MODE.ENUM_CURRENT_SETTINGS,
-              ref devMode))
+        if (PInvoke.EnumDisplaySettings(
+            display.DeviceName,
+            ENUM_DISPLAY_SETTINGS_MODE.ENUM_CURRENT_SETTINGS,
+            ref devMode))
         {
           display.ScaleFactor = devMode.dmLogPixels / 96.0;
         }

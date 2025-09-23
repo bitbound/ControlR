@@ -73,8 +73,8 @@ public partial class ToastWindow : Window
       {
         var workingArea = screen.WorkingArea;
 
-        var x = workingArea.Right - (Width * screen.Scaling);
-        var y = workingArea.Bottom - (Height * screen.Scaling);
+        var x = workingArea.Right - (ClientSize.Width * screen.Scaling);
+        var y = workingArea.Bottom - (ClientSize.Height * screen.Scaling);
 
         Position = new Avalonia.PixelPoint((int)x, (int)y);
       }

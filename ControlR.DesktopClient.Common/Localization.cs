@@ -53,6 +53,7 @@ public static class Localization
   public static string ShareScreenSecurityWarning => GetString();
   public static string Status => GetString();
   public static string SubmitText => GetString();
+  public static string Version => GetString();
   public static string YesText => GetString();
   public static string You => GetString();
 

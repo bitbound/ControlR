@@ -24,17 +24,17 @@ public static class HostAppBuilderExtensions
       .AddTransient<IHubConnectionBuilder, HubConnectionBuilder>()
       .AddSingleton(WeakReferenceMessenger.Default)
       .AddSingleton(TimeProvider.System)
+      .AddSingleton(WeakReferenceMessenger.Default)
       .AddSingleton<IProcessManager, ProcessManager>()
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<IImageUtility, ImageUtility>()
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
-      .AddSingleton<IStreamerStreamingClient, StreamerStreamingClient>()
+      .AddSingleton<IDesktopStreamingClient, DesktopStreamingClient>()
       .AddSingleton<IDesktopCapturer, DesktopCapturer>()
       .AddSingleton<IDelayer, Delayer>()
       .AddHostedService<HostLifetimeEventResponder>()
-      .AddHostedService<DtoHandler>()
-      .AddHostedService(x => x.GetRequiredService<IStreamerStreamingClient>())
+      .AddHostedService(x => x.GetRequiredService<IDesktopStreamingClient>())
       .Configure(configureStartup);
 
     return builder;

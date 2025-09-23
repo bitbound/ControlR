@@ -3,10 +3,10 @@ using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.NativeInterop.Unix;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Mac;
 
-[SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
 internal class IpcServerInitializerMac(
   TimeProvider timeProvider,
@@ -16,11 +16,13 @@ internal class IpcServerInitializerMac(
   IFileSystem fileSystem,
   IFileSystemUnix fileSystemUnix,
   IHubConnection<IAgentHub> hubConnection,
+  IOptions<InstanceOptions> instanceOptions,
   ILogger<IpcServerInitializerMac> logger) 
   : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemUnix _fileSystemUnix = fileSystemUnix;
+  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -50,7 +52,7 @@ internal class IpcServerInitializerMac(
   {
     try
     {
-      var pipeName = IpcPipeNames.GetMacPipeName();
+      var pipeName = IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
       _logger.LogInformation("Creating IPC server for pipe: {PipeName}", pipeName);
       var server = await CreateServer(pipeName, cancellationToken);
       _logger.LogInformation("Waiting for incoming IPC connection.");
@@ -150,8 +152,6 @@ internal class IpcServerInitializerMac(
         _logger.LogWarning(ex, "Error setting group ownership of pipe {PipePath} to staff group",
           pipePath);
       }
-      // Check every 2 seconds
-      await Task.Delay(TimeSpan.FromSeconds(2), _timeProvider, cancellationToken);
     }
     catch (OperationCanceledException)
     {

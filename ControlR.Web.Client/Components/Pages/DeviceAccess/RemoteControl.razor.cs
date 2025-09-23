@@ -81,7 +81,8 @@ public partial class RemoteControl : ComponentBase
 
       if (DeviceAccessState.CurrentDevice.Platform 
         is not SystemPlatform.Windows 
-        and not SystemPlatform.MacOs)
+        and not SystemPlatform.MacOs
+        and not SystemPlatform.Linux)
       {
         return SignalingState.UnsupportedOperatingSystem;
       }
@@ -141,6 +142,8 @@ public partial class RemoteControl : ComponentBase
     {
       Logger.LogResult(sessionResult);
       Snackbar.Add("Failed to get active sessions", Severity.Warning);
+      _alertMessage = $"Failed to get active sessions: {sessionResult.Reason}.";
+      _alertSeverity = Severity.Warning;
       return;
     }
 
@@ -178,7 +181,7 @@ public partial class RemoteControl : ComponentBase
   {
     var dto = message.Dto;
 
-    if (dto.StreamingSessionId != RemoteControlState.CurrentSession?.SessionId)
+    if (dto.RemoteControlSessionId != RemoteControlState.CurrentSession?.SessionId)
     {
       return;
     }
@@ -233,6 +236,15 @@ public partial class RemoteControl : ComponentBase
     Snackbar.Add("Sessions refreshed", Severity.Info);
   }
 
+  private async Task Reload()
+  {
+    _alertMessage = null;
+    _loadingMessage = null;
+    _downloadingMessage = null;
+    _downloadProgress = -1;
+     await GetDeviceSystemSessions();
+  }
+
   private async Task StartRemoteControl(DeviceUiSession deviceUiSession)
   {
     try
@@ -270,6 +282,7 @@ public partial class RemoteControl : ComponentBase
 
       _downloadingMessage = string.Empty;
       _downloadProgress = -1;
+      _loadingMessage = null;
 
       if (!streamingSessionResult.IsSuccess)
       {
@@ -288,7 +301,7 @@ public partial class RemoteControl : ComponentBase
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while requesting remote control session.");
-      _alertMessage = "An error occurred while requesting teh remote control session.";
+      _alertMessage = "An error occurred while requesting the remote control session.";
       _alertSeverity = Severity.Error;
       RemoteControlState.CurrentSession = null;
     }

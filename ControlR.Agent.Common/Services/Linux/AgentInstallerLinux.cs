@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Constants;
@@ -21,12 +20,14 @@ internal class AgentInstallerLinux(
   IRetryer retryer,
   ISettingsProvider settingsProvider,
   IElevationChecker elevationChecker,
+  IEmbeddedResourceAccessor embeddedResourceAccessor,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
   : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
+  private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly ISystemEnvironment _environment = environmentHelper;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
@@ -85,9 +86,43 @@ internal class AgentInstallerLinux(
           return Task.CompletedTask;
         }, 5, TimeSpan.FromSeconds(1));
 
-      var serviceFile = GetServiceFile().Trim();
+      // Create DesktopClient directory and copy executable if it exists
+      var desktopClientDir = Path.Combine(installDir, "DesktopClient");
+      _fileSystem.CreateDirectory(desktopClientDir);
+
+      var desktopClientExeName = AppConstants.DesktopClientFileName;
+      var sourceDesktopClientPath = Path.Combine(Path.GetDirectoryName(exePath)!, desktopClientExeName);
+      var targetDesktopClientPath = Path.Combine(desktopClientDir, desktopClientExeName);
+
+      if (_fileSystem.FileExists(sourceDesktopClientPath))
+      {
+        _logger.LogInformation("Copying desktop client executable to {TargetPath}.", targetDesktopClientPath);
+        if (_fileSystem.FileExists(targetDesktopClientPath))
+        {
+          _fileSystem.MoveFile(targetDesktopClientPath, $"{targetDesktopClientPath}.old", true);
+        }
+        await retryer.Retry(
+          () =>
+          {
+            _fileSystem.CopyFile(sourceDesktopClientPath, targetDesktopClientPath, true);
+            return Task.CompletedTask;
+          },
+          tryCount: 5,
+          retryDelay: TimeSpan.FromSeconds(1));
+      }
+      else
+      {
+        _logger.LogWarning("Desktop client executable not found at {SourcePath}. User service may not work correctly.", sourceDesktopClientPath);
+      }
+      var serviceFile = (await GetAgentServiceFile()).Trim();
+      var desktopServiceFile = (await GetDesktopServiceFile()).Trim();
+
+      // Ensure service directories exist
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(GetServiceFilePath())!);
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(GetDesktopServiceFilePath())!);
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
+      await _fileSystem.WriteAllTextAsync(GetDesktopServiceFilePath(), desktopServiceFile);
       await UpdateAppSettings(serverUri, tenantId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
@@ -97,6 +132,7 @@ internal class AgentInstallerLinux(
       }
 
       var serviceName = GetServiceName();
+      var desktopServiceName = GetDesktopServiceName();
 
       var psi = new ProcessStartInfo
       {
@@ -106,10 +142,14 @@ internal class AgentInstallerLinux(
         UseShellExecute = true
       };
 
-      _logger.LogInformation("Enabling service.");
+      _logger.LogInformation("Enabling agent service.");
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
-      _logger.LogInformation("Restarting service.");
+      _logger.LogInformation("Enabling desktop user service.");
+      psi.Arguments = $"systemctl --global enable {desktopServiceName}";
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
+      _logger.LogInformation("Restarting agent service.");
       psi.Arguments = $"systemctl restart {serviceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
@@ -144,6 +184,7 @@ internal class AgentInstallerLinux(
       }
 
       var serviceName = GetServiceName();
+      var desktopServiceName = GetDesktopServiceName();
 
       await ProcessManager
         .Start("sudo", $"systemctl stop {serviceName}")
@@ -153,7 +194,17 @@ internal class AgentInstallerLinux(
         .Start("sudo", $"systemctl disable {serviceName}")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
 
+      await ProcessManager
+        .Start("sudo", $"systemctl --global disable {desktopServiceName}")
+        .WaitForExitAsync(_lifetime.ApplicationStopping);
+
       _fileSystem.DeleteFile(GetServiceFilePath());
+
+      var desktopServicePath = GetDesktopServiceFilePath();
+      if (_fileSystem.FileExists(desktopServicePath))
+      {
+        _fileSystem.DeleteFile(desktopServicePath);
+      }
 
       await ProcessManager
         .Start("sudo", "systemctl daemon-reload")
@@ -185,29 +236,57 @@ internal class AgentInstallerLinux(
     return Path.Combine(dir, instanceOptions.Value.InstanceId);
   }
 
-  private string GetServiceFile()
+  private async Task<string> GetAgentServiceFile()
   {
-    var installDir = GetInstallDirectory();
-    var fileName = AppConstants.GetAgentFileName(_environment.Platform);
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerLinux).Assembly,
+      "ControlR.Agent.Common.Resources.controlr.agent.service");
 
-    var runCommand = "run";
-    if (instanceOptions.Value.InstanceId is string instanceId)
+    var installDir = GetInstallDirectory();
+
+    var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
+      ? ""
+      : $" -i {instanceOptions.Value.InstanceId}";
+
+    template = template
+      .Replace("{{INSTALL_DIRECTORY}}", installDir)
+      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
+
+    return template;
+  }
+
+  private async Task<string> GetDesktopServiceFile()
+  {
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerLinux).Assembly,
+      "ControlR.Agent.Common.Resources.controlr.desktop.service");
+
+    var installDir = GetInstallDirectory();
+
+    var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
+      ? ""
+      : $" --instance-id {instanceOptions.Value.InstanceId}";
+
+    template = template
+      .Replace("{{INSTALL_DIRECTORY}}", installDir)
+      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
+
+    return template;
+  }
+
+  private string GetDesktopServiceFilePath()
+  {
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
-      runCommand += $" -i {instanceId}";
+      return "/etc/systemd/user/controlr.desktop.service";
     }
 
-    return
-      "[Unit]\n" +
-      "Description=ControlR provides zero-trust remote control and administration.\n\n" +
-      "[Service]\n" +
-      $"WorkingDirectory={installDir}\n" +
-      $"ExecStart={installDir}/{fileName} {runCommand}\n" +
-      "Restart=always\n" +
-      "StartLimitIntervalSec=0\n" +
-      "Environment=DOTNET_ENVIRONMENT=Production\n" +
-      "RestartSec=10\n\n" +
-      "[Install]\n" +
-      "WantedBy=graphical.target";
+    return $"/etc/systemd/user/controlr.desktop-{instanceOptions.Value.InstanceId}.service";
+  }
+
+  private string GetDesktopServiceName()
+  {
+    return Path.GetFileName(GetDesktopServiceFilePath());
   }
 
   private string GetServiceFilePath()

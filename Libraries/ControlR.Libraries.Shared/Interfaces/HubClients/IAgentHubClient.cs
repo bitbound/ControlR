@@ -8,7 +8,7 @@ namespace ControlR.Libraries.Shared.Interfaces.HubClients;
 
 public interface IAgentHubClient : IHubClient
 {
-  Task<bool> CreateStreamingSession(RemoteControlSessionRequestDto dto);
+  Task<Result> CreateRemoteControlSession(RemoteControlSessionRequestDto dto);
   Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto);
   Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);

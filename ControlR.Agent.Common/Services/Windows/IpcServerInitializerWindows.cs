@@ -5,6 +5,7 @@ using System.Security.Principal;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -15,10 +16,12 @@ internal class IpcServerInitializerWindows(
   IIpcServerStore desktopIpcStore,
   IProcessManager processManager,
   IHubConnection<IAgentHub> hubConnection,
+  IOptions<InstanceOptions> instanceOptions,
   ILogger<IpcServerInitializerWindows> logger) 
   : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
   private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
+  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -48,7 +51,7 @@ internal class IpcServerInitializerWindows(
   {
     try
     {
-      var pipeName = IpcPipeNames.GetWindowsPipeName();
+      var pipeName = IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
       _logger.LogInformation("Creating IPC server for pipe: {PipeName}", pipeName);
       var server = await CreateServer(pipeName);
       _logger.LogInformation("Waiting for incoming IPC connection.");

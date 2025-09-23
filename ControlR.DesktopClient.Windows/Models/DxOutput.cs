@@ -18,17 +18,13 @@ internal sealed class DxOutput(
   : IDisposable
 {
 
-  private Bitmap? _lastCapture;
   public IDXGIAdapter1 Adapter { get; } = adapter;
   public Rectangle Bounds { get; } = bounds;
   public ID3D11Device Device { get; } = device;
   public ID3D11DeviceContext DeviceContext { get; } = deviceContext;
   public string DeviceName { get; } = deviceName;
   public bool IsDisposed { get; private set; }
-  public Bitmap? LastCapture => _lastCapture;
-
   public Rectangle LastCursorArea { get; set; }
-  public DateTimeOffset LastSuccessfulCapture { get; set; }
   public IDXGIOutputDuplication OutputDuplication { get; } = outputDuplication;
   public DXGI_MODE_ROTATION Rotation { get; } = rotation;
 
@@ -42,7 +38,6 @@ internal sealed class DxOutput(
     IsDisposed = true;
 
     TryHelper.TryAll(
-      () => LastCapture?.Dispose(),
       OutputDuplication.ReleaseFrame,
       () => Marshal.FinalReleaseComObject(OutputDuplication),
       () => Marshal.FinalReleaseComObject(DeviceContext),
@@ -50,11 +45,5 @@ internal sealed class DxOutput(
       () => Marshal.FinalReleaseComObject(Adapter));
 
     GC.SuppressFinalize(this);
-  }
-
-  public void SetLastCapture(Bitmap bitmap)
-  {
-    _lastCapture?.Dispose();
-    _lastCapture = bitmap;
   }
 }

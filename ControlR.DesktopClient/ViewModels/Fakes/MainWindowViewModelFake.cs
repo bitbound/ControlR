@@ -2,4 +2,9 @@
 internal class MainWindowViewModelFake : ViewModelBaseFake, IMainWindowViewModel
 {
   public IViewModelBase CurrentViewModel { get; set; } = new ManagedDeviceViewModelFake();
+
+  public void SetMainWindowNull()
+  {
+    // Do nothing
+  }
 }

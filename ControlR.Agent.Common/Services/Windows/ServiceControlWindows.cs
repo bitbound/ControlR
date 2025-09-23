@@ -1,7 +1,6 @@
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Options;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Windows;

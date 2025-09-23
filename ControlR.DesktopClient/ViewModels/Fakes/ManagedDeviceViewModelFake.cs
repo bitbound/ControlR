@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace ControlR.DesktopClient.ViewModels.Fakes;
 internal class ManagedDeviceViewModelFake : ViewModelBaseFake, IManagedDeviceViewModel
 {
+  public string? AppVersion { get; set; } = "1.0.0";
   public bool IsAccessibilityPermissionGranted { get; set; } = false;
 
   public bool IsMacOs

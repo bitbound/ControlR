@@ -39,7 +39,7 @@ internal class AgentHubClient(
   private readonly IUiSessionProvider _osSessionProvider = osSessionProvider;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settings = settings;
-  private readonly IDesktopClientUpdater _streamerUpdater = streamerUpdater;
+  private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly ITerminalStore _terminalStore = terminalStore;
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
@@ -102,16 +102,16 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<bool> CreateStreamingSession(RemoteControlSessionRequestDto dto)
+  public async Task<Result> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     try
     {
       if (!_settings.DisableAutoUpdate)
       {
-        var versionResult = await _streamerUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
+        var versionResult = await _desktopClientUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
         if (!versionResult)
         {
-          return false;
+          return Result.Fail("Failed to ensure latest desktop client version is installed.");
         }
       }
 
@@ -128,7 +128,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}.  Cannot create streaming session.",
           dto.TargetProcessId);
-        return false;
+        return Result.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
       }
 
       var dataFolder = string.IsNullOrWhiteSpace(_settings.InstanceId)
@@ -151,12 +151,12 @@ internal class AgentHubClient(
         "Streaming session created successfully for process ID {ProcessId}.",
         dto.TargetProcessId);
 
-      return true;
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating streaming session.");
-      return false;
+      return Result.Fail("An error occurred on the agent while creating streaming session.");
     }
   }
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Text;
 using Xunit.Abstractions;
 
 namespace ControlR.Tests.TestingUtilities;
@@ -30,46 +31,45 @@ public class XunitLogger(ITestOutputHelper testOutput, string categoryName) : IL
     testOutput.WriteLine(entry);
   }
 
-  private static string FormatLogEntry(LogLevel logLevel, string categoryName, string state, Exception? exception, string[] scopeStack)
+  private string FormatLogEntry(LogLevel logLevel, string category, string state, Exception? exception,
+    string[] scopeStack)
   {
     var ex = exception;
-    var exMessage = exception?.Message;
+    var exMessage = !string.IsNullOrWhiteSpace(exception?.Message)
+      ? $"[{exception.GetType().Name}]  {exception.Message}"
+      : null;
 
     while (ex?.InnerException is not null)
     {
-      exMessage += $" | {ex.InnerException.Message}";
+      exMessage += $" | [{ex.InnerException.GetType().Name}]  {ex.InnerException.Message}";
       ex = ex.InnerException;
     }
 
-    var entry =
-        $"[{logLevel}]\t" +
-        $"[Thread ID: {Environment.CurrentManagedThreadId}]\t" +
-        $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]\t";
+    var entry = new StringBuilder();
 
-    if (exception is not null)
-    {
-      entry += $"[Exception: {exception.GetType().Name}]\t";
-    }
+    entry.Append(
+      $"[{logLevel}]  " +
+      $"[Process ID: {Environment.ProcessId}]  " +
+      $"[Thread ID: {Environment.CurrentManagedThreadId}]  " +
+      $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]  ");
 
-    entry += scopeStack.Length != 0 ?
-                $"[{categoryName} => {string.Join(" => ", scopeStack)}]\t" :
-                $"[{categoryName}]\t";
+    entry.Append(scopeStack.Length != 0
+      ? $"[{category} => {string.Join(" => ", scopeStack)}]  "
+      : $"[{category}]  ");
 
-    entry += $"{state}\t";
+    entry.Append($"{state} ");
 
     if (!string.IsNullOrWhiteSpace(exMessage))
     {
-      entry += exMessage;
+      entry.Append(exMessage);
     }
 
     if (exception is not null)
     {
-      entry += $"{Environment.NewLine}{exception.StackTrace}";
+      entry.Append($"{Environment.NewLine}{exception.StackTrace}");
     }
 
-    entry += Environment.NewLine;
-
-    return entry;
+    return entry.ToString();
   }
 
   private class ScopeDisposable(ConcurrentStack<string> scopeStack) : IDisposable

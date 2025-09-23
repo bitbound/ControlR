@@ -37,7 +37,7 @@
 	
 	<TrayIcon.Icons>
 		<TrayIcons>
-			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR Desktop" Command="{Binding ShowWindowCommand}">
+			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowWindowCommand}">
 				<TrayIcon.Menu>
 					<NativeMenu>
 						<NativeMenuItem Header="Show" Command="{Binding ShowWindowCommand}" />

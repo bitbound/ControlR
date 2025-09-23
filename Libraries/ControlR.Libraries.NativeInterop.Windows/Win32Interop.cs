@@ -585,7 +585,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   public Result InvokeKeyEvent(string key, bool isPressed)
   {
-    if (!ConvertJavaScriptKeyToVirtualKey(key, out var convertResult))
+    if (!ConvertBrowserKeyArgToVirtualKey(key, out var convertResult))
     {
       return Result.Fail("Failed to convert key to virtual key.");
     }
@@ -1273,7 +1273,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return "Default";
   }
 
-  private bool ConvertJavaScriptKeyToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
+  private bool ConvertBrowserKeyArgToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
   {
     result = key switch
     {

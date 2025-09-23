@@ -5,6 +5,7 @@ namespace ControlR.DesktopClient.ViewModels;
 
 public interface IManagedDeviceViewModel : IViewModelBase
 {
+  string? AppVersion { get; }
   bool IsAccessibilityPermissionGranted { get; }
 
   bool IsMacOs { get; }
@@ -20,7 +21,13 @@ public interface IManagedDeviceViewModel : IViewModelBase
 
 public partial class ManagedDeviceViewModel(IServiceProvider serviceProvider) : ViewModelBase, IManagedDeviceViewModel
 {
+  #pragma warning disable IDE0052 // Remove unread private members
+  // Required on Mac.
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+  #pragma warning restore IDE0052 // Remove unread private members
+
+  [ObservableProperty]
+  private string? _appVersion;
 
   [ObservableProperty]
   private bool _isAccessibilityPermissionGranted;
@@ -32,6 +39,7 @@ public partial class ManagedDeviceViewModel(IServiceProvider serviceProvider) : 
   public override Task Initialize()
   {
     SetPermissionValues();
+    AppVersion = typeof(ManagedDeviceViewModel).Assembly.GetName().Version?.ToString();
     return Task.CompletedTask;
   }
 

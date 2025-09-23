@@ -63,9 +63,11 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 ### macOS Intel (untested)
 - Experimental remote control via VNC (Apple Screen Sharing)
 - Signed using ad-hoc certificate (this may change in the future)
-- 
+
 ### Ubuntu x64 (latest LTS)
 
+- Full remote control support on X11
+  - Only tested on Kubuntu with KDE Plasma
 - Experimental remote control via VNC
 
 ### All Operating Systems
@@ -81,7 +83,7 @@ Role Descriptions:
 
 - `AgentInstaller`
   - Able to deploy/install the agent on new devices
-- `DeviceSuperuser`
+- `DeviceSuperUser`
   - Able to access all devices
 - `TenantAdministrator`
   - Able manage users and permissions for the tenant
@@ -139,12 +141,16 @@ If the project gains support, I intend to add full remote control support for Ma
 
 ## Screenshots
 
-![Windows Sessions on Desktop](.assets/screenshots/desktop_windows-sessions.png)
+![Device Grid](.assets/screenshots/device-grid.png)
 
-![System Details on Desktop](.assets/screenshots/desktop_details-row.png)
+![Device Overview](.assets/screenshots/device-overview.png)
 
-![System Details on Desktop](.assets/screenshots/desktop_terminal.png)
+![Remote Terminal](.assets/screenshots/remote-terminal.png)
 
-![Remote Control on Desktop](.assets/screenshots/desktop_remote-control.png)
+![Session Select](.assets/screenshots/session-select.png)
 
-![Windows Sessions on Mobile](.assets/screenshots/mobile_windows-sessions.png)
+![Chat (Desktop)](.assets/screenshots/chat-desktop.png)
+
+![Chat (Web)](.assets/screenshots/chat-web.png)
+
+![Remote File System](.assets/screenshots/file-system.png)

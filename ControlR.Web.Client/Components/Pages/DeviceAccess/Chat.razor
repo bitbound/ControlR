@@ -17,6 +17,11 @@
         <MudAlert Severity="@_alertSeverity" Icon="@(AlertIcon)">
           @(_alertMessage)
         </MudAlert>
+        <MudTooltip Text="Reload">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mt-2" OnClick="Reload">
+            Reload
+          </MudButton>
+        </MudTooltip>
         break;
       }
     case ChatPageState.SessionSelect:
@@ -104,7 +109,7 @@
 
             <MudTooltip Text="Close Chat Session">
               <MudIconButton Icon="@Icons.Material.Filled.Close" Variant="Variant.Outlined" Color="Color.Error"
-                Size="Size.Small" OnClick="CloseChatSession"/>
+                Size="Size.Small" OnClick="CloseChatSession" />
             </MudTooltip>
           </div>
           <div class="chat-inner-grid">
@@ -135,15 +140,14 @@
               }
             </div>
             <div class="chat-input">
-              <MudTextField T="string" @ref="@(_chatInputElement)" InputId="@(_chatInputElementId)" @bind-Value="@ChatState.NewMessage"
-                @bind-Text="@ChatState.NewMessage" Label="Enter a message" HelperText="@ChatInputHelperText"
-                TextUpdateSuppression="false" Lines="@ChatInputLineCount" HelperTextOnFocus="true" Adornment="Adornment.End"
-                AdornmentIcon="@Icons.Material.Filled.Send" AdornmentColor="Color.Info" OnAdornmentClick="@SendMessage"
-                AutoFocus="true" Immediate="true" OnKeyDown="@HandleInputKeyDown" Class="mt-2" />
+              <MudTextField T="string" @ref="@(_chatInputElement)" InputId="@(_chatInputElementId)"
+                @bind-Value="@ChatState.NewMessage" @bind-Text="@ChatState.NewMessage" Label="Enter a message"
+                HelperText="@ChatInputHelperText" TextUpdateSuppression="false" Lines="@ChatInputLineCount"
+                HelperTextOnFocus="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send"
+                AdornmentColor="Color.Info" OnAdornmentClick="@SendMessage" AutoFocus="true" Immediate="true"
+                OnKeyDown="@HandleInputKeyDown" Class="mt-2" />
               <div class="mt-2">
-                <MudSwitch @bind-Value="ChatState.EnableMultiline"
-                           Color="Color.Success"
-                           Label="Multiline Input" />
+                <MudSwitch @bind-Value="ChatState.EnableMultiline" Color="Color.Success" Label="Multiline Input" />
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Options;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using Microsoft.Extensions.Options;
 
@@ -293,4 +292,5 @@ internal class ServiceControlMac(
       // Don't throw here as we want to continue with other users
     }
   }
+
 }

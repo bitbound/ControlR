@@ -16,7 +16,12 @@ namespace ControlR.DesktopClient;
 public partial class App : Application
 {
   private readonly CancellationTokenSource _appShutdownTokenSource = new();
-  public static Window MainWindow => ServiceProvider.GetRequiredService<MainWindow>();
+  public static Window MainWindow
+  {
+    get =>
+      ServiceProvider.GetRequiredService<IClassicDesktopStyleApplicationLifetime>().MainWindow ??=
+      ServiceProvider.GetRequiredService<MainWindow>();
+  }
   public static IServiceProvider ServiceProvider => StaticServiceProvider.Instance;
   public override void Initialize()
   {
@@ -29,25 +34,24 @@ public partial class App : Application
 
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
+      desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
       desktop.ShutdownRequested += (sender, args) =>
       {
-        TryCancelAppCts();
+        _appShutdownTokenSource.Cancel();
       };
 
       if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
       {
         _ = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
         {
-          Avalonia.Threading.Dispatcher.UIThread.Post(() => desktop.Shutdown());
           context.Cancel = true;
-          TryCancelAppCts();
+          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => desktop.Shutdown());
         });
 
         _ = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
         {
-          Avalonia.Threading.Dispatcher.UIThread.Post(() => desktop.Shutdown());
           context.Cancel = true;
-          TryCancelAppCts();
+          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => desktop.Shutdown());
         });
       }
 
@@ -66,7 +70,6 @@ public partial class App : Application
       // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
       DisableAvaloniaDataAnnotationValidation();
       DataContext = StaticServiceProvider.Instance.GetRequiredService<IAppViewModel>();
-      desktop.MainWindow = StaticServiceProvider.Instance.GetRequiredService<MainWindow>();
     }
     else if (!Design.IsDesignMode)
     {
@@ -118,19 +121,6 @@ public partial class App : Application
       {
         System.Diagnostics.Debug.WriteLine($"Error starting hosted service {hostedService.GetType().Name}: {ex.Message}");
       }
-    }
-  }
-
-  private void TryCancelAppCts()
-  {
-    try
-    {
-      _appShutdownTokenSource.Cancel();
-      _appShutdownTokenSource.Dispose();
-    }
-    catch
-    {
-      // Ignore.
     }
   }
 }

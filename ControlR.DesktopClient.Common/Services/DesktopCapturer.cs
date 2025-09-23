@@ -1,15 +1,17 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Extensions;
+using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services.Buffers;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -17,36 +19,37 @@ namespace ControlR.DesktopClient.Common.Services;
 
 public interface IDesktopCapturer : IAsyncDisposable
 {
-
-  DisplayInfo? SelectedDisplay { get; }
   Task ChangeDisplays(string displayId);
-  Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY);
 
-  IAsyncEnumerable<ScreenRegionDto> GetChangedRegions();
-  Task<IEnumerable<DisplayDto>> GetDisplays();
+  IAsyncEnumerable<ScreenRegionDto> GetCaptureStream(CancellationToken cancellationToken);
   Task RequestKeyFrame();
-  Task ResetDisplays();
 
-  Task StartCapturingChanges();
+  Task StartCapturingChanges(CancellationToken cancellationToken);
+  bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display);
 }
 
 internal class DesktopCapturer : IDesktopCapturer
 {
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
-  private readonly IHostApplicationLifetime _appLifetime;
   private readonly IImageUtility _bitmapUtility;
   private readonly ICaptureMetrics _captureMetrics;
-  private readonly ConcurrentQueue<ScreenRegionDto> _changedRegions = new();
-  private readonly SemaphoreSlim _displayLock = new(1, 1);
-  private readonly AutoResetEventAsync _frameReadySignal = new();
-  private readonly AutoResetEventAsync _frameRequestedSignal = new(true);
+  private readonly Channel<ScreenRegionDto> _captureChannel = Channel.CreateBounded<ScreenRegionDto>(
+    new BoundedChannelOptions(capacity: 1)
+    {
+      SingleReader = true,
+      SingleWriter = true,
+      FullMode = BoundedChannelFullMode.Wait,
+    });
+  private readonly Lock _displayLock = new();
+  private readonly IDisplayManager _displayManager;
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
+  private readonly IMessenger _messenger;
+  private readonly IImageUtility _imageUtility;
+  private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
-  private CancellationTokenSource? _captureCts;
   private Task? _captureTask;
-  private DisplayInfo[] _displays;
   private bool _disposedValue;
   private bool _forceKeyFrame = true;
   private string? _lastDisplayId;
@@ -57,51 +60,49 @@ internal class DesktopCapturer : IDesktopCapturer
   public DesktopCapturer(
     TimeProvider timeProvider,
     IScreenGrabber screenGrabber,
+    IDisplayManager displayManager,
     IImageUtility bitmapUtility,
     IMemoryProvider memoryProvider,
     ICaptureMetrics captureMetrics,
-    IHostApplicationLifetime appLifetime,
+    IMessenger messenger,
+    IImageUtility imageUtility,
     ILogger<DesktopCapturer> logger)
   {
     _timeProvider = timeProvider;
     _screenGrabber = screenGrabber;
+    _displayManager = displayManager;
     _bitmapUtility = bitmapUtility;
     _memoryProvider = memoryProvider;
     _captureMetrics = captureMetrics;
-    _appLifetime = appLifetime;
+    _messenger = messenger;
+    _imageUtility = imageUtility;
     _logger = logger;
-    _displays = [.. _screenGrabber.GetDisplays()];
-    _selectedDisplay =
-      _displays.FirstOrDefault(x => x.IsPrimary) ??
-      _displays.FirstOrDefault();
+
+    _messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
   }
 
-  public DisplayInfo? SelectedDisplay => _selectedDisplay;
-
-  public async Task ChangeDisplays(string displayId)
+  public Task ChangeDisplays(string displayId)
   {
-    using var displayLock = await _displayLock.AcquireLock(_appLifetime.ApplicationStopping);
-
-    if (_displays.FirstOrDefault(x => x.DeviceName == displayId) is not { } newDisplay)
+    if (!_displayManager.TryFindDisplay(displayId, out var newDisplay))
     {
       _logger.LogWarning("Could not find display with ID {DisplayId} when changing displays.", displayId);
-      return;
+      return Task.CompletedTask;
     }
 
-    _selectedDisplay = newDisplay;
+    SetSelectedDisplay(newDisplay);
     _forceKeyFrame = true;
+    return Task.CompletedTask;
   }
 
   public Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
   {
-    if (_selectedDisplay?.MonitorArea is not { } bounds)
+    var selectedDisplay = GetSelectedDisplay();
+    if (selectedDisplay is null)
     {
       return Point.Empty.AsTaskResult();
     }
 
-    var absoluteX = bounds.Width * percentX + bounds.Left;
-    var absoluteY = bounds.Height * percentY + bounds.Top;
-    return new Point((int)absoluteX, (int)absoluteY).AsTaskResult();
+    return _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
   }
 
   public async ValueTask DisposeAsync()
@@ -112,60 +113,31 @@ internal class DesktopCapturer : IDesktopCapturer
     }
     _disposedValue = true;
 
-    if (_captureCts is not null)
-    {
-      await _captureCts.CancelAsync();
-    }
-
     if (_captureTask is not null)
     {
       await _captureTask.ConfigureAwait(false);
     }
 
-    Disposer.DisposeAll(
-      _frameReadySignal,
-      _frameRequestedSignal,
-      _captureCts);
-
     GC.SuppressFinalize(this);
   }
 
-  public async IAsyncEnumerable<ScreenRegionDto> GetChangedRegions()
+  public async IAsyncEnumerable<ScreenRegionDto> GetCaptureStream(
+    [EnumeratorCancellation] CancellationToken cancellationToken)
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
-    try
+    await foreach (var region in _captureChannel.Reader.ReadAllAsync(cancellationToken))
     {
-      await _frameReadySignal.Wait(_appLifetime.ApplicationStopping);
-
-      while (_changedRegions.TryDequeue(out var region))
-      {
-        yield return region;
-      }
-      _captureMetrics.MarkFrameSent();
-    }
-    finally
-    {
-      _frameRequestedSignal.Set();
+      yield return region;
     }
   }
 
-  public async Task<IEnumerable<DisplayDto>> GetDisplays()
+  public Task<IEnumerable<DisplayDto>> GetDisplays()
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
 
-    using var displayLock = await _displayLock.AcquireLock(_appLifetime.ApplicationStopping);
-
-    return _displays
-      .Select(x => new DisplayDto
-      {
-        DisplayId = x.DeviceName,
-        Height = x.MonitorArea.Height,
-        IsPrimary = x.IsPrimary,
-        Width = x.MonitorArea.Width,
-        Name = x.DisplayName,
-        Left = x.MonitorArea.Left,
-        ScaleFactor = x.ScaleFactor,
-      });
+    return _displayManager.GetDisplays()
+      .ContinueWith(task => task.Result.AsEnumerable(),
+        TaskContinuationOptions.ExecuteSynchronously);
   }
 
   public Task RequestKeyFrame()
@@ -174,46 +146,46 @@ internal class DesktopCapturer : IDesktopCapturer
     return Task.CompletedTask;
   }
 
-  public async Task ResetDisplays()
+  public Task StartCapturingChanges(CancellationToken cancellationToken)
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
-
-    using var displayLock = await _displayLock.AcquireLock(_appLifetime.ApplicationStopping);
-  }
-
-  public Task StartCapturingChanges()
-  {
-    ObjectDisposedException.ThrowIf(_disposedValue, this);
-
-    _captureCts = CancellationTokenSource.CreateLinkedTokenSource(_appLifetime.ApplicationStopping);
-    _captureTask = StartCapturingChangesImpl(_captureCts.Token);
-    _captureMetrics.Start(_captureCts.Token);
+    _captureTask = StartCapturingChangesImpl(cancellationToken);
     return Task.CompletedTask;
   }
 
-  private static SKBitmap DownscaleBitmap(SKBitmap bitmap, double scale)
+  public bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display)
   {
-    var newWidth = (int)(bitmap.Width * scale);
-    var newHeight = (int)(bitmap.Height * scale);
-    var imageInfo = new SKImageInfo(newWidth, newHeight);
-    return bitmap.Resize(imageInfo, default(SKSamplingOptions));
+    if (GetSelectedDisplay() is { } selectedDisplay)
+    {
+      display = selectedDisplay;
+      return true;
+    }
+    display = null;
+    return false;
   }
 
-  private Task EncodeCaptureResult(CaptureResult captureResult, int quality)
+  private async Task EncodeCaptureResult(CaptureResult captureResult, int quality, SKBitmap? previousFrame)
   {
     if (!captureResult.IsSuccess)
     {
-      return Task.CompletedTask;
+      return;
+    }
+
+    if (captureResult.DirtyRects is not { } dirtyRects)
+    {
+      dirtyRects = GetDirtyRects(
+        bitmap: captureResult.Bitmap,
+        previousFrame: previousFrame);
     }
 
     // If there are no dirty rects, nothing changed.
-    if (captureResult.DirtyRects.Length == 0)
+    if (dirtyRects.Length == 0)
     {
-      return Task.CompletedTask;
+      return;
     }
 
     var bitmapArea = captureResult.Bitmap.ToRect();
-    foreach (var region in captureResult.DirtyRects)
+    foreach (var region in dirtyRects)
     {
       if (region.IsEmpty)
       {
@@ -227,56 +199,112 @@ internal class DesktopCapturer : IDesktopCapturer
         continue;
       }
 
-      EncodeRegion(captureResult.Bitmap, intersect, quality);
+      await EncodeRegion(captureResult.Bitmap, intersect, quality);
     }
-    return Task.CompletedTask;
   }
 
-  private void EncodeRegion(SKBitmap bitmap, SKRect region, int quality, bool isKeyFrame = false)
+  private async Task EncodeRegion(
+    SKBitmap bitmap,
+    SKRect region,
+    int quality,
+    bool isKeyFrame = false)
   {
-    SKBitmap? cropped = null;
+    using var ms = _memoryProvider.GetRecyclableStream();
+    using var writer = new BinaryWriter(ms);
+
+    using var cropped = _bitmapUtility.CropBitmap(bitmap, region);
+    var imageData = _bitmapUtility.EncodeJpeg(cropped, quality);
+
+    var dto = new ScreenRegionDto(
+      region.Left,
+      region.Top,
+      region.Width,
+      region.Height,
+      imageData);
+
+    await _captureChannel.Writer.WriteAsync(dto);
+
+    if (!isKeyFrame)
+    {
+      _captureMetrics.MarkBytesSent(imageData.Length);
+    }
+  }
+
+  private Rectangle[] GetDirtyRects(SKBitmap bitmap, SKBitmap? previousFrame)
+  {
+    if (previousFrame is null)
+    {
+      return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
+    }
 
     try
     {
-      using var ms = _memoryProvider.GetRecyclableStream();
-      using var writer = new BinaryWriter(ms);
-
-      cropped = _bitmapUtility.CropBitmap(bitmap, region);
-      var imageData = _bitmapUtility.EncodeJpeg(cropped, quality);
-
-      var dto = new ScreenRegionDto(
-        region.Left,
-        region.Top,
-        region.Width,
-        region.Height,
-        imageData);
-
-      _changedRegions.Enqueue(dto);
-
-      if (!isKeyFrame)
+      var diff = _imageUtility.GetChangedArea(bitmap, previousFrame);
+      if (!diff.IsSuccess)
       {
-        _captureMetrics.MarkBytesSent(imageData.Length);
+        return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
       }
+
+      return diff.Value.IsEmpty
+        ? []
+        : [diff.Value.ToRectangle()];
+
     }
-    finally
+    catch (Exception ex)
     {
-      cropped?.Dispose();
+      _logger.LogDebug(ex, "Failed to compute dirty rect diff for X11 virtual capture.");
+      return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
     }
   }
 
-  private void ResetDisplaysImpl()
+
+  private DisplayInfo? GetSelectedDisplay()
   {
-    _displays = [.. _screenGrabber.GetDisplays()];
-    _selectedDisplay =
-      _displays.FirstOrDefault(x => x.IsPrimary) ??
-      _displays.FirstOrDefault();
-    _lastMonitorArea = null;
-    _forceKeyFrame = true;
+    lock (_displayLock)
+    {
+      _selectedDisplay ??= _displayManager.GetPrimaryDisplay();
+      return _selectedDisplay;
+    }
+  }
+
+  private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
+  {
+    try
+    {
+      _logger.LogInformation("Display settings changed. Refreshing display list.");
+      await _displayManager.ReloadDisplays();
+      lock (_displayLock)
+      {
+        // If we had a display selected and it exists still, refresh it.
+        if (_selectedDisplay is not null &&
+            _displayManager.TryFindDisplay(_selectedDisplay.DeviceName, out var selectedDisplay))
+        {
+          _selectedDisplay = selectedDisplay;
+        }
+        else
+        {
+          // Else switch to the primary.
+          _selectedDisplay = _displayManager.GetPrimaryDisplay();
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling display settings changed.");
+    }
+  }
+
+  private void SetSelectedDisplay(DisplayInfo? display)
+  {
+    lock (_displayLock)
+    {
+      _selectedDisplay = display;
+    }
   }
 
   private bool ShouldSendKeyFrame()
   {
-    if (_selectedDisplay is null)
+    if (GetSelectedDisplay() is not { } selectedDisplay)
     {
       return false;
     }
@@ -286,12 +314,12 @@ internal class DesktopCapturer : IDesktopCapturer
       return true;
     }
 
-    if (_lastDisplayId != _selectedDisplay.DeviceName)
+    if (_lastDisplayId != selectedDisplay.DeviceName)
     {
       return true;
     }
 
-    if (_lastMonitorArea != _selectedDisplay.MonitorArea)
+    if (_lastMonitorArea != selectedDisplay.MonitorArea)
     {
       return true;
     }
@@ -301,68 +329,81 @@ internal class DesktopCapturer : IDesktopCapturer
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
   {
+    SKBitmap? previousCapture = null;
+
     while (!cancellationToken.IsCancellationRequested)
     {
-      using var displayLock = await _displayLock.AcquireLock(_appLifetime.ApplicationStopping);
-
       try
       {
-        await _frameRequestedSignal.Wait(cancellationToken);
         await ThrottleCapturing(cancellationToken);
 
-        _captureMetrics.MarkIteration();
+        // Wait for space before capturing the screen.  We want the most recent image possible.
+        if (!await _captureChannel.Writer.WaitToWriteAsync(cancellationToken))
+        {
+          _logger.LogWarning("Capture channel is closed. Stopping capture.");
+          break;
+        }
 
-        if (_selectedDisplay is not { } selectedDisplay)
+        if (GetSelectedDisplay() is not { } selectedDisplay)
         {
           _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
           await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
           continue;
         }
 
-        using var captureResult = _screenGrabber.Capture(
+        using var currentCapture = _screenGrabber.CaptureDisplay(
               targetDisplay: selectedDisplay,
               captureCursor: false);
 
-        if (captureResult.IsSuccess && captureResult.DirtyRects.Length == 0)
+        if (currentCapture.HadNoChanges)
         {
-          // Nothing changed, so skip encoding.
-          await Task.Delay(TimeSpan.FromMilliseconds(10), _timeProvider, cancellationToken);
+          // Nothing changed. Skip encoding.
+          await Task.Delay(_noChangeDelay, _timeProvider, cancellationToken);
           continue;
         }
 
-        if (!captureResult.IsSuccess)
+        if (!currentCapture.IsSuccess)
         {
           _logger.LogWarning(
-            captureResult.Exception,
+            currentCapture.Exception,
             "Failed to capture latest frame.  Reason: {ResultReason}",
-            captureResult.FailureReason);
+            currentCapture.FailureReason);
 
-          ResetDisplaysImpl();
+          await _displayManager.ReloadDisplays();
           await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
           continue;
         }
 
-        if (captureResult.IsUsingGpu != _captureMetrics.IsUsingGpu)
+        if (currentCapture.IsUsingGpu != _captureMetrics.IsUsingGpu)
         {
           // We've switched from GPU to CPU capture, so we need to force a keyframe.
           _forceKeyFrame = true;
         }
 
-        _captureMetrics.SetIsUsingGpu(captureResult.IsUsingGpu);
+        _captureMetrics.SetIsUsingGpu(currentCapture.IsUsingGpu);
 
         if (ShouldSendKeyFrame())
         {
-          EncodeRegion(captureResult.Bitmap, captureResult.Bitmap.ToRect(), CaptureMetricsBase.DefaultImageQuality, isKeyFrame: true);
+          await EncodeRegion(
+            currentCapture.Bitmap,
+            currentCapture.Bitmap.ToRect(),
+            CaptureMetricsBase.DefaultImageQuality,
+            isKeyFrame: true);
+
           _forceKeyFrame = false;
           _needsKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
           _lastMonitorArea = selectedDisplay.MonitorArea;
-          continue;
+        }
+        else
+        {
+          _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
+          await EncodeCaptureResult(currentCapture, _captureMetrics.Quality, previousCapture);
         }
 
-        _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
-
-  await EncodeCaptureResult(captureResult, _captureMetrics.Quality);
+        previousCapture?.Dispose();
+        // This built-in SKBitmap.Copy method has a memory leak.
+        previousCapture = currentCapture.Bitmap.Clone();
       }
       catch (OperationCanceledException)
       {
@@ -375,88 +416,11 @@ internal class DesktopCapturer : IDesktopCapturer
       }
       finally
       {
-        if (!_changedRegions.IsEmpty)
-        {
-          _frameReadySignal.Set();
-        }
-        else
-        {
-          _frameRequestedSignal.Set();
-        }
+        _captureMetrics.MarkFrameSent();
       }
     }
   }
 
-  private async Task StartCapturingSession0(CancellationToken cancellationToken)
-  {
-    _captureMetrics.SetIsUsingGpu(false);
-    var bounds = _screenGrabber.GetVirtualScreenBounds();
-
-    while (!cancellationToken.IsCancellationRequested)
-    {
-      try
-      {
-        if (_selectedDisplay is not { } selectedDisplay)
-        {
-          _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
-          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
-          continue;
-        }
-
-        await _frameRequestedSignal.Wait(cancellationToken);
-        await ThrottleCapturing(cancellationToken);
-
-        _captureMetrics.MarkIteration();
-
-        //using var captureResult = _screenGrabber.CaptureSession0Desktop();
-        using var captureResult = _screenGrabber.Capture(captureCursor: false);
-
-        if (!captureResult.IsSuccess)
-        {
-          _logger.LogWarning(
-            captureResult.Exception,
-            "Failed to capture latest frame.  Reason: {ResultReason}",
-            captureResult.FailureReason);
-
-          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
-          continue;
-        }
-
-        if (ShouldSendKeyFrame())
-        {
-          EncodeRegion(captureResult.Bitmap, bounds.ToRect(), CaptureMetricsBase.DefaultImageQuality, isKeyFrame: true);
-          _forceKeyFrame = false;
-          _needsKeyFrame = false;
-          _lastDisplayId = selectedDisplay.DeviceName;
-          _lastMonitorArea = selectedDisplay.MonitorArea;
-          continue;
-        }
-
-        _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
-  await EncodeCaptureResult(captureResult, _captureMetrics.Quality);
-      }
-      catch (OperationCanceledException)
-      {
-        _logger.LogInformation("Screen streaming cancelled.");
-        break;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error encoding screen captures.");
-      }
-      finally
-      {
-        if (!_changedRegions.IsEmpty)
-        {
-          _frameReadySignal.Set();
-        }
-        else
-        {
-          _frameRequestedSignal.Set();
-        }
-      }
-    }
-  }
   private async Task ThrottleCapturing(CancellationToken cancellationToken)
   {
     try

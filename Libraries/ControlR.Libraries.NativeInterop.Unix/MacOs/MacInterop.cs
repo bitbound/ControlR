@@ -74,7 +74,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       }
 
       // Send modifier key event
-      if (!ConvertJavaScriptKeyToVirtualKey(key, out var modVirtualKey))
+      if (!ConvertBrowserKeyArgToVirtualKey(key, out var modVirtualKey))
       {
         _logger.LogWarning("Failed to convert modifier key to virtual key: {Key}", key);
         return Result.Fail($"Failed to convert modifier key to virtual key: {key}");
@@ -101,7 +101,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
 
     // Non-modifier key: set modifier flags if any are down
-    if (!ConvertJavaScriptKeyToVirtualKey(key, out var virtualKey))
+    if (!ConvertBrowserKeyArgToVirtualKey(key, out var virtualKey))
     {
       // TODO: Consider enhanced international keyboard support:
       // 1. Add common international characters to the key map
@@ -378,7 +378,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  private static bool ConvertJavaScriptKeyToVirtualKey(string key, [NotNullWhen(true)] out ushort virtualKey)
+  private static bool ConvertBrowserKeyArgToVirtualKey(string key, [NotNullWhen(true)] out ushort virtualKey)
   {
     var keyMap = GetJavaScriptKeyMap();
     return keyMap.TryGetValue(key, out virtualKey);

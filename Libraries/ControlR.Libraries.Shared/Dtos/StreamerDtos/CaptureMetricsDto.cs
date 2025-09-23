@@ -4,7 +4,6 @@ namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 public record CaptureMetricsDto(
   double Mbps,
   double Fps,
-  double Ips,
   bool IsUsingGpu,
   int ImageQuality,
   TimeSpan Latency,

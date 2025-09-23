@@ -29,12 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.4" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.4" />
+    <PackageReference Include="Avalonia" Version="11.3.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.5" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.5" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.4">
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.5">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -42,18 +42,21 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
-
-  <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)WINDOWS_BUILD(;|$)'))">
+  
+  
+  <ItemGroup Condition="$(DefineConstants.Contains('WINDOWS_BUILD'))">
     <ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
   </ItemGroup>
+  
+  <ItemGroup Condition="$(DefineConstants.Contains('MAC_BUILD'))">
+    <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="$(DefineConstants.Contains('LINUX_BUILD'))">
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
+    <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+  </ItemGroup>
 
-	<ItemGroup Condition="$(Configuration.Contains('Mac'))">
-		<ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
-	</ItemGroup>
-
-	<ItemGroup Condition="$(Configuration.Contains('Linux'))">
-		<ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
-	</ItemGroup>
 	
 	<ItemGroup>
     <None Update="Assets\appicon.png">

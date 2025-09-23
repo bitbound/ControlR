@@ -71,7 +71,8 @@ public partial class Chat : ComponentBase, IDisposable
 
       if (DeviceAccessState.CurrentDevice.Platform
           is not SystemPlatform.Windows
-          and not SystemPlatform.MacOs)
+          and not SystemPlatform.MacOs
+          and not SystemPlatform.Linux)
       {
         return ChatPageState.UnsupportedOperatingSystem;
       }
@@ -160,9 +161,9 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task HandleChatStateChanged()
   {
-      // Update the UI
-      await InvokeAsync(StateHasChanged);
-      await JsInterop.ScrollToEnd(_chatMessagesContainer);
+    // Update the UI
+    await InvokeAsync(StateHasChanged);
+    await JsInterop.ScrollToEnd(_chatMessagesContainer);
   }
 
 
@@ -190,6 +191,8 @@ public partial class Chat : ComponentBase, IDisposable
       {
         Logger.LogResult(sessionResult);
         Snackbar.Add("Failed to get active sessions", Severity.Warning);
+        _alertMessage = $"Failed to get active sessions: {sessionResult.Reason}.";
+        _alertSeverity = Severity.Warning;
         return;
       }
 
@@ -210,6 +213,13 @@ public partial class Chat : ComponentBase, IDisposable
 
   private async Task RefreshSystemSessions()
   {
+    await LoadSystemSessions();
+  }
+
+  private async Task Reload()
+  {
+    _alertMessage = null;
+    _loadingMessage = null;
     await LoadSystemSessions();
   }
 
