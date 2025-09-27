@@ -17,7 +17,7 @@ internal class AgentHubClient(
   ISystemEnvironment systemEnvironment,
   IMessenger messenger,
   ITerminalStore terminalStore,
-  IUiSessionProvider osSessionProvider,
+  IUiSessionProvider uiSessionProvider,
   IIpcServerStore ipcServerStore,
   IDesktopClientUpdater streamerUpdater,
   IHostApplicationLifetime appLifetime,
@@ -36,7 +36,7 @@ internal class AgentHubClient(
   private readonly ILocalSocketProxy _localProxy = localProxy;
   private readonly ILogger<AgentHubClient> _logger = logger;
   private readonly IMessenger _messenger = messenger;
-  private readonly IUiSessionProvider _osSessionProvider = osSessionProvider;
+  private readonly IUiSessionProvider _uiSessionProvider = uiSessionProvider;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settings = settings;
   private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
@@ -222,7 +222,7 @@ internal class AgentHubClient(
 
   public async Task<DeviceUiSession[]> GetActiveUiSessions()
   {
-    return await _osSessionProvider.GetActiveDesktopClients();
+    return await _uiSessionProvider.GetActiveDesktopClients();
   }
 
   public async Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
@@ -568,7 +568,7 @@ internal class AgentHubClient(
     foreach (var chunk in data.Chunk(chunkSize))
     {
       yield return chunk;
-      await Task.Delay(1); // Small delay to prevent overwhelming the connection
+      await Task.Delay(1);
     }
   }
 

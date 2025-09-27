@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Libraries.Shared.Enums;
 
-public enum WindowsCursor
+public enum PointerCursor
 {
   Unknown,
   NormalArrow,
@@ -10,5 +10,6 @@ public enum WindowsCursor
   SizeNwse,
   SizeNesw,
   Wait,
-  Hand
+  Hand,
+  Custom,
 }

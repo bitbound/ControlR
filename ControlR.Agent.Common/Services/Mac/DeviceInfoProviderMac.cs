@@ -6,15 +6,15 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Mac;
 
-internal class DeviceDataGeneratorMac(
+internal class DeviceInfoProviderMac(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  ILogger<DeviceDataGeneratorMac> logger)
-  : DeviceDataGeneratorBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
+  ILogger<DeviceInfoProviderMac> logger)
+  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
-  private readonly ILogger<DeviceDataGeneratorMac> _logger = logger;
+  private readonly ILogger<DeviceInfoProviderMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
   public async Task<DeviceModel> CreateDevice(Guid deviceId)

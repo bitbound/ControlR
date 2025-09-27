@@ -314,16 +314,28 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
+      if (dto.Cursor == PointerCursor.Custom)
+      {
+        if (string.IsNullOrWhiteSpace(dto.CustomCursorBase64))
+        {
+          Logger.LogWarning("Received custom cursor change with no image data.");
+          return;
+        }
+        _canvasCssCursor = $"url(data:image/png;base64,{dto.CustomCursorBase64}) {dto.XHotspot} {dto.YHotspot}, auto";
+        await InvokeAsync(StateHasChanged);
+        return;
+      }
+
       _canvasCssCursor = dto.Cursor switch
       {
-        WindowsCursor.Hand => "pointer",
-        WindowsCursor.Ibeam => "text",
-        WindowsCursor.NormalArrow => "default",
-        WindowsCursor.SizeNesw => "nesw-resize",
-        WindowsCursor.SizeNwse => "nwse-resize",
-        WindowsCursor.SizeWe => "ew-resize",
-        WindowsCursor.SizeNs => "ns-resize",
-        WindowsCursor.Wait => "wait",
+        PointerCursor.Hand => "pointer",
+        PointerCursor.Ibeam => "text",
+        PointerCursor.NormalArrow => "default",
+        PointerCursor.SizeNesw => "nesw-resize",
+        PointerCursor.SizeNwse => "nwse-resize",
+        PointerCursor.SizeWe => "ew-resize",
+        PointerCursor.SizeNs => "ns-resize",
+        PointerCursor.Wait => "wait",
         _ => "default"
       };
 

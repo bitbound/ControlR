@@ -3,6 +3,11 @@
     "Run": {
       "commandName": "Project",
       "commandLineArgs": "--instance-id localhost",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "Logging__LogLevel__Default": "Debug",
+        "Serilog__MinimumLevel__Default": "Debug"
+      },
     }
   }
 }

@@ -1,16 +1,10 @@
+name: controlr
+
 # These values need to be set.  You can either define these environment variables
 # on the host or supply them here directly as string literals.
 x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
-
-networks:
-  controlr:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.29.0.0/16
-          gateway: 172.29.0.1
 
 services:
   controlr:
@@ -22,8 +16,6 @@ services:
       - aspire
     ports:
       - "5120:8080"
-    networks:
-      - controlr
     environment:
       # ASPNETCORE variables should *not* be changed.
       ASPNETCORE_ENVIRONMENT: Production
@@ -105,8 +97,6 @@ services:
     restart: unless-stopped
     ports:
       - "5432:5432"
-    networks:
-      - controlr
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
@@ -122,8 +112,6 @@ services:
       - "18888:18888"
     expose:
       - "18889"
-    networks:
-      - controlr
     environment:
       DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://aspire:18889"
       Dashboard__Frontend__BrowserToken: *aspireToken

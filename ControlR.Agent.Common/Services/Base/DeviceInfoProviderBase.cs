@@ -1,33 +1,28 @@
-﻿using System.Net.NetworkInformation;
+﻿using System.Collections.Immutable;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Agent.Common.Models;
+using ControlR.Agent.Common.Services.FileManager;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Base;
 
-internal class DeviceDataGeneratorBase(
+internal class DeviceInfoProviderBase(
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  ILogger<DeviceDataGeneratorBase> logger)
+  ILogger<DeviceInfoProviderBase> logger)
 {
-  private static readonly HashSet<string> _excludedDrivePrefixes =
-  [
-    "/System/Volumes/",
-    "/snap/",
-    "/boot/",
-    "/var/lib/docker/"
-  ];
-  
+ 
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
-  private readonly ILogger<DeviceDataGeneratorBase> _logger = logger;
+  private readonly ILogger<DeviceInfoProviderBase> _logger = logger;
 
   protected string GetAgentVersion()
   {
-    var version = typeof(DeviceDataGeneratorBase).Assembly.GetName().Version?.ToString();
+    var version = typeof(DeviceInfoProviderBase).Assembly.GetName().Version?.ToString();
     if (!string.IsNullOrWhiteSpace(version))
     {
       return version;
@@ -47,7 +42,9 @@ internal class DeviceDataGeneratorBase(
           .Where(x => x.IsReady)
           .Where(x => x.DriveType == DriveType.Fixed)
           .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
-          .Where(x => !_excludedDrivePrefixes.Contains(x.RootDirectory.FullName))
+          .Where(x =>
+            !FileSystemConstants.ExcludedDrivePrefixes.Any(prefix =>
+              x.RootDirectory.FullName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
           .Where(x => x.TotalSize > 0)
           .Select(x => new Drive
           {

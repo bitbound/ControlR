@@ -204,6 +204,9 @@ internal class FileManager(
     {
       var drives = _fileSystem.GetDrives()
         .Where(d => d.IsReady && d.DriveType == DriveType.Fixed && d.TotalSize > 0)
+        .Where(d => d.DriveFormat is not "squashfs" and not "overlay")
+        .Where(d => !FileSystemConstants.ExcludedDrivePrefixes.Any(prefix =>
+          d.RootDirectory.FullName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
         .Select(drive => new FileSystemEntryDto(
           Name: drive.Name,
           FullPath: drive.RootDirectory.FullName,

@@ -58,9 +58,16 @@ public sealed class ManualResetEventAsync : IDisposable
     }
   }
 
-  public async Task Wait(TimeSpan timeout)
+  public async Task<bool> Wait(TimeSpan timeout, bool throwOnCancellation)
   {
-    using var cts = new CancellationTokenSource(timeout);
-    await Wait(cts.Token);
+    try
+    {
+      await _tcs.Task.WaitAsync(timeout);
+      return true;
+    }
+    catch (TimeoutException) when (!throwOnCancellation)
+    {
+      return false;
+    }
   }
 }

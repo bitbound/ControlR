@@ -152,14 +152,6 @@
           @($"{_latestCaptureMetrics.Latency.TotalMilliseconds:N2} ms")
         </div>
 
-
-        <div>
-          Image Quality:
-        </div>
-        <div>
-          @(_latestCaptureMetrics.ImageQuality)
-        </div>
-
         @foreach (var kvp in _latestCaptureMetrics.ExtraData)
         {
           <div>

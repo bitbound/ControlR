@@ -2,7 +2,6 @@
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Messages;
@@ -30,6 +29,8 @@ public interface IDesktopCapturer : IAsyncDisposable
 
 internal class DesktopCapturer : IDesktopCapturer
 {
+  public const int DefaultImageQuality = 75;
+
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
   private readonly IImageUtility _bitmapUtility;
   private readonly ICaptureMetrics _captureMetrics;
@@ -49,12 +50,12 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
+  private readonly TimeSpan _waitForBandwidthTimeout = TimeSpan.FromMilliseconds(250);
   private Task? _captureTask;
   private bool _disposedValue;
   private bool _forceKeyFrame = true;
   private string? _lastDisplayId;
   private Rectangle? _lastMonitorArea;
-  private bool _needsKeyFrame = true;
   private DisplayInfo? _selectedDisplay;
 
   public DesktopCapturer(
@@ -164,7 +165,11 @@ internal class DesktopCapturer : IDesktopCapturer
     return false;
   }
 
-  private async Task EncodeCaptureResult(CaptureResult captureResult, int quality, SKBitmap? previousFrame)
+  private async Task EncodeCaptureResult(
+    CaptureResult captureResult,
+    int quality,
+    SKBitmap? previousFrame,
+    CancellationToken cancellationToken)
   {
     if (!captureResult.IsSuccess)
     {
@@ -181,6 +186,7 @@ internal class DesktopCapturer : IDesktopCapturer
     // If there are no dirty rects, nothing changed.
     if (dirtyRects.Length == 0)
     {
+      await Task.Delay(_noChangeDelay, cancellationToken);
       return;
     }
 
@@ -324,7 +330,7 @@ internal class DesktopCapturer : IDesktopCapturer
       return true;
     }
 
-    return _needsKeyFrame && _captureMetrics.Mbps < CaptureMetricsBase.TargetMbps * .5;
+    return false;
   }
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
@@ -358,7 +364,7 @@ internal class DesktopCapturer : IDesktopCapturer
         if (currentCapture.HadNoChanges)
         {
           // Nothing changed. Skip encoding.
-          await Task.Delay(_noChangeDelay, _timeProvider, cancellationToken);
+          await Task.Delay(_noChangeDelay, cancellationToken);
           continue;
         }
 
@@ -387,18 +393,20 @@ internal class DesktopCapturer : IDesktopCapturer
           await EncodeRegion(
             currentCapture.Bitmap,
             currentCapture.Bitmap.ToRect(),
-            CaptureMetricsBase.DefaultImageQuality,
+            DefaultImageQuality,
             isKeyFrame: true);
 
           _forceKeyFrame = false;
-          _needsKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
           _lastMonitorArea = selectedDisplay.MonitorArea;
         }
         else
         {
-          _needsKeyFrame = _needsKeyFrame || _captureMetrics.IsQualityReduced;
-          await EncodeCaptureResult(currentCapture, _captureMetrics.Quality, previousCapture);
+          await EncodeCaptureResult(
+            currentCapture,
+            DefaultImageQuality,
+            previousCapture,
+            cancellationToken);
         }
 
         previousCapture?.Dispose();
@@ -425,9 +433,12 @@ internal class DesktopCapturer : IDesktopCapturer
   {
     try
     {
-      using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(250), _timeProvider);
-      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-      await _captureMetrics.WaitForBandwidth(linkedCts.Token);
+      if (_captureMetrics.Mbps > CaptureMetricsBase.MaxMbps)
+      {
+        using var cts = new CancellationTokenSource(_waitForBandwidthTimeout, _timeProvider);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+        await _captureMetrics.WaitForBandwidth(linkedCts.Token);
+      }
     }
     catch (OperationCanceledException)
     {

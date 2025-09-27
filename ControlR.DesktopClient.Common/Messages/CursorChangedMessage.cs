@@ -2,4 +2,8 @@
 
 namespace ControlR.DesktopClient.Common.Messages;
 
-public record CursorChangedMessage(WindowsCursor Cursor);
+public record CursorChangedMessage(
+  PointerCursor Cursor,
+  string? CustomCursorBase64 = null,
+  ushort XHotspot = 0,
+  ushort YHotspot = 0);

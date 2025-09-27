@@ -67,7 +67,9 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 ### Ubuntu x64 (latest LTS)
 
 - Full remote control support on X11
-  - Only tested on Kubuntu with KDE Plasma
+  - Tested on Ubuntu, Kubuntu, and Mint
+  - On Ubuntu, you must enable X11 for the login screen
+    - Edit `/etc/gdm3/custom.conf` and uncomment the line `WaylandEnable=false`, then reboot
 - Experimental remote control via VNC
 
 ### All Operating Systems

@@ -6,15 +6,15 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Linux;
 
-internal class DeviceDataGeneratorLinux(
+internal class DeviceInfoProviderLinux(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  ILogger<DeviceDataGeneratorLinux> logger)
-  : DeviceDataGeneratorBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
+  ILogger<DeviceInfoProviderLinux> logger)
+  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
-  private readonly ILogger<DeviceDataGeneratorLinux> _logger = logger;
+  private readonly ILogger<DeviceInfoProviderLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
   public async Task<DeviceModel> CreateDevice(Guid deviceId)

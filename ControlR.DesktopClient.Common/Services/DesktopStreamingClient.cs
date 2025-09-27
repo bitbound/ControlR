@@ -133,7 +133,13 @@ internal sealed class DesktopStreamingClient(
   {
     try
     {
-      var dto = new CursorChangedDto(message.Cursor, _startupOptions.Value.SessionId);
+      var dto = new CursorChangedDto(
+        message.Cursor,
+        message.CustomCursorBase64,
+        message.XHotspot,
+        message.YHotspot,
+        _startupOptions.Value.SessionId);
+
       var wrapper = DtoWrapper.Create(dto, DtoType.CursorChanged);
       await Send(wrapper, _appLifetime.ApplicationStopping);
     }

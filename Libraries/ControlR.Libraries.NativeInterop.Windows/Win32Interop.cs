@@ -38,7 +38,7 @@ public interface IWin32Interop
   List<DeviceUiSession> GetActiveSessions();
   List<DeviceUiSession> GetActiveSessionsCsWin32();
   string? GetClipboardText();
-  WindowsCursor GetCurrentCursor();
+  PointerCursor GetCurrentCursor();
   bool GetCurrentThreadDesktopName(out string currentDesktop);
   List<string> GetDesktopNames(string windowStation = "WinSta0");
   bool GetInputDesktopName([NotNullWhen(true)] out string? inputDesktop);
@@ -77,7 +77,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private const uint Xbutton2 = 0x0002;
 
   private readonly ILogger<Win32Interop> _logger = logger;
-  private FrozenDictionary<HCURSOR, WindowsCursor>? _cursorMap;
+  private FrozenDictionary<HCURSOR, PointerCursor>? _cursorMap;
   private FrozenDictionary<string, ushort>? _keyMap;
   private HDESK _lastInputDesktop;
 
@@ -349,7 +349,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  public WindowsCursor GetCurrentCursor()
+  public PointerCursor GetCurrentCursor()
   {
     try
     {
@@ -362,7 +362,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       {
         _logger.LogDebug("Failed to get cursor info.  Last p/invoke error: {LastError}",
           Marshal.GetLastPInvokeErrorMessage());
-        return WindowsCursor.Unknown;
+        return PointerCursor.Unknown;
       }
 
       if (GetCursorMap().TryGetValue(cursorInfo.hCursor, out var cursor))
@@ -375,7 +375,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       _logger.LogError(ex, "Error while getting current cursor.");
     }
 
-    return WindowsCursor.Unknown;
+    return PointerCursor.Unknown;
   }
   public bool GetCurrentThreadDesktopName(out string desktopName)
   {
@@ -1333,18 +1333,18 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return true;
   }
 
-  private FrozenDictionary<HCURSOR, WindowsCursor> GetCursorMap()
+  private FrozenDictionary<HCURSOR, PointerCursor> GetCursorMap()
   {
-    return _cursorMap ??= new Dictionary<HCURSOR, WindowsCursor>
+    return _cursorMap ??= new Dictionary<HCURSOR, PointerCursor>
     {
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = WindowsCursor.NormalArrow,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = WindowsCursor.Ibeam,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = WindowsCursor.Wait,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = WindowsCursor.SizeNwse,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = WindowsCursor.SizeNesw,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = WindowsCursor.SizeWe,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = WindowsCursor.SizeNs,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = WindowsCursor.Hand
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = PointerCursor.NormalArrow,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = PointerCursor.Ibeam,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = PointerCursor.Wait,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = PointerCursor.SizeNwse,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = PointerCursor.SizeNesw,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = PointerCursor.SizeWe,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = PointerCursor.SizeNs,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = PointerCursor.Hand
     }.ToFrozenDictionary();
   }
   private FrozenDictionary<string, ushort> GetScanCodeKeyMap()

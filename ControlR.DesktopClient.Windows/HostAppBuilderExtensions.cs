@@ -23,7 +23,7 @@ public static class HostAppBuilderExtensions
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()
       .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
-      .AddHostedService<CursorWatcher>();
+      .AddHostedService<CursorWatcherWindows>();
 
     builder.BootstrapSerilog(
       logFilePath: PathConstants.GetLogsPath(appDataFolder),

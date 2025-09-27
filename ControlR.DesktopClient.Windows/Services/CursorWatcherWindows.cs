@@ -7,14 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
-internal partial class CursorWatcher(
-  TimeProvider timeProvider,
+internal partial class CursorWatcherWindows(
   ISystemEnvironment systemEnvironment,
   IMessenger messenger,
   IWin32Interop win32Interop,
   ILogger<ClipboardManagerWindows> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IMessenger _messenger = messenger;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IWin32Interop _win32Interop = win32Interop;
@@ -34,7 +32,7 @@ internal partial class CursorWatcher(
     {
       try
       {
-        await Task.Delay(TimeSpan.FromMilliseconds(50), _timeProvider, stoppingToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(10), stoppingToken);
 
         var nextCursor = _win32Interop.GetCurrentCursor();
         if (currentCursor != nextCursor)

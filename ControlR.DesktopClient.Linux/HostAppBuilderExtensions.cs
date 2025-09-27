@@ -21,7 +21,8 @@ public static class HostAppBuilderExtensions
       //.AddSingleton<IClipboardManager, ClipboardManagerGtk>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>()
       .AddSingleton<IInputSimulator, InputSimulatorX11>()
-      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>());
+      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
+      .AddHostedService<CursorWatcherX11>();
       
     builder.BootstrapSerilog(
       logFilePath: PathConstants.GetLogsPath(appDataFolder),

@@ -36,7 +36,7 @@ public class Win32InteropFake : IWin32Interop
     throw new NotImplementedException();
   }
 
-  public WindowsCursor GetCurrentCursor()
+  public PointerCursor GetCurrentCursor()
   {
     throw new NotImplementedException();
   }

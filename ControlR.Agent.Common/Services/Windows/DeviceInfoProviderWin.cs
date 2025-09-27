@@ -8,15 +8,15 @@ using Microsoft.Extensions.Options;
 namespace ControlR.Agent.Common.Services.Windows;
 
 [SupportedOSPlatform("windows6.0.6000")]
-internal class DeviceDataGeneratorWin(
+internal class DeviceInfoProviderWin(
   IWin32Interop win32Interop,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  ILogger<DeviceDataGeneratorWin> logger)
-  : DeviceDataGeneratorBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
+  ILogger<DeviceInfoProviderWin> logger)
+  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
 {
-  private readonly ILogger<DeviceDataGeneratorWin> _logger = logger;
+  private readonly ILogger<DeviceInfoProviderWin> _logger = logger;
 
   public async Task<DeviceModel> CreateDevice(Guid deviceId)
   {
