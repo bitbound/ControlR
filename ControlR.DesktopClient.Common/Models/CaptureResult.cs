@@ -20,7 +20,7 @@ public sealed class CaptureResult : IDisposable
   public bool IsSuccess { get; init; }
   public bool IsUsingGpu { get; init; }
 
-  public static CaptureResult Fail(string failureReason, CaptureResult? previousResult = null)
+  public static CaptureResult Fail(string failureReason)
   {
     return new CaptureResult()
     {

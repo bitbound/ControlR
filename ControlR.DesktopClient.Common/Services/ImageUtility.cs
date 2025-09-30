@@ -84,20 +84,19 @@ public class ImageUtility : IImageUtility
 
     var width = currentFrame.Width;
     var height = currentFrame.Height;
-    int left = int.MaxValue;
-    int top = int.MaxValue;
-    int right = int.MinValue;
-    int bottom = int.MinValue;
+    var left = int.MaxValue;
+    var top = int.MaxValue;
+    var right = int.MinValue;
+    var bottom = int.MinValue;
 
     var bytesPerPixel = currentFrame.BytesPerPixel;
-    var totalSize = currentFrame.ByteCount;
 
     try
     {
       unsafe
       {
-        byte* scan1 = (byte*)currentFrame.GetPixels().ToPointer();
-        byte* scan2 = (byte*)previousFrame.GetPixels().ToPointer();
+        var scan1 = (byte*)currentFrame.GetPixels().ToPointer();
+        var scan2 = (byte*)previousFrame.GetPixels().ToPointer();
 
         for (var row = 0; row < height; row++)
         {
@@ -108,28 +107,29 @@ public class ImageUtility : IImageUtility
             var data1 = scan1 + index;
             var data2 = scan2 + index;
 
-            if (data1[0] != data2[0] ||
-                data1[1] != data2[1] ||
-                data1[2] != data2[2] ||
-                data1[3] != data2[3])
+            if (data1[0] == data2[0] &&
+                data1[1] == data2[1] &&
+                data1[2] == data2[2] &&
+                data1[3] == data2[3])
             {
+              continue;
+            }
 
-              if (row < top)
-              {
-                top = row;
-              }
-              if (row > bottom)
-              {
-                bottom = row;
-              }
-              if (column < left)
-              {
-                left = column;
-              }
-              if (column > right)
-              {
-                right = column;
-              }
+            if (row < top)
+            {
+              top = row;
+            }
+            if (row > bottom)
+            {
+              bottom = row;
+            }
+            if (column < left)
+            {
+              left = column;
+            }
+            if (column > right)
+            {
+              right = column;
             }
 
           }
@@ -165,7 +165,7 @@ public class ImageUtility : IImageUtility
     {
       unsafe
       {
-        byte* scan = (byte*)bitmap.GetPixels().ToPointer();
+        var scan = (byte*)bitmap.GetPixels().ToPointer();
 
         for (var row = 0; row < height; row++)
         {
@@ -173,7 +173,7 @@ public class ImageUtility : IImageUtility
           {
             var index = row * width * bytesPerPixel + column * bytesPerPixel;
 
-            byte* data = scan + index;
+            var data = scan + index;
 
             if (data[0] == 0 &&
                 data[1] == 0 &&

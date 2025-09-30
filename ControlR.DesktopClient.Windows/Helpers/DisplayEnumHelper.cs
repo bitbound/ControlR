@@ -23,7 +23,6 @@
 //  ---------------------------------------------------------------------------------
 
 using System.Drawing;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Graphics.Gdi;
@@ -31,7 +30,7 @@ using ControlR.DesktopClient.Common.Models;
 
 namespace ControlR.DesktopClient.Windows.Helpers;
 
-internal static class DisplaysEnumerationHelper
+internal static class DisplaysEnumerationHelperWindows
 {
   private const int Cchdevicename = 32;
 
@@ -51,13 +50,17 @@ internal static class DisplaysEnumerationHelper
         {
           var info = new DisplayInfo
           {
-            ScreenSize = new Vector2(mi.Monitor.Right - mi.Monitor.Left, mi.Monitor.Bottom - mi.Monitor.Top),
-            MonitorArea = new Rectangle(mi.Monitor.Left, mi.Monitor.Top, mi.Monitor.Right - mi.Monitor.Left,
+            MonitorArea = new Rectangle(
+              mi.Monitor.Left,
+              mi.Monitor.Top,
+              mi.Monitor.Right - mi.Monitor.Left,
               mi.Monitor.Bottom - mi.Monitor.Top),
-            WorkArea = new Rectangle(mi.WorkArea.Left, mi.WorkArea.Top, mi.WorkArea.Right - mi.WorkArea.Left,
+            WorkArea = new Rectangle(
+              mi.WorkArea.Left,
+              mi.WorkArea.Top,
+              mi.WorkArea.Right - mi.WorkArea.Left,
               mi.WorkArea.Bottom - mi.WorkArea.Top),
             IsPrimary = mi.Flags > 0,
-            Hmon = hMonitor,
             DeviceName = mi.DeviceName
           };
           displays.Add(info);

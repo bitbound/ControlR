@@ -107,11 +107,9 @@ internal static class DisplaysEnumerationHelper
     {
       DeviceName = displayId.ToString(),
       DisplayName = isMain ? "Main Display" : $"Display {index + 1}",
-      Hmon = (nint)displayId,
       IsPrimary = isMain,
       MonitorArea = monitorArea,
       WorkArea = monitorArea,
-      ScreenSize = new Vector2(actualPixelWidth, actualPixelHeight), // Use actual pixel dimensions
       ScaleFactor = scaleFactor
     };
   }

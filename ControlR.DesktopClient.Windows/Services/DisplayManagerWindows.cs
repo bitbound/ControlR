@@ -109,7 +109,7 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     try
     {
       _displays.Clear();
-      foreach (var display in DisplaysEnumerationHelper.GetDisplays())
+      foreach (var display in DisplaysEnumerationHelperWindows.GetDisplays())
       {
         _displays[display.DeviceName] = display;
       }

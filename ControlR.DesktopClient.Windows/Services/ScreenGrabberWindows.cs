@@ -2,10 +2,8 @@
 using System.Drawing.Imaging;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Windows.Extensions;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Helpers;
@@ -18,12 +16,11 @@ using Windows.Win32.Graphics.Dxgi;
 using Windows.Win32.Graphics.Dxgi.Common;
 using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.UI.WindowsAndMessaging;
+using ControlR.DesktopClient.Windows.Helpers;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
 internal sealed class ScreenGrabberWindows(
-  TimeProvider timeProvider,
-  IImageUtility imageUtility,
   IDxOutputDuplicator dxOutputGenerator,
   IWin32Interop win32Interop,
   IDisplayManager displayManager,
@@ -31,9 +28,7 @@ internal sealed class ScreenGrabberWindows(
 {
   private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly IDisplayManager _displayManager = displayManager;
-  private readonly IImageUtility _imageUtility = imageUtility;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWin32Interop _win32Interop = win32Interop;
   private bool _inputDesktopSwitchResult = true;
 
