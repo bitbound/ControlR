@@ -366,7 +366,7 @@ public class ControlrApi(
       if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
           values.FirstOrDefault() is not { } hashString)
       {
-        return Result.Fail<byte[]>("Failed to get desktop client file hash.");
+        return Result.Fail<byte[]>("Failed to get desktop client file hash. 'Content-Hash' header missing.");
       }
 
       var fileHash = Convert.FromHexString(hashString);

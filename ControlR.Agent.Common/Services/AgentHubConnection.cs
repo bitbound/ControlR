@@ -19,7 +19,7 @@ internal class AgentHubConnection(
   IHostApplicationLifetime appLifetime,
   IDeviceDataGenerator deviceCreator,
   ISettingsProvider settings,
-  IDesktopClientUpdater streamerUpdater,
+  IDesktopClientUpdater desktopClientUpdater,
   IAgentUpdater agentUpdater,
   ILogger<AgentHubConnection> logger)
   : IAgentHubConnection
@@ -30,7 +30,7 @@ internal class AgentHubConnection(
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<AgentHubConnection> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
-  private readonly IDesktopClientUpdater _streamerUpdater = streamerUpdater;
+  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   
   public HubConnectionState State => _hubConnection.ConnectionState;
 
@@ -106,6 +106,6 @@ internal class AgentHubConnection(
   {
     await SendDeviceHeartbeat();
     await _agentUpdater.CheckForUpdate();
-    await _streamerUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
+    await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
   }
 }

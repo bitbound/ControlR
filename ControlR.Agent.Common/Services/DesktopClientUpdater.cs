@@ -82,8 +82,13 @@ internal class DesktopClientUpdater(
       {
         var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
 
+        if (!archiveCheckResult.IsSuccess)
+        {
+          return false;
+        }
+
         // Version is current.
-        if (archiveCheckResult.IsSuccess && !archiveCheckResult.Value)
+        if (archiveCheckResult is { IsSuccess: true, Value: false })
         {
           return true;
         }
@@ -203,7 +208,7 @@ internal class DesktopClientUpdater(
 
   private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
   {
-    byte[] localHash = [];
+    byte[] localHash;
 
     await using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
     {
@@ -237,7 +242,7 @@ internal class DesktopClientUpdater(
   {
     var connection = _serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
 
-    if (progress == 1 || progress < 0 || progress - _previousProgress > .05)
+    if (progress >= 1 || progress < 0 || progress - _previousProgress > .05)
     {
       _previousProgress = progress;
 
