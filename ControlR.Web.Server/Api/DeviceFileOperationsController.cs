@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Constants;
+﻿using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -223,7 +223,7 @@ public class DeviceFileOperationsController : ControllerBase
 
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
-      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{downloadFileName}\"");
+      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{System.Net.WebUtility.UrlEncode(downloadFileName)}\"");
 
       // Stream the file content to the response
       await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
