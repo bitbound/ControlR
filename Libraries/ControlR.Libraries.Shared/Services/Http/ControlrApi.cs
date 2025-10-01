@@ -623,7 +623,7 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload/initiate", request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<InitiateChunkedUploadResponseDto>() ??
-        throw new HttpRequestException("Failed to deserialize response");
+        new InitiateChunkedUploadResponseDto(false, "Failed to deserialize response");
     });
   }
 
