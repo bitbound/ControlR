@@ -223,7 +223,9 @@ public class DeviceFileOperationsController : ControllerBase
 
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
-      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{System.Net.WebUtility.UrlEncode(downloadFileName)}\"");
+      var escapedFileName = System.Net.WebUtility.UrlEncode(downloadFileName); // ASCII safe fallback
+      var encodedFileName = Uri.EscapeDataString(downloadFileName); // UTF-8 encoded
+      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{escapedFileName}\"; filename*=UTF-8''{encodedFileName}");
 
       // Stream the file content to the response
       await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
