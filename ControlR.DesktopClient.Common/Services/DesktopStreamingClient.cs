@@ -8,6 +8,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
@@ -312,7 +313,18 @@ internal sealed class DesktopStreamingClient(
     try
     {
       var displays = await _displayManager.GetDisplays();
-      var dto = new DisplayDataDto([.. displays]);
+      var displayDtos = displays.Select(x => new DisplayDto
+      {
+        DisplayId = x.DeviceName,
+        Height = x.MonitorArea.Height,
+        IsPrimary = x.IsPrimary,
+        Width = x.MonitorArea.Width,
+        Name = x.DisplayName,
+        Top = x.MonitorArea.Top,
+        Left = x.MonitorArea.Left,
+        ScaleFactor = x.ScaleFactor,
+      });
+      var dto = new DisplayDataDto([.. displayDtos]);
 
       var wrapper = DtoWrapper.Create(dto, DtoType.DisplayData);
       await Send(wrapper, _appLifetime.ApplicationStopping);

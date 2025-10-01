@@ -250,7 +250,8 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(TreeItemData<string> treeItem)
+  private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(
+    TreeItemData<string> treeItem)
   {
     return EventCallback.Factory.Create<IReadOnlyCollection<TreeItemData<string?>>?>(this, children =>
     {
@@ -327,6 +328,7 @@ public partial class FileSystem : JsInteropableComponent
       await NavigateToAddress();
     }
   }
+
   private async Task LoadDirectoryContents(string directoryPath)
   {
     try
@@ -685,8 +687,9 @@ public partial class FileSystem : JsInteropableComponent
           return;
         }
       }
-
-      using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
+      
+      // TODO: Replace multipart form with raw stream and custom metadata header.
+      await using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
       var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
 
       if (!result.IsSuccess)

@@ -1,11 +1,10 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using System.Drawing;
-using System.Numerics;
 
 namespace ControlR.DesktopClient.Mac.Helpers;
 
-internal static class DisplaysEnumerationHelper
+internal static class DisplayEnumHelperMac
 {
   private const uint MaxDisplays = 32;
 

@@ -36,7 +36,7 @@ internal class DisplayManagerX11 : IDisplayManager
     return Task.FromResult(new Point(absoluteX, absoluteY));
   }
 
-  public Task<ImmutableList<DisplayDto>> GetDisplays()
+  public Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
     lock (_displayLock)
     {
@@ -44,17 +44,6 @@ internal class DisplayManagerX11 : IDisplayManager
 
       var displayDtos = _displays
         .Values
-        .Select(x => new DisplayDto
-        {
-          DisplayId = x.DeviceName,
-          Height = x.MonitorArea.Height,
-          IsPrimary = x.IsPrimary,
-          Width = x.MonitorArea.Width,
-          Name = x.DisplayName,
-          Top = x.MonitorArea.Top,
-          Left = x.MonitorArea.Left,
-          ScaleFactor = x.ScaleFactor,
-        })
         .ToImmutableList();
 
       return Task.FromResult(displayDtos);

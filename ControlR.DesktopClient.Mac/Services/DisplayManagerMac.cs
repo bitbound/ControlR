@@ -6,7 +6,6 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;
@@ -31,7 +30,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     return Task.FromResult(new Point(absoluteX, absoluteY));
   }
 
-  public Task<ImmutableList<DisplayDto>> GetDisplays()
+  public Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
     lock (_displayLock)
     {
@@ -39,17 +38,6 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
 
       var displayDtos = _displays
         .Values
-        .Select(x => new DisplayDto
-        {
-          DisplayId = x.DeviceName,
-          Height = x.MonitorArea.Height,
-          IsPrimary = x.IsPrimary,
-          Width = x.MonitorArea.Width,
-          Name = x.DisplayName,
-          Top = x.MonitorArea.Top,
-          Left = x.MonitorArea.Left,
-          ScaleFactor = x.ScaleFactor,
-        })
         .ToImmutableList();
 
       return Task.FromResult(displayDtos);
@@ -62,18 +50,18 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     {
       EnsureDisplaysLoaded();
       return _displays.Values.FirstOrDefault(x => x.IsPrimary)
-        ?? _displays.Values.FirstOrDefault();
+             ?? _displays.Values.FirstOrDefault();
     }
   }
 
   public Rectangle GetVirtualScreenBounds()
   {
-    try
+    lock (_displayLock)
     {
-      lock (_displayLock)
+      try
       {
         EnsureDisplaysLoaded();
-        if (_displays.Count == 0)
+        if (_displays.IsEmpty)
         {
           return Rectangle.Empty;
         }
@@ -85,14 +73,14 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
 
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
       }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error getting virtual screen bounds.");
-      // Return main display bounds as fallback
-      var mainDisplayId = CoreGraphics.CGMainDisplayID();
-      var bounds = CoreGraphics.CGDisplayBounds(mainDisplayId);
-      return new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error getting virtual screen bounds.");
+        // Return main display bounds as fallback
+        var mainDisplayId = CoreGraphics.CGMainDisplayID();
+        var bounds = CoreGraphics.CGDisplayBounds(mainDisplayId);
+        return new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+      }
     }
   }
 
@@ -102,6 +90,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     {
       ReloadDisplaysImpl();
     }
+
     return Task.CompletedTask;
   }
 
@@ -117,7 +106,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
   private void EnsureDisplaysLoaded()
   {
     // Must be called within lock
-    if (_displays.Count == 0)
+    if (_displays.IsEmpty)
     {
       ReloadDisplaysImpl();
     }
@@ -129,7 +118,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     try
     {
       _displays.Clear();
-      var displays = DisplaysEnumerationHelper.GetDisplays();
+      var displays = DisplayEnumHelperMac.GetDisplays();
       foreach (var display in displays)
       {
         _displays[display.DeviceName] = display;

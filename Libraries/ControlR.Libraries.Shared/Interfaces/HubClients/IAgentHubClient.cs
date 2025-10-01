@@ -21,8 +21,8 @@ public interface IAgentHubClient : IHubClient
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
   Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
   Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);
-  Task<Result?> ReceiveFileUpload(FileUploadHubDto dto);
-  Task<Result> SendFileDownload(FileDownloadHubDto dto);
+  Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto);
+  Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto);
   Task<Result> DeleteFile(FileDeleteHubDto dto);
   Task<Result> CreateDirectory(CreateDirectoryHubDto dto);
   Task<ValidateFilePathResponseDto> ValidateFilePath(ValidateFilePathHubDto dto);

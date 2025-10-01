@@ -7,7 +7,6 @@ using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -29,10 +28,10 @@ public interface IDesktopCapturer : IAsyncDisposable
 
 internal class DesktopCapturer : IDesktopCapturer
 {
+  // ReSharper disable once MemberCanBePrivate.Global
   public const int DefaultImageQuality = 75;
 
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
-  private readonly IImageUtility _bitmapUtility;
   private readonly ICaptureMetrics _captureMetrics;
   private readonly Channel<ScreenRegionDto> _captureChannel = Channel.CreateBounded<ScreenRegionDto>(
     new BoundedChannelOptions(capacity: 1)
@@ -45,7 +44,6 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly IDisplayManager _displayManager;
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
-  private readonly IMessenger _messenger;
   private readonly IImageUtility _imageUtility;
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
@@ -62,24 +60,21 @@ internal class DesktopCapturer : IDesktopCapturer
     TimeProvider timeProvider,
     IScreenGrabber screenGrabber,
     IDisplayManager displayManager,
-    IImageUtility bitmapUtility,
     IMemoryProvider memoryProvider,
     ICaptureMetrics captureMetrics,
-    IMessenger messenger,
     IImageUtility imageUtility,
+    IMessenger messenger,
     ILogger<DesktopCapturer> logger)
   {
     _timeProvider = timeProvider;
     _screenGrabber = screenGrabber;
     _displayManager = displayManager;
-    _bitmapUtility = bitmapUtility;
     _memoryProvider = memoryProvider;
     _captureMetrics = captureMetrics;
-    _messenger = messenger;
     _imageUtility = imageUtility;
     _logger = logger;
 
-    _messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
+    messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
   }
 
   public Task ChangeDisplays(string displayId)
@@ -98,12 +93,9 @@ internal class DesktopCapturer : IDesktopCapturer
   public Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
   {
     var selectedDisplay = GetSelectedDisplay();
-    if (selectedDisplay is null)
-    {
-      return Point.Empty.AsTaskResult();
-    }
-
-    return _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
+    return selectedDisplay is null
+      ? Point.Empty.AsTaskResult()
+      : _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
   }
 
   public async ValueTask DisposeAsync()
@@ -131,16 +123,7 @@ internal class DesktopCapturer : IDesktopCapturer
       yield return region;
     }
   }
-
-  public Task<IEnumerable<DisplayDto>> GetDisplays()
-  {
-    ObjectDisposedException.ThrowIf(_disposedValue, this);
-
-    return _displayManager.GetDisplays()
-      .ContinueWith(task => task.Result.AsEnumerable(),
-        TaskContinuationOptions.ExecuteSynchronously);
-  }
-
+  
   public Task RequestKeyFrame()
   {
     _forceKeyFrame = true;
@@ -216,10 +199,10 @@ internal class DesktopCapturer : IDesktopCapturer
     bool isKeyFrame = false)
   {
     using var ms = _memoryProvider.GetRecyclableStream();
-    using var writer = new BinaryWriter(ms);
+    await using var writer = new BinaryWriter(ms);
 
-    using var cropped = _bitmapUtility.CropBitmap(bitmap, region);
-    var imageData = _bitmapUtility.EncodeJpeg(cropped, quality);
+    using var cropped = _imageUtility.CropBitmap(bitmap, region);
+    var imageData = _imageUtility.EncodeJpeg(cropped, quality);
 
     var dto = new ScreenRegionDto(
       region.Left,
@@ -281,7 +264,7 @@ internal class DesktopCapturer : IDesktopCapturer
       await _displayManager.ReloadDisplays();
       lock (_displayLock)
       {
-        // If we had a display selected and it exists still, refresh it.
+        // If we had a display selected, and it exists still, refresh it.
         if (_selectedDisplay is not null &&
             _displayManager.TryFindDisplay(_selectedDisplay.DeviceName, out var selectedDisplay))
         {

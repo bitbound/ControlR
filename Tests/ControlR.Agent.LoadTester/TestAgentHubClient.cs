@@ -113,16 +113,16 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok().AsTaskResult();
   }
 
-  public Task<Result?> ReceiveFileUpload(FileUploadHubDto dto)
+  public Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");
     return Result.Ok().AsTaskResult<Result?>();
   }
 
-  public Task<Result> SendFileDownload(FileDownloadHubDto dto)
+  public Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     Console.WriteLine($"Received file download request for {dto.FilePath}");
-    return Result.Ok().AsTaskResult();
+    return Result.Ok(new FileDownloadResponseHubDto(FileSize: 0)).AsTaskResult();
   }
 
   public Task<Result> DeleteFile(FileDeleteHubDto dto)

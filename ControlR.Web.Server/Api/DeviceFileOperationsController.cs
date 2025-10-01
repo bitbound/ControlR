@@ -10,7 +10,6 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class DeviceFileOperationsController : ControllerBase
 {
-
   [HttpPost("create-directory/{deviceId:guid}")]
   public async Task<IActionResult> CreateDirectory(
     [FromRoute] Guid deviceId,
@@ -65,7 +64,7 @@ public class DeviceFileOperationsController : ControllerBase
       logger.LogInformation("Directory creation requested for {DirectoryName} in {ParentPath} on device {DeviceId}",
         request.DirectoryName, request.ParentPath, deviceId);
 
-      return Ok(new { Message = "Directory creation completed", ParentPath = request.ParentPath, DirectoryName = request.DirectoryName });
+      return NoContent();
     }
     catch (Exception ex)
     {
@@ -129,7 +128,7 @@ public class DeviceFileOperationsController : ControllerBase
       logger.LogInformation("File deletion requested for {FilePath} on device {DeviceId}",
         request.FilePath, deviceId);
 
-      return Ok(new { Message = "File deletion completed", FilePath = request.FilePath });
+      return Ok(new { Message = "File deletion completed", request.FilePath });
     }
     catch (Exception ex)
     {
@@ -138,6 +137,7 @@ public class DeviceFileOperationsController : ControllerBase
       return StatusCode(500, "An error occurred during file deletion.");
     }
   }
+
   [HttpGet("download/{deviceId:guid}")]
   public async Task<IActionResult> DownloadFile(
     [FromRoute] Guid deviceId,
@@ -184,7 +184,7 @@ public class DeviceFileOperationsController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-  using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
 
     var downloadRequest = new FileDownloadHubDto(streamId, filePath);
 
@@ -193,7 +193,7 @@ public class DeviceFileOperationsController : ControllerBase
       // Request the file from the agent
       var requestResult = await agentHub.Clients
         .Client(device.ConnectionId)
-        .SendFileDownload(downloadRequest);
+        .UploadFileToViewer(downloadRequest);
 
       if (!requestResult.IsSuccess)
       {
@@ -212,18 +212,12 @@ public class DeviceFileOperationsController : ControllerBase
       }
 
       // Determine file name for download
-      var downloadFileName = !string.IsNullOrWhiteSpace(fileName) 
-        ? fileName 
-        : Path.GetFileName(filePath);
-        
-      if (string.IsNullOrWhiteSpace(downloadFileName))
-      {
-        downloadFileName = "download";
-      }
-
+      var downloadFileName = requestResult.Value.FileDisplayName;
+      
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
       Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{downloadFileName}\"");
+      Response.Headers.ContentLength = requestResult.Value.FileSize;
 
       // Stream the file content to the response
       await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
@@ -249,9 +243,12 @@ public class DeviceFileOperationsController : ControllerBase
       return StatusCode(500, "An error occurred during file download.");
     }
   }
+
   [HttpPost("upload")]
+  // TODO: Create middleware to make this configurable.
+  [DisableRequestSizeLimit]
   public async Task<IActionResult> UploadFile(
-    [FromForm] IFormFile file,
+    [FromForm] IFormFile? file,
     [FromForm] Guid deviceId,
     [FromForm] string targetDirectory,
     [FromForm] bool overwrite,
@@ -262,7 +259,7 @@ public class DeviceFileOperationsController : ControllerBase
     [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken = default)
   {
-    if (file is null || file.Length == 0)
+    if (file is not { Length: > 0})
     {
       return BadRequest("No file provided.");
     }
@@ -296,7 +293,7 @@ public class DeviceFileOperationsController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-  using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
 
     var uploadRequest = new FileUploadHubDto(
       streamId,
@@ -308,7 +305,7 @@ public class DeviceFileOperationsController : ControllerBase
     try
     {
       // Create chunks and stream to agent
-      using var fileStream = file.OpenReadStream();
+      await using var fileStream = file.OpenReadStream();
       var buffer = new byte[30 * 1024]; // 30KB chunks to respect SignalR limits
 
       var chunks = CreateFileChunks(fileStream, buffer);
@@ -317,7 +314,7 @@ public class DeviceFileOperationsController : ControllerBase
       // Notify the agent about the incoming upload
       var receiveResult = await agentHub.Clients
         .Client(device.ConnectionId)
-        .ReceiveFileUpload(uploadRequest);
+        .DownloadFileFromViewer(uploadRequest);
 
       // Signal completion
       signaler.EndSignal.Set();
@@ -399,7 +396,8 @@ public class DeviceFileOperationsController : ControllerBase
         .Client(device.ConnectionId)
         .ValidateFilePath(validateRequest);
 
-      logger.LogInformation("File path validation completed for {FileName} in {DirectoryPath} on device {DeviceId}: {IsValid}",
+      logger.LogInformation(
+        "File path validation completed for {FileName} in {DirectoryPath} on device {DeviceId}: {IsValid}",
         request.FileName, request.DirectoryPath, deviceId, result.IsValid);
 
       return Ok(result);

@@ -77,7 +77,9 @@ internal class FileManager(
 
       _fileSystem.CreateDirectory(directoryPath);
       _logger.LogInformation("Successfully created directory: {DirectoryPath}", directoryPath);
-      return Task.FromResult(FileReferenceResult.Ok(directoryPath));
+      return FileReferenceResult
+        .Ok(fileSystemPath: directoryPath, displayName: Path.GetFileName(directoryPath))
+        .AsTaskResult();
     }
     catch (Exception ex)
     {
@@ -105,7 +107,9 @@ internal class FileManager(
         return Task.FromResult(FileReferenceResult.Fail("Target path does not exist"));
       }
 
-      return Task.FromResult(FileReferenceResult.Ok(targetPath));
+      return FileReferenceResult
+        .Ok(targetPath, Path.GetFileName(targetPath))
+        .AsTaskResult();
     }
     catch (Exception ex)
     {
@@ -121,7 +125,7 @@ internal class FileManager(
       if (!_fileSystem.DirectoryExists(directoryPath))
       {
         _logger.LogWarning("Directory does not exist: {DirectoryPath}", directoryPath);
-        return Task.FromResult(new DirectoryContentsResult(Array.Empty<FileSystemEntryDto>(), false));
+        return Task.FromResult(new DirectoryContentsResult([], false));
       }
 
       var entries = new List<FileSystemEntryDto>();
@@ -285,18 +289,24 @@ internal class FileManager(
         var tempZipPath = Path.Combine(Path.GetTempPath(), $"controlr-upload-{Guid.NewGuid()}.zip");
 
         // Use System.IO.Compression to create the ZIP
-        using var zipStream = _fileSystem.CreateFile(tempZipPath);
+        await using var zipStream = _fileSystem.CreateFile(tempZipPath);
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Create);
 
         await AddDirectoryToZip(archive, filePath, string.Empty);
 
         _logger.LogInformation("Successfully created ZIP file for directory: {DirectoryPath} -> {ZipPath}", filePath, tempZipPath);
-        return FileReferenceResult.Ok(tempZipPath, onDispose: () => _fileSystem.DeleteFile(tempZipPath));
+        var directoryName = Path.GetFileName(filePath);
+        return FileReferenceResult.Ok(
+          fileSystemPath: tempZipPath,
+          displayName: $"{directoryName}.zip",
+          onDispose: () => _fileSystem.DeleteFile(tempZipPath));
       }
       else if (_fileSystem.FileExists(filePath))
       {
         // If it's a file, just return the original path
-        return FileReferenceResult.Ok(filePath);
+        return FileReferenceResult.Ok(
+          fileSystemPath: filePath, 
+          displayName: Path.GetFileName(filePath));
       }
       else
       {
@@ -327,11 +337,11 @@ internal class FileManager(
         return FileReferenceResult.Fail("File already exists");
       }
 
-      using var targetStream = _fileSystem.CreateFile(targetFilePath);
+      await using var targetStream = _fileSystem.CreateFile(targetFilePath);
       await fileStream.CopyToAsync(targetStream);
 
       _logger.LogInformation("Successfully saved uploaded file: {FilePath}", targetFilePath);
-      return FileReferenceResult.Ok(targetFilePath);
+      return FileReferenceResult.Ok(targetFilePath, fileName);
     }
     catch (Exception ex)
     {
@@ -354,8 +364,8 @@ internal class FileManager(
           : $"{entryPrefix}/{fileInfo.Name}";
 
         var entry = archive.CreateEntry(entryName);
-        using var entryStream = entry.Open();
-        using var fileStream = _fileSystem.OpenFileStream(filePath, FileMode.Open, FileAccess.Read);
+        await using var entryStream = entry.Open();
+        await using var fileStream = _fileSystem.OpenFileStream(filePath, FileMode.Open, FileAccess.Read);
         await fileStream.CopyToAsync(entryStream);
       }
 

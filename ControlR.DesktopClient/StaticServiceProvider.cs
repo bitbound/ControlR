@@ -62,7 +62,7 @@ internal static class StaticServiceProvider
 
     // Options
     services.AddOptions();
-
+    
     services.Configure<DesktopClientOptions>(options =>
     {
       options.InstanceId = instanceId;

@@ -32,7 +32,7 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     return Task.FromResult(new Point(absoluteX, absoluteY));
   }
 
-  public Task<ImmutableList<DisplayDto>> GetDisplays()
+  public Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
     lock (_displayLock)
     {
@@ -40,17 +40,6 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
 
       var displayDtos = _displays
         .Values
-        .Select(x => new DisplayDto
-        {
-          DisplayId = x.DeviceName,
-          Height = x.MonitorArea.Height,
-          IsPrimary = x.IsPrimary,
-          Width = x.MonitorArea.Width,
-          Name = x.DisplayName,
-          Top = x.MonitorArea.Top,
-          Left = x.MonitorArea.Left,
-          ScaleFactor = x.ScaleFactor,
-        })
         .ToImmutableList();
 
       return Task.FromResult(displayDtos);
@@ -97,7 +86,7 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
   private void EnsureDisplaysLoaded()
   {
     // Must be called within lock
-    if (_displays.Count == 0)
+    if (_displays.IsEmpty)
     {
       ReloadDisplaysImpl();
     }
@@ -109,7 +98,7 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     try
     {
       _displays.Clear();
-      foreach (var display in DisplaysEnumerationHelperWindows.GetDisplays())
+      foreach (var display in DisplaysEnumHelperWindows.GetDisplays())
       {
         _displays[display.DeviceName] = display;
       }

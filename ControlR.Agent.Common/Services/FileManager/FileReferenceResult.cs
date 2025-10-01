@@ -9,19 +9,24 @@ public class FileReferenceResult : IDisposable
     bool isSuccess,
     string? errorMessage = null,
     string? fileSystemPath = null,
+    string? fileDisplayName = null,
     Action? onDispose = null)
   {
     IsSuccess = isSuccess;
     ErrorMessage = errorMessage;
     FileSystemPath = fileSystemPath;
+    FileDisplayName = fileDisplayName;
     OnDispose = onDispose;
   }
+
+  public string? FileDisplayName { get; init; }
 
   public string? ErrorMessage { get; init; }
 
   public string? FileSystemPath { get; init; }
 
   [MemberNotNullWhen(true, nameof(FileSystemPath))]
+  [MemberNotNullWhen(true, nameof(FileDisplayName))]
   [MemberNotNullWhen(false, nameof(ErrorMessage))]
   public bool IsSuccess { get; init; }
 
@@ -34,11 +39,12 @@ public class FileReferenceResult : IDisposable
       errorMessage: errorMessage,
       onDispose: onDispose);
   }
-  public static FileReferenceResult Ok(string fileSystemPath, Action? onDispose = null)
+  public static FileReferenceResult Ok(string fileSystemPath, string displayName, Action? onDispose = null)
   {
     return new FileReferenceResult(
       isSuccess: true,
       fileSystemPath: fileSystemPath,
+      fileDisplayName: displayName,
       onDispose: onDispose);
   }
 

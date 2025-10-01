@@ -30,7 +30,7 @@ using ControlR.DesktopClient.Common.Models;
 
 namespace ControlR.DesktopClient.Windows.Helpers;
 
-internal static class DisplaysEnumerationHelperWindows
+internal static class DisplaysEnumHelperWindows
 {
   private const int Cchdevicename = 32;
 

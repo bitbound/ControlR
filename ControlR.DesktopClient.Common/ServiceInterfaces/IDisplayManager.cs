@@ -9,7 +9,7 @@ namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 public interface IDisplayManager
 {
   Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY);
-  Task<ImmutableList<DisplayDto>> GetDisplays();
+  Task<ImmutableList<DisplayInfo>> GetDisplays();
   DisplayInfo? GetPrimaryDisplay();
   Rectangle GetVirtualScreenBounds();
   Task ReloadDisplays();
