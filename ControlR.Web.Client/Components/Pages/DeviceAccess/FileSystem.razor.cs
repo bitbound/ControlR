@@ -285,10 +285,11 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var downloadUrl =
-        $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
+        $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}&isDirectory={item.IsDirectory}";
 
-      await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
-      Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
+      var downloadFileName = item.IsDirectory ? $"{item.Name}.zip" : item.Name;
+      await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, downloadFileName);
+      Snackbar.Add($"Started download of '{downloadFileName}'", Severity.Success);
     }
     catch (Exception ex)
     {

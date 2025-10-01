@@ -320,6 +320,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "isDirectory",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
