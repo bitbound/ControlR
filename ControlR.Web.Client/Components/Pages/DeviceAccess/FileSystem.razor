@@ -104,6 +104,30 @@
           </MudTooltip>
         </div>
       </div>
+
+      @if (IsUploadInProgress && !string.IsNullOrEmpty(CurrentUploadFileName))
+      {
+        <MudPaper Class="pa-4 mb-3" Elevation="2">
+          <div class="d-flex flex-column gap-2">
+            <MudText Typo="Typo.body1">
+              <strong>Uploading:</strong> @CurrentUploadFileName
+            </MudText>
+            <div class="d-flex align-center gap-2">
+              <MudProgressLinear Color="Color.Primary" Value="@UploadProgressPercentage" Class="flex-grow-1" />
+              <MudText Typo="Typo.body2" Class="ms-2" Style="min-width: 60px;">
+                @UploadProgressPercentage%
+              </MudText>
+            </div>
+            @if (TotalUploadBytes > 0)
+            {
+              <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @FormatBytes(UploadedBytes) / @FormatBytes(TotalUploadBytes)
+              </MudText>
+            }
+          </div>
+        </MudPaper>
+      }
+
       <div class="file-system-grid-cell">
         @if (IsLoadingContents)
         {

@@ -477,7 +477,7 @@ public class DeviceFileOperationsController : ControllerBase
         request.Overwrite,
         device.ConnectionId);
 
-      const int chunkSize = 256 * 1024; // 256KB chunks
+      const int chunkSize = 1024 * 1024; // 1MB chunks
       var response = new InitiateChunkedUploadResponseDto(
         uploadId,
         chunkSize,

@@ -65,7 +65,7 @@ The value is in bytes. For example:
 - 500 MB = 524288000 bytes
 - 1 GB = 1073741824 bytes
 
-Files larger than 1 MB will automatically use chunked upload with retry capability to ensure reliable transfers, even if the connection is interrupted.
+Files larger than 1 MB will automatically use chunked upload (1 MB chunks) with retry capability to ensure reliable transfers, even if the connection is interrupted. Upload progress is displayed in real-time for all files.
 
 ## Multi-tenancy
 

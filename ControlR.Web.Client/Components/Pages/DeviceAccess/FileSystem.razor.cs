@@ -41,6 +41,10 @@ public partial class FileSystem : JsInteropableComponent
   public bool IsLoadingContents { get; set; }
   public bool IsNewFolderInProgress { get; set; }
   public bool IsUploadInProgress { get; set; }
+  public string? CurrentUploadFileName { get; set; }
+  public int UploadProgressPercentage { get; set; }
+  public long UploadedBytes { get; set; }
+  public long TotalUploadBytes { get; set; }
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
@@ -550,29 +554,56 @@ public partial class FileSystem : JsInteropableComponent
     IsUploadInProgress = true;
     StateHasChanged();
 
-    var uploadTasks = new List<Task>();
+    var files = e.GetMultipleFiles().ToList();
+    var successCount = 0;
+    var failCount = 0;
 
-    foreach (var file in e.GetMultipleFiles()) // Limit to 10 files
+    // Upload files sequentially to show progress for each file
+    foreach (var file in files)
     {
-      uploadTasks.Add(UploadSingleFile(file));
+      try
+      {
+        CurrentUploadFileName = file.Name;
+        UploadProgressPercentage = 0;
+        UploadedBytes = 0;
+        TotalUploadBytes = file.Size;
+        StateHasChanged();
+
+        await UploadSingleFile(file);
+        successCount++;
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
+        failCount++;
+      }
     }
 
     try
     {
-      await Task.WhenAll(uploadTasks);
-      Snackbar.Add($"Successfully uploaded {e.FileCount} file(s)", Severity.Success);
+      if (successCount > 0)
+      {
+        Snackbar.Add($"Successfully uploaded {successCount} file(s)", Severity.Success);
+      }
+      if (failCount > 0)
+      {
+        Snackbar.Add($"Failed to upload {failCount} file(s)", Severity.Error);
+      }
 
       // Refresh directory contents
       await LoadDirectoryContents(SelectedPath);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error during file upload");
-      Snackbar.Add("One or more files failed to upload", Severity.Error);
+      Logger.LogError(ex, "Error refreshing directory contents");
     }
     finally
     {
       IsUploadInProgress = false;
+      CurrentUploadFileName = null;
+      UploadProgressPercentage = 0;
+      UploadedBytes = 0;
+      TotalUploadBytes = 0;
       StateHasChanged();
     }
   }
@@ -695,6 +726,10 @@ public partial class FileSystem : JsInteropableComponent
       }
       else
       {
+        // For small files, show progress at 0%, then 100% after upload
+        UploadProgressPercentage = 0;
+        StateHasChanged();
+
         using var fileStream = file.OpenReadStream(100 * 1024 * 1024);
         var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
 
@@ -703,6 +738,9 @@ public partial class FileSystem : JsInteropableComponent
           Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
           throw new Exception($"Upload failed: {result.Reason}");
         }
+
+        UploadProgressPercentage = 100;
+        StateHasChanged();
       }
     }
     catch (Exception ex)
@@ -762,6 +800,12 @@ public partial class FileSystem : JsInteropableComponent
             if (chunkResult.IsSuccess)
             {
               uploaded = true;
+              
+              // Update progress
+              UploadedBytes += bytesRead;
+              UploadProgressPercentage = (int)((double)UploadedBytes / TotalUploadBytes * 100);
+              StateHasChanged();
+              
               break;
             }
 
@@ -812,5 +856,18 @@ public partial class FileSystem : JsInteropableComponent
 
       throw;
     }
+  }
+
+  private static string FormatBytes(long bytes)
+  {
+    string[] sizes = ["B", "KB", "MB", "GB", "TB"];
+    double len = bytes;
+    var order = 0;
+    while (len >= 1024 && order < sizes.Length - 1)
+    {
+      order++;
+      len /= 1024;
+    }
+    return $"{len:0.##} {sizes[order]}";
   }
 }
