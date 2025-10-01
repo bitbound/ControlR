@@ -686,18 +686,130 @@ public partial class FileSystem : JsInteropableComponent
         }
       }
 
-      using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
-      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
+      // Use chunked upload for files larger than 1MB, otherwise use simple upload
+      const long chunkUploadThreshold = 1 * 1024 * 1024; // 1MB
 
-      if (!result.IsSuccess)
+      if (file.Size > chunkUploadThreshold)
       {
-        Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
-        throw new Exception($"Upload failed: {result.Reason}");
+        await UploadFileWithChunks(file);
+      }
+      else
+      {
+        using var fileStream = file.OpenReadStream(100 * 1024 * 1024);
+        var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
+
+        if (!result.IsSuccess)
+        {
+          Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
+          throw new Exception($"Upload failed: {result.Reason}");
+        }
       }
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
+      throw;
+    }
+  }
+
+  private async Task UploadFileWithChunks(IBrowserFile file)
+  {
+    Guard.IsNotNull(SelectedPath);
+    const int maxRetries = 3;
+
+    // Initiate the upload
+    var initiateResult = await ControlrApi.InitiateChunkedUpload(
+      DeviceId,
+      SelectedPath,
+      file.Name,
+      file.Size,
+      overwrite: true);
+
+    if (!initiateResult.IsSuccess || initiateResult.Value is null)
+    {
+      throw new Exception($"Failed to initiate upload: {initiateResult.Reason}");
+    }
+
+    var uploadId = initiateResult.Value.UploadId;
+    var serverChunkSize = initiateResult.Value.ChunkSize;
+
+    try
+    {
+      using var fileStream = file.OpenReadStream(initiateResult.Value.MaxFileSize);
+      var buffer = new byte[serverChunkSize];
+      var totalChunks = (int)Math.Ceiling((double)file.Size / serverChunkSize);
+      var chunkIndex = 0;
+
+      while (true)
+      {
+        var bytesRead = await fileStream.ReadAsync(buffer);
+        if (bytesRead == 0)
+        {
+          break;
+        }
+
+        var chunkData = bytesRead == buffer.Length
+          ? buffer
+          : buffer[..bytesRead];
+
+        // Retry logic for each chunk
+        var uploaded = false;
+        for (var retry = 0; retry < maxRetries; retry++)
+        {
+          try
+          {
+            var chunkResult = await ControlrApi.UploadChunk(uploadId, chunkIndex, totalChunks, chunkData);
+            if (chunkResult.IsSuccess)
+            {
+              uploaded = true;
+              break;
+            }
+
+            Logger.LogWarning("Chunk {ChunkIndex} upload failed (attempt {Retry}): {Error}",
+              chunkIndex, retry + 1, chunkResult.Reason);
+          }
+          catch (Exception ex)
+          {
+            Logger.LogWarning(ex, "Chunk {ChunkIndex} upload failed (attempt {Retry})",
+              chunkIndex, retry + 1);
+          }
+
+          if (retry < maxRetries - 1)
+          {
+            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retry))); // Exponential backoff
+          }
+        }
+
+        if (!uploaded)
+        {
+          await ControlrApi.CancelChunkedUpload(uploadId);
+          throw new Exception($"Failed to upload chunk {chunkIndex} after {maxRetries} attempts");
+        }
+
+        chunkIndex++;
+      }
+
+      // Complete the upload
+      var completeResult = await ControlrApi.CompleteChunkedUpload(uploadId);
+      if (!completeResult.IsSuccess || completeResult.Value?.Success != true)
+      {
+        throw new Exception($"Failed to complete upload: {completeResult.Value?.Message ?? completeResult.Reason}");
+      }
+
+      Logger.LogInformation("Successfully uploaded file {FileName} using chunked upload", file.Name);
+    }
+    catch
+    {
+      // Attempt to cancel the upload on error
+      try
+      {
+        await ControlrApi.CancelChunkedUpload(uploadId);
+      }
+      catch (Exception cancelEx)
+      {
+        Logger.LogWarning(cancelEx, "Failed to cancel upload {UploadId}", uploadId);
+      }
+
       throw;
     }
   }

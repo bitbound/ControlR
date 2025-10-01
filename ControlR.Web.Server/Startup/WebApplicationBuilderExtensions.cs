@@ -8,6 +8,7 @@ using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
@@ -84,6 +85,14 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddOpenApi();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();
+
+    // Configure form options for file uploads
+    builder.Services.Configure<FormOptions>(options =>
+    {
+      options.MultipartBodyLengthLimit = appOptions.MaxFileUploadSizeBytes;
+      options.ValueLengthLimit = int.MaxValue;
+      options.MultipartHeadersLengthLimit = int.MaxValue;
+    });
 
     // Add authn/authz services.
     builder.Services.AddCascadingAuthenticationState();
@@ -271,6 +280,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddSingleton<IHubStreamStore, HubStreamStore>();
+    builder.Services.AddSingleton<IChunkedUploadManager, ChunkedUploadManager>();
     builder.Services.AddWebSocketRelay();
     builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();

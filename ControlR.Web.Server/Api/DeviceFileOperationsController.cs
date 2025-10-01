@@ -259,12 +259,21 @@ public class DeviceFileOperationsController : ControllerBase
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IOptions<AppOptions> appOptions,
     [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken = default)
   {
     if (file is null || file.Length == 0)
     {
       return BadRequest("No file provided.");
+    }
+
+    var maxFileSize = appOptions.Value.MaxFileUploadSizeBytes;
+    if (file.Length > maxFileSize)
+    {
+      logger.LogWarning("File {FileName} size {FileSize} exceeds maximum allowed size {MaxSize}",
+        file.FileName, file.Length, maxFileSize);
+      return BadRequest($"File size exceeds maximum allowed size of {maxFileSize} bytes");
     }
 
     var device = await appDb.Devices
@@ -410,6 +419,222 @@ public class DeviceFileOperationsController : ControllerBase
         request.FileName, request.DirectoryPath, deviceId);
       return StatusCode(500, "An error occurred while validating the file path.");
     }
+  }
+
+  [HttpPost("upload/initiate")]
+  public async Task<IActionResult> InitiateChunkedUpload(
+    [FromBody] InitiateChunkedUploadRequestDto request,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IChunkedUploadManager uploadManager,
+    [FromServices] IOptions<AppOptions> appOptions,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
+    CancellationToken cancellationToken)
+  {
+    var maxFileSize = appOptions.Value.MaxFileUploadSizeBytes;
+    if (request.TotalSize > maxFileSize)
+    {
+      logger.LogWarning("File size {FileSize} exceeds maximum allowed size {MaxSize}",
+        request.TotalSize, maxFileSize);
+      return BadRequest($"File size exceeds maximum allowed size of {maxFileSize} bytes");
+    }
+
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        User.Identity?.Name, request.DeviceId);
+      return Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", request.DeviceId);
+      return BadRequest("Device is not currently connected.");
+    }
+
+    try
+    {
+      var uploadId = await uploadManager.InitiateUpload(
+        request.DeviceId,
+        request.TargetDirectory,
+        request.FileName,
+        request.TotalSize,
+        request.Overwrite,
+        device.ConnectionId);
+
+      const int chunkSize = 256 * 1024; // 256KB chunks
+      var response = new InitiateChunkedUploadResponseDto(
+        uploadId,
+        chunkSize,
+        maxFileSize);
+
+      logger.LogInformation("Initiated chunked upload {UploadId} for file {FileName} to device {DeviceId}",
+        uploadId, request.FileName, request.DeviceId);
+
+      return Ok(response);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error initiating chunked upload for file {FileName} to device {DeviceId}",
+        request.FileName, request.DeviceId);
+      return StatusCode(500, "An error occurred while initiating the chunked upload.");
+    }
+  }
+
+  [HttpPost("upload/chunk")]
+  public async Task<IActionResult> UploadChunk(
+    [FromForm] Guid uploadId,
+    [FromForm] int chunkIndex,
+    [FromForm] int totalChunks,
+    [FromForm] IFormFile chunk,
+    [FromServices] IChunkedUploadManager uploadManager,
+    [FromServices] ILogger<DeviceFileOperationsController> logger)
+  {
+    if (chunk is null || chunk.Length == 0)
+    {
+      return BadRequest("No chunk data provided.");
+    }
+
+    try
+    {
+      using var memoryStream = new MemoryStream();
+      await chunk.CopyToAsync(memoryStream);
+      var chunkData = memoryStream.ToArray();
+
+      var session = uploadManager.GetSession(uploadId);
+      if (session is null)
+      {
+        logger.LogWarning("Upload session {UploadId} not found for chunk {ChunkIndex}", uploadId, chunkIndex);
+        return NotFound("Upload session not found or expired.");
+      }
+
+      session.TotalChunks = totalChunks;
+
+      var success = await uploadManager.WriteChunk(uploadId, chunkIndex, chunkData);
+      if (!success)
+      {
+        return StatusCode(500, "Failed to write chunk.");
+      }
+
+      var response = new UploadChunkResponseDto(true, null);
+      return Ok(response);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error uploading chunk {ChunkIndex} for upload {UploadId}", chunkIndex, uploadId);
+      return StatusCode(500, "An error occurred while uploading the chunk.");
+    }
+  }
+
+  [HttpPost("upload/complete")]
+  public async Task<IActionResult> CompleteChunkedUpload(
+    [FromBody] CompleteChunkedUploadRequestDto request,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IChunkedUploadManager uploadManager,
+    [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
+    CancellationToken cancellationToken = default)
+  {
+    var session = uploadManager.GetSession(request.UploadId);
+    if (session is null)
+    {
+      logger.LogWarning("Upload session {UploadId} not found for completion", request.UploadId);
+      return NotFound("Upload session not found or expired.");
+    }
+
+    var (success, message) = await uploadManager.CompleteUpload(request.UploadId);
+    if (!success)
+    {
+      return BadRequest(message ?? "Upload validation failed.");
+    }
+
+    try
+    {
+      var streamId = Guid.NewGuid();
+      using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+
+      var uploadRequest = new FileUploadHubDto(
+        streamId,
+        session.TargetDirectory,
+        session.FileName,
+        session.TotalSize,
+        session.Overwrite);
+
+      // Create chunks and stream to agent
+      session.DataStream.Position = 0;
+      var buffer = new byte[30 * 1024]; // 30KB chunks to respect SignalR limits
+
+      var chunks = CreateFileChunks(session.DataStream, buffer);
+      signaler.SetStream(chunks, session.ConnectionId);
+
+      // Notify the agent about the incoming upload
+      var receiveResult = await agentHub.Clients
+        .Client(session.ConnectionId)
+        .ReceiveFileUpload(uploadRequest);
+
+      // Signal completion
+      signaler.EndSignal.Set();
+
+      // Clean up the session
+      await uploadManager.CancelUpload(request.UploadId);
+
+      if (receiveResult is null || !receiveResult.IsSuccess)
+      {
+        logger.LogWarning("Failed to upload file {FileName} to device {DeviceId}: {Reason}",
+          session.FileName, session.DeviceId, receiveResult?.Reason ?? "Unknown error");
+        return BadRequest(receiveResult?.Reason ?? "File upload failed.");
+      }
+
+      logger.LogInformation("Completed chunked upload {UploadId} for file {FileName} to device {DeviceId}",
+        request.UploadId, session.FileName, session.DeviceId);
+
+      var response = new CompleteChunkedUploadResponseDto(true, null);
+      return Ok(response);
+    }
+    catch (OperationCanceledException)
+    {
+      logger.LogWarning("File upload for upload {UploadId} timed out or was canceled.", request.UploadId);
+      await uploadManager.CancelUpload(request.UploadId);
+      return StatusCode(StatusCodes.Status408RequestTimeout);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error completing chunked upload {UploadId}", request.UploadId);
+      await uploadManager.CancelUpload(request.UploadId);
+      return StatusCode(500, "An error occurred during file upload.");
+    }
+  }
+
+  [HttpDelete("upload/{uploadId:guid}")]
+  public async Task<IActionResult> CancelChunkedUpload(
+    [FromRoute] Guid uploadId,
+    [FromServices] IChunkedUploadManager uploadManager,
+    [FromServices] ILogger<DeviceFileOperationsController> logger)
+  {
+    var success = await uploadManager.CancelUpload(uploadId);
+    if (!success)
+    {
+      logger.LogWarning("Upload session {UploadId} not found for cancellation", uploadId);
+      return NotFound("Upload session not found.");
+    }
+
+    logger.LogInformation("Cancelled chunked upload {UploadId}", uploadId);
+    return Ok();
   }
 
   private static async IAsyncEnumerable<byte[]> CreateFileChunks(
