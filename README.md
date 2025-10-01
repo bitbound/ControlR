@@ -40,6 +40,33 @@ Additional proxy IPs can be added to the `KnownProxies` list in the compose file
 
 If the public IP for your connected devices are not showing correctly, the problem is likely due to a misconfiguration here.
 
+## Configuration
+
+### File Upload Size Limit
+
+By default, the maximum file upload size is 100 MB. You can configure this limit by setting the `MaxFileUploadSizeBytes` option in your `appsettings.json` or via environment variable:
+
+**Via appsettings.json:**
+```json
+{
+  "AppOptions": {
+    "MaxFileUploadSizeBytes": 104857600
+  }
+}
+```
+
+**Via environment variable (Docker):**
+```
+ControlR_AppOptions__MaxFileUploadSizeBytes=104857600
+```
+
+The value is in bytes. For example:
+- 100 MB = 104857600 bytes
+- 500 MB = 524288000 bytes
+- 1 GB = 1073741824 bytes
+
+Files larger than 1 MB will automatically use chunked upload with retry capability to ensure reliable transfers, even if the connection is interrupted.
+
 ## Multi-tenancy
 
 By default, the server is single-tenant (although you can organize customer tenants via tags). The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.

@@ -61,6 +61,10 @@ services:
       ControlR_AppOptions__SmtpPort: 587
       ControlR_AppOptions__SmtpUserName: ""
 
+      # Maximum file upload size in bytes (default: 100 MB = 104857600 bytes).
+      # Files larger than 1 MB will use chunked upload with automatic retry.
+      ControlR_AppOptions__MaxFileUploadSizeBytes: 104857600
+
       # Uncomment and add an entry for each proxy that will be forwarding traffic
       # to ControlR.  The app will not work correctly if this isn't done or if the
       # forwarded headers are not in the correct format.
