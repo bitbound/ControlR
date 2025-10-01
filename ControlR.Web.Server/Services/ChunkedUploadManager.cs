@@ -48,17 +48,8 @@ public class ChunkedUploadManager : IChunkedUploadManager, IDisposable
   {
     _memoryProvider = memoryProvider;
     _logger = logger;
-    _cleanupTimer = new Timer(CleanupCallbackStatic, this, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    _cleanupTimer = new Timer(_ => CleanupCallback(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
   }
-
-  private static void CleanupCallbackStatic(object? state)
-  {
-    if (state is ChunkedUploadManager manager)
-    {
-      manager.CleanupCallback();
-    }
-  }
-
   public Task<Guid> InitiateUpload(
     Guid deviceId,
     string targetDirectory,
