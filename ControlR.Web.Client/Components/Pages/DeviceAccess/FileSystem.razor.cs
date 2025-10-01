@@ -16,6 +16,7 @@ public partial class FileSystem : JsInteropableComponent
   private string? _selectedPath;
   private ElementReference _splitterRef;
   private ElementReference _treePanelRef;
+  private CancellationTokenSource? _uploadCancellationTokenSource;
 
   public string AddressBarValue { get; set; } = string.Empty;
 
@@ -551,6 +552,10 @@ public partial class FileSystem : JsInteropableComponent
       return;
     }
 
+    // Create a new cancellation token source for this upload session
+    _uploadCancellationTokenSource?.Cancel();
+    _uploadCancellationTokenSource = new CancellationTokenSource();
+
     IsUploadInProgress = true;
     StateHasChanged();
 
@@ -561,6 +566,12 @@ public partial class FileSystem : JsInteropableComponent
     // Upload files sequentially to show progress for each file
     foreach (var file in files)
     {
+      if (_uploadCancellationTokenSource.Token.IsCancellationRequested)
+      {
+        Logger.LogInformation("Upload cancelled by user");
+        break;
+      }
+
       try
       {
         CurrentUploadFileName = file.Name;
@@ -569,8 +580,13 @@ public partial class FileSystem : JsInteropableComponent
         TotalUploadBytes = file.Size;
         StateHasChanged();
 
-        await UploadSingleFile(file);
+        await UploadSingleFile(file, _uploadCancellationTokenSource.Token);
         successCount++;
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogInformation("Upload of file {FileName} was cancelled", file.Name);
+        break;
       }
       catch (Exception ex)
       {
@@ -581,13 +597,20 @@ public partial class FileSystem : JsInteropableComponent
 
     try
     {
-      if (successCount > 0)
+      if (_uploadCancellationTokenSource.Token.IsCancellationRequested)
       {
-        Snackbar.Add($"Successfully uploaded {successCount} file(s)", Severity.Success);
+        Snackbar.Add("Upload cancelled", Severity.Warning);
       }
-      if (failCount > 0)
+      else
       {
-        Snackbar.Add($"Failed to upload {failCount} file(s)", Severity.Error);
+        if (successCount > 0)
+        {
+          Snackbar.Add($"Successfully uploaded {successCount} file(s)", Severity.Success);
+        }
+        if (failCount > 0)
+        {
+          Snackbar.Add($"Failed to upload {failCount} file(s)", Severity.Error);
+        }
       }
 
       // Refresh directory contents
@@ -604,6 +627,8 @@ public partial class FileSystem : JsInteropableComponent
       UploadProgressPercentage = 0;
       UploadedBytes = 0;
       TotalUploadBytes = 0;
+      _uploadCancellationTokenSource?.Dispose();
+      _uploadCancellationTokenSource = null;
       StateHasChanged();
     }
   }
@@ -690,7 +715,7 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private async Task UploadSingleFile(IBrowserFile file)
+  private async Task UploadSingleFile(IBrowserFile file, CancellationToken cancellationToken = default)
   {
     try
     {
@@ -722,7 +747,7 @@ public partial class FileSystem : JsInteropableComponent
 
       if (file.Size > chunkUploadThreshold)
       {
-        await UploadFileWithChunks(file);
+        await UploadFileWithChunks(file, cancellationToken);
       }
       else
       {
@@ -750,7 +775,7 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private async Task UploadFileWithChunks(IBrowserFile file)
+  private async Task UploadFileWithChunks(IBrowserFile file, CancellationToken cancellationToken = default)
   {
     Guard.IsNotNull(SelectedPath);
     const int maxRetries = 3;
@@ -780,7 +805,9 @@ public partial class FileSystem : JsInteropableComponent
 
       while (true)
       {
-        var bytesRead = await fileStream.ReadAsync(buffer);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var bytesRead = await fileStream.ReadAsync(buffer, cancellationToken);
         if (bytesRead == 0)
         {
           break;
@@ -869,5 +896,11 @@ public partial class FileSystem : JsInteropableComponent
       len /= 1024;
     }
     return $"{len:0.##} {sizes[order]}";
+  }
+
+  private void CancelUpload()
+  {
+    _uploadCancellationTokenSource?.Cancel();
+    Logger.LogInformation("Upload cancellation requested by user");
   }
 }
