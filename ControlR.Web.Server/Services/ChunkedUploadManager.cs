@@ -36,15 +36,28 @@ public class ChunkedUploadSession
   public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
 }
 
-public class ChunkedUploadManager(
-  IMemoryProvider memoryProvider,
-  ILogger<ChunkedUploadManager> logger) : IChunkedUploadManager, IDisposable
+public class ChunkedUploadManager : IChunkedUploadManager, IDisposable
 {
   private readonly ConcurrentDictionary<Guid, ChunkedUploadSession> _activeSessions = new();
-  private readonly IMemoryProvider _memoryProvider = memoryProvider;
-  private readonly ILogger<ChunkedUploadManager> _logger = logger;
-  private readonly Timer _cleanupTimer = new(CleanupCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+  private readonly IMemoryProvider _memoryProvider;
+  private readonly ILogger<ChunkedUploadManager> _logger;
+  private readonly Timer _cleanupTimer;
   private const int MaxSessionAgeMinutes = 60;
+
+  public ChunkedUploadManager(IMemoryProvider memoryProvider, ILogger<ChunkedUploadManager> logger)
+  {
+    _memoryProvider = memoryProvider;
+    _logger = logger;
+    _cleanupTimer = new Timer(CleanupCallbackStatic, this, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+  }
+
+  private static void CleanupCallbackStatic(object? state)
+  {
+    if (state is ChunkedUploadManager manager)
+    {
+      manager.CleanupCallback();
+    }
+  }
 
   public Task<Guid> InitiateUpload(
     Guid deviceId,
@@ -162,29 +175,40 @@ public class ChunkedUploadManager(
     return _activeSessions.TryGetValue(uploadId, out var session) ? session : null;
   }
 
-  private static void CleanupCallback(object? state)
+  private void CleanupCallback()
   {
-    // Cleanup handled in Dispose
+    try
+    {
+      var cutoffTime = DateTime.UtcNow.AddMinutes(-MaxSessionAgeMinutes);
+      var staleSessionIds = _activeSessions
+        .Where(kvp => kvp.Value.LastActivityAt < cutoffTime)
+        .Select(kvp => kvp.Key)
+        .ToList();
+
+      foreach (var sessionId in staleSessionIds)
+      {
+        if (_activeSessions.TryRemove(sessionId, out var session))
+        {
+          session.DataStream.Dispose();
+          _logger.LogInformation("Cleaned up stale upload session {UploadId} (Last activity: {LastActivity})", 
+            sessionId, session.LastActivityAt);
+        }
+      }
+
+      if (staleSessionIds.Count > 0)
+      {
+        _logger.LogInformation("Cleanup completed: removed {Count} stale upload sessions", staleSessionIds.Count);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error during upload session cleanup");
+    }
   }
 
   public void Dispose()
   {
     _cleanupTimer.Dispose();
-
-    var cutoffTime = DateTime.UtcNow.AddMinutes(-MaxSessionAgeMinutes);
-    var staleSessionIds = _activeSessions
-      .Where(kvp => kvp.Value.LastActivityAt < cutoffTime)
-      .Select(kvp => kvp.Key)
-      .ToList();
-
-    foreach (var sessionId in staleSessionIds)
-    {
-      if (_activeSessions.TryRemove(sessionId, out var session))
-      {
-        session.DataStream.Dispose();
-        _logger.LogInformation("Cleaned up stale upload session {UploadId}", sessionId);
-      }
-    }
 
     foreach (var session in _activeSessions.Values)
     {
