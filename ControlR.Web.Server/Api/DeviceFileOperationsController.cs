@@ -143,6 +143,7 @@ public class DeviceFileOperationsController : ControllerBase
     [FromRoute] Guid deviceId,
     [FromQuery] string filePath,
     [FromQuery] string? fileName,
+    [FromQuery] bool isDirectory,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -219,6 +220,12 @@ public class DeviceFileOperationsController : ControllerBase
       if (string.IsNullOrWhiteSpace(downloadFileName))
       {
         downloadFileName = "download";
+      }
+
+      // If downloading a directory, ensure .zip extension is present
+      if (isDirectory && !downloadFileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+      {
+        downloadFileName += ".zip";
       }
 
       // Set response headers for file download
