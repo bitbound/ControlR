@@ -15,6 +15,8 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
+  Task<Result> CancelChunkedUpload(Guid uploadId);
+  Task<Result<CompleteChunkedUploadResponseDto>> CompleteChunkedUpload(Guid uploadId);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName);
   Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
@@ -52,6 +54,7 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
+  Task<Result<InitiateChunkedUploadResponseDto>> InitiateChunkedUpload(Guid deviceId, string targetDirectory, string fileName, long totalSize, bool overwrite);
   Task<Result> LogOut();
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
@@ -61,6 +64,7 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
+  Task<Result<UploadChunkResponseDto>> UploadChunk(Guid uploadId, int chunkIndex, int totalChunks, byte[] chunkData);
   Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType, bool overwrite);
 }
 
@@ -582,6 +586,65 @@ public class ControlrApi(
       using var response = await _client.PutAsJsonAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>();
+    });
+  }
+
+  public async Task<Result> CancelChunkedUpload(Guid uploadId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.DeleteAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload/{uploadId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+
+  public async Task<Result<CompleteChunkedUploadResponseDto>> CompleteChunkedUpload(Guid uploadId)
+  {
+    return await TryCallApi(async () =>
+    {
+      var request = new CompleteChunkedUploadRequestDto(uploadId);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload/complete", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<CompleteChunkedUploadResponseDto>() ??
+        new CompleteChunkedUploadResponseDto(false, "Failed to deserialize response");
+    });
+  }
+
+  public async Task<Result<InitiateChunkedUploadResponseDto>> InitiateChunkedUpload(
+    Guid deviceId,
+    string targetDirectory,
+    string fileName,
+    long totalSize,
+    bool overwrite)
+  {
+    return await TryCallApi(async () =>
+    {
+      var request = new InitiateChunkedUploadRequestDto(deviceId, targetDirectory, fileName, totalSize, overwrite);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload/initiate", request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<InitiateChunkedUploadResponseDto>() ??
+        throw new HttpRequestException("Failed to deserialize response");
+    });
+  }
+
+  public async Task<Result<UploadChunkResponseDto>> UploadChunk(Guid uploadId, int chunkIndex, int totalChunks, byte[] chunkData)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var formData = new MultipartFormDataContent();
+
+      var chunkContent = new ByteArrayContent(chunkData);
+      chunkContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+      formData.Add(chunkContent, "chunk", $"chunk_{chunkIndex}");
+      formData.Add(new StringContent(uploadId.ToString()), "uploadId");
+      formData.Add(new StringContent(chunkIndex.ToString()), "chunkIndex");
+      formData.Add(new StringContent(totalChunks.ToString()), "totalChunks");
+
+      using var response = await _client.PostAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload/chunk", formData);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<UploadChunkResponseDto>() ??
+        new UploadChunkResponseDto(false, "Failed to deserialize response");
     });
   }
 

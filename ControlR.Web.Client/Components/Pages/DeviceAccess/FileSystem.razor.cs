@@ -16,6 +16,7 @@ public partial class FileSystem : JsInteropableComponent
   private string? _selectedPath;
   private ElementReference _splitterRef;
   private ElementReference _treePanelRef;
+  private CancellationTokenSource? _uploadCancellationTokenSource;
 
   public string AddressBarValue { get; set; } = string.Empty;
 
@@ -41,6 +42,10 @@ public partial class FileSystem : JsInteropableComponent
   public bool IsLoadingContents { get; set; }
   public bool IsNewFolderInProgress { get; set; }
   public bool IsUploadInProgress { get; set; }
+  public string? CurrentUploadFileName { get; set; }
+  public int UploadProgressPercentage { get; set; }
+  public long UploadedBytes { get; set; }
+  public long TotalUploadBytes { get; set; }
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
@@ -547,32 +552,83 @@ public partial class FileSystem : JsInteropableComponent
       return;
     }
 
+    // Create a new cancellation token source for this upload session
+    _uploadCancellationTokenSource?.Cancel();
+    _uploadCancellationTokenSource = new CancellationTokenSource();
+
     IsUploadInProgress = true;
     StateHasChanged();
 
-    var uploadTasks = new List<Task>();
+    var files = e.GetMultipleFiles().ToList();
+    var successCount = 0;
+    var failCount = 0;
 
-    foreach (var file in e.GetMultipleFiles()) // Limit to 10 files
+    // Upload files sequentially to show progress for each file
+    foreach (var file in files)
     {
-      uploadTasks.Add(UploadSingleFile(file));
+      if (_uploadCancellationTokenSource.Token.IsCancellationRequested)
+      {
+        Logger.LogInformation("Upload cancelled by user");
+        break;
+      }
+
+      try
+      {
+        CurrentUploadFileName = file.Name;
+        UploadProgressPercentage = 0;
+        UploadedBytes = 0;
+        TotalUploadBytes = file.Size;
+        StateHasChanged();
+
+        await UploadSingleFile(file, _uploadCancellationTokenSource.Token);
+        successCount++;
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogInformation("Upload of file {FileName} was cancelled", file.Name);
+        break;
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
+        failCount++;
+      }
     }
 
     try
     {
-      await Task.WhenAll(uploadTasks);
-      Snackbar.Add($"Successfully uploaded {e.FileCount} file(s)", Severity.Success);
+      if (_uploadCancellationTokenSource.Token.IsCancellationRequested)
+      {
+        Snackbar.Add("Upload cancelled", Severity.Warning);
+      }
+      else
+      {
+        if (successCount > 0)
+        {
+          Snackbar.Add($"Successfully uploaded {successCount} file(s)", Severity.Success);
+        }
+        if (failCount > 0)
+        {
+          Snackbar.Add($"Failed to upload {failCount} file(s)", Severity.Error);
+        }
+      }
 
       // Refresh directory contents
       await LoadDirectoryContents(SelectedPath);
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error during file upload");
-      Snackbar.Add("One or more files failed to upload", Severity.Error);
+      Logger.LogError(ex, "Error refreshing directory contents");
     }
     finally
     {
       IsUploadInProgress = false;
+      CurrentUploadFileName = null;
+      UploadProgressPercentage = 0;
+      UploadedBytes = 0;
+      TotalUploadBytes = 0;
+      _uploadCancellationTokenSource?.Dispose();
+      _uploadCancellationTokenSource = null;
       StateHasChanged();
     }
   }
@@ -659,7 +715,7 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private async Task UploadSingleFile(IBrowserFile file)
+  private async Task UploadSingleFile(IBrowserFile file, CancellationToken cancellationToken = default)
   {
     try
     {
@@ -686,13 +742,30 @@ public partial class FileSystem : JsInteropableComponent
         }
       }
 
-      using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
-      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
+      // Use chunked upload for files larger than 1MB, otherwise use simple upload
+      const long chunkUploadThreshold = 1 * 1024 * 1024; // 1MB
 
-      if (!result.IsSuccess)
+      if (file.Size > chunkUploadThreshold)
       {
-        Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
-        throw new Exception($"Upload failed: {result.Reason}");
+        await UploadFileWithChunks(file, cancellationToken);
+      }
+      else
+      {
+        // For small files, show progress at 0%, then 100% after upload
+        UploadProgressPercentage = 0;
+        StateHasChanged();
+
+        using var fileStream = file.OpenReadStream(100 * 1024 * 1024);
+        var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
+
+        if (!result.IsSuccess)
+        {
+          Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
+          throw new Exception($"Upload failed: {result.Reason}");
+        }
+
+        UploadProgressPercentage = 100;
+        StateHasChanged();
       }
     }
     catch (Exception ex)
@@ -700,5 +773,134 @@ public partial class FileSystem : JsInteropableComponent
       Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
       throw;
     }
+  }
+
+  private async Task UploadFileWithChunks(IBrowserFile file, CancellationToken cancellationToken = default)
+  {
+    Guard.IsNotNull(SelectedPath);
+    const int maxRetries = 3;
+
+    // Initiate the upload
+    var initiateResult = await ControlrApi.InitiateChunkedUpload(
+      DeviceId,
+      SelectedPath,
+      file.Name,
+      file.Size,
+      overwrite: true);
+
+    if (!initiateResult.IsSuccess || initiateResult.Value is null)
+    {
+      throw new Exception($"Failed to initiate upload: {initiateResult.Reason}");
+    }
+
+    var uploadId = initiateResult.Value.UploadId;
+    var serverChunkSize = initiateResult.Value.ChunkSize;
+
+    try
+    {
+      using var fileStream = file.OpenReadStream(initiateResult.Value.MaxFileSize);
+      var buffer = new byte[serverChunkSize];
+      var totalChunks = (int)Math.Ceiling((double)file.Size / serverChunkSize);
+      var chunkIndex = 0;
+
+      while (true)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var bytesRead = await fileStream.ReadAsync(buffer, cancellationToken);
+        if (bytesRead == 0)
+        {
+          break;
+        }
+
+        var chunkData = bytesRead == buffer.Length
+          ? buffer
+          : buffer[..bytesRead];
+
+        // Retry logic for each chunk
+        var uploaded = false;
+        for (var retry = 0; retry < maxRetries; retry++)
+        {
+          try
+          {
+            var chunkResult = await ControlrApi.UploadChunk(uploadId, chunkIndex, totalChunks, chunkData);
+            if (chunkResult.IsSuccess)
+            {
+              uploaded = true;
+              
+              // Update progress
+              UploadedBytes += bytesRead;
+              UploadProgressPercentage = (int)((double)UploadedBytes / TotalUploadBytes * 100);
+              StateHasChanged();
+              
+              break;
+            }
+
+            Logger.LogWarning("Chunk {ChunkIndex} upload failed (attempt {Retry}): {Error}",
+              chunkIndex, retry + 1, chunkResult.Reason);
+          }
+          catch (Exception ex)
+          {
+            Logger.LogWarning(ex, "Chunk {ChunkIndex} upload failed (attempt {Retry})",
+              chunkIndex, retry + 1);
+          }
+
+          if (retry < maxRetries - 1)
+          {
+            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retry))); // Exponential backoff
+          }
+        }
+
+        if (!uploaded)
+        {
+          await ControlrApi.CancelChunkedUpload(uploadId);
+          throw new Exception($"Failed to upload chunk {chunkIndex} after {maxRetries} attempts");
+        }
+
+        chunkIndex++;
+      }
+
+      // Complete the upload
+      var completeResult = await ControlrApi.CompleteChunkedUpload(uploadId);
+      if (!completeResult.IsSuccess || completeResult.Value?.Success != true)
+      {
+        throw new Exception($"Failed to complete upload: {completeResult.Value?.Message ?? completeResult.Reason}");
+      }
+
+      Logger.LogInformation("Successfully uploaded file {FileName} using chunked upload", file.Name);
+    }
+    catch
+    {
+      // Attempt to cancel the upload on error
+      try
+      {
+        await ControlrApi.CancelChunkedUpload(uploadId);
+      }
+      catch (Exception cancelEx)
+      {
+        Logger.LogWarning(cancelEx, "Failed to cancel upload {UploadId}", uploadId);
+      }
+
+      throw;
+    }
+  }
+
+  private static string FormatBytes(long bytes)
+  {
+    string[] sizes = ["B", "KB", "MB", "GB", "TB"];
+    double len = bytes;
+    var order = 0;
+    while (len >= 1024 && order < sizes.Length - 1)
+    {
+      order++;
+      len /= 1024;
+    }
+    return $"{len:0.##} {sizes[order]}";
+  }
+
+  private void CancelUpload()
+  {
+    _uploadCancellationTokenSource?.Cancel();
+    Logger.LogInformation("Upload cancellation requested by user");
   }
 }

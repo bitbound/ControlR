@@ -13,6 +13,7 @@ public class AppOptions
   public string? InMemoryDatabaseName { get; init; }
   public string[] KnownNetworks { get; init; } = [];
   public string[] KnownProxies { get; init; } = [];
+  public long MaxFileUploadSizeBytes { get; init; } = 100 * 1024 * 1024; // Default 100MB
   public string? MicrosoftClientId { get; init; }
   public string? MicrosoftClientSecret { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }

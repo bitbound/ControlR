@@ -104,6 +104,7 @@
           </MudTooltip>
         </div>
       </div>
+
       <div class="file-system-grid-cell">
         @if (IsLoadingContents)
         {
@@ -151,6 +152,40 @@
     </div>
   </div>
 </div>
+
+<!-- Upload Progress Display - Fixed at bottom of screen -->
+@if (IsUploadInProgress && !string.IsNullOrEmpty(CurrentUploadFileName))
+{
+  <div style="position: fixed; bottom: 20px; right: 20px; left: 20px; z-index: 1000; max-width: 600px; margin: 0 auto;">
+    <MudPaper Class="pa-3" Elevation="8" Style="max-height: 200px; overflow-y: auto;">
+      <div class="d-flex flex-column gap-2">
+        <div class="d-flex align-center justify-space-between">
+          <MudText Typo="Typo.body1">
+            <strong>Uploading:</strong> @CurrentUploadFileName
+          </MudText>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <MudProgressLinear Color="Color.Primary" Value="@UploadProgressPercentage" Class="flex-grow-1" />
+          <MudText Typo="Typo.body2" Style="min-width: 50px; text-align: right;">
+            @UploadProgressPercentage%
+          </MudText>
+          <MudTooltip Text="Cancel upload">
+            <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                           Size="Size.Small" 
+                           Color="Color.Error"
+                           OnClick="CancelUpload" />
+          </MudTooltip>
+        </div>
+        @if (TotalUploadBytes > 0)
+        {
+          <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @FormatBytes(UploadedBytes) / @FormatBytes(TotalUploadBytes)
+          </MudText>
+        }
+      </div>
+    </MudPaper>
+  </div>
+}
 
 <!-- Hidden file input for uploads -->
 <InputFile @ref="_fileInputRef" OnChange="OnFilesSelected" multiple style="display: none;" accept="*/*" />
