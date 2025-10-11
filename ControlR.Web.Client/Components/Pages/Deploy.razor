@@ -45,8 +45,7 @@
       @if (_installerKeyType == InstallerKeyType.TimeBased)
       {
         <div class="mt-2">
-          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date"
-                         Required />
+          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date" Required />
         </div>
         <div class="mt-2">
           <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required />
@@ -76,7 +75,8 @@ else
   if (_installerKeyType == InstallerKeyType.UsageBased)
   {
     <MudAlert Severity="Severity.Info">
-      Installation scripts contain an access key that will expire after @(_totalUsesAllowed) use(s) or 24 hours, whichever comes first.
+      Installation scripts contain an access key that will expire after @(_totalUsesAllowed) use(s) or 24 hours, whichever
+      comes first.
     </MudAlert>
   }
 
@@ -87,51 +87,40 @@ else
           PowerShell
         </MudText>
         <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-                      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX86Script"
-                      Adornment="Adornment.End"
-                      Value="@WindowsX86DeployScript"  />
+          AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX86Script"
+          Adornment="Adornment.End" Value="@WindowsX86DeployScript" />
       </MudTabPanel>
       <MudTabPanel Text="Windows x64" Icon="@Icons.Custom.Brands.MicrosoftWindows">
         <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4" GutterBottom>
           PowerShell
         </MudText>
         <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-                      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX64Script"
-                      Adornment="Adornment.End"
-                      Value="@WindowsX64DeployScript" />
+          AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyWindowsX64Script"
+          Adornment="Adornment.End" Value="@WindowsX64DeployScript" />
       </MudTabPanel>
       <MudTabPanel Text="Ubuntu" Icon="@Icons.Custom.Brands.Linux">
         <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4" GutterBottom>
           Bash
         </MudText>
         <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
-                      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUbuntuScript"
-                      Adornment="Adornment.End"
-                      Value="@UbuntuDeployScript" />
+          AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUbuntuScript"
+          Adornment="Adornment.End" Value="@UbuntuDeployScript" />
       </MudTabPanel>
       <MudTabPanel Text="Mac Intel" Icon="@Icons.Custom.Brands.Apple">
         <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4" GutterBottom>
           zsh
         </MudText>
-        <MudTextField T="string"
-                      Label="Copy and paste to install agent"
-                      Variant="Variant.Filled"
-                      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                      OnAdornmentClick="CopyMacX64Script"
-                      Adornment="Adornment.End"
-                      Value="@MacX64DeployScript" />
+        <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
+          AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyMacX64Script"
+          Adornment="Adornment.End" Value="@MacX64DeployScript" />
       </MudTabPanel>
       <MudTabPanel Text="Mac Apple Silicon" Icon="@Icons.Custom.Brands.Apple">
         <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="mt-4" GutterBottom>
           zsh
         </MudText>
-        <MudTextField T="string"
-                      Label="Copy and paste to install agent"
-                      Variant="Variant.Filled"
-                      AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                      OnAdornmentClick="CopyMacArm64Script"
-                      Adornment="Adornment.End"
-                      Value="@MacArm64DeployScript" />
+        <MudTextField T="string" Label="Copy and paste to install agent" Variant="Variant.Filled"
+          AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyMacArm64Script"
+          Adornment="Adornment.End" Value="@MacArm64DeployScript" />
       </MudTabPanel>
     </MudTabs>
 
@@ -139,19 +128,6 @@ else
       Options
     </MudText>
 
-    <div>
-      <MudText Typo="Typo.subtitle2" Color="Color.Info">
-        Device ID
-      </MudText>
-      <MudText Typo="Typo.body1" GutterBottom>
-        By default, a random device ID will be generated during installation.
-        Optionally, you can specify a predetermined ID here that will be assigned to the device.
-      </MudText>
-      <MudTextField @bind-Value="_deviceId"
-                    Class="mt-2"
-                    Label="Device ID (GUID)"
-                    Validation="@DeviceIdValidator" />
-    </div>
     <div class="mt-4">
       <MudText Typo="Typo.subtitle2" Color="Color.Info">
         Device Tags
@@ -162,14 +138,15 @@ else
       </MudText>
       <MudCheckBox @bind-Value="_addTags" Label="Add device tags" />
 
-      <MudSelect T="TagResponseDto"
-                 @bind-SelectedValues="_selectedTags"
-                 Disabled="!_addTags"
-                 Immediate
-                 MultiSelection
-                 FullWidth="false"
-                 Text="@(SelectedTagsText)"
-                 Label="Tags">
+      @if (_addTags && !_tags.Any())
+      {
+        <MudAlert Severity="Severity.Warning" Class="mt-2">
+          No tags are available. Tenant admins can create tags in the Permissions section.
+        </MudAlert>
+      }
+
+      <MudSelect T="TagResponseDto" @bind-SelectedValues="_selectedTags" Disabled="!_addTags" Immediate MultiSelection
+        FullWidth="false" Text="@(SelectedTagsText)" Label="Tags">
         @foreach (var tag in _tags)
         {
           <MudSelectItem Value="@tag">
@@ -177,6 +154,21 @@ else
           </MudSelectItem>
         }
       </MudSelect>
+    </div>
+
+    <div class="mt-4">
+      <MudText Typo="Typo.subtitle2" Color="Color.Info">
+        Device ID
+      </MudText>
+      <MudText Typo="Typo.body1" GutterBottom>
+        By default, a random device ID will be generated during installation.
+        Optionally, you can specify a predetermined ID here that will be assigned to the device.
+        The device ID must be a valid GUID (e.g. <code>New-Guid</code> in pwsh).
+      </MudText>
+      <MudAlert Severity="Severity.Warning" Class="my-2">
+        If you specify a device ID, it must be unique for each device/install.
+      </MudAlert>
+      <MudTextField @bind-Value="_deviceId" Class="mt-2" Label="Device ID (GUID)" Validation="@DeviceIdValidator" />
     </div>
   </div>
 }
