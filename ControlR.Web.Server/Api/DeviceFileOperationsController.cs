@@ -2,6 +2,7 @@ using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Net.Http.Headers;
 
 namespace ControlR.Web.Server.Api;
 
@@ -209,13 +210,12 @@ public class DeviceFileOperationsController : ControllerBase
       {
         return StatusCode(StatusCodes.Status413RequestEntityTooLarge);
       }
-
-      // Determine file name for download
-      var downloadFileName = requestResult.Value.FileDisplayName;
-
+      
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
-      Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{downloadFileName}\"");
+      var contentDisposition = new ContentDispositionHeaderValue("attachment");
+      contentDisposition.SetHttpFileName(requestResult.Value.FileDisplayName);
+      Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
       Response.Headers.ContentLength = fileSize;
 
       // Stream the file content to the response
