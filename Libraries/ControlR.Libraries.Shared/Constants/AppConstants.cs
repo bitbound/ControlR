@@ -8,6 +8,23 @@ public static class AppConstants
 {
   public const int DefaultVncPort = 5900;
 
+  public static string DesktopClientFileName =>
+    SystemEnvironment.Instance.Platform switch
+    {
+      SystemPlatform.Windows => "ControlR.DesktopClient.exe",
+      SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
+      _ => throw new PlatformNotSupportedException()
+    };
+
+  public static string DesktopClientZipFileName =>
+    SystemEnvironment.Instance.Platform switch
+    {
+      SystemPlatform.Windows => "ControlR.DesktopClient.zip",
+      SystemPlatform.MacOs => "ControlR.app.zip",
+      SystemPlatform.Linux => "ControlR.DesktopClient.zip",
+      _ => throw new PlatformNotSupportedException()
+    };
+
   public static Uri? ServerUri
   {
     get
@@ -21,32 +38,7 @@ public static class AppConstants
     }
   }
 
-  public static string DesktopClientFileName
-  {
-    get
-    {
-      return SystemEnvironment.Instance.Platform switch
-      {
-        SystemPlatform.Windows => "ControlR.DesktopClient.exe",
-        SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
-        _ => throw new PlatformNotSupportedException()
-      };
-    }
-  }
-
-  public static string DesktopClientZipFileName
-  {
-    get
-    {
-      return SystemEnvironment.Instance.Platform switch
-      {
-        SystemPlatform.Windows => "ControlR.DesktopClient.zip",
-        SystemPlatform.MacOs => "ControlR.app.zip",
-        SystemPlatform.Linux => "ControlR.DesktopClient.zip",
-        _ => throw new PlatformNotSupportedException()
-      };
-    }
-  }
+  public static int SignalrMaxMessageSize => 30 * 1024; // 30KB.
   private static Uri DevServerUri { get; } = new("http://localhost:5120");
 
   public static string GetAgentFileDownloadPath(RuntimeId runtime)

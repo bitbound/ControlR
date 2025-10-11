@@ -12,7 +12,7 @@ public class DesktopPreviewController : ControllerBase
 {
   [HttpGet("{deviceId:guid}/{targetProcessId:int}")]
   public async Task<IActionResult> GetDesktopPreview(
-    [FromRoute]Guid deviceId,
+    [FromRoute] Guid deviceId,
     [FromRoute] int targetProcessId,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
@@ -44,8 +44,8 @@ public class DesktopPreviewController : ControllerBase
 
     var requesterId = Guid.NewGuid();
     var streamId = Guid.NewGuid();
-  using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(10));
-    
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(10));
+
     var desktopPreviewRequestDto = new DesktopPreviewRequestDto(
       requesterId,
       streamId,
@@ -57,29 +57,26 @@ public class DesktopPreviewController : ControllerBase
 
     try
     {
-      await signaler.ReadySignal.Wait(cancellationToken);
+      // Set response content type for JPEG image
+      Response.ContentType = "image/jpeg";
+
+      // Stream the bytes directly to the response
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
+      {
+        await Response.Body.WriteAsync(chunk, cancellationToken);
+      }
+
+      return new EmptyResult();
     }
     catch (OperationCanceledException)
     {
       logger.LogWarning("Desktop preview request for device {DeviceId} timed out or was canceled.", deviceId);
       return StatusCode(StatusCodes.Status408RequestTimeout);
     }
-
-    if (signaler.Stream is null)
+    catch (Exception ex)
     {
-      logger.LogWarning("No stream available for desktop preview request on device {DeviceId}.", deviceId);
-      return StatusCode(StatusCodes.Status404NotFound);
+      logger.LogError(ex, "Error streaming desktop preview for device {DeviceId}.", deviceId);
+      return StatusCode(StatusCodes.Status500InternalServerError);
     }
-
-    // Set response content type for JPEG image
-    Response.ContentType = "image/jpeg";
-    
-    // Stream the bytes directly to the response
-    await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
-    {
-      await Response.Body.WriteAsync(chunk, cancellationToken);
-    }
-
-    return new EmptyResult();
   }
 }

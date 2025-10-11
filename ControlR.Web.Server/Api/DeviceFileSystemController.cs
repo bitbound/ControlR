@@ -64,20 +64,12 @@ public class DeviceFileSystemController : ControllerBase
         return BadRequest(result.Reason);
       }
 
-      await signaler.ReadySignal.Wait(cancellationToken);
-
-      if (signaler.Stream is null)
-      {
-        logger.LogWarning("No stream received for directory contents request on device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-        return StatusCode(StatusCodes.Status404NotFound);
-      }
-
       var entries = new List<FileSystemEntryDto>();
-      await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
         entries.AddRange(chunk);
       }
-      signaler.EndSignal.Set();
+
       var directoryExists = signaler.Metadata is bool b && b;
       return Ok(new GetDirectoryContentsResponseDto([.. entries], directoryExists));
     }
@@ -171,7 +163,7 @@ public class DeviceFileSystemController : ControllerBase
 
     if (!authResult.Succeeded)
     {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.", 
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
         User.Identity?.Name, request.DeviceId);
       return Forbid();
     }
@@ -192,7 +184,7 @@ public class DeviceFileSystemController : ControllerBase
         return Ok(result.Value);
       }
 
-      logger.LogWarning("Failed to get root drives for device {DeviceId}: {Reason}", 
+      logger.LogWarning("Failed to get root drives for device {DeviceId}: {Reason}",
         request.DeviceId, result.Reason);
       return BadRequest(result.Reason);
     }
@@ -230,7 +222,7 @@ public class DeviceFileSystemController : ControllerBase
 
     if (!authResult.Succeeded)
     {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.", 
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
         User.Identity?.Name, request.DeviceId);
       return Forbid();
     }
@@ -256,20 +248,12 @@ public class DeviceFileSystemController : ControllerBase
         return BadRequest(result.Reason);
       }
 
-      await signaler.ReadySignal.Wait(cancellationToken);
-      if (signaler.Stream is null)
-      {
-        logger.LogWarning("No stream received for subdirectories request on device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-        return StatusCode(StatusCodes.Status404NotFound);
-      }
-
       var entries = new List<FileSystemEntryDto>();
-      await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
         entries.AddRange(chunk);
       }
-      // Signal that we've consumed the stream
-      signaler.EndSignal.Set();
+
       return Ok(new GetSubdirectoriesResponseDto(entries.ToArray()));
     }
     catch (OperationCanceledException)

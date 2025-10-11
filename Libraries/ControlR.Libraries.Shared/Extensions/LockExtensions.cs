@@ -24,4 +24,13 @@ public static class LockExtensions
       semaphore.Release();
     });
   }
+
+  public static IDisposable Lock(this object lockTarget)
+  {
+    Monitor.Enter(lockTarget);
+    return new CallbackDisposable(() =>
+    {
+      Monitor.Exit(lockTarget);
+    });
+  }
 }

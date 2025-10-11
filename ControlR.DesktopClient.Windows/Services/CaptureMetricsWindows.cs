@@ -18,7 +18,7 @@ internal sealed class CaptureMetricsWindows(IServiceProvider serviceProvider)
     _ = _win32Interop.GetCurrentThreadDesktopName(out var threadDesktopName);
     _ = _win32Interop.GetInputDesktopName(out var inputDesktopName);
 
-    extraData.Add("Thread ID", $"{_systemEnvironment.CurrentThreadId}");
+    extraData.Add("Thread ID", $"{SystemEnvironment.CurrentThreadId}");
     extraData.Add("Thread Desktop Name", $"{threadDesktopName}");
     extraData.Add("Input Desktop Name", $"{inputDesktopName}");
 

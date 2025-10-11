@@ -1,16 +1,20 @@
+using System.Threading.Channels;
+using ControlR.Libraries.Shared.IO;
+using ControlR.Web.Client.Components.FileSystem;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
+// ReSharper disable AccessToDisposedClosure
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class FileSystem : JsInteropableComponent
 {
   private ElementReference _containerRef;
   private ElementReference _contentPanelRef;
-  private InputFile _fileInputRef = default!;
+  private InputFile _fileInputRef = null!;
   private string _searchText = string.Empty;
 
   private string? _selectedPath;
@@ -22,10 +26,6 @@ public partial class FileSystem : JsInteropableComponent
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
 
-  public Guid DeviceId => DeviceState.IsDeviceLoaded
-    ? DeviceState.CurrentDevice.Id
-    : Guid.Empty;
-
   [Inject]
   public required IDeviceState DeviceState { get; init; }
 
@@ -33,14 +33,6 @@ public partial class FileSystem : JsInteropableComponent
   public required IDialogService DialogService { get; set; }
 
   public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
-  public List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
-  public bool IsDeleteInProgress { get; set; }
-  public bool IsDownloadInProgress { get; set; }
-
-  public bool IsLoading { get; set; }
-  public bool IsLoadingContents { get; set; }
-  public bool IsNewFolderInProgress { get; set; }
-  public bool IsUploadInProgress { get; set; }
 
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
@@ -67,6 +59,21 @@ public partial class FileSystem : JsInteropableComponent
   [Inject]
   public required ISnackbar Snackbar { get; set; }
 
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; set; }
+
+  private Guid DeviceId => DeviceState.IsDeviceLoaded
+    ? DeviceState.CurrentDevice.Id
+    : Guid.Empty;
+
+  private List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
+  private bool IsDeleteInProgress { get; set; }
+  private bool IsLoading { get; set; }
+  private bool IsLoadingContents { get; set; }
+  private bool IsNewFolderInProgress { get; set; }
+  private bool IsUpButtonDisabled => string.IsNullOrEmpty(SelectedPath) 
+                                     || InitialTreeItems.Any(item => item.Value == SelectedPath);
+
   public override async ValueTask DisposeAsync()
   {
     try
@@ -84,32 +91,6 @@ public partial class FileSystem : JsInteropableComponent
     }
 
     await base.DisposeAsync();
-  }
-
-  public async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
-  {
-    try
-    {
-      if (string.IsNullOrEmpty(parentValue))
-      {
-        return [];
-      }
-
-      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
-      if (result.IsSuccess && result.Value is not null)
-      {
-        return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
-      }
-
-      Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}",
-        parentValue, result.Reason);
-      return [];
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentValue);
-      return [];
-    }
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -148,7 +129,7 @@ public partial class FileSystem : JsInteropableComponent
       Value = dto.FullPath,
       Text = dto.Name,
       Icon = Icons.Material.Filled.Folder,
-      Expandable = dto.IsDirectory && dto.HasSubfolders
+      Expandable = dto is { IsDirectory: true, HasSubfolders: true }
     };
   }
 
@@ -165,6 +146,12 @@ public partial class FileSystem : JsInteropableComponent
       CanRead = dto.CanRead,
       CanWrite = dto.CanWrite
     };
+  }
+
+  private static TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
+  {
+    return items?.FirstOrDefault(item =>
+      string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
   }
 
   private async Task<bool> BuildTreeToPath(string targetPath)
@@ -285,6 +272,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
+
       var downloadUrl =
         $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
@@ -298,15 +286,20 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
+  private async Task<Result<long>> GetMaxFileSize()
   {
-    if (items == null)
+    var getMaxSizeResult = await ControlrApi.GetFileUploadMaxSize();
+    if (!getMaxSizeResult.IsSuccess)
     {
-      return null;
+      Logger.LogError("Failed to get max upload size: {Error}", getMaxSizeResult.Reason);
+      Snackbar.Add("Failed to determine max upload size. Upload cancelled.", Severity.Error);
+      return Result.Fail<long>(getMaxSizeResult.Reason);
     }
 
-    return items.FirstOrDefault(item =>
-      string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
+    var maxFileSize = getMaxSizeResult.Value < 0
+      ? long.MaxValue
+      : getMaxSizeResult.Value;
+    return Result.Ok(maxFileSize);
   }
 
   private async Task HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
@@ -415,6 +408,32 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
+  {
+    try
+    {
+      if (string.IsNullOrEmpty(parentValue))
+      {
+        return [];
+      }
+
+      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
+      if (result is { IsSuccess: true, Value: not null })
+      {
+        return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
+      }
+
+      Logger.LogWarning("Failed to load subdirectories for {Path}: {Error}",
+        parentValue, result.Reason);
+      return [];
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Exception while loading subdirectories for {Path}", parentValue);
+      return [];
+    }
+  }
+
   private async Task NavigateToAddress()
   {
     var targetPath = AddressBarValue.Trim();
@@ -434,7 +453,7 @@ public partial class FileSystem : JsInteropableComponent
       }
 
       await InvokeAsync(StateHasChanged);
-      await Task.Delay(100); // Small delay to ensure tree is updated
+      await Task.Delay(100); // Small delay to ensure the tree is updated
 
       // Set the selected path (this will also load directory contents)
       SelectedPath = targetPath;
@@ -509,19 +528,35 @@ public partial class FileSystem : JsInteropableComponent
       return;
     }
 
-    IsDownloadInProgress = true;
     StateHasChanged();
 
     try
     {
-      if (SelectedItems.Count == 1)
+      var getMaxSizeResult = await GetMaxFileSize();
+      if (!getMaxSizeResult.IsSuccess)
       {
-        var item = SelectedItems.First();
-        await DownloadSingleItem(item);
+        return;
       }
-      else
+
+      var maxFileSize = getMaxSizeResult.Value;
+
+      var oversizedItems = SelectedItems
+        .Where(item => !item.IsDirectory && item.Size > maxFileSize)
+        .ToList();
+
+      if (oversizedItems.Count > 0)
       {
-        Snackbar.Add("Multiple file download not supported yet. Please select one item at a time.", Severity.Info);
+        var itemNames = string.Join(", ", oversizedItems.Select(x => x.Name));
+        var maxMb = (double)maxFileSize / (1024 * 1024);
+        Snackbar.Add($"The following files exceed the maximum download size of {maxMb:N2} MB and cannot be downloaded: {itemNames}",
+          Severity.Warning);
+        Logger.LogWarning("Some selected files exceed max download size: {ItemNames}", itemNames);
+        return;
+      }
+
+      foreach (var item in SelectedItems)
+      {
+        await DownloadSingleItem(item);
       }
     }
     catch (Exception ex)
@@ -531,38 +566,36 @@ public partial class FileSystem : JsInteropableComponent
     }
     finally
     {
-      IsDownloadInProgress = false;
       StateHasChanged();
     }
   }
 
   private async Task OnFilesSelected(InputFileChangeEventArgs e)
   {
-    if (string.IsNullOrEmpty(SelectedPath))
-    {
-      Snackbar.Add("Please select a directory first", Severity.Warning);
-      return;
-    }
-
-    if (e.FileCount == 0)
-    {
-      return;
-    }
-
-    IsUploadInProgress = true;
-    StateHasChanged();
-
-    var uploadTasks = new List<Task>();
-
-    foreach (var file in e.GetMultipleFiles()) // Limit to 10 files
-    {
-      uploadTasks.Add(UploadSingleFile(file));
-    }
-
     try
     {
+      StateHasChanged();
+
+      if (string.IsNullOrEmpty(SelectedPath))
+      {
+        Snackbar.Add("Please select a directory first", Severity.Warning);
+        return;
+      }
+
+      if (e.FileCount == 0)
+      {
+        return;
+      }
+
+      var uploadTasks = new List<Task>();
+      foreach (var file in e.GetMultipleFiles())
+      {
+        var uploadTask = UploadSingleFile(file);
+        uploadTasks.Add(uploadTask);
+      }
+      StateHasChanged();
+
       await Task.WhenAll(uploadTasks);
-      Snackbar.Add($"Successfully uploaded {e.FileCount} file(s)", Severity.Success);
 
       // Refresh directory contents
       await LoadDirectoryContents(SelectedPath);
@@ -574,7 +607,6 @@ public partial class FileSystem : JsInteropableComponent
     }
     finally
     {
-      IsUploadInProgress = false;
       StateHasChanged();
     }
   }
@@ -597,7 +629,7 @@ public partial class FileSystem : JsInteropableComponent
 
       if (string.IsNullOrWhiteSpace(folderName))
       {
-        return; // User cancelled or provided empty name
+        return; // User canceled or provided an empty name
       }
 
       IsNewFolderInProgress = true;
@@ -648,6 +680,65 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private async Task OnUpOneLevel()
+  {
+    if (string.IsNullOrEmpty(SelectedPath))
+    {
+      return;
+    }
+
+    try
+    {
+      // Use the agent to get path segments, which will properly handle the parent path
+      var pathSegmentsResult = await ControlrApi.GetPathSegments(DeviceId, SelectedPath);
+
+      if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
+      {
+        Logger.LogWarning("Failed to get path segments for {SelectedPath}: {ErrorMessage}",
+          SelectedPath, pathSegmentsResult.Reason);
+        Snackbar.Add("Unable to navigate up one level", Severity.Warning);
+        return;
+      }
+
+      var responseDto = pathSegmentsResult.Value;
+
+      if (!responseDto.Success)
+      {
+        Logger.LogWarning("Path segments request failed for {SelectedPath}: {Error}",
+          SelectedPath, responseDto.ErrorMessage);
+        Snackbar.Add($"Error navigating up: {responseDto.ErrorMessage}", Severity.Warning);
+        return;
+      }
+
+      // Get the parent path by removing the last segment
+      var segments = responseDto.PathSegments;
+      if (segments.Length <= 1)
+      {
+        // Already at root level
+        return;
+      }
+
+      // Build parent path from all segments except the last one
+      var parentPath = segments[0];
+      for (var i = 1; i < segments.Length - 1; i++)
+      {
+        parentPath = CombinePaths(parentPath, segments[i], responseDto.PathSeparator);
+      }
+
+      // Build the tree to the parent path and navigate
+      var buildResult = await BuildTreeToPath(parentPath);
+      if (buildResult)
+      {
+        SelectedPath = parentPath;
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error navigating up one level from {Path}", SelectedPath);
+      Snackbar.Add("An error occurred while navigating up one level", Severity.Error);
+    }
+  }
+
   private async Task OnUploadFileClick()
   {
     try
@@ -663,17 +754,18 @@ public partial class FileSystem : JsInteropableComponent
 
   private async Task UploadSingleFile(IBrowserFile file)
   {
+    var snackbarKey = Guid.NewGuid().ToString();
     try
     {
       Guard.IsNotNull(SelectedPath);
 
-      // Check if file already exists in current directory contents
+      // Check if the file already exists in current directory contents
       var existingFile = DirectoryContents.FirstOrDefault(f =>
         !f.IsDirectory && string.Equals(f.Name, file.Name, StringComparison.OrdinalIgnoreCase));
 
       if (existingFile != null)
       {
-        // Show confirmation dialog for overwriting
+        // Show the confirmation dialog for overwriting
         var confirmed = await DialogService.ShowMessageBox(
           "File Already Exists",
           $"The file '{file.Name}' already exists in the selected directory. Do you want to overwrite it?",
@@ -687,21 +779,145 @@ public partial class FileSystem : JsInteropableComponent
           return;
         }
       }
-      
-      // TODO: Replace multipart form with raw stream and custom metadata header.
-      await using var fileStream = file.OpenReadStream(100 * 1024 * 1024); // 100MB limit
-      var result = await ControlrApi.UploadFile(DeviceId, SelectedPath, file.Name, fileStream, file.ContentType, true);
 
-      if (!result.IsSuccess)
+      var getMaxSizeResult = await GetMaxFileSize();
+      if (!getMaxSizeResult.IsSuccess)
       {
-        Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
-        throw new Exception($"Upload failed: {result.Reason}");
+        return;
       }
+
+      var maxFileSize = getMaxSizeResult.Value;
+
+      if (file.Size > maxFileSize)
+      {
+        var maxMb = (double)maxFileSize / (1024 * 1024);
+        Snackbar.Add($"File '{file.Name}' exceeds the maximum upload size of {maxMb:N2} MB.",
+          Severity.Warning);
+        Logger.LogWarning("File {FileName} size {FileSize} exceeds max upload size {MaxSize}",
+          file.Name, file.Size, maxFileSize);
+        return;
+      }
+
+      using var cts = new CancellationTokenSource();
+      await using var fileStream = file.OpenReadStream(maxFileSize, cts.Token);
+      await using var observer = new StreamObserver(
+        observedStream: fileStream,
+        observationInterval: TimeSpan.FromMilliseconds(500));
+
+      using var snackbar = Snackbar.Add<FileUploadIndicator>(
+        new Dictionary<string, object>()
+        {
+          {"File", file },
+          {"StreamObserver", observer }
+        },
+        Severity.Normal,
+        config =>
+        {
+          config.Icon = Icons.Material.Filled.UploadFile;
+          config.RequireInteraction = true;
+          config.VisibleStateDuration = int.MaxValue;
+          config.ShowCloseIcon = false;
+          config.Action = "Cancel";
+          config.ActionColor = Color.Error;
+          config.ActionVariant = Variant.Outlined;
+          config.OnClick = _ =>
+          {
+            cts.Cancel();
+            return Task.CompletedTask;
+          };
+        },
+        key: snackbarKey);
+
+      if (snackbar is not null)
+      {
+        snackbar.OnClose += _ =>
+        {
+          cts.Cancel();
+        };
+      }
+
+      var metadata = new FileUploadMetadata(
+        DeviceId,
+        SelectedPath,
+        file.Name,
+        file.Size,
+        file.ContentType,
+        true);
+
+      var channel = Channel.CreateUnbounded<byte[]>();
+
+      // Write file chunks to channel in the background
+      var writeTask = Task.Run(async () =>
+      {
+        try
+        {
+          var buffer = new byte[AppConstants.SignalrMaxMessageSize];
+          int bytesRead;
+
+          while ((bytesRead = await fileStream.ReadAsync(buffer, cts.Token)) > 0)
+          {
+            var chunk = buffer[..bytesRead];
+            await channel.Writer.WriteAsync(chunk, cts.Token);
+          }
+          channel.Writer.TryComplete();
+        }
+        catch (OperationCanceledException)
+        {
+          channel.Writer.TryComplete(new OperationCanceledException("Upload was canceled."));
+        }
+        catch (Exception ex)
+        {
+          channel.Writer.TryComplete(ex);
+          Logger.LogError(ex, "Error writing file chunks to channel for {FileName}", file.Name);
+        }
+      }, cts.Token);
+
+      var result = await ViewerHub.Server
+        .UploadFile(metadata, channel.Reader)
+        .WaitAsync(cts.Token);
+
+      // Wait for the write task to complete
+      try
+      {
+        await writeTask;
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error in background write task for {FileName}", file.Name);
+      }
+
+      if (result.IsSuccess)
+      {
+        Logger.LogInformation("Successfully uploaded file {FileName}", file.Name);
+        Snackbar.Add($"Successfully uploaded '{file.Name}'", Severity.Success);
+      }
+      else
+      {
+        if (cts.IsCancellationRequested)
+        {
+          Logger.LogInformation("Upload cancelled for file {FileName}", file.Name);
+          Snackbar.Add($"Upload cancelled for '{file.Name}'", Severity.Info);
+          return;
+        }
+        Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
+        Snackbar.Add($"Upload failed for '{file.Name}': {result.Reason}", Severity.Error);
+      }
+    }
+    catch (OperationCanceledException)
+    {
+      Logger.LogInformation("Upload operation cancelled for file {FileName}", file.Name);
+      Snackbar.Add($"Upload cancelled for '{file.Name}'", Severity.Info);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error uploading file {FileName}", file.Name);
-      throw;
+      Snackbar.Add($"An error occurred while uploading '{file.Name}'", Severity.Error);
+    }
+    finally
+    {
+      // Remove the snackbar if it still exists
+      Snackbar.RemoveByKey(snackbarKey);
+      await InvokeAsync(StateHasChanged);
     }
   }
 }

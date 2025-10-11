@@ -1,36 +1,27 @@
-﻿namespace ControlR.Web.Server.Hubs;
+﻿using System.Threading.Channels;
 
-public interface IHubStreamSignaler : IDisposable
-{
-  Guid StreamId { get; }
-  ManualResetEventAsync EndSignal { get; }
-  ManualResetEventAsync ReadySignal { get; }
-  string RequesterConnectionId { get; }
-  string ResponderConnectionId { get; }
-  Type ItemType { get; }
-  object? Metadata { get; set; }
-}
+namespace ControlR.Web.Server.Hubs;
 
-public class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null) : IHubStreamSignaler
+public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null) : IDisposable
 {
+  private readonly Channel<T> _channel = Channel.CreateBounded<T>(new BoundedChannelOptions(10)
+  {
+    SingleReader = true,
+    SingleWriter = true,
+    FullMode = BoundedChannelFullMode.Wait
+  });
   private readonly Action? _onDispose = onDispose;
-  private bool _disposedValue;
+  private readonly CancellationTokenSource _streamCancelledSource = new();
+  private readonly CancellationTokenSource _writeCompletedSource = new();
+  private int _disposedValue; 
 
-  public ManualResetEventAsync EndSignal { get; } = new();
-  public ManualResetEventAsync ReadySignal { get; } = new();
-  public string RequesterConnectionId { get; internal set; } = string.Empty;
-  public string ResponderConnectionId { get; internal set; } = string.Empty;
-  public IAsyncEnumerable<T>? Stream { get; internal set; }
-  public Guid StreamId { get; } = streamId;
-  public Type ItemType => typeof(T);
   public object? Metadata { get; set; }
 
-  public void SetStream(IAsyncEnumerable<T> stream, string responderConnectionId)
-  {
-    ResponderConnectionId = responderConnectionId;
-    Stream = stream;
-    ReadySignal.Set();
-  }
+  public Guid StreamId { get; } = streamId;
+
+  public CancellationToken WriteCompleted => _writeCompletedSource.Token;
+
+  public ChannelReader<T> Reader => _channel.Reader;
 
   public void Dispose()
   {
@@ -38,15 +29,40 @@ public class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null) : IHu
     GC.SuppressFinalize(this);
   }
 
-  protected virtual void Dispose(bool disposing)
+  public async Task WriteFromChannelReader(ChannelReader<T> reader, CancellationToken cancellationToken)
   {
-    if (_disposedValue) return;
-    if (disposing)
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _streamCancelledSource.Token);
+    try
     {
-      EndSignal.Dispose();
-      ReadySignal.Dispose();
-      _onDispose?.Invoke();
+      await foreach (var item in reader.ReadAllAsync(linkedCts.Token))
+      {
+        await _channel.Writer.WriteAsync(item, linkedCts.Token);
+      }
+      _channel.Writer.TryComplete();
     }
-    _disposedValue = true;
+    catch (Exception ex)
+    {
+      _channel.Writer.TryComplete(ex);
+      throw;
+    }
+    finally
+    {
+      await _writeCompletedSource.CancelAsync();
+    }
+  }
+
+  private void Dispose(bool disposing)
+  {
+
+    if (Interlocked.CompareExchange(ref _disposedValue, 1, 0) != 0)
+    {
+      return;
+    }
+
+    if (!disposing) return;
+    _streamCancelledSource.Cancel();
+    _streamCancelledSource.Dispose();
+    _channel.Writer.TryComplete();
+    _onDispose?.Invoke();
   }
 }

@@ -122,7 +122,7 @@ public class TestAgentHubClient : IAgentHubClient
   public Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     Console.WriteLine($"Received file download request for {dto.FilePath}");
-    return Result.Ok(new FileDownloadResponseHubDto(FileSize: 0)).AsTaskResult();
+    return Result.Ok(new FileDownloadResponseHubDto(FileSize: 0, FileDisplayName: "Test.zip")).AsTaskResult();
   }
 
   public Task<Result> DeleteFile(FileDeleteHubDto dto)

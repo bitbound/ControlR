@@ -141,6 +141,19 @@ else
 
     <div>
       <MudText Typo="Typo.subtitle2" Color="Color.Info">
+        Device ID
+      </MudText>
+      <MudText Typo="Typo.body1" GutterBottom>
+        By default, a random device ID will be generated during installation.
+        Optionally, you can specify a predetermined ID here that will be assigned to the device.
+      </MudText>
+      <MudTextField @bind-Value="_deviceId"
+                    Class="mt-2"
+                    Label="Device ID (GUID)"
+                    Validation="@DeviceIdValidator" />
+    </div>
+    <div class="mt-4">
+      <MudText Typo="Typo.subtitle2" Color="Color.Info">
         Device Tags
       </MudText>
       <MudText Typo="Typo.body1" GutterBottom>

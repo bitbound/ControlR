@@ -341,6 +341,7 @@ internal class ViewerHubConnection(
       });
   }
 
+
   public async Task UninstallAgent(Guid deviceId, string reason)
   {
     await TryInvoke(

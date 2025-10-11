@@ -20,11 +20,13 @@ wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/doc
 sudo docker compose up -d
 ```
 
-At minimum, you will need to supply values for the variables at the top of the compose file. By default, they're expected to be passed in via the environment variables shown to the right of the variables.
+**IMPORTANT:** Read the below sections regarding reverse proxy and Cloudflare caching.
 
-See the comments in the compose file for additional configuration info.
+At minimum, you will need to supply environment variables (e.g. `ControlR_POSTGRES_USER`) for the anchors (e.g. `$pgUser`) at the top of the docker-compose file. Alternatively, you could also use Docker secrets, an environment file, or hard-code them in the docker-compose file.  Whatever works for your setup and security requirements.
 
-Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy".
+See the comments in the docker-compose file for additional configuration info.
+
+Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy."
 
 ## Reverse Proxy Configuration:
 
@@ -32,19 +34,23 @@ Some ControlR features require [forwarded headers](https://learn.microsoft.com/e
 
 When using a reverse proxy, including Cloudflare proxying, the proxy IPs must be trusted by the service receiving the forwarded traffic. By default, ControlR will trust the Docker gateway IP. If `EnableCloudflareProxySupport` option is enabled, the [Cloudflare IP ranges](https://www.cloudflare.com/ips/) will automatically be trusted too.
 
-Every proxy server IP needs to be added to the `X-Forwarded-For` header, creating a chain of all hops until it reaches the service that handles the request. Each proxy server in the chain needs to trust all IPs that came before it. When the request reaches the servce, the header should have a complete chain of all proxy servers.
+Every proxy server IP needs to be added to the `X-Forwarded-For` header, creating a chain of all hops until it reaches the service that handles the request. Each proxy server in the chain needs to trust all IPs that came before it. When the request reaches the service, the header should have a complete chain of all proxy servers.
 
-If you have another reverse proxy in front of Docker (e.g. Nginx, Caddy, etc.), it must trust the IPs of any proxies that came before it (e.g. Cloudflare). Likewise, your service in Docker (i.e. ControlR) must also trust the IP of your reverse proxy. If the reverse proxy is on the same machine as the service, and is forwarding to localhost, the service will automatically trust it.
+If you have another reverse proxy in front of Docker (e.g., Nginx, Caddy, etc.), it must trust the IPs of any proxies that came before it (e.g., Cloudflare). Likewise, your service in Docker (i.e., ControlR) must also trust the IP of your reverse proxy. If the reverse proxy is on the same machine as the service and is forwarding to localhost, the service will automatically trust it.
 
-Additional proxy IPs can be added to the `KnownProxies` list in the compose file.
+Additional proxy IPs can be added to the `KnownProxies` list in the docker-compose file.
 
-If the public IP for your connected devices are not showing correctly, the problem is likely due to a misconfiguration here.
+If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.
+
+## Cloudflare Caching:
+
+ControlR relies on custom headers returned by `HEAD` requests for files under the `/downloads` path. If you're using Cloudflare proxy, you must bypass the cache for all requests under `/downloads`.
 
 ## Multi-tenancy
 
 By default, the server is single-tenant (although you can organize customer tenants via tags). The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
 
-Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the compose file will allow anyone to create a new account on the server. A new tenant is created for each account that is created this way.
+Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the docker-compose file will allow anyone to create a new account on the server. A new tenant is created for each account created this way.
 
 The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/en-us/ef/core/querying/filters) feature to isolate tenant data (devices, users, etc.);
 
@@ -58,11 +64,11 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 - Full remote control support
   - Controlling the login window is only possible after a user has logged in
 - Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using ad-hoc certificate (this may change in the future)
+- Signed using adhoc certificate (this may change in the future)
 
 ### macOS Intel (untested)
 - Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using ad-hoc certificate (this may change in the future)
+- Signed using adhoc certificate (this may change in the future)
 
 ### Ubuntu x64 (latest LTS)
 
@@ -74,6 +80,28 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 
 ### All Operating Systems
 - Terminal uses embedded cross-platform PowerShell host
+
+## Agent Log Locations
+
+Logs for the agent and desktop client are detailed below. On Windows, the path depends on whether the app is running in Debug or Release mode. On macOS and Linux, the path depends on whether the app is running as root.  This is only relevant for local debugging.
+
+Under normal user circumstances, the main agent will run in Release mode as SYSTEM/root. For Mac and Ubuntu, the desktop client will normally run as the user for the current GUI session.  For Windows, the desktop client runs as SYSTEM due to permissions required for capturing and controlling full-screen UAC prompts and the WinLogon desktop.
+
+**Main Agent**
+- **Windows**
+  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.Agent\LogFile.log`
+  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.Agent\LogFile.log`
+- **macOS / Linux**
+  - Running as root: `/var/log/controlr/{hostname}/ControlR.Agent/LogFile.log`
+  - Running as user: `~/.controlr/logs/{hostname}/ControlR.Agent/LogFile.log`
+
+**Desktop Client**
+- **Windows**
+  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.DesktopClient\LogFile.log`
+  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.DesktopClient\LogFile.log`
+- **macOS / Linux**
+  - Running as root: `/var/log/controlr/{hostname}/ControlR.DesktopClient/LogFile.log`
+  - Running as user: `~/.controlr/logs/{hostname}/ControlR.DesktopClient/LogFile.log`
 
 ## Permissions
 
@@ -88,13 +116,13 @@ Role Descriptions:
 - `DeviceSuperUser`
   - Able to access all devices
 - `TenantAdministrator`
-  - Able manage users and permissions for the tenant
+  - Able to manage users and permissions for the tenant
 - `ServerAdministrator`
   - Able to manage and see stats for the server
   - This does not allow access to other tenants' devices or users
 
 ## API Spec
-An OpenAPI spec is created with each build of the server and committed to the repository.  It can be found [here](/ControlR.Web.Server/ControlR.Web.Server.json), or within the artifacts for each GitHub release.  You can use this file to generate API clients in any language.
+An OpenAPI spec is created with each build of the server and committed to the repository.  It can be found [here](./ControlR.Web.Server/ControlR.Web.Server.json), or within the artifacts for each GitHub release.  You can use this file to generate API clients in any language.
 
 While debugging, you can also browse the API at https://localhost:7033/scalar/ or https://localhost:7033/openapi/v1.json.
 
@@ -111,7 +139,7 @@ To create a PAT, follow these steps:
 5. Add the token to the `x-personal-token` header in your API requests.
 
 ## Logon Tokens
-Logon Tokens are time-limited, single-use tokens that allow you to create an authenticated browser session with a **specific device**.  Coupled with PATs, this allows you to create an integration that can opens a browser tab to access a particular device.
+Logon Tokens are time-limited, single-use tokens that allow you to create an authenticated browser session with a **specific device**.  Coupled with PATs, this allows you to create an integration that can open a browser tab to access a particular device.
 
 See the `/api/logon-tokens` endpoint in the API spec.  A successful response includes the full URL, including the logon token, that can be opened in the browser to access the target device.
 
@@ -127,7 +155,7 @@ You can also add a connection string for Azure Monitor to see your data there. T
 
 ## Relay Servers
 
-ControlR has the ability to integrate with geographically-distributed relay servers and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
+ControlR is able to integrate with geographically-distributed relay servers and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
 
 Relay servers are currently disabled on the public server (https://controlr.app), which is located in Seattle, WA.
 

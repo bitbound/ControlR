@@ -51,6 +51,10 @@ services:
       # The Gateway IP here must match the IP address in the above controlr network gateway.
       ControlR_AppOptions__DockerGatewayIp: 172.29.0.1
 
+      # The maximum allowed file size for transfers in the remote File System component.
+      # Set to 0 or less for no limit.  Default is 100MB.
+      ControlR_AppOptions__MaxFileTransferSize: 104857600
+
       ControlR_AppOptions__RequireUserEmailConfirmation: true
       ControlR_AppOptions__SmtpDisplayName: ""
       ControlR_AppOptions__SmtpEmail: ""
@@ -92,13 +96,13 @@ services:
       #ControlR_AppOptions__MicrosoftClientSecret: ""
 
   postgres:
-    image: postgres:latest
+    image: postgres:18
     container_name: postgres
     restart: unless-stopped
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     environment:
       POSTGRES_USER: *pgUser
       POSTGRES_PASSWORD: *pgPassword

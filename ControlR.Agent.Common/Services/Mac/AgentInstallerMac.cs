@@ -38,6 +38,7 @@ internal class AgentInstallerMac(
     Uri? serverUri = null,
     Guid? tenantId = null,
     string? installerKey = null,
+    Guid? deviceId = null,
     Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
@@ -67,7 +68,6 @@ internal class AgentInstallerMac(
       var installDir = GetInstallDirectory();
 
       var exePath = _environment.StartupExePath;
-      var fileName = Path.GetFileName(exePath);
       var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
       _fileSystem.CreateDirectory(installDir);
 
@@ -94,7 +94,7 @@ internal class AgentInstallerMac(
       _logger.LogInformation("Writing plist files.");
       await _fileSystem.WriteAllTextAsync(agentPlistPath, agentPlistFile);
       await _fileSystem.WriteAllTextAsync(desktopPlistPath, desktopPlistFile);
-      await UpdateAppSettings(serverUri, tenantId);
+      await UpdateAppSettings(serverUri, tenantId, deviceId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
       if (!createResult.IsSuccess)

@@ -44,12 +44,14 @@ internal class DesktopClientWatcherWin(
               .GetProcessesByName(Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName))
               .Any(x => x.SessionId == session.SystemSessionId);
 
-          if (!desktopProcessRunning)
+          if (desktopProcessRunning)
           {
-            _logger.LogInformation("No desktop client found in session {SessionId}. Launching a new one.", session.SystemSessionId);
-            var launchTask = LaunchDesktopClient(session.SystemSessionId, stoppingToken);
-            launchTasks.Add(launchTask);
+            continue;
           }
+
+          _logger.LogInformation("No desktop client found in session {SessionId}. Launching a new one.", session.SystemSessionId);
+          var launchTask = LaunchDesktopClient(session.SystemSessionId, stoppingToken);
+          launchTasks.Add(launchTask);
         }
         await Task.WhenAll(launchTasks);
         if (launchTasks.Any(x => !x.Result))

@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
@@ -12,6 +13,7 @@ public class ViewerHub(
   UserManager<AppUser> userManager,
   AppDb appDb,
   IAuthorizationService authorizationService,
+  IHubStreamStore hubStreamStore,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IServerStatsProvider serverStatsProvider,
   IIpApi ipApi,
@@ -22,6 +24,7 @@ public class ViewerHub(
   private readonly IHubContext<AgentHub, IAgentHubClient> _agentHub = agentHub;
   private readonly AppDb _appDb = appDb;
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
+  private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly IIpApi _ipApi = ipApi;
   private readonly ILogger<ViewerHub> _logger = logger;
@@ -60,7 +63,7 @@ public class ViewerHub(
         return Result.Fail<PwshCompletionsResponseDto>("Forbidden.");
       }
 
-      // Create new request with ViewerConnectionId
+      // Create a new request with ViewerConnectionId
       var requestWithViewerConnection = request with { ViewerConnectionId = Context.ConnectionId };
 
       return await _agentHub.Clients
@@ -400,12 +403,7 @@ public class ViewerHub(
     try
     {
       using var scope = _logger.BeginMemberScope();
-
-      if (!TryGetTenantId(out var tenantId))
-      {
-        return;
-      }
-
+      
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
         return;
@@ -464,7 +462,7 @@ public class ViewerHub(
         return Result.Fail("User is not authorized to send terminal input.");
       }
 
-      // Create new DTO with ViewerConnectionId
+      // Create a new DTO with ViewerConnectionId
       var dtoWithViewerConnection = dto with { ViewerConnectionId = Context.ConnectionId };
 
       return await _agentHub.Clients
@@ -497,7 +495,7 @@ public class ViewerHub(
         dto.SessionId);
 
       var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
-      var displayName = await GetDisplayName(user, "Admin");
+      var displayName = await GetDisplayName(user);
       dto = dto with
       {
         ViewerConnectionId = Context.ConnectionId,
@@ -684,5 +682,89 @@ public class ViewerHub(
       userName);
 
     return false;
+  }
+
+  public async Task<Result> UploadFile(
+    FileUploadMetadata fileUploadMetadata,
+    ChannelReader<byte[]> fileStream)
+  {
+    try
+    {
+      var deviceId = fileUploadMetadata.DeviceId;
+
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail("Unauthorized.");
+      }
+
+      var maxUploadSize = _appOptions.CurrentValue.MaxFileTransferSize;
+      if (maxUploadSize > 0 && fileUploadMetadata.FileSize > maxUploadSize)
+      {
+        return Result.Fail($"File size exceeds the maximum allowed size of {maxUploadSize} bytes.");
+      }
+
+      var device = authResult.Value;
+      if (string.IsNullOrWhiteSpace(device.ConnectionId))
+      {
+        _logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
+        return Result.Fail("Device is not currently connected.");
+      }
+
+      var streamId = Guid.NewGuid();
+      using var signaler = _hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+
+      var uploadRequest = new FileUploadHubDto(
+        streamId,
+        fileUploadMetadata.TargetDirectory,
+        fileUploadMetadata.FileName,
+        fileUploadMetadata.FileSize,
+        fileUploadMetadata.Overwrite);
+
+      // Asynchronously write the client's stream to the channel.
+      var writeTask = signaler.WriteFromChannelReader(fileStream, Context.ConnectionAborted);
+
+      // Notify the agent about the incoming upload
+      var receiveResult = await _agentHub.Clients
+        .Client(device.ConnectionId)
+        .DownloadFileFromViewer(uploadRequest)
+        .WaitAsync(Context.ConnectionAborted);
+
+      if (receiveResult is null || !receiveResult.IsSuccess)
+      {
+        var reason = receiveResult?.Reason ?? "Agent did not respond.";
+        _logger.LogWarning("Device {DeviceId} failed to download file {FileName}.  Reason: {Reason}",
+          deviceId,
+          fileUploadMetadata.FileName,
+          reason);
+        return Result.Fail($"Agent failed to download file: {reason}");
+      }
+
+      // Await the write task to ensure all data is sent or an error occurs.
+      try
+      {
+        await writeTask;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error writing file stream for {FileName} to device {DeviceId}",
+          fileUploadMetadata.FileName, fileUploadMetadata.DeviceId);
+        return Result.Fail("An error occurred while writing the file stream.");
+      }
+
+      return Result.Ok();
+    }
+    catch (OperationCanceledException)
+    {
+      _logger.LogInformation("File upload was canceled by the user for file {FileName} to device {DeviceId}",
+        fileUploadMetadata.FileName,
+        fileUploadMetadata.DeviceId);
+      return Result.Fail("File upload was canceled.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error uploading file {FileName} to device {DeviceId}",
+        fileUploadMetadata.FileName, fileUploadMetadata.DeviceId);
+      return Result.Fail("An error occurred during file upload.");
+    }
   }
 }

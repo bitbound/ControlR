@@ -1,0 +1,59 @@
+@using ControlR.Libraries.Shared.IO
+@using ControlR.Libraries.Shared.Helpers
+
+<div class="d-flex flex-column file-upload-indicator">
+  <MudText Typo="Typo.body1" Class="text-truncate">Uploading: @_fileName</MudText>
+  <div class="d-flex align-center mt-1">
+    <MudProgressLinear Class="flex-grow-1" Value="_progress" Color="Color.Primary" />
+    <MudText Class="ms-2 no-wrap" Typo="Typo.body2">@($"{_progress:F0}%")</MudText>
+  </div>
+  <MudText Typo="Typo.caption" Class="no-wrap mt-2">
+    @($"{UnitsHelper.ToHumanReadableFileSize(_lastPosition)} / {UnitsHelper.ToHumanReadableFileSize(File.Size)}")
+  </MudText>
+  
+  <MudText Typo="Typo.caption" Class="no-wrap">
+    @($"{UnitsHelper.ToHumanReadableFileSize(_bytesPerSecond)}/s")
+  </MudText>
+
+</div>
+
+
+@code {
+  private double _progress;
+  private double _bytesPerSecond;
+  private string _fileName = string.Empty;
+  private long _lastPosition;
+  private DateTime _lastTimestamp;
+
+
+  [Parameter]
+  [EditorRequired]
+  public required IBrowserFile File { get; init; }
+
+  [Parameter]
+  [EditorRequired]
+  public required StreamObserver StreamObserver { get; init; }
+
+  protected override Task OnInitializedAsync()
+  {
+    _fileName = File.Name;
+    _lastTimestamp = DateTime.UtcNow;
+
+    StreamObserver.OnPositionChanged(async position =>
+    {
+      var now = DateTime.UtcNow;
+      var timeElapsed = (now - _lastTimestamp).TotalSeconds;
+
+      if (timeElapsed > 0)
+      {
+        _bytesPerSecond = (position - _lastPosition) / timeElapsed;
+      }
+
+      _lastPosition = position;
+      _lastTimestamp = now;
+      _progress = (double)position / File.Size * 100;
+      await InvokeAsync(StateHasChanged);
+    });
+    return base.OnInitializedAsync();
+  }
+}

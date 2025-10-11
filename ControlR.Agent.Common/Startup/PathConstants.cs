@@ -15,13 +15,15 @@ internal static class PathConstants
     if (OperatingSystem.IsWindows())
     {
       var logsDir = Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          "ControlR");
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "ControlR");
 
       logsDir = AppendSubDirectories(logsDir, instanceId);
       return Path.Combine(logsDir, "Logs", "ControlR.Agent", "LogFile.log");
     }
-    else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+
+    // ReSharper disable once InvertIf
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
       var logsDir = ElevationCheckerLinux.Instance.IsElevated()
         ? "/var/log/controlr"
@@ -29,32 +31,6 @@ internal static class PathConstants
 
       logsDir = AppendSubDirectories(logsDir, instanceId);
       return Path.Combine(logsDir, "ControlR.Agent", "LogFile.log");
-    }
-    else
-    {
-      throw new PlatformNotSupportedException();
-    }
-  }
-
-  private static string GetSettingsDirectory(string? instanceId)
-  {
-    if (OperatingSystem.IsWindows())
-    {
-      var rootDir = Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          "ControlR");
-
-      return AppendSubDirectories(rootDir, instanceId);
-    }
-
-    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-    {
-
-      var rootDir = ElevationCheckerLinux.Instance.IsElevated()
-        ? "/etc/controlr"
-        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
-
-      return AppendSubDirectories(rootDir, instanceId);
     }
 
     throw new PlatformNotSupportedException();
@@ -68,6 +44,7 @@ internal static class PathConstants
       {
         rootDir = Path.Combine(rootDir, "Debug");
       }
+
       if (!string.IsNullOrWhiteSpace(instanceId))
       {
         rootDir = Path.Combine(rootDir, instanceId);
@@ -76,13 +53,39 @@ internal static class PathConstants
       return Directory.CreateDirectory(rootDir).FullName;
     }
 
+    // ReSharper disable once InvertIf
     if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
       if (!string.IsNullOrWhiteSpace(instanceId))
       {
         rootDir = Path.Combine(rootDir, instanceId);
       }
+
       return Directory.CreateDirectory(rootDir).FullName;
+    }
+
+    throw new PlatformNotSupportedException();
+  }
+
+  private static string GetSettingsDirectory(string? instanceId)
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      var rootDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "ControlR");
+
+      return AppendSubDirectories(rootDir, instanceId);
+    }
+
+    // ReSharper disable once InvertIf
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+    {
+      var rootDir = ElevationCheckerLinux.Instance.IsElevated()
+        ? "/etc/controlr"
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
+
+      return AppendSubDirectories(rootDir, instanceId);
     }
 
     throw new PlatformNotSupportedException();

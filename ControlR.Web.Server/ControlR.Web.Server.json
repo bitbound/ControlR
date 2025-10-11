@@ -329,85 +329,6 @@
         }
       }
     },
-    "/api/device-file-operations/upload": {
-      "post": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "allOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "ContentType": {
-                        "type": "string"
-                      },
-                      "ContentDisposition": {
-                        "type": "string"
-                      },
-                      "Headers": {
-                        "type": "object",
-                        "additionalProperties": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "Length": {
-                        "type": "integer",
-                        "format": "int64"
-                      },
-                      "Name": {
-                        "type": "string"
-                      },
-                      "FileName": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "deviceId": {
-                        "type": "string",
-                        "format": "uuid"
-                      }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "targetDirectory": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "overwrite": {
-                        "type": "boolean"
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/device-file-operations/validate-path/{deviceId}": {
       "post": {
         "tags": [
@@ -2076,6 +1997,35 @@
         }
       }
     },
+    "/api/user-server-settings/file-upload-max-size": {
+      "get": {
+        "tags": [
+          "UserServerSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadMaxSizeResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadMaxSizeResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadMaxSizeResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user-tags": {
       "post": {
         "tags": [
@@ -2800,6 +2750,18 @@
           }
         }
       },
+      "FileUploadMaxSizeResponseDto": {
+        "required": [
+          "maxFileSize"
+        ],
+        "type": "object",
+        "properties": {
+          "maxFileSize": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "GetDirectoryContentsRequestDto": {
         "required": [
           "deviceId",
@@ -3284,6 +3246,9 @@
     },
     {
       "name": "Users"
+    },
+    {
+      "name": "UserServerSettings"
     },
     {
       "name": "UserTags"

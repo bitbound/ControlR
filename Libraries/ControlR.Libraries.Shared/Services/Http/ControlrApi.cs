@@ -17,11 +17,10 @@ public interface IControlrApi
   Task<Result> AddUserTag(Guid userId, Guid tagId);
   Task<Result> CreateDevice(DeviceDto device, string installerKey);
   Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName);
-  Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
-  Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail);
+  Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string inviteeEmail);
 
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory);
@@ -43,6 +42,7 @@ public interface IControlrApi
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
   Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
+  Task<Result<long>> GetFileUploadMaxSize();
   Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
   Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
@@ -61,7 +61,7 @@ public interface IControlrApi
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
-  Task<Result> UploadFile(Guid deviceId, string targetPath, string fileName, Stream fileStream, string contentType, bool overwrite);
+  Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
 }
 
 public class ControlrApi(
@@ -135,18 +135,6 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName)
-  {
-    return await TryCallApi(async () =>
-    {
-      var requestDto = new ValidateFilePathRequestDto(deviceId, directoryPath, fileName);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/validate-path/{deviceId}", requestDto);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ?? 
-        new ValidateFilePathResponseDto(false, "Failed to deserialize response");
-    });
-  }
-
   public async Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto)
   {
     return await TryCallApi(async () =>
@@ -178,11 +166,11 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string invteeEmail)
+  public async Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string inviteeEmail)
   {
     return await TryCallApi(async () =>
     {
-      var request = new TenantInviteRequestDto(invteeEmail);
+      var request = new TenantInviteRequestDto(inviteeEmail);
       using var response = await _client.PostAsJsonAsync(HttpConstants.InvitesEndpoint, request);
       if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
       {
@@ -329,9 +317,10 @@ public class ControlrApi(
       using var response = await _client.SendAsync(request);
       response.EnsureSuccessStatusCode();
       if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
-          values.FirstOrDefault() is not { } hashString)
+          values.FirstOrDefault() is not { } hashString ||
+          string.IsNullOrWhiteSpace(hashString))
       {
-        return Result.Fail<byte[]>("Failed to get agent file hash.");
+        return Result.Fail<byte[]>("Failed to get agent file hash. 'Content-Hash' header missing or empty.");
       }
 
       var fileHash = Convert.FromHexString(hashString);
@@ -364,9 +353,10 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
 
       if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
-          values.FirstOrDefault() is not { } hashString)
+          values.FirstOrDefault() is not { } hashString ||
+          string.IsNullOrWhiteSpace(hashString))
       {
-        return Result.Fail<byte[]>("Failed to get desktop client file hash. 'Content-Hash' header missing.");
+        return Result.Fail<byte[]>("Failed to get desktop client file hash. 'Content-Hash' header missing or empty.");
       }
 
       var fileHash = Convert.FromHexString(hashString);
@@ -409,6 +399,18 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/contents", dto);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
+    });
+  }
+
+  public async Task<Result<long>> GetFileUploadMaxSize()
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.UserServerSettingsEndpoint}/file-upload-max-size");
+      response.EnsureSuccessStatusCode();
+      var dto = await response.Content.ReadFromJsonAsync<FileUploadMaxSizeResponseDto>()
+        ?? throw new HttpRequestException("The server response was empty.");
+      return dto.MaxFileSize;
     });
   }
 
@@ -585,31 +587,15 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> UploadFile(Guid deviceId, string targetDirectory, string fileName, Stream fileStream, string contentType)
-  {
-    return await UploadFile(deviceId, targetDirectory, fileName, fileStream, contentType, overwrite: false);
-  }
-
-  public async Task<Result> UploadFile(Guid deviceId, string targetDirectory, string fileName, Stream fileStream, string contentType, bool overwrite)
+  public async Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName)
   {
     return await TryCallApi(async () =>
     {
-      using var formData = new MultipartFormDataContent();
-
-      var streamContent = new StreamContent(fileStream);
-      if (string.IsNullOrWhiteSpace(contentType))
-      {
-        contentType = "application/octet-stream";
-      }
-      streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-
-      formData.Add(streamContent, "file", fileName);
-      formData.Add(new StringContent(deviceId.ToString()), "deviceId");
-      formData.Add(new StringContent(targetDirectory), "targetDirectory");
-      formData.Add(new StringContent(overwrite.ToString()), "overwrite");
-
-      using var response = await _client.PostAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/upload", formData);
+      var requestDto = new ValidateFilePathRequestDto(deviceId, directoryPath, fileName);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/validate-path/{deviceId}", requestDto);
       response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ??
+        new ValidateFilePathResponseDto(false, "Failed to deserialize response");
     });
   }
 
@@ -624,6 +610,12 @@ public class ControlrApi(
     {
       return Result
         .Fail(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (OperationCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+    {
+      return Result
+        .Fail(ex, "The operation was canceled by the caller.")
         .Log(_logger);
     }
     catch (Exception ex)

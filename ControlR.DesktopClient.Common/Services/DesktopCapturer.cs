@@ -15,15 +15,44 @@ using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.Services;
 
+/// <summary>
+/// Responsible for capturing the desktop and streaming it to a consumer.
+/// </summary>
 public interface IDesktopCapturer : IAsyncDisposable
 {
-  Task ChangeDisplays(string displayId);
+    /// <summary>
+    /// Changes the display that is being captured.
+    /// </summary>
+    /// <param name="displayId">The ID of the display to switch to.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ChangeDisplays(string displayId);
 
-  IAsyncEnumerable<ScreenRegionDto> GetCaptureStream(CancellationToken cancellationToken);
-  Task RequestKeyFrame();
+    /// <summary>
+    /// Gets an asynchronous stream of captured screen regions.
+    /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation.</param>
+    /// <returns>An <see cref="IAsyncEnumerable{T}"/> of <see cref="ScreenRegionDto"/>.</returns>
+    IAsyncEnumerable<ScreenRegionDto> GetCaptureStream(CancellationToken cancellationToken);
 
-  Task StartCapturingChanges(CancellationToken cancellationToken);
-  bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display);
+    /// <summary>
+    /// Forces the next frame to be a key frame.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task RequestKeyFrame();
+
+    /// <summary>
+    /// Starts the process of capturing screen changes.
+    /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task StartCapturingChanges(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tries to get the display that is currently selected for capture.
+    /// </summary>
+    /// <param name="display">When this method returns, contains the selected display, if found; otherwise, null.</param>
+    /// <returns>true if a display is selected; otherwise, false.</returns>
+    bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display);
 }
 
 internal class DesktopCapturer : IDesktopCapturer
@@ -48,7 +77,6 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
-  private readonly TimeSpan _waitForBandwidthTimeout = TimeSpan.FromMilliseconds(250);
   private Task? _captureTask;
   private bool _disposedValue;
   private bool _forceKeyFrame = true;
@@ -308,12 +336,7 @@ internal class DesktopCapturer : IDesktopCapturer
       return true;
     }
 
-    if (_lastMonitorArea != selectedDisplay.MonitorArea)
-    {
-      return true;
-    }
-
-    return false;
+    return _lastMonitorArea != selectedDisplay.MonitorArea;
   }
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
@@ -324,9 +347,9 @@ internal class DesktopCapturer : IDesktopCapturer
     {
       try
       {
-        await ThrottleCapturing(cancellationToken);
+        await _captureMetrics.WaitForBandwidth(cancellationToken);
 
-        // Wait for space before capturing the screen.  We want the most recent image possible.
+        // Wait for a space before capturing the screen.  We want the most recent image possible.
         if (!await _captureChannel.Writer.WaitToWriteAsync(cancellationToken))
         {
           _logger.LogWarning("Capture channel is closed. Stopping capture.");
@@ -344,7 +367,7 @@ internal class DesktopCapturer : IDesktopCapturer
               targetDisplay: selectedDisplay,
               captureCursor: false);
 
-        if (currentCapture.HadNoChanges)
+        if (currentCapture.HadNoChanges && !_forceKeyFrame)
         {
           // Nothing changed. Skip encoding.
           await Task.Delay(_noChangeDelay, cancellationToken);
@@ -409,23 +432,6 @@ internal class DesktopCapturer : IDesktopCapturer
       {
         _captureMetrics.MarkFrameSent();
       }
-    }
-  }
-
-  private async Task ThrottleCapturing(CancellationToken cancellationToken)
-  {
-    try
-    {
-      if (_captureMetrics.Mbps > CaptureMetricsBase.MaxMbps)
-      {
-        using var cts = new CancellationTokenSource(_waitForBandwidthTimeout, _timeProvider);
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-        await _captureMetrics.WaitForBandwidth(linkedCts.Token);
-      }
-    }
-    catch (OperationCanceledException)
-    {
-      _logger.LogDebug("Throttle timed out.");
     }
   }
 }

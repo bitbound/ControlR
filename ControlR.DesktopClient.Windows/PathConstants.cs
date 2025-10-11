@@ -16,14 +16,14 @@ public static class PathConstants
   private static string AppendSubDirectories(string rootDir, string? instanceId)
   {
     if (SystemEnvironment.Instance.IsDebug)
-      {
-        rootDir = Path.Combine(rootDir, "Debug");
-      }
-      if (!string.IsNullOrWhiteSpace(instanceId))
-      {
-        rootDir = Path.Combine(rootDir, instanceId);
-      }
+    {
+      rootDir = Path.Combine(rootDir, "Debug");
+    }
+    if (!string.IsNullOrWhiteSpace(instanceId))
+    {
+      rootDir = Path.Combine(rootDir, instanceId);
+    }
 
-      return Directory.CreateDirectory(rootDir).FullName;
+    return Directory.CreateDirectory(rootDir).FullName;
   }
 }

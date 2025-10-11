@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <ItemGroup>
-        <PackageReference Include="MessagePack" Version="3.1.4" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
-        <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+  <ItemGroup>
+    <PackageReference Include="MessagePack" Version="3.1.4" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
 
-    </ItemGroup>
+  </ItemGroup>
 
-    <ItemGroup>
-        <EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
-    </ItemGroup>
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
+  </ItemGroup>
 
 </Project>

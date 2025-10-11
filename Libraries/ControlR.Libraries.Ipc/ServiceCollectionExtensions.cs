@@ -2,7 +2,7 @@
 
 namespace ControlR.Libraries.Ipc;
 
-public static class IServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
   public static IServiceCollection AddControlrIpc(this IServiceCollection services)
   {

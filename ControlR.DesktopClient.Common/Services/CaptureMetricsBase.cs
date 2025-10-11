@@ -4,6 +4,7 @@ using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
@@ -16,10 +17,13 @@ namespace ControlR.DesktopClient.Common.Services;
 public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundService, ICaptureMetrics
 {
   public const double MaxMbps = 10;
-  protected readonly ILogger<CaptureMetricsBase> _logger = serviceProvider.GetRequiredService<ILogger<CaptureMetricsBase>>();
-  protected readonly IMessenger _messenger = serviceProvider.GetRequiredService<IMessenger>();
-  protected readonly IProcessManager _processManager = serviceProvider.GetRequiredService<IProcessManager>();
-  protected readonly ISystemEnvironment _systemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
+  protected readonly IProcessManager ProcessManager = serviceProvider.GetRequiredService<IProcessManager>();
+  protected readonly ISystemEnvironment SystemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
+
+  private readonly ILogger<CaptureMetricsBase> _logger =
+    serviceProvider.GetRequiredService<ILogger<CaptureMetricsBase>>();
+
+  private readonly IMessenger _messenger = serviceProvider.GetRequiredService<IMessenger>();
 
   private readonly ManualResetEventAsync _bandwidthAvailableSignal = new();
   private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
@@ -27,14 +31,13 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
   private readonly TimeSpan _processInterval = TimeSpan.FromSeconds(.1);
   private readonly TimeProvider _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
-  private double _fps;
-  private bool _isUsingGpu;
-  private double _mbps;
 
-  public double Fps => _fps;
+  public double Fps { get; private set; }
 
-  public bool IsUsingGpu => _isUsingGpu;
-  public double Mbps => _mbps;
+  public bool IsUsingGpu { get; private set; }
+
+  public double Mbps { get; private set; }
+
   public override void Dispose()
   {
     base.Dispose();
@@ -44,23 +47,19 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
 
   public void MarkBytesSent(int length)
   {
-    lock (_bytesSent)
-    {
-      _bytesSent.Enqueue(new SentPayload(length, _timeProvider.GetUtcNow()));
-    }
+    using var acquiredLock = _bytesSent.Lock();
+    _bytesSent.Enqueue(new SentPayload(length, _timeProvider.GetUtcNow()));
   }
 
   public void MarkFrameSent()
   {
-    lock (_framesSent)
-    {
-      _framesSent.Enqueue(_timeProvider.GetUtcNow());
-    }
+    using var acquiredLock = _framesSent.Lock();
+    _framesSent.Enqueue(_timeProvider.GetUtcNow());
   }
 
   public void SetIsUsingGpu(bool isUsingGpu)
   {
-    _isUsingGpu = isUsingGpu;
+    IsUsingGpu = isUsingGpu;
   }
 
   public async Task WaitForBandwidth(CancellationToken cancellationToken)
@@ -78,7 +77,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
         var processTask = ProcessMetrics(cts.Token);
         var broadcastTask = BroadcastMetrics(cts.Token);
         await Task.WhenAll(processTask, broadcastTask);
-        cts.Cancel();
+        await cts.CancelAsync();
       }
       catch (OperationCanceledException)
       {
@@ -136,30 +135,31 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
 
   private SentPayload[] GetBytesSent()
   {
-    lock (_bytesSent)
+    using var acquiredLock = _bytesSent.Lock();
+    
+    while (
+      _bytesSent.TryPeek(out var payload) &&
+      payload.Timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
     {
-      while (
-        _bytesSent.TryPeek(out var payload) &&
-        payload.Timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
-      {
-        _ = _bytesSent.TryDequeue(out _);
-      }
-      return [.. _bytesSent];
+      _ = _bytesSent.TryDequeue(out _);
     }
+
+    return [.. _bytesSent];
   }
+
   private DateTimeOffset[] GetFramesSent()
   {
-    lock (_framesSent)
+    using var acquiredLock = _framesSent.Lock();
+    while (
+      _framesSent.TryPeek(out var timestamp) &&
+      timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
     {
-      while (
-        _framesSent.TryPeek(out var timestamp) &&
-        timestamp.Add(_broadcastInterval) < _timeProvider.GetUtcNow())
-      {
-        _ = _framesSent.TryDequeue(out _);
-      }
-      return [.. _framesSent];
+      _ = _framesSent.TryDequeue(out _);
     }
+
+    return [.. _framesSent];
   }
+
   private async Task ProcessMetrics(CancellationToken cancellationToken)
   {
     using var timer = new PeriodicTimerEx(_processInterval, _timeProvider);
@@ -170,39 +170,28 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
         var framesSent = GetFramesSent();
         var bytesSent = GetBytesSent();
 
-        if (framesSent.Length >= 2)
+        Fps = framesSent.Length switch
         {
-          _fps = framesSent.Length / _broadcastInterval.TotalSeconds;
-        }
-        else if (framesSent.Length == 1)
-        {
-          _fps = 1;
-        }
-        else
-        {
-          _fps = 0;
-        }
+          >= 2 => framesSent.Length / _broadcastInterval.TotalSeconds,
+          1 => 1,
+          _ => 0
+        };
 
-        if (bytesSent.Length >= 2)
+        Mbps = bytesSent.Length switch
         {
-          _mbps = ConvertBytesToMbps(bytesSent.Sum(x => x.Size), _broadcastInterval);
-        }
-        else if (bytesSent.Length == 1)
-        {
-          _mbps = ConvertBytesToMbps(bytesSent.First().Size, _broadcastInterval);
-        }
-        else
-        {
-          _mbps = 0;
-        }
+          >= 2 => ConvertBytesToMbps(bytesSent.Sum(x => x.Size), _broadcastInterval),
+          1 => ConvertBytesToMbps(bytesSent.First().Size, _broadcastInterval),
+          _ => 0
+        };
 
-        if (_mbps >= MaxMbps && _bandwidthAvailableSignal.IsSet)
+        switch (Mbps)
         {
-          _bandwidthAvailableSignal.Reset();
-        }
-        else if (_mbps < MaxMbps && !_bandwidthAvailableSignal.IsSet)
-        {
-          _bandwidthAvailableSignal.Set();
+          case >= MaxMbps when _bandwidthAvailableSignal.IsSet:
+            _bandwidthAvailableSignal.Reset();
+            break;
+          case < MaxMbps when !_bandwidthAvailableSignal.IsSet:
+            _bandwidthAvailableSignal.Set();
+            break;
         }
       }
       catch (OperationCanceledException ex)

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
@@ -59,7 +58,7 @@ public class RemoteControlHostManager(
 #endif
 
       using var app = builder.Build();
-      await using var session = CreateRemoteControlSession(requestDto, app);
+      await using var session = CreateRemoteControlSession(requestDto);
       await app.RunAsync(session.CancellationTokenSource.Token);
 
       _logger.LogInformation(
@@ -95,20 +94,18 @@ public class RemoteControlHostManager(
     await session.CancellationTokenSource.CancelAsync();
   }
 
-  private RemoteControlSession CreateRemoteControlSession(RemoteControlRequestIpcDto requestDto, IHost app)
+  private RemoteControlSession CreateRemoteControlSession(RemoteControlRequestIpcDto requestDto)
   {
-    var session = new RemoteControlSession(requestDto, app);
-    return _sessions.AddOrUpdate(requestDto.SessionId, session, (key, value) =>
+    var session = new RemoteControlSession();
+    return _sessions.AddOrUpdate(requestDto.SessionId, session, (_, value) =>
     {
       value.DisposeAsync().Forget();
       return session;
     });
   }
 
-  private class RemoteControlSession(RemoteControlRequestIpcDto requestDto, IHost host) : IAsyncDisposable
+  private class RemoteControlSession : IAsyncDisposable
   {
-    public RemoteControlRequestIpcDto RequestDto => requestDto;
-    public IHost Host => host;
     public CancellationTokenSource CancellationTokenSource { get; } = new();
 
     public async ValueTask DisposeAsync()
@@ -118,7 +115,10 @@ public class RemoteControlHostManager(
         await CancellationTokenSource.CancelAsync();
         CancellationTokenSource.Dispose();
       }
-      catch { }
+      catch
+      {
+        // Ignore.
+      }
     }
   };
 }

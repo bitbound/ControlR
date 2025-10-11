@@ -10,17 +10,9 @@ namespace ControlR.Agent.Startup;
 
 internal static class CommandProvider
 {
-  private static readonly string[] _deviceTagsAlias = ["-g", "--device-tags"];
-  private static readonly string[] _installerKeyAlias = ["-k", "--installer-key"];
-  private static readonly string[] _instanceIdAlias = ["-i", "--instance-id"];
-  private static readonly string[] _serverUriAlias = ["-s", "--server-uri"];
-  private static readonly string[] _tenantIdAlias = ["-t", "--tenant-id"];
-
   internal static Command GetInstallCommand(string[] args)
   {
-    var serverUriOption = new Option<Uri?>(
-      "ServerUri",
-      _serverUriAlias)
+    var serverUriOption = new Option<Uri?>("-s", "--server-uri")
     {
       Description = 
         "The fully-qualified server URI to which the agent will connect " +
@@ -45,9 +37,7 @@ internal static class CommandProvider
       }
     };
 
-    var instanceIdOption = new Option<string>(
-      "InstanceId",
-      _instanceIdAlias)
+    var instanceIdOption = new Option<string>("-i", "--instance-id")
     {
       Description = 
         "An instance ID for this agent installation, which allows multiple agent installations.  " +
@@ -56,28 +46,29 @@ internal static class CommandProvider
 
     instanceIdOption.Validators.Add(ValidateInstanceId);
 
-    var deviceTagsOption = new Option<string?>(
-      "DeviceTags",
-      _deviceTagsAlias)
+    var deviceTagsOption = new Option<string?>("-g", "--device-tags")
     {
       Description = "An optional, comma-separated list of tags to which the agent will be assigned."
     };
 
-    var tenantIdOption = new Option<Guid?>(
-      "TenantId",
-      _tenantIdAlias)
+    var tenantIdOption = new Option<Guid?>("-t", "--tenant-id")
     {
       Required = true,
       Description = "The tenant ID to which the agent will be assigned."
     };
 
-    var installerKeyOption = new Option<string?>(
-      "InstallerKey",
-      _installerKeyAlias)
+    var installerKeyOption = new Option<string?>("-k", "--installer-key")
     {
       Description = "An access key that will allow the device to be created on the server."
     };
 
+    var deviceIdOption = new Option<Guid?>("-d", "--device-id")
+    {
+      Required = false,
+      Description = 
+        "An optional device ID to which the agent will be assigned.  If omitted, the installer will either " +
+        "use the existing device ID saved on the system (if present) or create a new, random ID."
+    };
 
     var installCommand = new Command("install", "Install the ControlR service.")
     {
@@ -86,6 +77,7 @@ internal static class CommandProvider
       deviceTagsOption,
       tenantIdOption,
       installerKeyOption,
+      deviceIdOption,
     };
 
     installCommand.SetAction(async parseResult =>
@@ -95,6 +87,7 @@ internal static class CommandProvider
       var deviceTags = parseResult.GetValue(deviceTagsOption);
       var tenantId = parseResult.GetRequiredValue(tenantIdOption);
       var installerKey = parseResult.GetValue(installerKeyOption);
+      var deviceId = parseResult.GetValue(deviceIdOption);
 
       var tags = deviceTags is null
       ? []
@@ -108,7 +101,7 @@ internal static class CommandProvider
 
       using var host = CreateHost(StartupMode.Install, args, instanceId, serverUri);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
-      await installer.Install(serverUri, tenantId, installerKey, tags);
+      await installer.Install(serverUri, tenantId, installerKey, deviceId, tags);
       await host.RunAsync();
     });
 
@@ -117,9 +110,7 @@ internal static class CommandProvider
 
   internal static Command GetRunCommand(string[] args)
   {
-    var instanceIdOption = new Option<string?>(
-      "InstanceId",
-      _instanceIdAlias)
+    var instanceIdOption = new Option<string?>("-i", "--instance-id")
     {
       Description = "The instance ID of the agent, which can be used for multiple agent installations."
     };
@@ -143,9 +134,7 @@ internal static class CommandProvider
 
   internal static Command GetUninstallCommand(string[] args)
   {
-    var instanceIdOption = new Option<string?>(
-      "InstanceId",
-      _instanceIdAlias)
+    var instanceIdOption = new Option<string?>("-i", "--instance-id")
     {
       Description = "The instance ID of the agent, which can be used for multiple agent installations."
     };
@@ -183,7 +172,7 @@ internal static class CommandProvider
 
   private static void ValidateInstanceId(OptionResult optionResult)
   {
-    var id = optionResult.GetValueOrDefault<string>();
+    var id = optionResult.GetValueOrDefault<string?>();
     char[] illegalChars = [.. Path.GetInvalidPathChars(), ' '];
 
     if (id is not null && id.IndexOfAny(illegalChars) >= 0)

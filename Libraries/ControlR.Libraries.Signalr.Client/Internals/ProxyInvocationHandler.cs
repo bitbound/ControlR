@@ -21,6 +21,10 @@ internal sealed class ProxyInvocationHandler<THub, TClient>(HubConnection<THub, 
 {
   public async Task<T> InvokeAsync<T>(MethodInfo method, object[] args)
   {
+    if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
+    {
+      return await hubConnection.Connection.InvokeCoreAsync<T>(method.Name, args[..^1], cancellationToken: cancellationToken);
+    }
     return await hubConnection.Connection.InvokeCoreAsync<T>(method.Name, args);
   }
 
@@ -34,31 +38,43 @@ internal sealed class ProxyInvocationHandler<THub, TClient>(HubConnection<THub, 
     if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
     {
       return RunSync(() =>
-        hubConnection.Connection.StreamAsChannelCoreAsync<T>(method.Name, args[..^1], cancellationToken));
+        hubConnection.Connection.StreamAsChannelCoreAsync<T>(method.Name, args[..^1], cancellationToken: cancellationToken));
     }
     return RunSync(() => hubConnection.Connection.StreamAsChannelCoreAsync<T>(method.Name, args));
   }
 
   public async ValueTask<T> InvokeValueTaskAsync<T>(MethodInfo method, object[] args)
   {
+    if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
+    {
+      return await hubConnection.Connection.InvokeCoreAsync<T>(method.Name, args[..^1], cancellationToken: cancellationToken);
+    }
     return await hubConnection.Connection.InvokeCoreAsync<T>(method.Name, args);
   }
 
   public async Task InvokeVoidAsync(MethodInfo method, object[] args)
   {
+    if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
+    {
+      await hubConnection.Connection.InvokeCoreAsync(method.Name, args[..^1], cancellationToken: cancellationToken);
+      return;
+    }
     await hubConnection.Connection.InvokeCoreAsync(method.Name, args);
   }
   public async Task SendAsync(MethodInfo method, object[] args)
   {
-    // For methods with client-to-server streaming params (IAsyncEnumerable<T>),
-    // SignalR requires SendCoreAsync (no return) instead of InvokeCoreAsync.
+    if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
+    {
+      await hubConnection.Connection.SendCoreAsync(method.Name, args[..^1], cancellationToken: cancellationToken);
+      return;
+    }
     await hubConnection.Connection.SendCoreAsync(method.Name, args);
   }
   public IAsyncEnumerable<T> Stream<T>(MethodInfo method, object[] args)
   {
     if (args.Length > 0 && args[^1] is CancellationToken cancellationToken)
     {
-      return hubConnection.Connection.StreamAsyncCore<T>(method.Name, args[..^1], cancellationToken);
+      return hubConnection.Connection.StreamAsyncCore<T>(method.Name, args[..^1], cancellationToken: cancellationToken);
     }
     return hubConnection.Connection.StreamAsyncCore<T>(method.Name, args);
   }

@@ -15,6 +15,7 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+// ReSharper disable UnusedMethodReturnValue.Local
 
 namespace ControlR.DesktopClient;
 
@@ -81,8 +82,7 @@ internal static class StaticServiceProvider
       .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()
       .AddSingleton<IDialogProvider, DialogProvider>()
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
-      .AddSingleton<IpcClientAccessor>()
-      .AddSingleton<IIpcClientAccessor>(provider => provider.GetRequiredService<IpcClientAccessor>())
+      .AddSingleton<IIpcClientAccessor, IpcClientAccessor>()
       .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IImageUtility, ImageUtility>()
@@ -134,14 +134,12 @@ internal static class StaticServiceProvider
       return services;
     }
 
-    var logsPath = string.Empty;
-
 #if WINDOWS_BUILD
-    logsPath = Windows.PathConstants.GetLogsPath(instanceId);
+    var logsPath = PathConstants.GetLogsPath(instanceId);
 #elif MAC_BUILD
-    logsPath = Mac.PathConstants.GetLogsPath(instanceId);
+    var logsPath = Mac.PathConstants.GetLogsPath(instanceId);
 #elif LINUX_BUILD
-    logsPath = Linux.PathConstants.GetLogsPath(instanceId);
+    var logsPath = Linux.PathConstants.GetLogsPath(instanceId);
 #else
     throw new PlatformNotSupportedException("Unsupported operating system.");
 #endif

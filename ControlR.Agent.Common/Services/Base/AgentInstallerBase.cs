@@ -99,7 +99,7 @@ internal abstract class AgentInstallerBase(
     }
   }
 
-  protected async Task UpdateAppSettings(Uri? serverUri, Guid? tenantId)
+  protected async Task UpdateAppSettings(Uri? serverUri, Guid? tenantId, Guid? deviceId)
   {
     using var _ = Logger.BeginMemberScope();
     var currentOptions = AppOptions.CurrentValue;
@@ -112,17 +112,26 @@ internal abstract class AgentInstallerBase(
     var updatedTenantId =
       tenantId ??
       currentOptions.TenantId;
+    
+    var updatedDeviceId =
+      deviceId ??
+      currentOptions.DeviceId;
 
     Logger.LogInformation("Setting server URI to {ServerUri}.", updatedServerUri);
     currentOptions.ServerUri = updatedServerUri;
 
     Logger.LogInformation("Setting tenant ID to {TenantId}.", updatedTenantId);
     currentOptions.TenantId = updatedTenantId;
-
-    if (currentOptions.DeviceId == Guid.Empty)
+    
+    if (updatedDeviceId == Guid.Empty)
     {
       Logger.LogInformation("DeviceId is empty.  Generating new one.");
       currentOptions.DeviceId = Guid.NewGuid();
+    }
+    else
+    {
+      Logger.LogInformation("Setting device ID to {DeviceId}.", updatedDeviceId);
+      currentOptions.DeviceId = updatedDeviceId;
     }
 
     Logger.LogInformation("Writing results to disk.");

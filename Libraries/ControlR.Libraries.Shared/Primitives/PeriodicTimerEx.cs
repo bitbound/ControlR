@@ -2,7 +2,7 @@ namespace ControlR.Libraries.Shared.Primitives;
 
 public sealed class PeriodicTimerEx(TimeSpan interval, TimeProvider timeProvider) : IDisposable
 {
-  private readonly PeriodicTimer _tiemr = new(interval, timeProvider);
+  private readonly PeriodicTimer _timer = new(interval, timeProvider);
   private bool _disposedValue;
 
   public void Dispose()
@@ -16,7 +16,7 @@ public sealed class PeriodicTimerEx(TimeSpan interval, TimeProvider timeProvider
   {
     try
     {
-      return await _tiemr.WaitForNextTickAsync(cancellationToken);
+      return await _timer.WaitForNextTickAsync(cancellationToken);
 
     }
     catch (OperationCanceledException) when (!throwOnCancellation)
@@ -31,7 +31,7 @@ public sealed class PeriodicTimerEx(TimeSpan interval, TimeProvider timeProvider
     {
       if (disposing)
       {
-        _tiemr.Dispose();
+        _timer.Dispose();
       }
 
       _disposedValue = true;

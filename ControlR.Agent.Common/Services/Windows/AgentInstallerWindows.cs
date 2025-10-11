@@ -40,6 +40,7 @@ internal class AgentInstallerWindows(
     Uri? serverUri = null,
     Guid? tenantId = null,
     string? installerKey = null,
+    Guid? deviceId = null,
     Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
@@ -107,7 +108,7 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      await UpdateAppSettings(serverUri, tenantId);
+      await UpdateAppSettings(serverUri, tenantId, deviceId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
       if (!createResult.IsSuccess)

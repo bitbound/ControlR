@@ -7,6 +7,7 @@ namespace ControlR.Web.Client.Components.Pages;
 public partial class Deploy
 {
   private bool _addTags;
+  private string? _deviceId;
   private DateTime? _inputExpirationDate;
   private TimeSpan? _inputExpirationTime;
   private string? _installerKey;
@@ -34,6 +35,19 @@ public partial class Deploy
 
   [Inject]
   public required TimeProvider TimeProvider { get; init; }
+
+  private static Func<string?, string?> DeviceIdValidator => deviceId =>
+  {
+    if (string.IsNullOrEmpty(deviceId))
+    {
+      return null;
+    }
+
+    return Guid.TryParse(deviceId, out _)
+      ? null
+      : "Must be a valid GUID.";
+  };
+
   private string MacArm64DeployScript
   {
     get
@@ -78,22 +92,22 @@ public partial class Deploy
     }
   }
 
-  private string WindowsX86DeployScript
+  private string WindowsX64DeployScript
   {
     get
     {
-      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
+      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x64/ControlR.Agent.exe");
       return "$ProgressPreference = \"SilentlyContinue\"; " +
              $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
              $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }
 
-  private string WindowsX64DeployScript
+  private string WindowsX86DeployScript
   {
     get
     {
-      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x64/ControlR.Agent.exe");
+      var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
       return "$ProgressPreference = \"SilentlyContinue\"; " +
              $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
              $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
@@ -144,17 +158,6 @@ public partial class Deploy
     await Clipboard.SetText(UbuntuDeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
-  private async Task CopyWindowsX86Script()
-  {
-    if (_tenantId is null)
-    {
-      Snackbar.Add("Failed to find TenantId", Severity.Error);
-      return;
-    }
-
-    await Clipboard.SetText(WindowsX86DeployScript);
-    Snackbar.Add("Install script copied to clipboard", Severity.Success);
-  }
 
   private async Task CopyWindowsX64Script()
   {
@@ -165,6 +168,18 @@ public partial class Deploy
     }
 
     await Clipboard.SetText(WindowsX64DeployScript);
+    Snackbar.Add("Install script copied to clipboard", Severity.Success);
+  }
+
+  private async Task CopyWindowsX86Script()
+  {
+    if (_tenantId is null)
+    {
+      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      return;
+    }
+
+    await Clipboard.SetText(WindowsX86DeployScript);
     Snackbar.Add("Install script copied to clipboard", Severity.Success);
   }
 
@@ -180,8 +195,6 @@ public partial class Deploy
         break;
       case InstallerKeyType.TimeBased:
         await GenerateTimeBasedKey();
-        break;
-      default:
         break;
     }
   }
@@ -211,6 +224,7 @@ public partial class Deploy
       Snackbar.Add("Failed to create installer key", Severity.Error);
       return;
     }
+
     _keyExpiration = expirationDate.ToString("g");
     _installerKey = createResult.Value.AccessKey;
   }
@@ -230,18 +244,28 @@ public partial class Deploy
       Snackbar.Add("Failed to create installer key", Severity.Error);
       return;
     }
+
     _installerKey = createResult.Value.AccessKey;
     if (createResult.Value.Expiration.HasValue)
     {
       _keyExpiration = createResult.Value.Expiration.Value.ToLocalTime().ToString("g");
     }
   }
+
   private string GetCommonArgs()
   {
     var serverUri = GetServerUri();
     var args = $"-s {serverUri} -i {serverUri.Authority} -t {_tenantId} -k {_installerKey}";
 
-    if (!_addTags || _selectedTags is null) return args;
+    if (!string.IsNullOrWhiteSpace(_deviceId) && Guid.TryParse(_deviceId, out _))
+    {
+      args += $" -d {_deviceId}";
+    }
+
+    if (!_addTags || _selectedTags?.Any() != true)
+    {
+      return args;
+    }
 
     var tags = string.Join(",", _selectedTags.Select(t => t.Id));
     args += $" -g {tags}";

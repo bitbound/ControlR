@@ -38,6 +38,7 @@ internal class AgentInstallerLinux(
     Uri? serverUri = null,
     Guid? tenantId = null,
     string? installerKey = null,
+    Guid? deviceId = null,
     Guid[]? tags = null)
   {
     if (!await _installLock.WaitAsync(0))
@@ -69,7 +70,6 @@ internal class AgentInstallerLinux(
       var installDir = GetInstallDirectory();
 
       var exePath = _environment.StartupExePath;
-      var fileName = Path.GetFileName(exePath);
       var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
       _fileSystem.CreateDirectory(installDir);
 
@@ -123,7 +123,7 @@ internal class AgentInstallerLinux(
 
       await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
       await _fileSystem.WriteAllTextAsync(GetDesktopServiceFilePath(), desktopServiceFile);
-      await UpdateAppSettings(serverUri, tenantId);
+      await UpdateAppSettings(serverUri, tenantId, deviceId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
       if (!createResult.IsSuccess)

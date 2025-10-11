@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿using System.Threading.Channels;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Models;
@@ -24,4 +25,5 @@ public interface IViewerHub
   Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);
   Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task UninstallAgent(Guid deviceId, string reason);
+  Task<Result> UploadFile(FileUploadMetadata metadata, ChannelReader<byte[]> fileStream);
 }

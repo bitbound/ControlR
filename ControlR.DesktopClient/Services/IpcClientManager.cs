@@ -15,7 +15,7 @@ public class IpcClientManager(
   TimeProvider timeProvider,
   IRemoteControlHostManager remoteControlHostManager,
   IChatSessionManager chatSessionManager,
-  IpcClientAccessor ipcClientAccessor,
+  IIpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
   IProcessManager processManager,
   IScreenGrabber screenGrabber,
@@ -24,7 +24,7 @@ public class IpcClientManager(
   ILogger<IpcClientManager> logger) : BackgroundService
 {
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
-  private readonly IpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
+  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
@@ -36,10 +36,10 @@ public class IpcClientManager(
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    await AcceptClientConnections(stoppingToken);
+    await CreateClientConnection(stoppingToken);
   }
 
-  private async Task AcceptClientConnections(CancellationToken stoppingToken)
+  private async Task CreateClientConnection(CancellationToken stoppingToken)
   {
     var processId = _processManager.GetCurrentProcess().Id;
     var pipeName = IpcPipeNames.GetPipeName(_desktopClientOptions.Value.InstanceId);
@@ -154,8 +154,8 @@ public class IpcClientManager(
       }
 
       // Encode as JPEG
-      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75, compressOutput: false); // 75% quality
-      if (jpegData is null || jpegData.Length == 0)
+      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75, compressOutput: false);
+      if (jpegData.Length == 0)
       {
         _logger.LogWarning("Failed to encode JPEG: No data returned");
         return new DesktopPreviewResponseIpcDto([], false, "Failed to encode JPEG");

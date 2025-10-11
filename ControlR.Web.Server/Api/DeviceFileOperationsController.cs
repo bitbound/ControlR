@@ -147,6 +147,7 @@ public class DeviceFileOperationsController : ControllerBase
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions,
     [FromServices] ILogger<DeviceFileOperationsController> logger,
     CancellationToken cancellationToken)
   {
@@ -202,25 +203,23 @@ public class DeviceFileOperationsController : ControllerBase
         return StatusCode(StatusCodes.Status500InternalServerError);
       }
 
-      // Wait for the agent to start streaming
-      await signaler.ReadySignal.Wait(cancellationToken);
-
-      if (signaler.Stream is null)
+      var fileSize = requestResult.Value.FileSize;
+      var maxFileSize = appOptions.CurrentValue.MaxFileTransferSize;
+      if (maxFileSize > 0 && fileSize > maxFileSize)
       {
-        logger.LogWarning("No stream available for file download from device {DeviceId}.", deviceId);
-        return StatusCode(StatusCodes.Status404NotFound);
+        return StatusCode(StatusCodes.Status413RequestEntityTooLarge);
       }
 
       // Determine file name for download
       var downloadFileName = requestResult.Value.FileDisplayName;
-      
+
       // Set response headers for file download
       Response.ContentType = "application/octet-stream";
       Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{downloadFileName}\"");
-      Response.Headers.ContentLength = requestResult.Value.FileSize;
+      Response.Headers.ContentLength = fileSize;
 
       // Stream the file content to the response
-      await foreach (var chunk in signaler.Stream.WithCancellation(cancellationToken))
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
         await Response.Body.WriteAsync(chunk, cancellationToken);
       }
@@ -241,107 +240,6 @@ public class DeviceFileOperationsController : ControllerBase
       logger.LogError(ex, "Error downloading file {FilePath} from device {DeviceId}",
         filePath, deviceId);
       return StatusCode(500, "An error occurred during file download.");
-    }
-  }
-
-  [HttpPost("upload")]
-  // TODO: Create middleware to make this configurable.
-  [DisableRequestSizeLimit]
-  public async Task<IActionResult> UploadFile(
-    [FromForm] IFormFile? file,
-    [FromForm] Guid deviceId,
-    [FromForm] string targetDirectory,
-    [FromForm] bool overwrite,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IHubStreamStore hubStreamStore,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileOperationsController> logger,
-    CancellationToken cancellationToken = default)
-  {
-    if (file is not { Length: > 0})
-    {
-      return BadRequest("No file provided.");
-    }
-
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
-
-    if (device is null)
-    {
-      logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceAccessByDeviceResourcePolicy.PolicyName);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, deviceId);
-      return Forbid();
-    }
-
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
-    {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
-    }
-
-    var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
-
-    var uploadRequest = new FileUploadHubDto(
-      streamId,
-      targetDirectory,
-      file.FileName,
-      file.Length,
-      overwrite);
-
-    try
-    {
-      // Create chunks and stream to agent
-      await using var fileStream = file.OpenReadStream();
-      var buffer = new byte[30 * 1024]; // 30KB chunks to respect SignalR limits
-
-      var chunks = CreateFileChunks(fileStream, buffer);
-      signaler.SetStream(chunks, device.ConnectionId);
-
-      // Notify the agent about the incoming upload
-      var receiveResult = await agentHub.Clients
-        .Client(device.ConnectionId)
-        .DownloadFileFromViewer(uploadRequest);
-
-      // Signal completion
-      signaler.EndSignal.Set();
-
-      if (receiveResult is null || !receiveResult.IsSuccess)
-      {
-        logger.LogWarning("Failed to upload file {FileName} to device {DeviceId}: {Reason}",
-          file.FileName, deviceId, receiveResult?.Reason ?? "Unknown error");
-        return BadRequest(receiveResult?.Reason ?? "File upload failed.");
-      }
-
-      logger.LogInformation("File upload completed for {FileName} to device {DeviceId}",
-        file.FileName, deviceId);
-
-      return Ok("File uploaded successfully");
-    }
-    catch (OperationCanceledException)
-    {
-      logger.LogWarning("File upload for {FileName} to device {DeviceId} timed out or was canceled.",
-        file.FileName, deviceId);
-      return StatusCode(StatusCodes.Status408RequestTimeout);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error uploading file {FileName} to device {DeviceId}",
-        file.FileName, deviceId);
-      return StatusCode(500, "An error occurred during file upload.");
     }
   }
 
@@ -407,27 +305,6 @@ public class DeviceFileOperationsController : ControllerBase
       logger.LogError(ex, "Error validating file path {FileName} in {DirectoryPath} on device {DeviceId}",
         request.FileName, request.DirectoryPath, deviceId);
       return StatusCode(500, "An error occurred while validating the file path.");
-    }
-  }
-
-  private static async IAsyncEnumerable<byte[]> CreateFileChunks(
-    Stream fileStream,
-    byte[] buffer)
-  {
-    int bytesRead;
-    while ((bytesRead = await fileStream.ReadAsync(buffer)) > 0)
-    {
-      if (bytesRead == buffer.Length)
-      {
-        yield return buffer;
-      }
-      else
-      {
-        // Create a properly sized array for the last chunk
-        var finalChunk = new byte[bytesRead];
-        Array.Copy(buffer, finalChunk, bytesRead);
-        yield return finalChunk;
-      }
     }
   }
 }
