@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;

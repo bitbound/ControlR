@@ -1,44 +1,38 @@
 <Project>
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
 
-		<!-- These API calls take forever. -->
-		<NuGetAudit>false</NuGetAudit>
+        <!-- These API calls take forever. -->
+        <NuGetAudit>false</NuGetAudit>
 
-		<Authors>Jared Goodwin</Authors>
-		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
-		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
-		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
-		<Company>$(Author)</Company>
-    <Description>Open-source remote control and remote access.</Description>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<Configurations>
-			Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux</Configurations>
-	</PropertyGroup>
+        <Authors>Jared Goodwin</Authors>
+        <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+        <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+        <Company>$(Author)</Company>
+        <Description>Open-source remote control and remote access.</Description>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <Configurations>
+            Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux
+        </Configurations>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<!-- TreatWarningsAsErrors can be selectively bypassed here. -->
-		<WarningsNotAsErrors></WarningsNotAsErrors>
-	</PropertyGroup>
+    <PropertyGroup>
+        <!-- Commented code. It can be helpful for examples/docs. -->
+        <NoWarn>S125</NoWarn>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<!-- Commented code. It can be helpful for examples/docs. -->
-		<NoWarn>S125</NoWarn>
-	</PropertyGroup>
+    <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
+        <DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
-    <DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
+        <DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
-    <DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
-    <DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
-  </PropertyGroup>
-
-
+    <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
+        <DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
+    </PropertyGroup>
 </Project>
