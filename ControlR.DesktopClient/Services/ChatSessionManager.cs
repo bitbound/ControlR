@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
@@ -110,7 +108,7 @@ internal class ChatSessionManager(
 
     try
     {
-      // Get the current user name
+      // Get the current username
       var currentUser = Environment.UserName;
 #if WINDOWS_BUILD
       // On Windows, we're running as SYSTEM to allow input to UAC/WinLogon.
@@ -180,9 +178,9 @@ internal class ChatSessionManager(
 
           return newSession;
         },
-        (sessionId, existingSession) =>
+        (_, existingSession) =>
         {
-          if (existingSession.ChatWindow?.PlatformImpl is not { })
+          if (existingSession.ChatWindow?.PlatformImpl is null)
           {
             existingSession.ChatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
             existingSession.ChatWindow.DataContext = _serviceProvider.GetRequiredService<IChatWindowViewModel>();

@@ -406,7 +406,7 @@ internal class AgentHubClient(
         response.JpegData.Length,
         dto.StreamId);
 
-      var channel = Channel.CreateUnbounded<byte[]>();
+      var channel = Channel.CreateBounded<byte[]>(10);
       
       // ReSharper disable AccessToDisposedClosure
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

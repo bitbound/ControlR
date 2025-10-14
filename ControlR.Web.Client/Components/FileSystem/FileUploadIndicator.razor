@@ -1,3 +1,4 @@
+@implements IDisposable
 @using ControlR.Libraries.Shared.IO
 @using ControlR.Libraries.Shared.Helpers
 
@@ -12,7 +13,7 @@
   </MudText>
   
   <MudText Typo="Typo.caption" Class="no-wrap">
-    @($"{UnitsHelper.ToHumanReadableFileSize(_bytesPerSecond)}/s")
+    @($"{UnitsHelper.ToHumanReadableNetworkSpeed(_bytesPerSecond)}")
   </MudText>
 
 </div>
@@ -24,6 +25,7 @@
   private string _fileName = string.Empty;
   private long _lastPosition;
   private DateTime _lastTimestamp;
+  private IDisposable? _observerRegistration;
 
 
   [Parameter]
@@ -39,7 +41,7 @@
     _fileName = File.Name;
     _lastTimestamp = DateTime.UtcNow;
 
-    StreamObserver.OnPositionChanged(async position =>
+    _observerRegistration = StreamObserver.OnPositionChanged(async position =>
     {
       var now = DateTime.UtcNow;
       var timeElapsed = (now - _lastTimestamp).TotalSeconds;
@@ -51,9 +53,14 @@
 
       _lastPosition = position;
       _lastTimestamp = now;
-      _progress = (double)position / File.Size * 100;
+      _progress = Math.Min(100, (double)position / File.Size * 100);
       await InvokeAsync(StateHasChanged);
     });
     return base.OnInitializedAsync();
+  }
+
+  public void Dispose()
+  {
+    _observerRegistration?.Dispose();
   }
 }

@@ -718,7 +718,7 @@ public partial class FileSystem : JsInteropableComponent
         return;
       }
 
-      // Build parent path from all segments except the last one
+      // Build the parent path from all segments except the last one
       var parentPath = segments[0];
       for (var i = 1; i < segments.Length - 1; i++)
       {
@@ -844,7 +844,7 @@ public partial class FileSystem : JsInteropableComponent
         file.ContentType,
         true);
 
-      var channel = Channel.CreateUnbounded<byte[]>();
+      var channel = Channel.CreateBounded<byte[]>(10);
 
       // Write file chunks to channel in the background
       var writeTask = Task.Run(async () =>
