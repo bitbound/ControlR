@@ -115,33 +115,15 @@ public class ImageUtility : IImageUtility
               continue;
             }
 
-            if (row < top)
-            {
-              top = row;
-            }
-            if (row > bottom)
-            {
-              bottom = row;
-            }
-            if (column < left)
-            {
-              left = column;
-            }
-            if (column > right)
-            {
-              right = column;
-            }
-
+            top = Math.Min(top, row);
+            bottom = Math.Max(bottom, row);
+            left = Math.Min(left, column);
+            right = Math.Max(right, column);
           }
         }
 
         if (left <= right && top <= bottom)
         {
-          left = Math.Max(left - 2, 0);
-          top = Math.Max(top - 2, 0);
-          right = Math.Min(right + 2, width);
-          bottom = Math.Min(bottom + 2, height);
-
           return Result.Ok(new SKRect(left, top, right, bottom));
         }
         else

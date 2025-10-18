@@ -79,7 +79,7 @@ internal class DesktopCapturer : IDesktopCapturer
   private readonly TimeProvider _timeProvider;
   private Task? _captureTask;
   private bool _disposedValue;
-  private bool _forceKeyFrame = true;
+  private volatile bool _forceKeyFrame = true;
   private string? _lastDisplayId;
   private Rectangle? _lastMonitorArea;
   private DisplayInfo? _selectedDisplay;

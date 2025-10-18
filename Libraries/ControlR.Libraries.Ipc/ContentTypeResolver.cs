@@ -44,8 +44,8 @@ internal class ContentTypeResolver : IContentTypeResolver
           return assembly.GetTypes(); 
         }
         catch 
-        { 
-          return Array.Empty<Type>(); 
+        {
+          return [];
         }
       })
       .FirstOrDefault(t => t.FullName == typeName || t.Name == typeName);

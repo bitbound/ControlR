@@ -246,13 +246,20 @@ internal sealed class ScreenGrabberWindows(
 
     var numRects = (int)(bufferSizeNeeded / rectSize);
     var dirtyRects = new Rectangle[numRects];
+    var dirtyRectsPtr = (RECT*)NativeMemory.Alloc(bufferSizeNeeded);
 
-    var dirtyRectsPtr = stackalloc RECT[numRects];
-    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
-
-    for (var i = 0; i < numRects; i++)
+    try
     {
-      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
+      outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
+
+      for (var i = 0; i < numRects; i++)
+      {
+        dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
+      }
+    }
+    finally
+    {
+      NativeMemory.Free(dirtyRectsPtr);
     }
 
     return dirtyRects;
@@ -292,7 +299,6 @@ internal sealed class ScreenGrabberWindows(
       {
         hotspotX = iconInfoPtr->xHotspot;
         hotspotY = iconInfoPtr->yHotspot;
-        PInvoke.DestroyIcon(hicon);
       }
 
       var virtualScreen = _displayManager.GetVirtualScreenBounds();

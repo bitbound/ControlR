@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+﻿using ControlR.Libraries.Shared.Extensions;
+using SkiaSharp;
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -37,9 +38,9 @@ public static class BitmapExtensions
   public static SKImage ToSKImage(this Bitmap bitmap)
   {
     var info = new SKImageInfo(bitmap.Width, bitmap.Height);
-    var sKImage = SKImage.Create(info);
-    using SKPixmap pixmap = sKImage.PeekPixels();
+    using var sKImage = SKImage.Create(info).AsMaybeDisposable();
+    using SKPixmap pixmap = sKImage.Value.PeekPixels();
     bitmap.ToSKPixmap(pixmap);
-    return sKImage;
+    return sKImage.Suppress();
   }
 }
