@@ -14,9 +14,9 @@ public interface ICallbackStore
 
   Task InvokeFuncs(MessageWrapper wrapper, Func<MessageWrapper, Task> responseFunc);
 
-  bool TryRemoveAll(Type type);
-
   bool TryRemove(Type type, CallbackToken token);
+
+  bool TryRemoveAll(Type type);
 }
 
 internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<CallbackStore> logger) : ICallbackStore
@@ -25,7 +25,6 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
   private readonly SemaphoreSlim _actionsLock = new(1, 1);
   private readonly ConcurrentDictionary<Type, List<IpcFunc>> _funcs = new();
   private readonly SemaphoreSlim _funcsLock = new(1, 1);
-  private readonly IContentTypeResolver _contentTypeResolver = contentTypeResolver;
   private readonly ILogger<CallbackStore> _logger = logger;
 
   public CallbackToken Add(Type contentType, Action<object> callback)
@@ -35,7 +34,7 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
       _actionsLock.Wait();
       var token = new CallbackToken();
       var action = new IpcAction(contentType, callback, token);
-      _actions.AddOrUpdate(contentType, [action], (k, v) =>
+      _actions.AddOrUpdate(contentType, [action], (_, v) =>
       {
         v.Add(action);
         return v;
@@ -55,7 +54,7 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
       _funcsLock.Wait();
       var token = new CallbackToken();
       var func = new IpcFunc(handler, contentType, returnType, token);
-      _funcs.AddOrUpdate(contentType, [func], (k, v) =>
+      _funcs.AddOrUpdate(contentType, [func], (_, v) =>
       {
         v.Add(func);
         return v;
@@ -70,12 +69,7 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
 
   public async Task InvokeActions(MessageWrapper wrapper)
   {
-    if (wrapper is null)
-    {
-      return;
-    }
-
-    var contentType = _contentTypeResolver.ResolveType(wrapper.ContentTypeName);
+    var contentType = contentTypeResolver.ResolveType(wrapper.ContentTypeName);
     if (contentType is null)
     {
       return;
@@ -112,12 +106,7 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
 
   public async Task InvokeFuncs(MessageWrapper wrapper, Func<MessageWrapper, Task> responseFunc)
   {
-    if (wrapper is null)
-    {
-      return;
-    }
-
-    var contentType = _contentTypeResolver.ResolveType(wrapper.ContentTypeName);
+    var contentType = contentTypeResolver.ResolveType(wrapper.ContentTypeName);
     if (contentType is null)
     {
       return;
@@ -134,14 +123,10 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
 
       foreach (var func in funcs)
       {
-        object? result = default;
+        object? result = null;
         var returnType = func.ReturnType;
 
-        if (func.ContentType is null)
-        {
-          result = func.Handler?.Invoke();
-        }
-        else if (func.ContentType == contentType)
+        if (func.ContentType == contentType)
         {
           var content = MessagePackSerializer.Deserialize(contentType, wrapper.Content);
           if (content is null)
@@ -149,7 +134,7 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
             _logger.LogError("Failed to deserialize message wrapper.");
             return;
           }
-          result = func.Handler2?.Invoke(content);
+          result = func.Handler?.Invoke(content);
         }
 
         if (result is null)
@@ -227,9 +212,9 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
 
   private class IpcAction(Type contentType, Action<object> action, CallbackToken callbackToken)
   {
-    public Type ContentType { get; } = contentType;
     public Action<object> Action { get; } = action;
     public CallbackToken CallbackToken { get; } = callbackToken;
+    public Type ContentType { get; } = contentType;
   }
 
   private class IpcFunc
@@ -237,22 +222,14 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
     public IpcFunc(Func<object, object> handler, Type contentType, Type returnType, CallbackToken callbackToken)
     {
       ContentType = contentType;
-      Handler2 = handler;
-      ReturnType = returnType;
-      CallbackToken = callbackToken;
-    }
-
-    public IpcFunc(Func<object> handler, Type returnType, CallbackToken callbackToken)
-    {
       Handler = handler;
       ReturnType = returnType;
       CallbackToken = callbackToken;
     }
-
-    public Type? ContentType { get; }
-    public Type ReturnType { get; }
+    
     public CallbackToken CallbackToken { get; }
-    public Func<object>? Handler { get; }
-    public Func<object, object>? Handler2 { get; }
+    public Type? ContentType { get; }
+    public Func<object, object>? Handler { get; }
+    public Type ReturnType { get; }
   }
 }

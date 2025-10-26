@@ -23,18 +23,19 @@ internal class DesktopClientUpdater(
   IProcessManager processManager,
   ILogger<DesktopClientUpdater> logger) : BackgroundService, IDesktopClientUpdater
 {
-  private readonly ConcurrentList<RemoteControlSessionRequestDto> _pendingRequests = [];
-  private readonly SemaphoreSlim _updateLock = new(1, 1);
-  private readonly IServiceProvider _serviceProvider = serviceProvider;
-  private readonly IFileSystem _fileSystem = fileSystem;
-  private readonly IDownloadsApi _downloadsApi = downloadsApi;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
-  private readonly IServiceControl _serviceControl = serviceControl;
-  private readonly IControlrApi _controlrApi = controlrApi;
-  private readonly IProcessManager _processManager = processManager;
-  private readonly ISettingsProvider _settings = settings;
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
+  private readonly IControlrApi _controlrApi = controlrApi;
+  private readonly IDownloadsApi _downloadsApi = downloadsApi;
+  private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<DesktopClientUpdater> _logger = logger;
+  private readonly ConcurrentList<RemoteControlSessionRequestDto> _pendingRequests = [];
+  private readonly IProcessManager _processManager = processManager;
+  private readonly IServiceControl _serviceControl = serviceControl;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly ISettingsProvider _settings = settings;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+  private readonly SemaphoreSlim _updateLock = new(1, 1);
+
   private double _previousProgress;
 
   public async Task<bool> EnsureLatestVersion(RemoteControlSessionRequestDto requestDto, CancellationToken cancellationToken)

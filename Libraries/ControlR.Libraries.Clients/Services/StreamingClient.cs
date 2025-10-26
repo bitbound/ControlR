@@ -28,6 +28,7 @@ public abstract class StreamingClient(
 {
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
+
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<StreamingClient> _logger = logger;
   private readonly int _maxSendBufferLength = ushort.MaxValue * 2;
@@ -35,16 +36,11 @@ public abstract class StreamingClient(
   private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
-  private ClientWebSocket? _client;
-  private TimeSpan _latency;
-  private volatile int _sendBufferLength;
-  private enum MessageType : short
-  {
-    Dto,
-    Ack
-  }
 
-  public TimeSpan CurrentLatency => _latency;
+  private ClientWebSocket? _client;
+  private volatile int _sendBufferLength;
+
+  public TimeSpan CurrentLatency { get; private set; }
 
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
 
@@ -68,6 +64,7 @@ public abstract class StreamingClient(
     }
     finally
     {
+      IsDisposed = true;
       _client?.Dispose();
       _client = null;
       await InvokeOnClosedHandlers();
@@ -123,13 +120,13 @@ public abstract class StreamingClient(
     await _sendLock.WaitAsync(linkedCts.Token);
     try
     {
-      var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: cancellationToken);
+      var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: linkedCts.Token);
 
       await Client.SendAsync(
           dtoBytes,
           WebSocketMessageType.Binary,
           true,
-          cancellationToken);
+          linkedCts.Token);
 
       _ = Interlocked.Add(ref _sendBufferLength, dtoBytes.Length);
     }
@@ -254,7 +251,7 @@ public abstract class StreamingClient(
             {
               var ackDto = receivedWrapper.GetPayload<AckDto>();
               _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
-              _latency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
+              CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
               break;
             }
           default:

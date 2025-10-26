@@ -27,9 +27,9 @@ public class PostgresDateTimeOffsetConverter : ValueConverter<DateTimeOffset, Da
       : base(convertToProviderExpression, convertFromProviderExpression, mappingHints)
   {
   }
-  protected static Expression<Func<DateTimeOffset, DateTimeOffset>> ToUtc()
-      => v => v.ToUniversalTime();
 
   protected static Expression<Func<DateTimeOffset, DateTimeOffset>> ToLocalTime()
       => v => v.ToLocalTime();
+  protected static Expression<Func<DateTimeOffset, DateTimeOffset>> ToUtc()
+      => v => v.ToUniversalTime();
 }

@@ -107,7 +107,6 @@ public partial class App : Application
     }
   }
 
-
   private async Task StartHostedServices()
   {
     var hostedServices = StaticServiceProvider.Instance.GetServices<IHostedService>();

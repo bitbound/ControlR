@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Cryptography;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Signalr.Client.Diagnostics;
 using ControlR.Libraries.Signalr.Client.Exceptions;
 using ControlR.Libraries.Signalr.Client.Internals;
@@ -167,7 +166,6 @@ internal sealed class HubConnection<THub, TClient>(
   public bool IsConnected => ConnectionState == HubConnectionState.Connected;
   public THub Server => _hubProxy ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
-
   internal HubConnection Connection => _connection ?? throw new InvalidOperationException("Hub connection has not been initialized.");
 
   public async Task<bool> Connect(
@@ -218,7 +216,7 @@ internal sealed class HubConnection<THub, TClient>(
 
         using (DefaultActivitySource.StartActivity("Binding client interface."))
         {
-          await BindClientInterface(_connection);
+          BindClientInterface(_connection);
         }
 
         await _connection.StartAsync(cancellationToken);
@@ -299,19 +297,18 @@ internal sealed class HubConnection<THub, TClient>(
 
     foreach (var interfaceType in type.GetInterfaces())
     {
-      HubConnection<THub, TClient>.GetMethodsRecursively(interfaceType, methods);
+      methods.AddRange(interfaceType.GetMethods(BindingFlags));
     }
 
     return methods;
-
   }
 
-  private async Task BindClientInterface(HubConnection connection)
+  private void BindClientInterface(HubConnection connection)
   {
     var client = _serviceProvider.GetRequiredService<TClient>();
-    var clientMethods = HubConnection<THub, TClient>.GetMethodsRecursively(typeof(TClient));
+    var clientMethods = GetMethodsRecursively(typeof(TClient));
 
-    await foreach (var method in clientMethods.ToAsyncEnumerable())
+    foreach (var method in clientMethods)
     {
       var parameters = method.GetParameters();
       var paramTypes = parameters.Length > 0 ?

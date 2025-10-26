@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -26,17 +27,18 @@ internal class AgentHubConnection(
 {
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   private readonly IDeviceDataGenerator _deviceCreator = deviceCreator;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<AgentHubConnection> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
-  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
+
   
   public HubConnectionState State => _hubConnection.ConnectionState;
 
   public async Task Connect(CancellationToken cancellationToken)
   {
-    var hubEndpoint = new Uri(_settings.ServerUri, "/hubs/agent");
+    var hubEndpoint = new Uri(_settings.ServerUri, AppConstants.AgentHubPath);
 
     var result = await _hubConnection.Connect(
       hubEndpoint,
@@ -101,6 +103,7 @@ internal class AgentHubConnection(
       _logger.LogError(ex, "Error while sending device update.");
     }
   }
+
   
   private async Task HubConnection_Reconnected(string? arg)
   {

@@ -23,18 +23,18 @@ public interface IFileSystem
 
   bool FileExists(string path);
   string[] GetDirectories(string path);
-  string[] GetFiles(string path);
+  DirectoryInfo GetDirectoryInfo(string directoryPath);
   DriveInfo[] GetDrives();
   FileInfo GetFileInfo(string filePath);
-  DirectoryInfo GetDirectoryInfo(string directoryPath);
+
+  FileVersionInfo GetFileVersionInfo(string filePath);
+  string[] GetFiles(string path);
 
   public string[] GetFiles(string path, string searchPattern);
 
   public string[] GetFiles(string path, string searchPattern, SearchOption searchOption);
 
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions);
-
-  FileVersionInfo GetFileVersionInfo(string filePath);
 
   void MoveFile(string sourceFile, string destinationFile, bool overwrite);
 
@@ -115,6 +115,26 @@ public class FileSystem : IFileSystem
     return Directory.GetDirectories(path);
   }
 
+  public DirectoryInfo GetDirectoryInfo(string directoryPath)
+  {
+    return new DirectoryInfo(directoryPath);
+  }
+
+  public DriveInfo[] GetDrives()
+  {
+    return DriveInfo.GetDrives();
+  }
+
+  public FileInfo GetFileInfo(string filePath)
+  {
+    return new FileInfo(filePath);
+  }
+
+  public FileVersionInfo GetFileVersionInfo(string filePath)
+  {
+    return FileVersionInfo.GetVersionInfo(filePath);
+  }
+
   public string[] GetFiles(string path)
   {
     return Directory.GetFiles(path);
@@ -133,26 +153,6 @@ public class FileSystem : IFileSystem
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions)
   {
     return Directory.GetFiles(path, searchPattern, enumerationOptions);
-  }
-
-  public DriveInfo[] GetDrives()
-  {
-    return DriveInfo.GetDrives();
-  }
-
-  public FileInfo GetFileInfo(string filePath)
-  {
-    return new FileInfo(filePath);
-  }
-
-  public DirectoryInfo GetDirectoryInfo(string directoryPath)
-  {
-    return new DirectoryInfo(directoryPath);
-  }
-
-  public FileVersionInfo GetFileVersionInfo(string filePath)
-  {
-    return FileVersionInfo.GetVersionInfo(filePath);
   }
 
   public void MoveFile(string sourceFile, string destinationFile, bool overwrite)

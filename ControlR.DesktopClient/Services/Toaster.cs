@@ -1,5 +1,4 @@
 using Avalonia.Threading;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Views;
 using Microsoft.Extensions.Logging;
 

@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using ControlR.Web.Server.Data.Entities.Bases;
 
-
 namespace ControlR.Web.Server.Data.Entities;
 
 public class AppUser : IdentityUser<Guid>, ITenantEntityBase

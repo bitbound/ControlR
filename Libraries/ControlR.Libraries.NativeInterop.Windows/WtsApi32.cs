@@ -4,6 +4,27 @@ namespace ControlR.Libraries.NativeInterop.Windows;
 
 public static class WtsApi32
 {
+  public static nint WtsCurrentServerHandle { get; } = nint.Zero;
+  
+  [DllImport("wtsapi32.dll", SetLastError = true)]
+  public static extern int WTSEnumerateSessions(
+    nint hServer,
+    int reserved,
+    int version,
+    ref nint ppSessionInfo,
+    ref int pCount);
+
+  [DllImport("wtsapi32.dll", SetLastError = false)]
+  public static extern void WTSFreeMemory(nint memory);
+
+  [DllImport("wtsapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern nint WTSOpenServer(string pServerName);
+
+  [DllImport("Wtsapi32.dll")]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool WTSQuerySessionInformation(nint hServer, uint sessionId, WtsInfoClass wtsInfoClass,
+    out nint ppBuffer, out uint pBytesReturned);
+
   public enum WtsConnectstateClass
   {
     WtsActive,
@@ -46,27 +67,6 @@ public static class WtsApi32
     WtsClientInfo,
     WtsSessionInfo
   }
-
-  public static nint WtsCurrentServerHandle { get; } = nint.Zero;
-
-  [DllImport("wtsapi32.dll", SetLastError = true)]
-  public static extern int WTSEnumerateSessions(
-    nint hServer,
-    int reserved,
-    int version,
-    ref nint ppSessionInfo,
-    ref int pCount);
-
-  [DllImport("wtsapi32.dll", SetLastError = false)]
-  public static extern void WTSFreeMemory(nint memory);
-
-  [DllImport("wtsapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-  public static extern nint WTSOpenServer(string pServerName);
-
-  [DllImport("Wtsapi32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static extern bool WTSQuerySessionInformation(nint hServer, uint sessionId, WtsInfoClass wtsInfoClass,
-    out nint ppBuffer, out uint pBytesReturned);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct WtsSessionInfo

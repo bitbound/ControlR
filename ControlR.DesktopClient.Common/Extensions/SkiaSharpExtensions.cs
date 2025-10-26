@@ -5,17 +5,16 @@ namespace ControlR.DesktopClient.Common.Extensions;
 
 public static class SkiaSharpExtensions
 {
-  public static SKRect ToRect(this SKBitmap bitmap)
-  {
-    return new SKRect(0, 0, bitmap.Width, bitmap.Height);
-  }
-
   public static SKBitmap Clone(this SKBitmap bitmap)
   {
     var clone = new SKBitmap(bitmap.Info);
     using var canvas = new SKCanvas(clone);
     canvas.DrawBitmap(bitmap, 0, 0);
     return clone;
+  }
+  public static SKRect ToRect(this SKBitmap bitmap)
+  {
+    return new SKRect(0, 0, bitmap.Width, bitmap.Height);
   }
 
   public static SKRect ToRect(this Rectangle rectangle)

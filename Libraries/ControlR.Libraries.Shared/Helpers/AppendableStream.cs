@@ -40,7 +40,6 @@ public class AppendableStream(Stream underlyingStream, byte[] bytesToAppend) : S
     base.Close();
   }
 
-
   public override ValueTask DisposeAsync()
   {
     GC.SuppressFinalize(this);

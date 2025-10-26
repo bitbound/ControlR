@@ -136,7 +136,7 @@ internal sealed class DesktopStreamingClient(
     {
       var dto = new CursorChangedDto(
         message.Cursor,
-        message.CustomCursorBase64,
+        message.CustomCursorBase64Png,
         message.XHotspot,
         message.YHotspot,
         _startupOptions.Value.SessionId);

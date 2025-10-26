@@ -7,12 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Principal;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32.SafeHandles;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Security;
@@ -21,6 +15,12 @@ using Windows.Win32.System.Threading;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.Shell;
 using Windows.Win32.UI.WindowsAndMessaging;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Shared.Models;
+using ControlR.Libraries.Shared.Primitives;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32.SafeHandles;
 using WTS_CONNECTSTATE_CLASS = Windows.Win32.System.RemoteDesktop.WTS_CONNECTSTATE_CLASS;
 using WTS_INFO_CLASS = Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
@@ -34,10 +34,10 @@ public interface IWin32Interop
     int targetSessionId,
     bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess);
-  bool EnumWindows(Func<nint, bool> windowFunc);
 
-  List<DeviceUiSession> GetActiveSessions();
-  List<DeviceUiSession> GetActiveSessionsCsWin32();
+  bool EnumWindows(Func<nint, bool> windowFunc);
+  List<DesktopSession> GetActiveSessions();
+  List<DesktopSession> GetActiveSessionsCsWin32();
   string? GetClipboardText();
   PointerCursor GetCurrentCursor();
   bool GetCurrentThreadDesktopName(out string currentDesktop);
@@ -50,19 +50,22 @@ public interface IWin32Interop
   bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
-  Result InvokeKeyEvent(string key, bool isPressed);
+  void InvokeKeyEvent(string key, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   void MovePointer(int x, int y, MovePointerType moveType);
   nint OpenInputDesktop();
   void ResetKeyboardState();
+  void SetBlockInput(bool isBlocked);
   void SetClipboardText(string? text);
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
+
   bool StartProcessInBackgroundSession(
     string commandLine,
     bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess);
+
   bool SwitchToInputDesktop();
   void TypeText(string text);
 }
@@ -70,12 +73,26 @@ public interface IWin32Interop
 [SupportedOSPlatform("windows6.0.6000")]
 public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32Interop
 {
-  private const uint GenericAllRights = 0x10000000;
-  private const uint MaximumAllowedRights = 0x2000000;
-  private const uint Xbutton1 = 0x0001;
-  private const uint Xbutton2 = 0x0002;
+  private const uint CF_UNICODETEXT = 13u;
+  private const uint GenericAllRights = 0x10000000u;
+  private const uint MaximumAllowedRights = 0x2000000u;
+  private const uint Xbutton1 = 0x0001u;
+  private const uint Xbutton2 = 0x0002u;
+
+  private static readonly string[] _invalidWindowClassNames =
+  [
+    "Progman", // Desktop
+    "WorkerW", // Desktop worker
+    "Shell_TrayWnd", // Taskbar
+    "DV2ControlHost", // Windows widgets
+    "Windows.UI.Core.CoreWindow", // UWP system windows
+    "ApplicationFrameWindow", // Some UWP containers
+    "ForegroundStaging", // System staging window
+    "MSCTFIME UI" // Input method editor
+  ];
 
   private readonly ILogger<Win32Interop> _logger = logger;
+
   private FrozenDictionary<HCURSOR, PointerCursor>? _cursorMap;
   private HDESK _lastInputDesktop;
 
@@ -204,17 +221,17 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   public bool EnumWindows(Func<nint, bool> windowFunc)
   {
     return PInvoke.EnumWindows((hwnd, _) => windowFunc.Invoke((nint)hwnd.Value),
-    nint.Zero);
+      nint.Zero);
   }
 
-  public List<DeviceUiSession> GetActiveSessions()
+  public List<DesktopSession> GetActiveSessions()
   {
-    var sessions = new List<DeviceUiSession>();
+    var sessions = new List<DesktopSession>();
     var consoleSessionId = PInvoke.WTSGetActiveConsoleSessionId();
-    sessions.Add(new DeviceUiSession
+    sessions.Add(new DesktopSession
     {
       SystemSessionId = (int)consoleSessionId,
-      Type = UiSessionType.Console,
+      Type = DesktopSessionType.Console,
       Name = "Console",
       Username = GetUsernameFromSessionId(consoleSessionId)
     });
@@ -239,11 +256,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         current += dataSize;
         if (sessionInfo.State == WtsApi32.WtsConnectstateClass.WtsActive && sessionInfo.SessionID != consoleSessionId)
         {
-          sessions.Add(new DeviceUiSession
+          sessions.Add(new DesktopSession
           {
             SystemSessionId = (int)sessionInfo.SessionID,
             Name = sessionInfo.pWinStationName,
-            Type = UiSessionType.Rdp,
+            Type = DesktopSessionType.Rdp,
             Username = GetUsernameFromSessionId(sessionInfo.SessionID)
           });
         }
@@ -259,15 +276,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return sessions;
   }
 
-  public List<DeviceUiSession> GetActiveSessionsCsWin32()
+  public List<DesktopSession> GetActiveSessionsCsWin32()
   {
-    var sessions = new List<DeviceUiSession>();
+    var sessions = new List<DesktopSession>();
 
     var consoleSessionId = PInvoke.WTSGetActiveConsoleSessionId();
-    sessions.Add(new DeviceUiSession
+    sessions.Add(new DesktopSession
     {
       SystemSessionId = (int)consoleSessionId,
-      Type = UiSessionType.Console,
+      Type = DesktopSessionType.Console,
       Name = "Console",
       Username = GetUsernameFromSessionId(consoleSessionId)
     });
@@ -290,11 +307,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       if (ppSessionInfos->State == WTS_CONNECTSTATE_CLASS.WTSActive && ppSessionInfos->SessionId != consoleSessionId)
       {
-        sessions.Add(new DeviceUiSession
+        sessions.Add(new DesktopSession
         {
           SystemSessionId = (int)ppSessionInfos->SessionId,
           Name = ppSessionInfos->pWinStationName.ToString(),
-          Type = UiSessionType.Rdp,
+          Type = DesktopSessionType.Rdp,
           Username = GetUsernameFromSessionId(ppSessionInfos->SessionId)
         });
       }
@@ -360,6 +377,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     return PointerCursor.Unknown;
   }
+
   public bool GetCurrentThreadDesktopName(out string desktopName)
   {
     desktopName = string.Empty;
@@ -432,25 +450,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return string.Empty;
   }
 
-  private static string GetWindowClassName(HWND hwnd)
-  {
-    var buffer = stackalloc char[256];
-    var length = PInvoke.GetClassName(hwnd, buffer, 256);
-    return length > 0 ? new string(buffer, 0, length) : string.Empty;
-  }
-
-  private static readonly string[] _invalidWindowClassNames =
-  [
-    "Progman",           // Desktop
-    "WorkerW",           // Desktop worker
-    "Shell_TrayWnd",     // Taskbar
-    "DV2ControlHost",    // Windows widgets
-    "Windows.UI.Core.CoreWindow", // UWP system windows
-    "ApplicationFrameWindow", // Some UWP containers
-    "ForegroundStaging", // System staging window
-    "MSCTFIME UI"        // Input method editor
-  ];
-
   public List<WindowInfo> GetVisibleWindows()
   {
     var handles = new List<nint>();
@@ -463,12 +462,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         {
           return true;
         }
+
         handles.Add(hwnd);
         return true;
-      }, 
+      },
       nint.Zero);
 
-    foreach (var item in handles.Index()) 
+    foreach (var item in handles.Index())
     {
       var hwnd = new HWND(item.Item);
 
@@ -504,7 +504,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
           hwnd,
           Marshal.GetLastWin32Error());
       }
-      
+
       var windowTextLength = PInvoke.GetWindowTextLength(hwnd);
       var windowTextSpan = new char[windowTextLength + 1].AsSpan();
       _ = PInvoke.GetWindowText(hwnd, windowTextSpan);
@@ -545,6 +545,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       return false;
     }
+
     windowRect = new Rectangle(
       rect.X,
       rect.Y,
@@ -566,11 +567,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     PInvoke.SendSAS(!isService);
   }
 
-  public Result InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, bool isPressed)
   {
     if (!ConvertBrowserKeyArgToVirtualKey(key, out var convertResult))
     {
-      return Result.Fail("Failed to convert key to virtual key.");
+      _logger.LogWarning("Failed to convert key '{Key}' to virtual key.", key);
+      return;
     }
 
     var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
@@ -580,10 +582,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     if (result == 0)
     {
       _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
-      return Result.Fail("Failed to send key input.");
     }
-
-    return Result.Ok();
   }
 
   public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
@@ -767,6 +766,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
+  public void SetBlockInput(bool isBlocked)
+  {
+    if (!PInvoke.BlockInput(isBlocked))
+    {
+      _logger.LogError("Failed to set input block state to {IsBlocked}.", isBlocked);
+      LogWin32Error();
+    }
+  }
+
   public void SetClipboardText(string? text)
   {
     if (string.IsNullOrWhiteSpace(text))
@@ -792,11 +800,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       var pointer = Marshal.StringToHGlobalUni(text);
       var handle = new HANDLE(pointer);
-      var result = PInvoke.SetClipboardData(13, handle);
+      var result = PInvoke.SetClipboardData(CF_UNICODETEXT, handle);
       if (result == default)
       {
         LogWin32Error();
-        _logger.LogError("Failed to set clipboard text.  Last Win32 Error: {Win32Error}", Marshal.GetLastPInvokeError());
+        _logger.LogError("Failed to set clipboard text.  Last Win32 Error: {Win32Error}",
+          Marshal.GetLastPInvokeError());
         Marshal.FreeHGlobal(pointer);
       }
     }
@@ -818,6 +827,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   {
     return (nint)PInvoke.SetParent(new HWND(windowHandle), new HWND(parentWindowHandle)).Value;
   }
+
   public bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height)
   {
     return PInvoke.SetWindowPos(
@@ -827,7 +837,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       y,
       width,
       height,
-      SET_WINDOW_POS_FLAGS.SWP_ASYNCWINDOWPOS | SET_WINDOW_POS_FLAGS.SWP_SHOWWINDOW | SET_WINDOW_POS_FLAGS.SWP_DRAWFRAME | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
+      SET_WINDOW_POS_FLAGS.SWP_ASYNCWINDOWPOS | SET_WINDOW_POS_FLAGS.SWP_SHOWWINDOW |
+      SET_WINDOW_POS_FLAGS.SWP_DRAWFRAME | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
   }
 
   public bool StartProcessInBackgroundSession(
@@ -860,9 +871,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
 
     using var openWinstaResult = PInvoke.OpenWindowStation(
-         lpszWinSta: "WinSta0",
-         fInherit: false,
-         dwDesiredAccess: (uint)ACCESS_MASK.WINSTA_ALL_ACCESS);
+      "WinSta0",
+      false,
+      (uint)ACCESS_MASK.WINSTA_ALL_ACCESS);
 
     if (openWinstaResult.IsInvalid)
     {
@@ -886,10 +897,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     _logger.LogInformation("Getting/Creating background desktop: {DesktopName}", desktopName);
     using var backgroundDesktop = PInvoke.CreateDesktop(
-      lpszDesktop: desktopName,
-      dwFlags: 0,
-      dwDesiredAccess: (uint)ACCESS_MASK.DESKTOP_ALL,
-      lpsa: sa);
+      desktopName,
+      0,
+      (uint)ACCESS_MASK.DESKTOP_ALL,
+      sa);
 
     if (backgroundDesktop.IsInvalid)
     {
@@ -915,9 +926,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var desktopPtr = Marshal.StringToHGlobalAuto($"WinSta0\\{desktopName}\0");
     using var desktopPtrCb = new CallbackDisposable(() => Marshal.FreeHGlobal(desktopPtr));
 
-    var startupInfo = new STARTUPINFOW()
+    var startupInfo = new STARTUPINFOW
     {
-      lpDesktop = new PWSTR((char*)desktopPtr.ToPointer()),
+      lpDesktop = new PWSTR((char*)desktopPtr.ToPointer())
     };
 
     // Flags that specify the priority and creation method of the process.
@@ -940,17 +951,17 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var commandLineArray = $"{commandLine}\0".ToCharArray();
     var commandLineSpan = commandLineArray.AsSpan();
     var createProcessResult = PInvoke.CreateProcessAsUser(
-      hToken: primaryToken,
-      lpApplicationName: null,
-      lpCommandLine: ref commandLineSpan,
-      lpProcessAttributes: sa,
-      lpThreadAttributes: sa,
-      bInheritHandles: false,
-      dwCreationFlags: dwCreationFlags,
-      lpEnvironment: null,
-      lpCurrentDirectory: null,
-      lpStartupInfo: in startupInfo,
-      lpProcessInformation: out var procInfo);
+      primaryToken,
+      null,
+      ref commandLineSpan,
+      sa,
+      sa,
+      false,
+      dwCreationFlags,
+      null,
+      null,
+      in startupInfo,
+      out var procInfo);
 
     if (!createProcessResult)
     {
@@ -1087,11 +1098,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var deskHandle = new HANDLE(handle.Value);
 
     if (!PInvoke.GetUserObjectInformation(
-      deskHandle,
-      USER_OBJECT_INFORMATION_INDEX.UOI_NAME,
-      outValue.ToPointer(),
-      256,
-      (uint*)outLength.ToPointer()))
+          deskHandle,
+          USER_OBJECT_INFORMATION_INDEX.UOI_NAME,
+          outValue.ToPointer(),
+          256,
+          (uint*)outLength.ToPointer()))
     {
       desktopName = string.Empty;
       return false;
@@ -1103,7 +1114,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   private static HDESK GetInputDesktop()
   {
-    return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
+    return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)GenericAllRights);
   }
 
   private static HKL GetKeyboardLayout()
@@ -1154,6 +1165,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     };
   }
 
+  private static string GetWindowClassName(HWND hwnd)
+  {
+    var buffer = stackalloc char[256];
+    var length = PInvoke.GetClassName(hwnd, buffer, 256);
+    return length > 0
+      ? new string(buffer, 0, length)
+      : string.Empty;
+  }
+
   [return: MarshalAs(UnmanagedType.Bool)]
   [LibraryImport("kernel32.dll", SetLastError = true)]
   private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
@@ -1189,12 +1209,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private static string ResolveDesktopName(uint targetSessionId)
   {
     var isLogonScreenVisible = Process
-        .GetProcessesByName("LogonUI")
-        .Any(x => x.SessionId == targetSessionId);
+      .GetProcessesByName("LogonUI")
+      .Any(x => x.SessionId == targetSessionId);
 
     var isSecureDesktopVisible = Process
-        .GetProcessesByName("consent")
-        .Any(x => x.SessionId == targetSessionId);
+      .GetProcessesByName("consent")
+      .Any(x => x.SessionId == targetSessionId);
 
     if (isLogonScreenVisible || isSecureDesktopVisible)
     {
@@ -1252,30 +1272,32 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       "Katakana" => VIRTUAL_KEY.VK_OEM_FINISH,
       "Romaji" => VIRTUAL_KEY.VK_OEM_BACKTAB,
       "Zenkaku" => VIRTUAL_KEY.VK_OEM_ENLW,
-      _ => key.Length == 1 ? (VIRTUAL_KEY)PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout()) : null
+      _ => key.Length == 1
+        ? (VIRTUAL_KEY)PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout())
+        : null
     };
 
-    if (result is null)
+    if (result is not null)
     {
-      _logger.LogWarning("Unable to parse key input: {key}.", key);
-      return false;
+      return true;
     }
 
-    return true;
+    _logger.LogWarning("Unable to parse key input: {key}.", key);
+    return false;
   }
 
   private FrozenDictionary<HCURSOR, PointerCursor> GetCursorMap()
   {
     return _cursorMap ??= new Dictionary<HCURSOR, PointerCursor>
     {
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32512)] = PointerCursor.NormalArrow,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32513)] = PointerCursor.Ibeam,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32514)] = PointerCursor.Wait,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32642)] = PointerCursor.SizeNwse,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32643)] = PointerCursor.SizeNesw,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32644)] = PointerCursor.SizeWe,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32645)] = PointerCursor.SizeNs,
-      [PInvoke.LoadCursor(HINSTANCE.Null, (PWSTR)(char*)32649)] = PointerCursor.Hand
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32512)] = PointerCursor.NormalArrow,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32513)] = PointerCursor.Ibeam,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32514)] = PointerCursor.Wait,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32642)] = PointerCursor.SizeNwse,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32643)] = PointerCursor.SizeNesw,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32644)] = PointerCursor.SizeWe,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32645)] = PointerCursor.SizeNs,
+      [PInvoke.LoadCursor(HINSTANCE.Null, (char*)32649)] = PointerCursor.Hand
     }.ToFrozenDictionary();
   }
 
@@ -1337,6 +1359,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       // If exact match is found, return that session.
       return (uint)targetSessionId;
     }
+
     if (PInvoke.IsOS(OS.OS_ANYSERVER))
     {
       // If Windows Server, default to console session.
@@ -1344,7 +1367,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
 
     // If consumer version and there's an RDP session active, return that.
-    if (activeSessions.Find(x => x.Type == UiSessionType.Rdp) is { } rdSession)
+    if (activeSessions.Find(x => x.Type == DesktopSessionType.Rdp) is { } rdSession)
     {
       return (uint)rdSession.SystemSessionId;
     }
@@ -1368,7 +1391,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
 
       var systemProcId = (uint)Environment.ProcessId;
-      
+
       // Obtain a handle to the winlogon process;
       var explorerProcessHandle = PInvoke.OpenProcess(
         (PROCESS_ACCESS_RIGHTS)MaximumAllowedRights,

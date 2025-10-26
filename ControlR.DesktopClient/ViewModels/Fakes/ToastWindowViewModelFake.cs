@@ -1,31 +1,10 @@
 using Avalonia.Media;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using Avalonia;
 
 namespace ControlR.DesktopClient.ViewModels.Fakes;
 
 public class ToastWindowViewModelFake : IToastWindowViewModel
 {
-  public string Title { get; set; } = "Sample Toast Notification";
-  public string Message { get; set; } = "This is a sample toast message that demonstrates how the toast notification will appear in the application.";
-  public ToastIcon ToastIcon { get; set; } = ToastIcon.Info;
-
-  public string IconResourceKey
-  {
-    get
-    {
-      return ToastIcon switch
-      {
-        ToastIcon.Info => "info_regular",
-        ToastIcon.Success => "checkmark_circle_regular", 
-        ToastIcon.Warning => "warning_regular",
-        ToastIcon.Error => "error_circle_regular",
-        ToastIcon.Question => "question_circle_regular",
-        _ => "info_regular"
-      };
-    }
-  }
-
   public IBrush IconBrush
   {
     get
@@ -57,5 +36,24 @@ public class ToastWindowViewModelFake : IToastWindowViewModel
     }
   }
 
+  public string IconResourceKey
+  {
+    get
+    {
+      return ToastIcon switch
+      {
+        ToastIcon.Info => "info_regular",
+        ToastIcon.Success => "checkmark_circle_regular", 
+        ToastIcon.Warning => "warning_regular",
+        ToastIcon.Error => "error_circle_regular",
+        ToastIcon.Question => "question_circle_regular",
+        _ => "info_regular"
+      };
+    }
+  }
+  public string Message { get; set; } = "This is a sample toast message that demonstrates how the toast notification will appear in the application.";
+
   public Func<Task>? OnClick { get; set; }
+  public string Title { get; set; } = "Sample Toast Notification";
+  public ToastIcon ToastIcon { get; set; } = ToastIcon.Info;
 }

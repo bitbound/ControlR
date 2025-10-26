@@ -9,17 +9,19 @@ namespace ControlR.DesktopClient.Linux.Services;
 public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
 {
   private static readonly object _lock = new();
+
   private readonly ILogger<ClipboardManagerX11> _logger;
+
   private nint _clipboardAtom;
   private nint _clipboardDataAtom;
   private nint _clipboardManagerAtom;
+  private string? _currentClipboardText;
   private nint _display;
   private nint _saveTargetsAtom;
   private nint _stringAtom;
   private nint _targetsAtom;
   private nint _utf8StringAtom;
   private nint _window;
-  private string? _currentClipboardText;
 
   public ClipboardManagerX11(ILogger<ClipboardManagerX11> logger)
   {
@@ -108,6 +110,106 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
            TryGetSelectionWithFormat(selection, _stringAtom);
   }
 
+  private void HandleEvent(ref LibX11.XEvent xEvent)
+  {
+    try
+    {
+      if (xEvent.type == LibX11.SelectionClear)
+      {
+        // We lost clipboard ownership
+        _currentClipboardText = null;
+      }
+      else if (xEvent.type == LibX11.SelectionRequest)
+      {
+        HandleSelectionRequest(ref xEvent);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling X11 event");
+    }
+  }
+
+  private void HandleSelectionRequest(ref LibX11.XEvent xEvent)
+  {
+    // We need to extract the selection request data from the event
+    // Since XEvent is a union, we need to be careful about how we access the data
+    var eventPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibX11.XEvent>());
+    try
+    {
+      Marshal.StructureToPtr(xEvent, eventPtr, false);
+      var request = Marshal.PtrToStructure<LibX11.XSelectionRequestEvent>(eventPtr);
+      
+      var response = new LibX11.XSelectionEvent
+      {
+        type = LibX11.SelectionNotify,
+        display = request.display,
+        requestor = request.requestor,
+        selection = request.selection,
+        target = request.target,
+        property = nint.Zero,
+        time = request.time
+      };
+
+      if (request.selection == _clipboardAtom && !string.IsNullOrEmpty(_currentClipboardText))
+      {
+        if (request.target == _targetsAtom)
+        {
+          // Client is asking what formats we support
+          var supportedTargets = new nint[] { _targetsAtom, _utf8StringAtom, _stringAtom };
+          var targetsPtr = Marshal.AllocHGlobal(supportedTargets.Length * nint.Size);
+          try
+          {
+            Marshal.Copy(supportedTargets, 0, targetsPtr, supportedTargets.Length);
+            LibX11.XChangeProperty(_display, request.requestor, request.property, 
+              LibX11.XInternAtom(_display, "ATOM", false), 32, LibX11.PropModeReplace, targetsPtr, supportedTargets.Length);
+            response.property = request.property;
+          }
+          finally
+          {
+            Marshal.FreeHGlobal(targetsPtr);
+          }
+        }
+        else if (request.target == _utf8StringAtom || request.target == _stringAtom)
+        {
+          // Client is requesting text data
+          var encoding = request.target == _utf8StringAtom ? Encoding.UTF8 : Encoding.ASCII;
+          var textBytes = encoding.GetBytes(_currentClipboardText);
+          var textPtr = Marshal.AllocHGlobal(textBytes.Length);
+          try
+          {
+            Marshal.Copy(textBytes, 0, textPtr, textBytes.Length);
+            LibX11.XChangeProperty(_display, request.requestor, request.property, request.target, 8, 
+              LibX11.PropModeReplace, textPtr, textBytes.Length);
+            response.property = request.property;
+          }
+          finally
+          {
+            Marshal.FreeHGlobal(textPtr);
+          }
+        }
+      }
+
+      // Send the response event
+      var responseEventPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibX11.XSelectionEvent>());
+      try
+      {
+        Marshal.StructureToPtr(response, responseEventPtr, false);
+        var responseEvent = Marshal.PtrToStructure<LibX11.XEvent>(responseEventPtr);
+        LibX11.XSendEvent(_display, request.requestor, false, LibX11.NoEventMask, ref responseEvent);
+        LibX11.XFlush(_display);
+      }
+      finally
+      {
+        Marshal.FreeHGlobal(responseEventPtr);
+      }
+    }
+    finally
+    {
+      Marshal.FreeHGlobal(eventPtr);
+    }
+  }
+
   private void Initialize()
   {
     _display = LibX11.XOpenDisplay(null);
@@ -131,6 +233,17 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     _clipboardManagerAtom = LibX11.XInternAtom(_display, "CLIPBOARD_MANAGER", false);
     _saveTargetsAtom = LibX11.XInternAtom(_display, "SAVE_TARGETS", false);
     _targetsAtom = LibX11.XInternAtom(_display, "TARGETS", false);
+  }
+
+  private void ProcessPendingEvents()
+  {
+    // Process any pending events for a short time to handle immediate selection requests
+    var timeout = DateTime.Now.AddMilliseconds(100);
+    while (DateTime.Now < timeout && LibX11.XPending(_display) > 0)
+    {
+      _ = LibX11.XNextEvent(_display, out var xEvent);
+      HandleEvent(ref xEvent);
+    }
   }
 
   private string? ReadProperty(nint property)
@@ -287,116 +400,5 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     }
 
     return null;
-  }
-
-  private void ProcessPendingEvents()
-  {
-    // Process any pending events for a short time to handle immediate selection requests
-    var timeout = DateTime.Now.AddMilliseconds(100);
-    while (DateTime.Now < timeout && LibX11.XPending(_display) > 0)
-    {
-      _ = LibX11.XNextEvent(_display, out var xEvent);
-      HandleEvent(ref xEvent);
-    }
-  }
-
-  private void HandleEvent(ref LibX11.XEvent xEvent)
-  {
-    try
-    {
-      if (xEvent.type == LibX11.SelectionClear)
-      {
-        // We lost clipboard ownership
-        _currentClipboardText = null;
-      }
-      else if (xEvent.type == LibX11.SelectionRequest)
-      {
-        HandleSelectionRequest(ref xEvent);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error handling X11 event");
-    }
-  }
-
-  private void HandleSelectionRequest(ref LibX11.XEvent xEvent)
-  {
-    // We need to extract the selection request data from the event
-    // Since XEvent is a union, we need to be careful about how we access the data
-    var eventPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibX11.XEvent>());
-    try
-    {
-      Marshal.StructureToPtr(xEvent, eventPtr, false);
-      var request = Marshal.PtrToStructure<LibX11.XSelectionRequestEvent>(eventPtr);
-      
-      var response = new LibX11.XSelectionEvent
-      {
-        type = LibX11.SelectionNotify,
-        display = request.display,
-        requestor = request.requestor,
-        selection = request.selection,
-        target = request.target,
-        property = nint.Zero,
-        time = request.time
-      };
-
-      if (request.selection == _clipboardAtom && !string.IsNullOrEmpty(_currentClipboardText))
-      {
-        if (request.target == _targetsAtom)
-        {
-          // Client is asking what formats we support
-          var supportedTargets = new nint[] { _targetsAtom, _utf8StringAtom, _stringAtom };
-          var targetsPtr = Marshal.AllocHGlobal(supportedTargets.Length * nint.Size);
-          try
-          {
-            Marshal.Copy(supportedTargets, 0, targetsPtr, supportedTargets.Length);
-            LibX11.XChangeProperty(_display, request.requestor, request.property, 
-              LibX11.XInternAtom(_display, "ATOM", false), 32, LibX11.PropModeReplace, targetsPtr, supportedTargets.Length);
-            response.property = request.property;
-          }
-          finally
-          {
-            Marshal.FreeHGlobal(targetsPtr);
-          }
-        }
-        else if (request.target == _utf8StringAtom || request.target == _stringAtom)
-        {
-          // Client is requesting text data
-          var encoding = request.target == _utf8StringAtom ? Encoding.UTF8 : Encoding.ASCII;
-          var textBytes = encoding.GetBytes(_currentClipboardText);
-          var textPtr = Marshal.AllocHGlobal(textBytes.Length);
-          try
-          {
-            Marshal.Copy(textBytes, 0, textPtr, textBytes.Length);
-            LibX11.XChangeProperty(_display, request.requestor, request.property, request.target, 8, 
-              LibX11.PropModeReplace, textPtr, textBytes.Length);
-            response.property = request.property;
-          }
-          finally
-          {
-            Marshal.FreeHGlobal(textPtr);
-          }
-        }
-      }
-
-      // Send the response event
-      var responseEventPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibX11.XSelectionEvent>());
-      try
-      {
-        Marshal.StructureToPtr(response, responseEventPtr, false);
-        var responseEvent = Marshal.PtrToStructure<LibX11.XEvent>(responseEventPtr);
-        LibX11.XSendEvent(_display, request.requestor, false, LibX11.NoEventMask, ref responseEvent);
-        LibX11.XFlush(_display);
-      }
-      finally
-      {
-        Marshal.FreeHGlobal(responseEventPtr);
-      }
-    }
-    finally
-    {
-      Marshal.FreeHGlobal(eventPtr);
-    }
   }
 }

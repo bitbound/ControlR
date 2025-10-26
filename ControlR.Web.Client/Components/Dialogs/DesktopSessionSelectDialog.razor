@@ -78,28 +78,29 @@
 
   [Parameter]
   [EditorRequired]
-  public DeviceUiSession[] Sessions { get; set; } = Array.Empty<DeviceUiSession>();
+  public DesktopSession[] Sessions { get; set; } = Array.Empty<DesktopSession>();
 
   [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
 
   [Inject]
   public required ILogger<DesktopSessionSelectDialog> Logger { get; init; }
+
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-
   private async Task RefreshSessions()
   {
-    var sessionResult = await ViewerHub.GetActiveUiSessions(Device.Id);
-    if (!sessionResult.IsSuccess)
+    try
     {
-      Logger.LogResult(sessionResult);
-      Snackbar.Add("Failed to get active sessions", Severity.Warning);
-      return;
+      Sessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(Device.Id);
+      await InvokeAsync(StateHasChanged);
     }
-    Sessions = sessionResult.Value;
-    await InvokeAsync(StateHasChanged);
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Failed to refresh desktop sessions for device {DeviceId}", Device.Id);
+      Snackbar.Add("Failed to refresh desktop sessions.", Severity.Error);
+    }
   }
 
   private void Cancel()
@@ -107,9 +108,8 @@
     MudDialog.Cancel();
   }
 
-  private void Submit(DeviceUiSession session)
+  private void Submit(DesktopSession session)
   {
     MudDialog.Close(DialogResult.Ok(session));
   }
-
 }

@@ -11,6 +11,7 @@ internal class ServiceControlWindows(
     ILogger<ServiceControlWindows> logger) : IServiceControl
 {
   private static readonly TimeSpan _serviceStatusTimeout = TimeSpan.FromSeconds(10);
+
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<ServiceControlWindows> _logger = logger;
 
@@ -47,6 +48,11 @@ internal class ServiceControlWindows(
     }
   }
 
+  public Task StartDesktopClientService(bool throwOnFailure)
+  {
+    throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
+  }
+
   public async Task StopAgentService(bool throwOnFailure)
   {
     try
@@ -80,24 +86,9 @@ internal class ServiceControlWindows(
     }
   }
 
-  public Task StartDesktopClientService(bool throwOnFailure)
-  {
-    throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
-  }
-
   public Task StopDesktopClientService(bool throwOnFailure)
   {
     throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
-  }
-
-  private string GetAgentServiceName()
-  {
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return "ControlR.Agent";
-    }
-
-    return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
   }
 
   private static async Task WaitForStatusAsync(
@@ -108,5 +99,15 @@ internal class ServiceControlWindows(
     {
       serviceController.WaitForStatus(status, _serviceStatusTimeout);  
     });
+  }
+
+  private string GetAgentServiceName()
+  {
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      return "ControlR.Agent";
+    }
+
+    return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
   }
 }

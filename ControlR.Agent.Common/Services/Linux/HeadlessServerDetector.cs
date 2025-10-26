@@ -7,8 +7,8 @@ internal class HeadlessServerDetector(
     IProcessManager processManager,
     ILogger<HeadlessServerDetector> logger) : IHeadlessServerDetector
 {
-    private readonly IProcessManager _processManager = processManager;
     private readonly ILogger<HeadlessServerDetector> _logger = logger;
+    private readonly IProcessManager _processManager = processManager;
 
     public async Task<bool> IsHeadlessServer()
     {

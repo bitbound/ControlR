@@ -17,14 +17,15 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     _userId = extension?.Options.UserId;
   }
 
+  public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+
   public required DbSet<Device> Devices { get; init; }
   public required DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
-  public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<TenantSetting> TenantSettings { get; init; }
+  public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
-  public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
   protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
   {
@@ -48,6 +49,80 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
+  }
+
+  private static void ConfigureRoles(ModelBuilder builder)
+  {
+    builder
+      .Entity<AppRole>()
+      .HasMany(x => x.UserRoles)
+      .WithOne()
+      .HasForeignKey(x => x.RoleId);
+  }
+
+  private static void SeedDatabase(ModelBuilder builder)
+  {
+    var builtInRoles = RoleFactory.GetBuiltInRoles();
+
+    builder
+        .Entity<AppRole>()
+        .HasData(builtInRoles);
+  }
+
+  private void ConfigureDevices(ModelBuilder builder)
+  {
+    builder
+      .Entity<Device>()
+      .OwnsMany(x => x.Drives)
+      .ToJson();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<Device>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigurePersonalAccessTokens(ModelBuilder builder)
+  {
+    builder
+      .Entity<PersonalAccessToken>()
+      .HasIndex(x => x.HashedKey)
+      .IsUnique();
+
+    builder
+      .Entity<PersonalAccessToken>()
+      .Property(x => x.HashedKey)
+      .IsRequired();
+
+    builder
+      .Entity<PersonalAccessToken>()
+      .HasOne(x => x.User)
+      .WithMany(x => x.PersonalAccessTokens)
+      .HasForeignKey(x => x.UserId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<PersonalAccessToken>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+  private void ConfigureTags(ModelBuilder builder)
+  {
+    builder
+      .Entity<Tag>()
+      .HasIndex(x => new { x.Name, x.TenantId })
+      .IsUnique();
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<Tag>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
   }
 
   private void ConfigureTenant(ModelBuilder builder)
@@ -98,53 +173,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     }
   }
 
-  private static void ConfigureRoles(ModelBuilder builder)
-  {
-    builder
-      .Entity<AppRole>()
-      .HasMany(x => x.UserRoles)
-      .WithOne()
-      .HasForeignKey(x => x.RoleId);
-  }
-
-  private static void SeedDatabase(ModelBuilder builder)
-  {
-    var builtInRoles = RoleFactory.GetBuiltInRoles();
-
-    builder
-        .Entity<AppRole>()
-        .HasData(builtInRoles);
-  }
-
-  private void ConfigureDevices(ModelBuilder builder)
-  {
-    builder
-      .Entity<Device>()
-      .OwnsMany(x => x.Drives)
-      .ToJson();
-
-    if (_tenantId is not null)
-    {
-      builder
-        .Entity<Device>()
-        .HasQueryFilter(x => x.TenantId == _tenantId);
-    }
-  }
-  private void ConfigureTags(ModelBuilder builder)
-  {
-    builder
-      .Entity<Tag>()
-      .HasIndex(x => new { x.Name, x.TenantId })
-      .IsUnique();
-
-    if (_tenantId is not null)
-    {
-      builder
-        .Entity<Tag>()
-        .HasQueryFilter(x => x.TenantId == _tenantId);
-    }
-  }
-
   private void ConfigureTenantSettings(ModelBuilder builder)
   {
     builder
@@ -156,33 +184,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     {
       builder
         .Entity<TenantSetting>()
-        .HasQueryFilter(x => x.TenantId == _tenantId);
-    }
-  }
-
-  private void ConfigurePersonalAccessTokens(ModelBuilder builder)
-  {
-    builder
-      .Entity<PersonalAccessToken>()
-      .HasIndex(x => x.HashedKey)
-      .IsUnique();
-
-    builder
-      .Entity<PersonalAccessToken>()
-      .Property(x => x.HashedKey)
-      .IsRequired();
-
-    builder
-      .Entity<PersonalAccessToken>()
-      .HasOne(x => x.User)
-      .WithMany(x => x.PersonalAccessTokens)
-      .HasForeignKey(x => x.UserId)
-      .OnDelete(DeleteBehavior.Cascade);
-
-    if (_tenantId is not null)
-    {
-      builder
-        .Entity<PersonalAccessToken>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }

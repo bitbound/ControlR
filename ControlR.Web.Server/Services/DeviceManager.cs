@@ -17,6 +17,7 @@ public class DeviceManager(
   UserManager<AppUser> userManager) : IDeviceManager
 {
   private const BindingFlags BindingFlags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.FlattenHierarchy;
+
   private static readonly ConcurrentDictionary<Type, ImmutableDictionary<string, PropertyInfo>> _propertiesCache = [];
 
   private readonly AppDb _appDb = appDb;
@@ -64,33 +65,6 @@ public class DeviceManager(
     return Result.Ok(entity);
   }
 
-  private async Task UpdateDeviceEntity(Device entity, DeviceDto deviceDto, EntityState entityState, bool addTagIds)
-  {
-    var entry = _appDb.Entry(entity);
-    await entry.Reference(x => x.Tenant).LoadAsync();
-    await entry.Collection(x => x.Tags!).LoadAsync();
-    entry.State = entityState;
-
-    SetValuesExcept(
-      entry,
-      deviceDto,
-      nameof(DeviceDto.Alias),
-      nameof(DeviceDto.TagIds));
-
-    entity.Drives = [.. deviceDto.Drives];
-
-    if (addTagIds && deviceDto.TagIds is { Length: > 0 } tagIds)
-    {
-      var tags = await _appDb.Tags
-        .Where(x => tagIds.Contains(x.Id))
-        .ToListAsync();
-
-      entity.Tags = tags;
-    }
-
-    await _appDb.SaveChangesAsync();
-  }
-
   private static void SetValuesExcept<TDto>(
     EntityEntry entry,
     TDto dto,
@@ -133,5 +107,32 @@ public class DeviceManager(
         prop.CurrentValue = dtoValue;
       }
     }
+  }
+
+  private async Task UpdateDeviceEntity(Device entity, DeviceDto deviceDto, EntityState entityState, bool addTagIds)
+  {
+    var entry = _appDb.Entry(entity);
+    await entry.Reference(x => x.Tenant).LoadAsync();
+    await entry.Collection(x => x.Tags!).LoadAsync();
+    entry.State = entityState;
+
+    SetValuesExcept(
+      entry,
+      deviceDto,
+      nameof(DeviceDto.Alias),
+      nameof(DeviceDto.TagIds));
+
+    entity.Drives = [.. deviceDto.Drives];
+
+    if (addTagIds && deviceDto.TagIds is { Length: > 0 } tagIds)
+    {
+      var tags = await _appDb.Tags
+        .Where(x => tagIds.Contains(x.Id))
+        .ToListAsync();
+
+      entity.Tags = tags;
+    }
+
+    await _appDb.SaveChangesAsync();
   }
 }

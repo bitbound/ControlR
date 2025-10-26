@@ -26,11 +26,4 @@ public static class ListExtensions
     self[index] = newItem;
     return true;
   }
-
-  public static void RemoveDuplicates<T>(this List<T> self)
-  {
-    var distinct = self.Distinct().ToList();
-    self.Clear();
-    self.AddRange(distinct);
-  }
 }

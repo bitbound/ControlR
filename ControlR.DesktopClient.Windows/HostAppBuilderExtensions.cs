@@ -14,7 +14,8 @@ public static class HostAppBuilderExtensions
   {
     builder.Services
       .AddSingleton<IWin32Interop, Win32Interop>()
-      .AddSingleton<IInputSimulator, InputSimulatorWindows>()
+      .AddSingleton<InputSimulatorWindows>()
+      .AddSingleton<IInputSimulator>(services => services.GetRequiredService<InputSimulatorWindows>())
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<IDisplayManager, DisplayManagerWindows>()
@@ -23,6 +24,7 @@ public static class HostAppBuilderExtensions
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()
       .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
+      .AddHostedService(x => x.GetRequiredService<InputSimulatorWindows>())
       .AddHostedService<CursorWatcherWindows>();
 
     builder.BootstrapSerilog(

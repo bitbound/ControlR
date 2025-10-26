@@ -1,16 +1,21 @@
 ﻿using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Models;
+using ControlR.Agent.Common.Models.Messages;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
+using ControlR.Libraries.Clients.Extensions;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;
@@ -21,19 +26,26 @@ internal class AgentHubClient(
   ISystemEnvironment systemEnvironment,
   IMessenger messenger,
   ITerminalStore terminalStore,
-  IUiSessionProvider uiSessionProvider,
+  IDesktopSessionProvider desktopSessionProvider,
   IIpcServerStore ipcServerStore,
   IDesktopClientUpdater streamerUpdater,
   IHostApplicationLifetime appLifetime,
   ISettingsProvider settings,
   IProcessManager processManager,
+  IPowerControl powerControl,
   ILocalSocketProxy localProxy,
   IFileManager fileManager,
   IFileSystem fileSystem,
+  IDeviceDataGenerator deviceDataGenerator,
+  IAgentUpdater agentUpdater,
+  IWakeOnLanService wakeOnLan,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
+  private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
+  private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
+  private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
   private readonly IFileManager _fileManager = fileManager;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
@@ -41,11 +53,12 @@ internal class AgentHubClient(
   private readonly ILocalSocketProxy _localProxy = localProxy;
   private readonly ILogger<AgentHubClient> _logger = logger;
   private readonly IMessenger _messenger = messenger;
+  private readonly IPowerControl _powerControl = powerControl;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settings = settings;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly ITerminalStore _terminalStore = terminalStore;
-  private readonly IUiSessionProvider _uiSessionProvider = uiSessionProvider;
+  private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
 
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
   {
@@ -78,6 +91,23 @@ internal class AgentHubClient(
       _logger.LogError(ex, "Error while closing chat session {SessionId}.", sessionId);
       return Result.Fail("An error occurred while closing chat session.");
     }
+  }
+
+  public Task CloseTerminalSession(Guid terminalSessionId)
+  {
+    try
+    {
+      _logger.LogInformation("Closing terminal session {TerminalSessionId}.", terminalSessionId);
+
+      // The underlying process is killed/disposed upon eviction from the MemoryCache.
+      _ = _terminalStore.TryRemove(terminalSessionId, out _);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while closing terminal session {TerminalSessionId}.", terminalSessionId);
+    }
+
+    return Task.CompletedTask;
   }
 
   public async Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
@@ -165,14 +195,14 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<Result> CreateTerminalSession(TerminalSessionRequest requestDto)
+  public async Task<Result> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
   {
     try
     {
       _logger.LogInformation("Terminal session started.  Viewer Connection ID: {ConnectionId}",
-        requestDto.ViewerConnectionId);
+        viewerConnectionId);
 
-      return await _terminalStore.CreateSession(requestDto.TerminalId, requestDto.ViewerConnectionId);
+      return await _terminalStore.CreateSession(terminalSessionId, viewerConnectionId);
     }
     catch (Exception ex)
     {
@@ -228,7 +258,7 @@ internal class AgentHubClient(
     try
     {
       _logger.LogInformation("Downloading file from viewer: {FileName} to {Directory}",
-           dto.FileName, dto.TargetDirectoryPath);
+        dto.FileName, dto.TargetDirectoryPath);
 
       var targetPath = Path.Join(dto.TargetDirectoryPath, dto.FileName);
 
@@ -246,6 +276,7 @@ internal class AgentHubClient(
         // Process each chunk (e.g., write to file, buffer, etc.)
         await fs.WriteAsync(chunk);
       }
+
       return Result.Ok();
     }
     catch (UnauthorizedAccessException ex)
@@ -274,9 +305,9 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<DeviceUiSession[]> GetActiveUiSessions()
+  public async Task<DesktopSession[]> GetActiveUiSessions()
   {
-    return await _uiSessionProvider.GetActiveDesktopClients();
+    return await _desktopSessionProvider.GetActiveDesktopClients();
   }
 
   public async Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
@@ -336,16 +367,58 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task InvokeCtrlAltDel()
+  {
+    if (!OperatingSystem.IsWindows())
+    {
+      _logger.LogWarning("Ctrl+Alt+Del invocation is only supported on Windows.");
+      return;
+    }
+
+    await _messenger.SendEvent(EventKinds.CtrlAltDelInvoked);
+  }
+
+  public async Task InvokeWakeDevice(WakeDeviceDto dto)
+  {
+    try
+    {
+      await _wakeOnLan.WakeDevices(dto.MacAddresses);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking wake device.");
+    }
+  }
+
+  public async Task ReceiveAgentUpdateTrigger()
+  {
+    try
+    {
+      await _agentUpdater.CheckForUpdate();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while receiving agent update trigger.");
+    }
+  }
+
   public Task ReceiveDto(DtoWrapper dto)
   {
     _messenger.Send(new DtoReceivedMessage<DtoWrapper>(dto)).Forget();
     return Task.CompletedTask;
   }
 
+  public async Task ReceivePowerStateChange(PowerStateChangeType changeType)
+  {
+    await _powerControl.ChangeState(changeType);
+  }
+
   public async Task<Result> ReceiveTerminalInput(TerminalInputDto dto)
   {
     try
     {
+      Guard.IsNotNullOrWhiteSpace(dto.ViewerConnectionId);
+
       return await _terminalStore.WriteInput(
         dto.TerminalId,
         dto.Input,
@@ -357,6 +430,11 @@ internal class AgentHubClient(
       _logger.LogError(ex, "Error while creating terminal session.");
       return Result.Fail("An error occurred.");
     }
+  }
+
+  public async Task RefreshDeviceInfo()
+  {
+    await SendDeviceHeartbeat();
   }
 
   public async Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto)
@@ -407,7 +485,7 @@ internal class AgentHubClient(
         dto.StreamId);
 
       var channel = Channel.CreateBounded<byte[]>(10);
-      
+
       // ReSharper disable AccessToDisposedClosure
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
@@ -421,6 +499,7 @@ internal class AgentHubClient(
             cts.Token.ThrowIfCancellationRequested();
             await channel.Writer.WriteAsync(chunk, cts.Token);
           }
+
           channel.Writer.TryComplete();
         }
         catch (Exception ex)
@@ -515,6 +594,7 @@ internal class AgentHubClient(
           {
             await channel.Writer.WriteAsync(chunk);
           }
+
           channel.Writer.TryComplete();
         }
         catch (Exception ex)
@@ -558,6 +638,7 @@ internal class AgentHubClient(
           {
             await channel.Writer.WriteAsync(chunk);
           }
+
           channel.Writer.TryComplete();
         }
         catch (Exception ex)
@@ -604,7 +685,7 @@ internal class AgentHubClient(
     {
       _logger.LogInformation("Sending file to viewer: {FilePath}, Stream ID: {StreamId}",
         dto.FilePath, dto.StreamId);
-      
+
       using var resolveResult = await _fileManager.ResolveTargetFilePath(dto.FilePath);
       if (!resolveResult.IsSuccess || string.IsNullOrEmpty(resolveResult.FileSystemPath))
       {
@@ -678,6 +759,42 @@ internal class AgentHubClient(
     }
   }
 
+  private async Task SendDeviceHeartbeat()
+  {
+    try
+    {
+      using var _ = _logger.BeginMemberScope();
+
+      if (_hubConnection.ConnectionState != HubConnectionState.Connected)
+      {
+        _logger.LogWarning("Not connected to hub when trying to send device update.");
+        return;
+      }
+
+      var device = await _deviceDataGenerator.CreateDevice(_settings.DeviceId);
+
+      var dto = device.CloneAs<DeviceModel, DeviceDto>();
+
+      var updateResult = await _hubConnection.Server.UpdateDevice(dto);
+
+      if (!updateResult.IsSuccess)
+      {
+        _logger.LogResult(updateResult);
+        return;
+      }
+
+      if (updateResult.Value.Id != device.Id)
+      {
+        _logger.LogInformation("Device ID changed.  Updating appsettings.");
+        await _settings.UpdateId(updateResult.Value.Id);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending device update.");
+    }
+  }
+
   private async Task SendFileStream(
     Guid streamId,
     string fileSystemPath)
@@ -695,12 +812,13 @@ internal class AgentHubClient(
       {
         var buffer = new byte[AppConstants.SignalrMaxMessageSize];
         int bytesRead;
-        
+
         while ((bytesRead = await fileStream.ReadAsync(buffer, cts.Token)) > 0)
         {
           var chunk = buffer[..bytesRead];
           await channel.Writer.WriteAsync(chunk, cts.Token);
         }
+
         channel.Writer.TryComplete();
       }
       catch (OperationCanceledException)

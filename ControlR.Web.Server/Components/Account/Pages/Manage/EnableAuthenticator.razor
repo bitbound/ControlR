@@ -1,10 +1,10 @@
 ﻿@page "/Account/Manage/EnableAuthenticator"
 
-
 @inject UserManager<AppUser> UserManager
 @inject IdentityUserAccessor UserAccessor
 @inject UrlEncoder UrlEncoder
 @inject IdentityRedirectManager RedirectManager
+@inject IOptionsMonitor<AppOptions> AppOptions
 @inject ILogger<EnableAuthenticator> Logger
 
 <PageTitle>Configure authenticator app</PageTitle>
@@ -78,13 +78,13 @@ else
 
   private string? _message;
   private string? _qrCodeDataUri;
-  private AppUser _user = default!;
+  private AppUser _user = null!;
   private string? _sharedKey;
   private string? _authenticatorUri;
   private IEnumerable<string>? _recoveryCodes;
 
   [CascadingParameter]
-  private HttpContext HttpContext { get; set; } = default!;
+  public required HttpContext HttpContext { get; init; }
 
   [SupplyParameterFromForm]
   private InputModel Input { get; set; } = new();
@@ -163,10 +163,14 @@ else
 
   private string GenerateQrCodeUri(string email, string unformattedKey)
   {
+    var totpIssuerName = AppOptions.CurrentValue.AuthenticatorIssuerName is { Length: > 0 } issuerName
+      ? issuerName
+      : "ControlR";
+    
     return string.Format(
       CultureInfo.InvariantCulture,
       AuthenticatorUriFormat,
-      UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
+      UrlEncoder.Encode(totpIssuerName),
       UrlEncoder.Encode(email),
       unformattedKey);
   }

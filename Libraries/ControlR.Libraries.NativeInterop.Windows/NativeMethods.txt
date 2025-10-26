@@ -90,3 +90,4 @@ SendMessage
 WM_PAINT
 RedrawWindow
 WM_SETREDRAW
+BlockInput

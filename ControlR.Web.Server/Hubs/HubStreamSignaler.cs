@@ -13,15 +13,16 @@ public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null
   private readonly Action? _onDispose = onDispose;
   private readonly CancellationTokenSource _streamCancelledSource = new();
   private readonly CancellationTokenSource _writeCompletedSource = new();
+
   private int _disposedValue; 
 
   public object? Metadata { get; set; }
 
+  public ChannelReader<T> Reader => _channel.Reader;
+
   public Guid StreamId { get; } = streamId;
 
   public CancellationToken WriteCompleted => _writeCompletedSource.Token;
-
-  public ChannelReader<T> Reader => _channel.Reader;
 
   public void Dispose()
   {

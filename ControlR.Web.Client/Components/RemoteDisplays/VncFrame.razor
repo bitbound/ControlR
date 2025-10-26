@@ -1,10 +1,11 @@
-﻿@if (_loading)
+﻿@using ControlR.Libraries.Shared.Dtos.StreamerDtos
+@if (_loading)
 {
   <div class="w-100 text-center mt-8">
     <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
       Loading
     </MudText>
-    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large"/>
   </div>
 }
 else if (_noVncUri is not null)
@@ -36,7 +37,10 @@ else if (_noVncUri is not null)
   public required NavigationManager NavManager { get; init; }
 
   [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
+  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
+
+  [Inject]
+  public required IUserSettingsProvider UserSettings { get; init; }
 
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
@@ -46,7 +50,6 @@ else if (_noVncUri is not null)
 
   [Inject]
   public required ILogger<VncFrame> Logger { get; init; }
-
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -84,10 +87,15 @@ else if (_noVncUri is not null)
 
       Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", _websocketUri.Authority);
 
-      var sessionResult = await ViewerHub.RequestVncSession(
-        Device.Id,
+      var notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
+      var requestDto = new VncSessionRequestDto(
         _sessionId,
-        _websocketUri);
+        _websocketUri,
+        MainHub.ConnectionId ?? string.Empty,
+        Device.Id,
+        notifyUser);
+      
+      var sessionResult = await MainHub.Server.RequestVncSession(Device.Id, requestDto);
 
       if (!sessionResult.IsSuccess)
       {
@@ -107,4 +115,5 @@ else if (_noVncUri is not null)
       await InvokeAsync(StateHasChanged);
     }
   }
+
 }

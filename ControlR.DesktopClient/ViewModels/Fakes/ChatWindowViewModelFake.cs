@@ -37,11 +37,12 @@ public class ChatWindowViewModelFake : IChatWindowViewModel
     NewMessage = "Let me take a look at that for you...";
   }
 
-  public ChatSession? Session { get; set; }
-  public string NewMessage { get; set; } = string.Empty;
-  public ObservableCollection<ChatMessageViewModel> Messages => Session?.Messages ?? [];
   public string ChatTitle => "Chat with viewer@example.com";
+  public ObservableCollection<ChatMessageViewModel> Messages => Session?.Messages ?? [];
+  public string NewMessage { get; set; } = string.Empty;
   public ICommand SendMessageCommand => new RelayCommand(() => { });
+
+  public ChatSession? Session { get; set; }
 
   public Task HandleChatWindowClosed() => Task.CompletedTask;
   public Task SendMessage() => Task.CompletedTask;

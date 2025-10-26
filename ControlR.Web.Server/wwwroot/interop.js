@@ -203,7 +203,6 @@ document.addEventListener("visibilitychange", async () => {
   }
 });
 
-
 /** Session Storage */
 
 /**

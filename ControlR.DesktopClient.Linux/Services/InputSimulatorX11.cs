@@ -174,6 +174,11 @@ public class InputSimulatorX11 : IInputSimulator
     }
   }
 
+  public Task SetBlockInput(bool isBlocked)
+  {
+    throw new NotImplementedException();
+  }
+
   public void TypeText(string text)
   {
     var display = LibX11.XOpenDisplay("");

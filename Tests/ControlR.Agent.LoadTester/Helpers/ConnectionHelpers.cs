@@ -16,6 +16,7 @@ namespace ControlR.Agent.LoadTester.Helpers;
 public static class ConnectionHelper
 {
   private const int SO_REUSEPORT = 15;
+
   private static int[] _lastOctets = [.. Enumerable.Range(200, 10)];
   private static int[] _ports = [.. Enumerable.Range(32_768, 28_231)];
 
@@ -36,56 +37,6 @@ public static class ConnectionHelper
       return webSocket;
     };
   }
-
-
-
-  public static HttpMessageInvoker GetMessageInvoker(int agentNum)
-  {
-    var socketsHandler = new SocketsHttpHandler()
-    {
-
-      ConnectCallback = async (context, token) =>
-      {
-        while (true)
-        {
-          try
-          {
-            var octetIndex = agentNum / _ports.Length % _lastOctets.Length;
-            var portIndex = agentNum % _ports.Length;
-            var lastOctet = _lastOctets[octetIndex];
-            var port = _ports[portIndex];
-            var localEndpoint = new IPEndPoint(IPAddress.Parse($"192.168.0.{lastOctet}"), port);
-
-            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            socket.SetRawSocketOption(1, SO_REUSEPORT, BitConverter.GetBytes(1));
-            socket.Bind(localEndpoint);
-
-            IPEndPoint? remoteEndpoint;
-
-            if (context.DnsEndPoint.Host == "localhost")
-            {
-              remoteEndpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
-            }
-            else
-            {
-              var ips = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, token);
-              remoteEndpoint = new IPEndPoint(ips[0], context.DnsEndPoint.Port);
-            }
-            await socket.ConnectAsync(remoteEndpoint, token);
-            return new NetworkStream(socket, ownsSocket: false);
-          }
-          catch (Exception ex)
-          {
-            Console.WriteLine($"Failed to get bound socket. Error: {ex}");
-          }
-        }
-      },
-    };
-
-    return new HttpMessageInvoker(socketsHandler);
-  }
-
 
   public static Task<DeviceDto> CreateDevice(
     Guid deviceId,
@@ -139,5 +90,52 @@ public static class ConnectionHelper
       throw new InvalidOperationException($"Failed to clone device model: {result.Reason}");
     }
     return result.Value.AsTaskResult();
+  }
+
+  public static HttpMessageInvoker GetMessageInvoker(int agentNum)
+  {
+    var socketsHandler = new SocketsHttpHandler()
+    {
+
+      ConnectCallback = async (context, token) =>
+      {
+        while (true)
+        {
+          try
+          {
+            var octetIndex = agentNum / _ports.Length % _lastOctets.Length;
+            var portIndex = agentNum % _ports.Length;
+            var lastOctet = _lastOctets[octetIndex];
+            var port = _ports[portIndex];
+            var localEndpoint = new IPEndPoint(IPAddress.Parse($"192.168.0.{lastOctet}"), port);
+
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            socket.SetRawSocketOption(1, SO_REUSEPORT, BitConverter.GetBytes(1));
+            socket.Bind(localEndpoint);
+
+            IPEndPoint? remoteEndpoint;
+
+            if (context.DnsEndPoint.Host == "localhost")
+            {
+              remoteEndpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
+            }
+            else
+            {
+              var ips = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, token);
+              remoteEndpoint = new IPEndPoint(ips[0], context.DnsEndPoint.Port);
+            }
+            await socket.ConnectAsync(remoteEndpoint, token);
+            return new NetworkStream(socket, ownsSocket: false);
+          }
+          catch (Exception ex)
+          {
+            Console.WriteLine($"Failed to get bound socket. Error: {ex}");
+          }
+        }
+      },
+    };
+
+    return new HttpMessageInvoker(socketsHandler);
   }
 }

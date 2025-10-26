@@ -118,6 +118,30 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     await TagStore.Remove(_selectedTag.Id);
     Snackbar.Add("Tag deleted", Severity.Success);
   }
+
+  private async Task HandleDeviceToggled((DeviceDto device, bool isToggled) args)
+  {
+    if (_selectedTag is null)
+    {
+      Snackbar.Add("No tag selected", Severity.Error);
+      return;
+    }
+    
+    await SetDeviceTag(args.isToggled, _selectedTag, args.device.Id);
+  }
+  private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
+  {
+    if (args.Key == "Enter")
+    {
+      await CreateTag();
+    }
+  }
+
+  [MemberNotNullWhen(true, nameof(_newTagName))]
+  private bool IsNewTagNameValid()
+  {
+    return ValidateNewTagName(_newTagName) == null;
+  }
   private async Task RenameSelectedTag()
   {
     if (_selectedTag is null)
@@ -151,30 +175,6 @@ public partial class TagsTabContent : ComponentBase, IDisposable
 
     await TagStore.AddOrUpdate(new TagViewModel(renameResult.Value));
     Snackbar.Add("Tag renamed", Severity.Success);
-  }
-
-  private async Task HandleDeviceToggled((DeviceDto device, bool isToggled) args)
-  {
-    if (_selectedTag is null)
-    {
-      Snackbar.Add("No tag selected", Severity.Error);
-      return;
-    }
-    
-    await SetDeviceTag(args.isToggled, _selectedTag, args.device.Id);
-  }
-  private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
-  {
-    if (args.Key == "Enter")
-    {
-      await CreateTag();
-    }
-  }
-
-  [MemberNotNullWhen(true, nameof(_newTagName))]
-  private bool IsNewTagNameValid()
-  {
-    return ValidateNewTagName(_newTagName) == null;
   }
 
   private async Task SetDeviceTag(bool isToggled, TagViewModel tag, Guid deviceId)

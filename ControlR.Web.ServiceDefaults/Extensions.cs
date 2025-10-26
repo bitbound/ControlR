@@ -18,6 +18,16 @@ namespace ControlR.Web.ServiceDefaults;
 // To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
 public static class Extensions
 {
+  public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
+  {
+    builder.Services
+      .AddHealthChecks()
+      // Add a default liveness check to ensure app is responsive
+      .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+    return builder;
+  }
+
   public static IHostApplicationBuilder AddServiceDefaults(
     this IHostApplicationBuilder builder,
     string serviceName)
@@ -47,7 +57,7 @@ public static class Extensions
     builder.Logging.AddOpenTelemetry(logging =>
     {
       var resourceBuilder = ResourceBuilder.CreateDefault();
-      resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
+      resourceBuilder.AddService(serviceName, "controlr");
 
       logging.IncludeFormattedMessage = true;
       logging.IncludeScopes = true;
@@ -55,7 +65,7 @@ public static class Extensions
     });
 
     builder.Services.AddOpenTelemetry()
-      .ConfigureResource(resourceBuilder => { resourceBuilder.AddService(serviceName, serviceNamespace: "controlr"); })
+      .ConfigureResource(resourceBuilder => { resourceBuilder.AddService(serviceName, "controlr"); })
       .WithMetrics(metrics =>
       {
         metrics
@@ -68,14 +78,11 @@ public static class Extensions
         tracing
           .AddAspNetCoreInstrumentation(options =>
           {
-            options.Filter = (httpContext) =>
-            {
-              return httpContext.Request.Path.Value?.StartsWith("/health") != true;
-            };
+            options.Filter = httpContext => { return httpContext.Request.Path.Value?.StartsWith("/health") != true; };
           })
           .AddHttpClientInstrumentation(options =>
           {
-            options.FilterHttpWebRequest = (request) =>
+            options.FilterHttpWebRequest = request =>
             {
               return !request.RequestUri.PathAndQuery.StartsWith("/health");
             };
@@ -85,6 +92,26 @@ public static class Extensions
     builder.AddOpenTelemetryExporters();
 
     return builder;
+  }
+
+  public static WebApplication MapDefaultEndpoints(this WebApplication app)
+  {
+    // All health checks must pass for app to be considered ready to accept traffic after starting
+    app
+      .MapHealthChecks("/health")
+      .WithRequestTimeout(TimeSpan.FromSeconds(5))
+      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
+
+    // Only health checks tagged with the "live" tag must pass for app to be considered alive
+    app
+      .MapHealthChecks("/alive", new HealthCheckOptions
+      {
+        Predicate = r => r.Tags.Contains("live")
+      })
+      .WithRequestTimeout(TimeSpan.FromSeconds(5))
+      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
+
+    return app;
   }
 
   private static IHostApplicationBuilder AddOpenTelemetryExporters(
@@ -108,35 +135,5 @@ public static class Extensions
     }
 
     return builder;
-  }
-
-  public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
-  {
-    builder.Services
-      .AddHealthChecks()
-      // Add a default liveness check to ensure app is responsive
-      .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
-
-    return builder;
-  }
-
-  public static WebApplication MapDefaultEndpoints(this WebApplication app)
-  {
-    // All health checks must pass for app to be considered ready to accept traffic after starting
-    app
-      .MapHealthChecks("/health")
-      .WithRequestTimeout(TimeSpan.FromSeconds(5))
-      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
-
-    // Only health checks tagged with the "live" tag must pass for app to be considered alive
-    app
-      .MapHealthChecks("/alive", new HealthCheckOptions
-      {
-        Predicate = r => r.Tags.Contains("live")
-      })
-      .WithRequestTimeout(TimeSpan.FromSeconds(5))
-      .CacheOutput(policy => { policy.Expire(TimeSpan.FromSeconds(5)); });
-
-    return app;
   }
 }

@@ -63,7 +63,6 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     return NoContent();
   }
 
-
   [HttpGet]
   public async Task<ActionResult<RoleResponseDto[]>> GetOwnRoles(
     [FromServices] AppDb appDb)

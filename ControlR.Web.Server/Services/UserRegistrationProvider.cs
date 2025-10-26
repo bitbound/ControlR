@@ -10,10 +10,9 @@ public class UserRegistrationProvider(
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<UserRegistrationProvider> logger) : IUserRegistrationProvider
 {
-  private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly ILogger<UserRegistrationProvider> _logger = logger;
-
+  private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
   public async Task<bool> IsSelfRegistrationEnabled()
   {
     try

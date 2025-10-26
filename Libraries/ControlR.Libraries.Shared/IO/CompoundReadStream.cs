@@ -6,6 +6,7 @@ public class CompoundReadStream : Stream
   private readonly bool _ownsStreams;
   private readonly List<Stream> _streams;
   private readonly long _totalLength;
+
   private int _currentStreamIndex = 0;
 
   public CompoundReadStream(bool ownsStreams, params Stream[] streams)
@@ -45,28 +46,6 @@ public class CompoundReadStream : Stream
   {
     // No-op since this is a read-only stream
   }
-  public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-  {
-    return await ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
-  }
-
-  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-  {
-    if (_currentStreamIndex >= _streams.Count)
-    {
-      return 0; // End of all streams
-    }
-
-    var bytesRead = await _streams[_currentStreamIndex].ReadAsync(buffer, cancellationToken);
-    if (bytesRead == 0)
-    {
-      // Move to the next stream
-      _currentStreamIndex++;
-      return await ReadAsync(buffer, cancellationToken);
-    }
-
-    return bytesRead;
-  }
 
   public override int Read(byte[] buffer, int offset, int count)
   {
@@ -84,6 +63,30 @@ public class CompoundReadStream : Stream
     }
 
     return bytesRead;
+  }
+  public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+  {
+    return await ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
+  }
+
+  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+  {
+    while (true)
+    {
+      if (_currentStreamIndex >= _streams.Count)
+      {
+        return 0; // End of all streams
+      }
+
+      var bytesRead = await _streams[_currentStreamIndex].ReadAsync(buffer, cancellationToken);
+      if (bytesRead != 0)
+      {
+        return bytesRead;
+      }
+
+      // Move to the next stream
+      _currentStreamIndex++;
+    }
   }
 
   public override long Seek(long offset, SeekOrigin origin)

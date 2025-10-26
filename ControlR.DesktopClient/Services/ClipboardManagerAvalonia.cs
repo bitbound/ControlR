@@ -1,4 +1,4 @@
-using ControlR.DesktopClient.Common.ServiceInterfaces;
+using Avalonia.Input.Platform;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
@@ -16,7 +16,8 @@ public class ClipboardManagerAvalonia(
         _logger.LogWarning("Clipboard is not available.");
         return null;
       }
-      return await App.MainWindow.Clipboard.GetTextAsync();
+
+      return await App.MainWindow.Clipboard.TryGetTextAsync();
     });
   }
 

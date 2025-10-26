@@ -84,6 +84,32 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     ];
   }
 
+  private async Task DeleteSelectedUser()
+  {
+    if (_selectedUser is null)
+      return;
+
+    try
+    {
+      var result = await ControlrApi.DeleteUser(_selectedUser.Id);
+      if (!result.IsSuccess)
+      {
+        Snackbar.Add(result.Reason, Severity.Error);
+        return;
+      }
+      
+      await UserStore.Refresh();
+      _selectedUser = null;
+      Snackbar.Add("User deleted", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while deleting user.");
+      Snackbar.Add("An error occurred while deleting user", Severity.Error);
+    }
+    await InvokeAsync(StateHasChanged);
+  }
+
   private async Task SetUserRole(bool isToggled, UserResponseDto user, RoleViewModel role)
   {
     try
@@ -173,31 +199,5 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     }
 
     return false;
-  }
-
-  private async Task DeleteSelectedUser()
-  {
-    if (_selectedUser is null)
-      return;
-
-    try
-    {
-      var result = await ControlrApi.DeleteUser(_selectedUser.Id);
-      if (!result.IsSuccess)
-      {
-        Snackbar.Add(result.Reason, Severity.Error);
-        return;
-      }
-      
-      await UserStore.Refresh();
-      _selectedUser = null;
-      Snackbar.Add("User deleted", Severity.Success);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while deleting user.");
-      Snackbar.Add("An error occurred while deleting user", Severity.Error);
-    }
-    await InvokeAsync(StateHasChanged);
   }
 }

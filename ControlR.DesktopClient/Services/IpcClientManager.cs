@@ -1,5 +1,4 @@
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
@@ -24,15 +23,15 @@ public class IpcClientManager(
   ILogger<IpcClientManager> logger) : BackgroundService
 {
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
+  private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
+  private readonly IImageUtility _imageUtility = imageUtility;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
-  private readonly IImageUtility _imageUtility = imageUtility;
-  private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {

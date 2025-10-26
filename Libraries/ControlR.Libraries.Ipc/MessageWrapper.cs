@@ -31,13 +31,13 @@ public class MessageWrapper
   }
 
   [DataMember]
+  public byte[] Content { get; set; }
+
+  [DataMember]
+  public string ContentTypeName { get; set; }
+
+  [DataMember]
   public Guid Id { get; set; }
-
-  [DataMember]
-  public byte[] Content { get; set; } = [];
-
-  [DataMember]
-  public string ContentTypeName { get; set; } = string.Empty;
 
   [DataMember]
   public MessageType MessageType { get; set; }

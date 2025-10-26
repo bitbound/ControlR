@@ -2,9 +2,6 @@
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
 
-        <!-- These API calls take forever. -->
-        <NuGetAudit>false</NuGetAudit>
-
         <Authors>Jared Goodwin</Authors>
         <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
         <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
@@ -35,4 +32,8 @@
     <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
         <DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
     </PropertyGroup>
+
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+		<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.6" />
+	</ItemGroup>
 </Project>

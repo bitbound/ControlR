@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
-
 internal sealed class CaptureMetricsWindows(IServiceProvider serviceProvider) 
   : CaptureMetricsBase(serviceProvider), ICaptureMetrics
 {

@@ -10,17 +10,18 @@ using System.Runtime.InteropServices;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
-internal partial class CursorWatcherX11(
+internal class CursorWatcherX11(
   IMessenger messenger,
   IImageUtility imageUtility,
   ILogger<CursorWatcherX11> logger) : BackgroundService
 {
-  private readonly IMessenger _messenger = messenger;
   private readonly IImageUtility _imageUtility = imageUtility;
   private readonly ILogger<CursorWatcherX11> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
+
   private IntPtr _display = IntPtr.Zero;
-  private ulong _lastCursorSerial = 0;
   private string? _lastCursorBase64;
+  private ulong _lastCursorSerial = 0;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {

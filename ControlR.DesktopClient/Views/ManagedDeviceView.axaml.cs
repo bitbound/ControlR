@@ -19,16 +19,16 @@ public partial class ManagedDeviceView : UserControl
     Unloaded += ManagedDeviceView_Unloaded;
   }
 
-  private void ManagedDeviceView_Unloaded(object? sender, RoutedEventArgs e)
-  {
-    App.MainWindow.Activated -= MainWindow_Activated;
-  }
-
   private void MainWindow_Activated(object? sender, EventArgs e)
   {
     if (DataContext is not IManagedDeviceViewModel viewModel)
       return;
 
     viewModel.SetPermissionValues();
+  }
+
+  private void ManagedDeviceView_Unloaded(object? sender, RoutedEventArgs e)
+  {
+    App.MainWindow.Activated -= MainWindow_Activated;
   }
 }

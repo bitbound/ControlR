@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Web.Client.Components.Pages.DeviceAccess;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -13,6 +12,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
+
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
   private double _canvasCssWidth;
@@ -20,14 +20,14 @@ public partial class RemoteDisplay : JsInteropableComponent
   private double _canvasScale = 1;
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
-  private ElementReference _outerFrameElement;
   private double _lastPinchDistance = -1;
   private CaptureMetricsDto? _latestCaptureMetrics;
+  private IDisposable? _messageHandlerRegistration;
+  private ElementReference _outerFrameElement;
+  private IDisposable? _remoteControlStateChangedToken;
   private ElementReference _screenArea;
   private bool _streamStarted;
   private ElementReference _virtualKeyboard;
-  private IDisposable? _messageHandlerRegistration;
-  private IDisposable? _remoteControlStateChangedToken;
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -45,6 +45,8 @@ public partial class RemoteDisplay : JsInteropableComponent
   [Inject]
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
+  [Inject]
+  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
 
   [Parameter]
   [EditorRequired]
@@ -58,9 +60,6 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
-
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
 
   private string CanvasClasses
   {
@@ -137,6 +136,12 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
+  public async Task SendKeyEvent(string key, bool isPressed)
+  {
+    await StreamingClient.SendKeyEvent(key, isPressed, _componentClosing.Token);
+  }
+
+  [JSInvokable]
   public async Task SendKeyboardStateReset()
   {
     if (StreamingClient.State != System.Net.WebSockets.WebSocketState.Open)
@@ -145,12 +150,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
 
     await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
-  }
-
-  [JSInvokable]
-  public async Task SendKeyEvent(string key, bool isPressed)
-  {
-    await StreamingClient.SendKeyEvent(key, isPressed, _componentClosing.Token);
   }
 
   [JSInvokable]
@@ -266,7 +265,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-
   private async Task DrawRegion(ScreenRegionDto dto)
   {
     try
@@ -316,12 +314,12 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       if (dto.Cursor == PointerCursor.Custom)
       {
-        if (string.IsNullOrWhiteSpace(dto.CustomCursorBase64))
+        if (string.IsNullOrWhiteSpace(dto.CustomCursorBase64Png))
         {
           Logger.LogWarning("Received custom cursor change with no image data.");
           return;
         }
-        _canvasCssCursor = $"url(data:image/png;base64,{dto.CustomCursorBase64}) {dto.XHotspot} {dto.YHotspot}, auto";
+        _canvasCssCursor = $"url(data:image/png;base64,{dto.CustomCursorBase64Png}) {dto.XHotspot} {dto.YHotspot}, auto";
         await InvokeAsync(StateHasChanged);
         return;
       }
@@ -540,8 +538,16 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private async Task InvokeCtrlAltDel()
   {
-    await ViewerHub.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
-    Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
+    try
+    {
+      await MainHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
+      Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending Ctrl+Alt+Del.");
+      Snackbar.Add("An error occurred while sending Ctrl+Alt+Del.");
+    }
   }
 
   private void OnTouchCancel(TouchEventArgs ev)

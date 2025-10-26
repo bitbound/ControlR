@@ -11,46 +11,48 @@ public interface IMacInterop
 {
   Result InvokeKeyEvent(string key, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
-  void MovePointer(int x, int y, MovePointerType moveType);
-  void ResetKeyboardState();
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
-  void TypeText(string text);
   bool IsAccessibilityPermissionGranted();
+  bool IsScreenCapturePermissionGranted();
+  void MovePointer(int x, int y, MovePointerType moveType);
   void OpenAccessibilityPreferences();
   void OpenScreenRecordingPreferences();
   void RequestAccessibilityPermission();
-  bool IsScreenCapturePermissionGranted();
   void RequestScreenCapturePermission();
+  void ResetKeyboardState();
+  void TypeText(string text);
   Result WakeScreen();
 }
 
 public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
 {
+  private const int DoubleClickDistanceThreshold = 5; // pixels
+
+  // Double-click timing and distance thresholds
+  private static readonly TimeSpan _doubleClickTimeThreshold = TimeSpan.FromMilliseconds(500);
   private static readonly nint _eventSource = MacInputSimulation.CGEventSourceCreate(MacInputSimulation.kCGHIDEventTap);
+
   private readonly ILogger<MacInterop> _logger = logger;
 
-  // Track mouse button states for proper drag events
-  private bool _leftButtonDown = false;
-  private bool _rightButtonDown = false;
-  private bool _middleButtonDown = false;
-
-  // Track modifier key states
-  private bool _shiftDown = false;
-  private bool _controlDown = false;
-  private bool _optionDown = false;
   private bool _commandDown = false;
+  private bool _controlDown = false;
+  private int _currentClickCount = 0;
+  private int _lastCalculatedClickCount = 1; // Store the last calculated click count for mouse up events
+  private int _lastClickButton = -1;
 
   // Track click timing for double-click detection
   private DateTimeOffset _lastClickTime = DateTimeOffset.MinValue;
   private int _lastClickX = -1;
   private int _lastClickY = -1;
-  private int _lastClickButton = -1;
-  private int _currentClickCount = 0;
-  private int _lastCalculatedClickCount = 1; // Store the last calculated click count for mouse up events
 
-  // Double-click timing and distance thresholds
-  private static readonly TimeSpan _doubleClickTimeThreshold = TimeSpan.FromMilliseconds(500);
-  private const int DoubleClickDistanceThreshold = 5; // pixels
+  // Track mouse button states for proper drag events
+  private bool _leftButtonDown = false;
+  private bool _middleButtonDown = false;
+  private bool _optionDown = false;
+  private bool _rightButtonDown = false;
+
+  // Track modifier key states
+  private bool _shiftDown = false;
 
   public Result InvokeKeyEvent(string key, bool isPressed)
   {
@@ -143,21 +145,6 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  // Returns the current modifier flags for CGEventSetFlags
-  private ulong GetCurrentModifierFlags()
-  {
-    ulong flags = 0;
-    if (_shiftDown)
-      flags |= MacInputSimulation.kCGEventFlagMaskShift;
-    if (_controlDown)
-      flags |= MacInputSimulation.kCGEventFlagMaskControl;
-    if (_optionDown)
-      flags |= MacInputSimulation.kCGEventFlagMaskAlternate;
-    if (_commandDown)
-      flags |= MacInputSimulation.kCGEventFlagMaskCommand;
-    return flags;
-  }
-
   public void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed)
   {
     try
@@ -221,6 +208,83 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
+  public void InvokeWheelScroll(int x, int y, int scrollY, int scrollX)
+  {
+    try
+    {
+      var location = new MacInputSimulation.CGPoint(x, y);
+
+      // Normalize scroll values to direction only, then use a fixed reasonable scroll amount for macOS
+      const int macScrollAmount = 3; // Lines to scroll per wheel tick - adjust as needed
+
+      if (scrollY != 0)
+      {
+        var normalizedScrollY = scrollY > 0 ? macScrollAmount : -macScrollAmount;
+
+        var eventRef = MacInputSimulation.CGEventCreateScrollWheelEvent(
+          _eventSource,
+          MacInputSimulation.kCGScrollEventUnitLine,
+          1, // wheelCount
+          normalizedScrollY,
+          0);
+
+        if (eventRef != nint.Zero)
+        {
+          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, eventRef);
+          MacInputSimulation.CFRelease(eventRef);
+        }
+      }
+
+      if (scrollX != 0)
+      {
+        var normalizedScrollX = scrollX > 0 ? macScrollAmount : -macScrollAmount;
+
+        var eventRef = MacInputSimulation.CGEventCreateScrollWheelEvent(
+          _eventSource,
+          MacInputSimulation.kCGScrollEventUnitLine,
+          2, // wheelCount
+          0,
+          normalizedScrollX);
+
+        if (eventRef != nint.Zero)
+        {
+          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, eventRef);
+          MacInputSimulation.CFRelease(eventRef);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error invoking wheel scroll at ({X}, {Y})", x, y);
+    }
+  }
+
+  public bool IsAccessibilityPermissionGranted()
+  {
+    try
+    {
+      return ApplicationServices.AXIsProcessTrusted();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking accessibility permission.");
+      return false;
+    }
+  }
+
+  public bool IsScreenCapturePermissionGranted()
+  {
+    try
+    {
+      return CoreGraphics.CGPreflightScreenCaptureAccess();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking screen capture permission.");
+      return false;
+    }
+  }
+
   public void MovePointer(int x, int y, MovePointerType moveType)
   {
     try
@@ -279,6 +343,29 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       _logger.LogError(ex, "Error moving pointer to ({X}, {Y})", x, y);
     }
   }
+  public void OpenAccessibilityPreferences()
+  {
+    var prefPage = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
+    Process.Start("open", prefPage);
+  }
+
+  public void OpenScreenRecordingPreferences()
+  {
+    var prefPage = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
+    Process.Start("open", prefPage);
+  }
+
+  public void RequestAccessibilityPermission()
+  {
+    var optionsDict = Foundation.CreateAccessibilityPromptDictionary();
+    _ = ApplicationServices.AXIsProcessTrustedWithOptions(optionsDict);
+    Foundation.CFRelease(optionsDict);
+  }
+
+  public void RequestScreenCapturePermission()
+  {
+    _ = CoreGraphics.CGRequestScreenCaptureAccess();
+  }
 
   public void ResetKeyboardState()
   {
@@ -291,57 +378,6 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error resetting keyboard state");
-    }
-  }
-
-  public void InvokeWheelScroll(int x, int y, int scrollY, int scrollX)
-  {
-    try
-    {
-      var location = new MacInputSimulation.CGPoint(x, y);
-
-      // Normalize scroll values to direction only, then use a fixed reasonable scroll amount for macOS
-      const int macScrollAmount = 3; // Lines to scroll per wheel tick - adjust as needed
-
-      if (scrollY != 0)
-      {
-        var normalizedScrollY = scrollY > 0 ? macScrollAmount : -macScrollAmount;
-
-        var eventRef = MacInputSimulation.CGEventCreateScrollWheelEvent(
-          _eventSource,
-          MacInputSimulation.kCGScrollEventUnitLine,
-          1, // wheelCount
-          normalizedScrollY,
-          0);
-
-        if (eventRef != nint.Zero)
-        {
-          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, eventRef);
-          MacInputSimulation.CFRelease(eventRef);
-        }
-      }
-
-      if (scrollX != 0)
-      {
-        var normalizedScrollX = scrollX > 0 ? macScrollAmount : -macScrollAmount;
-
-        var eventRef = MacInputSimulation.CGEventCreateScrollWheelEvent(
-          _eventSource,
-          MacInputSimulation.kCGScrollEventUnitLine,
-          2, // wheelCount
-          0,
-          normalizedScrollX);
-
-        if (eventRef != nint.Zero)
-        {
-          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, eventRef);
-          MacInputSimulation.CFRelease(eventRef);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error invoking wheel scroll at ({X}, {Y})", x, y);
     }
   }
 
@@ -375,6 +411,76 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error typing text: {Text}", text);
+    }
+  }
+
+  public Result WakeScreen()
+  {
+    nint assertionType = nint.Zero;
+    nint reasonString = nint.Zero;
+    try
+    {
+      // Create CFString for assertion type
+      assertionType = Foundation.CFStringCreateWithCString(
+        nint.Zero,
+        IOKit.kIOPMAssertionTypePreventUserIdleDisplaySleep,
+        0x08000100); // kCFStringEncodingUTF8
+
+      if (assertionType == nint.Zero)
+      {
+        return Result.Fail("Failed to create assertion type string");
+      }
+
+      // Create CFString for reason
+      reasonString = Foundation.CFStringCreateWithCString(
+        nint.Zero,
+        "ControlR remote control wake",
+        0x08000100); // kCFStringEncodingUTF8
+
+      if (reasonString == nint.Zero)
+      {
+        return Result.Fail("Failed to create reason string");
+      }
+
+      // Create power assertion to wake the screen
+      var result = IOKit.IOPMAssertionCreateWithName(
+        assertionType,
+        IOKit.kIOPMAssertionLevelOn,
+        reasonString,
+        out uint assertionID);
+
+      if (result != IOKit.kIOReturnSuccess)
+      {
+        return Result.Fail($"Failed to create power assertion. IOReturn: {result}");
+      }
+
+      // Brief delay to allow the assertion to take effect
+      Thread.Sleep(100);
+
+      // Release the assertion immediately after creating it
+      // This is enough to wake the screen without keeping it awake permanently
+      var releaseResult = IOKit.IOPMAssertionRelease(assertionID);
+      if (releaseResult != IOKit.kIOReturnSuccess)
+      {
+        _logger.LogWarning("Failed to release power assertion {AssertionID}. IOReturn: {Result}",
+          assertionID, releaseResult);
+      }
+
+      _logger.LogInformation("Screen wake assertion created and released successfully");
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error waking screen");
+      return Result.Fail($"Error waking screen: {ex.Message}");
+    }
+    finally
+    {
+      // Clean up CFString objects
+      if (assertionType != nint.Zero)
+        Foundation.CFRelease(assertionType);
+      if (reasonString != nint.Zero)
+        Foundation.CFRelease(reasonString);
     }
   }
 
@@ -589,123 +695,19 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     return _currentClickCount;
   }
 
-  public bool IsAccessibilityPermissionGranted()
+  // Returns the current modifier flags for CGEventSetFlags
+  private ulong GetCurrentModifierFlags()
   {
-    try
-    {
-      return ApplicationServices.AXIsProcessTrusted();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error checking accessibility permission.");
-      return false;
-    }
-  }
-
-  public void RequestAccessibilityPermission()
-  {
-    var optionsDict = Foundation.CreateAccessibilityPromptDictionary();
-    _ = ApplicationServices.AXIsProcessTrustedWithOptions(optionsDict);
-    Foundation.CFRelease(optionsDict);
-  }
-
-  public bool IsScreenCapturePermissionGranted()
-  {
-    try
-    {
-      return CoreGraphics.CGPreflightScreenCaptureAccess();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error checking screen capture permission.");
-      return false;
-    }
-  }
-  public void OpenAccessibilityPreferences()
-  {
-    var prefPage = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
-    Process.Start("open", prefPage);
-  }
-
-  public void OpenScreenRecordingPreferences()
-  {
-    var prefPage = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
-    Process.Start("open", prefPage);
-  }
-
-  public void RequestScreenCapturePermission()
-  {
-    _ = CoreGraphics.CGRequestScreenCaptureAccess();
-  }
-
-  public Result WakeScreen()
-  {
-    nint assertionType = nint.Zero;
-    nint reasonString = nint.Zero;
-    try
-    {
-      // Create CFString for assertion type
-      assertionType = Foundation.CFStringCreateWithCString(
-        nint.Zero,
-        IOKit.kIOPMAssertionTypePreventUserIdleDisplaySleep,
-        0x08000100); // kCFStringEncodingUTF8
-
-      if (assertionType == nint.Zero)
-      {
-        return Result.Fail("Failed to create assertion type string");
-      }
-
-      // Create CFString for reason
-      reasonString = Foundation.CFStringCreateWithCString(
-        nint.Zero,
-        "ControlR remote control wake",
-        0x08000100); // kCFStringEncodingUTF8
-
-      if (reasonString == nint.Zero)
-      {
-        return Result.Fail("Failed to create reason string");
-      }
-
-      // Create power assertion to wake the screen
-      var result = IOKit.IOPMAssertionCreateWithName(
-        assertionType,
-        IOKit.kIOPMAssertionLevelOn,
-        reasonString,
-        out uint assertionID);
-
-      if (result != IOKit.kIOReturnSuccess)
-      {
-        return Result.Fail($"Failed to create power assertion. IOReturn: {result}");
-      }
-
-      // Brief delay to allow the assertion to take effect
-      Thread.Sleep(100);
-
-      // Release the assertion immediately after creating it
-      // This is enough to wake the screen without keeping it awake permanently
-      var releaseResult = IOKit.IOPMAssertionRelease(assertionID);
-      if (releaseResult != IOKit.kIOReturnSuccess)
-      {
-        _logger.LogWarning("Failed to release power assertion {AssertionID}. IOReturn: {Result}",
-          assertionID, releaseResult);
-      }
-
-      _logger.LogInformation("Screen wake assertion created and released successfully");
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error waking screen");
-      return Result.Fail($"Error waking screen: {ex.Message}");
-    }
-    finally
-    {
-      // Clean up CFString objects
-      if (assertionType != nint.Zero)
-        Foundation.CFRelease(assertionType);
-      if (reasonString != nint.Zero)
-        Foundation.CFRelease(reasonString);
-    }
+    ulong flags = 0;
+    if (_shiftDown)
+      flags |= MacInputSimulation.kCGEventFlagMaskShift;
+    if (_controlDown)
+      flags |= MacInputSimulation.kCGEventFlagMaskControl;
+    if (_optionDown)
+      flags |= MacInputSimulation.kCGEventFlagMaskAlternate;
+    if (_commandDown)
+      flags |= MacInputSimulation.kCGEventFlagMaskCommand;
+    return flags;
   }
 
 }

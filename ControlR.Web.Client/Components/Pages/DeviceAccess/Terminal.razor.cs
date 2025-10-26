@@ -15,6 +15,7 @@ public partial class Terminal : IAsyncDisposable
   };
 
   private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
+
   private MudTextField<string> _commandInputElement = null!;
 
   // Provided by UI.  Never null
@@ -24,6 +25,9 @@ public partial class Terminal : IAsyncDisposable
   private bool _loading = true;
   private bool _taboutPrevented;
   private ElementReference _terminalOutputContainer;
+
+  [Inject]
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
 
   [Inject]
   public required IDeviceState DeviceState { get; init; }
@@ -42,9 +46,6 @@ public partial class Terminal : IAsyncDisposable
 
   [Inject]
   public required ITerminalState TerminalState { get; init; }
-
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
 
   private int CommandInputLineCount => TerminalState.EnableMultiline
     ? 6
@@ -72,6 +73,7 @@ public partial class Terminal : IAsyncDisposable
   {
     await base.OnAfterRenderAsync(firstRender);
 
+    // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
     if (_commandInputElement is not null && !_taboutPrevented)
     {
       _taboutPrevented = true;
@@ -95,7 +97,10 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await ViewerHub.CreateTerminalSession(DeviceState.CurrentDevice.Id, TerminalState.Id);
+      var result = await DeviceAccessHub.Server.CreateTerminalSession(
+        DeviceState.CurrentDevice.Id,
+        TerminalState.Id);
+
       if (!result.IsSuccess)
       {
         Snackbar.Add("Failed to start terminal", Severity.Error);
@@ -164,73 +169,82 @@ public partial class Terminal : IAsyncDisposable
 
   private async Task GetAllCompletions()
   {
-    if (string.IsNullOrWhiteSpace(TerminalState.LastCompletionInput))
+    try
     {
-      TerminalState.LastCompletionInput = TerminalState.CommandInputText;
-      TerminalState.LastCursorIndex = await JsInterop.GetCursorIndexById(_commandInputElementId);
-      if (TerminalState.LastCursorIndex < 0)
+
+      if (string.IsNullOrWhiteSpace(TerminalState.LastCompletionInput))
       {
-        Snackbar.Add("Failed to get cursor index for completions", Severity.Error);
+        TerminalState.LastCompletionInput = TerminalState.CommandInputText;
+        TerminalState.LastCursorIndex = await JsInterop.GetCursorIndexById(_commandInputElementId);
+        if (TerminalState.LastCursorIndex < 0)
+        {
+          Snackbar.Add("Failed to get cursor index for completions", Severity.Error);
+          return;
+        }
+      }
+
+      // Start with an empty list to collect all completions
+      var allMatches = new List<PwshCompletionMatch>();
+      var currentPage = 0;
+      PwshCompletionsResponseDto? lastResponse = null;
+
+      // Keep requesting pages until we have all completions
+      do
+      {
+        var requestDto = new PwshCompletionsRequestDto(
+          DeviceState.CurrentDevice.Id,
+          TerminalState.Id,
+          TerminalState.LastCompletionInput,
+          TerminalState.LastCursorIndex,
+          string.Empty, // ViewerConnectionId will be set by server
+          null,
+          currentPage);
+
+        var completionResult = await DeviceAccessHub.Server.GetPwshCompletions(requestDto);
+
+        if (!completionResult.IsSuccess)
+        {
+          Snackbar.Add(completionResult.Reason, Severity.Error);
+          return;
+        }
+
+        if (completionResult.Value.TotalCount >= PwshCompletionsResponseDto.MaxRetrievableItems)
+        {
+          Snackbar.Add($"Too many items to retrieve ({completionResult.Value.TotalCount})", Severity.Warning);
+          return;
+        }
+
+        lastResponse = completionResult.Value;
+        allMatches.AddRange(lastResponse.CompletionMatches);
+        currentPage++;
+      } while (lastResponse.HasMorePages);
+
+      if (allMatches.Count == 0)
+      {
+        Logger.LogInformation("No completions found for input: {Input}", TerminalState.LastCompletionInput);
         return;
       }
+
+      Logger.LogInformation("Received {Count} completions for input: {Input}",
+        allMatches.Count, TerminalState.LastCompletionInput);
+
+      // Create a combined response with all matches
+      _currentCompletions = new PwshCompletionsResponseDto(
+        lastResponse.ReplacementIndex,
+        lastResponse.ReplacementLength,
+        [.. allMatches],
+        false, // No more pages since we collected everything
+        allMatches.Count);
+
+      await InvokeAsync(StateHasChanged);
+      await _completionsAutoComplete.OpenMenuAsync();
+      await _completionsAutoComplete.FocusAsync();
     }
-
-    // Start with an empty list to collect all completions
-    var allMatches = new List<PwshCompletionMatch>();
-    var currentPage = 0;
-    PwshCompletionsResponseDto? lastResponse = null;
-
-    // Keep requesting pages until we have all completions
-    do
+    catch (Exception ex)
     {
-      var requestDto = new PwshCompletionsRequestDto(
-        DeviceState.CurrentDevice.Id,
-        TerminalState.Id,
-        TerminalState.LastCompletionInput,
-        TerminalState.LastCursorIndex,
-        string.Empty, // ViewerConnectionId will be set by server
-        null,
-        currentPage);
-
-      var completionResult = await ViewerHub.GetPwshCompletions(requestDto);
-
-      if (!completionResult.IsSuccess)
-      {
-        Snackbar.Add(completionResult.Reason, Severity.Error);
-        return;
-      }
-
-      if (completionResult.Value.TotalCount >= PwshCompletionsResponseDto.MaxRetrievableItems)
-      {
-        Snackbar.Add($"Too many items to retrieve ({completionResult.Value.TotalCount})", Severity.Warning);
-        return;
-      }
-
-      lastResponse = completionResult.Value;
-      allMatches.AddRange(lastResponse.CompletionMatches);
-      currentPage++;
-    } while (lastResponse.HasMorePages);
-
-    if (allMatches.Count == 0)
-    {
-      Logger.LogInformation("No completions found for input: {Input}", TerminalState.LastCompletionInput);
-      return;
+      Logger.LogError(ex, "Error while getting all command completions.");
+      Snackbar.Add("An error occurred while getting completions", Severity.Error);
     }
-
-    Logger.LogInformation("Received {Count} completions for input: {Input}",
-      allMatches.Count, TerminalState.LastCompletionInput);
-
-    // Create a combined response with all matches
-    _currentCompletions = new PwshCompletionsResponseDto(
-      lastResponse.ReplacementIndex,
-      lastResponse.ReplacementLength,
-      [.. allMatches],
-      false, // No more pages since we collected everything
-      allMatches.Count);
-
-    await InvokeAsync(StateHasChanged);
-    await _completionsAutoComplete.OpenMenuAsync();
-    await _completionsAutoComplete.FocusAsync();
   }
 
   private async Task GetNextCompletion(bool forward)
@@ -256,7 +270,7 @@ public partial class Terminal : IAsyncDisposable
         string.Empty, // ViewerConnectionId will be set by server
         forward);
 
-      var completionResult = await ViewerHub.GetPwshCompletions(requestDto);
+      var completionResult = await DeviceAccessHub.Server.GetPwshCompletions(requestDto);
 
       if (!completionResult.IsSuccess)
       {
@@ -320,8 +334,11 @@ public partial class Terminal : IAsyncDisposable
       TerminalState.InputHistory.Add(TerminalState.CommandInputText);
       TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
 
-      var result = await ViewerHub.SendTerminalInput(DeviceState.CurrentDevice.Id, TerminalState.Id,
-        TerminalState.CommandInputText);
+      var dto = new TerminalInputDto(TerminalState.Id, TerminalState.CommandInputText);
+      var result = await DeviceAccessHub.Server.SendTerminalInput(
+        DeviceState.CurrentDevice.Id,
+        dto);
+        
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);

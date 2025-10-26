@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Libraries.Shared.Services;
@@ -16,8 +15,6 @@ public interface ISystemEnvironment
   string SelfExtractDir { get; }
   string StartupDirectory { get; }
   string StartupExePath { get; }
-
-  bool IsSessionZero();
 }
 
 public class SystemEnvironment : ISystemEnvironment
@@ -108,9 +105,4 @@ public class SystemEnvironment : ISystemEnvironment
     throw new DirectoryNotFoundException("Unable to determine startup directory.");
 
   public string StartupExePath { get; } = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();
-
-  public bool IsSessionZero()
-  {
-    return Process.GetCurrentProcess().SessionId == 0;
-  }
 }

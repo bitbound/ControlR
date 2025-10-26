@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Interfaces.HubClients;
+using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
-    services.AddScoped<IViewerHubConnection, ViewerHubConnection>();
+    services.AddScoped<IHubConnector, HubConnector>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
     services.AddScoped<IMemoryProvider, MemoryProvider>();
     services.AddScoped<IDelayer, Delayer>();
@@ -48,7 +48,8 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IRoleStore, RoleStore>();
     services.AddScoped<IInviteStore, InviteStore>();
 
-    services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
+    services.AddStronglyTypedSignalrClient<IMainBrowserHub, IMainBrowserHubClient, MainBrowserHubClient>(ServiceLifetime.Scoped);
+    services.AddStronglyTypedSignalrClient<IDeviceAccessHub, IDeviceAccessHubClient, DeviceAccessHubClient>(ServiceLifetime.Scoped);
 
     return services;
   }

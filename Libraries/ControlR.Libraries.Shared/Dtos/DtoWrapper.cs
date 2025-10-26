@@ -2,7 +2,6 @@
 
 namespace ControlR.Libraries.Shared.Dtos;
 
-
 [MessagePackObject(keyAsPropertyName: true)]
 public class DtoWrapper
 {

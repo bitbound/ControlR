@@ -10,6 +10,36 @@ public class TenantSettingsController(AppDb appDb) : ControllerBase
 {
   private readonly AppDb _appDb = appDb;
 
+  [HttpDelete("{name}")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult> DeleteSetting(string name)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return Unauthorized();
+    }
+
+    var tenant = await _appDb.Tenants
+      .Include(x => x.TenantSettings)
+      .FirstOrDefaultAsync(x => x.Id == tenantId);
+
+    if (tenant is null)
+    {
+      return NotFound();
+    }
+
+    tenant.TenantSettings ??= [];
+    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == name);
+
+    if (setting is not null)
+    {
+      tenant.TenantSettings.Remove(setting);
+      await _appDb.SaveChangesAsync();
+    }
+
+    return NoContent();
+  }
+
   [HttpGet]
   [Authorize]
   public async IAsyncEnumerable<TenantSettingResponseDto> GetAll()
@@ -105,35 +135,5 @@ public class TenantSettingsController(AppDb appDb) : ControllerBase
 
     await _appDb.SaveChangesAsync();
     return entity.ToDto();
-  }
-
-  [HttpDelete("{name}")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult> DeleteSetting(string name)
-  {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return Unauthorized();
-    }
-
-    var tenant = await _appDb.Tenants
-      .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId);
-
-    if (tenant is null)
-    {
-      return NotFound();
-    }
-
-    tenant.TenantSettings ??= [];
-    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == name);
-
-    if (setting is not null)
-    {
-      tenant.TenantSettings.Remove(setting);
-      await _appDb.SaveChangesAsync();
-    }
-
-    return NoContent();
   }
 }

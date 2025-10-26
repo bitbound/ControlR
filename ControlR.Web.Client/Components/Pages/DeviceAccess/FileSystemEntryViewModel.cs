@@ -2,18 +2,31 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public class FileSystemEntryViewModel
 {
-  public required string Name { get; set; }
-  public required string FullPath { get; set; }
-  public required bool IsDirectory { get; set; }
-  public required long Size { get; set; }
-  public required DateTimeOffset LastModified { get; set; }
-  public required bool IsHidden { get; set; }
   public required bool CanRead { get; set; }
   public required bool CanWrite { get; set; }
 
   public string FormattedSize => IsDirectory ? string.Empty : FormatBytes(Size);
+  public required string FullPath { get; set; }
   
   public string Icon => IsDirectory ? Icons.Material.Filled.Folder : GetFileIcon();
+  public required bool IsDirectory { get; set; }
+  public required bool IsHidden { get; set; }
+  public required DateTimeOffset LastModified { get; set; }
+  public required string Name { get; set; }
+  public required long Size { get; set; }
+
+  private static string FormatBytes(long bytes)
+  {
+    string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
+    var counter = 0;
+    var number = (decimal)bytes;
+    while (Math.Round(number / 1024) >= 1)
+    {
+      number /= 1024;
+      counter++;
+    }
+    return $"{number:n1} {suffixes[counter]}";
+  }
 
   private string GetFileIcon()
   {
@@ -29,18 +42,5 @@ public class FileSystemEntryViewModel
       ".exe" or ".msi" => Icons.Material.Filled.Launch,
       _ => Icons.Material.Filled.InsertDriveFile
     };
-  }
-
-  private static string FormatBytes(long bytes)
-  {
-    string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
-    var counter = 0;
-    var number = (decimal)bytes;
-    while (Math.Round(number / 1024) >= 1)
-    {
-      number /= 1024;
-      counter++;
-    }
-    return $"{number:n1} {suffixes[counter]}";
   }
 }

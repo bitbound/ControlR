@@ -16,12 +16,12 @@ public static class IpcPipeNames
     throw new PlatformNotSupportedException();
   }
 
-  public static string GetWindowsPipeName(string? instanceId)
+  public static string GetUnixPipeName(string? instanceId)
   {
 #if DEBUG
-    var pipeName = "controlr-ipc-server-debug";
+    var pipeName = "/tmp/controlr-ipc-server-debug";
 #else
-    var pipeName = "controlr-ipc-server";
+    var pipeName = "/tmp/controlr-ipc-server";
 #endif
     if (string.IsNullOrWhiteSpace(instanceId))
     {
@@ -30,12 +30,12 @@ public static class IpcPipeNames
     return $"{pipeName}-{instanceId.Replace(".", "-")}";
   }
 
-  public static string GetUnixPipeName(string? instanceId)
+  public static string GetWindowsPipeName(string? instanceId)
   {
 #if DEBUG
-    var pipeName = "/tmp/controlr-ipc-server-debug";
+    var pipeName = "controlr-ipc-server-debug";
 #else
-    var pipeName = "/tmp/controlr-ipc-server";
+    var pipeName = "controlr-ipc-server";
 #endif
     if (string.IsNullOrWhiteSpace(instanceId))
     {

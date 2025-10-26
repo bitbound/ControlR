@@ -6,6 +6,5 @@ public class AppViewModelFake : IAppViewModel
 {
   public ICommand ExitApplicationCommand { get; } = new RelayCommand(() => { });
 
-
   public ICommand ShowWindowCommand { get; } = new RelayCommand(() => { });
 }

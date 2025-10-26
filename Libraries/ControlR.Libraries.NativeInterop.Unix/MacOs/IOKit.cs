@@ -5,15 +5,19 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 
 public static class IOKit
 {
-  private const string IOKitFramework = "/System/Library/Frameworks/IOKit.framework/IOKit";
+  // IOPMAssertionLevel values
+  public const uint kIOPMAssertionLevelOff = 0;
+  public const uint kIOPMAssertionLevelOn = 255;
+  public const string kIOPMAssertionTypePreventSystemSleep = "PreventSystemSleep";
 
   // IOPMAssertion types
   public const string kIOPMAssertionTypePreventUserIdleDisplaySleep = "PreventUserIdleDisplaySleep";
   public const string kIOPMAssertionTypePreventUserIdleSystemSleep = "PreventUserIdleSystemSleep";
-  public const string kIOPMAssertionTypePreventSystemSleep = "PreventSystemSleep";
 
   // IOReturn codes
   public const uint kIOReturnSuccess = 0;
+
+  private const string IOKitFramework = "/System/Library/Frameworks/IOKit.framework/IOKit";
 
   [DllImport(IOKitFramework, EntryPoint = "IOPMAssertionCreateWithName")]
   public static extern uint IOPMAssertionCreateWithName(
@@ -24,8 +28,4 @@ public static class IOKit
 
   [DllImport(IOKitFramework, EntryPoint = "IOPMAssertionRelease")]
   public static extern uint IOPMAssertionRelease(uint assertionID);
-
-  // IOPMAssertionLevel values
-  public const uint kIOPMAssertionLevelOff = 0;
-  public const uint kIOPMAssertionLevelOn = 255;
 }

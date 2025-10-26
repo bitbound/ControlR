@@ -7,15 +7,27 @@ namespace ControlR.DesktopClient.Linux.Services;
 
 public class ClipboardManagerGtk : IClipboardManager, IDisposable
 {
-  private readonly ILogger<ClipboardManagerGtk> _logger;
   private static readonly object _lock = new();
+
   private static bool _gtkInitialized = false;
+
+  private readonly ILogger<ClipboardManagerGtk> _logger;
+
   private bool _disposed = false;
 
   public ClipboardManagerGtk(ILogger<ClipboardManagerGtk> logger)
   {
     _logger = logger;
     EnsureGtkInitialized();
+  }
+
+  public void Dispose()
+  {
+    if (!_disposed)
+    {
+      _disposed = true;
+      GC.SuppressFinalize(this);
+    }
   }
 
   public Task<string?> GetText()
@@ -131,15 +143,6 @@ public class ClipboardManagerGtk : IClipboardManager, IDisposable
     {
       _logger.LogError(ex, "Exception during GTK initialization");
       return false;
-    }
-  }
-
-  public void Dispose()
-  {
-    if (!_disposed)
-    {
-      _disposed = true;
-      GC.SuppressFinalize(this);
     }
   }
 }

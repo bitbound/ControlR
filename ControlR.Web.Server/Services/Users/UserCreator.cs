@@ -40,12 +40,12 @@ public class UserCreator(
   ILogger<UserCreator> logger,
   AppDb appDb) : IUserCreator
 {
+  private readonly AppDb _appDb = appDb;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
-  private readonly AppDb _appDb = appDb;
 
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,

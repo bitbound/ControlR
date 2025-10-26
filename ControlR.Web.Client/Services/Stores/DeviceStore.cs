@@ -25,7 +25,6 @@ internal class DeviceStore : StoreBase<DeviceDto>, IDeviceStore
     }
   }
 
-
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     if (message.NewState == HubConnectionState.Connected)

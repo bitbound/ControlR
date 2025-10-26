@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 
 namespace ControlR.DesktopClient.ViewModels;
 

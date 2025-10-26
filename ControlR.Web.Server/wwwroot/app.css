@@ -48,8 +48,6 @@
   height: 100% !important;
 }
 
-
-
 #mud-snackbar-container {
   /* Place above content windows. */
   z-index: 9001 !important;

@@ -17,18 +17,19 @@ namespace ControlR.DesktopClient.Common.Services;
 public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundService, ICaptureMetrics
 {
   public const double MaxMbps = 10;
+
   protected readonly IProcessManager ProcessManager = serviceProvider.GetRequiredService<IProcessManager>();
   protected readonly ISystemEnvironment SystemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
-
-  private readonly ILogger<CaptureMetricsBase> _logger =
-    serviceProvider.GetRequiredService<ILogger<CaptureMetricsBase>>();
-
-  private readonly IMessenger _messenger = serviceProvider.GetRequiredService<IMessenger>();
 
   private readonly ManualResetEventAsync _bandwidthAvailableSignal = new();
   private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
+
+  private readonly ILogger<CaptureMetricsBase> _logger =
+    serviceProvider.GetRequiredService<ILogger<CaptureMetricsBase>>();
+
+  private readonly IMessenger _messenger = serviceProvider.GetRequiredService<IMessenger>();
   private readonly TimeSpan _processInterval = TimeSpan.FromSeconds(.1);
   private readonly TimeProvider _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
 

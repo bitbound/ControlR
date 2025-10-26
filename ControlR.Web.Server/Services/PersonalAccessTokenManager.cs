@@ -22,8 +22,8 @@ public class PersonalAccessTokenManager(
   IPasswordHasher<string> passwordHasher) : IPersonalAccessTokenManager
 {
   private readonly AppDb _appDb = appDb;
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IPasswordHasher<string> _passwordHasher = passwordHasher;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreateToken(CreatePersonalAccessTokenRequestDto request, Guid tenantId, Guid userId)
   {

@@ -14,6 +14,19 @@ internal class ScreenGrabberX11(
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberX11> _logger = logger;
 
+  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  {
+    try
+    {
+      return CaptureAllDisplaysImpl(captureCursor);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error grabbing all screens.");
+      return CaptureResult.Fail(ex);
+    }
+  }
+
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true)
@@ -25,19 +38,6 @@ internal class ScreenGrabberX11(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error grabbing screen for display {DisplayName}.", targetDisplay.DeviceName);
-      return CaptureResult.Fail(ex);
-    }
-  }
-
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
-  {
-    try
-    {
-      return CaptureAllDisplaysImpl(captureCursor);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error grabbing all screens.");
       return CaptureResult.Fail(ex);
     }
   }

@@ -5,7 +5,7 @@ namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 [MessagePackObject(keyAsPropertyName: true)]
 public record CursorChangedDto(
     PointerCursor Cursor,
-    string? CustomCursorBase64,
+    string? CustomCursorBase64Png,
     ushort XHotspot,
     ushort YHotspot,
     Guid SessionId);

@@ -16,48 +16,52 @@ internal static class HubProxyGenerator
   {
     var interfaceType = typeof(THub);
     if (!interfaceType.IsInterface)
-      throw new DynamicObjectGenerationException("T must be an interface type.");
+      throw new DynamicObjectGenerationException("THub must be an interface type.");
 
     if (handler == null)
       throw new DynamicObjectGenerationException("Handler cannot be null.");
+
+    var interfaceTypes = new List<Type> { interfaceType };
+    interfaceTypes.AddRange(interfaceType.GetInterfaces());
 
     var assemblyName = new AssemblyName("AsyncDynamicAssembly");
     var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
     var moduleBuilder = assemblyBuilder.DefineDynamicModule("AsyncDynamicModule");
 
     var typeBuilder = moduleBuilder.DefineType("AsyncDynamicType",
-        TypeAttributes.Public | TypeAttributes.Class,
-        null,
-        [interfaceType]);
+      TypeAttributes.Public | TypeAttributes.Class,
+      null,
+      [..interfaceTypes]);
 
     var handlerField = typeBuilder.DefineField("_handler", typeof(IInvocationHandler), FieldAttributes.Private);
 
     // Constructor
     var ctor = typeBuilder.DefineConstructor(
-        MethodAttributes.Public,
-        CallingConventions.Standard,
-        [typeof(IInvocationHandler)]);
+      MethodAttributes.Public,
+      CallingConventions.Standard,
+      [typeof(IInvocationHandler)]);
 
     var ctorIL = ctor.GetILGenerator();
     ctorIL.Emit(OpCodes.Ldarg_0);
     ctorIL.Emit(
       OpCodes.Call,
       typeof(object).GetConstructor(Type.EmptyTypes)
-        ?? throw new DynamicObjectGenerationException("Object constructor not found."));
+      ?? throw new DynamicObjectGenerationException("Object constructor not found."));
     ctorIL.Emit(OpCodes.Ldarg_0);
     ctorIL.Emit(OpCodes.Ldarg_1);
     ctorIL.Emit(OpCodes.Stfld, handlerField);
     ctorIL.Emit(OpCodes.Ret);
 
     // Implement interface methods
-    foreach (var method in interfaceType.GetMethods())
+    var methods = interfaceTypes.SelectMany(t => t.GetMethods()).ToArray();
+    foreach (var method in methods)
     {
       ImplementMethod(typeBuilder, method, handlerField);
     }
 
     var proxyType = typeBuilder.CreateType();
     var instance = Activator.CreateInstance(proxyType, handler)
-      ?? throw new DynamicObjectGenerationException("Failed to create instance of proxy type.");
+                   ?? throw new DynamicObjectGenerationException("Failed to create instance of proxy type.");
 
     return (THub)instance;
   }
@@ -65,21 +69,21 @@ internal static class HubProxyGenerator
   private static DynamicObjectGenerationException GetInvalidReturnTypeEx(Type returnType)
   {
     return new DynamicObjectGenerationException(
-          $"Unsupported method return type: {returnType}.  Methods must return " +
-          "Task, Task<T>, ValueTask<T>, IAsyncEnumerable<T>, or ChannelReader<T>.");
+      $"Unsupported method return type: {returnType}.  Methods must return " +
+      "Task, Task<T>, ValueTask<T>, IAsyncEnumerable<T>, or ChannelReader<T>.");
   }
 
   private static void ImplementMethod(TypeBuilder typeBuilder, MethodInfo method, FieldBuilder handlerField)
   {
     var parameters = method.GetParameters();
     var parameterTypes = Array.ConvertAll(parameters, p => p.ParameterType);
-  var hasClientToServerStreamParam = parameters.Any(p => IsClientToServerStreamParam(p.ParameterType));
+    var hasClientToServerStreamParam = parameters.Any(p => IsClientToServerStreamParam(p.ParameterType));
 
     var methodBuilder = typeBuilder.DefineMethod(
-        method.Name,
-        MethodAttributes.Public | MethodAttributes.Virtual,
-        method.ReturnType,
-        parameterTypes);
+      method.Name,
+      MethodAttributes.Public | MethodAttributes.Virtual,
+      method.ReturnType,
+      parameterTypes);
 
     var methodIL = methodBuilder.GetILGenerator();
 
@@ -92,7 +96,7 @@ internal static class HubProxyGenerator
     methodIL.Emit(
       OpCodes.Call,
       typeof(MethodBase).GetMethod("GetMethodFromHandle", [typeof(RuntimeMethodHandle)])
-        ?? throw new DynamicObjectGenerationException("GetMethodFromHandle method not found."));
+      ?? throw new DynamicObjectGenerationException("GetMethodFromHandle method not found."));
 
     // Create and load parameters array
     methodIL.Emit(OpCodes.Ldc_I4, parameters.Length);
@@ -107,6 +111,7 @@ internal static class HubProxyGenerator
       {
         methodIL.Emit(OpCodes.Box, parameterTypes[i]);
       }
+
       methodIL.Emit(OpCodes.Stelem_Ref);
     }
 
@@ -115,12 +120,15 @@ internal static class HubProxyGenerator
     if (method.ReturnType == typeof(Task))
     {
       // If the method has a client-to-server streaming parameter we must use SendAsync.
-      var targetMethodName = hasClientToServerStreamParam ? nameof(IInvocationHandler.SendAsync) : nameof(IInvocationHandler.InvokeVoidAsync);
+      var targetMethodName = hasClientToServerStreamParam
+        ? nameof(IInvocationHandler.SendAsync)
+        : nameof(IInvocationHandler.InvokeVoidAsync);
+
       methodIL.Emit(
         OpCodes.Callvirt,
         typeof(IInvocationHandler)
           .GetMethod(targetMethodName)
-          ?? throw new DynamicObjectGenerationException($"{targetMethodName} method not found on proxy implementation."));
+        ?? throw new DynamicObjectGenerationException($"{targetMethodName} method not found on proxy implementation."));
     }
     else if (method.ReturnType == typeof(void))
     {
@@ -128,12 +136,13 @@ internal static class HubProxyGenerator
       {
         throw GetInvalidReturnTypeEx(method.ReturnType); // We only allow void when streaming params are present.
       }
+
       // Wrap SendAsync(Task) and ignore result; emit call then return.
       methodIL.Emit(
         OpCodes.Callvirt,
         typeof(IInvocationHandler)
           .GetMethod(nameof(IInvocationHandler.SendAsync))
-          ?? throw new DynamicObjectGenerationException("SendAsync method not found on proxy implementation."));
+        ?? throw new DynamicObjectGenerationException("SendAsync method not found on proxy implementation."));
       // Discard the returned Task (fire-and-forget). Optionally could Wait but that's discouraged.
       methodIL.Emit(OpCodes.Pop);
     }
@@ -153,7 +162,7 @@ internal static class HubProxyGenerator
         typeof(IInvocationHandler)
           .GetMethod(methodName)
           ?.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0])
-            ?? throw new DynamicObjectGenerationException($"{methodName} method not found on proxy implementation."));
+        ?? throw new DynamicObjectGenerationException($"{methodName} method not found on proxy implementation."));
     }
     else
     {
@@ -169,14 +178,15 @@ internal static class HubProxyGenerator
   {
     return returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
   }
-  private static bool IsClientToServerStreamParam(Type paramType)
-  {
-    return paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
-  }
 
   private static bool IsChannelReader(Type returnType)
   {
     return returnType.GetGenericTypeDefinition() == typeof(ChannelReader<>);
+  }
+
+  private static bool IsClientToServerStreamParam(Type paramType)
+  {
+    return paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
   }
 
   private static bool IsGenericTask(Type returnType)

@@ -8,8 +8,8 @@ public class ScreenWakerMac(
   IMacInterop macInterop,
   ILogger<ScreenGrabberMac> logger) : IHostedService
 {
-  private readonly IMacInterop _macInterop = macInterop;
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
+  private readonly IMacInterop _macInterop = macInterop;
 
   public Task StartAsync(CancellationToken cancellationToken)
   {

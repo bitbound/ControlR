@@ -6,7 +6,10 @@ namespace ControlR.Libraries.Shared.Constants;
 
 public static class AppConstants
 {
+  public const string AgentHubPath = "/hubs/agent";
   public const int DefaultVncPort = 5900;
+  public const string DeviceAccessHubPath = "/hubs/device-access";
+  public const string MainBrowserHubPath = "/hubs/main-browser";
 
   public static string DesktopClientFileName =>
     SystemEnvironment.Instance.Platform switch
@@ -15,7 +18,7 @@ public static class AppConstants
       SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
       _ => throw new PlatformNotSupportedException()
     };
-
+  
   public static string DesktopClientZipFileName =>
     SystemEnvironment.Instance.Platform switch
     {
@@ -39,6 +42,7 @@ public static class AppConstants
   }
 
   public static int SignalrMaxMessageSize => 30 * 1024; // 30KB.
+
   private static Uri DevServerUri { get; } = new("http://localhost:5120");
 
   public static string GetAgentFileDownloadPath(RuntimeId runtime)

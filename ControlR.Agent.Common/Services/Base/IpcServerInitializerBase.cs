@@ -14,12 +14,12 @@ internal abstract class IpcServerInitializerBase(
   IHubConnection<IAgentHub> hubConnection,
   ILogger logger) : BackgroundService
 {
-  protected readonly TimeProvider _timeProvider = timeProvider;
+  protected readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   protected readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
   protected readonly IIpcServerStore _ipcStore = ipcStore;
-  protected readonly IProcessManager _processManager = processManager;
-  protected readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   protected readonly ILogger _logger = logger;
+  protected readonly IProcessManager _processManager = processManager;
+  protected readonly TimeProvider _timeProvider = timeProvider;
 
   protected Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
   {

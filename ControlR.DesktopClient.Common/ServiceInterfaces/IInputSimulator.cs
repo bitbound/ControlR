@@ -9,6 +9,6 @@ public interface IInputSimulator
   void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType);
   void ResetKeyboardState();
   void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX);
-
+  Task SetBlockInput(bool isBlocked);
   void TypeText(string text);
 }

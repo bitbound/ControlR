@@ -22,6 +22,12 @@ public class Device : TenantEntityBase
   public bool Is64Bit { get; set; }
   public bool IsOnline { get; set; }
   public DateTimeOffset LastSeen { get; set; }
+
+  [StringLength(15)]
+  public string LocalIpV4 { get; set; } = string.Empty;
+
+  [StringLength(39)]
+  public string LocalIpV6 { get; set; } = string.Empty;
   public string[] MacAddresses { get; set; } = [];
 
   [StringLength(100)]
@@ -40,12 +46,6 @@ public class Device : TenantEntityBase
 
   [StringLength(39)]
   public string PublicIpV6 { get; set; } = string.Empty;
-
-  [StringLength(15)]
-  public string LocalIpV4 { get; set; } = string.Empty;
-
-  [StringLength(39)]
-  public string LocalIpV6 { get; set; } = string.Empty;
 
   public List<Tag>? Tags { get; set; }
 

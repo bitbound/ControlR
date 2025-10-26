@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using ControlR.DesktopClient.Common.Extensions;
+﻿using ControlR.DesktopClient.Common.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using SkiaSharp;
 
@@ -7,12 +6,12 @@ namespace ControlR.DesktopClient.Common.Services;
 
 public interface IImageUtility
 {
-  public bool IsEmpty(SKBitmap bitmap);
   SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea);
   SKBitmap DownscaleBitmap(SKBitmap bitmap, double scale);
   byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80);
   byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true);
   Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false);
+  public bool IsEmpty(SKBitmap bitmap);
 }
 
 public class ImageUtility : IImageUtility
@@ -46,17 +45,7 @@ public class ImageUtility : IImageUtility
   public byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true)
   {
     using var ms = new MemoryStream();
-
-    if (compressOutput)
-    {
-      using var gzipStream = new GZipStream(ms, CompressionLevel.Fastest, true);
-      bitmap.Encode(gzipStream, SKEncodedImageFormat.Jpeg, quality);
-    }
-    else
-    {
-      bitmap.Encode(ms, SKEncodedImageFormat.Jpeg, quality);
-    }
-
+    bitmap.Encode(ms, SKEncodedImageFormat.Jpeg, quality);
     return ms.ToArray();
   }
 
@@ -124,6 +113,11 @@ public class ImageUtility : IImageUtility
 
         if (left <= right && top <= bottom)
         {
+          left = Math.Max(left - 2, 0);
+          top = Math.Max(top - 2, 0);
+          right = Math.Min(right + 2, width);
+          bottom = Math.Min(bottom + 2, height);
+
           return Result.Ok(new SKRect(left, top, right, bottom));
         }
         else

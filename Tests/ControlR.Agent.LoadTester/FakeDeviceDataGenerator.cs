@@ -19,14 +19,15 @@ internal class FakeDeviceDataGenerator(
   private readonly Version _agentVersion = agentVersion;
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
-  private DeviceModel? _device;
-  private double? _totalMemory;
-  private double? _usedMemory;
-  private double? _totalStorage;
-  private double? _usedStorage;
+
   private double? _cpuUtilization;
   private string? _currentUser;
+  private DeviceModel? _device;
   private Drive? _osDrive;
+  private double? _totalMemory;
+  private double? _totalStorage;
+  private double? _usedMemory;
+  private double? _usedStorage;
 
   public Task<DeviceModel> CreateDevice(Guid deviceId)
   {

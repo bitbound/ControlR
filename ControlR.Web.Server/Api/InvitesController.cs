@@ -46,20 +46,6 @@ public class InvitesController : ControllerBase
     return new AcceptInvitationResponseDto(true);
   }
 
-  [HttpGet]
-  public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
-    [FromServices] AppDb appDb)
-  {
-    var origin = Request.ToOrigin();
-    return await appDb.TenantInvites
-      .Select(x => new TenantInviteResponseDto(
-        x.Id,
-        x.CreatedAt,
-        x.InviteeEmail,
-        new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{x.ActivationCode}")))
-      .ToArrayAsync();
-  }
-
   [HttpPost]
   public async Task<ActionResult<TenantInviteResponseDto>> Create(
     [FromBody] TenantInviteRequestDto dto,
@@ -139,5 +125,19 @@ public class InvitesController : ControllerBase
       await userManager.DeleteAsync(user);
     }
     return NoContent();
+  }
+
+  [HttpGet]
+  public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
+    [FromServices] AppDb appDb)
+  {
+    var origin = Request.ToOrigin();
+    return await appDb.TenantInvites
+      .Select(x => new TenantInviteResponseDto(
+        x.Id,
+        x.CreatedAt,
+        x.InviteeEmail,
+        new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{x.ActivationCode}")))
+      .ToArrayAsync();
   }
 }

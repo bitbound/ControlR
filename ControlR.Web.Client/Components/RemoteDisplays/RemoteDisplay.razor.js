@@ -1,4 +1,6 @@
-﻿class State {
+﻿// noinspection JSUnusedGlobalSymbols
+
+class State {
   /** @type {CanvasRenderingContext2D} */
   canvas2dContext;
   /** @type {HTMLCanvasElement} */
@@ -34,7 +36,7 @@
 
   constructor() {
     this.windowEventHandlers = [];
-    this.touchList = { length: 0 };
+    this.touchList = {length: 0};
     this.previousPinchDistance = -1;
     this.mouseMoveTimeout = -1;
     this.touchClickTimeout = -1;
@@ -47,6 +49,7 @@
    * @returns {Promise<any>}
    */
   invokeDotNet(methodName, ...args) {
+    // noinspection JSUnresolvedReference
     return this.componentRef.invokeMethodAsync(methodName, ...args);
   }
 }
@@ -58,7 +61,7 @@ class WindowEventHandler {
   handler;
 
   /**
-   * 
+   *
    * @param {keyof WindowEventMap} type
    * @param {EventListener} handler
    */
@@ -67,7 +70,6 @@ class WindowEventHandler {
     this.handler = handler;
   }
 }
-
 
 /**
  * Draws the encoded image onto the canvas at the specified region.
@@ -80,11 +82,8 @@ class WindowEventHandler {
  */
 export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
   const state = getState(canvasId);
-  const ds = new DecompressionStream('gzip');
   const imageBlob = new Blob([encodedRegion]);
-  const decompressStream = imageBlob.stream().pipeThrough(ds);
-  const decompressedImage = await new Response(decompressStream).blob();
-  const bitmap = await createImageBitmap(decompressedImage);
+  const bitmap = await createImageBitmap(imageBlob);
   state.canvas2dContext.drawImage(bitmap, x, y, width, height);
   bitmap.close();
 }
@@ -108,7 +107,7 @@ export async function initialize(componentRef, canvasId) {
   state.canvas2dContext = canvas.getContext("2d");
 
   canvas.addEventListener("pointerup", async ev => {
-    if (state.currentPointerType != "touch") {
+    if (state.currentPointerType !== "touch") {
       return;
     }
 
@@ -130,13 +129,13 @@ export async function initialize(componentRef, canvasId) {
     resetTouchState(state);
   });
 
-  canvas.addEventListener("pointercancel", ev => {
+  canvas.addEventListener("pointercancel", () => {
     resetTouchState(state);
   });
-  canvas.addEventListener("pointerout", ev => {
+  canvas.addEventListener("pointerout", () => {
     resetTouchState(state);
   });
-  canvas.addEventListener("pointerleave", ev => {
+  canvas.addEventListener("pointerleave", () => {
     resetTouchState(state);
   });
 
@@ -156,8 +155,7 @@ export async function initialize(componentRef, canvasId) {
 
       if (Math.abs(ev.movementY) > Math.abs(ev.movementX)) {
         await state.invokeDotNet("SendWheelScroll", percentX, percentY, ev.movementY * 3, 0);
-      }
-      else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
+      } else if (Math.abs(ev.movementX) > Math.abs(ev.movementY)) {
         await state.invokeDotNet("SendWheelScroll", percentX, percentY, 0, ev.movementX * -3);
       }
       return;
@@ -189,7 +187,6 @@ export async function initialize(componentRef, canvasId) {
     }
   })
 
-
   canvas.addEventListener("pointerdown", ev => {
     state.currentPointerType = ev.pointerType;
     state.pointerDownEvent = ev;
@@ -216,11 +213,11 @@ export async function initialize(componentRef, canvasId) {
   canvas.addEventListener("mousedown", async ev => {
     ev.stopPropagation();
 
-    if (state.currentPointerType == "touch") {
+    if (state.currentPointerType === "touch") {
       return;
     }
 
-    if (ev.button == 3 || ev.button == 4) {
+    if (ev.button === 3 || ev.button === 4) {
       ev.preventDefault();
     }
 
@@ -234,11 +231,11 @@ export async function initialize(componentRef, canvasId) {
   canvas.addEventListener("mouseup", async ev => {
     ev.stopPropagation();
 
-    if (state.currentPointerType == "touch") {
+    if (state.currentPointerType === "touch") {
       return;
     }
 
-    if (ev.button == 3 || ev.button == 4) {
+    if (ev.button === 3 || ev.button === 4) {
       ev.preventDefault();
     }
 
@@ -252,7 +249,7 @@ export async function initialize(componentRef, canvasId) {
   canvas.addEventListener("click", async ev => {
     ev.stopPropagation();
 
-    if (state.currentPointerType == "mouse") {
+    if (state.currentPointerType === "mouse") {
       return;
     }
 
@@ -267,7 +264,7 @@ export async function initialize(componentRef, canvasId) {
   canvas.addEventListener("dblclick", async ev => {
     ev.stopPropagation();
 
-    if (state.currentPointerType == "mouse") {
+    if (state.currentPointerType === "mouse") {
       return;
     }
 
@@ -298,13 +295,12 @@ export async function initialize(componentRef, canvasId) {
       return;
     }
 
-    if (state.currentPointerType == "touch") {
+    if (state.currentPointerType === "touch") {
       state.longPressStarted = true;
       state.longPressStartOffsetX = ev.offsetX;
       state.longPressStartOffsetY = ev.offsetY;
     }
   });
-
 
   /** @param {KeyboardEvent} ev */
   const onKeyDown = async (ev) => {
@@ -316,7 +312,7 @@ export async function initialize(componentRef, canvasId) {
       return;
     }
 
-    if (!ev.ctrlKey || !ev.shiftKey || ev.key.toLowerCase() != "i") {
+    if (!ev.ctrlKey || !ev.shiftKey || ev.key.toLowerCase() !== "i") {
       ev.preventDefault();
     }
 
@@ -334,13 +330,8 @@ export async function initialize(componentRef, canvasId) {
     if (canvas.classList.contains("minimized")) {
       return;
     }
-    ev.preventDefault();
-    const keyPressDto = {
-      dtoType: "keyEvent",
-      isPressed: false,
-      key: ev.key
-    };
 
+    ev.preventDefault();
     state.invokeDotNet("SendKeyEvent", ev.key, false);
   }
   window.addEventListener("keyup", onKeyUp);
@@ -353,13 +344,12 @@ export async function initialize(componentRef, canvasId) {
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
 }
 
-
 /**
- * 
+ *
  * @param {number} pinchCenterX
  * @param {number} pinchCenterY
  * @param {HTMLDivElement} contentDiv
- * @param {HTMLcanvasElement} canvasRef
+ * @param {HTMLCanvasElement} canvasRef
  * @param {number} canvasCssWidth
  * @param {number} canvasCssHeight
  * @param {number} widthChange
@@ -371,19 +361,18 @@ export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, 
 
   const clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
   const clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
-  
+
   const pinchAdjustX = pinchCenterX / window.innerWidth - .5;
   const pinchAdjustY = pinchCenterY / window.innerHeight - .5;
-  
+
   const scrollByX = widthChange * (clientAdjustedScrollLeftPercent + (pinchAdjustX * contentDiv.clientWidth / contentDiv.scrollWidth));
   const scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
 
   contentDiv.scrollBy(scrollByX, scrollByY);
 }
 
-
 /**
- * 
+ *
  * @param {string} key
  * @param {string} canvasId
  */
@@ -406,7 +395,7 @@ function getDistanceBetween(point1X, point1Y, point2X, point2Y) {
 }
 
 /**
- * 
+ *
  * @param {string} canvasId
  * @returns {State}
  */
@@ -417,9 +406,8 @@ function getState(canvasId) {
   return window[`controlr-canvas-${canvasId}`];
 }
 
-
 /**
- * 
+ *
  * @param {State} state
  */
 function resetTouchState(state) {
@@ -429,7 +417,7 @@ function resetTouchState(state) {
 }
 
 /**
- * 
+ *
  * @param {number} offsetX
  * @param {number} offsetY
  * @param {State} state
@@ -460,7 +448,7 @@ async function sendPointerMove(offsetX, offsetY, state, throttle = false) {
 }
 
 /**
- * 
+ *
  * @param {number} offsetX
  * @param {number} offsetY
  * @param {boolean} isPressed
@@ -473,9 +461,8 @@ async function sendMouseButtonEvent(offsetX, offsetY, isPressed, button, state) 
   await state.invokeDotNet("SendMouseButtonEvent", button, isPressed, percentX, percentY);
 }
 
-
 /**
- * 
+ *
  * @param {number} offsetX
  * @param {number} offsetY
  * @param {number} button

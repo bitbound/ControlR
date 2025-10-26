@@ -1,6 +1,5 @@
 namespace ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
 
-
 public record PwshCompletionsResponseDto(
     int ReplacementIndex,
     int ReplacementLength,

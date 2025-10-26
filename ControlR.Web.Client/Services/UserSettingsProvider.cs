@@ -8,9 +8,9 @@ public interface IUserSettingsProvider
   Task<bool> GetHideOfflineDevices();
   Task<bool> GetNotifyUserOnSessionStart();
   Task<string> GetUserDisplayName();
-  Task SetUserDisplayName(string value);
   Task SetHideOfflineDevices(bool value);
   Task SetNotifyUserOnSessionStart(bool value);
+  Task SetUserDisplayName(string value);
 }
 
 internal class UserSettingsProvider(
@@ -29,16 +29,6 @@ internal class UserSettingsProvider(
     return await GetPref(UserPreferenceNames.HideOfflineDevices, true);
   }
 
-  public async Task SetUserDisplayName(string value)
-  {
-    await SetPref(UserPreferenceNames.UserDisplayName, value);
-  }
-
-  public async Task SetHideOfflineDevices(bool value)
-  {
-    await SetPref(UserPreferenceNames.HideOfflineDevices, value);
-  }
-
   public async Task<bool> GetNotifyUserOnSessionStart()
   {
     return await GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
@@ -49,11 +39,20 @@ internal class UserSettingsProvider(
     return await GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
   }
 
+  public async Task SetHideOfflineDevices(bool value)
+  {
+    await SetPref(UserPreferenceNames.HideOfflineDevices, value);
+  }
+
   public async Task SetNotifyUserOnSessionStart(bool value)
   {
     await SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
   }
 
+  public async Task SetUserDisplayName(string value)
+  {
+    await SetPref(UserPreferenceNames.UserDisplayName, value);
+  }
 
   private async Task<T> GetPref<T>(string preferenceName, T defaultValue)
   {

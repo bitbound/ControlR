@@ -6,6 +6,12 @@ public static class Foundation
 {
   private const string FoundationFramework = "/System/Library/Frameworks/Foundation.framework/Foundation";
 
+  [DllImport(FoundationFramework, EntryPoint = "CFBooleanCreate")]
+  public static extern nint CFBooleanCreate(nint allocator, bool value);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFBooleanGetValue")]
+  public static extern bool CFBooleanGetValue(nint boolean);
+
   [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreate")]
   public static extern nint CFDictionaryCreate(
     nint allocator, 
@@ -15,64 +21,18 @@ public static class Foundation
     nint keyCallbacks, 
     nint valueCallbacks);
 
-  [DllImport(FoundationFramework, EntryPoint = "CFRelease")]
-  public static extern void CFRelease(nint cf);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFStringCreateWithCString")]
-  public static extern nint CFStringCreateWithCString(nint allocator, string cStr, uint encoding);
-
-  // Get pointers to default callback structures
-  public static nint GetKCFTypeDictionaryKeyCallBacks()
-  {
-    if (NativeLibrary.TryGetExport(NativeLibrary.Load(FoundationFramework), "kCFTypeDictionaryKeyCallBacks", out var address))
-    {
-      return address;
-    }
-    return nint.Zero;
-  }
-
-  public static nint GetKCFTypeDictionaryValueCallBacks()
-  {
-    if (NativeLibrary.TryGetExport(NativeLibrary.Load(FoundationFramework), "kCFTypeDictionaryValueCallBacks", out var address))
-    {
-      return address;
-    }
-    return nint.Zero;
-  }
-
-  [DllImport(FoundationFramework, EntryPoint = "CFBooleanGetValue")]
-  public static extern bool CFBooleanGetValue(nint boolean);
-
-  // Get kCFBooleanTrue - the proper way to access this constant
-  public static nint GetKCFBooleanTrue()
-  {
-    // Use NativeLibrary to get the symbol
-    try
-    {
-      var handle = NativeLibrary.Load(FoundationFramework);
-      if (NativeLibrary.TryGetExport(handle, "kCFBooleanTrue", out var address))
-      {
-        return Marshal.ReadIntPtr(address);
-      }
-    }
-    catch (Exception)
-    {
-      // Fallback: try a different approach or return null
-    }
-    
-    // If we can't get the symbol, try creating a CFBoolean directly
-    return CFBooleanCreate(nint.Zero, true);
-  }
-
-  [DllImport(FoundationFramework, EntryPoint = "CFBooleanCreate")]
-  public static extern nint CFBooleanCreate(nint allocator, bool value);
-
   // Simplified approach using CFDictionaryCreateMutable
   [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreateMutable")]
   public static extern nint CFDictionaryCreateMutable(nint allocator, nint capacity, nint keyCallBacks, nint valueCallBacks);
 
   [DllImport(FoundationFramework, EntryPoint = "CFDictionarySetValue")]
   public static extern void CFDictionarySetValue(nint theDict, nint key, nint value);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFRelease")]
+  public static extern void CFRelease(nint cf);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFStringCreateWithCString")]
+  public static extern nint CFStringCreateWithCString(nint allocator, string cStr, uint encoding);
 
   // Create a CFDictionary with the prompt option for accessibility permission
   public static nint CreateAccessibilityPromptDictionary()
@@ -124,5 +84,45 @@ public static class Foundation
       
       throw new InvalidOperationException($"Failed to create accessibility prompt dictionary: {ex.Message}", ex);
     }
+  }
+
+  // Get kCFBooleanTrue - the proper way to access this constant
+  public static nint GetKCFBooleanTrue()
+  {
+    // Use NativeLibrary to get the symbol
+    try
+    {
+      var handle = NativeLibrary.Load(FoundationFramework);
+      if (NativeLibrary.TryGetExport(handle, "kCFBooleanTrue", out var address))
+      {
+        return Marshal.ReadIntPtr(address);
+      }
+    }
+    catch (Exception)
+    {
+      // Fallback: try a different approach or return null
+    }
+    
+    // If we can't get the symbol, try creating a CFBoolean directly
+    return CFBooleanCreate(nint.Zero, true);
+  }
+
+  // Get pointers to default callback structures
+  public static nint GetKCFTypeDictionaryKeyCallBacks()
+  {
+    if (NativeLibrary.TryGetExport(NativeLibrary.Load(FoundationFramework), "kCFTypeDictionaryKeyCallBacks", out var address))
+    {
+      return address;
+    }
+    return nint.Zero;
+  }
+
+  public static nint GetKCFTypeDictionaryValueCallBacks()
+  {
+    if (NativeLibrary.TryGetExport(NativeLibrary.Load(FoundationFramework), "kCFTypeDictionaryValueCallBacks", out var address))
+    {
+      return address;
+    }
+    return nint.Zero;
   }
 }

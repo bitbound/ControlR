@@ -13,6 +13,19 @@ public class ScreenGrabberMac(
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
 
+  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  {
+    try
+    {
+      return CaptureAllDisplaysImpl(captureCursor);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error grabbing all screens.");
+      return CaptureResult.Fail(ex);
+    }
+  }
+
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true)
@@ -24,19 +37,6 @@ public class ScreenGrabberMac(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error grabbing screen for display {DisplayName}.", targetDisplay.DeviceName);
-      return CaptureResult.Fail(ex);
-    }
-  }
-
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
-  {
-    try
-    {
-      return CaptureAllDisplaysImpl(captureCursor);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error grabbing all screens.");
       return CaptureResult.Fail(ex);
     }
   }

@@ -11,8 +11,8 @@ public class XunitLogger<T>(ITestOutputHelper testOutput) : XunitLogger(testOutp
 
 public class XunitLogger(ITestOutputHelper testOutput, string categoryName) : ILogger
 {
-  private readonly ConcurrentStack<string> _scopeStack = new();
   private readonly string _categoryName = categoryName;
+  private readonly ConcurrentStack<string> _scopeStack = new();
 
   public IDisposable BeginScope<TState>(TState state) where TState : notnull
   {

@@ -31,6 +31,9 @@ services:
       # Allows devices to self-register without requiring an installer key.
       ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
 
+      # The name that appears in TOTP authenticator apps.
+      ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
+
       # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
@@ -73,15 +76,6 @@ services:
       #ControlR_AppOptions__KnownProxies__0:
 
       #ControlR_AppOptions__KnownNetworks__0:
-
-      # If enabled, ControlR will attempt to use geolocation APIs to determine
-      # the closest relay server to the viewer when starting a remote control
-      # session.  Otherwise, the local server will be used.
-      ControlR_AppOptions__UseExternalWebSocketRelay: false
-      #ControlR_AppOptions__ExternalWebSocketHosts__0__Label:
-      #ControlR_AppOptions__ExternalWebSocketHosts__0__Origin:
-      #ControlR_AppOptions__ExternalWebSocketHosts__0__Latitude:
-      #ControlR_AppOptions__ExternalWebSocketHosts__0__Longitude:
 
       # To enable Microsoft account login, create an App Registration in Azure and
       # set the values below. Instructions can be found here:

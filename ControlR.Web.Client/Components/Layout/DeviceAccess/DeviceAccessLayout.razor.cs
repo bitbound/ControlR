@@ -30,7 +30,13 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
+
+  [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
+
+  [Inject]
+  public required IHubConnector HubConnector { get; init; }
 
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
@@ -48,7 +54,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
+  public required ITerminalState TerminalState { get; init; }
 
   private MudTheme CustomTheme =>
     _customTheme ??= new MudTheme
@@ -70,7 +76,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         return true;
       }
 
-      if (DeviceAccessState.IsDeviceLoaded != true)
+      if (!DeviceAccessState.IsDeviceLoaded)
       {
         return true;
       }
@@ -81,15 +87,17 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
   public async ValueTask DisposeAsync()
   {
-    if (ChatState.CurrentSession is not null)
+    try
     {
-      await ViewerHub.CloseChatSession(
-        DeviceAccessState.CurrentDevice.Id,
-        ChatState.SessionId,
-        ChatState.CurrentSession.ProcessId);
+      await TryDisposeChat();
+      await TryDisposeTerminal();
+      ChatState.Clear();
+      Messenger.UnregisterAll(this);
     }
-    ChatState.Clear();
-    Messenger.UnregisterAll(this);
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error during DeviceAccessLayout disposal.");
+    }
     GC.SuppressFinalize(this);
   }
 
@@ -114,10 +122,10 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("logonToken", StringComparison.OrdinalIgnoreCase))
         {
           var basePath = uri.GetLeftPart(UriPartial.Path);
-          var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+          var query = HttpUtility.ParseQueryString(uri.Query);
           query.Remove("logonToken");
-          // Rebuild remaining query string (retain deviceId and any future params)
-          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys!.Select(k => $"{k}={query[k]}")) : string.Empty;
+          // Rebuild the remaining query string (retain deviceId and any future params)
+          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) : string.Empty;
           NavManager.NavigateTo(basePath + remaining, replace: true);
         }
       }
@@ -132,7 +140,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
         Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
-        await ViewerHub.Connect();
+        await HubConnector.Connect<IDeviceAccessHub>(AppConstants.DeviceAccessHubPath);
         await GetDeviceInfo();
       }
     }
@@ -194,7 +202,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     {
       _errorText = "Failed to fetch device details.";
       Logger.LogError(ex, "Error fetching device details for {DeviceId}", _deviceId);
-      return;
     }
   }
 
@@ -228,7 +235,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
-    if (DeviceAccessState.CurrentDevice is null)
+    if (DeviceAccessState.CurrentDeviceMaybe is null)
     {
       return;
     }
@@ -262,5 +269,44 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   private void ToggleNavDrawer()
   {
     _drawerOpen = !_drawerOpen;
+  }
+
+  private async Task TryDisposeChat()
+  {
+    try
+    {
+      if (!DeviceAccessHub.IsConnected || ChatState.CurrentSession is null)
+      {
+        return;
+      }
+      
+      await DeviceAccessHub.Server.CloseChatSession(
+        DeviceAccessState.CurrentDevice.Id,
+        ChatState.SessionId,
+        ChatState.CurrentSession.ProcessId);
+
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error disposing chat session.");
+    }
+  }
+
+  private async Task TryDisposeTerminal()
+  {
+    try
+    {
+      if (!DeviceAccessHub.IsConnected || TerminalState.Id == Guid.Empty)
+      {
+        return;
+      }
+      await DeviceAccessHub.Server.CloseTerminalSession(
+        DeviceAccessState.CurrentDevice.Id,
+        TerminalState.Id);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error disposing terminal session.");
+    }
   }
 }

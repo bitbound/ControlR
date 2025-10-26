@@ -26,7 +26,6 @@
  *	    Keith Packard, Intel Corporation
  */
 
-
 using System.Runtime.InteropServices;
 
 namespace ControlR.Libraries.NativeInterop.Unix.Linux;
@@ -34,6 +33,15 @@ namespace ControlR.Libraries.NativeInterop.Unix.Linux;
 public static class LibXrandr
 {
     private const string LibraryName = "libXrandr.so.2";
+
+    [DllImport(LibraryName)]
+    public static extern nint XRRAllocateMonitor(nint display, int output);
+
+    [DllImport(LibraryName)]
+    public static extern void XRRFreeMonitors(nint monitors);
+
+    [DllImport(LibraryName)]
+    public static extern nint XRRGetMonitors(nint display, nint window, bool get_active, out int monitors);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct XRRMonitorInfo
@@ -52,13 +60,4 @@ public static class LibXrandr
         // RROutput*
         public nint outputs;
     }
-
-    [DllImport(LibraryName)]
-    public static extern nint XRRGetMonitors(nint display, nint window, bool get_active, out int monitors);
-
-    [DllImport(LibraryName)]
-    public static extern void XRRFreeMonitors(nint monitors);
-
-    [DllImport(LibraryName)]
-    public static extern nint XRRAllocateMonitor(nint display, int output);
 }

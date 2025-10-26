@@ -57,7 +57,7 @@ public static class WebApplicationBuilderExtensions
 
     if (appOptions.UseInMemoryDatabase)
     {
-      builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
+      builder.Services.AddDbContextFactory<AppDb>((_, options) =>
       {
         var dbName = appOptions.InMemoryDatabaseName ?? "Controlr";
         options.UseInMemoryDatabase(dbName);
@@ -153,7 +153,7 @@ public static class WebApplicationBuilderExtensions
           return Task.CompletedTask;
         }
 
-        // For UI requests, redirect to login page
+        // For UI requests, redirect to the login page
         context.Response.Redirect(context.RedirectUri);
         return Task.CompletedTask;
       };
@@ -167,7 +167,7 @@ public static class WebApplicationBuilderExtensions
           return Task.CompletedTask;
         }
 
-        // For UI requests, redirect to access denied page
+        // For UI requests, redirect to the access-denied page
         context.Response.Redirect(context.RedirectUri);
         return Task.CompletedTask;
       };
@@ -176,12 +176,12 @@ public static class WebApplicationBuilderExtensions
     // Add personal access token authentication
     authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
-      options => { });
+      _ => { });
 
     // Add logon token authentication
     authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
       LogonTokenAuthenticationSchemeOptions.DefaultScheme,
-      options => { });
+      _ => { });
 
     builder.Services
       .AddAuthorizationBuilder()
@@ -233,9 +233,10 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddControlrWebClient();
 
     // Add HTTP clients.
-    builder.Services.AddHttpClient<IIpApi, IpApi>();
-    builder.Services.AddHttpClient<IControlrApi, ControlrApi>(HttpClientConfigurer.ConfigureHttpClient);
-    builder.Services.AddHttpClient<IWsRelayApi, WsRelayApi>();
+    builder.Services.AddTransient<IdentityForwardingHandler>();
+    builder.Services
+      .AddHttpClient<IControlrApi, ControlrApi>(HttpClientConfigurer.ConfigureHttpClient)
+      .AddHttpMessageHandler<IdentityForwardingHandler>();
 
     if (appOptions.UseHttpLogging)
     {
@@ -280,7 +281,46 @@ public static class WebApplicationBuilderExtensions
 
     return builder;
   }
-  public static async Task<IHostApplicationBuilder> ConfigureForwardedHeaders(
+
+
+  private static void AddPostgresDb(this IHostApplicationBuilder builder)
+  {
+
+    // Add DB services.
+    var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
+    var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
+    var pgHost = builder.Configuration.GetValue<string>("POSTGRES_HOST");
+
+    ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
+    ArgumentException.ThrowIfNullOrWhiteSpace(pgPass);
+    ArgumentException.ThrowIfNullOrWhiteSpace(pgHost);
+
+    if (Uri.TryCreate(pgHost, UriKind.Absolute, out var pgHostUri))
+    {
+      pgHost = pgHostUri.Authority;
+    }
+
+    var pgBuilder = new NpgsqlConnectionStringBuilder
+    {
+      Database = "controlr",
+      Username = pgUser,
+      Password = pgPass,
+      Host = pgHost
+    };
+
+    builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
+    {
+      options.UseNpgsql(pgBuilder.ConnectionString);
+      var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+      if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
+      {
+        options.UseUserClaims(user);
+        options.EnableDetailedErrors(builder.Environment.IsDevelopment());
+      }
+    }, lifetime: ServiceLifetime.Transient);
+  }
+
+  private static async Task ConfigureForwardedHeaders(
     this IHostApplicationBuilder builder,
     AppOptions appOptions)
   {
@@ -373,46 +413,5 @@ public static class WebApplicationBuilderExtensions
         }
       }
     });
-
-    return builder;
-  }
-
-  private static IHostApplicationBuilder AddPostgresDb(this IHostApplicationBuilder builder)
-  {
-
-    // Add DB services.
-    var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
-    var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
-    var pgHost = builder.Configuration.GetValue<string>("POSTGRES_HOST");
-
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgPass);
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgHost);
-
-    if (Uri.TryCreate(pgHost, UriKind.Absolute, out var pgHostUri))
-    {
-      pgHost = pgHostUri.Authority;
-    }
-
-    var pgBuilder = new NpgsqlConnectionStringBuilder
-    {
-      Database = "controlr",
-      Username = pgUser,
-      Password = pgPass,
-      Host = pgHost
-    };
-
-    builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
-    {
-      options.UseNpgsql(pgBuilder.ConnectionString);
-      var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-      if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
-      {
-        options.UseUserClaims(user);
-        options.EnableDetailedErrors(builder.Environment.IsDevelopment());
-      }
-    }, lifetime: ServiceLifetime.Transient);
-
-    return builder;
   }
 }

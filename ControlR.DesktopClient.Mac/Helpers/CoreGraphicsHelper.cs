@@ -6,24 +6,6 @@ namespace ControlR.DesktopClient.Mac.Helpers;
 
 internal static class CoreGraphicsHelper
 {
-  public static Rectangle ToRectangle(this CoreGraphics.CGRect cgRect)
-  {
-    return new Rectangle(
-      (int)cgRect.X,
-      (int)cgRect.Y,
-      (int)cgRect.Width,
-      (int)cgRect.Height);
-  }
-
-  public static CoreGraphics.CGRect ToCGRect(this Rectangle rectangle)
-  {
-    return new CoreGraphics.CGRect(
-      rectangle.X,
-      rectangle.Y,
-      rectangle.Width,
-      rectangle.Height);
-  }
-
   public static SKBitmap? CGImageToSKBitmap(nint cgImageRef)
   {
     if (cgImageRef == nint.Zero)
@@ -110,5 +92,22 @@ internal static class CoreGraphicsHelper
     {
       CoreGraphics.CFRelease(cgImageRef);
     }
+  }
+
+  public static CoreGraphics.CGRect ToCGRect(this Rectangle rectangle)
+  {
+    return new CoreGraphics.CGRect(
+      rectangle.X,
+      rectangle.Y,
+      rectangle.Width,
+      rectangle.Height);
+  }
+  public static Rectangle ToRectangle(this CoreGraphics.CGRect cgRect)
+  {
+    return new Rectangle(
+      (int)cgRect.X,
+      (int)cgRect.Y,
+      (int)cgRect.Width,
+      (int)cgRect.Height);
   }
 }

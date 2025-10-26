@@ -5,7 +5,6 @@ using ControlR.Agent.Common.Services.Linux;
 using ControlR.Agent.Common.Services.Mac;
 using ControlR.Agent.Common.Services.Windows;
 using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Signalr.Client.Extensions;
@@ -21,6 +20,8 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
+using ControlR.Agent.Common.Services.Base;
+using ControlR.Libraries.Shared.Hubs.Clients;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -97,6 +98,46 @@ internal static class HostApplicationBuilderExtensions
     services.AddControlrIpc();
     services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
 
+    if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
+    {
+      services.AddSingleton<IWin32Interop, Win32Interop>();
+      services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderWindows>();
+      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderWin>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
+      services.AddSingleton<IServiceControl, ServiceControlWindows>();
+      services.AddSingleton<IPowerControl, PowerControlWindows>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
+    }
+    else if (OperatingSystem.IsLinux())
+    {
+      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderLinux>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+      services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderX11>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
+      services.AddSingleton<IServiceControl, ServiceControlLinux>();
+      services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
+      services.AddSingleton<IPowerControl, PowerControlMac>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+    }
+    else if (OperatingSystem.IsMacOS())
+    {
+      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderMac>();
+      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
+      services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderMac>();
+      services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
+      services.AddSingleton<IServiceControl, ServiceControlMac>();
+      services.AddSingleton<IPowerControl, PowerControlMac>();
+      services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+    }
+    else
+    {
+      throw new PlatformNotSupportedException();
+    }
+
+    // Add services only needed when running.
     if (startupMode == StartupMode.Run)
     {
       services.AddSingleton<IAgentUpdater, AgentUpdater>();
@@ -112,7 +153,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService<AgentHeartbeatTimer>();
       services.AddHostedService(s => s.GetRequiredService<IDesktopClientUpdater>());
-      services.AddHostedService<DtoHandler>();
+      services.AddHostedService<MessageHandler>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {
@@ -129,47 +170,6 @@ internal static class HostApplicationBuilderExtensions
         services.AddHostedService<DesktopClientWatcherLinux>();
         services.AddHostedService<IpcServerInitializerLinux>();
       }
-    }
-
-    if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
-    {
-      services.AddSingleton<IWin32Interop, Win32Interop>();
-      services.AddSingleton<IUiSessionProvider, UiSessionProviderWindows>();
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderWin>();
-      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
-      services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
-      services.AddSingleton<IServiceControl, ServiceControlWindows>();
-      services.AddSingleton<IPowerControl, PowerControlWindows>();
-      services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
-    }
-    else if (OperatingSystem.IsLinux())
-    {
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderLinux>();
-      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-      services.AddSingleton<IUiSessionProvider, UiSessionProviderX11>();
-      services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
-      services.AddSingleton<IServiceControl, ServiceControlLinux>();
-      services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
-      services.AddSingleton<IPowerControl, PowerControlMac>();
-      services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
-      services.AddSingleton<IWin32Interop, Win32InteropFake>();
-      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-    }
-    else if (OperatingSystem.IsMacOS())
-    {
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderMac>();
-      services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-      services.AddSingleton<IUiSessionProvider, UiSessionProviderMac>();
-      services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
-      services.AddSingleton<IServiceControl, ServiceControlMac>();
-      services.AddSingleton<IPowerControl, PowerControlMac>();
-      services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
-      services.AddSingleton<IWin32Interop, Win32InteropFake>();
-      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-    }
-    else
-    {
-      throw new PlatformNotSupportedException();
     }
 
     builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));

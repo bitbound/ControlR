@@ -12,12 +12,6 @@ public interface IServiceControl
     Task StartAgentService(bool throwOnFailure);
 
     /// <summary>
-    /// Stops the main ControlR agent service.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task StopAgentService(bool throwOnFailure);
-
-    /// <summary>
     /// Starts the ControlR desktop client service.
     /// On Mac: Starts the LaunchAgent for the desktop client.
     /// On Linux: Starts the systemd user service for the desktop client.
@@ -26,6 +20,12 @@ public interface IServiceControl
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="NotSupportedException">Thrown on Windows platform.</exception>
     Task StartDesktopClientService(bool throwOnFailure);
+
+    /// <summary>
+    /// Stops the main ControlR agent service.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StopAgentService(bool throwOnFailure);
 
     /// <summary>
     /// Stops the ControlR desktop client service.

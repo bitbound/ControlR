@@ -16,6 +16,9 @@ public partial class Permissions : ComponentBase
   public required IDeviceStore DeviceStore { get; init; }
 
   [Inject]
+  public required IRoleStore RoleStore { get; init; }
+
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
@@ -23,9 +26,6 @@ public partial class Permissions : ComponentBase
 
   [Inject]
   public required IUserStore UserStore { get; init; }
-
-  [Inject]
-  public required IRoleStore RoleStore { get; init; }
 
   protected override async Task OnInitializedAsync()
   {

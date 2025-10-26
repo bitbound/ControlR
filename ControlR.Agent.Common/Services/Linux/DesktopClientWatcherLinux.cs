@@ -18,24 +18,17 @@ internal class DesktopClientWatcherLinux(
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
-  private readonly IServiceControl _serviceControl = serviceControl;
-  private readonly IProcessManager _processManager = processManager;
-  private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
-  private int? _loginScreenDesktopClientPid;
+  private readonly IProcessManager _processManager = processManager;
+  private readonly IServiceControl _serviceControl = serviceControl;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
-  private class DisplayEnvironmentInfo
-  {
-    public bool IsLoginScreen { get; set; }
-    public string? XAuthPath { get; set; }
-    public string Display { get; set; } = ":0";
-    public string? DisplayManager { get; set; }
-  }
+  private int? _loginScreenDesktopClientPid;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -65,6 +58,25 @@ internal class DesktopClientWatcherLinux(
         _logger.LogError(ex, "Error while checking for desktop processes.");
       }
     }
+  }
+  
+  private static Dictionary<string, string> ParseSessionInfo(string sessionOutput)
+  {
+    var info = new Dictionary<string, string>();
+    var lines = sessionOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    
+    foreach (var line in lines)
+    {
+      var parts = line.Split('=', 2);
+      if (parts.Length == 2)
+      {
+        var key = parts[0].Trim();
+        var value = parts[1].Trim();
+        info[key] = value;
+      }
+    }
+    
+    return info;
   }
 
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
@@ -119,86 +131,6 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
-  private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
-  {
-    try
-    {
-      // Use systemctl to check if the user service is running
-      // Set XDG_RUNTIME_DIR for the user context
-      var result = await _processManager.GetProcessOutput("sudo", $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user is-active {serviceName}", 5000);
-
-      if (!result.IsSuccess)
-      {
-        _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
-        return false;
-      }
-
-      // systemctl is-active returns "active" if the service is running
-      var output = result.Value?.Trim();
-      var isRunning = string.Equals(output, "active", StringComparison.OrdinalIgnoreCase);
-
-      _logger.LogIfChanged(LogLevel.Debug, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
-
-      return isRunning;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogIfChanged(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
-      return false;
-    }
-  }
-
-  private async Task<List<string>> GetLoggedInUsersAsync()
-  {
-    try
-    {
-      var result = await _processManager.GetProcessOutput("who", "-u", 5000);
-      var users = new List<string>();
-
-      if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
-      {
-        var lines = result.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
-        {
-          // Parse the who output to extract usernames
-          // Format: username pts/0 timestamp (IP)
-          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-          if (parts.Length >= 1)
-          {
-            var username = parts[0];
-            // Get UID for the user
-            var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-            if (uidResult.IsSuccess &&
-                !string.IsNullOrWhiteSpace(uidResult.Value) &&
-                int.TryParse(uidResult.Value.Trim(), out var uid) &&
-                uid >= 1000) // Exclude system users (typically UID < 1000 on Linux)
-            {
-              users.Add(uidResult.Value.Trim());
-            }
-          }
-        }
-      }
-
-      return [.. users.Distinct()];
-    }
-    catch (Exception ex)
-    {
-      _logger.LogIfChanged(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
-      return [];
-    }
-  }
-
-  private string GetDesktopClientServiceName()
-  {
-    // This should match the service name from ServiceControlLinux
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return "controlr.desktop.service";
-    }
-
-    return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
-  }
-
   private async Task CheckLoginScreenDesktopClient(CancellationToken cancellationToken)
   {
     var displayInfo = await DetectDisplayEnvironment();
@@ -221,50 +153,28 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
-  private async Task<DisplayEnvironmentInfo> DetectDisplayEnvironment()
+  private Task<string> DetectCurrentDisplay()
   {
-    var info = new DisplayEnvironmentInfo();
-
     try
     {
-      // First, detect which display manager is running
-      var dmResult = await _processManager.GetProcessOutput("systemctl", "status display-manager --no-pager -l", 3000);
-      if (dmResult.IsSuccess && !string.IsNullOrWhiteSpace(dmResult.Value))
+      // Check for active X11 displays
+      var displays = new[] { ":0", ":1", ":10" }; // Common display numbers
+
+      foreach (var display in displays)
       {
-        var output = dmResult.Value.ToLowerInvariant();
-        if (output.Contains("sddm.service"))
+        if (_fileSystem.FileExists($"/tmp/.X11-unix/X{display[1..]}"))
         {
-          info.DisplayManager = "sddm";
-        }
-        else if (output.Contains("gdm") || output.Contains("gdm3"))
-        {
-          info.DisplayManager = "gdm";
-        }
-        else if (output.Contains("lightdm"))
-        {
-          info.DisplayManager = "lightdm";
+          return Task.FromResult(display);
         }
       }
 
-      // Check if we're at login screen by looking for active user sessions
-      // Use a more robust approach that doesn't rely on column order
-      var hasActiveUserSessions = await HasActiveUserSessions();
-
-      info.IsLoginScreen = !hasActiveUserSessions;
-
-      if (info.IsLoginScreen)
-      {
-        // Dynamically detect XAUTH and display for current session
-        info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
-        info.Display = await DetectCurrentDisplay();
-      }
-
-      return info;
+      // Fallback to environment variable or default
+      return Task.FromResult(Environment.GetEnvironmentVariable("DISPLAY") ?? ":0");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting display environment");
-      return info;
+      _logger.LogError(ex, "Error detecting current display");
+      return Task.FromResult(":0");
     }
   }
 
@@ -350,28 +260,188 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
-  private Task<string> DetectCurrentDisplay()
+  private async Task<DisplayEnvironmentInfo> DetectDisplayEnvironment()
   {
+    var info = new DisplayEnvironmentInfo();
+
     try
     {
-      // Check for active X11 displays
-      var displays = new[] { ":0", ":1", ":10" }; // Common display numbers
-
-      foreach (var display in displays)
+      // First, detect which display manager is running
+      var dmResult = await _processManager.GetProcessOutput("systemctl", "status display-manager --no-pager -l", 3000);
+      if (dmResult.IsSuccess && !string.IsNullOrWhiteSpace(dmResult.Value))
       {
-        if (_fileSystem.FileExists($"/tmp/.X11-unix/X{display[1..]}"))
+        var output = dmResult.Value.ToLowerInvariant();
+        if (output.Contains("sddm.service"))
         {
-          return Task.FromResult(display);
+          info.DisplayManager = "sddm";
+        }
+        else if (output.Contains("gdm") || output.Contains("gdm3"))
+        {
+          info.DisplayManager = "gdm";
+        }
+        else if (output.Contains("lightdm"))
+        {
+          info.DisplayManager = "lightdm";
         }
       }
 
-      // Fallback to environment variable or default
-      return Task.FromResult(Environment.GetEnvironmentVariable("DISPLAY") ?? ":0");
+      // Check if we're at login screen by looking for active user sessions
+      // Use a more robust approach that doesn't rely on column order
+      var hasActiveUserSessions = await HasActiveUserSessions();
+
+      info.IsLoginScreen = !hasActiveUserSessions;
+
+      if (info.IsLoginScreen)
+      {
+        // Dynamically detect XAUTH and display for current session
+        info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
+        info.Display = await DetectCurrentDisplay();
+      }
+
+      return info;
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting current display");
-      return Task.FromResult(":0");
+      _logger.LogError(ex, "Error detecting display environment");
+      return info;
+    }
+  }
+
+  private string GetDesktopClientServiceName()
+  {
+    // This should match the service name from ServiceControlLinux
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      return "controlr.desktop.service";
+    }
+
+    return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
+  }
+
+  private string GetInstallDirectory()
+  {
+    var dir = "/usr/local/bin/ControlR";
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      return dir;
+    }
+
+    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+  }
+
+  private async Task<List<string>> GetLoggedInUsersAsync()
+  {
+    try
+    {
+      var result = await _processManager.GetProcessOutput("who", "-u", 5000);
+      var users = new List<string>();
+
+      if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
+      {
+        var lines = result.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+        {
+          // Parse the who output to extract usernames
+          // Format: username pts/0 timestamp (IP)
+          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+          if (parts.Length >= 1)
+          {
+            var username = parts[0];
+            // Get UID for the user
+            var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
+            if (uidResult.IsSuccess &&
+                !string.IsNullOrWhiteSpace(uidResult.Value) &&
+                int.TryParse(uidResult.Value.Trim(), out var uid) &&
+                uid >= 1000) // Exclude system users (typically UID < 1000 on Linux)
+            {
+              users.Add(uidResult.Value.Trim());
+            }
+          }
+        }
+      }
+
+      return [.. users.Distinct()];
+    }
+    catch (Exception ex)
+    {
+      _logger.LogIfChanged(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
+      return [];
+    }
+  }
+
+  private async Task<bool> HasActiveUserSessions()
+  {
+    try
+    {
+      // First get list of session IDs
+      var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
+      if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
+      {
+        return false;
+      }
+
+      var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+      foreach (var line in sessionLines)
+      {
+        var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 0)
+        {
+          var sessionId = parts[0]; // Session ID is always the first column
+          
+          // Get detailed session info using show-session (key-value format)
+          var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
+          if (sessionInfoResult.IsSuccess && !string.IsNullOrWhiteSpace(sessionInfoResult.Value))
+          {
+            var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
+            
+            // Check if this is an active session with a regular user UID (≥1000)
+            if (sessionInfo.TryGetValue("Active", out string? activeValue) &&
+                sessionInfo.TryGetValue("User", out string? userValue) &&
+                string.Equals(activeValue, "yes", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(userValue, out var uid) &&
+                uid >= 1000)
+            {
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking for active user sessions");
+      return false;
+    }
+  }
+
+  private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
+  {
+    try
+    {
+      // Use systemctl to check if the user service is running
+      // Set XDG_RUNTIME_DIR for the user context
+      var result = await _processManager.GetProcessOutput("sudo", $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user is-active {serviceName}", 5000);
+
+      if (!result.IsSuccess)
+      {
+        _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
+        return false;
+      }
+
+      // systemctl is-active returns "active" if the service is running
+      var output = result.Value?.Trim();
+      var isRunning = string.Equals(output, "active", StringComparison.OrdinalIgnoreCase);
+
+      _logger.LogIfChanged(LogLevel.Debug, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
+
+      return isRunning;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogIfChanged(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
+      return false;
     }
   }
 
@@ -516,81 +586,12 @@ internal class DesktopClientWatcherLinux(
       _logger.LogError(ex, "Error stopping login screen desktop client");
     }
   }
-
-  private string GetInstallDirectory()
-  {
-    var dir = "/usr/local/bin/ControlR";
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return dir;
-    }
-
-    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
-  }
-
-  private async Task<bool> HasActiveUserSessions()
-  {
-    try
-    {
-      // First get list of session IDs
-      var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
-      if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
-      {
-        return false;
-      }
-
-      var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-      foreach (var line in sessionLines)
-      {
-        var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 0)
-        {
-          var sessionId = parts[0]; // Session ID is always the first column
-          
-          // Get detailed session info using show-session (key-value format)
-          var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
-          if (sessionInfoResult.IsSuccess && !string.IsNullOrWhiteSpace(sessionInfoResult.Value))
-          {
-            var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
-            
-            // Check if this is an active session with a regular user UID (≥1000)
-            if (sessionInfo.TryGetValue("Active", out string? activeValue) &&
-                sessionInfo.TryGetValue("User", out string? userValue) &&
-                string.Equals(activeValue, "yes", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(userValue, out var uid) &&
-                uid >= 1000)
-            {
-              return true;
-            }
-          }
-        }
-      }
-      
-      return false;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error checking for active user sessions");
-      return false;
-    }
-  }
   
-  private static Dictionary<string, string> ParseSessionInfo(string sessionOutput)
+  private class DisplayEnvironmentInfo
   {
-    var info = new Dictionary<string, string>();
-    var lines = sessionOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-    
-    foreach (var line in lines)
-    {
-      var parts = line.Split('=', 2);
-      if (parts.Length == 2)
-      {
-        var key = parts[0].Trim();
-        var value = parts[1].Trim();
-        info[key] = value;
-      }
-    }
-    
-    return info;
+    public string Display { get; set; } = ":0";
+    public string? DisplayManager { get; set; }
+    public bool IsLoginScreen { get; set; }
+    public string? XAuthPath { get; set; }
   }
 }

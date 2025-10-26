@@ -2,8 +2,8 @@
 
 public interface IClipboardManager
 {
-  Task SetText(string text);
   Task<string?> GetText();
+  Task SetText(string text);
 }
 
 internal class ClipboardManager(IJsInterop jsInterop) : IClipboardManager

@@ -8,16 +8,20 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 public partial class Chat : ComponentBase, IDisposable
 {
   private readonly string _chatInputElementId = $"chat-input-{Guid.NewGuid()}";
+
   private string? _alertMessage;
   private Severity _alertSeverity;
   private MudTextField<string> _chatInputElement = null!;
   private ElementReference _chatMessagesContainer;
   private string? _loadingMessage = "Loading";
-  private DeviceUiSession[]? _systemSessions;
   private IDisposable? _stateChangeHandler;
+  private DesktopSession[]? _systemSessions;
 
   [Inject]
   public required IChatState ChatState { get; init; }
+
+  [Inject]
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
@@ -29,13 +33,7 @@ public partial class Chat : ComponentBase, IDisposable
   public required ILogger<Chat> Logger { get; init; }
 
   [Inject]
-  public required NavigationManager NavManager { get; init; }
-
-  [Inject]
   public required ISnackbar Snackbar { get; init; }
-
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
 
   private string AlertIcon =>
     _alertSeverity switch
@@ -47,13 +45,13 @@ public partial class Chat : ComponentBase, IDisposable
       _ => Icons.Material.Outlined.Info
     };
 
-  private int ChatInputLineCount => ChatState.EnableMultiline
-    ? 6
-    : 1;
-
   private string ChatInputHelperText => ChatState.EnableMultiline
     ? "Type a message and press Ctrl+Enter to send, or Enter for new line"
     : "Type a message and press Enter to send";
+
+  private int ChatInputLineCount => ChatState.EnableMultiline
+    ? 6
+    : 1;
 
   private ChatPageState CurrentState
   {
@@ -101,11 +99,22 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 
-
   public void Dispose()
   {
     _stateChangeHandler?.Dispose();
     GC.SuppressFinalize(this);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+    // If this is the first render and we have existing messages, scroll to end after a short delay
+    // to ensure the DOM is fully rendered with content.
+    if (firstRender && ChatState.ChatMessages.Count > 0)
+    {
+      await Task.Delay(50);
+      await JsInterop.ScrollToEnd(_chatMessagesContainer);
+    }
   }
 
   protected override async Task OnInitializedAsync()
@@ -127,32 +136,28 @@ public partial class Chat : ComponentBase, IDisposable
     await LoadSystemSessions();
   }
 
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    await base.OnAfterRenderAsync(firstRender);
-    // If this is the first render and we have existing messages, scroll to end after a short delay
-    // to ensure the DOM is fully rendered with content.
-    if (firstRender && ChatState.ChatMessages.Count > 0)
-    {
-      await Task.Delay(50);
-      await JsInterop.ScrollToEnd(_chatMessagesContainer);
-    }
-  }
-
   private async Task CloseChatSession()
   {
     if (ChatState.CurrentSession is not null)
     {
-      var result = await ViewerHub.CloseChatSession(
-        DeviceAccessState.CurrentDevice.Id,
-        ChatState.SessionId,
-        ChatState.CurrentSession.ProcessId);
+        try
+        {
+            var result = await DeviceAccessHub.Server.CloseChatSession(
+                DeviceAccessState.CurrentDevice.Id,
+                ChatState.SessionId,
+                ChatState.CurrentSession.ProcessId);
 
-      if (!result.IsSuccess)
-      {
-        Logger.LogError("Failed to close chat session: {Error}", result.Exception?.Message);
-        Snackbar.Add("Failed to close chat session", Severity.Warning);
-      }
+            if (!result.IsSuccess)
+            {
+                Logger.LogError("Failed to close chat session: {Error}", result.Exception?.Message);
+                Snackbar.Add("Failed to close chat session", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error closing chat session.");
+            Snackbar.Add("Error closing chat session", Severity.Error);
+        }
     }
 
     ChatState.Clear();
@@ -165,7 +170,6 @@ public partial class Chat : ComponentBase, IDisposable
     await InvokeAsync(StateHasChanged);
     await JsInterop.ScrollToEnd(_chatMessagesContainer);
   }
-
 
   private async Task HandleInputKeyDown(KeyboardEventArgs args)
   {
@@ -186,17 +190,7 @@ public partial class Chat : ComponentBase, IDisposable
   {
     try
     {
-      var sessionResult = await ViewerHub.GetActiveUiSessions(DeviceAccessState.CurrentDevice.Id);
-      if (!sessionResult.IsSuccess)
-      {
-        Logger.LogResult(sessionResult);
-        Snackbar.Add("Failed to get active sessions", Severity.Warning);
-        _alertMessage = $"Failed to get active sessions: {sessionResult.Reason}.";
-        _alertSeverity = Severity.Warning;
-        return;
-      }
-
-      _systemSessions = sessionResult.Value;
+        _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
     }
     catch (Exception ex)
     {
@@ -256,7 +250,7 @@ public partial class Chat : ComponentBase, IDisposable
       ChatState.NewMessage = string.Empty;
 
       // Send to the device
-      var result = await ViewerHub.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
+      var result = await DeviceAccessHub.Server.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
       if (!result.IsSuccess)
       {
         Logger.LogError("Failed to send chat message: {Error}", result.Exception?.Message);
@@ -275,7 +269,7 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 
-  private async Task StartChatSession(DeviceUiSession session)
+  private async Task StartChatSession(DesktopSession session)
   {
     try
     {

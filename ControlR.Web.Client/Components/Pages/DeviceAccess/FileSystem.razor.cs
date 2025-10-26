@@ -27,6 +27,9 @@ public partial class FileSystem : JsInteropableComponent
   public required IControlrApi ControlrApi { get; set; }
 
   [Inject]
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; set; }
+
+  [Inject]
   public required IDeviceState DeviceState { get; init; }
 
   [Inject]
@@ -58,9 +61,6 @@ public partial class FileSystem : JsInteropableComponent
 
   [Inject]
   public required ISnackbar Snackbar { get; set; }
-
-  [Inject]
-  public required IHubConnection<IViewerHub> ViewerHub { get; set; }
 
   private Guid DeviceId => DeviceState.IsDeviceLoaded
     ? DeviceState.CurrentDevice.Id
@@ -872,7 +872,7 @@ public partial class FileSystem : JsInteropableComponent
         }
       }, cts.Token);
 
-      var result = await ViewerHub.Server
+      var result = await DeviceAccessHub.Server
         .UploadFile(metadata, channel.Reader)
         .WaitAsync(cts.Token);
 

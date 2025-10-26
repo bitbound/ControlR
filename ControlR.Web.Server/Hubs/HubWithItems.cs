@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 
 namespace ControlR.Web.Server.Hubs;
 
-public abstract class HubWithItems<T> : Hub<T>
-    where T : class
+public abstract class HubWithItems<TClient> : Hub<TClient>
+    where TClient : class
 {
   protected TItem GetItem<TItem>(TItem defaultValue, [CallerMemberName] string key = "")
   {

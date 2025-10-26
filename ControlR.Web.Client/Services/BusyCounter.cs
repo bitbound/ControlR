@@ -15,19 +15,18 @@ internal class BusyCounter(IMessenger messenger) : IBusyCounter
 
   public bool IsBusy => _busyCounter > 0;
 
-
   public int PendingOperations => _busyCounter;
 
   public IDisposable IncrementBusyCounter(Action? additionalDisposedAction = null)
   {
     Interlocked.Increment(ref _busyCounter);
 
-    messenger.SendGenericMessage(EventMessageKind.PendingOperationsChanged);
+    messenger.SendEvent(EventKinds.PendingOperationsChanged);
 
     return new CallbackDisposable(() =>
     {
       Interlocked.Decrement(ref _busyCounter);
-      messenger.SendGenericMessage(EventMessageKind.PendingOperationsChanged);
+      messenger.SendEvent(EventKinds.PendingOperationsChanged);
 
       additionalDisposedAction?.Invoke();
     });

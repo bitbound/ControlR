@@ -10,20 +10,20 @@ public interface ISettingsProvider
 {
   Guid DeviceId { get; }
   bool DisableAutoUpdate { get; }
+  int HubDtoChunkSize { get; }
   string InstanceId { get; }
   Uri ServerUri { get; }
   Guid TenantId { get; }
   int VncPort { get; }
-  int HubDtoChunkSize { get; }
   string GetAppSettingsPath();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
 }
 
 internal class SettingsProvider(
+  IFileSystem fileSystem,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptionsMonitor<DeveloperOptions> developerOptions,
-  IFileSystem fileSystem,
   IOptions<InstanceOptions> instanceOptions) : ISettingsProvider
 {
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
@@ -34,6 +34,11 @@ internal class SettingsProvider(
   private readonly SemaphoreSlim _updateLock = new(1, 1);
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
   public bool DisableAutoUpdate => _developerOptions.CurrentValue.DisableAutoUpdate;
+
+  public int HubDtoChunkSize => _appOptions.CurrentValue.HubDtoChunkSize is > 0
+    ? _appOptions.CurrentValue.HubDtoChunkSize.Value
+    : 100;
+
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
 
   public Uri ServerUri =>
@@ -46,9 +51,7 @@ internal class SettingsProvider(
     : _appOptions.CurrentValue.TenantId;
 
   public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
-  public int HubDtoChunkSize => _appOptions.CurrentValue.HubDtoChunkSize is > 0
-    ? _appOptions.CurrentValue.HubDtoChunkSize.Value
-    : 100;
+
   public string GetAppSettingsPath()
   {
     return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
@@ -68,7 +71,7 @@ internal class SettingsProvider(
 
       var contents = await _fileSystem.ReadAllTextAsync(path);
       var json = JsonNode.Parse(contents) ??
-        throw new InvalidOperationException("Failed to parse app settings JSON.");
+                 throw new InvalidOperationException("Failed to parse app settings JSON.");
 
       json[AgentAppOptions.SectionKey] = JsonSerializer.SerializeToNode(options);
       contents = JsonSerializer.Serialize(json, _jsonOptions);

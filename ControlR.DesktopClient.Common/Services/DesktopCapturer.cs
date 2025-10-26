@@ -61,7 +61,6 @@ internal class DesktopCapturer : IDesktopCapturer
   public const int DefaultImageQuality = 75;
 
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
-  private readonly ICaptureMetrics _captureMetrics;
   private readonly Channel<ScreenRegionDto> _captureChannel = Channel.CreateBounded<ScreenRegionDto>(
     new BoundedChannelOptions(capacity: 1)
     {
@@ -69,14 +68,16 @@ internal class DesktopCapturer : IDesktopCapturer
       SingleWriter = true,
       FullMode = BoundedChannelFullMode.Wait,
     });
+  private readonly ICaptureMetrics _captureMetrics;
   private readonly Lock _displayLock = new();
   private readonly IDisplayManager _displayManager;
+  private readonly IImageUtility _imageUtility;
   private readonly ILogger<DesktopCapturer> _logger;
   private readonly IMemoryProvider _memoryProvider;
-  private readonly IImageUtility _imageUtility;
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
+
   private Task? _captureTask;
   private bool _disposedValue;
   private volatile bool _forceKeyFrame = true;
@@ -273,7 +274,6 @@ internal class DesktopCapturer : IDesktopCapturer
       return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
     }
   }
-
 
   private DisplayInfo? GetSelectedDisplay()
   {

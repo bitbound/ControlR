@@ -875,42 +875,6 @@
       }
     },
     "/api/Invites": {
-      "get": {
-        "tags": [
-          "Invites"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "Invites"
@@ -952,6 +916,42 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Invites"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  }
                 }
               }
             }
@@ -1058,42 +1058,6 @@
       }
     },
     "/api/personal-access-tokens": {
-      "get": {
-        "tags": [
-          "PersonalAccessTokens"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "PersonalAccessTokens"
@@ -1140,9 +1104,66 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "PersonalAccessTokens"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/personal-access-tokens/{id}": {
+      "delete": {
+        "tags": [
+          "PersonalAccessTokens"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
       "put": {
         "tags": [
           "PersonalAccessTokens"
@@ -1198,27 +1219,6 @@
                 }
               }
             }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "PersonalAccessTokens"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }
@@ -1455,6 +1455,65 @@
         }
       }
     },
+    "/api/tenant-settings/{name}": {
+      "delete": {
+        "tags": [
+          "TenantSettings"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "TenantSettings"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenant-settings": {
       "get": {
         "tags": [
@@ -1536,65 +1595,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/tenant-settings/{name}": {
-      "get": {
-        "tags": [
-          "TenantSettings"
-        ],
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantSettingResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantSettingResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantSettingResponseDto"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "TenantSettings"
-        ],
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }
@@ -1890,42 +1890,6 @@
       }
     },
     "/api/Users": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserResponseDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserResponseDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "Users"
@@ -1967,6 +1931,42 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
                 }
               }
             }
@@ -2450,11 +2450,11 @@
       "DeviceColumnFilter": {
         "type": "object",
         "properties": {
-          "propertyName": {
+          "operator": {
             "type": "string",
             "nullable": true
           },
-          "operator": {
+          "propertyName": {
             "type": "string",
             "nullable": true
           },
@@ -2467,12 +2467,12 @@
       "DeviceColumnSort": {
         "type": "object",
         "properties": {
+          "descending": {
+            "type": "boolean"
+          },
           "propertyName": {
             "type": "string",
             "nullable": true
-          },
-          "descending": {
-            "type": "boolean"
           },
           "sortOrder": {
             "type": "integer",
@@ -2658,6 +2658,9 @@
       "DeviceSearchResponseDto": {
         "type": "object",
         "properties": {
+          "anyDevicesForUser": {
+            "type": "boolean"
+          },
           "items": {
             "type": "array",
             "items": {
@@ -2668,9 +2671,6 @@
           "totalItems": {
             "type": "integer",
             "format": "int32"
-          },
-          "anyDevicesForUser": {
-            "type": "boolean"
           }
         }
       },
@@ -2843,14 +2843,11 @@
       },
       "LogonTokenResponseDto": {
         "required": [
-          "token",
-          "deviceAccessUrl"
+          "deviceAccessUrl",
+          "token"
         ],
         "type": "object",
         "properties": {
-          "token": {
-            "type": "string"
-          },
           "deviceAccessUrl": {
             "type": "string",
             "format": "uri"
@@ -2858,6 +2855,9 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "token": {
+            "type": "string"
           }
         }
       },

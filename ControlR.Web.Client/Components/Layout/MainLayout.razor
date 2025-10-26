@@ -2,7 +2,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavManager
 @inject IMessenger Messenger
-@inject IViewerHubConnection ViewerHub
+@inject IHubConnector HubConnector
 @inject ISnackbar Snackbar
 @inject ILogger<MainLayout> Logger
 
@@ -17,7 +17,7 @@
 
       @if (RendererInfo.IsInteractive)
       {
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => ToggleNavDrawer())" />
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => ToggleNavDrawer())" />
       }
       else
       {
@@ -32,7 +32,7 @@
 
       <MudSpacer/>
 
-      <RealtimeConnectionIndicator />
+      <ConnectionIndicator THub="@IMainBrowserHub" />
 
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
@@ -68,7 +68,6 @@
 
   <DeviceContentHarness/>
 </div>
-
 
 <div id="blazor-error-ui">
   An unhandled error has occurred.
@@ -111,11 +110,10 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Connect();
+        await HubConnector.Connect<IMainBrowserHub>(AppConstants.MainBrowserHubPath);
       }
     }
   }
-
 
   private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)
   {
@@ -127,7 +125,7 @@
 
       if (_isAuthenticated)
       {
-        await ViewerHub.Connect();
+        await HubConnector.Connect<IMainBrowserHub>(AppConstants.MainBrowserHubPath);
       }
     }
     catch (Exception ex)
@@ -136,7 +134,6 @@
       Snackbar.Add("Authentication state change error", Severity.Error);
     }
   }
-
 
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {

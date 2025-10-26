@@ -19,9 +19,9 @@ public class FileReferenceResult : IDisposable
     OnDispose = onDispose;
   }
 
-  public string? FileDisplayName { get; init; }
-
   public string? ErrorMessage { get; init; }
+
+  public string? FileDisplayName { get; init; }
 
   public string? FileSystemPath { get; init; }
 

@@ -3,7 +3,6 @@ using System.Runtime.Versioning;
 
 namespace ControlR.Libraries.DevicesCommon.Services.Processes;
 
-
 /// <summary>
 /// <para>
 ///   An interface that wraps the System.Diagnostics.Process class.
@@ -45,6 +44,7 @@ public interface IProcess : IDisposable
 public class ProcessWrapper(Process process) : IProcess
 {
   private readonly Process _process = process;
+
   private bool _disposedValue;
 
   public event EventHandler? Exited
@@ -76,6 +76,13 @@ public class ProcessWrapper(Process process) : IProcess
   public bool Responding => _process.Responding;
   public int SessionId => _process.SessionId;
   public ProcessStartInfo StartInfo { get => _process.StartInfo; set => _process.StartInfo = value; }
+
+  public void Dispose()
+  {
+    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    Dispose(disposing: true);
+    GC.SuppressFinalize(this);
+  }
   public void Kill()
   {
     _process.Kill();
@@ -93,20 +100,15 @@ public class ProcessWrapper(Process process) : IProcess
 
   protected virtual void Dispose(bool disposing)
   {
-    if (!_disposedValue)
+    if (_disposedValue)
     {
-      if (disposing)
-      {
-        _process.Dispose();
-      }
-      _disposedValue = true;
+      return;
     }
-  }
 
-  public void Dispose()
-  {
-    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    Dispose(disposing: true);
-    GC.SuppressFinalize(this);
+    if (disposing)
+    {
+      _process.Dispose();
+    }
+    _disposedValue = true;
   }
 }

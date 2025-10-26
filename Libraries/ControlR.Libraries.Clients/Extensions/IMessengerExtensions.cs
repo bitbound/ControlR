@@ -2,15 +2,15 @@
 
 public static class MessengerExtensions
 {
-  public static IDisposable RegisterEventMessage(
+  public static IDisposable RegisterEvent(
     this IMessenger messenger,
     object recipient,
-    EventMessageKind kind,
+    Guid eventKind,
     Action handler)
   {
-    return messenger.Register<ValueMessage<EventMessageKind>>(recipient, (_, message) =>
+    return messenger.Register<EventMessage>(recipient, (_, message) =>
     {
-      if (kind == message.Value)
+      if (eventKind == message.EventKind)
       {
         handler();
       }
@@ -19,44 +19,45 @@ public static class MessengerExtensions
     });
   }
 
-  public static IDisposable RegisterEventMessage(
+  public static IDisposable RegisterEvent(
     this IMessenger messenger,
     object recipient,
-    EventMessageKind kind,
+    Guid eventKind,
     Func<Task> handler)
   {
-    return messenger.Register<ValueMessage<EventMessageKind>>(recipient, async (_, message) =>
+    return messenger.Register<EventMessage>(recipient, async (_, message) =>
     {
-      if (kind == message.Value)
+      if (eventKind == message.EventKind)
       {
         await handler();
       }
     });
   }
 
-  public static IDisposable RegisterEventMessage(
+  public static IDisposable RegisterEvent(
     this IMessenger messenger,
     object recipient,
-    Action<object, EventMessageKind> handler)
+    Action<object, Guid> handler)
   {
-    return messenger.Register<ValueMessage<EventMessageKind>>(recipient, (subscriber, message) =>
+    return messenger.Register<EventMessage>(recipient, (subscriber, message) =>
     {
-      handler(subscriber, message.Value);
+      handler(subscriber, message.EventKind);
       return Task.CompletedTask;
     });
   }
 
-  public static IDisposable RegisterEventMessage(
+  public static IDisposable RegisterEvent(
     this IMessenger messenger,
     object recipient,
-    Func<object, EventMessageKind, Task> handler)
+    Func<object, Guid, Task> handler)
   {
-    return messenger.Register<ValueMessage<EventMessageKind>>(recipient,
-      async (subscriber, message) => { await handler(subscriber, message.Value); });
+    return messenger.Register<EventMessage>(recipient,
+      async (subscriber, message) => { await handler(subscriber, message.EventKind); });
   }
 
-  public static Task SendGenericMessage(this IMessenger messenger, EventMessageKind kind)
+  public static Task SendEvent(this IMessenger messenger, Guid eventKind)
   {
-    return messenger.Send(new ValueMessage<EventMessageKind>(kind));
+    return messenger.Send(new EventMessage(eventKind));
   }
+  
 }

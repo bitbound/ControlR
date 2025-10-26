@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace ControlR.Libraries.NativeInterop.Unix;
 
-
 public interface IFileSystemUnix
 {
 	/// <summary>

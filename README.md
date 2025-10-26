@@ -14,7 +14,6 @@ Project Board: https://github.com/users/bitbound/projects/1
 
 ## Quick Start: 
 
-
 ```
 wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/docker-compose.yml
 sudo docker compose up -d

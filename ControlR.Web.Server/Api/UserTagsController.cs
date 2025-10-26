@@ -49,7 +49,6 @@ public class UserTagsController : ControllerBase
     return NoContent();
   }
 
-
   [HttpGet]
   public async Task<ActionResult<TagResponseDto[]>> GetAllowedTags(
     [FromServices] AppDb appDb)

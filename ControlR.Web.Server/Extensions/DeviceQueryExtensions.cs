@@ -143,9 +143,9 @@ public static class DeviceQueryExtensions
     return Expression.Lambda<Func<Device, bool>>(comparisonExpression, parameter);
   }
 
-  private static Expression<Func<Device, bool>> BuildStringExpression(
-    Expression<Func<Device, string?>> propertySelector,
-    Expression<Func<string?, bool>> condition)
+  private static Expression<Func<Device, bool>> BuildDoubleExpression(
+    Expression<Func<Device, double?>> propertySelector,
+    Expression<Func<double?, bool>> condition)
   {
     var parameter = propertySelector.Parameters[0];
     var propertyExpression = propertySelector.Body;
@@ -158,9 +158,9 @@ public static class DeviceQueryExtensions
     return Expression.Lambda<Func<Device, bool>>(replacedCondition!, parameter);
   }
 
-  private static Expression<Func<Device, bool>> BuildDoubleExpression(
-    Expression<Func<Device, double?>> propertySelector,
-    Expression<Func<double?, bool>> condition)
+  private static Expression<Func<Device, bool>> BuildStringExpression(
+    Expression<Func<Device, string?>> propertySelector,
+    Expression<Func<string?, bool>> condition)
   {
     var parameter = propertySelector.Parameters[0];
     var propertyExpression = propertySelector.Body;
@@ -192,6 +192,50 @@ public static class DeviceQueryExtensions
         return query.Where(BuildBooleanExpression(propertySelector, boolValue));
       default:
         logger.LogError("Unsupported boolean filter operator: {FilterOperator}", filterOperator);
+        return query;
+    }
+  }
+  private static IQueryable<Device> FilterByDoubleColumn(
+    this IQueryable<Device> query,
+    string filterOperator,
+    string? filterValue,
+    Expression<Func<Device, double?>> propertySelector,
+    ILogger logger)
+  {
+    // Parse the filter value to double
+    if (!double.TryParse(filterValue, out var doubleValue))
+    {
+      switch (filterOperator)
+      {
+        case FilterOperator.Number.Empty:
+          // If the filter is for empty, we can return devices with 0 value
+          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d == 0));
+        case FilterOperator.Number.NotEmpty:
+          // If the filter is for not empty, we can return devices with non-zero value
+          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d != 0));
+        default:
+          logger.LogError("Invalid double filter value: {FilterValue}", filterValue);
+          return query;
+      }
+    }
+
+    switch (filterOperator)
+    {
+      // Handle MudBlazor numeric filter operators
+      case FilterOperator.Number.Equal:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d == doubleValue));
+      case FilterOperator.Number.NotEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d != doubleValue));
+      case FilterOperator.Number.GreaterThan:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d > doubleValue));
+      case FilterOperator.Number.GreaterThanOrEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d >= doubleValue));
+      case FilterOperator.Number.LessThan:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue));
+      case FilterOperator.Number.LessThanOrEqual:
+        return query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue));
+      default:
+        logger.LogError("Unsupported numeric filter operator: {FilterOperator}", filterOperator);
         return query;
     }
   }
@@ -255,50 +299,6 @@ public static class DeviceQueryExtensions
           logger.LogError("Unsupported string filter operator for non-relational database: {FilterOperator}", filterOperator);
           return query;
       }
-    }
-  }
-  private static IQueryable<Device> FilterByDoubleColumn(
-    this IQueryable<Device> query,
-    string filterOperator,
-    string? filterValue,
-    Expression<Func<Device, double?>> propertySelector,
-    ILogger logger)
-  {
-    // Parse the filter value to double
-    if (!double.TryParse(filterValue, out var doubleValue))
-    {
-      switch (filterOperator)
-      {
-        case FilterOperator.Number.Empty:
-          // If the filter is for empty, we can return devices with 0 value
-          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d == 0));
-        case FilterOperator.Number.NotEmpty:
-          // If the filter is for not empty, we can return devices with non-zero value
-          return query.Where(BuildDoubleExpression(propertySelector, d => d == null || d != 0));
-        default:
-          logger.LogError("Invalid double filter value: {FilterValue}", filterValue);
-          return query;
-      }
-    }
-
-    switch (filterOperator)
-    {
-      // Handle MudBlazor numeric filter operators
-      case FilterOperator.Number.Equal:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d == doubleValue));
-      case FilterOperator.Number.NotEqual:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d != doubleValue));
-      case FilterOperator.Number.GreaterThan:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d > doubleValue));
-      case FilterOperator.Number.GreaterThanOrEqual:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d >= doubleValue));
-      case FilterOperator.Number.LessThan:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d < doubleValue));
-      case FilterOperator.Number.LessThanOrEqual:
-        return query.Where(BuildDoubleExpression(propertySelector, d => d <= doubleValue));
-      default:
-        logger.LogError("Unsupported numeric filter operator: {FilterOperator}", filterOperator);
-        return query;
     }
   }
 

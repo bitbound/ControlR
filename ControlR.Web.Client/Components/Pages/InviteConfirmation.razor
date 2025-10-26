@@ -74,7 +74,6 @@ else
                       OnKeyDown="HandleKeyDown">
         </MudTextField>
 
-
         <MudTextField T="string"
                       @bind-Value="_inputModel.ConfirmPassword"
                       For="@(() => _inputModel.ConfirmPassword!)"
@@ -118,7 +117,6 @@ else
     var authState = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = authState.User.IsAuthenticated();
   }
-
 
   private async Task HandleKeyDown(KeyboardEventArgs args)
   {

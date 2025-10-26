@@ -1,7 +1,5 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
-using ControlR.DesktopClient.Common.Options;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.ViewModels;
 

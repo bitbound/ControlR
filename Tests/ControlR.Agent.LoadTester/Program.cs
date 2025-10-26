@@ -3,10 +3,11 @@ using ControlR.Agent.LoadTester;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.SignalR.Client;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Interfaces.HubClients;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Libraries.Shared.Primitives;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
@@ -27,7 +28,7 @@ Console.CancelKeyPress += (s, e) => { cts.Cancel(); };
 Console.WriteLine($"Connecting to {serverUri}");
 
 var connections = new ConcurrentBag<HubConnection>();
-var hubUri = new Uri(serverUri, "/hubs/agent");
+var hubUri = new Uri(serverUri, AppConstants.AgentHubPath);
 var agentHubClient = new TestAgentHubClient();
 var retryPolicy = new TestAgentRetryPolicy();
 
@@ -80,7 +81,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         nameof(IAgentHubClient.CreateRemoteControlSession),
         agentHubClient.CreateRemoteControlSession);
 
-      connection.On<TerminalSessionRequest, Result>(
+      connection.On<Guid, string, Result>(
         nameof(IAgentHubClient.CreateTerminalSession),
         agentHubClient.CreateTerminalSession);
 

@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
 
 @inject IMessenger Messenger;
-@inject IViewerHubConnection ViewerHub;
+@inject IHubConnection<IMainBrowserHub> MainHub;
 @inject ISnackbar Snackbar;
 @inject ILogger<ServerStats> Logger;
 
@@ -15,7 +15,6 @@
                  Class="ms-2"
                  OnClick="HandleRefreshClicked" />
 </PrimaryTitle>
-
 
 <div class="mt-10">
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
@@ -137,7 +136,7 @@
   {
     try
     {
-      var result = await ViewerHub.GetServerStats();
+      var result = await MainHub.Server.GetServerStats();
       if (result.IsSuccess)
       {
         _serverStats = result.Value;

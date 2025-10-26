@@ -7,7 +7,6 @@ using Microsoft.Extensions.Time.Testing;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 
-
 namespace ControlR.Web.Server.Tests.Helpers;
 
 internal static class TestWebServerBuilder

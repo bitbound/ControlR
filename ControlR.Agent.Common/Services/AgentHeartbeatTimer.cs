@@ -8,10 +8,11 @@ internal class AgentHeartbeatTimer(
   ISystemEnvironment systemEnvironment,
   ILogger<AgentHeartbeatTimer> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IAgentHubConnection _hubConnection = hubConnection;
   private readonly ILogger<AgentHeartbeatTimer> _logger = logger;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+  private readonly TimeProvider _timeProvider = timeProvider;
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     var delayTime = _systemEnvironment.IsDebug ?

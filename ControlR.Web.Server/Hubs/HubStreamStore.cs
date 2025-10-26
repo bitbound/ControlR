@@ -12,8 +12,8 @@ public interface IHubStreamStore
 
 public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryCache) : IHubStreamStore
 {
-  private readonly IMemoryCache _memoryCache = memoryCache;
   private readonly ILogger<HubStreamStore> _logger = logger;
+  private readonly IMemoryCache _memoryCache = memoryCache;
 
   public HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration)
   {

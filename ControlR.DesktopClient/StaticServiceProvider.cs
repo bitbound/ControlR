@@ -2,8 +2,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
@@ -18,7 +16,6 @@ using Microsoft.Extensions.Logging;
 // ReSharper disable UnusedMethodReturnValue.Local
 
 namespace ControlR.DesktopClient;
-
 
 internal static class StaticServiceProvider
 {

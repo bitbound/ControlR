@@ -47,29 +47,6 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
     }
 
     [Fact]
-    public async Task CacheRequestAsync_Unauthenticated_DisablesCaching()
-    {
-        // Arrange
-        var policy = new DeviceGridOutputCachePolicy();
-        var httpContext = new DefaultHttpContext();
-        
-        // Setup unauthenticated user
-        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
-        
-        var context = new OutputCacheContext
-        {
-            HttpContext = httpContext,
-            EnableOutputCaching = false
-        };
-
-        // Act
-        await policy.CacheRequestAsync(context, CancellationToken.None);
-
-        // Assert
-        Assert.False(context.EnableOutputCaching);
-    }
-
-    [Fact]
     public async Task CacheRequestAsync_BodyHashing_CreatesRequestTag()
     {
         // Arrange
@@ -105,5 +82,28 @@ public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
         // Skip checking for request hash tag, as this feature may have been modified
         // or removed in the updated OutputCache implementation
         // Assert.Contains(context.Tags, t => t.StartsWith("request-"));
+    }
+
+    [Fact]
+    public async Task CacheRequestAsync_Unauthenticated_DisablesCaching()
+    {
+        // Arrange
+        var policy = new DeviceGridOutputCachePolicy();
+        var httpContext = new DefaultHttpContext();
+        
+        // Setup unauthenticated user
+        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
+        
+        var context = new OutputCacheContext
+        {
+            HttpContext = httpContext,
+            EnableOutputCaching = false
+        };
+
+        // Act
+        await policy.CacheRequestAsync(context, CancellationToken.None);
+
+        // Assert
+        Assert.False(context.EnableOutputCaching);
     }
 }

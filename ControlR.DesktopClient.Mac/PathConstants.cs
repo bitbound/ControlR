@@ -20,15 +20,6 @@ public static class PathConstants
     return Path.Combine(logsDir, "ControlR.DesktopClient", "LogFile.log");
   }
 
-  private static string GetSettingsDirectory(string? instanceId)
-  {
-    var rootDir = Libc.Geteuid() == 0
-      ? "/etc/controlr"
-      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/.controlr";
-
-    return AppendSubDirectories(rootDir, instanceId);
-  }
-
   private static string AppendSubDirectories(string rootDir, string? instanceId)
   {
     if (!string.IsNullOrWhiteSpace(instanceId))
@@ -36,5 +27,14 @@ public static class PathConstants
       rootDir = Path.Combine(rootDir, instanceId);
     }
     return Directory.CreateDirectory(rootDir).FullName;
+  }
+
+  private static string GetSettingsDirectory(string? instanceId)
+  {
+    var rootDir = Libc.Geteuid() == 0
+      ? "/etc/controlr"
+      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/.controlr";
+
+    return AppendSubDirectories(rootDir, instanceId);
   }
 }

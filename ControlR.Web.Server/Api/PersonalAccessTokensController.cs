@@ -9,21 +9,6 @@ namespace ControlR.Web.Server.Api;
 public class PersonalAccessTokensController : ControllerBase
 {
 
-  [HttpGet]
-  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetPersonalAccessTokens(
-    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
-    [FromServices] UserManager<AppUser> userManager)
-  {
-    var user = await userManager.GetUserAsync(User);
-    if (user is null)
-    {
-      return BadRequest("User not found");
-    }
-
-    var personalAccessTokens = await personalAccessTokenManager.GetForUser(user.Id);
-    return Ok(personalAccessTokens);
-  }
-
   [HttpPost]
   public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
@@ -37,28 +22,6 @@ public class PersonalAccessTokensController : ControllerBase
     }
 
     var result = await personalAccessTokenManager.CreateToken(request, user.TenantId, user.Id);
-    if (!result.IsSuccess)
-    {
-      return BadRequest(result.Reason);
-    }
-
-    return Ok(result.Value);
-  }
-
-  [HttpPut("{id}")]
-  public async Task<ActionResult<PersonalAccessTokenDto>> UpdatePersonalAccessToken(
-    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
-    [FromServices] UserManager<AppUser> userManager,
-    Guid id,
-    [FromBody] UpdatePersonalAccessTokenRequestDto request)
-  {
-    var user = await userManager.GetUserAsync(User);
-    if (user is null)
-    {
-      return BadRequest("User not found");
-    }
-
-    var result = await personalAccessTokenManager.Update(id, request, user.Id);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
@@ -86,5 +49,42 @@ public class PersonalAccessTokensController : ControllerBase
     }
 
     return Ok();
+  }
+
+  [HttpGet]
+  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetPersonalAccessTokens(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager)
+  {
+    var user = await userManager.GetUserAsync(User);
+    if (user is null)
+    {
+      return BadRequest("User not found");
+    }
+
+    var personalAccessTokens = await personalAccessTokenManager.GetForUser(user.Id);
+    return Ok(personalAccessTokens);
+  }
+
+  [HttpPut("{id}")]
+  public async Task<ActionResult<PersonalAccessTokenDto>> UpdatePersonalAccessToken(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    Guid id,
+    [FromBody] UpdatePersonalAccessTokenRequestDto request)
+  {
+    var user = await userManager.GetUserAsync(User);
+    if (user is null)
+    {
+      return BadRequest("User not found");
+    }
+
+    var result = await personalAccessTokenManager.Update(id, request, user.Id);
+    if (!result.IsSuccess)
+    {
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
   }
 }

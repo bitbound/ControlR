@@ -5,13 +5,12 @@ namespace ControlR.Libraries.NativeInterop.Unix.Linux;
 public static unsafe class LibXfixes
 {
   private const string LibXfixesSo = "libXfixes.so.3";
-
-  [DllImport(LibXfixesSo)]
-  public static extern int XFixesQueryVersion(IntPtr display, out int major_version, out int minor_version);
-
+  
   [DllImport(LibXfixesSo)]
   public static extern IntPtr XFixesGetCursorImage(IntPtr display);
 
+  [DllImport(LibXfixesSo)]
+  public static extern int XFixesQueryVersion(IntPtr display, out int major_version, out int minor_version);
 
 
   [StructLayout(LayoutKind.Sequential)]

@@ -34,6 +34,8 @@ internal static class DisplaysEnumHelperWindows
 {
   private const int Cchdevicename = 32;
 
+  private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref Rect lprcMonitor, nint dwData);
+
   public static List<DisplayInfo> GetDisplays()
   {
     var displays = new List<DisplayInfo>();
@@ -99,8 +101,6 @@ internal static class DisplaysEnumHelperWindows
 
   [DllImport("user32.dll", CharSet = CharSet.Auto)]
   private static extern bool GetMonitorInfo(nint hMonitor, ref MonitorInfoEx lpmi);
-
-  private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref Rect lprcMonitor, nint dwData);
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
   private struct MonitorInfoEx

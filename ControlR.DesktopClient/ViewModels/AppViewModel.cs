@@ -25,12 +25,13 @@ public class AppViewModel : ViewModelBase, IAppViewModel
     ExitApplicationCommand = new RelayCommand(() => _desktop.Shutdown());
   }
 
+  public ICommand ExitApplicationCommand { get; }
+
+  public ICommand ShowWindowCommand { get; }
+
   private void ShowMainWindow()
   {
     _desktop.MainWindow ??= _serviceProvider.GetRequiredService<MainWindow>();
     _desktop.MainWindow.Show();
   }
-
-  public ICommand ShowWindowCommand { get; }
-  public ICommand ExitApplicationCommand { get; }
 }

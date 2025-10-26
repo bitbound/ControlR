@@ -18,7 +18,6 @@ param (
   [switch]$BuildDesktop
 )
 
-
 #$InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
 #$VsWhere = "$InstallerDir\vswhere.exe"
 #$MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
@@ -89,7 +88,6 @@ if ($BuildAgent) {
   # Linux Agent
   dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
   Check-LastExitCode
-
 
   # These will need to be built on MacOS for code-signing.
   #dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"

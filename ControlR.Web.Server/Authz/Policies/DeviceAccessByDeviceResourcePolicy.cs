@@ -34,7 +34,6 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("User ID claim is missing.", handlerCtx, authzHandler, logger);
         }
 
-
         // For logon token users, check if the device ID matches the token's device
         var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
         if (authMethod == LogonTokenAuthenticationSchemeOptions.DefaultScheme)

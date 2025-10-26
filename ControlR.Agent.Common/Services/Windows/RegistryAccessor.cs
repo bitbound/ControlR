@@ -7,40 +7,16 @@ namespace ControlR.Agent.Common.Services.Windows;
 
 public interface IRegistryAccessor
 {
-  void SetSoftwareSasGeneration(bool isEnabled);
   bool GetPromptOnSecureDesktop();
   Result<int> GetRdpPort();
   void SetPromptOnSecureDesktop(bool enabled);
+  void SetSoftwareSasGeneration(bool isEnabled);
 }
 
 internal class RegistryAccessor(
   IElevationChecker elevation,
   ILogger<RegistryAccessor> logger) : IRegistryAccessor
 {
-  [SupportedOSPlatform("windows")]
-  public void SetSoftwareSasGeneration(bool isEnabled)
-  {
-    try
-    {
-      // Set Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-      using var subkey =
-        Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
-
-      if (isEnabled)
-      {
-        subkey?.SetValue("SoftwareSASGeneration", "3", RegistryValueKind.DWord);
-      }
-      else
-      {
-        subkey?.DeleteValue("SoftwareSASGeneration", false);
-      }
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while enabling SoftwareSASGeneration.");
-    }
-  }
-
   [SupportedOSPlatform("windows")]
   public bool GetPromptOnSecureDesktop()
   {
@@ -97,6 +73,29 @@ internal class RegistryAccessor(
     catch (Exception ex)
     {
       logger.LogError(ex, "Error while setting PromptOnSecureDesktop.");
+    }
+  }
+  [SupportedOSPlatform("windows")]
+  public void SetSoftwareSasGeneration(bool isEnabled)
+  {
+    try
+    {
+      // Set Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
+      using var subkey =
+        Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true);
+
+      if (isEnabled)
+      {
+        subkey?.SetValue("SoftwareSASGeneration", "3", RegistryValueKind.DWord);
+      }
+      else
+      {
+        subkey?.DeleteValue("SoftwareSASGeneration", false);
+      }
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while enabling SoftwareSASGeneration.");
     }
   }
 }

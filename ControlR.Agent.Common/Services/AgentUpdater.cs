@@ -25,7 +25,6 @@ internal class AgentUpdater(
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly SemaphoreSlim _checkForUpdatesLock = new(1, 1);
   private readonly IControlrApi _controlrApi = controlrApi;
@@ -36,6 +35,7 @@ internal class AgentUpdater(
   private readonly ILogger<AgentUpdater> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
   private readonly ISettingsProvider _settings = settings;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new();
 

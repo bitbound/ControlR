@@ -6,11 +6,10 @@ using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
 
-
 public class AgentInstallerKeyManagerTests
 {
-  private readonly FakeTimeProvider _timeProvider;
   private readonly AgentInstallerKeyManager _keyManager;
+  private readonly FakeTimeProvider _timeProvider;
 
   public AgentInstallerKeyManagerTests(ITestOutputHelper testOutput)
   {
@@ -27,35 +26,6 @@ public class AgentInstallerKeyManagerTests
   {
     var validateResult = await _keyManager.ValidateKey("asdf");
     Assert.False(validateResult);
-  }
-
-  [Fact]
-  public async Task ValidateKey_WhenUsageBasedKeyExists_Succeeds()
-  {
-    var key = await _keyManager.CreateKey(
-      tenantId: Guid.NewGuid(),
-      creatorId: Guid.NewGuid(),
-      keyType: InstallerKeyType.UsageBased,
-      allowedUses: 1,
-      expiration: null);
-
-    var validateResult = await _keyManager.ValidateKey(key.KeySecret);
-    Assert.True(validateResult);
-  }
-
-  [Fact]
-  public async Task ValidateKey_WhenTimeBasedKeyExistsAndNotExpired_Succeeds()
-  {
-    var key = await _keyManager.CreateKey(
-      tenantId: Guid.NewGuid(),
-      creatorId: Guid.NewGuid(),
-      keyType: InstallerKeyType.TimeBased,
-      allowedUses: null,
-      expiration: _timeProvider.GetLocalNow().AddHours(1));
-
-    var validateResult = await _keyManager.ValidateKey(key.KeySecret);
-
-    Assert.True(validateResult);
   }
 
   [Fact]
@@ -86,6 +56,21 @@ public class AgentInstallerKeyManagerTests
     Assert.False(validateResult);
   }
 
+  [Fact]
+  public async Task ValidateKey_WhenTimeBasedKeyExistsAndNotExpired_Succeeds()
+  {
+    var key = await _keyManager.CreateKey(
+      tenantId: Guid.NewGuid(),
+      creatorId: Guid.NewGuid(),
+      keyType: InstallerKeyType.TimeBased,
+      allowedUses: null,
+      expiration: _timeProvider.GetLocalNow().AddHours(1));
+
+    var validateResult = await _keyManager.ValidateKey(key.KeySecret);
+
+    Assert.True(validateResult);
+  }
+
   [Theory]
   [InlineData(1)]
   [InlineData(5)]
@@ -107,5 +92,19 @@ public class AgentInstallerKeyManagerTests
 
     var finalValidateResult = await _keyManager.ValidateKey(key.KeySecret);
     Assert.False(finalValidateResult);
+  }
+
+  [Fact]
+  public async Task ValidateKey_WhenUsageBasedKeyExists_Succeeds()
+  {
+    var key = await _keyManager.CreateKey(
+      tenantId: Guid.NewGuid(),
+      creatorId: Guid.NewGuid(),
+      keyType: InstallerKeyType.UsageBased,
+      allowedUses: 1,
+      expiration: null);
+
+    var validateResult = await _keyManager.ValidateKey(key.KeySecret);
+    Assert.True(validateResult);
   }
 }

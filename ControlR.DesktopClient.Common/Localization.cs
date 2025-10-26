@@ -13,6 +13,7 @@ public static class Localization
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip
   };
+
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
 
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings();
@@ -21,11 +22,11 @@ public static class Localization
   public static string Accessibility => GetString();
   public static string AccessibilityPermissionDescription => GetString();
   public static string CancelText => GetString();
-  public static string ChatWindowTitle => GetString();
-  public static string ChatWindowDefaultTitle => GetString();
-  public static string ChatWindowClosedSystemMessage => GetString();
-  public static string ChatSessionClosedToastTitle => GetString();
   public static string ChatSessionClosedToastMessage => GetString();
+  public static string ChatSessionClosedToastTitle => GetString();
+  public static string ChatWindowClosedSystemMessage => GetString();
+  public static string ChatWindowDefaultTitle => GetString();
+  public static string ChatWindowTitle => GetString();
   public static string CloseText => GetString();
   public static string EnterCodePlaceholder => GetString();
   public static string EnterMessagePlaceholder => GetString();
@@ -35,8 +36,8 @@ public static class Localization
   public static string MacOsPermissions => GetString();
   public static string ManagedDeviceMessage => GetString();
   public static string ManagedDeviceTitle => GetString();
-  public static string NewChatMessageToastTitle => GetString();
   public static string NewChatMessageToastMessage => GetString();
+  public static string NewChatMessageToastTitle => GetString();
   public static string NoMessagesText => GetString();
   public static string NoText => GetString();
   public static string NotGranted => GetString();

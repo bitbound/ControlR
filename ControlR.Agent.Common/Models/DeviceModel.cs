@@ -22,6 +22,10 @@ public class DeviceModel
 
   public DateTimeOffset LastSeen { get; set; }
 
+  public string LocalIpV4 { get; set; } = string.Empty;
+
+  public string LocalIpV6 { get; set; } = string.Empty;
+
   public string[] MacAddresses { get; set; } = [];
 
   public string Name { get; set; } = string.Empty;
@@ -37,10 +41,6 @@ public class DeviceModel
   public string PublicIpV4 { get; set; } = string.Empty;
 
   public string PublicIpV6 { get; set; } = string.Empty;
-
-  public string LocalIpV4 { get; set; } = string.Empty;
-
-  public string LocalIpV6 { get; set; } = string.Empty;
 
   public Guid[]? TagIds { get; set; }
 

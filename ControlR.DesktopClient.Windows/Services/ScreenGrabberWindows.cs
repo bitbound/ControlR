@@ -26,11 +26,18 @@ internal sealed class ScreenGrabberWindows(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
-  private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly IDisplayManager _displayManager = displayManager;
+  private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;
+
   private bool _inputDesktopSwitchResult = true;
+
+  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  {
+    SwitchToInputDesktop();
+    return GetBitBltCapture(_displayManager.GetVirtualScreenBounds(), captureCursor);
+  }
 
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
@@ -56,11 +63,6 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
-  {
-    SwitchToInputDesktop();
-    return GetBitBltCapture(_displayManager.GetVirtualScreenBounds(), captureCursor);
-  }
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
     bool captureCursor)
@@ -89,7 +91,7 @@ internal sealed class ScreenGrabberWindows(
         _ = TryDrawCursor(graphics, captureArea);
       }
 
-      var skBitmap = bitmap.ToSKBitmap();
+      var skBitmap = bitmap.ToSkBitmap();
       return CaptureResult.Ok(skBitmap, isUsingGpu: false);
     }
     catch (Exception ex)
@@ -184,7 +186,7 @@ internal sealed class ScreenGrabberWindows(
 
       if (!captureCursor)
       {
-        return CaptureResult.Ok(bitmap.ToSKBitmap(), true, dirtyRects);
+        return CaptureResult.Ok(bitmap.ToSkBitmap(), true, dirtyRects);
       }
 
       if (!dxOutput.LastCursorArea.IsEmpty)
@@ -205,7 +207,7 @@ internal sealed class ScreenGrabberWindows(
         dxOutput.LastCursorArea = Rectangle.Empty;
       }
 
-      return CaptureResult.Ok(bitmap.ToSKBitmap(), true, dirtyRects);
+      return CaptureResult.Ok(bitmap.ToSkBitmap(), true, dirtyRects);
     }
     catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
     {

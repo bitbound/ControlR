@@ -91,7 +91,6 @@ internal class IpcServerInitializerMac(
 
     _logger.LogInformation("Starting pipe permission check for LaunchDaemon pipe {PipePath}", pipePath);
 
-
     // Wait for pipe file to get created.
     while (!pipeServer.IsDisposed && !cancellationToken.IsCancellationRequested)
     {

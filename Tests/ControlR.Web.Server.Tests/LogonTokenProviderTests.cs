@@ -50,45 +50,6 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ValidateTokenAsync_ReturnsValidResultForValidToken()
-  {
-    // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
-    var deviceId = Guid.NewGuid();
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
-    
-    // Create a token
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
-    
-    // Act
-    var validateResult = await logonTokenProvider.ValidateTokenAsync(token.Token);
-    
-    // Assert
-    Assert.True(validateResult.IsSuccess);
-    Assert.Equal(user.Id, validateResult.Value.UserId);
-    Assert.Equal(tenant.Id, validateResult.Value.TenantId);
-  }
-
-  [Fact]
-  public async Task ValidateTokenAsync_ReturnsFailureForInvalidToken()
-  {
-    // Arrange
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
-    var invalidToken = "invalid-token";
-    
-    // Act
-    var result = await logonTokenProvider.ValidateTokenAsync(invalidToken);
-    
-    // Assert
-    Assert.False(result.IsSuccess);
-  }
-
-  [Fact]
   public async Task ValidateAndConsumeTokenAsync_FailsWhenTokenUsedSecondTime()
   {
     // Arrange
@@ -137,6 +98,45 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     // Assert
     Assert.False(result.IsSuccess);
     Assert.Contains("expired", result.Reason);
+  }
+
+  [Fact]
+  public async Task ValidateTokenAsync_ReturnsFailureForInvalidToken()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    
+    var invalidToken = "invalid-token";
+    
+    // Act
+    var result = await logonTokenProvider.ValidateTokenAsync(invalidToken);
+    
+    // Assert
+    Assert.False(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task ValidateTokenAsync_ReturnsValidResultForValidToken()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
+    
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    
+    // Create a token
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
+    
+    // Act
+    var validateResult = await logonTokenProvider.ValidateTokenAsync(token.Token);
+    
+    // Assert
+    Assert.True(validateResult.IsSuccess);
+    Assert.Equal(user.Id, validateResult.Value.UserId);
+    Assert.Equal(tenant.Id, validateResult.Value.TenantId);
   }
 }
 

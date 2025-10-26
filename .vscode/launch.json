@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Agent (Run)",
+      "name": "Agent (Debug)",
       "type": "coreclr",
       "request": "launch",
       "program": "${workspaceFolder}/ControlR.Agent/bin/Debug/net9.0/ControlR.Agent.dll",
@@ -13,7 +13,7 @@
       "console": "internalConsole"
     },
     {
-      "name": "DesktopClient",
+      "name": "DesktopClient (Debug)",
       "type": "coreclr",
       "request": "launch",
       "program": "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net9.0/ControlR.DesktopClient.dll",
@@ -24,7 +24,7 @@
       "console": "internalConsole",
     },
     {
-      "name": "Server (https)",
+      "name": "Server (Debug)",
       "type": "coreclr",
       "request": "launch",
       "program": "${workspaceFolder}/ControlR.Web.Server/bin/Debug/net9.0/ControlR.Web.Server.dll",
@@ -55,16 +55,74 @@
       "cwd": "${workspaceFolder}/Tests/ControlR.Agent.LoadTester",
       "stopAtEntry": false,
       "console": "internalConsole"
+    },
+    {
+      "name": "Server (Hot Reload)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "dotnet",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/ControlR.Web.Server/ControlR.Web.Server.csproj",
+        "--launch-profile",
+        "https"
+      ],
+      "cwd": "${workspaceFolder}/ControlR.Web.Server",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?:\\/\\/\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "console": "internalConsole"
+    },
+    {
+      "name": "Agent (Hot Reload)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "dotnet",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/ControlR.Agent/ControlR.Agent.csproj",
+        "--launch-profile",
+        "Run"
+      ],
+      "cwd": "${workspaceFolder}/ControlR.Agent",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "DesktopClient (Hot Reload)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "dotnet",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/ControlR.DesktopClient/ControlR.DesktopClient.csproj",
+        "--launch-profile",
+        "Run"
+      ],
+      "cwd": "${workspaceFolder}/ControlR.DesktopClient",
+      "stopAtEntry": false,
+      "console": "internalConsole"
     }
   ],
   "compounds": [
     {
-      "name": "Full Stack",
+      "name": "Full Stack (Debug)",
       "preLaunchTask": "build + compose",
       "configurations": [
-        "Server (https)",
-        "Agent (Run)",
-        "DesktopClient"
+        "Server (Debug)",
+        "Agent (Debug)",
+        "DesktopClient (Debug)"
       ],
       "stopAll": true,
       "presentation": {
@@ -73,13 +131,28 @@
         "order": 0
       }
     },
+    {
+      "name": "Full Stack (Hot Reload)",
+      "preLaunchTask": "build + compose",
+      "configurations": [
+        "Server (Hot Reload)",
+        "Agent (Hot Reload)",
+        "DesktopClient (Hot Reload)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 1
+      }
+    },
       {
       "name": "Full Stack (wasm debug)",
       "preLaunchTask": "build + compose",
       "configurations": [
         "Server (wasm debug)",
-        "Agent (Run)",
-        "DesktopClient"
+        "Agent (Debug)",
+        "DesktopClient (Debug)"
       ],
       "stopAll": true,
       "presentation": {
@@ -92,7 +165,7 @@
       "name": "Load Test",
       "preLaunchTask": "build + compose",
       "configurations": [
-        "Server (https)",
+        "Server (Debug)",
         "LoadTester"
       ],
       "stopAll": true,
@@ -106,7 +179,7 @@
       "name": "Backend",
       "preLaunchTask": "build + compose",
       "configurations": [
-        "Server (https)"
+        "Server (Debug)"
       ],
       "stopAll": true,
       "presentation": {

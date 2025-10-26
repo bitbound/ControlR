@@ -12,8 +12,8 @@ namespace ControlR.Web.Server.Components.Account;
 // authentication state to the client which is then fixed for the lifetime of the WebAssembly application.
 internal sealed class PersistingRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
-  private readonly IdentityOptions _options;
   private readonly ILogger<PersistingRevalidatingAuthenticationStateProvider> _logger;
+  private readonly IdentityOptions _options;
   private readonly IServiceScopeFactory _scopeFactory;
   private readonly PersistentComponentState _state;
   private readonly PersistingComponentStateSubscription _subscription;

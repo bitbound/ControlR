@@ -9,25 +9,13 @@ public partial class DeviceContentWindow : IAsyncDisposable
   public required DeviceContentInstance ContentInstance { get; init; }
 
   [Inject]
-  public required ISystemEnvironment EnvironmentHelper { get; init; }
-
-  [Inject]
   public required IJsInterop JsInterop { get; init; }
-
-  [Inject]
-  public required IJSRuntime JsRuntime { get; init; }
 
   [Inject]
   public required ILogger<DeviceContentWindow> Logger { get; init; }
 
   [Inject]
   public required IMessenger Messenger { get; init; }
-
-  [Inject]
-  public required ISnackbar Snackbar { get; init; }
-
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
 
   public WindowState WindowState { get; private set; } = WindowState.Restored;
 

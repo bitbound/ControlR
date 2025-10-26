@@ -8,6 +8,7 @@ using ControlR.Web.ServiceDefaults;
 using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Reflection;
+using ControlR.Libraries.Shared.Constants;
 
 var isOpenApiBuild = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 var builder = WebApplication.CreateBuilder(args);
@@ -59,7 +60,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.MapWebSocketRelay();
-app.MapHub<AgentHub>("/hubs/agent");
+app.MapHub<AgentHub>(AppConstants.AgentHubPath);
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -82,8 +83,8 @@ app.UseWhen(
 
 app.MapAdditionalIdentityEndpoints();
 
-app.MapHub<ViewerHub>("/hubs/viewer");
-
+app.MapHub<MainBrowserHub>(AppConstants.MainBrowserHubPath);
+app.MapHub<DeviceAccessHub>(AppConstants.DeviceAccessHubPath);
 
 if (appOptions.UseInMemoryDatabase)
 {

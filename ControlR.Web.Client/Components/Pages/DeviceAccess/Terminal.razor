@@ -2,9 +2,9 @@
 @page "/device-access/terminal"
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
+@using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions
 
 <div class="h-100">
-  @using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions
   @if (_loading)
   {
    <LoadingIndicator IsVisible Message="Loading" Class="mt-4"  />

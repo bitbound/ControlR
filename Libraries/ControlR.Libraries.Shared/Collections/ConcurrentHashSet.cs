@@ -158,7 +158,6 @@ public class ConcurrentHashSet<T> : ISet<T>, IReadOnlySet<T>
     }
   }
 
-
   void ICollection<T>.Add(T item)
   {
     lock (_set)

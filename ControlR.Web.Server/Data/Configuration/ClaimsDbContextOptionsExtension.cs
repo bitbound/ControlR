@@ -8,11 +8,11 @@ public class ClaimsDbContextOptionsExtension(ClaimsDbContextOptions options) : I
 
   public DbContextOptionsExtensionInfo Info => new ExtensionInfo(this);
 
+  public ClaimsDbContextOptions Options => _options;
+
   public void ApplyServices(IServiceCollection services) { }
 
   public void Validate(IDbContextOptions options) { }
-
-  public ClaimsDbContextOptions Options => _options;
 
   private sealed class ExtensionInfo(ClaimsDbContextOptionsExtension extension) : DbContextOptionsExtensionInfo(extension)
   {
@@ -21,6 +21,7 @@ public class ClaimsDbContextOptionsExtension(ClaimsDbContextOptions options) : I
           extension.Options.TenantId,
           extension.Options.UserId
       );
+
     private string? _logFragment;
 
     public override bool IsDatabaseProvider => false;
@@ -34,14 +35,14 @@ public class ClaimsDbContextOptionsExtension(ClaimsDbContextOptions options) : I
       }
     }
 
+    public override int GetServiceProviderHashCode() => _serviceProviderHash.GetHashCode();
+
     public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
     {
       if (Extension is not ClaimsDbContextOptionsExtension extension) return;
       debugInfo["Tenant:Id"] = $"{extension.Options.TenantId}";
       debugInfo["User:Id"] = $"{extension.Options.UserId}";
     }
-
-    public override int GetServiceProviderHashCode() => _serviceProviderHash.GetHashCode();
 
     public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
     {

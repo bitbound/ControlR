@@ -6,9 +6,10 @@ namespace ControlR.Web.Client.Components.Pages;
 
 public partial class PersonalAccessTokens
 {
-  private PersonalAccessTokenDto[] _personalAccessTokens = [];
   private bool _isLoading = false;
   private string _newTokenName = string.Empty;
+  private PersonalAccessTokenDto[] _personalAccessTokens = [];
+
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
 

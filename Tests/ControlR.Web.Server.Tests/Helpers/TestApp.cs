@@ -7,9 +7,10 @@ internal class TestApp(
   FakeTimeProvider timeProvider,
   WebApplication webApp) : IAsyncDisposable
 {
+  public WebApplication App { get; } = webApp;
   public IServiceProvider Services => App.Services;
   public FakeTimeProvider TimeProvider { get; } = timeProvider;
-  public WebApplication App { get; } = webApp;
+
   public async ValueTask DisposeAsync()
   {
     await App.DisposeAsync();

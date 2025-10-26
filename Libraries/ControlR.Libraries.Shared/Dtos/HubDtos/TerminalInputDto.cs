@@ -2,5 +2,7 @@
 [MessagePackObject(keyAsPropertyName: true)]
 public record TerminalInputDto(
     Guid TerminalId,
-    string Input,
-    string ViewerConnectionId);
+    string Input)
+{
+  public string? ViewerConnectionId { get; set; }
+}

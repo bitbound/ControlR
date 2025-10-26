@@ -4,37 +4,42 @@ namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class DesktopPreviewDialog : ComponentBase
 {
-  private bool _isLoading = true;
   private string? _errorMessage;
+  private bool _isLoading = true;
   private string? _previewImageDataUri;
+
+  [Inject]
+  public required IControlrApi ControlrApi { get; init; }
+
+  [Parameter]
+  [EditorRequired]
+  public required DeviceDto Device { get; set; }
+
+  [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
+  public required ILogger<DesktopPreviewDialog> Logger { get; init; }
 
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; set; }
 
   [Parameter]
   [EditorRequired]
-  public required DeviceDto Device { get; set; }
-
-  [Parameter]
-  [EditorRequired]
-  public required DeviceUiSession Session { get; set; }
-
-  [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-
-  [Inject]
-  public required ILogger<DesktopPreviewDialog> Logger { get; init; }
+  public required DesktopSession Session { get; set; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-
-  [Inject]
-  public required IJsInterop JsInterop { get; init; }
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
     await LoadPreview();
+  }
+
+  private void Close()
+  {
+    MudDialog.Close(DialogResult.Ok(false));
   }
 
   private async Task LoadPreview()
@@ -76,10 +81,5 @@ public partial class DesktopPreviewDialog : ComponentBase
   {
     await LoadPreview();
     Snackbar.Add("Preview refreshed", Severity.Info);
-  }
-
-  private void Close()
-  {
-    MudDialog.Close(DialogResult.Ok(false));
   }
 }

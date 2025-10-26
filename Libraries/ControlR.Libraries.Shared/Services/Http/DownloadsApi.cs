@@ -4,10 +4,9 @@ namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IDownloadsApi
 {
+  Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress);
   Task<Result> DownloadFile(string downloadUri, string destinationPath);
   Task<Result> DownloadFile(Uri downloadUri, string destinationPath);
-
-  Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress);
 
 }
 
@@ -17,27 +16,6 @@ public class DownloadsApi(
 {
   private readonly HttpClient _client = client;
   private readonly ILogger<DownloadsApi> _logger = logger;
-
-  public async Task<Result> DownloadFile(string downloadUri, string destinationPath)
-  {
-    try
-    {
-      await using var webStream = await _client.GetStreamAsync(downloadUri);
-      await using var fs = new FileStream(destinationPath, FileMode.Create);
-      await webStream.CopyToAsync(fs);
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while downloading file {DownloadUri}.", downloadUri);
-      return Result.Fail(ex);
-    }
-  }
-
-  public Task<Result> DownloadFile(Uri downloadUri, string destinationPath)
-  {
-    return DownloadFile($"{downloadUri}", destinationPath);
-  }
 
   public async Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress)
   {
@@ -73,6 +51,27 @@ public class DownloadsApi(
       _logger.LogError(ex, "Error while downloading remote control client.");
       return Result.Fail(ex);
     }
+  }
+
+  public async Task<Result> DownloadFile(string downloadUri, string destinationPath)
+  {
+    try
+    {
+      await using var webStream = await _client.GetStreamAsync(downloadUri);
+      await using var fs = new FileStream(destinationPath, FileMode.Create);
+      await webStream.CopyToAsync(fs);
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while downloading file {DownloadUri}.", downloadUri);
+      return Result.Fail(ex);
+    }
+  }
+
+  public Task<Result> DownloadFile(Uri downloadUri, string destinationPath)
+  {
+    return DownloadFile($"{downloadUri}", destinationPath);
   }
 
 }

@@ -8,13 +8,13 @@ namespace ControlR.Web.Client.Components;
 [SupportedOSPlatform("browser")]
 public partial class Dashboard
 {
+  private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
   private readonly Dictionary<string, SortDefinition<DeviceViewModel>> _sortDefinitions = new()
   {
     ["IsOnline"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.IsOnline), true, 0, x => x.IsOnline),
     ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Name), false, 1, x => x.Name)
   };
 
-  private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
   private Version? _agentReleaseVersion;
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
@@ -33,10 +33,19 @@ public partial class Dashboard
   public required IDialogService DialogService { get; init; }
 
   [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
   public required ILogger<Dashboard> Logger { get; init; }
 
   [Inject]
+  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
+
+  [Inject]
   public required IMessenger Messenger { get; init; }
+
+  [Inject]
+  public required NavigationManager NavMan { get; init; }
 
   [Inject]
   public required IUserSettingsProvider Settings { get; init; }
@@ -46,15 +55,6 @@ public partial class Dashboard
 
   [Inject]
   public required IUserTagStore UserTagStore { get; init; }
-
-  [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
-
-  [Inject]
-  public required IJsInterop JsInterop { get; init; }
-
-  [Inject]
-  public required NavigationManager NavMan { get; init; }
 
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
@@ -208,7 +208,7 @@ public partial class Dashboard
   {
     try
     {
-      await ViewerHub.RefreshDeviceInfo(device.Id);
+      await MainHub.Server.RefreshDeviceInfo(device.Id);
     }
     catch (Exception ex)
     {
@@ -245,18 +245,6 @@ public partial class Dashboard
     {
       await InvokeAsync(_dataGrid.ReloadServerData);
     }
-  }
-
-  private Task VncConnectClicked(DeviceViewModel device)
-  {
-    WindowStore.AddContentInstance<VncFrame>(
-      device,
-      DeviceContentInstanceType.VncFrame,
-      new Dictionary<string, object?>
-      {
-        [nameof(VncFrame.Device)] = device
-      });
-    return Task.CompletedTask;
   }
 
   private async Task RemoveDevice(DeviceViewModel device)
@@ -305,7 +293,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.SendPowerStateChange(device.Id, PowerStateChangeType.Restart);
+      await MainHub.Server.SendPowerStateChange(device.Id, PowerStateChangeType.Restart);
       Snackbar.Add("Restart command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -337,7 +325,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.SendPowerStateChange(device.Id, PowerStateChangeType.Shutdown);
+      await MainHub.Server.SendPowerStateChange(device.Id, PowerStateChangeType.Shutdown);
       Snackbar.Add("Shutdown command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -360,7 +348,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.UninstallAgent(device.Id, "Manually uninstalled.");
+      await MainHub.Server.UninstallAgent(device.Id, "Manually uninstalled.");
       Snackbar.Add("Uninstall command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -374,12 +362,24 @@ public partial class Dashboard
     try
     {
       Snackbar.Add("Sending update request", Severity.Success);
-      await ViewerHub.SendAgentUpdateTrigger(deviceId);
+      await MainHub.Server.SendAgentUpdateTrigger(deviceId);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while sending update request.");
     }
+  }
+
+  private Task VncConnectClicked(DeviceViewModel device)
+  {
+    WindowStore.AddContentInstance<VncFrame>(
+      device,
+      DeviceContentInstanceType.VncFrame,
+      new Dictionary<string, object?>
+      {
+        [nameof(VncFrame.Device)] = device
+      });
+    return Task.CompletedTask;
   }
 
   private async Task WakeDevice(DeviceViewModel device)
@@ -392,7 +392,7 @@ public partial class Dashboard
         return;
       }
 
-      await ViewerHub.SendWakeDevice(device.MacAddresses);
+      await MainHub.Server.SendWakeDevice(device.Id, device.MacAddresses);
       Snackbar.Add("Wake command sent", Severity.Success);
     }
     catch (Exception ex)

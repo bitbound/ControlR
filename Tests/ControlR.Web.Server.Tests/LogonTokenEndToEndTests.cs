@@ -14,6 +14,69 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
+  public async Task LogonTokenFlow_EndToEnd_ShouldNotAllowAccessToAnotherDevice()
+  {
+    // Arrange
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
+    using var httpClient = testServer.Factory.CreateClient();
+
+    var deviceId1 = Guid.NewGuid();
+    var deviceId2 = Guid.NewGuid();
+
+    // Phase 1: Create a user, tenant, and two devices
+    var user = await testServer.TestServer.Services.CreateTestUser();
+    var tenant = user.Tenant!;
+
+    // Create two devices for the tenant
+    await testServer.TestServer.Services.CreateTestDevice(tenant.Id, deviceId1);
+    await testServer.TestServer.Services.CreateTestDevice(tenant.Id, deviceId2);
+
+    // Create a test user and issue a personal access token for that user
+    var patManager = testServer.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
+    var createPatRequest = new CreatePersonalAccessTokenRequestDto("Test Key for Cross-Device Access");
+    var createResult = await patManager.CreateToken(createPatRequest, tenant.Id, user.Id);
+
+    Assert.True(createResult.IsSuccess, $"PAT creation failed: {createResult.Reason}");
+    var pat = createResult.Value.PlainTextToken;
+
+    // Phase 2: Create a logon token for device1 only
+    var logonTokenRequest = new LogonTokenRequestDto
+    {
+      DeviceId = deviceId1,
+      ExpirationMinutes = 15,
+    };
+
+    // Add personal access token to request headers
+    httpClient.DefaultRequestHeaders.Add(
+      PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
+      pat);
+
+    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
+
+    // Assert logon token creation succeeded
+    logonTokenResponse.EnsureSuccessStatusCode();
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>();
+
+    Assert.NotNull(logonTokenResult);
+    Assert.NotNull(logonTokenResult.Token);
+
+    var logonToken = logonTokenResult.Token;
+
+    using var newClient = testServer.TestServer.CreateClient();
+
+    var device2DetailsResponse = await newClient.GetAsync(
+      $"/device-access?deviceId={deviceId2}&logonToken={logonToken}");
+  
+    // This should fail - the logon token should only grant access to device1
+    Assert.True(
+      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
+      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.NotFound,
+      $"Expected unauthorized, forbidden, or not found when accessing device2 with device1 logon token, but got {device2DetailsResponse.StatusCode}");
+  }
+
+  [Fact]
   public async Task LogonTokenFlow_EndToEnd_ShouldWorkOnceAndFailOnSecondUse()
   {
     // Arrange
@@ -94,68 +157,5 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.Equal(logonTokenResult.Token, tokenParam);
     Assert.Equal(deviceId.ToString(), deviceIdParam);
-  }
-
-  [Fact]
-  public async Task LogonTokenFlow_EndToEnd_ShouldNotAllowAccessToAnotherDevice()
-  {
-    // Arrange
-    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
-    using var httpClient = testServer.Factory.CreateClient();
-
-    var deviceId1 = Guid.NewGuid();
-    var deviceId2 = Guid.NewGuid();
-
-    // Phase 1: Create a user, tenant, and two devices
-    var user = await testServer.TestServer.Services.CreateTestUser();
-    var tenant = user.Tenant!;
-
-    // Create two devices for the tenant
-    await testServer.TestServer.Services.CreateTestDevice(tenant.Id, deviceId1);
-    await testServer.TestServer.Services.CreateTestDevice(tenant.Id, deviceId2);
-
-    // Create a test user and issue a personal access token for that user
-    var patManager = testServer.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var createPatRequest = new CreatePersonalAccessTokenRequestDto("Test Key for Cross-Device Access");
-    var createResult = await patManager.CreateToken(createPatRequest, tenant.Id, user.Id);
-
-    Assert.True(createResult.IsSuccess, $"PAT creation failed: {createResult.Reason}");
-    var pat = createResult.Value.PlainTextToken;
-
-    // Phase 2: Create a logon token for device1 only
-    var logonTokenRequest = new LogonTokenRequestDto
-    {
-      DeviceId = deviceId1,
-      ExpirationMinutes = 15,
-    };
-
-    // Add personal access token to request headers
-    httpClient.DefaultRequestHeaders.Add(
-      PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
-      pat);
-
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
-
-    // Assert logon token creation succeeded
-    logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>();
-
-    Assert.NotNull(logonTokenResult);
-    Assert.NotNull(logonTokenResult.Token);
-
-    var logonToken = logonTokenResult.Token;
-
-    using var newClient = testServer.TestServer.CreateClient();
-
-    var device2DetailsResponse = await newClient.GetAsync(
-      $"/device-access?deviceId={deviceId2}&logonToken={logonToken}");
-  
-    // This should fail - the logon token should only grant access to device1
-    Assert.True(
-      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
-      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.Forbidden ||
-      device2DetailsResponse.StatusCode == System.Net.HttpStatusCode.NotFound,
-      $"Expected unauthorized, forbidden, or not found when accessing device2 with device1 logon token, but got {device2DetailsResponse.StatusCode}");
   }
 }

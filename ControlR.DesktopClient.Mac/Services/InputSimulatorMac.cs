@@ -10,10 +10,9 @@ public class InputSimulatorMac(
   IMacInterop macInterop,
   ILogger<InputSimulatorMac> logger) : IInputSimulator
 {
-  private readonly IMacInterop _macInterop = macInterop;
   private readonly ILogger<InputSimulatorMac> _logger = logger;
-
-
+  private readonly IMacInterop _macInterop = macInterop;
+  
   public void InvokeKeyEvent(string key, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
@@ -110,6 +109,11 @@ public class InputSimulatorMac(
     {
       _logger.LogError(ex, "Error processing wheel scroll at ({X}, {Y})", x, y);
     }
+  }
+
+  public Task SetBlockInput(bool isBlocked)
+  {
+    throw new NotImplementedException();
   }
 
   public void TypeText(string text)

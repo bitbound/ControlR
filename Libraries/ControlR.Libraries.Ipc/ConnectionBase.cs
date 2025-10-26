@@ -42,7 +42,6 @@ internal abstract class ConnectionBase(
 {
   protected readonly SemaphoreSlim _connectLock = new(1, 1);
   protected readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-  protected PipeStream? _pipeStream;
 
   private readonly ICallbackStore _callbackStore = callbackFactory?.Create() ??
     throw new ArgumentNullException(nameof(callbackFactory));
@@ -50,6 +49,9 @@ internal abstract class ConnectionBase(
     throw new ArgumentNullException(nameof(contentTypeResolver));
 
   private readonly ConcurrentDictionary<Guid, TaskCompletionSource<MessageWrapper>> _invokesPendingCompletion = new();
+
+  protected PipeStream? _pipeStream;
+
   private bool _isDisposed;
   private Task? _readTask;
 

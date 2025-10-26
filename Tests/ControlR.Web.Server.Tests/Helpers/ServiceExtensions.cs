@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace ControlR.Web.Server.Tests.Helpers;
 
 internal static class ServiceExtensions
@@ -32,6 +31,121 @@ internal static class ServiceExtensions
       }
     };
     return controller;
+  }
+
+  /// <summary>
+  /// Creates a test tenant and user, then returns a controller configured with that user
+  /// </summary>
+  /// <typeparam name="T">The controller type to create</typeparam>
+  /// <param name="services"></param>
+  /// <param name="tenantName">Optional tenant name</param>
+  /// <param name="userEmail">Optional user email</param>
+  /// <param name="roles">Optional roles to assign to the user</param>
+  /// <returns>A tuple containing the controller, tenant, and user</returns>
+  public static async Task<(T controller, Tenant tenant, AppUser user)> CreateControllerWithTestData<T>(
+    this IServiceProvider services,
+    string tenantName = "Test Tenant",
+    string userEmail = "test@example.com",
+    params string[] roles) where T : ControllerBase
+  {
+    var tenant = await services.CreateTestTenant(tenantName);
+
+    // If the test caller should NOT be a server administrator, ensure there is at least one
+    // existing user so the next created user will not become the automatic server admin.
+    if (!roles.Contains(RoleNames.ServerAdministrator))
+    {
+      // create a seed user in the tenant so our test user is not the very first user
+      await services.CreateTestUser(tenant.Id, email: "seed@t.local");
+    }
+
+    var user = await services.CreateTestUser(tenant.Id, userEmail, roles);
+
+    // Ensure the created controller user does not accidentally hold ServerAdministrator role
+    // unless explicitly requested by the caller.
+    if (!roles.Contains(RoleNames.ServerAdministrator))
+    {
+      var userManager = services.GetRequiredService<UserManager<AppUser>>();
+      if (await userManager.IsInRoleAsync(user, RoleNames.ServerAdministrator))
+      {
+        await userManager.RemoveFromRoleAsync(user, RoleNames.ServerAdministrator);
+      }
+      // Also remove any persisted user-role links directly from the DB to ensure Identity
+      // role lookups reflect the intended test state.
+      using (var db = services.GetRequiredService<AppDb>())
+      {
+        var userEntity = await db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Id == user.Id);
+        if (userEntity is not null && userEntity.UserRoles?.Any() == true)
+        {
+          db.UserRoles.RemoveRange(userEntity.UserRoles);
+          await db.SaveChangesAsync();
+        }
+      }
+    }
+    var controller = await services.CreateControllerWithUser<T>(user);
+    
+    return (controller, tenant, user);
+  }
+
+  /// <summary>
+  /// Creates a controller configured with a test user context
+  /// </summary>
+  /// <typeparam name="T">The controller type to create</typeparam>
+  /// <param name="services"></param>
+  /// <param name="user">The user to configure for the controller</param>
+  /// <returns>The configured controller instance</returns>
+  public static async Task<T> CreateControllerWithUser<T>(this IServiceProvider services, AppUser user) where T : ControllerBase
+  {
+    var controller = services.CreateController<T>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+
+    await controller.SetControllerUser(user, userManager);
+
+    return controller;
+  }
+
+  /// <summary>
+  /// Creates a test device for the specified tenant and saves it to the database
+  /// </summary>
+  /// <param name="services"></param>
+  /// <param name="tenantId">The tenant ID for the device</param>
+  /// <param name="deviceId">Optional device ID, if not provided a new Guid will be used</param>
+  /// <returns>The created Device entity</returns>
+  public static async Task<Device> CreateTestDevice(
+    this IServiceProvider services,
+    Guid tenantId,
+    Guid? deviceId = null)
+  {
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var id = deviceId ?? Guid.NewGuid();
+    var now = DateTimeOffset.UtcNow;
+    var deviceDto = new DeviceDto(
+      Name: "Test Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: id,
+      Is64Bit: true,
+      IsOnline: true,
+      LastSeen: now,
+      OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
+      Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
+      ProcessorCount: 4,
+      ConnectionId: "test-connection-id",
+      OsDescription: "Windows 10",
+      TenantId: tenantId,
+      TotalMemory: 8192,
+      TotalStorage: 256000,
+      UsedMemory: 4096,
+      UsedStorage: 128000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:11:22:33:44:55"],
+      PublicIpV4: "127.0.0.1",
+      PublicIpV6: "::1",
+      LocalIpV4: "10.0.0.2",
+      LocalIpV6: "fe80::2",
+      Drives: [new Libraries.Shared.Models.Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]
+    );
+    var device = await deviceManager.AddOrUpdate(deviceDto);
+    return device;
   }
 
   /// <summary>
@@ -131,120 +245,5 @@ internal static class ServiceExtensions
     }
     
     return user;
-  }
-
-  /// <summary>
-  /// Creates a controller configured with a test user context
-  /// </summary>
-  /// <typeparam name="T">The controller type to create</typeparam>
-  /// <param name="services"></param>
-  /// <param name="user">The user to configure for the controller</param>
-  /// <returns>The configured controller instance</returns>
-  public static async Task<T> CreateControllerWithUser<T>(this IServiceProvider services, AppUser user) where T : ControllerBase
-  {
-    var controller = services.CreateController<T>();
-    var userManager = services.GetRequiredService<UserManager<AppUser>>();
-
-    await controller.SetControllerUser(user, userManager);
-
-    return controller;
-  }
-
-  /// <summary>
-  /// Creates a test tenant and user, then returns a controller configured with that user
-  /// </summary>
-  /// <typeparam name="T">The controller type to create</typeparam>
-  /// <param name="services"></param>
-  /// <param name="tenantName">Optional tenant name</param>
-  /// <param name="userEmail">Optional user email</param>
-  /// <param name="roles">Optional roles to assign to the user</param>
-  /// <returns>A tuple containing the controller, tenant, and user</returns>
-  public static async Task<(T controller, Tenant tenant, AppUser user)> CreateControllerWithTestData<T>(
-    this IServiceProvider services,
-    string tenantName = "Test Tenant",
-    string userEmail = "test@example.com",
-    params string[] roles) where T : ControllerBase
-  {
-    var tenant = await services.CreateTestTenant(tenantName);
-
-    // If the test caller should NOT be a server administrator, ensure there is at least one
-    // existing user so the next created user will not become the automatic server admin.
-    if (!roles.Contains(RoleNames.ServerAdministrator))
-    {
-      // create a seed user in the tenant so our test user is not the very first user
-      await services.CreateTestUser(tenant.Id, email: "seed@t.local");
-    }
-
-    var user = await services.CreateTestUser(tenant.Id, userEmail, roles);
-
-    // Ensure the created controller user does not accidentally hold ServerAdministrator role
-    // unless explicitly requested by the caller.
-    if (!roles.Contains(RoleNames.ServerAdministrator))
-    {
-      var userManager = services.GetRequiredService<UserManager<AppUser>>();
-      if (await userManager.IsInRoleAsync(user, RoleNames.ServerAdministrator))
-      {
-        await userManager.RemoveFromRoleAsync(user, RoleNames.ServerAdministrator);
-      }
-      // Also remove any persisted user-role links directly from the DB to ensure Identity
-      // role lookups reflect the intended test state.
-      using (var db = services.GetRequiredService<AppDb>())
-      {
-        var userEntity = await db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Id == user.Id);
-        if (userEntity is not null && userEntity.UserRoles?.Any() == true)
-        {
-          db.UserRoles.RemoveRange(userEntity.UserRoles);
-          await db.SaveChangesAsync();
-        }
-      }
-    }
-    var controller = await services.CreateControllerWithUser<T>(user);
-    
-    return (controller, tenant, user);
-  }
-
-  /// <summary>
-  /// Creates a test device for the specified tenant and saves it to the database
-  /// </summary>
-  /// <param name="services"></param>
-  /// <param name="tenantId">The tenant ID for the device</param>
-  /// <param name="deviceId">Optional device ID, if not provided a new Guid will be used</param>
-  /// <returns>The created Device entity</returns>
-  public static async Task<Device> CreateTestDevice(
-    this IServiceProvider services,
-    Guid tenantId,
-    Guid? deviceId = null)
-  {
-    var deviceManager = services.GetRequiredService<IDeviceManager>();
-    var id = deviceId ?? Guid.NewGuid();
-    var now = DateTimeOffset.UtcNow;
-    var deviceDto = new DeviceDto(
-      Name: "Test Device",
-      AgentVersion: "1.0.0",
-      CpuUtilization: 10,
-      Id: id,
-      Is64Bit: true,
-      IsOnline: true,
-      LastSeen: now,
-      OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
-      Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
-      ProcessorCount: 4,
-      ConnectionId: "test-connection-id",
-      OsDescription: "Windows 10",
-      TenantId: tenantId,
-      TotalMemory: 8192,
-      TotalStorage: 256000,
-      UsedMemory: 4096,
-      UsedStorage: 128000,
-      CurrentUsers: ["TestUser"],
-      MacAddresses: ["00:11:22:33:44:55"],
-      PublicIpV4: "127.0.0.1",
-      PublicIpV6: "::1",
-      LocalIpV4: "10.0.0.2",
-      LocalIpV6: "fe80::2",
-      Drives: [new Libraries.Shared.Models.Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]
-    );
-    var device = await deviceManager.AddOrUpdate(deviceDto);
-    return device;
   }
 }

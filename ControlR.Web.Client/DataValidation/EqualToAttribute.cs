@@ -2,7 +2,6 @@
 
 namespace ControlR.Web.Client.DataValidation;
 
-
 public class EqualToAttribute(string comparisonProperty) : ValidationAttribute
 {
   private readonly string _comparisonProperty = comparisonProperty;

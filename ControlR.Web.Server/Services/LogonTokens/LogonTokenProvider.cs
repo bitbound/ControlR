@@ -37,12 +37,16 @@ public class LogonTokenProvider(
     int expirationMinutes = 5)
   {
     // Validate that the user exists and belongs to the tenant
-    using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-    var user = await dbContext.Users
+    await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+    var exists = await dbContext.Users
       .Where(u => u.Id == userId && u.TenantId == tenantId)
       .Select(u => new { u.Id, u.UserName, u.Email })
-      .FirstOrDefaultAsync()
-      ?? throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+      .AnyAsync();
+
+    if (!exists)
+    {
+      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+    }
 
     var token = RandomGenerator.CreateAccessToken();
     var now = _timeProvider.GetUtcNow();
@@ -184,7 +188,7 @@ public class LogonTokenProvider(
     }
 
     // Validate the user exists in the database
-    using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+    await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var user = await dbContext.Users
       .Where(u => u.Id == logonToken.UserId && u.TenantId == logonToken.TenantId)
       .Select(u => new { u.Id, u.UserName, u.Email })
@@ -202,6 +206,8 @@ public class LogonTokenProvider(
     return new TokenValidationResult(true, null, logonToken, userInfo);
   }
 
+  private record UserInfo(Guid Id, string? UserName, string? Email);
+  
   private class TokenValidationResult
   {
 
@@ -227,6 +233,4 @@ public class LogonTokenProvider(
 
     public UserInfo? User { get; }
   }
-
-  private record UserInfo(Guid Id, string? UserName, string? Email);
 }

@@ -11,15 +11,14 @@ internal class InputDesktopReporter(
   IDelayer delayer,
   ILogger<InputDesktopReporter> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly IDelayer _delayer = delayer;
   private readonly ILogger<InputDesktopReporter> _logger = logger;
+  private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IWin32Interop _win32Interop = win32Interop;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     _logger.LogInformation("Beginning desktop watch.");
-
 
     if (_win32Interop.GetInputDesktopName(out var initialInputDesktop))
     {
@@ -65,7 +64,6 @@ internal class InputDesktopReporter(
             "Desktop has changed from {LastDesktop} to {CurrentDesktop}.",
             threadDesktop,
             inputDesktop);
-
 
           if (!_win32Interop.SwitchToInputDesktop())
           {

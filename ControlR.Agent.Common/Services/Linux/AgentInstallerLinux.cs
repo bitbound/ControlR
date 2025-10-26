@@ -27,12 +27,13 @@ internal class AgentInstallerLinux(
   : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
+
+  private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly ISystemEnvironment _environment = environmentHelper;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
-  private readonly IElevationChecker _elevationChecker = elevationChecker;
 
   public async Task Install(
     Uri? serverUri = null,
@@ -225,17 +226,6 @@ internal class AgentInstallerLinux(
     }
   }
 
-  private string GetInstallDirectory()
-  {
-    var dir = "/usr/local/bin/ControlR";
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
-    {
-      return dir;
-    }
-
-    return Path.Combine(dir, instanceOptions.Value.InstanceId);
-  }
-
   private async Task<string> GetAgentServiceFile()
   {
     var template = await _embeddedResourceAccessor.GetResourceAsString(
@@ -287,6 +277,17 @@ internal class AgentInstallerLinux(
   private string GetDesktopServiceName()
   {
     return Path.GetFileName(GetDesktopServiceFilePath());
+  }
+
+  private string GetInstallDirectory()
+  {
+    var dir = "/usr/local/bin/ControlR";
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    {
+      return dir;
+    }
+
+    return Path.Combine(dir, instanceOptions.Value.InstanceId);
   }
 
   private string GetServiceFilePath()

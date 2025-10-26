@@ -13,18 +13,6 @@ public class OptionsMonitorWrapper<T>(T options) : IOptionsMonitor<T>
 
   public T Get(string? name) => _options;
 
-  public void Update(T options, string? name)
-  {
-    _options = options;
-    lock (_listeners)
-    {
-      foreach (var listener in _listeners)
-      {
-        listener.Invoke(options, name);
-      }
-    }
-  }
-
   public IDisposable OnChange(Action<T, string?> listener)
   {
     lock (_listeners)
@@ -39,5 +27,17 @@ public class OptionsMonitorWrapper<T>(T options) : IOptionsMonitor<T>
         _listeners.Remove(listener);
       }
     });
+  }
+
+  public void Update(T options, string? name)
+  {
+    _options = options;
+    lock (_listeners)
+    {
+      foreach (var listener in _listeners)
+      {
+        listener.Invoke(options, name);
+      }
+    }
   }
 }

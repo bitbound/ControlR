@@ -14,13 +14,14 @@ internal class DesktopClientWatcherMac(
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherMac> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
-  private readonly IServiceControl _serviceControl = serviceControl;
-  private readonly IProcessManager _processManager = processManager;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherMac> _logger = logger;
+  private readonly IProcessManager _processManager = processManager;
+  private readonly IServiceControl _serviceControl = serviceControl;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+  private readonly TimeProvider _timeProvider = timeProvider;
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     if (_systemEnvironment.IsDebug)
@@ -92,37 +93,16 @@ internal class DesktopClientWatcherMac(
     }
   }
 
-  private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
+  private string GetDesktopClientServiceName()
   {
-    try
+    // This should match the service name from the LaunchAgent plist
+    // Based on ServiceControlMac implementation
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      // Use launchctl to check if the service is running
-      var result = await _processManager.GetProcessOutput("sudo", $"launchctl print gui/{uid}/{serviceName}", 5000);
-      
-      if (!result.IsSuccess)
-      {
-        _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
-        return false;
-      }
-
-      // If the command succeeds and contains process information, the service is running
-      var output = result.Value;
-      if (string.IsNullOrWhiteSpace(output))
-      {
-        return false;
-      }
-
-      // Check if the output contains "pid = " which indicates a running process
-      var isRunning = output.Contains("pid = ");
-      _logger.LogIfChanged(LogLevel.Debug, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
-
-      return isRunning;
+      return "app.controlr.desktop";
     }
-    catch (Exception ex)
-    {
-      _logger.LogIfChanged(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
-      return false;
-    }
+
+    return $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
   }
 
   private async Task<List<string>> GetLoggedInUsersAsync()
@@ -165,15 +145,36 @@ internal class DesktopClientWatcherMac(
     }
   }
 
-  private string GetDesktopClientServiceName()
+  private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
   {
-    // This should match the service name from the LaunchAgent plist
-    // Based on ServiceControlMac implementation
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    try
     {
-      return "app.controlr.desktop";
-    }
+      // Use launchctl to check if the service is running
+      var result = await _processManager.GetProcessOutput("sudo", $"launchctl print gui/{uid}/{serviceName}", 5000);
+      
+      if (!result.IsSuccess)
+      {
+        _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
+        return false;
+      }
 
-    return $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+      // If the command succeeds and contains process information, the service is running
+      var output = result.Value;
+      if (string.IsNullOrWhiteSpace(output))
+      {
+        return false;
+      }
+
+      // Check if the output contains "pid = " which indicates a running process
+      var isRunning = output.Contains("pid = ");
+      _logger.LogIfChanged(LogLevel.Debug, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
+
+      return isRunning;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogIfChanged(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
+      return false;
+    }
   }
 }

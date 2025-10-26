@@ -12,11 +12,13 @@ public class PersonalAccessTokenAuthenticationHandler(
   IPersonalAccessTokenManager personalAccessTokenManager,
   IOptionsMonitor<PersonalAccessTokenAuthenticationSchemeOptions> options) : AuthenticationHandler<PersonalAccessTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
+  private const int MaxFailures = 5;
+
+  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
+  private static readonly TimeSpan _failureWindow = TimeSpan.FromMinutes(5);
+
   private readonly IPersonalAccessTokenManager _personalAccessTokenManager = personalAccessTokenManager;
   private readonly UserManager<AppUser> _userManager = userManager;
-  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
-  private const int MaxFailures = 5;
-  private static readonly TimeSpan _failureWindow = TimeSpan.FromMinutes(5);
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {

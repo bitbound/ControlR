@@ -41,7 +41,6 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
     ];
   }
 
-
   private async Task SetDeviceTag(bool isToggled, Guid deviceId, TagViewModel tag)
   {
     try

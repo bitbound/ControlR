@@ -26,7 +26,7 @@
   {
     if (RendererInfo.IsInteractive)
     {
-      Messenger.RegisterEventMessage(this, HandleGenericMessage);
+      Messenger.RegisterEvent(this, HandleEventMessage);
     }
     base.OnInitializedAsync();
   }
@@ -36,11 +36,11 @@
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task HandleGenericMessage(object subscriber, EventMessageKind messageKind)
+  private async Task HandleEventMessage(object subscriber, Guid eventKind)
   {
     await ScreenWake.SetScreenWakeLock(ContentInstances.Count > 0);
     
-    if (messageKind == EventMessageKind.DeviceContentWindowsChanged)
+    if (eventKind == EventKinds.DeviceContentWindowsChanged)
     {
       await InvokeAsync(StateHasChanged);
     }

@@ -5,19 +5,20 @@ using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public partial class RemoteControl : ComponentBase
 {
   private string? _alertMessage;
   private Severity _alertSeverity;
-  private string? _downloadingMessage;
   private double _downloadProgress = -1;
+  private string? _downloadingMessage;
   private string? _loadingMessage = "Loading";
 
-  private DeviceUiSession[]? _systemSessions;
+  private DesktopSession[]? _systemSessions;
 
   [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
+  
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
@@ -34,16 +35,17 @@ public partial class RemoteControl : ComponentBase
   public required NavigationManager NavManager { get; init; }
 
   [Inject]
+  public required IRemoteControlState RemoteControlState { get; init; }
+
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
+  
 
   [Inject]
-  public required IViewerHubConnection ViewerHub { get; init; }
-
-  [Inject]
-  public required IRemoteControlState RemoteControlState { get; init; }
+  public required IUserSettingsProvider UserSettings { get; init; }
 
   private string AlertIcon =>
     _alertSeverity switch
@@ -137,17 +139,17 @@ public partial class RemoteControl : ComponentBase
 
   private async Task GetDeviceSystemSessions()
   {
-    var sessionResult = await ViewerHub.GetActiveUiSessions(DeviceAccessState.CurrentDevice.Id);
-    if (!sessionResult.IsSuccess)
+    try
     {
-      Logger.LogResult(sessionResult);
-      Snackbar.Add("Failed to get active sessions", Severity.Warning);
-      _alertMessage = $"Failed to get active sessions: {sessionResult.Reason}.";
-      _alertSeverity = Severity.Warning;
-      return;
+        _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
     }
-
-    _systemSessions = sessionResult.Value;
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Failed to get active sessions.");
+        Snackbar.Add("Failed to get active sessions", Severity.Warning);
+        _alertMessage = "Failed to get active sessions.";
+        _alertSeverity = Severity.Warning;
+    }
   }
 
   private async Task HandleDisconnectRequested()
@@ -200,14 +202,14 @@ public partial class RemoteControl : ComponentBase
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task PreviewSession(DeviceUiSession deviceUiSession)
+  private async Task PreviewSession(DesktopSession desktopSession)
   {
     try
     {
       var parameters = new DialogParameters
       {
         { nameof(DesktopPreviewDialog.Device), DeviceAccessState.CurrentDevice },
-        { nameof(DesktopPreviewDialog.Session), deviceUiSession }
+        { nameof(DesktopPreviewDialog.Session), desktopSession }
       };
 
       var dialogOptions = new DialogOptions
@@ -218,7 +220,7 @@ public partial class RemoteControl : ComponentBase
       };
 
       await DialogService.ShowAsync<DesktopPreviewDialog>(
-        $"Desktop Preview - {deviceUiSession.Name}", 
+        $"Desktop Preview - {desktopSession.Name}", 
         parameters, 
         dialogOptions);
     }
@@ -245,7 +247,7 @@ public partial class RemoteControl : ComponentBase
      await GetDeviceSystemSessions();
   }
 
-  private async Task StartRemoteControl(DeviceUiSession deviceUiSession)
+  private async Task StartRemoteControl(DesktopSession desktopSession)
   {
     try
     {
@@ -254,31 +256,31 @@ public partial class RemoteControl : ComponentBase
 
       var session = new RemoteControlSession(
         DeviceAccessState.CurrentDevice,
-        deviceUiSession.SystemSessionId,
-        deviceUiSession.ProcessId);
+        desktopSession.SystemSessionId,
+        desktopSession.ProcessId);
 
-      var relayOrigin = await ViewerHub.GetWebSocketRelayOrigin();
       var accessToken = RandomGenerator.CreateAccessToken();
 
       var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
+      var uriBuilder = new UriBuilder(serverUri)
+      {
+        Path = "/relay",
+        Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout=30"
+      };
 
-      var relayUri = relayOrigin is not null
-        ? new UriBuilder(relayOrigin)
-        : new UriBuilder(serverUri);
+      Snackbar.Add($"Starting remote control in system session {desktopSession.SystemSessionId}", Severity.Info);
 
-      relayUri.Path = "/relay";
-      relayUri.Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout=30";
-
-      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", relayUri.Uri.GetOrigin());
-
-      Snackbar.Add($"Starting remote control in system session {deviceUiSession.SystemSessionId}", Severity.Info);
-
-      var streamingSessionResult = await ViewerHub.RequestStreamingSession(
-        session.Device.Id,
+      var notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
+      var requestDto = new RemoteControlSessionRequestDto(
         session.SessionId,
-        relayUri.Uri,
+        uriBuilder.Uri,
         session.TargetSystemSession,
-        session.TargetProcessId);
+        session.TargetProcessId,
+        string.Empty, // ViewerConnectionId is set by hub.
+        session.Device.Id,
+        notifyUser);
+
+      var streamingSessionResult = await DeviceAccessHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
 
       _downloadingMessage = string.Empty;
       _downloadProgress = -1;
@@ -292,7 +294,7 @@ public partial class RemoteControl : ComponentBase
         return;
       }
 
-      await StreamingClient.Connect(relayUri.Uri, CancellationToken.None);
+      await StreamingClient.Connect(uriBuilder.Uri, CancellationToken.None);
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
@@ -306,7 +308,6 @@ public partial class RemoteControl : ComponentBase
       RemoteControlState.CurrentSession = null;
     }
   }
-
 
   private enum SignalingState
   {

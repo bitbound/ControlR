@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
@@ -11,7 +12,8 @@ namespace ControlR.Web.Server.Hubs;
 public class AgentHub(
   AppDb appDb,
   TimeProvider timeProvider,
-  IHubContext<ViewerHub, IViewerHubClient> viewerHub,
+  IHubContext<MainBrowserHub, IMainBrowserHubClient> mainHub,
+  IHubContext<DeviceAccessHub, IDeviceAccessHubClient> deviceAccessHub,
   IDeviceManager deviceManager,
   IOptions<AppOptions> appOptions,
   IOutputCacheStore outputCacheStore,
@@ -20,12 +22,13 @@ public class AgentHub(
 {
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
+  private readonly IHubContext<DeviceAccessHub, IDeviceAccessHubClient> _deviceAccessHub = deviceAccessHub;
   private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<AgentHub> _logger = logger;
+  private readonly IHubContext<MainBrowserHub, IMainBrowserHubClient> _mainHub = mainHub;
   private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
   private DeviceDto? Device
   {
@@ -114,7 +117,7 @@ public class AgentHub(
         responseDto.ViewerConnectionId,
         responseDto.SessionId);
 
-      return await _viewerHub.Clients
+      return await _deviceAccessHub.Clients
         .Client(responseDto.ViewerConnectionId)
         .ReceiveChatResponse(responseDto);
     }
@@ -136,7 +139,7 @@ public class AgentHub(
 
   public async Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto)
   {
-    await _viewerHub.Clients
+    await _deviceAccessHub.Clients
       .Client(progressDto.ViewerConnectionId)
       .ReceiveDesktopClientDownloadProgress(progressDto);
   }
@@ -225,7 +228,7 @@ public class AgentHub(
   {
     try
     {
-      await _viewerHub.Clients
+      await _deviceAccessHub.Clients
         .Client(viewerConnectionId)
         .ReceiveTerminalOutput(outputDto);
     }
@@ -363,7 +366,7 @@ public class AgentHub(
 
   private async Task SendDeviceUpdate(Device device, DeviceDto dto)
   {
-    await _viewerHub.Clients
+    await _mainHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
 
@@ -377,7 +380,7 @@ public class AgentHub(
     }
 
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
-    await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
+    await _mainHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
   private DeviceDto UpdateDeviceDtoState(DeviceDto deviceDto)

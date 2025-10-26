@@ -5,6 +5,30 @@ namespace ControlR.Agent.LoadTester.Helpers;
 
 internal static class ServiceCollectionExtensions
 {
+  public static IServiceCollection RemoveImplementation<TImplementation>(
+    this IServiceCollection services)
+    where TImplementation : class
+  {
+    var implementations = services
+      .Where(x => x.ImplementationType == typeof(TImplementation) ||
+                  (x.ImplementationInstance is TImplementation))
+      .ToList();
+
+    foreach (var implementation in implementations)
+    {
+      services.Remove(implementation);
+    }
+
+    return services;
+  }
+
+  public static IServiceCollection RemoveService<TInterface>(
+    this IServiceCollection services)
+    where TInterface : class
+  {
+    services.RemoveAll<TInterface>();
+    return services;
+  }
   public static IServiceCollection ReplaceService<TInterface, TImplementation>(
     this IServiceCollection services,
     ServiceLifetime lifetime)
@@ -57,30 +81,5 @@ internal static class ServiceCollectionExtensions
       ServiceLifetime.Transient => services.AddTransient<TInterface>(factory),
       _ => throw new ArgumentOutOfRangeException(nameof(lifetime), lifetime, "Invalid service lifetime specified.")
     };
-  }
-
-  public static IServiceCollection RemoveImplementation<TImplementation>(
-    this IServiceCollection services)
-    where TImplementation : class
-  {
-    var implementations = services
-      .Where(x => x.ImplementationType == typeof(TImplementation) ||
-                  (x.ImplementationInstance is TImplementation))
-      .ToList();
-
-    foreach (var implementation in implementations)
-    {
-      services.Remove(implementation);
-    }
-
-    return services;
-  }
-
-  public static IServiceCollection RemoveService<TInterface>(
-    this IServiceCollection services)
-    where TInterface : class
-  {
-    services.RemoveAll<TInterface>();
-    return services;
   }
 }

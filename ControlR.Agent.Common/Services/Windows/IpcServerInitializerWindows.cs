@@ -20,8 +20,8 @@ internal class IpcServerInitializerWindows(
   ILogger<IpcServerInitializerWindows> logger) 
   : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
-  private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
+  private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {

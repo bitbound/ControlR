@@ -12,9 +12,9 @@ public class PermissionsInitializerMac(
   IMacInterop macInterop,
   ILogger<PermissionsInitializerMac> logger) : BackgroundService
 {
-  private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly IMacInterop _macInterop = macInterop;
   private readonly ILogger<PermissionsInitializerMac> _logger = logger;
+  private readonly IMacInterop _macInterop = macInterop;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {

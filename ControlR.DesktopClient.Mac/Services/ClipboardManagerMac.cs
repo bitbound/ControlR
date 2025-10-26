@@ -6,12 +6,12 @@ namespace ControlR.DesktopClient.Mac.Services;
 
 public class ClipboardManagerMac(ILogger<ClipboardManagerMac> logger) : IClipboardManager
 {
-    private static readonly nint _nsPasteboardClass = AppKit.objc_getClass("NSPasteboard");
-    private static readonly nint _generalPasteboardSelector = AppKit.sel_registerName("generalPasteboard");
-    private static readonly nint _stringForTypeSelector = AppKit.sel_registerName("stringForType:");
-    private static readonly nint _setStringForTypeSelector = AppKit.sel_registerName("setString:forType:");
     private static readonly nint _clearContentsSelector = AppKit.sel_registerName("clearContents");
+    private static readonly nint _generalPasteboardSelector = AppKit.sel_registerName("generalPasteboard");
+    private static readonly nint _nsPasteboardClass = AppKit.objc_getClass("NSPasteboard");
     private static readonly nint _nsStringPboardType = AppKit.CreateNSString("NSStringPboardType");
+    private static readonly nint _setStringForTypeSelector = AppKit.sel_registerName("setString:forType:");
+    private static readonly nint _stringForTypeSelector = AppKit.sel_registerName("stringForType:");
 
     private readonly SemaphoreSlim _clipboardLock = new(1, 1);
     private readonly ILogger<ClipboardManagerMac> _logger = logger;

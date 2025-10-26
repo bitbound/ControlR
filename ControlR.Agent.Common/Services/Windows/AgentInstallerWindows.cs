@@ -30,11 +30,12 @@ internal class AgentInstallerWindows(
   : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
+
   private readonly IElevationChecker _elevationChecker = elevationChecker;
-  private readonly IRegistryAccessor _registryAccessor = registryAccessor;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly IProcessManager _processes = processes;
+  private readonly IRegistryAccessor _registryAccessor = registryAccessor;
 
   public async Task Install(
     Uri? serverUri = null,

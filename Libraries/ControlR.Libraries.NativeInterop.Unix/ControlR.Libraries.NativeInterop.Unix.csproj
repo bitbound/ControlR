@@ -5,4 +5,10 @@
     <ItemGroup>
         <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
 </Project>

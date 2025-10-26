@@ -27,6 +27,10 @@ public class DeviceViewModel : IEquatable<DeviceViewModel>
 
   public DateTimeOffset LastSeen { get; set; }
 
+  public string LocalIpV4 { get; set; } = string.Empty;
+
+  public string LocalIpV6 { get; set; } = string.Empty;
+
   public string[] MacAddresses { get; set; } = [];
 
   public string Name { get; set; } = string.Empty;
@@ -43,10 +47,6 @@ public class DeviceViewModel : IEquatable<DeviceViewModel>
 
   public string PublicIpV6 { get; set; } = string.Empty;
 
-  public string LocalIpV4 { get; set; } = string.Empty;
-
-  public string LocalIpV6 { get; set; } = string.Empty;
-
   public Guid[]? TagIds { get; set; }
 
   public Guid TenantId { get; set; }
@@ -61,6 +61,7 @@ public class DeviceViewModel : IEquatable<DeviceViewModel>
 
   public double UsedStorage { get; set; }
   public double UsedStoragePercent => UsedStorage / TotalStorage;
+
   public bool Equals(DeviceViewModel? other)
   {
     return Id == other?.Id;

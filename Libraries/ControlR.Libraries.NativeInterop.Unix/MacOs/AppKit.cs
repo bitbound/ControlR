@@ -5,22 +5,6 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 public static class AppKit
 {
     private const string AppKitFramework = "/System/Library/Frameworks/AppKit.framework/AppKit";
-    
-    // NSPasteboard methods
-    [DllImport(AppKitFramework, EntryPoint = "objc_getClass")]
-    public static extern nint objc_getClass(string className);
-
-    [DllImport(AppKitFramework, EntryPoint = "sel_registerName")]
-    public static extern nint sel_registerName(string selectorName);
-
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
-    public static extern nint objc_msgSend(nint receiver, nint selector);
-
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
-    public static extern nint objc_msgSend_IntPtr(nint receiver, nint selector, nint arg1);
-
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
-    public static extern nint objc_msgSend_IntPtr_IntPtr(nint receiver, nint selector, nint arg1, nint arg2);
 
     // Helper methods for NSString conversion
     public static nint CreateNSString(string str)
@@ -47,4 +31,20 @@ public static class AppKit
         var cStringPtr = objc_msgSend(nsString, utf8StringSelector);
         return cStringPtr != nint.Zero ? Marshal.PtrToStringAnsi(cStringPtr) : null;
     }
+    
+    // NSPasteboard methods
+    [DllImport(AppKitFramework, EntryPoint = "objc_getClass")]
+    public static extern nint objc_getClass(string className);
+
+    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    public static extern nint objc_msgSend(nint receiver, nint selector);
+
+    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    public static extern nint objc_msgSend_IntPtr(nint receiver, nint selector, nint arg1);
+
+    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    public static extern nint objc_msgSend_IntPtr_IntPtr(nint receiver, nint selector, nint arg1, nint arg2);
+
+    [DllImport(AppKitFramework, EntryPoint = "sel_registerName")]
+    public static extern nint sel_registerName(string selectorName);
 }

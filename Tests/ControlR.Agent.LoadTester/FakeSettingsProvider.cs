@@ -6,17 +6,16 @@ namespace ControlR.Agent.LoadTester;
 internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsProvider
 {
   public Guid DeviceId => deviceId;
+
+  public bool DisableAutoUpdate => true;
+  public int HubDtoChunkSize => 100;
   public string InstanceId { get; } = string.Empty;
 
   public Uri ServerUri { get; } = serverUri;
 
-  public int VncPort => AppConstants.DefaultVncPort;
-  public int HubDtoChunkSize => 100;
-
-
-  public bool DisableAutoUpdate => true;
-
   public Guid TenantId => default;
+
+  public int VncPort => AppConstants.DefaultVncPort;
 
   public string GetAppSettingsPath()
   {

@@ -10,37 +10,37 @@ public static class BitmapExtensions
   {
     return new Rectangle(0, 0, bitmap.Width, bitmap.Height);
   }
-  public static SKBitmap ToSKBitmap(this Bitmap bitmap)
+  public static SKBitmap ToSkBitmap(this Bitmap bitmap)
   {
     var info = new SKImageInfo(bitmap.Width, bitmap.Height);
     var sKBitmap = new SKBitmap(info);
-    using SKPixmap pixmap = sKBitmap.PeekPixels();
-    bitmap.ToSKPixmap(pixmap);
+    using var pixmap = sKBitmap.PeekPixels();
+    bitmap.ToSkPixmap(pixmap);
     return sKBitmap;
   }
 
-  public static void ToSKPixmap(this Bitmap bitmap, SKPixmap pixmap)
+  public static SKImage ToSkImage(this Bitmap bitmap)
+  {
+    var info = new SKImageInfo(bitmap.Width, bitmap.Height);
+    using var sKImage = SKImage.Create(info).AsMaybeDisposable();
+    using var pixmap = sKImage.Value.PeekPixels();
+    bitmap.ToSkPixmap(pixmap);
+    return sKImage.Suppress();
+  }
+
+  public static void ToSkPixmap(this Bitmap bitmap, SKPixmap pixmap)
   {
     if (pixmap.ColorType == SKImageInfo.PlatformColorType)
     {
       var info = pixmap.Info;
       using Bitmap image = new(info.Width, info.Height, info.RowBytes, PixelFormat.Format32bppPArgb, pixmap.GetPixels());
-      using Graphics graphics = Graphics.FromImage(image);
+      using var graphics = Graphics.FromImage(image);
       graphics.Clear(Color.Transparent);
       graphics.DrawImageUnscaled(bitmap, 0, 0);
       return;
     }
 
-    using SKImage sKImage = bitmap.ToSKImage();
+    using var sKImage = bitmap.ToSkImage();
     sKImage.ReadPixels(pixmap, 0, 0);
-  }
-
-  public static SKImage ToSKImage(this Bitmap bitmap)
-  {
-    var info = new SKImageInfo(bitmap.Width, bitmap.Height);
-    using var sKImage = SKImage.Create(info).AsMaybeDisposable();
-    using SKPixmap pixmap = sKImage.Value.PeekPixels();
-    bitmap.ToSKPixmap(pixmap);
-    return sKImage.Suppress();
   }
 }
