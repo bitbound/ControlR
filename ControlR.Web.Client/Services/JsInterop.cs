@@ -41,7 +41,7 @@ public interface IJsInterop
   ValueTask SetStyleProperty(ElementReference element, string propertyName, string value);
 
   ValueTask StartDraggingY(ElementReference element, double clientY);
-  ValueTask ToggleFullscreen(ElementReference element);
+  ValueTask ToggleFullscreen(ElementReference? element = null);
 }
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
@@ -161,7 +161,7 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     return jsRuntime.InvokeVoidAsync("startDraggingY", element, clientY);
   }
 
-  public ValueTask ToggleFullscreen(ElementReference element)
+  public ValueTask ToggleFullscreen(ElementReference? element = null)
   {
     return jsRuntime.InvokeVoidAsync("toggleFullscreen", element);
   }

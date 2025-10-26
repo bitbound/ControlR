@@ -11,7 +11,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 {
   private const double MaxCanvasScale = 3;
   private const double MinCanvasScale = 0.25;
-  
+
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
@@ -26,7 +26,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   private double _lastPinchDistance = -1;
   private CaptureMetricsDto? _latestCaptureMetrics;
   private IDisposable? _messageHandlerRegistration;
-  private ElementReference _outerFrameElement;
   private IDisposable? _remoteControlStateChangedToken;
   private ElementReference _screenArea;
   private bool _streamStarted;
@@ -205,6 +204,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       {
         await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
       }
+
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
     }
   }
@@ -322,7 +322,9 @@ public partial class RemoteDisplay : JsInteropableComponent
           Logger.LogWarning("Received custom cursor change with no image data.");
           return;
         }
-        _canvasCssCursor = $"url(data:image/png;base64,{dto.CustomCursorBase64Png}) {dto.XHotspot} {dto.YHotspot}, auto";
+
+        _canvasCssCursor =
+          $"url(data:image/png;base64,{dto.CustomCursorBase64Png}) {dto.XHotspot} {dto.YHotspot}, auto";
         await InvokeAsync(StateHasChanged);
         return;
       }
@@ -380,7 +382,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private async Task HandleFullscreenClicked()
   {
-    await JsInterop.ToggleFullscreen(_outerFrameElement);
+    await JsInterop.ToggleFullscreen();
   }
 
   private async Task HandleKeyboardToggled()
@@ -441,7 +443,8 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
 
       Snackbar.Add("Sending clipboard", Severity.Info);
-      await StreamingClient.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
+      await StreamingClient.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId,
+        _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -457,47 +460,47 @@ public partial class RemoteDisplay : JsInteropableComponent
       switch (message.DtoType)
       {
         case DtoType.DisplayData:
-          {
-            var dto = message.GetPayload<DisplayDataDto>();
-            await HandleDisplayDataReceived(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<DisplayDataDto>();
+          await HandleDisplayDataReceived(dto);
+          break;
+        }
         case DtoType.ScreenRegion:
-          {
-            var dto = message.GetPayload<ScreenRegionDto>();
-            await DrawRegion(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<ScreenRegionDto>();
+          await DrawRegion(dto);
+          break;
+        }
         case DtoType.ClipboardText:
-          {
-            var dto = message.GetPayload<ClipboardTextDto>();
-            await HandleClipboardTextReceived(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<ClipboardTextDto>();
+          await HandleClipboardTextReceived(dto);
+          break;
+        }
         case DtoType.CursorChanged:
-          {
-            var dto = message.GetPayload<CursorChangedDto>();
-            await HandleCursorChanged(dto);
-            break;
-          }
+        {
+          var dto = message.GetPayload<CursorChangedDto>();
+          await HandleCursorChanged(dto);
+          break;
+        }
         case DtoType.WindowsSessionEnding:
-          {
-            Snackbar.Add("Remote Windows session ending", Severity.Warning);
-            await OnDisconnectRequested.InvokeAsync();
-            break;
-          }
+        {
+          Snackbar.Add("Remote Windows session ending", Severity.Warning);
+          await OnDisconnectRequested.InvokeAsync();
+          break;
+        }
         case DtoType.WindowsSessionSwitched:
-          {
-            Snackbar.Add("Remote Windows session switched", Severity.Info);
-            break;
-          }
+        {
+          Snackbar.Add("Remote Windows session switched", Severity.Info);
+          break;
+        }
         case DtoType.CaptureMetricsChanged:
-          {
-            var dto = message.GetPayload<CaptureMetricsDto>();
-            _latestCaptureMetrics = dto;
-            await InvokeAsync(StateHasChanged);
-            break;
-          }
+        {
+          var dto = message.GetPayload<CaptureMetricsDto>();
+          _latestCaptureMetrics = dto;
+          await InvokeAsync(StateHasChanged);
+          break;
+        }
         default:
           Logger.LogWarning("Received unsupported DTO type: {DtoType}", message.DtoType);
           Snackbar.Add($"Unsupported DTO type: {message.DtoType}", Severity.Warning);

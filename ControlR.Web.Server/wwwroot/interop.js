@@ -1,4 +1,6 @@
-﻿/** 
+﻿// noinspection JSUnusedGlobalSymbols
+
+/** 
  * @type {WakeLockSentinel}
  */
 let _wakeLock = null;
@@ -15,11 +17,11 @@ function addClassName(element, className) {
  * Create a blob URL from image data
  * @param {Uint8Array} imageData - The image data
  * @param {string} mimeType - The MIME type (e.g., 'image/jpeg')
- * @returns {string} The blob URL
+ * @returns {string | null} The blob URL
  */
 function createBlobUrl(imageData, mimeType) {
   try {
-    // Create blob and return URL
+    // Create a blob and return URL
     const blob = new Blob([imageData], { type: mimeType });
     return URL.createObjectURL(blob);
   } catch (error) {
@@ -66,17 +68,15 @@ function invokePrompt(message) {
   return prompt(message);
 }
 function isTouchScreen() {
-  // Check for touch points support
+  // Check for touchpoint support
   if (navigator.maxTouchPoints > 0) {
     return true;
   }
   
   // Fallback for older browsers
-  if ('ontouchstart' in window || window.TouchEvent) {
-    return true;
-  }
+  return !!('ontouchstart' in window || window.TouchEvent);
   
-  return false;
+  
 }
 function log(category, message) {
   console.log("Got: ", category, message);
@@ -86,7 +86,7 @@ function preventTabOut(element) {
     if (!ev.key) {
       return;
     }
-    if (ev.key.toLowerCase() == "tab") {
+    if (ev.key.toLowerCase() === "tab") {
       ev.preventDefault();
     }
   })
@@ -126,14 +126,14 @@ async function setScreenWakeLock(isWakeEnabled) {
 
   if (isWakeEnabled) {
     console.log("Requesting screen wake lock.");
-    _wakeLock?.release();
+    await _wakeLock?.release();
     _wakeLock ??= await navigator.wakeLock.request("screen");
     console.log("Wake lock acquired.");
     return;
   }
 
   console.log("Releasing screen wake lock.");
-  _wakeLock?.release();
+  await _wakeLock?.release();
   _wakeLock = null;
 }
 
@@ -163,7 +163,7 @@ function startDraggingY(element, clientY) {
       element.style.top = `${ev.clientY}px`;
     }
   }
-  function pointerUpOrLeave(ev) {
+  function pointerUpOrLeave() {
     window.removeEventListener("pointermove", pointerMove);
     window.removeEventListener("pointerup", pointerUpOrLeave);
     window.removeEventListener("pointerleave", pointerUpOrLeave);
@@ -178,17 +178,15 @@ function openWindow(url, target) {
 }
 
 /**
- * @param {HTMLElement} element
+ * @param {HTMLElement | undefined} element
  */
 async function toggleFullscreen(element) {
-  if (!element) {
-    return;
-  }
   if (document.fullscreenElement) {
-    document.exitFullscreen();
+    await document.exitFullscreen();
   } else {
     try {
-      await element.requestFullscreen();
+      const targetElement = element ?? document.documentElement;
+      await targetElement.requestFullscreen();
     }
     catch (err) {
       console.error("Error attempting to enable full-screen mode.");
@@ -198,8 +196,8 @@ async function toggleFullscreen(element) {
  }
 
 document.addEventListener("visibilitychange", async () => {
-  if (_wakeEnabled && document.visibilityState == "visible") {
-    setScreenWakeLock(true);
+  if (_wakeEnabled && document.visibilityState === "visible") {
+    await setScreenWakeLock(true);
   }
 });
 
