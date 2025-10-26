@@ -9,6 +9,9 @@ namespace ControlR.Web.Client.Components.RemoteDisplays;
 
 public partial class RemoteDisplay : JsInteropableComponent
 {
+  private const double MaxCanvasScale = 3;
+  private const double MinCanvasScale = 0.25;
+  
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
@@ -589,11 +592,20 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
-      var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
 
-      RemoteControlState.ViewMode = ViewMode.Original;
+      if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
+      {
+        // When switching from scaled to original, zoom out so the transition is less jarring.
+        RemoteControlState.ViewMode = ViewMode.Original;
+        _canvasScale = MinCanvasScale;
+      }
+      else
+      {
+        var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
+        var newScale = _canvasScale + pinchChange / 100;
+        _canvasScale = Math.Clamp(newScale, MinCanvasScale, MaxCanvasScale);
+      }
 
-      _canvasScale = Math.Max(.25, Math.Min(_canvasScale + pinchChange / 100, 3));
 
       var newWidth = RemoteControlState.SelectedDisplay.Width * _canvasScale;
       var widthChange = newWidth - _canvasCssWidth;
