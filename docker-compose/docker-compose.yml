@@ -16,6 +16,8 @@ services:
       - aspire
     ports:
       - "5120:8080"
+    networks:
+      - controlr-network
     environment:
       # ASPNETCORE variables should *not* be changed.
       ASPNETCORE_ENVIRONMENT: Production
@@ -52,7 +54,7 @@ services:
       ControlR_AppOptions__UseHttpLogging: false
 
       # The Gateway IP here must match the IP address used by the Docker gateway.
-      ControlR_AppOptions__DockerGatewayIp: "::ffff:172.18.0.1"
+      ControlR_AppOptions__DockerGatewayIp: "::ffff:172.29.0.1"
 
       # The maximum allowed file size for transfers in the remote File System component.
       # Set to 0 or less for no limit.  Default is 100MB.
@@ -87,7 +89,7 @@ services:
       # Instructions can be found here:
       # https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
       #ControlR_AppOptions__GitHubClientId: ""
-      #ControlR_AppOptions__MicrosoftClientSecret: ""
+      #ControlR_AppOptions__GitHubClientSecret: ""
 
   postgres:
     image: postgres:18
@@ -95,6 +97,8 @@ services:
     restart: unless-stopped
     ports:
       - "5432:5432"
+    networks:
+      - controlr-network
     volumes:
       - postgres-data:/var/lib/postgresql
     environment:
@@ -110,6 +114,8 @@ services:
       - "18888:18888"
     expose:
       - "18889"
+    networks:
+      - controlr-network
     environment:
       DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://aspire:18889"
       Dashboard__Frontend__BrowserToken: *aspireToken
@@ -117,3 +123,11 @@ services:
 volumes:
   postgres-data:
     name: "postgres-data"
+
+networks:
+  controlr-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+          gateway: 172.29.0.1
