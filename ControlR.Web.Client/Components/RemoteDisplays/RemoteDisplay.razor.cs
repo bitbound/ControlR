@@ -12,9 +12,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   private const double MaxCanvasScale = 3;
   private const double MinCanvasScale = 0.25;
 
+
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
+
 
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
@@ -30,6 +32,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private ElementReference _screenArea;
   private bool _streamStarted;
   private ElementReference _virtualKeyboard;
+
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -62,6 +65,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
+
 
   private string CanvasClasses
   {
@@ -104,6 +108,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     set => _ = TypeText(value);
   }
 
+
   [JSImport("drawFrame", "RemoteDisplay")]
   public static partial Task DrawFrame(
     string canvasId,
@@ -112,6 +117,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     float width,
     float height,
     byte[] encodedImage);
+
 
   public override async ValueTask DisposeAsync()
   {
@@ -192,6 +198,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     await InvokeAsync(StateHasChanged);
   }
 
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
@@ -247,12 +254,14 @@ public partial class RemoteDisplay : JsInteropableComponent
     });
   }
 
+
   private static double GetDistance(double x1, double y1, double x2, double y2)
   {
     var dx = x1 - x2;
     var dy = y1 - y2;
     return Math.Sqrt(dx * dx + dy * dy);
   }
+
 
   private async Task ChangeDisplays(DisplayDto display)
   {

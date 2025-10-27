@@ -36,6 +36,9 @@ public partial class RemoteControl : ComponentBase
 
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
+  
+  [Inject]
+  public required IScreenWake ScreenWake { get; init; } 
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -163,6 +166,7 @@ public partial class RemoteControl : ComponentBase
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await StreamingClient.SendCloseStreamingSession(cts.Token);
       await StreamingClient.Close();
+      await ScreenWake.SetScreenWakeLock(isWakeEnabled: false);
       Snackbar.Add("Remote control session disconnected", Severity.Info);
       await GetDeviceSystemSessions();
     }
@@ -199,6 +203,7 @@ public partial class RemoteControl : ComponentBase
     RemoteControlState.CurrentSession = null;
     Snackbar.Add("Connection lost", Severity.Warning);
     await GetDeviceSystemSessions();
+    await ScreenWake.SetScreenWakeLock(isWakeEnabled: false);
     await InvokeAsync(StateHasChanged);
   }
 
@@ -299,6 +304,7 @@ public partial class RemoteControl : ComponentBase
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
       _loadingMessage = null;
+      await ScreenWake.SetScreenWakeLock(isWakeEnabled: true);
     }
     catch (Exception ex)
     {
