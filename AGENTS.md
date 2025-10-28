@@ -1,6 +1,50 @@
 # Project Overview
 ControlR is a cross-platform solution for remote access and remote control of devices. It primarily uses the latest .NET version for backend web, frontend web (via Blazor), and the desktop applications.
 
+## Quick Start
+
+The easiest way to build and run the application is to use the provided launch profiles in your IDE.
+
+- **Visual Studio / JetBrains Rider:** Use the **"Full Stack"** launch profile to start all the necessary projects for a complete debugging experience.
+- **VS Code:**
+    - Use the **"Full Stack (Debug)"** config in `launch.json` for general debugging.
+    - Use the **"Full Stack (Hot Reload)"** config for Blazor UI development to get fast feedback on changes.
+- **CLI:** To simply build the entire solution, run `dotnet build ControlR.sln` from the root directory.
+
+## High-Level Architecture
+
+The following diagram shows the communication flow between the major components of the system.
+
+```mermaid
+graph TD
+    subgraph "User's Browser"
+        A[Web Client - Blazor]
+    end
+
+    subgraph "Cloud / Server Host"
+        B[Web Server - ASP.NET Core]
+        C[WebSocket Relay]
+    end
+
+    subgraph "Remote Machine"
+        D[Agent - Background Service]
+        E[Desktop Client - Avalonia]
+    end
+
+    A -- HTTP & SignalR --> B
+    B -- SignalR UI Updates --> A
+
+    D -- SignalR Heartbeat/Data --> B
+    B -- SignalR Commands --> D
+
+    A -- Remote Control Stream --> C
+    C -- Remote Control Stream --> E
+
+    D -- IPC via Named Pipes --> E
+    E -- IPC via Named Pipes --> D
+```
+
+
 ## Project Structure
 
 ### Core Components
@@ -24,6 +68,7 @@ ControlR is a cross-platform solution for remote access and remote control of de
 - **ControlR.Libraries.DevicesCommon** - Device-related common functionality
 - **ControlR.Libraries.DevicesNative** - Native device interaction libraries
 - **ControlR.Libraries.Clients** - Client-side shared functionality
+- **ControlR.Libraries.ApiClient** - Generated API client for server communication
 - **ControlR.Libraries.Ipc** - Inter-process communication utilities
 - **ControlR.Libraries.Signalr.Client** - SignalR client abstractions
 - **ControlR.Libraries.WebSocketRelay.Common** - WebSocket relay shared components
