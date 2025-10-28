@@ -714,8 +714,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       try
       {
-        var state = PInvoke.GetAsyncKeyState((int)key);
-
+        // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
         switch (key)
         {
           // Skip mouse buttons and toggleable keys.
@@ -727,7 +726,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
           case VIRTUAL_KEY.VK_SCROLL:
             continue;
         }
-
+        
+        var state = PInvoke.GetAsyncKeyState((int)key);
+        
         if (state == 0)
         {
           continue;
@@ -1124,15 +1125,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   private static Point GetNormalizedPoint(int x, int y)
   {
-    var left = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
-    var top = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
-    var width = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
-    var height = (double)PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
-    var right = left + width;
-    var bottom = top + height;
+    var left = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
+    var top = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
+    var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
+    var height = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
 
-    var normalizedX = (int)((x - left) / (right - left) * 65535);
-    var normalizedY = (int)((y - top) / (bottom - top) * 65535);
+    var normalizedX = (x - left) * 65535 / width;
+    var normalizedY = (y - top) * 65535 / height;
 
     return new Point(normalizedX, normalizedY);
   }
