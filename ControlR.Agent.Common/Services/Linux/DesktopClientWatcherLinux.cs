@@ -375,7 +375,7 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // First get list of session IDs
+      // First get a list of session IDs
       var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
       if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
       {
@@ -474,7 +474,7 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
-  private async Task LaunchLoginScreenDesktopClient(DisplayEnvironmentInfo displayInfo, CancellationToken cancellationToken)
+  private Task LaunchLoginScreenDesktopClient(DisplayEnvironmentInfo displayInfo, CancellationToken cancellationToken)
   {
     try
     {
@@ -484,7 +484,7 @@ internal class DesktopClientWatcherLinux(
       if (!_fileSystem.FileExists(desktopClientPath))
       {
         _logger.LogError("Desktop client executable not found at {Path}", desktopClientPath);
-        return;
+        return Task.CompletedTask;
       }
 
       var instanceArgs = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
@@ -553,6 +553,8 @@ internal class DesktopClientWatcherLinux(
     {
       _logger.LogError(ex, "Error launching login screen desktop client");
     }
+
+    return Task.CompletedTask;
   }
 
   private async Task StopLoginScreenDesktopClient()
