@@ -86,10 +86,10 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // Check for login screen first
+      // Check for the login screen first
       await CheckLoginScreenDesktopClient(cancellationToken);
 
-      // Then check logged-in users
+      // Then check for logged-in users
       var loggedInUsers = await GetLoggedInUsersAsync();
       if (loggedInUsers.Count == 0)
       {
@@ -116,6 +116,8 @@ internal class DesktopClientWatcherLinux(
     {
       var serviceName = GetDesktopClientServiceName();
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
+      
+      cancellationToken.ThrowIfCancellationRequested();
 
       if (!isRunning)
       {
@@ -138,7 +140,7 @@ internal class DesktopClientWatcherLinux(
     var displayInfo = await DetectDisplayEnvironment();
     if (!displayInfo.IsLoginScreen)
     {
-      // If not at login screen, ensure login screen client is stopped
+      // If not at the login screen, ensure the login screen client is stopped
       await StopLoginScreenDesktopClient();
       return;
     }
@@ -148,7 +150,7 @@ internal class DesktopClientWatcherLinux(
       "Login screen detected. Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
       args: (displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"));
 
-    // Launch desktop client for login screen if needed
+    // Launch the desktop client for the login screen if needed
     if (!await IsLoginScreenDesktopClientRunning())
     {
       await LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
@@ -159,7 +161,7 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // Check for active X11 displays
+      // Check for the active X11 displays
       var displays = new[] { ":0", ":1", ":10" }; // Common display numbers
 
       foreach (var display in displays)
@@ -170,7 +172,7 @@ internal class DesktopClientWatcherLinux(
         }
       }
 
-      // Fallback to environment variable or default
+      // Fall back to the environment variable or a default
       return Task.FromResult(Environment.GetEnvironmentVariable("DISPLAY") ?? ":0");
     }
     catch (Exception ex)
@@ -184,7 +186,7 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // Method 1: Check display manager specific patterns
+      // Method 1: Check the display-manager-specific patterns
       switch (displayManager?.ToLowerInvariant())
       {
         case "sddm":
@@ -198,7 +200,7 @@ internal class DesktopClientWatcherLinux(
 
         case "gdm":
         case "gdm3":
-          // GDM stores auth in /run/gdm3 or similar
+          // GDM stores the auth in /run/gdm3 or similar
           var gdmAuth = await _processManager.GetProcessOutput("bash", "-c \"find /run/gdm* -name '*database*' -type f 2>/dev/null | head -1\"", 3000);
           if (gdmAuth.IsSuccess && !string.IsNullOrEmpty(gdmAuth.Value.Trim()))
           {
@@ -215,7 +217,7 @@ internal class DesktopClientWatcherLinux(
           break;
       }
 
-      // Method 2: Try to extract from running X server process
+      // Method 2: Try to extract the auth path from the running X server process
       var xorgCmd = await _processManager.GetProcessOutput("ps", "aux", 5000);
       if (xorgCmd.IsSuccess)
       {
@@ -237,7 +239,7 @@ internal class DesktopClientWatcherLinux(
         }
       }
 
-      // Method 3: Common fallback locations
+      // Method 3: Check common fallback locations
       var fallbackPaths = new[]
       {
         "/var/lib/gdm3/.Xauthority",
@@ -287,15 +289,15 @@ internal class DesktopClientWatcherLinux(
         }
       }
 
-      // Check if we're at login screen by looking for active user sessions
-      // Use a more robust approach that doesn't rely on column order
+      // Check if we're at the login screen by looking for active user sessions
+      // Use a more robust approach that doesn't rely on the column order
       var hasActiveUserSessions = await HasActiveUserSessions();
 
       info.IsLoginScreen = !hasActiveUserSessions;
 
       if (info.IsLoginScreen)
       {
-        // Dynamically detect XAUTH and display for current session
+        // Dynamically detect the XAUTH path and the display for the current session
         info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
         info.Display = await DetectCurrentDisplay();
       }
@@ -311,7 +313,7 @@ internal class DesktopClientWatcherLinux(
 
   private string GetDesktopClientServiceName()
   {
-    // This should match the service name from ServiceControlLinux
+    // This should match the service name from the ServiceControlLinux
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
       return "controlr.desktop.service";
@@ -343,13 +345,13 @@ internal class DesktopClientWatcherLinux(
         var lines = result.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
         {
-          // Parse the who output to extract usernames
+          // Parse the output of 'who' to extract username
           // Format: username pts/0 timestamp (IP)
           var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
           if (parts.Length >= 1)
           {
             var username = parts[0];
-            // Get UID for the user
+            // Get the UID for the user
             var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
             if (uidResult.IsSuccess &&
                 !string.IsNullOrWhiteSpace(uidResult.Value) &&
@@ -375,7 +377,7 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // First get a list of session IDs
+      // First, get a list of session IDs
       var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
       if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
       {
@@ -388,9 +390,9 @@ internal class DesktopClientWatcherLinux(
         var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 0)
         {
-          var sessionId = parts[0]; // Session ID is always the first column
+          var sessionId = parts[0]; // The session ID is always the first column
           
-          // Get detailed session info using show-session (key-value format)
+          // Get the detailed session info using show-session (key-value format)
           var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
           if (sessionInfoResult.IsSuccess && !string.IsNullOrWhiteSpace(sessionInfoResult.Value))
           {
@@ -422,8 +424,8 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      // Use systemctl to check if the user service is running
-      // Set XDG_RUNTIME_DIR for the user context
+      // Use systemctl to check whether the user service is running
+      // Set the XDG_RUNTIME_DIR for the user context
       var result = await _processManager.GetProcessOutput("sudo", $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user is-active {serviceName}", 5000);
 
       if (!result.IsSuccess)
@@ -432,7 +434,7 @@ internal class DesktopClientWatcherLinux(
         return false;
       }
 
-      // systemctl is-active returns "active" if the service is running
+      // The systemctl is-active command returns "active" if the service is running
       var output = result.Value?.Trim();
       var isRunning = string.Equals(output, "active", StringComparison.OrdinalIgnoreCase);
 
@@ -491,7 +493,7 @@ internal class DesktopClientWatcherLinux(
         ? ""
         : $" --instance-id {_instanceOptions.Value.InstanceId}";
 
-      // Set up environment variables for X11 access
+      // Set up the environment variables for X11 access
       var envVars = new Dictionary<string, string>
       {
         ["DISPLAY"] = displayInfo.Display,
@@ -507,7 +509,7 @@ internal class DesktopClientWatcherLinux(
       _logger.LogInformation("Starting login screen desktop client. Display: {Display}, XAUTH: {XAuth}",
         displayInfo.Display, displayInfo.XAuthPath ?? "none");
 
-      // Start the process with proper environment
+      // Start the process with the proper environment
       var startInfo = new ProcessStartInfo
       {
         FileName = desktopClientPath,
@@ -529,7 +531,7 @@ internal class DesktopClientWatcherLinux(
         _loginScreenDesktopClientPid = process.Id;
         _logger.LogInformation("Login screen desktop client started with PID {PID}", process.Id);
 
-        // Don't wait for the process to exit - it should run continuously
+        // Don't wait for the process to exit; it should run continuously
         _ = Task.Run(async () =>
         {
           try
@@ -568,13 +570,13 @@ internal class DesktopClientWatcherLinux(
 
       _logger.LogInformation("Stopping login screen desktop client (PID {PID})", _loginScreenDesktopClientPid.Value);
 
-      // Try graceful termination first
+      // Try a graceful termination first
       await _processManager.GetProcessOutput("kill", $"-TERM {_loginScreenDesktopClientPid.Value}", 3000);
 
-      // Wait a moment for graceful shutdown
+      // Wait a moment for a graceful shutdown
       await Task.Delay(2000);
 
-      // Check if still running and force kill if necessary
+      // Check if it is still running and force-kill it if necessary
       var processCheck = await _processManager.GetProcessOutput("ps", $"-p {_loginScreenDesktopClientPid.Value}", 3000);
       if (processCheck.IsSuccess && processCheck.Value.Contains(_loginScreenDesktopClientPid.Value.ToString()))
       {

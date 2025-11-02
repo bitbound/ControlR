@@ -80,6 +80,8 @@ internal class DesktopClientWatcherMac(
       var serviceName = GetDesktopClientServiceName();
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
 
+      cancellationToken.ThrowIfCancellationRequested();
+      
       if (!isRunning)
       {
         _logger.LogIfChanged(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
