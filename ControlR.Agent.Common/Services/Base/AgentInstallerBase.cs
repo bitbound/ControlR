@@ -14,12 +14,14 @@ internal abstract class AgentInstallerBase(
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IProcessManager processManager,
+  ISystemEnvironment systemEnvironment,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerBase> logger)
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
@@ -74,9 +76,7 @@ internal abstract class AgentInstallerBase(
         }
       }
 
-      procs = ProcessManager
-        .GetProcessesByName("ControlR.DesktopClient")
-        .Where(x => x.Id != Environment.ProcessId);
+      procs = ProcessManager.GetProcessesByName("ControlR.DesktopClient");
 
       foreach (var proc in procs)
       {
@@ -136,5 +136,29 @@ internal abstract class AgentInstallerBase(
 
     Logger.LogInformation("Writing results to disk.");
     await _settingsProvider.UpdateAppOptions(currentOptions);
+  }
+
+  protected async Task<Result> WriteCurrentAgentEtag(string installDir)
+  {
+    try
+    {
+      Logger.LogInformation("Fetching current ETag for agent binary.");
+      var etagResult = await _controlrApi.GetCurrentAgentETag(_systemEnvironment.Runtime);
+      if (!etagResult.IsSuccess)
+      {
+        Logger.LogResult(etagResult);
+        return etagResult.ToResult();
+      }
+
+      var etagFilePath = Path.Combine(installDir, AppConstants.AgentEtagFileName);
+      await FileSystem.WriteAllTextAsync(etagFilePath, etagResult.Value);
+      Logger.LogInformation("ETag written to {ETagFilePath}", etagFilePath);
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while writing current ETag file.");
+      return Result.Fail(ex);
+    }
   }
 }

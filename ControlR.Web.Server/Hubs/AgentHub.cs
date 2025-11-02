@@ -127,7 +127,7 @@ public class AgentHub(
         "Viewer {ViewerConnectionId} for chat session {SessionId} is no longer connected.",
         responseDto.ViewerConnectionId,
         responseDto.SessionId);
-      await Clients.Caller.CloseChatSession(responseDto.SessionId, responseDto.DesktopUiProcessId);
+      await Clients.Caller.CloseChatSession(responseDto.SessionId, responseDto.DesktopSessionProcessId);
       return false;
     }
     catch (Exception ex)
@@ -135,13 +135,6 @@ public class AgentHub(
       _logger.LogError(ex, "Error forwarding chat response to viewer.");
       return false;
     }
-  }
-
-  public async Task SendDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto)
-  {
-    await _deviceAccessHub.Clients
-      .Client(progressDto.ViewerConnectionId)
-      .ReceiveDesktopClientDownloadProgress(progressDto);
   }
 
   public async Task SendDesktopPreviewStream(Guid streamId, ChannelReader<byte[]> jpegChunks)

@@ -91,7 +91,7 @@ public class ViewerStreamingClient(
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
-        var wrapper = DtoWrapper.Create(dto, DtoType.CloseStreamingSession);
+        var wrapper = DtoWrapper.Create(dto, DtoType.CloseRemoteControlSession);
         await Send(wrapper, cancellationToken);
       });
   }

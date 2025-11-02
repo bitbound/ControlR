@@ -11,6 +11,10 @@ The easiest way to build and run the application is to use the provided launch p
     - Use the **"Full Stack (Hot Reload)"** config for Blazor UI development to get fast feedback on changes.
 - **CLI:** To simply build the entire solution, run `dotnet build ControlR.sln` from the root directory.
 
+## Context Scope
+- Do not include any files or folders within `ControlR.Web.Server/novnc/` in your context.
+- Do not include anything within folders named `node_modules` in your context.
+
 ## High-Level Architecture
 
 The following diagram shows the communication flow between the major components of the system.
@@ -114,6 +118,14 @@ graph TD
 - **Clean Architecture** - Separation of concerns with clear dependencies
 - **Dependency Injection** - Built-in .NET DI container
 
+### Service Registration
+In general, services are not registered directly in `Program.cs`. Instead, extension methods are used to group service registrations for different parts of the application. Here's where you can find the main service registration methods for each project:
+
+- **ControlR.Agent**: `AddControlRAgent` in `ControlR.Agent.Common\Startup\HostBuilderExtensions.cs`
+- **ControlR.Web.Server**: `AddControlrServer` in `ControlR.Web.Server\Startup\WebApplicationBuilderExtensions.cs`
+- **ControlR.Web.Client**: `AddControlrWebClient` in `ControlR.Web.Client\Startup\IServiceCollectionExtensions.cs`
+- **ControlR.DesktopClient**: `AddControlrDesktop` in `ControlR.DesktopClient\StaticServiceProvider.cs`
+
 ### Desktop Architecture  
 - **MVVM Pattern** - Model-View-ViewModel for UI separation
 - **Localization** - `Localization.cs` will pull region-specific strings from `/Resources/Strings/{locale}.json`
@@ -157,10 +169,9 @@ All inherit from base and implement `CreateDevice()` → returns `DeviceModel` �
 - Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name
 
 ### Build and Task System
-- Primary build: `dotnet build ControlR.sln` (VS Code default build task)
-- Component builds follow dependency order: Server → Agent → DesktopClient
-- Docker development via `docker-compose/docker-compose.yml` with required environment variables
-- Use `.vscode/tasks.json` or `ControlR.slnLaunch` launch profiles for common workflows
+- Use the following build command to verify that changes compile: `dotnet build ControlR.sln --verbosity quiet`
+  - If successful, there will be no output.
+  - If unsuccessful, errors will be displayed.
 
 ### C# Coding Standards
 - Use the latest C# language features and default recommendations.
@@ -170,6 +181,7 @@ All inherit from base and implement `CreateDevice()` → returns `DeviceModel` �
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Always prefer collection expressions to initialize collections (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
+- Do not leave comments that reference historical changes, prior implementations, or what was fixed. Comments should explain current intent only.
 
 ### Platform-Specific Development
 - Use `[SupportedOSPlatform]` attributes for platform-specific code

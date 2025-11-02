@@ -7,20 +7,21 @@ namespace ControlR.Agent.Common.Services.Mac;
 
 internal class DesktopClientWatcherMac(
   TimeProvider timeProvider,
-  IDesktopClientUpdater desktopClientUpdater,
   IServiceControl serviceControl,
   IProcessManager processManager,
   ISystemEnvironment systemEnvironment,
+  IControlrMutationLock mutationLock,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherMac> logger) : BackgroundService
 {
-  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherMac> _logger = logger;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
+
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -31,10 +32,11 @@ internal class DesktopClientWatcherMac(
     }
 
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
-    while (await timer.WaitForNextTickAsync(stoppingToken))
+    while (await timer.WaitForNextTick(throwOnCancellation: false, stoppingToken))
     {
       try
       {
+        using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         await CheckAndStartDesktopClientServices(stoppingToken);
       }
       catch (Exception ex)
@@ -42,7 +44,9 @@ internal class DesktopClientWatcherMac(
         _logger.LogError(ex, "Error while checking for desktop processes.");
       }
     }
+    await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
+
 
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
   {
@@ -79,7 +83,6 @@ internal class DesktopClientWatcherMac(
       if (!isRunning)
       {
         _logger.LogIfChanged(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
-        await _desktopClientUpdater.EnsureLatestVersion(cancellationToken);
         await _serviceControl.StartDesktopClientService(throwOnFailure: true);
       }
       else

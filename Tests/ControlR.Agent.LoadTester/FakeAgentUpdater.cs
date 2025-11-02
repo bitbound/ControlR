@@ -7,6 +7,11 @@ internal class FakeAgentUpdater : IHostedService, IAgentUpdater
 {
   public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new();
 
+  public Task<IDisposable> AcquireUpdateLock(CancellationToken cancellationToken)
+  {
+    return Task.FromResult<IDisposable>(new FakeLock());
+  }
+
   public Task CheckForUpdate(CancellationToken cancellationToken = default)
   {
     UpdateCheckCompletedSignal.Set();
@@ -21,5 +26,10 @@ internal class FakeAgentUpdater : IHostedService, IAgentUpdater
   public Task StopAsync(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
+  }
+
+  private class FakeLock : IDisposable
+  {
+    public void Dispose() { }
   }
 }

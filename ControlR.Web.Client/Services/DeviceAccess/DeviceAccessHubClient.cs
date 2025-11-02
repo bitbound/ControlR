@@ -15,12 +15,6 @@ public class DeviceAccessHubClient(
     return exceptions.Count == 0;
   }
 
-  public async Task ReceiveDesktopClientDownloadProgress(DesktopClientDownloadProgressDto progressDto)
-  {
-    var message = new DtoReceivedMessage<DesktopClientDownloadProgressDto>(progressDto);
-    await Messenger.Send(message);
-  }
-
   public async Task ReceiveTerminalOutput(TerminalOutputDto output)
   {
     await Messenger.Send(new DtoReceivedMessage<TerminalOutputDto>(output));

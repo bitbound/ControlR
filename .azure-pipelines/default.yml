@@ -19,68 +19,74 @@ jobs:
         fetchDepth: 1
 
       - task: Bash@3
-        displayName: Publish ControlR.Agent (ARM64)
+        displayName: Publish DesktopClient + Agent (ARM64)
         inputs:
           targetType: 'inline'
           script: |
-            dotnet publish -c Release -r osx-arm64 --self-contained -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-            sudo codesign --force --deep --entitlements "$(Build.SourcesDirectory)/.build/Mac/ControlR.entitlements" --sign - "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
-          workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
+            # Clean Resources folder
+            rm -f "./ControlR.Agent.Common/Resources/*.zip"
+            
+            # Build DesktopClient
+            dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-arm64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-arm64/" -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber)
+            sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.DesktopClient"
+            pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-arm64/"
+            ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-arm64/" "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip"
+            
+            # Copy DesktopClient ZIP to Agent Resources
+            mkdir -p "./ControlR.Agent.Common/Resources"
+            cp "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip" "./ControlR.Agent.Common/Resources/ControlR.app.zip"
+            
+            # Build Agent
+            dotnet publish "./ControlR.Agent/" -c Release -r osx-arm64 --self-contained -o "./ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+            sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
+          workingDirectory: '$(Build.SourcesDirectory)'
 
       - task: Bash@3
-        displayName: Publish ControlR.Agent (x64)
+        displayName: Publish DesktopClient + Agent (x64)
         inputs:
           targetType: 'inline'
           script: |
-            dotnet publish -c Release -r osx-x64 --self-contained -o "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-            sudo codesign --force --deep --entitlements "$(Build.SourcesDirectory)/.build/Mac/ControlR.entitlements" --sign - "$(Build.SourcesDirectory)/ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
-          workingDirectory: '$(Build.SourcesDirectory)/ControlR.Agent'
+            # Clean Resources folder
+            rm -f "./ControlR.Agent.Common/Resources/*.zip"
+            
+            # Build DesktopClient
+            dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-x64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-x64/" -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber)
+            sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.DesktopClient"
+            pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-x64/"
+            ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-x64/" "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip"
+            
+            # Copy DesktopClient ZIP to Agent Resources
+            mkdir -p "./ControlR.Agent.Common/Resources"
+            cp "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip" "./ControlR.Agent.Common/Resources/ControlR.app.zip"
+            
+            # Build Agent
+            dotnet publish "./ControlR.Agent/" -c Release -r osx-x64 --self-contained -o "./ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber) -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+            sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
+          workingDirectory: '$(Build.SourcesDirectory)'
 
       - task: PublishPipelineArtifact@1
-        displayName: Publish Agent (macOS ARM64)
+        displayName: Upload Agent (macOS ARM64)
         inputs:
           targetPath: ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent
           artifact: Agent-macOS-ARM64
           publishLocation: pipeline
 
       - task: PublishPipelineArtifact@1
-        displayName: Publish Agent (macOS x64)
+        displayName: Upload Agent (macOS x64)
         inputs:
           targetPath: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
           artifact: Agent-macOS-x64
           publishLocation: pipeline
 
-      - task: Bash@3
-        displayName: Publish ControlR.DesktopClient (ARM64)
-        inputs:
-          targetType: 'inline'
-          script: |
-            dotnet publish -c Release_Mac -r osx-arm64 -o "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-arm64/" -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber)
-            sudo codesign --force --deep --entitlements "$(Build.SourcesDirectory)/.build/Mac/ControlR.entitlements" --sign - "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.DesktopClient"
-            pwsh "$(Build.SourcesDirectory)/.build/Mac/CreateMacApp.ps1" -OutputDir "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-arm64/"
-            ditto -c -k --sequesterRsrc "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-arm64/" "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip"
-          workingDirectory: '$(Build.SourcesDirectory)/ControlR.DesktopClient'
-
-      - task: Bash@3
-        displayName: Publish ControlR.DesktopClient (x64)
-        inputs:
-          targetType: 'inline'
-          script: |
-            dotnet publish -c Release_Mac -r osx-x64 -o "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-x64/" -p:Version=$(Build.BuildNumber) -p:FileVersion=$(Build.BuildNumber)
-            sudo codesign --force --deep --entitlements "$(Build.SourcesDirectory)/.build/Mac/ControlR.entitlements" --sign - "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-x64/ControlR.DesktopClient"
-            pwsh "$(Build.SourcesDirectory)/.build/Mac/CreateMacApp.ps1" -OutputDir "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-x64/"
-            ditto -c -k --sequesterRsrc "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-x64/" "$(Build.SourcesDirectory)/ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip"
-          workingDirectory: '$(Build.SourcesDirectory)/ControlR.DesktopClient'
-
       - task: PublishPipelineArtifact@1
-        displayName: Publish DesktopClient (macOS ARM64)
+        displayName: Upload DesktopClient (macOS ARM64)
         inputs:
           targetPath: ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip
           artifact: DesktopClient-macOS-ARM64
           publishLocation: pipeline
 
       - task: PublishPipelineArtifact@1
-        displayName: Publish DesktopClient (macOS x64)
+        displayName: Upload DesktopClient (macOS x64)
         inputs:
           targetPath: ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip
           artifact: DesktopClient-macOS-x64
@@ -126,19 +132,7 @@ jobs:
           artifactName: Agent-macOS-x64
           targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
-      - task: DownloadPipelineArtifact@2
-        displayName: Download macOS ARM64 DesktopClient
-        inputs:
-          buildType: current
-          artifactName: DesktopClient-macOS-ARM64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-arm64\
-
-      - task: DownloadPipelineArtifact@2
-        displayName: Download macOS x64 DesktopClient
-        inputs:
-          buildType: current
-          artifactName: DesktopClient-macOS-x64
-          targetPath: $(Build.SourcesDirectory)\ControlR.Web.Server\wwwroot\downloads\osx-x64\
+      # No longer download DesktopClient artifacts to server; DesktopClient is embedded in Agent
 
       - task: DotNetCoreCLI@2
         displayName: Pack ControlR.ApiClient (Release)
@@ -196,8 +190,6 @@ jobs:
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.app.zip",
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.app.zip",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\novnc\vnc.html"
             )
             foreach ($TestPath in $TestPaths) {

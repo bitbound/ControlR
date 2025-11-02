@@ -5,8 +5,8 @@ namespace ControlR.Libraries.Shared.Services.Http;
 public interface IDownloadsApi
 {
   Task<Result> DownloadDesktopClientZip(string destinationPath, string desktopClientDownloadUri, Func<double, Task>? onDownloadProgress);
-  Task<Result> DownloadFile(string downloadUri, string destinationPath);
-  Task<Result> DownloadFile(Uri downloadUri, string destinationPath);
+  Task<Result> DownloadFile(string downloadUri, string destinationPath, CancellationToken cancellationToken = default);
+  Task<Result> DownloadFile(Uri downloadUri, string destinationPath, CancellationToken cancellationToken = default);
 
 }
 
@@ -53,13 +53,13 @@ public class DownloadsApi(
     }
   }
 
-  public async Task<Result> DownloadFile(string downloadUri, string destinationPath)
+  public async Task<Result> DownloadFile(string downloadUri, string destinationPath, CancellationToken cancellationToken = default)
   {
     try
     {
-      await using var webStream = await _client.GetStreamAsync(downloadUri);
+      await using var webStream = await _client.GetStreamAsync(downloadUri, cancellationToken);
       await using var fs = new FileStream(destinationPath, FileMode.Create);
-      await webStream.CopyToAsync(fs);
+      await webStream.CopyToAsync(fs, cancellationToken);
       return Result.Ok();
     }
     catch (Exception ex)
@@ -69,9 +69,9 @@ public class DownloadsApi(
     }
   }
 
-  public Task<Result> DownloadFile(Uri downloadUri, string destinationPath)
+  public Task<Result> DownloadFile(Uri downloadUri, string destinationPath, CancellationToken cancellationToken = default)
   {
-    return DownloadFile($"{downloadUri}", destinationPath);
+    return DownloadFile($"{downloadUri}", destinationPath, cancellationToken);
   }
 
 }

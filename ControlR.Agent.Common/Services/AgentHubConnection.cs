@@ -107,8 +107,15 @@ internal class AgentHubConnection(
   
   private async Task HubConnection_Reconnected(string? arg)
   {
-    await SendDeviceHeartbeat();
-    await _agentUpdater.CheckForUpdate();
-    await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
+    try
+    {
+      await SendDeviceHeartbeat();
+      await _agentUpdater.CheckForUpdate();
+      await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling hub reconnection.");
+    }
   }
 }

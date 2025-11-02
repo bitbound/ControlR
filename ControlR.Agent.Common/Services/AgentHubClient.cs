@@ -143,7 +143,7 @@ internal class AgentHubClient(
     {
       if (!_settings.DisableAutoUpdate)
       {
-        var versionResult = await _desktopClientUpdater.EnsureLatestVersion(dto, _appLifetime.ApplicationStopping);
+        var versionResult = await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
         if (!versionResult)
         {
           return Result.Fail("Failed to ensure latest desktop client version is installed.");
@@ -151,7 +151,7 @@ internal class AgentHubClient(
       }
 
       _logger.LogInformation(
-        "Creating streaming session.  Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
+        "Creating remote control session.  Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
         "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
         dto.SessionId,
         dto.ViewerConnectionId,
@@ -161,7 +161,7 @@ internal class AgentHubClient(
       if (!_ipcServerStore.TryGetServer(dto.TargetProcessId, out var ipcServer))
       {
         _logger.LogWarning(
-          "No IPC server found for process ID {ProcessId}.  Cannot create streaming session.",
+          "No IPC server found for process ID {ProcessId}.  Cannot create remote control session.",
           dto.TargetProcessId);
         return Result.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
       }
@@ -183,15 +183,15 @@ internal class AgentHubClient(
 
       await ipcServer.Server.Send(ipcDto);
       _logger.LogInformation(
-        "Streaming session created successfully for process ID {ProcessId}.",
+        "Remote control session created successfully for process ID {ProcessId}.",
         dto.TargetProcessId);
 
       return Result.Ok();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while creating streaming session.");
-      return Result.Fail("An error occurred on the agent while creating streaming session.");
+      _logger.LogError(ex, "Error while creating remote control session.");
+      return Result.Fail("An error occurred on the agent while creating remote control session.");
     }
   }
 
@@ -305,7 +305,7 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<DesktopSession[]> GetActiveUiSessions()
+  public async Task<DesktopSession[]> GetActiveDesktopSessions()
   {
     return await _desktopSessionProvider.GetActiveDesktopClients();
   }

@@ -1,4 +1,5 @@
 ﻿@layout DeviceAccessLayout
+@inherits ViewportAwareComponent
 @page "/device-access/remote-control"
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
@@ -12,25 +13,6 @@
     case SignalingState.Loading:
       {
         <LoadingIndicator IsVisible Message="@(_loadingMessage)" />
-        break;
-      }
-    case SignalingState.Downloading:
-      {
-        <div class="text-center downloading-message-wrapper">
-          <MudText Typo="Typo.h4" Color="Color.Info" Align="Align.Center" GutterBottom Class="mt-5">
-            @(_downloadingMessage)
-          </MudText>
-
-          @switch (_downloadProgress)
-          {
-            case >= 0:
-              <MudProgressCircular Min="0" Max="1" Value="_downloadProgress" Color="Color.Info" Size="Size.Large" />
-              break;
-            case < 0:
-              <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Large" />
-              break;
-          }
-        </div>
         break;
       }
     case SignalingState.Alert:

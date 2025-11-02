@@ -96,8 +96,8 @@ internal sealed class DesktopStreamingClient(
     {
       _logger.LogError(
         ex,
-        "Error while initializing streaming session. " +
-        "Streaming cannot start.  Shutting down.");
+        "Error while initializing remote control session. " +
+        "Remote control cannot start.  Shutting down.");
       _appLifetime.StopApplication();
     }
   }
@@ -168,9 +168,9 @@ internal sealed class DesktopStreamingClient(
 
       switch (wrapper.DtoType)
       {
-        case DtoType.CloseStreamingSession:
+        case DtoType.CloseRemoteControlSession:
           {
-            _logger.LogInformation("Received request to close streaming session.");
+            _logger.LogInformation("Received request to close remote control session.");
             _appLifetime.StopApplication();
             break;
           }
@@ -372,7 +372,7 @@ internal sealed class DesktopStreamingClient(
       }
     }
 
-    _logger.LogInformation("Streaming session ended.  Shutting down.");
+    _logger.LogInformation("Remote control session ended.  Shutting down.");
     _appLifetime.StopApplication();
   }
 

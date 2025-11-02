@@ -11,9 +11,9 @@ internal class CursorWatcherWindows(
   IMessenger messenger,
   IWin32Interop win32Interop,
   IProcessManager processManager,
-  ILogger<ClipboardManagerWindows> logger) : BackgroundService
+  ILogger<CursorWatcherWindows> logger) : BackgroundService
 {
-  private readonly ILogger<ClipboardManagerWindows> _logger = logger;
+  private readonly ILogger<CursorWatcherWindows> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly IProcessManager _processManager = processManager;
   private readonly IWin32Interop _win32Interop = win32Interop;

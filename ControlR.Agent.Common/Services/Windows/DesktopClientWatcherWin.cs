@@ -16,35 +16,38 @@ internal class DesktopClientWatcherWin(
   ISystemEnvironment environment,
   IFileSystem fileSystem,
   ISettingsProvider settingsProvider,
-  IDesktopClientUpdater desktopClientUpdater,
+  IControlrMutationLock mutationLock,
+  IDesktopSessionProvider desktopSessionProvider,
   ILogger<DesktopClientWatcherWin> logger) : BackgroundService
 {
-  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
+  private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly ISystemEnvironment _environment = environment;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<DesktopClientWatcherWin> _logger = logger;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWin32Interop _win32Interop = win32Interop;
+
+
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
 
-    while (await timer.WaitForNextTickAsync(stoppingToken))
+    while (await timer.WaitForNextTick(throwOnCancellation: false, stoppingToken))
     {
       try
       {
+        using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         var activeSessions = _win32Interop.GetActiveSessions();
+        var desktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
         var launchTasks = new List<Task<bool>>();
 
         foreach (var session in activeSessions)
         {
-          var desktopProcessRunning = _processManager
-              .GetProcessesByName(Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName))
-              .Any(x => x.SessionId == session.SystemSessionId);
-
-          if (desktopProcessRunning)
+          if (desktopClients.Any(x => x.SystemSessionId == session.SystemSessionId))
           {
             continue;
           }
@@ -53,9 +56,15 @@ internal class DesktopClientWatcherWin(
           var launchTask = LaunchDesktopClient(session.SystemSessionId, stoppingToken);
           launchTasks.Add(launchTask);
         }
+
         await Task.WhenAll(launchTasks);
+
         if (launchTasks.Any(x => !x.Result))
         {
+          _logger.LogWarning(
+            "Failed to launch desktop client in one or more sessions.  " +
+            "Deleting existing desktop client installation to force a reinstall.");
+
           await DeleteDesktopClient();
         }
       }
@@ -65,6 +74,8 @@ internal class DesktopClientWatcherWin(
       }
     }
   }
+
+
 
   // For debugging.
   private static Result<string> GetSolutionDir(string currentDir)
@@ -87,6 +98,8 @@ internal class DesktopClientWatcherWin(
 
     return Result.Fail<string>("Not found.");
   }
+
+
 
   // Kills all desktop client processes, deletes the archive, and deletes the folder.
   private async Task DeleteDesktopClient()
@@ -153,8 +166,7 @@ internal class DesktopClientWatcherWin(
         StartDebugSession();
         return true;
       }
-
-      await _desktopClientUpdater.EnsureLatestVersion(cancellationToken);
+      
       var startupDir = _environment.StartupDirectory;
       var desktopDir = Path.Combine(startupDir, "DesktopClient");
       var binaryPath = Path.Combine(desktopDir, AppConstants.DesktopClientFileName);

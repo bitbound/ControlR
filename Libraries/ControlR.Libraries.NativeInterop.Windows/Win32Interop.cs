@@ -335,8 +335,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         return null;
       }
 
-      var data = PInvoke.GetClipboardData(1);
-      return Marshal.PtrToStringAnsi(data);
+      var data = PInvoke.GetClipboardData(CF_UNICODETEXT);
+      return Marshal.PtrToStringUni(data);
     }
     catch (Exception ex)
     {
@@ -749,21 +749,28 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
         inputs.Add(input);
       }
-      catch
+      catch (Exception ex)
       {
-        // Ignore.
+        _logger.LogError(ex, "Error while resetting key state for key {Key}.", key);
       }
     }
 
     foreach (var input in inputs)
     {
-      var result = PInvoke.SendInput([input], sizeof(INPUT));
-      if (result != 1)
+      try
       {
-        _logger.LogWarning("Failed to reset key state.");
-      }
+        var result = PInvoke.SendInput([input], sizeof(INPUT));
+        if (result != 1)
+        {
+          _logger.LogWarning("Failed to reset key state.");
+        }
 
-      Thread.Sleep(1);
+        Thread.Sleep(1);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error while sending reset key input.");
+      }
     }
   }
 

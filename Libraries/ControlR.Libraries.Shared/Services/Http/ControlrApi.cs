@@ -35,8 +35,10 @@ public interface IControlrApi
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
   Task<Result<TagResponseDto[]>> GetAllowedTags();
-  Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime);
+  Task<Result<string>> GetCurrentAgentETag(RuntimeId runtime, CancellationToken cancellationToken = default);
+  Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default);
   Task<Result<Version>> GetCurrentAgentVersion();
+  Task<Result<string>> GetCurrentDesktopClientETag(RuntimeId runtime);
   Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
@@ -70,6 +72,7 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
+
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -308,29 +311,37 @@ public class ControlrApi(
       await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
 
-  public async Task<Result<byte[]>> GetCurrentAgentHash(RuntimeId runtime)
+  public async Task<Result<string>> GetCurrentAgentETag(RuntimeId runtime, CancellationToken cancellationToken = default)
   {
     try
     {
       var fileRelativePath = AppConstants.GetAgentFileDownloadPath(runtime);
       using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
-      using var response = await _client.SendAsync(request);
+      using var response = await _client.SendAsync(request, cancellationToken);
       response.EnsureSuccessStatusCode();
-      if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
-          values.FirstOrDefault() is not { } hashString ||
-          string.IsNullOrWhiteSpace(hashString))
+
+      if (response.Headers.ETag is null || string.IsNullOrWhiteSpace(response.Headers.ETag.Tag))
       {
-        return Result.Fail<byte[]>("Failed to get agent file hash. 'Content-Hash' header missing or empty.");
+        return Result.Fail<string>("Failed to get agent file ETag. ETag header missing or empty.");
       }
 
-      var fileHash = Convert.FromHexString(hashString);
-      return Result.Ok(fileHash);
+      return Result.Ok(response.Headers.ETag.Tag);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while checking for new agent hash.");
-      return Result.Fail<byte[]>(ex);
+      _logger.LogError(ex, "Error while getting agent ETag.");
+      return Result.Fail<string>(ex);
     }
+  }
+
+  public async Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default)
+  {
+    return await TryCallApi(async () =>
+    {
+        return await _client.GetStringAsync(
+          $"{HttpConstants.AgentUpdateEndpoint}/get-hash-sha256/{runtime}",
+          cancellationToken);
+    });
   }
 
   public async Task<Result<Version>> GetCurrentAgentVersion()
@@ -341,6 +352,29 @@ public class ControlrApi(
       _logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
       return version;
     });
+  }
+
+  public async Task<Result<string>> GetCurrentDesktopClientETag(RuntimeId runtime)
+  {
+    try
+    {
+      var fileRelativePath = AppConstants.GetDesktopClientDownloadPath(runtime);
+      using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
+      using var response = await _client.SendAsync(request);
+      response.EnsureSuccessStatusCode();
+
+      if (response.Headers.ETag is null || string.IsNullOrWhiteSpace(response.Headers.ETag.Tag))
+      {
+        return Result.Fail<string>("Failed to get desktop client file ETag. ETag header missing or empty.");
+      }
+
+      return Result.Ok(response.Headers.ETag.Tag);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting desktop client ETag.");
+      return Result.Fail<string>(ex);
+    }
   }
 
   public async Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime)
@@ -598,6 +632,7 @@ public class ControlrApi(
         new ValidateFilePathResponseDto(false, "Failed to deserialize response");
     });
   }
+
 
   private async Task<Result> TryCallApi(Func<Task> func)
   {

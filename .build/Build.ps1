@@ -23,6 +23,7 @@ param (
 #$MSBuildPath = (&"$VsWhere" -latest -prerelease -products * -find "\MSBuild\Current\Bin\MSBuild.exe").Trim()
 $Root = (Get-Item -Path $PSScriptRoot).Parent.FullName
 $DownloadsFolder = "$Root\ControlR.Web.Server\wwwroot\downloads"
+$StagingFolder = "$Root\.build\staging-desktop"
 
 function Check-LastExitCode {
   if ($LASTEXITCODE -and $LASTEXITCODE -gt 0) {
@@ -58,70 +59,98 @@ if (!(Test-Path -Path "$Root\ControlR.sln")) {
 }
 
 New-Item -Path "$DownloadsFolder" -ItemType Directory -Force | Out-Null
+New-Item -Path "$StagingFolder" -ItemType Directory -Force | Out-Null
 
-if ($BuildAgent) {
-  $CommonArgs = @(
-    "-c", $Configuration,
-    "-p:Version=$CurrentVersion",
-    "-p:FileVersion=$CurrentVersion",
-    "-p:PublishSingleFile=true",
-    "-p:IncludeAllContentForSelfExtract=true",
-    "-p:EnableCompressionInSingleFile=true",
-    "-p:IncludeAppSettingsInSingleFile=true"
+$AgentResourcesFolder = "$Root\ControlR.Agent.Common\Resources"
+New-Item -Path "$AgentResourcesFolder" -ItemType Directory -Force | Out-Null
+
+$DesktopPublishPath = "$Root\ControlR.DesktopClient\bin\publish\"
+$DesktopCommonArgs = @(
+  "-c", $Configuration,
+  "--self-contained",
+  "-p:Version=$CurrentVersion",
+  "-p:FileVersion=$CurrentVersion"
+)
+
+$AgentCommonArgs = @(
+  "-c", $Configuration,
+  "-p:Version=$CurrentVersion",
+  "-p:FileVersion=$CurrentVersion",
+  "-p:PublishSingleFile=true",
+  "-p:IncludeAllContentForSelfExtract=true",
+  "-p:EnableCompressionInSingleFile=true",
+  "-p:IncludeAppSettingsInSingleFile=true"
+)
+
+function Build-DesktopAndAgent {
+  param(
+    [string]$RuntimeId,
+    [string]$DesktopExeName,
+    [string]$AgentExeName,
+    [string]$ZipFileName,
+    [bool]$SignExecutables
   )
   
-  # Windows Agent
-  dotnet publish -r win-x86 -o "$DownloadsFolder\win-x86\" $CommonArgs "$Root\ControlR.Agent\"
-  Check-LastExitCode
-
-  Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x86\ControlR.Agent.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x86\ControlR.Agent.exe"
-  Check-LastExitCode
-
-  dotnet publish -r win-x64 -o "$DownloadsFolder\win-x64\" $CommonArgs "$Root\ControlR.Agent\"
-  Check-LastExitCode
+  Write-Host "`n========================================" -ForegroundColor Cyan
+  Write-Host "Building for $RuntimeId" -ForegroundColor Cyan
+  Write-Host "========================================" -ForegroundColor Cyan
   
-  Wait-ForFileToExist -FilePath "$DownloadsFolder\win-x64\ControlR.Agent.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\win-x64\ControlR.Agent.exe"
-  Check-LastExitCode
-
-  # Linux Agent
-  dotnet publish -r linux-x64 -o "$DownloadsFolder\linux-x64\" $CommonArgs "$Root\ControlR.Agent\"
-  Check-LastExitCode
-
-  # These will need to be built on MacOS for code-signing.
-  #dotnet publish -r osx-arm64 -o "$DownloadsFolder\osx-arm64\" $CommonArgs "$Root\ControlR.Agent\"
-  #Check-LastExitCode
-  #dotnet publish -r osx-x64 -o "$DownloadsFolder\osx-x64\" $CommonArgs "$Root\ControlR.Agent\"
-  #Check-LastExitCode
+  # Clean Resources folder of Desktop ZIPs
+  Write-Host "Cleaning Resources folder..." -ForegroundColor Yellow
+  Get-ChildItem -Path $AgentResourcesFolder -Filter "*.zip" | Remove-Item -Force
   
-  Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
+  # Build Desktop Client
+  if ($BuildDesktop) {
+    Write-Host "Publishing DesktopClient for $RuntimeId..." -ForegroundColor Green
+    dotnet publish -r $RuntimeId -o "$DesktopPublishPath\$RuntimeId" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
+    Check-LastExitCode
+    
+    if ($SignExecutables) {
+      Wait-ForFileToExist -FilePath "$DesktopPublishPath\$RuntimeId\$DesktopExeName"
+      Write-Host "Signing $DesktopExeName..." -ForegroundColor Green
+      &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\$RuntimeId\$DesktopExeName"
+      Check-LastExitCode
+    }
+    
+  Write-Host "Creating DesktopClient ZIP (staged, not copied to server)..." -ForegroundColor Green
+  New-Item -Path "$StagingFolder\$RuntimeId" -ItemType Directory -Force | Out-Null
+  Compress-Archive -Path "$DesktopPublishPath\$RuntimeId\*" -DestinationPath "$StagingFolder\$RuntimeId\$ZipFileName" -Force
+    
+    # Copy to Resources folder for embedding
+  Write-Host "Copying $ZipFileName to Agent Resources folder..." -ForegroundColor Green
+  Copy-Item "$StagingFolder\$RuntimeId\$ZipFileName" "$AgentResourcesFolder\$ZipFileName" -Force
+  }
+  
+  # Build Agent
+  if ($BuildAgent) {
+    Write-Host "Publishing Agent for $RuntimeId..." -ForegroundColor Green
+    dotnet publish -r $RuntimeId -o "$DownloadsFolder\$RuntimeId\" $AgentCommonArgs "$Root\ControlR.Agent\"
+    Check-LastExitCode
+    
+    if ($SignExecutables) {
+      Wait-ForFileToExist -FilePath "$DownloadsFolder\$RuntimeId\$AgentExeName"
+      Write-Host "Signing $AgentExeName..." -ForegroundColor Green
+      &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DownloadsFolder\$RuntimeId\$AgentExeName"
+      Check-LastExitCode
+    }
+  }
+  
+  Write-Host "Completed build for $RuntimeId" -ForegroundColor Cyan
 }
 
-if ($BuildDesktop) {
-  $DesktopPublishPath = "$Root\ControlR.DesktopClient\bin\publish\"
-  $DesktopCommonArgs = @(
-    "-c", $Configuration,
-    "--self-contained",
-    "-p:Version=$CurrentVersion",
-    "-p:FileVersion=$CurrentVersion"
-  )
+# Build for each platform
+if ($BuildDesktop -or $BuildAgent) {
+  Build-DesktopAndAgent -RuntimeId "win-x86" -DesktopExeName "ControlR.DesktopClient.exe" -AgentExeName "ControlR.Agent.exe" -ZipFileName "ControlR.DesktopClient.zip" -SignExecutables $true
+  Build-DesktopAndAgent -RuntimeId "win-x64" -DesktopExeName "ControlR.DesktopClient.exe" -AgentExeName "ControlR.Agent.exe" -ZipFileName "ControlR.DesktopClient.zip" -SignExecutables $true
+  Build-DesktopAndAgent -RuntimeId "linux-x64" -DesktopExeName "ControlR.DesktopClient" -AgentExeName "ControlR.Agent" -ZipFileName "ControlR.DesktopClient.zip" -SignExecutables $false
   
-  dotnet publish -r win-x86 -o "$DesktopPublishPath\win-x86" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
-  Wait-ForFileToExist -FilePath "$DesktopPublishPath\win-x86\ControlR.DesktopClient.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\win-x86\ControlR.DesktopClient.exe"
-  Check-LastExitCode
-  Compress-Archive -Path "$DesktopPublishPath\win-x86\*" -DestinationPath "$DownloadsFolder\win-x86\ControlR.DesktopClient.zip" -Force
-
-  dotnet publish -r win-x64 -o "$DesktopPublishPath\win-x64" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
-  Wait-ForFileToExist -FilePath "$DesktopPublishPath\win-x64\ControlR.DesktopClient.exe"
-  &"$SignToolPath" sign /fd SHA256 /sha1 "$CertificateThumbprint" /t http://timestamp.digicert.com "$DesktopPublishPath\win-x64\ControlR.DesktopClient.exe"
-  Check-LastExitCode
-  Compress-Archive -Path "$DesktopPublishPath\win-x64\*" -DestinationPath "$DownloadsFolder\win-x64\ControlR.DesktopClient.zip" -Force
-
-  # Linux Desktop Client
-  dotnet publish -r linux-x64 -o "$DesktopPublishPath\linux-x64" $DesktopCommonArgs "$Root\ControlR.DesktopClient\"
-  Compress-Archive -Path "$DesktopPublishPath\linux-x64\*" -DestinationPath "$DownloadsFolder\linux-x64\ControlR.DesktopClient.zip" -Force
+  # Mac builds would be done on macOS with code signing
+  # Build-DesktopAndAgent -RuntimeId "osx-x64" -DesktopExeName "ControlR.DesktopClient" -AgentExeName "ControlR.Agent" -ZipFileName "ControlR.app.zip" -SignExecutables $false
+  # Build-DesktopAndAgent -RuntimeId "osx-arm64" -DesktopExeName "ControlR.DesktopClient" -AgentExeName "ControlR.Agent" -ZipFileName "ControlR.app.zip" -SignExecutables $false
+  
+  if ($BuildAgent) {
+    Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
+  }
 }
 
 dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"

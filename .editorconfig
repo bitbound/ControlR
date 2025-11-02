@@ -20,6 +20,9 @@ csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 
+# BB0001: Configure Bitbound analyzer rule severity
+dotnet_diagnostic.BB0001.severity = suggestion
+
 # CA1401: P/Invokes should not be visible
 dotnet_diagnostic.CA1401.severity = silent
 

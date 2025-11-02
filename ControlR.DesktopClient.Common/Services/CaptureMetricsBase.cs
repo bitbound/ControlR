@@ -103,7 +103,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
 
   private async Task BroadcastMetrics(CancellationToken cancellationToken)
   {
-    using var timer = new PeriodicTimerEx(_broadcastInterval, _timeProvider);
+    using var timer = new PeriodicTimer(_broadcastInterval, _timeProvider);
     while (await timer.WaitForNextTick(throwOnCancellation: false, cancellationToken))
     {
       try
@@ -163,7 +163,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
 
   private async Task ProcessMetrics(CancellationToken cancellationToken)
   {
-    using var timer = new PeriodicTimerEx(_processInterval, _timeProvider);
+    using var timer = new PeriodicTimer(_processInterval, _timeProvider);
     while (await timer.WaitForNextTick(throwOnCancellation: false, cancellationToken))
     {
       try

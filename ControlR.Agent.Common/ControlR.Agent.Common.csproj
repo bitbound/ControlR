@@ -11,6 +11,8 @@
     <None Remove="Resources\LaunchDaemon.plist" />
     <None Remove="Resources\controlr.agent.service" />
     <None Remove="Resources\controlr.desktop.service" />
+    <None Remove="Resources\ControlR.DesktopClient.zip" />
+    <None Remove="Resources\ControlR.app.zip" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,6 +20,8 @@
     <EmbeddedResource Include="Resources\LaunchDaemon.plist" />
     <EmbeddedResource Include="Resources\controlr.agent.service" />
     <EmbeddedResource Include="Resources\controlr.desktop.service" />
+    <EmbeddedResource Include="Resources\ControlR.DesktopClient.zip" Condition="Exists('Resources\ControlR.DesktopClient.zip')" />
+    <EmbeddedResource Include="Resources\ControlR.app.zip" Condition="Exists('Resources\ControlR.app.zip')" />
   </ItemGroup>
 
   <ItemGroup>

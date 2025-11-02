@@ -4,7 +4,7 @@
     {
       "label": "build solution",
       "type": "shell",
-      "command": "dotnet build ControlR.sln",
+      "command": "dotnet build ControlR.sln --verbosity quiet",
       "group": {
         "kind": "build",
         "isDefault": true

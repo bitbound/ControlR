@@ -97,8 +97,7 @@ public partial class Deploy
     get
     {
       var downloadUri = new Uri(GetServerUri(), "/downloads/win-x64/ControlR.Agent.exe");
-      return "$ProgressPreference = \"SilentlyContinue\"; " +
-             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+      return $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
              $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }
@@ -108,8 +107,7 @@ public partial class Deploy
     get
     {
       var downloadUri = new Uri(GetServerUri(), "/downloads/win-x86/ControlR.Agent.exe");
-      return "$ProgressPreference = \"SilentlyContinue\"; " +
-             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
+      return $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.exe\" -UseBasicParsing; " +
              $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }

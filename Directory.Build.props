@@ -6,7 +6,7 @@
         <Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
         <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
         <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
-        <Company>$(Author)</Company>
+        <Company>Bitbound</Company>
         <Description>Open-source remote control and remote access.</Description>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>

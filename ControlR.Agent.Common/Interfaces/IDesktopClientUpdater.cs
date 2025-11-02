@@ -5,9 +5,5 @@ namespace ControlR.Agent.Common.Interfaces;
 internal interface IDesktopClientUpdater : IHostedService
 {
   Task<bool> EnsureLatestVersion(
-      RemoteControlSessionRequestDto requestDto,
-      CancellationToken cancellationToken);
-
-  Task<bool> EnsureLatestVersion(
       CancellationToken cancellationToken);
 }

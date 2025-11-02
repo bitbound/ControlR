@@ -12,27 +12,41 @@ internal class DesktopSessionProviderWindows(
 
   public Task<DesktopSession[]> GetActiveDesktopClients()
   {
-    var uiSessions = new List<DesktopSession>();
+    // Build a map of live Windows sessions we care about (Console + active RDP)
     var windowsSessions = _win32Interop
       .GetActiveSessions()
       .ToDictionary(x => x.SystemSessionId, x => x);
 
-    foreach (var server in _ipcStore.Servers)
+    // If multiple IPC servers are registered for the same Windows session (e.g., stale entries
+    // from a previous DesktopClient PID or multiple installs), prefer:
+    // 1) Connected servers over disconnected
+    // 2) Highest PID (assumed most recent)
+    var serversByWinSession = _ipcStore.Servers
+      .Values
+      .GroupBy(s => s.Process.SessionId)
+      .Select(g => g
+        .OrderByDescending(s => s.Server.IsConnected)
+        .ThenByDescending(s => s.Process.Id)
+        .First())
+      .ToArray();
+
+    var uiSessions = new List<DesktopSession>(serversByWinSession.Length);
+
+    foreach (var server in serversByWinSession)
     {
-      if (!windowsSessions.TryGetValue(server.Value.Process.SessionId, out var winSession))
+      if (!windowsSessions.TryGetValue(server.Process.SessionId, out var winSession))
       {
         continue;
       }
-      var uiSession = new DesktopSession()
+
+      uiSessions.Add(new DesktopSession
       {
-        ProcessId = server.Value.Process.Id,
-        SystemSessionId = server.Value.Process.SessionId,
+        ProcessId = server.Process.Id,
+        SystemSessionId = server.Process.SessionId,
         Name = winSession.Name,
         Username = winSession.Username,
         Type = winSession.Type,
-      };
-
-      uiSessions.Add(uiSession);
+      });
     }
 
     return uiSessions.ToArray().AsTaskResult();

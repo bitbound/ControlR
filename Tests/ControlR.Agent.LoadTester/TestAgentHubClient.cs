@@ -60,7 +60,7 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok().AsTaskResult<Result?>();
   }
 
-  public Task<DesktopSession[]> GetActiveUiSessions()
+  public Task<DesktopSession[]> GetActiveDesktopSessions()
   {
     var session = new DesktopSession
     {

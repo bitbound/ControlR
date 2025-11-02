@@ -6,12 +6,10 @@ using Microsoft.AspNetCore.Components;
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public partial class RemoteControl : ComponentBase
+public partial class RemoteControl : ViewportAwareComponent
 {
   private string? _alertMessage;
   private Severity _alertSeverity;
-  private double _downloadProgress = -1;
-  private string? _downloadingMessage;
   private string? _loadingMessage = "Loading";
 
   private DesktopSession[]? _systemSessions;
@@ -69,11 +67,6 @@ public partial class RemoteControl : ComponentBase
         return SignalingState.ConnectionActive;
       }
 
-      if (!string.IsNullOrWhiteSpace(_downloadingMessage))
-      {
-        return SignalingState.Downloading;
-      }
-
       if (!string.IsNullOrWhiteSpace(_loadingMessage))
       {
         return SignalingState.Loading;
@@ -118,8 +111,6 @@ public partial class RemoteControl : ComponentBase
     await base.OnInitializedAsync();
     try
     {
-      Messenger.Register<DtoReceivedMessage<DesktopClientDownloadProgressDto>>(this, HandleStreamerDownloadProgress);
-
       if (CurrentState == SignalingState.ConnectionActive)
       {
         return;
@@ -181,23 +172,6 @@ public partial class RemoteControl : ComponentBase
     }
   }
 
-  private async Task HandleStreamerDownloadProgress(
-    object recipient,
-    DtoReceivedMessage<DesktopClientDownloadProgressDto> message)
-  {
-    var dto = message.Dto;
-
-    if (dto.RemoteControlSessionId != RemoteControlState.CurrentSession?.SessionId)
-    {
-      return;
-    }
-
-    _downloadProgress = dto.Progress;
-    _downloadingMessage = dto.Message;
-
-    await InvokeAsync(StateHasChanged);
-  }
-
   private async Task HandleStreamingConnectionLost()
   {
     RemoteControlState.CurrentSession = null;
@@ -222,6 +196,8 @@ public partial class RemoteControl : ComponentBase
         BackdropClick = false,
         FullWidth = true,
         MaxWidth = MaxWidth.ExtraExtraLarge,
+        FullScreen = CurrentBreakpoint < Breakpoint.Md,
+        CloseOnEscapeKey = true
       };
 
       await DialogService.ShowAsync<DesktopPreviewDialog>(
@@ -247,8 +223,6 @@ public partial class RemoteControl : ComponentBase
   {
     _alertMessage = null;
     _loadingMessage = null;
-    _downloadingMessage = null;
-    _downloadProgress = -1;
      await GetDeviceSystemSessions();
   }
 
@@ -287,8 +261,6 @@ public partial class RemoteControl : ComponentBase
 
       var streamingSessionResult = await DeviceAccessHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
 
-      _downloadingMessage = string.Empty;
-      _downloadProgress = -1;
       _loadingMessage = null;
 
       if (!streamingSessionResult.IsSuccess)
@@ -319,7 +291,6 @@ public partial class RemoteControl : ComponentBase
   {
     Unknown,
     Loading,
-    Downloading,
     Alert,
     SessionSelect,
     ConnectionActive,

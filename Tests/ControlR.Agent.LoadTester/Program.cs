@@ -86,8 +86,8 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         agentHubClient.CreateTerminalSession);
 
       connection.On(
-        nameof(IAgentHubClient.GetActiveUiSessions),
-         agentHubClient.GetActiveUiSessions);
+        nameof(IAgentHubClient.GetActiveDesktopSessions),
+         agentHubClient.GetActiveDesktopSessions);
 
       connection.On<TerminalInputDto, Result>(
         nameof(IAgentHubClient.ReceiveTerminalInput),

@@ -9,20 +9,20 @@ namespace ControlR.Agent.Common.Services.Linux;
 
 internal class DesktopClientWatcherLinux(
   TimeProvider timeProvider,
-  IDesktopClientUpdater desktopClientUpdater,
   IServiceControl serviceControl,
   IProcessManager processManager,
   IHeadlessServerDetector headlessServerDetector,
   ISystemEnvironment systemEnvironment,
   IFileSystem fileSystem,
+  IControlrMutationLock mutationLock,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
-  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
@@ -39,7 +39,7 @@ internal class DesktopClientWatcherLinux(
     }
 
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
-    while (await timer.WaitForNextTickAsync(stoppingToken))
+    while (await timer.WaitForNextTick(throwOnCancellation: false, stoppingToken))
     {
       try
       {
@@ -51,6 +51,7 @@ internal class DesktopClientWatcherLinux(
           continue;
         }
 
+        using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         await CheckAndStartDesktopClientServices(stoppingToken);
       }
       catch (Exception ex)
@@ -58,6 +59,8 @@ internal class DesktopClientWatcherLinux(
         _logger.LogError(ex, "Error while checking for desktop processes.");
       }
     }
+
+    await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
   
   private static Dictionary<string, string> ParseSessionInfo(string sessionOutput)
@@ -117,7 +120,6 @@ internal class DesktopClientWatcherLinux(
       if (!isRunning)
       {
         _logger.LogIfChanged(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
-        await _desktopClientUpdater.EnsureLatestVersion(cancellationToken);
         await _serviceControl.StartDesktopClientService(throwOnFailure: true);
       }
       else
@@ -476,8 +478,6 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      await _desktopClientUpdater.EnsureLatestVersion(cancellationToken);
-
       var installDir = GetInstallDirectory();
       var desktopClientPath = Path.Combine(installDir, "DesktopClient", "ControlR.DesktopClient");
 

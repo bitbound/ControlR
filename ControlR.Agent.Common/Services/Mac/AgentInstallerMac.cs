@@ -20,10 +20,11 @@ internal class AgentInstallerMac(
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IProcessManager processManager,
+  IControlrMutationLock mutationLock,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
@@ -32,6 +33,7 @@ internal class AgentInstallerMac(
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerMac> _logger = logger;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IServiceControl _serviceControl = serviceControl;
 
   public async Task Install(
@@ -49,6 +51,7 @@ internal class AgentInstallerMac(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       if (serverUri is null && AppOptions.CurrentValue.ServerUri is null)
       {
         Logger.LogWarning(
@@ -102,6 +105,12 @@ internal class AgentInstallerMac(
         return;
       }
 
+      var etagResult = await WriteCurrentAgentEtag(installDir);
+      if (!etagResult.IsSuccess)
+      {
+        _logger.LogWarning("Failed to write ETag, but continuing with installation.");
+      }
+
       await _serviceControl.StartAgentService(throwOnFailure: false);
 
       _logger.LogInformation("Installer finished.");
@@ -127,6 +136,7 @@ internal class AgentInstallerMac(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       _logger.LogInformation("Uninstall started.");
 
       if (Libc.Geteuid() != 0)

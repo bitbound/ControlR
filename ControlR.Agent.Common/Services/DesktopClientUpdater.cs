@@ -1,44 +1,35 @@
-﻿using System.IO.Compression;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Services.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;
 
 internal class DesktopClientUpdater(
-  IServiceProvider serviceProvider,
   IFileSystem fileSystem,
-  IDownloadsApi downloadsApi,
   ISystemEnvironment systemEnvironment,
   IServiceControl serviceControl,
-  IControlrApi controlrApi,
   ISettingsProvider settings,
-  IAgentUpdater agentUpdater,
+  IControlrMutationLock mutationLock,
   IProcessManager processManager,
+  IDesktopSessionProvider desktopSessionProvider,
+  IEmbeddedDesktopClientProvider embeddedDesktopClientProvider,
   ILogger<DesktopClientUpdater> logger) : BackgroundService, IDesktopClientUpdater
 {
-  private readonly IAgentUpdater _agentUpdater = agentUpdater;
-  private readonly IControlrApi _controlrApi = controlrApi;
-  private readonly IDownloadsApi _downloadsApi = downloadsApi;
+  private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
+  private readonly IEmbeddedDesktopClientProvider _embeddedDesktopClientProvider = embeddedDesktopClientProvider;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<DesktopClientUpdater> _logger = logger;
-  private readonly ConcurrentList<RemoteControlSessionRequestDto> _pendingRequests = [];
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
   private readonly IServiceControl _serviceControl = serviceControl;
-  private readonly IServiceProvider _serviceProvider = serviceProvider;
   private readonly ISettingsProvider _settings = settings;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly SemaphoreSlim _updateLock = new(1, 1);
 
-  private double _previousProgress;
 
-  public async Task<bool> EnsureLatestVersion(RemoteControlSessionRequestDto requestDto, CancellationToken cancellationToken)
+  public async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
   {
     if (_settings.DisableAutoUpdate)
     {
@@ -46,28 +37,7 @@ internal class DesktopClientUpdater(
       return false;
     }
 
-    if (_systemEnvironment.Platform != SystemPlatform.Windows &&
-        _systemEnvironment.Platform != SystemPlatform.MacOs &&
-        _systemEnvironment.Platform != SystemPlatform.Linux)
-    {
-      _logger.LogInformation("Desktop client update check is only supported on Windows, MacOS, and Linux platforms. Current platform: {Platform}", _systemEnvironment.Platform);
-      return false;
-    }
-
-    _pendingRequests.Add(requestDto);
-    try
-    {
-      return await EnsureLatestVersion(cancellationToken);
-    }
-    finally
-    {
-      _pendingRequests.Remove(requestDto);
-    }
-  }
-
-  public async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
-  {
-    await _agentUpdater.UpdateCheckCompletedSignal.Wait(cancellationToken);
+    using var mutation = await _mutationLock.AcquireAsync(cancellationToken);
     await _updateLock.WaitAsync(cancellationToken);
     try
     {
@@ -76,40 +46,49 @@ internal class DesktopClientUpdater(
       var startupDir = _systemEnvironment.StartupDirectory;
       var desktopDir = Path.Combine(startupDir, "DesktopClient");
       var binaryPath = AppConstants.GetDesktopExecutablePath(startupDir);
-      var zipPath = Path.Combine(startupDir, AppConstants.DesktopClientZipFileName);
+      var extractedZipPath = Path.Combine(startupDir, AppConstants.DesktopClientZipFileName);
 
-      if (_fileSystem.FileExists(zipPath) &&
-          _fileSystem.FileExists(binaryPath))
+      // 1) Compute embedded zip hash
+      var embeddedHashResult = await GetEmbeddedZipHash(cancellationToken);
+      if (!embeddedHashResult.IsSuccess)
       {
-        var archiveCheckResult = await IsRemoteHashDifferent(zipPath);
+        return false;
+      }
+      var embeddedHash = embeddedHashResult.Value;
 
-        if (!archiveCheckResult.IsSuccess)
-        {
-          return false;
-        }
+      // 2) Compute extracted zip hash (if present)
+      var extractedHash = await GetFileHash(extractedZipPath, cancellationToken);
 
-        // Version is current.
-        if (archiveCheckResult is { IsSuccess: true, Value: false })
-        {
-          return true;
-        }
+      // 3) Quick up-to-date check
+      if (IsUpToDate(extractedHash, embeddedHash, binaryPath))
+      {
+        _logger.LogInformation("Desktop client version is current (hash match).");
+        return true;
       }
 
-      var runningDesktopClients = _processManager.GetProcessesByName(
-        Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName));
+      _logger.LogInformation("Desktop client update required. Extracting from embedded resources.");
 
-      foreach (var process in runningDesktopClients)
-      {
-        _logger.LogInformation("Killing running desktop client process {ProcessId} ({ProcessName})", process.Id, process.ProcessName);
-        process.KillAndDispose();
-      }
+      // 4) Disconnect active desktop clients
+      await DisconnectActiveDesktopClients();
 
+      // 5) Clean existing desktop directory
       if (_fileSystem.DirectoryExists(desktopDir))
       {
         _fileSystem.DeleteDirectory(desktopDir, true);
       }
 
-      return await DownloadDesktopClient(desktopDir);
+      // 6) Extract
+      var extractResult = await ExtractDesktopClient(desktopDir);
+      if (extractResult)
+      {
+        _logger.LogInformation("Desktop client updated successfully.");
+      }
+      else
+      {
+        _logger.LogError("Desktop client update failed.");
+      }
+
+      return extractResult;
     }
     catch (Exception ex)
     {
@@ -149,7 +128,26 @@ internal class DesktopClientUpdater(
     }
   }
 
-  private async Task<bool> DownloadDesktopClient(string desktopDir)
+  private async Task DisconnectActiveDesktopClients()
+  {
+    var desktopSessions = await _desktopSessionProvider.GetActiveDesktopClients();
+    foreach (var session in desktopSessions)
+    {
+      try
+      {
+        _logger.LogInformation("Disconnecting active desktop client process {ProcessId}.", session.ProcessId);
+        _processManager
+          .GetProcessById(session.ProcessId)
+          .KillAndDispose();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to disconnect desktop client process {ProcessId}.", session.ProcessId);
+      }
+    }
+  }
+
+  private async Task<bool> ExtractDesktopClient(string desktopDir)
   {
     try
     {
@@ -158,26 +156,18 @@ internal class DesktopClientUpdater(
         await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       }
 
-      _previousProgress = 0;
       var targetPath = Path.Combine(_systemEnvironment.StartupDirectory, AppConstants.DesktopClientZipFileName);
-      _logger.LogInformation("Downloading desktop client archive to {Path}", targetPath);
+      _logger.LogInformation("Extracting desktop client archive to {Path}", targetPath);
 
-      var result = await _downloadsApi.DownloadDesktopClientZip(
-        targetPath,
-        GetDesktopZipUri(),
-        async progress =>
-        {
-          await ReportDownloadProgress(progress, "Downloading desktop client on remote device");
-        });
+      var extractResult = await _embeddedDesktopClientProvider.ExtractDesktopClient(targetPath, CancellationToken.None);
 
-      if (!result.IsSuccess)
+      if (!extractResult.IsSuccess)
       {
+        _logger.LogError("Failed to extract embedded desktop client: {Reason}", extractResult.Reason);
         return false;
       }
 
-      await ReportDownloadProgress(-1, "Extracting desktop client archive");
-
-      ZipFile.ExtractToDirectory(targetPath, desktopDir, true);
+      _fileSystem.ExtractZipArchive(targetPath, desktopDir, true);
 
       await SetDesktopClientPermissions(desktopDir);
 
@@ -194,80 +184,49 @@ internal class DesktopClientUpdater(
     }
   }
 
-  private string GetDesktopZipUri()
+  private async Task<Result<string>> GetEmbeddedZipHash(CancellationToken cancellationToken)
   {
-    return _systemEnvironment.Runtime switch
+    var embeddedHash = await _embeddedDesktopClientProvider.GetEmbeddedResourceHash(cancellationToken);
+    if (!embeddedHash.IsSuccess)
     {
-      RuntimeId.WinX64 => $"{_settings.ServerUri}downloads/win-x64/{AppConstants.DesktopClientZipFileName}",
-      RuntimeId.WinX86 => $"{_settings.ServerUri}downloads/win-x86/{AppConstants.DesktopClientZipFileName}",
-      RuntimeId.MacOsX64 => $"{_settings.ServerUri}downloads/osx-x64/{AppConstants.DesktopClientZipFileName}",
-      RuntimeId.MacOsArm64 => $"{_settings.ServerUri}downloads/osx-arm64/{AppConstants.DesktopClientZipFileName}",
-      RuntimeId.LinuxX64 => $"{_settings.ServerUri}downloads/linux-x64/{AppConstants.DesktopClientZipFileName}",
-      _ => throw new PlatformNotSupportedException($"Unsupported runtime ID: {_systemEnvironment.Runtime}"),
-    };
+      _logger.LogError("Failed to compute hash of embedded desktop client: {Reason}", embeddedHash.Reason);
+    }
+    else
+    {
+      _logger.LogInformation("Embedded desktop client hash: {EmbeddedHash}", embeddedHash.Value);
+    }
+    return embeddedHash;
   }
 
-  private async Task<Result<bool>> IsRemoteHashDifferent(string zipPath)
+  private async Task<string?> GetFileHash(string path, CancellationToken cancellationToken)
   {
-    byte[] localHash;
-
-    await using (var zipFs = _fileSystem.OpenFileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+    if (!_fileSystem.FileExists(path))
     {
-      localHash = await SHA256.HashDataAsync(zipFs);
+      _logger.LogInformation("Extracted desktop client ZIP not found. Update required.");
+      return null;
     }
 
-    _logger.LogInformation("Checking desktop client remote archive hash.");
-    var desktopClientHashResult = await _controlrApi.GetCurrentDesktopClientHash(_systemEnvironment.Runtime);
-    if (!desktopClientHashResult.IsSuccess)
+    try
     {
-      _logger.LogResult(desktopClientHashResult);
-      return desktopClientHashResult.ToResult(false);
+      await using var fileStream = _fileSystem.OpenFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+      var hashBytes = await SHA256.HashDataAsync(fileStream, cancellationToken);
+      var extractedHash = Convert.ToHexString(hashBytes);
+      _logger.LogInformation("Extracted desktop client hash: {ExtractedHash}", extractedHash);
+      return extractedHash;
     }
-
-    _logger.LogInformation(
-      "Comparing local desktop client archive hash ({LocalArchiveHash}) to remote ({RemoteArchiveHash}).",
-      Convert.ToHexString(localHash),
-      Convert.ToHexString(desktopClientHashResult.Value));
-
-    if (desktopClientHashResult.Value.SequenceEqual(localHash))
+    catch (Exception ex)
     {
-      _logger.LogInformation("Versions match.  Continuing.");
-      return Result.Ok(false);
+      _logger.LogWarning(ex, "Failed to compute hash of extracted desktop client ZIP. Will re-extract.");
+      return null;
     }
-
-    _logger.LogInformation("Versions differ.  Proceeding with desktop client update.");
-    return Result.Ok(true);
   }
 
-  private async Task ReportDownloadProgress(double progress, string message)
+
+  private bool IsUpToDate(string? extractedHash, string embeddedHash, string binaryPath)
   {
-    var connection = _serviceProvider.GetRequiredService<IHubConnection<IAgentHub>>();
-
-    if (progress >= 1 || progress < 0 || progress - _previousProgress > .05)
-    {
-      _previousProgress = progress;
-
-      foreach (var request in _pendingRequests)
-      {
-        try
-        {
-          var dto = new DesktopClientDownloadProgressDto(
-            request.SessionId,
-            request.ViewerConnectionId,
-            progress,
-            message);
-
-          await connection
-            .Server
-            .SendDesktopClientDownloadProgress(dto)
-            .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-          _logger.LogError(ex, "Error while sending remote control download progress.");
-        }
-      }
-    }
+    return !string.IsNullOrWhiteSpace(extractedHash)
+           && string.Equals(extractedHash, embeddedHash, StringComparison.OrdinalIgnoreCase)
+           && _fileSystem.FileExists(binaryPath);
   }
 
   private async Task SetDesktopClientPermissions(string desktopDir)
@@ -283,7 +242,7 @@ internal class DesktopClientUpdater(
         {
           _logger.LogWarning("Failed to set executable permissions on Mac app bundle: {Error}", chmodResult.Reason);
         }
-      }      
+      }
     }
     else if (_systemEnvironment.Platform == SystemPlatform.Linux)
     {

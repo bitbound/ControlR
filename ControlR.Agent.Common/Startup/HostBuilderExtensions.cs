@@ -20,7 +20,6 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
-using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.Shared.Hubs.Clients;
 
 namespace ControlR.Agent.Common.Startup;
@@ -83,6 +82,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddSingleton<IControlrMutationLock, ControlrMutationLock>();
     services.AddSingleton<IFileManager, FileManager>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddSingleton<ILocalSocketProxy, LocalSocketProxy>();
@@ -94,6 +94,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IDelayer, Delayer>();
     services.AddSingleton<IRetryer, Retryer>();
     services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();
+    services.AddSingleton<IEmbeddedDesktopClientProvider, EmbeddedDesktopClientProvider>();
     services.AddHostedService<HostLifetimeEventResponder>();
     services.AddControlrIpc();
     services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());

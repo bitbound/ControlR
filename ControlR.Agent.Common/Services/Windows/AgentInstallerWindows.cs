@@ -24,16 +24,18 @@ internal class AgentInstallerWindows(
   IRegistryAccessor registryAccessor,
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
+  IControlrMutationLock mutationLock,
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, environmentHelper, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processes = processes;
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
 
@@ -52,6 +54,7 @@ internal class AgentInstallerWindows(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       if (serverUri is null && AppOptions.CurrentValue.ServerUri is null)
       {
         Logger.LogWarning(
@@ -117,6 +120,12 @@ internal class AgentInstallerWindows(
         return;
       }
 
+      var etagResult = await WriteCurrentAgentEtag(installDir);
+      if (!etagResult.IsSuccess)
+      {
+        Logger.LogWarning("Failed to write ETag, but continuing with installation.");
+      }
+
       var serviceName = GetServiceName();
 
       var subcommand = "run";
@@ -165,6 +174,7 @@ internal class AgentInstallerWindows(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       Logger.LogInformation("Uninstall started.");
 
       if (!_elevationChecker.IsElevated())

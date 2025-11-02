@@ -367,3 +367,4 @@ FodyWeavers.xsd
 .DS_Store
 .idea/.idea.ControlR/.idea/copilot.data.migration.agent.xml
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
+.plans/*

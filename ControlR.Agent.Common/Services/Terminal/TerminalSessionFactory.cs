@@ -22,7 +22,6 @@ internal class TerminalSessionFactory(
         timeProvider,
         systemEnvironment,
         hubConnection,
-        systemEnvironment,
         sessionLogger);
 
       await terminalSession.Initialize();

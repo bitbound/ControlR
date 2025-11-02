@@ -21,6 +21,8 @@ public interface IFileSystem
 
   bool DirectoryExists(string directoryPath);
 
+  void ExtractZipArchive(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles);
+
   bool FileExists(string path);
   string[] GetDirectories(string path);
   DirectoryInfo GetDirectoryInfo(string directoryPath);
@@ -103,6 +105,11 @@ public class FileSystem : IFileSystem
   public bool DirectoryExists(string directoryPath)
   {
     return Directory.Exists(directoryPath);
+  }
+
+  public void ExtractZipArchive(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles)
+  {
+    System.IO.Compression.ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName, overwriteFiles);
   }
 
   public bool FileExists(string path)

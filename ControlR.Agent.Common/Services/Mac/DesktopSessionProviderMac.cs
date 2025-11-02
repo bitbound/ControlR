@@ -43,7 +43,103 @@ internal class DesktopSessionProviderMac(
     return [.. uiSessions];
   }
 
-  public async Task<DesktopSession[]> GetActiveUiSessions()
+  public async Task<string[]> GetLoggedInUsers()
+  {
+    var sessions = await GetActiveUiSessions();
+    return sessions
+      .Where(s => !string.IsNullOrEmpty(s.Username))
+      .Select(s => s.Username)
+      .Distinct()
+      .ToArray();
+  }
+
+
+  private static DesktopSessionType DetermineSessionType(string tty)
+  {
+    // On macOS:
+    // - "console" typically means the main physical display
+    // - "ttys000", "ttys001", etc. are typically remote sessions or additional terminals
+    // For simplicity, we'll treat everything as Console since macOS doesn't have
+    // the same RDP concept as Windows
+    return DesktopSessionType.Console;
+  }
+
+  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
+  {
+    var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
+    
+    if (tty == "console")
+    {
+      return $"{sessionTypeStr} - {username}";
+    }
+    else
+    {
+      return $"{sessionTypeStr} - {username} ({tty})";
+    }
+  }
+
+  /// <summary>
+  /// Generate a deterministic session ID based on username and TTY.
+  /// This should match the logic used by the desktop client.
+  /// </summary>
+  private static int GenerateSessionId(string username, string tty)
+  {
+    var sessionKey = $"{username}:{tty}";
+    var hash = sessionKey.GetHashCode();
+    
+    // Make sure it's positive and in a reasonable range
+    return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
+  }
+
+
+  private async Task AddVncSessions(List<DesktopSession> sessions)
+  {
+    try
+    {
+      // Check for VNC/Screen Sharing processes
+      var vncResult = await _processManager.GetProcessOutput("ps", "aux", 5000);
+      if (!vncResult.IsSuccess)
+        return;
+
+      var vncLines = vncResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+      foreach (var line in vncLines)
+      {
+        // Look for VNC server processes or Screen Sharing
+        if (line.Contains("vnc", StringComparison.OrdinalIgnoreCase) || 
+            line.Contains("screensharing", StringComparison.OrdinalIgnoreCase))
+        {
+          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+          if (parts.Length < 2) continue;
+
+          var vncUsername = parts[0];
+          
+          // Avoid duplicates and system users
+          if (sessions.Any(s => s.Username == vncUsername) || vncUsername == "root")
+            continue;
+
+          // Generate a deterministic session ID for VNC sessions
+          var sessionId = GenerateSessionId(vncUsername, "vnc");
+
+          var session = new DesktopSession
+          {
+            Username = vncUsername,
+            SystemSessionId = sessionId,
+            Name = $"Screen Sharing - {vncUsername}",
+            Type = DesktopSessionType.Console, // Treat VNC as console since it's the desktop
+            ProcessId = 0
+          };
+
+          sessions.Add(session);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Error detecting VNC sessions");
+    }
+  }
+
+  private async Task<DesktopSession[]> GetActiveUiSessions()
   {
     var sessions = new List<DesktopSession>();
 
@@ -110,100 +206,6 @@ internal class DesktopSessionProviderMac(
     }
 
     return [.. sessions];
-  }
-
-  public async Task<string[]> GetLoggedInUsers()
-  {
-    var sessions = await GetActiveUiSessions();
-    return sessions
-      .Where(s => !string.IsNullOrEmpty(s.Username))
-      .Select(s => s.Username)
-      .Distinct()
-      .ToArray();
-  }
-
-  private static DesktopSessionType DetermineSessionType(string tty)
-  {
-    // On macOS:
-    // - "console" typically means the main physical display
-    // - "ttys000", "ttys001", etc. are typically remote sessions or additional terminals
-    // For simplicity, we'll treat everything as Console since macOS doesn't have
-    // the same RDP concept as Windows
-    return DesktopSessionType.Console;
-  }
-
-  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
-  {
-    var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
-    
-    if (tty == "console")
-    {
-      return $"{sessionTypeStr} - {username}";
-    }
-    else
-    {
-      return $"{sessionTypeStr} - {username} ({tty})";
-    }
-  }
-
-  /// <summary>
-  /// Generate a deterministic session ID based on username and TTY.
-  /// This should match the logic used by the desktop client.
-  /// </summary>
-  private static int GenerateSessionId(string username, string tty)
-  {
-    var sessionKey = $"{username}:{tty}";
-    var hash = sessionKey.GetHashCode();
-    
-    // Make sure it's positive and in a reasonable range
-    return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
-  }
-
-  private async Task AddVncSessions(List<DesktopSession> sessions)
-  {
-    try
-    {
-      // Check for VNC/Screen Sharing processes
-      var vncResult = await _processManager.GetProcessOutput("ps", "aux", 5000);
-      if (!vncResult.IsSuccess)
-        return;
-
-      var vncLines = vncResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-      foreach (var line in vncLines)
-      {
-        // Look for VNC server processes or Screen Sharing
-        if (line.Contains("vnc", StringComparison.OrdinalIgnoreCase) || 
-            line.Contains("screensharing", StringComparison.OrdinalIgnoreCase))
-        {
-          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-          if (parts.Length < 2) continue;
-
-          var vncUsername = parts[0];
-          
-          // Avoid duplicates and system users
-          if (sessions.Any(s => s.Username == vncUsername) || vncUsername == "root")
-            continue;
-
-          // Generate a deterministic session ID for VNC sessions
-          var sessionId = GenerateSessionId(vncUsername, "vnc");
-
-          var session = new DesktopSession
-          {
-            Username = vncUsername,
-            SystemSessionId = sessionId,
-            Name = $"Screen Sharing - {vncUsername}",
-            Type = DesktopSessionType.Console, // Treat VNC as console since it's the desktop
-            ProcessId = 0
-          };
-
-          sessions.Add(session);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogDebug(ex, "Error detecting VNC sessions");
-    }
   }
 
   private async Task<Dictionary<string, string>> GetLoggedInUserMap()

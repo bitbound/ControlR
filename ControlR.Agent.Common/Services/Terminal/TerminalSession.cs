@@ -22,13 +22,11 @@ internal class TerminalSession(
   TimeProvider timeProvider,
   ISystemEnvironment environment,
   IHubConnection<IAgentHub> hubConnection,
-  ISystemEnvironment systemEnvironment,
   ILogger<TerminalSession> logger) : ITerminalSession
 {
   private readonly ISystemEnvironment _environment = environment;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<TerminalSession> _logger = logger;
-  private readonly ISystemEnvironment _systemEnvironemnt = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly string _viewerConnectionId = viewerConnectionId;
   private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -217,7 +215,7 @@ internal class TerminalSession(
       // Set up event handlers
       _runspace.StateChanged += Runspace_StateChanged;
 
-      if (_systemEnvironemnt.IsWindows)
+      if (_environment.IsWindows)
       {
         _powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process");
         await _powerShell.InvokeAsync();

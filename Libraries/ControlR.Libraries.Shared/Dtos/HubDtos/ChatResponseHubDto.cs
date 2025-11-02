@@ -3,7 +3,7 @@ namespace ControlR.Libraries.Shared.Dtos.HubDtos;
 [MessagePackObject(keyAsPropertyName: true)]
 public record ChatResponseHubDto(
   Guid SessionId,
-  int DesktopUiProcessId,
+  int DesktopSessionProcessId,
   string Message,
   string SenderUsername,
   string ViewerConnectionId,

@@ -17,7 +17,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<Result> DeleteFile(FileDeleteHubDto dto);
   Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto);
-  Task<DesktopSession[]> GetActiveUiSessions();
+  Task<DesktopSession[]> GetActiveDesktopSessions();
   Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);

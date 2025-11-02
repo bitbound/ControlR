@@ -21,10 +21,11 @@ internal class AgentInstallerLinux(
   ISettingsProvider settingsProvider,
   IElevationChecker elevationChecker,
   IEmbeddedResourceAccessor embeddedResourceAccessor,
+  IControlrMutationLock mutationLock,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, environmentHelper, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
@@ -34,6 +35,7 @@ internal class AgentInstallerLinux(
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
+  private readonly IControlrMutationLock _mutationLock = mutationLock;
 
   public async Task Install(
     Uri? serverUri = null,
@@ -50,6 +52,7 @@ internal class AgentInstallerLinux(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       if (serverUri is null && AppOptions.CurrentValue.ServerUri is null)
       {
         Logger.LogWarning(
@@ -132,6 +135,12 @@ internal class AgentInstallerLinux(
         return;
       }
 
+      var etagResult = await WriteCurrentAgentEtag(installDir);
+      if (!etagResult.IsSuccess)
+      {
+        _logger.LogWarning("Failed to write ETag, but continuing with installation.");
+      }
+
       var serviceName = GetServiceName();
       var desktopServiceName = GetDesktopServiceName();
 
@@ -177,6 +186,7 @@ internal class AgentInstallerLinux(
 
     try
     {
+      using var mutation = await _mutationLock.AcquireAsync(_lifetime.ApplicationStopping);
       _logger.LogInformation("Uninstall started.");
 
       if (Libc.Geteuid() != 0)

@@ -96,7 +96,7 @@ public class DeviceAccessHub(
       }
 
       var device = authResult.Value;
-      return await AgentHub.Clients.Client(device.ConnectionId).GetActiveUiSessions();
+      return await AgentHub.Clients.Client(device.ConnectionId).GetActiveDesktopSessions();
     }
     catch (Exception ex)
     {

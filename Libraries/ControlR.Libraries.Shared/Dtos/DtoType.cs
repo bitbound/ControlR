@@ -4,7 +4,7 @@ public enum DtoType
 {
   None = 0,
   ChangeDisplays = 17,
-  CloseStreamingSession = 19,
+  CloseRemoteControlSession = 19,
   ClipboardText = 21,
   DisplayData = 23,
   MovePointer = 26,

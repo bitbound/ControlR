@@ -2,6 +2,7 @@
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 
 namespace ControlR.Agent.Common.Services.Linux;
+
 internal class DesktopSessionProviderX11(
   IIpcServerStore ipcStore,
   IProcessManager processManager,
@@ -10,6 +11,7 @@ internal class DesktopSessionProviderX11(
   private readonly IIpcServerStore _ipcStore = ipcStore;
   private readonly ILogger<DesktopSessionProviderX11> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
+
 
   public async Task<DesktopSession[]> GetActiveDesktopClients()
   {
@@ -22,7 +24,7 @@ internal class DesktopSessionProviderX11(
       {
         ProcessId = server.Value.Process.Id,
         SystemSessionId = server.Value.Process.SessionId,
-        Type = DesktopSessionType.Console // On Linux X11, we typically have console sessions
+        Type = DesktopSessionType.Console
       };
 
       // Try to find the username for this session
@@ -43,7 +45,118 @@ internal class DesktopSessionProviderX11(
     return [.. uiSessions];
   }
 
-  public async Task<DesktopSession[]> GetActiveUiSessions()
+  public async Task<string[]> GetLoggedInUsers()
+  {
+    var sessions = await GetActiveDesktopSessions();
+    return [.. sessions
+      .Where(s => !string.IsNullOrEmpty(s.Username))
+      .Select(s => s.Username)
+      .Distinct()];
+  }
+
+
+  private static DesktopSessionType DetermineSessionType(string tty)
+  {
+    // On Linux:
+    // - "tty1", "tty2", etc. are virtual consoles (text mode)
+    // - ":0", ":1", etc. are X11 display sessions
+    // - "pts/0", "pts/1", etc. are pseudo-terminals (SSH, etc.)
+    // For X11 desktop sessions, we'll treat them as Console
+    if (tty.StartsWith(':') || tty.StartsWith("tty"))
+    {
+      return DesktopSessionType.Console;
+    }
+
+    // For SSH and other remote sessions, we don't have RDP but treat as console
+    return DesktopSessionType.Console;
+  }
+
+  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
+  {
+    var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
+
+    if (tty.StartsWith(':'))
+    {
+      return $"{sessionTypeStr} - {username} (X11 {tty})";
+    }
+    else if (tty.StartsWith("tty"))
+    {
+      return $"{sessionTypeStr} - {username} ({tty})";
+    }
+    else
+    {
+      return $"{sessionTypeStr} - {username} ({tty})";
+    }
+  }
+
+  /// <summary>
+  /// Generate a deterministic session ID based on username and TTY.
+  /// This should match the logic used by the desktop client.
+  /// </summary>
+  private static int GenerateSessionId(string username, string tty)
+  {
+    var sessionKey = $"{username}:{tty}";
+    var hash = sessionKey.GetHashCode();
+
+    // Make sure it's positive and in a reasonable range
+    return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
+  }
+
+
+  private async Task AddX11Sessions(List<DesktopSession> sessions)
+  {
+    try
+    {
+      // Check for X11 sessions by looking for X server processes
+      var xResult = await _processManager.GetProcessOutput("ps", "aux", 5000);
+      if (!xResult.IsSuccess)
+        return;
+
+      var xLines = xResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+      foreach (var line in xLines)
+      {
+        // Look for X server processes (Xorg, X11, etc.)
+        if ((line.Contains("/usr/bin/X", StringComparison.OrdinalIgnoreCase) ||
+             line.Contains("Xorg", StringComparison.OrdinalIgnoreCase) ||
+             line.Contains("/usr/lib/xorg/Xorg", StringComparison.OrdinalIgnoreCase)) &&
+            !line.Contains("grep", StringComparison.OrdinalIgnoreCase))
+        {
+          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+          if (parts.Length < 2) continue;
+
+          var xUsername = parts[0];
+
+          // Avoid duplicates and system users
+          if (sessions.Any(s => s.Username == xUsername) || xUsername == "root")
+            continue;
+
+          // Extract display number from command line if possible
+          var displayMatch = System.Text.RegularExpressions.Regex.Match(line, @":(\d+)");
+          var display = displayMatch.Success ? $":{displayMatch.Groups[1].Value}" : ":0";
+
+          // Generate a deterministic session ID for X11 sessions
+          var sessionId = GenerateSessionId(xUsername, display);
+
+          var session = new DesktopSession
+          {
+            Username = xUsername,
+            SystemSessionId = sessionId,
+            Name = $"Console - {xUsername} (X11 {display})",
+            Type = DesktopSessionType.Console,
+            ProcessId = 0
+          };
+
+          sessions.Add(session);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Error detecting X11 sessions");
+    }
+  }
+
+  private async Task<DesktopSession[]> GetActiveDesktopSessions()
   {
     var sessions = new List<DesktopSession>();
 
@@ -72,8 +185,8 @@ internal class DesktopSessionProviderX11(
 
           // Get UID for the user to exclude system users
           var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-          if (!uidResult.IsSuccess || 
-              !int.TryParse(uidResult.Value.Trim(), out var uid) || 
+          if (!uidResult.IsSuccess ||
+              !int.TryParse(uidResult.Value.Trim(), out var uid) ||
               uid < 1000) // Exclude system users (typically UID < 1000 on Ubuntu)
             continue;
 
@@ -110,116 +223,6 @@ internal class DesktopSessionProviderX11(
     }
 
     return [.. sessions];
-  }
-
-  public async Task<string[]> GetLoggedInUsers()
-  {
-    var sessions = await GetActiveUiSessions();
-    return sessions
-      .Where(s => !string.IsNullOrEmpty(s.Username))
-      .Select(s => s.Username)
-      .Distinct()
-      .ToArray();
-  }
-
-  private static DesktopSessionType DetermineSessionType(string tty)
-  {
-    // On Linux:
-    // - "tty1", "tty2", etc. are virtual consoles (text mode)
-    // - ":0", ":1", etc. are X11 display sessions
-    // - "pts/0", "pts/1", etc. are pseudo-terminals (SSH, etc.)
-    // For X11 desktop sessions, we'll treat them as Console
-    if (tty.StartsWith(':') || tty.StartsWith("tty"))
-    {
-      return DesktopSessionType.Console;
-    }
-    
-    // For SSH and other remote sessions, we don't have RDP but treat as console
-    return DesktopSessionType.Console;
-  }
-
-  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
-  {
-    var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
-    
-    if (tty.StartsWith(':'))
-    {
-      return $"{sessionTypeStr} - {username} (X11 {tty})";
-    }
-    else if (tty.StartsWith("tty"))
-    {
-      return $"{sessionTypeStr} - {username} ({tty})";
-    }
-    else
-    {
-      return $"{sessionTypeStr} - {username} ({tty})";
-    }
-  }
-
-  /// <summary>
-  /// Generate a deterministic session ID based on username and TTY.
-  /// This should match the logic used by the desktop client.
-  /// </summary>
-  private static int GenerateSessionId(string username, string tty)
-  {
-    var sessionKey = $"{username}:{tty}";
-    var hash = sessionKey.GetHashCode();
-    
-    // Make sure it's positive and in a reasonable range
-    return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
-  }
-
-  private async Task AddX11Sessions(List<DesktopSession> sessions)
-  {
-    try
-    {
-      // Check for X11 sessions by looking for X server processes
-      var xResult = await _processManager.GetProcessOutput("ps", "aux", 5000);
-      if (!xResult.IsSuccess)
-        return;
-
-      var xLines = xResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-      foreach (var line in xLines)
-      {
-        // Look for X server processes (Xorg, X11, etc.)
-        if ((line.Contains("/usr/bin/X", StringComparison.OrdinalIgnoreCase) || 
-             line.Contains("Xorg", StringComparison.OrdinalIgnoreCase) ||
-             line.Contains("/usr/lib/xorg/Xorg", StringComparison.OrdinalIgnoreCase)) &&
-            !line.Contains("grep", StringComparison.OrdinalIgnoreCase))
-        {
-          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-          if (parts.Length < 2) continue;
-
-          var xUsername = parts[0];
-          
-          // Avoid duplicates and system users
-          if (sessions.Any(s => s.Username == xUsername) || xUsername == "root")
-            continue;
-
-          // Extract display number from command line if possible
-          var displayMatch = System.Text.RegularExpressions.Regex.Match(line, @":(\d+)");
-          var display = displayMatch.Success ? $":{displayMatch.Groups[1].Value}" : ":0";
-
-          // Generate a deterministic session ID for X11 sessions
-          var sessionId = GenerateSessionId(xUsername, display);
-
-          var session = new DesktopSession
-          {
-            Username = xUsername,
-            SystemSessionId = sessionId,
-            Name = $"Console - {xUsername} (X11 {display})",
-            Type = DesktopSessionType.Console,
-            ProcessId = 0
-          };
-
-          sessions.Add(session);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogDebug(ex, "Error detecting X11 sessions");
-    }
   }
 
   private async Task<Dictionary<string, string>> GetLoggedInUserMap()

@@ -11,6 +11,7 @@ namespace ControlR.DesktopClient.Services;
 public interface IRemoteControlHostManager
 {
   Task StartHost(RemoteControlRequestIpcDto requestDto);
+  Task StopAllHosts(string reason);
   Task StopHost(Guid sessionId);
 }
 
@@ -80,6 +81,22 @@ public class RemoteControlHostManager(
       GC.Collect();
       GC.WaitForPendingFinalizers();
     }
+  }
+
+  public async Task StopAllHosts(string reason)
+  {
+    foreach (var session in _sessions.Values)
+    {
+      try
+      {
+        await session.CancellationTokenSource.CancelAsync();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Failed to stop remote control session.");
+      }
+    }
+    _sessions.Clear();
   }
 
   public async Task StopHost(Guid sessionId)

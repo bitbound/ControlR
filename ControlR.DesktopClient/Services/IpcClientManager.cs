@@ -1,3 +1,5 @@
+using System.Reflection.Metadata;
+using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -16,12 +18,14 @@ public class IpcClientManager(
   IChatSessionManager chatSessionManager,
   IIpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
+  IClassicDesktopStyleApplicationLifetime appLifetime,
   IProcessManager processManager,
   IScreenGrabber screenGrabber,
   IImageUtility imageUtility,
   IOptions<DesktopClientOptions> desktopClientOptions,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
+  private readonly IClassicDesktopStyleApplicationLifetime _appLifetime = appLifetime;
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
   private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IImageUtility _imageUtility = imageUtility;
@@ -33,10 +37,12 @@ public class IpcClientManager(
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly TimeProvider _timeProvider = timeProvider;
 
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     await CreateClientConnection(stoppingToken);
   }
+
 
   private async Task CreateClientConnection(CancellationToken stoppingToken)
   {
@@ -54,6 +60,7 @@ public class IpcClientManager(
         client.On<ChatMessageIpcDto>(HandleChatMessage);
         client.On<CloseChatSessionIpcDto>(HandleCloseChatSession);
         client.On<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(HandleDesktopPreviewRequest);
+        client.On<ShutdownCommandDto>(HandleShutdownCommand);
 
         if (!await client.Connect(stoppingToken))
         {
@@ -176,5 +183,22 @@ public class IpcClientManager(
   private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
   {
     _remoteControlHostManager.StartHost(dto).Forget();
+  }
+
+  private async void HandleShutdownCommand(ShutdownCommandDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Handling shutdown command. Reason: {Reason}", dto.Reason);
+      await _remoteControlHostManager.StopAllHosts(dto.Reason);
+      if (!_appLifetime.TryShutdown())
+      {
+        _logger.LogWarning("Failed to initiate application shutdown.");
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling shutdown command.");
+    }
   }
 }
