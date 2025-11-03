@@ -222,6 +222,7 @@ public static class WebApplicationBuilderExtensions
       {
         options.EnableDetailedErrors = builder.Environment.IsDevelopment();
         options.MaximumReceiveMessageSize = 100_000;
+        options.MaximumParallelInvocationsPerClient = 2;
       })
       .AddMessagePackProtocol()
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
