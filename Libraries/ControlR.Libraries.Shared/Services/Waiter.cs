@@ -1,8 +1,8 @@
 ﻿namespace ControlR.Libraries.Shared.Services;
 
-public interface IDelayer
+public interface IWaiter
 {
-  Task<bool> WaitForAsync(
+  Task<bool> WaitFor(
       Func<bool> condition,
       TimeSpan? pollingDelay = null,
       Func<Task>? conditionFailedCallback = null,
@@ -10,12 +10,12 @@ public interface IDelayer
       CancellationToken cancellationToken = default);
 }
 
-public class Delayer(TimeProvider timeProvider) : IDelayer
+public class Waiter(TimeProvider timeProvider) : IWaiter
 {
   private readonly TimeProvider _timeProvider = timeProvider;
-  public static Delayer Default { get; } = new(TimeProvider.System);
+  public static Waiter Default { get; } = new(TimeProvider.System);
 
-  public async Task<bool> WaitForAsync(
+  public async Task<bool> WaitFor(
     Func<bool> condition,
     TimeSpan? pollingDelay = null,
     Func<Task>? conditionFailedCallback = null,

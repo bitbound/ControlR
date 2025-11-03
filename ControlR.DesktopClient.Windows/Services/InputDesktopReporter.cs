@@ -8,10 +8,10 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal class InputDesktopReporter(
   TimeProvider timeProvider,
   IWin32Interop win32Interop,
-  IDelayer delayer,
+  IWaiter waiter,
   ILogger<InputDesktopReporter> logger) : BackgroundService
 {
-  private readonly IDelayer _delayer = delayer;
+  private readonly IWaiter _waiter = waiter;
   private readonly ILogger<InputDesktopReporter> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWin32Interop _win32Interop = win32Interop;

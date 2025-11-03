@@ -17,6 +17,7 @@ public interface IDeviceAccessHub : IBrowserHubBase
 
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
+  Task InvokeCtrlAltDel(Guid deviceId);
 
   Task<Result> RequestStreamingSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
   Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);

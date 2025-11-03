@@ -23,6 +23,9 @@ csharp_style_expression_bodied_local_functions = false:silent
 # BB0001: Configure Bitbound analyzer rule severity
 dotnet_diagnostic.BB0001.severity = suggestion
 
+# CS0618: 'member' is obsolete
+dotnet_diagnostic.CS0618.severity = suggestion
+
 # CA1401: P/Invokes should not be visible
 dotnet_diagnostic.CA1401.severity = silent
 
@@ -75,10 +78,6 @@ dotnet_naming_style.pascal_case.required_suffix =
 dotnet_naming_style.pascal_case.word_separator =
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
-dotnet_naming_style.pascal_case.required_prefix =
-dotnet_naming_style.pascal_case.required_suffix =
-dotnet_naming_style.pascal_case.word_separator =
-dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 2
 indent_size = 2
@@ -120,5 +119,3 @@ dotnet_naming_rule.const_fields_should_be_pascal_case.style = pascal_case
 
 dotnet_naming_symbols.const_fields.applicable_kinds = field
 dotnet_naming_symbols.const_fields.required_modifiers = const
-
-dotnet_naming_style.pascal_case.capitalization = pascal_case

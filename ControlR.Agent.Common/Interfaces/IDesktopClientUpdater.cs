@@ -2,8 +2,10 @@
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Interfaces;
+
 internal interface IDesktopClientUpdater : IHostedService
 {
   Task<bool> EnsureLatestVersion(
-      CancellationToken cancellationToken);
+    bool acquireGlobalLock,
+    CancellationToken cancellationToken);
 }

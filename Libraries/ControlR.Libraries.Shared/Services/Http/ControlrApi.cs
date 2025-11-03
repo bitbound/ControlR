@@ -336,12 +336,9 @@ public class ControlrApi(
 
   public async Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default)
   {
-    return await TryCallApi(async () =>
-    {
-        return await _client.GetStringAsync(
-          $"{HttpConstants.AgentUpdateEndpoint}/get-hash-sha256/{runtime}",
-          cancellationToken);
-    });
+    return await TryCallApi(async () => await _client.GetStringAsync(
+      $"{HttpConstants.AgentUpdateEndpoint}/get-hash-sha256/{runtime}",
+      cancellationToken));
   }
 
   public async Task<Result<Version>> GetCurrentAgentVersion()

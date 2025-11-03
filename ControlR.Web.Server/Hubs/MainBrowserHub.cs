@@ -35,26 +35,6 @@ public class MainBrowserHub(
       return Result.Fail<ServerStatsDto>("Failed to get agent count.");
     }
   }
-
-  public async Task InvokeCtrlAltDel(Guid deviceId)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
-      {
-        return;
-      }
-      
-      await AgentHub.Clients
-        .Client(authResult.Value.ConnectionId)
-        .InvokeCtrlAltDel();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while invoking CtrlAltDel.");
-    }
-  }
-
   public override async Task OnConnectedAsync()
   {
     try
@@ -160,25 +140,6 @@ public class MainBrowserHub(
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error during viewer disconnect.");
-    }
-  }
-
-  public async Task RefreshDeviceInfo(Guid deviceId)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
-      {
-        return;
-      }
-      
-      await AgentHub.Clients
-        .Client(authResult.Value.ConnectionId)
-        .RefreshDeviceInfo();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while refreshing device info.");
     }
   }
 

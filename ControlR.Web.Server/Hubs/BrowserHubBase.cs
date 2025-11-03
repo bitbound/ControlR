@@ -12,13 +12,32 @@ public class BrowserHubBase<TClient>(
   IAuthorizationService authorizationService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   ILogger<BrowserHubBase<TClient>> logger) : HubWithItems<TClient>, IBrowserHubBase
-    where TClient : class
+  where TClient : class
 {
   protected readonly IHubContext<AgentHub, IAgentHubClient> AgentHub = agentHub;
   protected readonly AppDb AppDb = appDb;
   protected readonly IAuthorizationService AuthorizationService = authorizationService;
   protected readonly ILogger<BrowserHubBase<TClient>> Logger = logger;
   protected readonly UserManager<AppUser> UserManager = userManager;
+
+  public async Task RefreshDeviceInfo(Guid deviceId)
+  {
+    try
+    {
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return;
+      }
+
+      await AgentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .RefreshDeviceInfo();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while refreshing device info.");
+    }
+  }
 
   public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
   {

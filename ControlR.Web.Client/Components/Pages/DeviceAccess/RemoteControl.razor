@@ -11,117 +11,122 @@
     case SignalingState.ConnectionActive:
       break;
     case SignalingState.Loading:
-      {
-        <LoadingIndicator IsVisible Message="@(_loadingMessage)" />
-        break;
-      }
+    {
+      <LoadingIndicator IsVisible Message="@(_loadingMessage)"/>
+      break;
+    }
+    case SignalingState.Reconnecting:
+    {
+      <LoadingIndicator IsVisible Message="Reconnecting"/>
+      break;
+    }
     case SignalingState.Alert:
-      {
-        <MudAlert Severity="_alertSeverity" Icon="@(AlertIcon)">
-          @(_alertMessage)
-        </MudAlert>
+    {
+      <MudAlert Severity="_alertSeverity" Icon="@(AlertIcon)">
+        @(_alertMessage)
+      </MudAlert>
 
-        <MudTooltip Text="Reload">
-          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mt-2" OnClick="Reload">
-             Reload
-          </MudButton>
-        </MudTooltip>
+      <MudTooltip Text="Reload">
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mt-2" OnClick="HandleReloadClicked">
+          Reload
+        </MudButton>
+      </MudTooltip>
 
-        break;
-      }
+      break;
+    }
     case SignalingState.SessionSelect:
+    {
+      <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
+        System Sessions on @(DeviceAccessState.CurrentDevice.Name):
+      </MudText>
+
+      <MudTooltip Text="Refresh System Sessions">
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mb-2" OnClick="HandleRefreshSessionsClicked">
+          Refresh Sessions
+        </MudButton>
+      </MudTooltip>
+
+      @if (_systemSessions is null || _systemSessions.Length == 0)
       {
-        <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
-          System Sessions on @(DeviceAccessState.CurrentDevice.Name):
-        </MudText>
-
-        <MudTooltip Text="Refresh System Sessions">
-          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mb-2" OnClick="RefreshSystemSessions">
-            Refresh Sessions
-          </MudButton>
-        </MudTooltip>
-
-        @if (_systemSessions is null || _systemSessions.Length == 0)
-        {
-          <MudAlert Severity="Severity.Warning" Icon="@(Icons.Material.Filled.Info)">
-            No system sessions available.
-          </MudAlert>
-        }
-        else
-        {
-          <MudGrid>
-            @foreach (var session in _systemSessions)
-            {
-              <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard @key=session Class="mb-3" Outlined>
-                  <MudCardContent>
-                    <div class="session-card-grid">
-                      <div>
-                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
-                          Session ID:
-                        </MudText>
-                      </div>
-                      <div>
-                        @(session.SystemSessionId)
-                      </div>
-                      <div>
-                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
-                          Process ID:
-                        </MudText>
-                      </div>
-                      <div>
-                        @(session.ProcessId)
-                      </div>
-                      <div>
-                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
-                          Session Name:
-                        </MudText>
-                      </div>
-                      <div>
-                        @(session.Name)
-                      </div>
-                      <div>
-                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">
-                          User:
-                        </MudText>
-                      </div>
-                      <div>
-                        @(session.Username)
-                      </div>
-                    </div>
-                  </MudCardContent>
-                  <MudCardActions>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="@(_ => StartRemoteControl(session))">
-                      Connect
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))"
-                      Class="ms-4">
-                      Preview
-                    </MudButton>
-                  </MudCardActions>
-                </MudCard>
-              </MudItem>
-            }
-          </MudGrid>
-        }
-
-        break;
-      }
-    case SignalingState.UnsupportedOperatingSystem:
-      {
-        <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
-          Unsupported operating system.
+        <MudAlert Severity="Severity.Warning" Icon="@(Icons.Material.Filled.Info)">
+          No system sessions available.
         </MudAlert>
-        break;
       }
+      else
+      {
+        <MudGrid>
+          @foreach (var session in _systemSessions)
+          {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+              <MudCard @key=session Class="mb-3" Outlined>
+                <MudCardContent>
+                  <div class="session-card-grid">
+                    <div>
+                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        Session ID:
+                      </MudText>
+                    </div>
+                    <div>
+                      @(session.SystemSessionId)
+                    </div>
+                    <div>
+                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        Process ID:
+                      </MudText>
+                    </div>
+                    <div>
+                      @(session.ProcessId)
+                    </div>
+                    <div>
+                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        Session Name:
+                      </MudText>
+                    </div>
+                    <div>
+                      @(session.Name)
+                    </div>
+                    <div>
+                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        User:
+                      </MudText>
+                    </div>
+                    <div>
+                      @(session.Username)
+                    </div>
+                  </div>
+                </MudCardContent>
+                <MudCardActions>
+                  <MudButton Variant="Variant.Outlined" Color="Color.Info"
+                             OnClick="@(_ => StartRemoteControl(session, quiet: false))">
+                    Connect
+                  </MudButton>
+                  <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))"
+                             Class="ms-4">
+                    Preview
+                  </MudButton>
+                </MudCardActions>
+              </MudCard>
+            </MudItem>
+          }
+        </MudGrid>
+      }
+      break;
+    }
+    case SignalingState.UnsupportedOperatingSystem:
+    {
+      <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
+        Unsupported operating system.
+      </MudAlert>
+      break;
+    }
     case SignalingState.Unknown:
     default:
-      {
-        <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
-          Unexpected signaling state.
-        </MudAlert>
-        break;
-      }
+    {
+      <MudAlert Severity="Severity.Error" Icon="@(Icons.Material.Filled.Error)">
+        Unexpected signaling state.
+      </MudAlert>
+      break;
+    }
   }
-  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested" IsVisible="IsRemoteDisplayVisible" />
+  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested" IsVisible="IsRemoteDisplayVisible"/>
 </div>

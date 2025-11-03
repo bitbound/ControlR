@@ -32,7 +32,7 @@ public static class HostAppBuilderExtensions
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<IDesktopStreamingClient, DesktopStreamingClient>()
       .AddSingleton<IDesktopCapturer, DesktopCapturer>()
-      .AddSingleton<IDelayer, Delayer>()
+      .AddSingleton<IWaiter, Waiter>()
       .AddHostedService<HostLifetimeEventResponder>()
       .AddHostedService(x => x.GetRequiredService<IDesktopStreamingClient>())
       .Configure(configureStartup);

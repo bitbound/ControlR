@@ -34,10 +34,10 @@ internal sealed class DesktopStreamingClient(
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
   IDisplayManager displayManager,
-  IDelayer delayer,
+  IWaiter waiter,
   IOptions<StreamingSessionOptions> startupOptions,
   ILogger<DesktopStreamingClient> logger)
-  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IDesktopStreamingClient
+  : StreamingClient(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopStreamingClient
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;

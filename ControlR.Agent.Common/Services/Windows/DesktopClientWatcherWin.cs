@@ -1,10 +1,11 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.NativeInterop.Windows;
-using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Helpers;
+using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -13,37 +14,42 @@ internal class DesktopClientWatcherWin(
   TimeProvider timeProvider,
   IWin32Interop win32Interop,
   IProcessManager processManager,
+  IIpcServerStore ipcServerStore,
   ISystemEnvironment environment,
   IFileSystem fileSystem,
   ISettingsProvider settingsProvider,
   IControlrMutationLock mutationLock,
   IDesktopSessionProvider desktopSessionProvider,
+  IDesktopClientUpdater desktopClientUpdater,
+  IWaiter waiter,
   ILogger<DesktopClientWatcherWin> logger) : BackgroundService
 {
+  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly ISystemEnvironment _environment = environment;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IIpcServerStore _ipcServerStore = ipcServerStore;
   private readonly ILogger<DesktopClientWatcherWin> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IWaiter _waiter = waiter;
   private readonly IWin32Interop _win32Interop = win32Interop;
-
+  private int _launchFailCount;
 
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
 
-    while (await timer.WaitForNextTick(throwOnCancellation: false, stoppingToken))
+    while (await timer.WaitForNextTick(false, stoppingToken))
     {
       try
       {
         using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         var activeSessions = _win32Interop.GetActiveSessions();
         var desktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
-        var launchTasks = new List<Task<bool>>();
 
         foreach (var session in activeSessions)
         {
@@ -52,21 +58,31 @@ internal class DesktopClientWatcherWin(
             continue;
           }
 
-          _logger.LogInformation("No desktop client found in session {SessionId}. Launching a new one.", session.SystemSessionId);
-          var launchTask = LaunchDesktopClient(session.SystemSessionId, stoppingToken);
-          launchTasks.Add(launchTask);
+          _logger.LogInformation(
+            "No desktop client found in session {SessionId}. Launching a new one.",
+            session.SystemSessionId);
+
+          if (!await _desktopClientUpdater.EnsureLatestVersion(acquireGlobalLock: false, stoppingToken))
+          {
+            _logger.LogWarning("Failed to ensure latest version of desktop client.  Continuing optimistically.");
+          }
+          
+          if (!await LaunchDesktopClient(session.SystemSessionId, stoppingToken))
+          {
+            _launchFailCount++;
+          }
         }
 
-        await Task.WhenAll(launchTasks);
-
-        if (launchTasks.Any(x => !x.Result))
+        if (_launchFailCount < 10)
         {
-          _logger.LogWarning(
-            "Failed to launch desktop client in one or more sessions.  " +
-            "Deleting existing desktop client installation to force a reinstall.");
-
-          await DeleteDesktopClient();
+          continue;
         }
+
+        _logger.LogWarning(
+          "Failed to launch desktop client in one or more sessions.  " +
+          "Deleting existing desktop client installation to force a reinstall.");
+
+        await DeleteDesktopClient();
       }
       catch (Exception ex)
       {
@@ -74,7 +90,6 @@ internal class DesktopClientWatcherWin(
       }
     }
   }
-
 
 
   // For debugging.
@@ -100,12 +115,17 @@ internal class DesktopClientWatcherWin(
   }
 
 
-
   // Kills all desktop client processes, deletes the archive, and deletes the folder.
   private async Task DeleteDesktopClient()
   {
     try
     {
+      if (_environment.IsDebug)
+      {
+        _logger.LogDebug("Skipping desktop client deletion because we're in Debug mode.");
+        return;
+      }
+
       var processName = Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName);
       var processes = _processManager.GetProcessesByName(processName);
       foreach (var process in processes)
@@ -154,6 +174,7 @@ internal class DesktopClientWatcherWin(
     {
       _logger.LogError(ex, "Error while deleting desktop client files.");
     }
+
     await Task.CompletedTask;
   }
 
@@ -163,19 +184,18 @@ internal class DesktopClientWatcherWin(
     {
       if (_environment.IsDebug)
       {
-        StartDebugSession();
-        return true;
+        return await StartDebugSession();
       }
-      
+
       var startupDir = _environment.StartupDirectory;
       var desktopDir = Path.Combine(startupDir, "DesktopClient");
       var binaryPath = Path.Combine(desktopDir, AppConstants.DesktopClientFileName);
 
       var result = _win32Interop.CreateInteractiveSystemProcess(
-        commandLine: $"\"{binaryPath}\" --instance-id {_settingsProvider.InstanceId}",
-        targetSessionId: sessionId,
-        hiddenWindow: true,
-        startedProcess: out var process);
+        $"\"{binaryPath}\" --instance-id {_settingsProvider.InstanceId}",
+        sessionId,
+        true,
+        out var process);
 
       if (!result || process is null || process.Id == -1)
       {
@@ -183,14 +203,14 @@ internal class DesktopClientWatcherWin(
         return false;
       }
 
-      // Wait to make sure the process stays running.
-      await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, cancellationToken);
-      if (process.HasExited)
-      {
-        _logger.LogError("Desktop client process in session {SessionId} has exited immediately after launch.", sessionId);
-        return false;
-      }
-      return true;
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+
+      return await _waiter.WaitFor(
+        () => !process.HasExited && _ipcServerStore.ContainsServer(process.Id),
+        TimeSpan.FromSeconds(1),
+        throwOnCancellation: false,
+        cancellationToken: linkedCts.Token);
     }
     catch (Exception ex)
     {
@@ -199,20 +219,20 @@ internal class DesktopClientWatcherWin(
     }
   }
 
-  private void StartDebugSession()
+  private async Task<bool> StartDebugSession()
   {
     var solutionDirResult = GetSolutionDir(Environment.CurrentDirectory);
 
     if (!solutionDirResult.IsSuccess)
     {
-      return;
+      return false;
     }
 
     var desktopClientBin = Path.Combine(
-          solutionDirResult.Value,
-          "ControlR.DesktopClient",
-          "bin",
-          "Debug");
+      solutionDirResult.Value,
+      "ControlR.DesktopClient",
+      "bin",
+      "Debug");
 
     var desktopClientPath = _fileSystem
       .GetFiles(desktopClientBin, AppConstants.DesktopClientFileName, SearchOption.AllDirectories)
@@ -224,13 +244,22 @@ internal class DesktopClientWatcherWin(
       throw new FileNotFoundException("DesktopClient binary not found.", desktopClientPath);
     }
 
-    var psi = new ProcessStartInfo()
+    var psi = new ProcessStartInfo
     {
       WorkingDirectory = Path.GetDirectoryName(desktopClientPath),
       UseShellExecute = true,
-      FileName = desktopClientPath
+      FileName = desktopClientPath,
+      Arguments = "--instance-id localhost"
     };
 
-    _processManager.Start(psi);
+    var process = _processManager.Start(psi);
+    Guard.IsNotNull(process);
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    return await _waiter.WaitFor(
+      () => !process.HasExited && _ipcServerStore.ContainsServer(process.Id),
+      TimeSpan.FromSeconds(1),
+      throwOnCancellation: false,
+      cancellationToken: cts.Token);
   }
 }

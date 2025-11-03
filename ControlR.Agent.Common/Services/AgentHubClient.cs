@@ -143,7 +143,10 @@ internal class AgentHubClient(
     {
       if (!_settings.DisableAutoUpdate)
       {
-        var versionResult = await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
+        var versionResult = await _desktopClientUpdater.EnsureLatestVersion(
+          acquireGlobalLock: true, 
+          _appLifetime.ApplicationStopping);
+        
         if (!versionResult)
         {
           return Result.Fail("Failed to ensure latest desktop client version is installed.");

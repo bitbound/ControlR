@@ -3,7 +3,6 @@ using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using ControlR.Agent.Common.Interfaces;
 using System.Security.Cryptography;
 
 namespace ControlR.Agent.Common.Services;
@@ -29,16 +28,15 @@ internal class AgentUpdater(
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDownloadsApi _downloadsApi = downloadsApi;
-  private readonly ISystemEnvironment _systemEnvironment = environmentHelper;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<AgentUpdater> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processInvoker = processInvoker;
   private readonly ISettingsProvider _settings = settings;
+  private readonly ISystemEnvironment _systemEnvironment = environmentHelper;
   private readonly TimeProvider _timeProvider = timeProvider;
-
-
+  
   public async Task CheckForUpdate(CancellationToken cancellationToken = default)
   {
     if (_settings.DisableAutoUpdate)
@@ -185,6 +183,7 @@ internal class AgentUpdater(
       _logger.LogError(ex, "Error while checking for updates.");
     }
   }
+
 
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)

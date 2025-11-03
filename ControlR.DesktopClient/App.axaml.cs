@@ -35,7 +35,7 @@ public partial class App : Application
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
       desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-      desktop.ShutdownRequested += (sender, args) =>
+      desktop.ShutdownRequested += (_, _) =>
       {
         _appShutdownTokenSource.Cancel();
       };

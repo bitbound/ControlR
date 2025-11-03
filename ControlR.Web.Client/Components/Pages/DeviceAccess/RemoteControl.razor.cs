@@ -10,13 +10,14 @@ public partial class RemoteControl : ViewportAwareComponent
 {
   private string? _alertMessage;
   private Severity _alertSeverity;
+  private bool _isReconnecting;
   private string? _loadingMessage = "Loading";
-
   private DesktopSession[]? _systemSessions;
+
 
   [Inject]
   public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
-  
+
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
@@ -27,23 +28,19 @@ public partial class RemoteControl : ViewportAwareComponent
   public required ILogger<RemoteControl> Logger { get; init; }
 
   [Inject]
-  public required IMessenger Messenger { get; init; }
-
-  [Inject]
   public required NavigationManager NavManager { get; init; }
 
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
-  
+
   [Inject]
-  public required IScreenWake ScreenWake { get; init; } 
+  public required IScreenWake ScreenWake { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
-  
 
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }
@@ -62,6 +59,11 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     get
     {
+      if (_isReconnecting)
+      {
+        return SignalingState.Reconnecting;
+      }
+
       if (StreamingClient.State == WebSocketState.Open)
       {
         return SignalingState.ConnectionActive;
@@ -77,10 +79,10 @@ public partial class RemoteControl : ViewportAwareComponent
         return SignalingState.Alert;
       }
 
-      if (DeviceAccessState.CurrentDevice.Platform 
-        is not SystemPlatform.Windows 
-        and not SystemPlatform.MacOs
-        and not SystemPlatform.Linux)
+      if (DeviceAccessState.CurrentDevice.Platform
+          is not SystemPlatform.Windows
+          and not SystemPlatform.MacOs
+          and not SystemPlatform.Linux)
       {
         return SignalingState.UnsupportedOperatingSystem;
       }
@@ -106,6 +108,7 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
+
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -116,7 +119,7 @@ public partial class RemoteControl : ViewportAwareComponent
         return;
       }
 
-      await GetDeviceSystemSessions();
+      await GetDeviceSystemSessions(false);
     }
     catch (Exception ex)
     {
@@ -131,18 +134,22 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
-  private async Task GetDeviceSystemSessions()
+
+  private async Task GetDeviceSystemSessions(bool quiet)
   {
     try
     {
-        _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
+      _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Failed to get active sessions.");
+      Logger.LogError(ex, "Failed to get active sessions.");
+      if (!quiet)
+      {
         Snackbar.Add("Failed to get active sessions", Severity.Warning);
         _alertMessage = "Failed to get active sessions.";
         _alertSeverity = Severity.Warning;
+      }
     }
   }
 
@@ -157,9 +164,9 @@ public partial class RemoteControl : ViewportAwareComponent
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await StreamingClient.SendCloseStreamingSession(cts.Token);
       await StreamingClient.Close();
-      await ScreenWake.SetScreenWakeLock(isWakeEnabled: false);
+      await ScreenWake.SetScreenWakeLock(false);
       Snackbar.Add("Remote control session disconnected", Severity.Info);
-      await GetDeviceSystemSessions();
+      await GetDeviceSystemSessions(false);
     }
     catch (Exception ex)
     {
@@ -172,12 +179,30 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
+  private async Task HandleRefreshSessionsClicked()
+  {
+    await GetDeviceSystemSessions(false);
+    Snackbar.Add("Sessions refreshed", Severity.Info);
+  }
+
+  private async Task HandleReloadClicked()
+  {
+    _alertMessage = null;
+    _loadingMessage = null;
+    await GetDeviceSystemSessions(false);
+  }
+
   private async Task HandleStreamingConnectionLost()
   {
+    if (await Reconnect())
+    {
+      return;
+    }
+
     RemoteControlState.CurrentSession = null;
     Snackbar.Add("Connection lost", Severity.Warning);
-    await GetDeviceSystemSessions();
-    await ScreenWake.SetScreenWakeLock(isWakeEnabled: false);
+    await GetDeviceSystemSessions(false);
+    await ScreenWake.SetScreenWakeLock(false);
     await InvokeAsync(StateHasChanged);
   }
 
@@ -201,8 +226,8 @@ public partial class RemoteControl : ViewportAwareComponent
       };
 
       await DialogService.ShowAsync<DesktopPreviewDialog>(
-        $"Desktop Preview - {desktopSession.Name}", 
-        parameters, 
+        $"Desktop Preview - {desktopSession.Name}",
+        parameters,
         dialogOptions);
     }
     catch (Exception ex)
@@ -213,24 +238,67 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
-  private async Task RefreshSystemSessions()
-  {
-    await GetDeviceSystemSessions();
-    Snackbar.Add("Sessions refreshed", Severity.Info);
-  }
-
-  private async Task Reload()
-  {
-    _alertMessage = null;
-    _loadingMessage = null;
-     await GetDeviceSystemSessions();
-  }
-
-  private async Task StartRemoteControl(DesktopSession desktopSession)
+  private async Task<bool> Reconnect()
   {
     try
     {
-      _loadingMessage = "Starting remote control session";
+      _isReconnecting = true;
+      _alertMessage = null;
+      _loadingMessage = null;
+      
+      await InvokeAsync(StateHasChanged);
+
+      for (var i = 0; i < 5; i++)
+      {
+        try
+        {
+          if (i > 0)
+          {
+            await Task.Delay(3_000);
+          }
+
+          await GetDeviceSystemSessions(true);
+          if (_systemSessions is null)
+          {
+            continue;
+          }
+
+          if (_systemSessions.Length > 1)
+          {
+            break;
+          }
+
+          if (await StartRemoteControl(_systemSessions[0], quiet: true))
+          {
+            return true;
+          }
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Error while reconnecting.");
+        }
+      }
+
+      _alertMessage = "Failed to reconnect.";
+      _alertSeverity = Severity.Warning;
+      return false;
+    }
+    finally
+    {
+      _isReconnecting = false;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task<bool> StartRemoteControl(DesktopSession desktopSession, bool quiet)
+  {
+    try
+    {
+      if (!quiet)
+      {
+        _loadingMessage = "Starting remote control session";
+      }
+      
       _systemSessions = null;
 
       var session = new RemoteControlSession(
@@ -247,7 +315,10 @@ public partial class RemoteControl : ViewportAwareComponent
         Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout=30"
       };
 
-      Snackbar.Add($"Starting remote control in system session {desktopSession.SystemSessionId}", Severity.Info);
+      if (!quiet)
+      {
+        Snackbar.Add($"Starting remote control in system session {desktopSession.SystemSessionId}", Severity.Info);
+      }
 
       var notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
       var requestDto = new RemoteControlSessionRequestDto(
@@ -268,7 +339,7 @@ public partial class RemoteControl : ViewportAwareComponent
         _alertMessage = streamingSessionResult.Reason;
         _alertSeverity = Severity.Error;
         await InvokeAsync(StateHasChanged);
-        return;
+        return false;
       }
 
       await StreamingClient.Connect(uriBuilder.Uri, CancellationToken.None);
@@ -276,16 +347,22 @@ public partial class RemoteControl : ViewportAwareComponent
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
       _loadingMessage = null;
-      await ScreenWake.SetScreenWakeLock(isWakeEnabled: true);
+      await ScreenWake.SetScreenWakeLock(true);
+      return true;
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while requesting remote control session.");
-      _alertMessage = "An error occurred while requesting the remote control session.";
-      _alertSeverity = Severity.Error;
+      if (!quiet)
+      {
+        _alertMessage = "An error occurred while requesting the remote control session.";
+        _alertSeverity = Severity.Error;
+      }
       RemoteControlState.CurrentSession = null;
+      return false;
     }
   }
+
 
   private enum SignalingState
   {
@@ -294,6 +371,7 @@ public partial class RemoteControl : ViewportAwareComponent
     Alert,
     SessionSelect,
     ConnectionActive,
+    Reconnecting,
     UnsupportedOperatingSystem
   }
 }

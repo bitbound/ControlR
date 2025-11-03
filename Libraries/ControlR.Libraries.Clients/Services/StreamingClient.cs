@@ -23,13 +23,13 @@ public abstract class StreamingClient(
   TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
-  IDelayer delayer,
+  IWaiter waiter,
   ILogger<StreamingClient> logger) : IStreamingClient
 {
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
 
-  private readonly IDelayer _delayer = delayer;
+  private readonly IWaiter _waiter = waiter;
   private readonly ILogger<StreamingClient> _logger = logger;
   private readonly int _maxSendBufferLength = ushort.MaxValue * 2;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
@@ -297,7 +297,7 @@ public abstract class StreamingClient(
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
-    var waitResult = await _delayer.WaitForAsync(
+    var waitResult = await _waiter.WaitFor(
         () => _sendBufferLength < _maxSendBufferLength,
         pollingDelay: TimeSpan.FromMilliseconds(25),
         cancellationToken: linkedCts.Token);

@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IHubConnector, HubConnector>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();
     services.AddScoped<IMemoryProvider, MemoryProvider>();
-    services.AddScoped<IDelayer, Delayer>();
+    services.AddScoped<IWaiter, Waiter>();
     services.AddScoped<IRetryer, Retryer>();
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddScoped<IScreenWake, ScreenWake>();

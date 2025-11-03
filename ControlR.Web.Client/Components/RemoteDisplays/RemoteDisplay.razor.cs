@@ -51,7 +51,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
   [Inject]
-  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
+  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
 
   [Parameter]
   [EditorRequired]
@@ -555,13 +555,13 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await MainHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
+      await DeviceAccessHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
       Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while sending Ctrl+Alt+Del.");
-      Snackbar.Add("An error occurred while sending Ctrl+Alt+Del.");
+      Snackbar.Add("An error occurred while sending Ctrl+Alt+Del.", Severity.Error);
     }
   }
 

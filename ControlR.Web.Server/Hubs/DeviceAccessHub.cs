@@ -14,7 +14,7 @@ public class DeviceAccessHub(
   IHubStreamStore hubStreamStore,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
   IOptionsMonitor<AppOptions> appOptions,
-  ILogger<DeviceAccessHub> logger) 
+  ILogger<DeviceAccessHub> logger)
   : BrowserHubBase<IDeviceAccessHubClient>(userManager, appDb, authorizationService, agentHub, logger), IDeviceAccessHub
 {
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
@@ -54,6 +54,7 @@ public class DeviceAccessHub(
       {
         return;
       }
+
       await AgentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .CloseTerminalSession(terminalSessionId);
@@ -127,7 +128,26 @@ public class DeviceAccessHub(
       return Result.Fail<PwshCompletionsResponseDto>("An error occurred.");
     }
   }
-  
+
+  public async Task InvokeCtrlAltDel(Guid deviceId)
+  {
+    try
+    {
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return;
+      }
+
+      await AgentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .InvokeCtrlAltDel();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while invoking CtrlAltDel.");
+    }
+  }
+
 
   public async Task<Result> RequestStreamingSession(
     Guid deviceId,
@@ -343,5 +363,4 @@ public class DeviceAccessHub(
       return Result.Fail("An error occurred during file upload.");
     }
   }
-
 }

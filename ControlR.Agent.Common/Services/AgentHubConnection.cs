@@ -111,7 +111,9 @@ internal class AgentHubConnection(
     {
       await SendDeviceHeartbeat();
       await _agentUpdater.CheckForUpdate();
-      await _desktopClientUpdater.EnsureLatestVersion(_appLifetime.ApplicationStopping);
+      await _desktopClientUpdater.EnsureLatestVersion(
+        acquireGlobalLock: true,
+        _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {

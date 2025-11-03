@@ -267,7 +267,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
     builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
     builder.Services.AddSingleton<IRetryer, Retryer>();
-    builder.Services.AddSingleton<IDelayer, Delayer>();
+    builder.Services.AddSingleton<IWaiter, Waiter>();
     builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<IEmailSender, EmailSender>();

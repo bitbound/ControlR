@@ -82,7 +82,7 @@ public static class HostRunner
       await host.StartAsync(cancellationToken);
       hosts.Add(host);
 
-      await Delayer.Default.WaitForAsync(
+      await Waiter.Default.WaitFor(
         () =>
         {
           return hosts.All(x => x.Services.GetRequiredService<IHubConnection<IAgentHub>>().IsConnected);

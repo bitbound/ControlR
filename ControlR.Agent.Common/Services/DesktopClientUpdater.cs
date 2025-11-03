@@ -2,6 +2,7 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;
@@ -27,9 +28,10 @@ internal class DesktopClientUpdater(
   private readonly ISettingsProvider _settings = settings;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly SemaphoreSlim _updateLock = new(1, 1);
-
-
-  public async Task<bool> EnsureLatestVersion(CancellationToken cancellationToken)
+  
+  public async Task<bool> EnsureLatestVersion(
+    bool acquireGlobalLock,
+    CancellationToken cancellationToken)
   {
     if (_settings.DisableAutoUpdate)
     {
@@ -37,7 +39,10 @@ internal class DesktopClientUpdater(
       return false;
     }
 
-    using var mutation = await _mutationLock.AcquireAsync(cancellationToken);
+    using var mutationLock = acquireGlobalLock
+      ? await _mutationLock.AcquireAsync(cancellationToken)
+      : new NoopDisposable();
+    
     await _updateLock.WaitAsync(cancellationToken);
     try
     {
@@ -118,13 +123,13 @@ internal class DesktopClientUpdater(
       return;
     }
 
-    _ = await EnsureLatestVersion(stoppingToken);
+    _ = await EnsureLatestVersion(acquireGlobalLock: true, stoppingToken);
 
     using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
 
     while (await timer.WaitForNextTickAsync(stoppingToken))
     {
-      _ = await EnsureLatestVersion(stoppingToken);
+      _ = await EnsureLatestVersion(acquireGlobalLock: true, stoppingToken);
     }
   }
 

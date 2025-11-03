@@ -91,7 +91,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IMemoryProvider, MemoryProvider>();
     services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
     services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
-    services.AddSingleton<IDelayer, Delayer>();
+    services.AddSingleton<IWaiter, Waiter>();
     services.AddSingleton<IRetryer, Retryer>();
     services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();
     services.AddSingleton<IEmbeddedDesktopClientProvider, EmbeddedDesktopClientProvider>();

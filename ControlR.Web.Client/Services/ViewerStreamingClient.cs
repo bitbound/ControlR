@@ -34,11 +34,11 @@ public class ViewerStreamingClient(
   TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
-  IDelayer delayer,
+  IWaiter waiter,
   ILogger<ViewerStreamingClient> logger)
-  : StreamingClient(timeProvider, messenger, memoryProvider, delayer, logger), IViewerStreamingClient
+  : StreamingClient(timeProvider, messenger, memoryProvider, waiter, logger), IViewerStreamingClient
 {
-  private readonly IDelayer _delayer = delayer;
+  private readonly IWaiter _waiter = waiter;
   private readonly ILogger<ViewerStreamingClient> _logger = logger;
 
   public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
@@ -204,7 +204,7 @@ public class ViewerStreamingClient(
     using var cts = new CancellationTokenSource();
     cts.CancelAfter(TimeSpan.FromSeconds(30));
 
-    await _delayer.WaitForAsync(
+    await _waiter.WaitFor(
       condition: () => State == WebSocketState.Open || IsDisposed,
       pollingDelay: TimeSpan.FromMilliseconds(100),
       cancellationToken: cts.Token);

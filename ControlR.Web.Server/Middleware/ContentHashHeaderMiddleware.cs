@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 
 namespace ControlR.Web.Server.Middleware;
 
+[Obsolete("This should be removed in version 0.15.x")]
 public class ContentHashHeaderMiddleware(
   RequestDelegate next,
   IFileProvider fileProvider,
