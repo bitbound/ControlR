@@ -3,13 +3,13 @@ using ControlR.Libraries.DevicesCommon.Services.Processes;
 
 namespace ControlR.Agent.Common.Services.Linux;
 
-internal class DesktopSessionProviderX11(
+internal class DesktopSessionProviderLinux(
   IIpcServerStore ipcStore,
   IProcessManager processManager,
-  ILogger<DesktopSessionProviderX11> logger) : IDesktopSessionProvider
+  ILogger<DesktopSessionProviderLinux> logger) : IDesktopSessionProvider
 {
   private readonly IIpcServerStore _ipcStore = ipcStore;
-  private readonly ILogger<DesktopSessionProviderX11> _logger = logger;
+  private readonly ILogger<DesktopSessionProviderLinux> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
 
 
@@ -20,24 +20,116 @@ internal class DesktopSessionProviderX11(
 
     foreach (var server in _ipcStore.Servers)
     {
-      var uiSession = new DesktopSession()
-      {
-        ProcessId = server.Value.Process.Id,
-        SystemSessionId = server.Value.Process.SessionId,
-        Type = DesktopSessionType.Console
-      };
+      var process = server.Value.Process;
+
+      // Default values
+      string? username = null;
+      string? display = null;
+      string? waylandDisplay = null;
+      string? tty = null;
 
       // Try to find the username for this session
-      var getUserResult = await TryGetUsernameForProcess(server.Value.Process, loggedInUsers);
+      var getUserResult = await TryGetUsernameForProcess(process, loggedInUsers);
       if (getUserResult.IsSuccess)
       {
-        uiSession.Username = getUserResult.Value;
-        uiSession.Name = $"Console - {getUserResult.Value}";
+        username = getUserResult.Value;
+      }
+
+      // Try to get the controlling TTY for the process
+      try
+      {
+        var ttyResult = await _processManager.GetProcessOutput("ps", $"-o tty= -p {process.Id}", 3000);
+        if (ttyResult.IsSuccess)
+        {
+          var raw = ttyResult.Value.Trim();
+          // ps may return '?' when there's no tty
+          if (!string.IsNullOrWhiteSpace(raw) && raw != "?")
+          {
+            tty = raw;
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Failed to get TTY for process {Pid}", process.Id);
+      }
+
+      // Try to read DISPLAY / Wayland variables from the process environment
+      try
+      {
+        var envResult = await _processManager.GetProcessOutput("cat", $"/proc/{process.Id}/environ", 3000);
+        if (envResult.IsSuccess && !string.IsNullOrEmpty(envResult.Value))
+        {
+          // environ is NUL (\0) separated
+          var entries = envResult.Value.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+          foreach (var entry in entries)
+          {
+            if (display is null && entry.StartsWith("DISPLAY=", StringComparison.Ordinal))
+            {
+              var val = entry[8..].Trim();
+              if (!string.IsNullOrWhiteSpace(val))
+                display = val;
+            }
+            else if (waylandDisplay is null && entry.StartsWith("WAYLAND_DISPLAY=", StringComparison.Ordinal))
+            {
+              var val = entry[15..].Trim();
+              if (!string.IsNullOrWhiteSpace(val))
+                waylandDisplay = val;
+            }
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Failed to read environment for process {Pid}", process.Id);
+      }
+
+      // Prefer a DISPLAY value (X11), else wayland display, else TTY
+      string? sessionKey = null;
+      string sessionLabel;
+      DesktopSessionType sessionType;
+
+      if (!string.IsNullOrWhiteSpace(display))
+      {
+        sessionKey = display;
+        sessionLabel = display; // ":0" etc. FormatSessionName will render as X11
+        sessionType = DesktopSessionType.Console;
+      }
+      else if (!string.IsNullOrWhiteSpace(waylandDisplay))
+      {
+        sessionKey = waylandDisplay;
+        sessionLabel = waylandDisplay; // e.g. "wayland-0"
+        sessionType = DesktopSessionType.Console;
+      }
+      else if (!string.IsNullOrWhiteSpace(tty))
+      {
+        sessionKey = tty;
+        sessionLabel = tty;
+        sessionType = DetermineSessionType(tty);
       }
       else
       {
-        uiSession.Name = $"Console - Session {server.Value.Process.SessionId}";
+        // Last resort: use PID-derived key to avoid collisions
+        sessionKey = $"pid:{process.Id}";
+        sessionLabel = $"Session {process.SessionId}";
+        sessionType = DesktopSessionType.Console;
       }
+
+      // Build a stable numeric SystemSessionId compatible with discovery logic
+      var sessionIdSeedUser = string.IsNullOrWhiteSpace(username) ? "unknown" : username;
+      var systemSessionId = GenerateSessionId(sessionIdSeedUser, sessionKey);
+
+      // Compose name consistently with other discovery methods
+      var name = FormatSessionName(sessionLabel, sessionType);
+
+      var uiSession = new DesktopSession
+      {
+        ProcessId = process.Id,
+        SystemSessionId = systemSessionId,
+        Type = sessionType,
+        Username = username ?? string.Empty,
+        Name = name
+      };
 
       uiSessions.Add(uiSession);
     }
@@ -71,21 +163,21 @@ internal class DesktopSessionProviderX11(
     return DesktopSessionType.Console;
   }
 
-  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
+  private static string FormatSessionName(string tty, DesktopSessionType sessionType)
   {
     var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
 
     if (tty.StartsWith(':'))
     {
-      return $"{sessionTypeStr} - {username} (X11 {tty})";
+      return $"{sessionTypeStr} - (X11 {tty})";
     }
     else if (tty.StartsWith("tty"))
     {
-      return $"{sessionTypeStr} - {username} ({tty})";
+      return $"{sessionTypeStr} - {tty}";
     }
     else
     {
-      return $"{sessionTypeStr} - {username} ({tty})";
+      return $"{sessionTypeStr} - {tty}";
     }
   }
 
@@ -195,7 +287,7 @@ internal class DesktopSessionProviderX11(
 
           // Determine session type based on tty
           var sessionType = DetermineSessionType(tty);
-          var sessionName = FormatSessionName(username, tty, sessionType);
+          var sessionName = FormatSessionName(tty, sessionType);
 
           var session = new DesktopSession
           {

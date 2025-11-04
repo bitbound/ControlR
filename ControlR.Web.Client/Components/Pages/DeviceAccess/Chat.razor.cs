@@ -194,8 +194,8 @@ public partial class Chat : ComponentBase, IDisposable
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error loading system sessions.");
-      _alertMessage = "An error occurred while loading system sessions.";
+      Logger.LogError(ex, "Error loading desktop sessions.");
+      _alertMessage = "An error occurred while loading desktop sessions.";
       _alertSeverity = Severity.Error;
     }
     finally

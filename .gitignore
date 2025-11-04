@@ -368,3 +368,5 @@ FodyWeavers.xsd
 .idea/.idea.ControlR/.idea/copilot.data.migration.agent.xml
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
 .plans/*
+/.build/staging-desktop
+ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip

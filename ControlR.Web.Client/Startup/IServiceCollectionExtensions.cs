@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
     services.AddMudServices(config =>
     {
       config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+      config.SnackbarConfiguration.HideTransitionDuration = 100;
     });
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();

@@ -22,12 +22,14 @@ public static class LoggerExtensions
     [CallerLineNumber] int callerLineNumber = 0,
     [CallerMemberName] string callerMemberName = "",
     Exception? exception = null,
+    TimeSpan? cacheDuration = null,
     params object[] args)
   {
     var argsKey = args != null && args.Length > 0
       ? string.Join("|", args.Select(a => a?.ToString() ?? "<null>")) 
       : string.Empty;
 
+    cacheDuration ??= TimeSpan.FromHours(1);
     var cacheValue = $"{template}|{argsKey}";
     var key = $"{callerFilePath}:{callerLineNumber}:{callerMemberName}:{template}";
     if (_cache.TryGetValue(key, out string? cachedValue) && cachedValue == cacheValue)
@@ -35,7 +37,7 @@ public static class LoggerExtensions
       return;
     }
 
-    _cache.Set(key, cacheValue, TimeSpan.FromHours(1));
+    _cache.Set(key, cacheValue, cacheDuration.Value);
 #pragma warning disable CA2254 // Template should be a static expression
     logger.Log(logLevel, exception, template, args ?? []);
 #pragma warning restore CA2254 // Template should be a static expression

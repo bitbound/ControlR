@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.IO.Pipes;
+using System.Security.Principal;
 
 namespace ControlR.Libraries.Ipc;
 
@@ -22,7 +23,8 @@ internal class IpcClient : ConnectionBase, IIpcClient
         serverName,
         pipeName,
         PipeDirection.InOut,
-        PipeOptions.Asynchronous);
+        PipeOptions.Asynchronous,
+        TokenImpersonationLevel.Impersonation);
   }
 
   public async Task<bool> Connect(CancellationToken cancellationToken)

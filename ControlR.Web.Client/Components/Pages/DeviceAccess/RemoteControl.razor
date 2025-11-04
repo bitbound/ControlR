@@ -37,10 +37,10 @@
     case SignalingState.SessionSelect:
     {
       <MudText Typo="Typo.subtitle1" Color="Color.Info" GutterBottom>
-        System Sessions on @(DeviceAccessState.CurrentDevice.Name):
+        Desktop Sessions on @(DeviceAccessState.CurrentDevice.Name):
       </MudText>
 
-      <MudTooltip Text="Refresh System Sessions">
+      <MudTooltip Text="Refresh Desktop Sessions">
         <MudButton StartIcon="@Icons.Material.Filled.Refresh" Class="mb-2" OnClick="HandleRefreshSessionsClicked">
           Refresh Sessions
         </MudButton>
@@ -49,7 +49,7 @@
       @if (_systemSessions is null || _systemSessions.Length == 0)
       {
         <MudAlert Severity="Severity.Warning" Icon="@(Icons.Material.Filled.Info)">
-          No system sessions available.
+          No desktop sessions available.
         </MudAlert>
       }
       else

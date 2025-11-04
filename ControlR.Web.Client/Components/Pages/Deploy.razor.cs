@@ -86,7 +86,7 @@ public partial class Deploy
       var downloadUri = new Uri(GetServerUri(), "/downloads/linux-x64/ControlR.Agent");
       return
         $"sudo rm -f /tmp/ControlR.Agent && " +
-        $"sudo wget -q -O /tmp/ControlR.Agent {downloadUri} && " +
+        $"sudo wget -O /tmp/ControlR.Agent {downloadUri} && " +
         $"sudo chmod +x /tmp/ControlR.Agent && " +
         $"sudo /tmp/ControlR.Agent install {GetCommonArgs()}";
     }

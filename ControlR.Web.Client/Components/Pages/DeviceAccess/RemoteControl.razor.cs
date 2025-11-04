@@ -119,11 +119,11 @@ public partial class RemoteControl : ViewportAwareComponent
         return;
       }
 
-      await GetDeviceSystemSessions(false);
+      await GetDeviceDesktopSessions(false);
     }
     catch (Exception ex)
     {
-      const string message = "Failed to retrieve system sessions on remote device.";
+      const string message = "Failed to retrieve desktop sessions on remote device.";
       Logger.LogError(ex, message);
       _alertMessage = message;
       _alertSeverity = Severity.Error;
@@ -135,7 +135,7 @@ public partial class RemoteControl : ViewportAwareComponent
   }
 
 
-  private async Task GetDeviceSystemSessions(bool quiet)
+  private async Task GetDeviceDesktopSessions(bool quiet)
   {
     try
     {
@@ -166,7 +166,7 @@ public partial class RemoteControl : ViewportAwareComponent
       await StreamingClient.Close();
       await ScreenWake.SetScreenWakeLock(false);
       Snackbar.Add("Remote control session disconnected", Severity.Info);
-      await GetDeviceSystemSessions(false);
+      await GetDeviceDesktopSessions(false);
     }
     catch (Exception ex)
     {
@@ -181,7 +181,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
   private async Task HandleRefreshSessionsClicked()
   {
-    await GetDeviceSystemSessions(false);
+    await GetDeviceDesktopSessions(false);
     Snackbar.Add("Sessions refreshed", Severity.Info);
   }
 
@@ -189,7 +189,7 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     _alertMessage = null;
     _loadingMessage = null;
-    await GetDeviceSystemSessions(false);
+    await GetDeviceDesktopSessions(false);
   }
 
   private async Task HandleStreamingConnectionLost()
@@ -201,7 +201,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
     RemoteControlState.CurrentSession = null;
     Snackbar.Add("Connection lost", Severity.Warning);
-    await GetDeviceSystemSessions(false);
+    await GetDeviceDesktopSessions(false);
     await ScreenWake.SetScreenWakeLock(false);
     await InvokeAsync(StateHasChanged);
   }
@@ -257,7 +257,7 @@ public partial class RemoteControl : ViewportAwareComponent
             await Task.Delay(3_000);
           }
 
-          await GetDeviceSystemSessions(true);
+          await GetDeviceDesktopSessions(true);
           if (_systemSessions is null)
           {
             continue;

@@ -1,8 +1,8 @@
-namespace ControlR.Tests.TestingUtilities;
+namespace ControlR.Libraries.Shared.Helpers;
 
 public static class IoHelper
 {
-  public static string GetSolutionDir(string currentDir)
+  public static Result<string> GetSolutionDir(string currentDir)
   {
     var dirInfo = new DirectoryInfo(currentDir);
     if (!dirInfo.Exists)
@@ -12,7 +12,7 @@ public static class IoHelper
 
     if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
     {
-      return dirInfo.FullName;
+      return Result.Ok(dirInfo.FullName);
     }
 
     if (dirInfo.Parent is not null)
@@ -20,6 +20,6 @@ public static class IoHelper
       return GetSolutionDir(dirInfo.Parent.FullName);
     }
 
-    throw new DirectoryNotFoundException($"Directory '{currentDir}' does not contain a solution file.");
+    return Result.Fail<string>("Solution directory not found.");
   }
 }

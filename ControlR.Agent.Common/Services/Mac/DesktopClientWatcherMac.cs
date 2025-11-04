@@ -56,11 +56,11 @@ internal class DesktopClientWatcherMac(
       var loggedInUsers = await GetLoggedInUsersAsync();
       if (loggedInUsers.Count == 0)
       {
-        _logger.LogIfChanged(LogLevel.Debug, "No logged-in users found.");
+        _logger.LogIfChanged(LogLevel.Information, "No logged-in users found.");
         return;
       }
 
-      _logger.LogIfChanged(LogLevel.Debug, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
+      _logger.LogIfChanged(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
 
       foreach (var uid in loggedInUsers)
       {
@@ -89,7 +89,7 @@ internal class DesktopClientWatcherMac(
       }
       else
       {
-        _logger.LogIfChanged(LogLevel.Debug, "Desktop client service is running for user {UID}.", args: uid);
+        _logger.LogIfChanged(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
       }
     }
     catch (Exception ex)
@@ -172,7 +172,7 @@ internal class DesktopClientWatcherMac(
 
       // Check if the output contains "pid = " which indicates a running process
       var isRunning = output.Contains("pid = ");
-      _logger.LogIfChanged(LogLevel.Debug, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
+      _logger.LogIfChanged(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
 
       return isRunning;
     }

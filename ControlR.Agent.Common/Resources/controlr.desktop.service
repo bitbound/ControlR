@@ -3,8 +3,8 @@ Description=ControlR Desktop Client provides user session interface for remote c
 After=graphical-session.target
 
 [Service]
-WorkingDirectory=/usr/local/bin/ControlR/c.jaredg.dev/DesktopClient
-ExecStart=/usr/local/bin/ControlR/c.jaredg.dev/DesktopClient/ControlR.DesktopClient --instance-id c.jaredg.dev
+WorkingDirectory={{INSTALL_DIRECTORY}}/DesktopClient
+ExecStart={{INSTALL_DIRECTORY}}/DesktopClient/ControlR.DesktopClient{{INSTANCE_ARGS}}
 Type=simple
 Environment=DOTNET_ENVIRONMENT=Production
 TimeoutStopSec=15

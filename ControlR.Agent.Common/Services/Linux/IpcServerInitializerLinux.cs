@@ -2,7 +2,6 @@ using System.Runtime.Versioning;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.NativeInterop.Unix;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Linux;
@@ -15,11 +14,13 @@ internal class IpcServerInitializerLinux(
   IProcessManager processManager,
   IFileSystem fileSystem,
   IHubConnection<IAgentHub> hubConnection,
+  IIpcClientAuthenticator ipcAuthenticator,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<IpcServerInitializerLinux> logger) 
   : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
 {
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IIpcClientAuthenticator _ipcAuthenticator = ipcAuthenticator;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,6 +62,23 @@ internal class IpcServerInitializerLinux(
         return;
       }
 
+      // Authenticate the connection
+      var authResult = await _ipcAuthenticator.AuthenticateConnection(server);
+      if (!authResult.IsSuccess)
+      {
+        _logger.LogCritical(
+          "IPC connection authentication FAILED: {Reason}. Connection rejected and disconnected.",
+          authResult.Reason);
+
+        // TODO: Send authentication failure event to server's event notification system
+        // once that feature is implemented. Include: timestamp, attempted process ID,
+        // executable path, and failure reason.
+
+        server.Dispose();
+        return;
+      }
+
+      _logger.LogInformation("IPC connection authenticated successfully.");
       HandleConnection(server, cancellationToken).Forget();
     }
     catch (OperationCanceledException ex)

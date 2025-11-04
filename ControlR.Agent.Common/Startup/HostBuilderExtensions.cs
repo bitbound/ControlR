@@ -109,18 +109,20 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IServiceControl, ServiceControlWindows>();
       services.AddSingleton<IPowerControl, PowerControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
+      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderWindows>();
     }
     else if (OperatingSystem.IsLinux())
     {
       services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderLinux>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
-      services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderX11>();
+      services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderLinux>();
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderLinux>();
     }
     else if (OperatingSystem.IsMacOS())
     {
@@ -132,6 +134,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderMac>();
     }
     else
     {
@@ -147,8 +150,8 @@ internal static class HostApplicationBuilderExtensions
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
       services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddSingleton<IIpcServerStore, IpcServerStore>();
+      services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
       services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
-
       services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
       services.AddHostedService<IpcServerWatcher>();
       services.AddHostedService<HubConnectionInitializer>();
