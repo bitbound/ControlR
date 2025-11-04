@@ -29,8 +29,8 @@ public class IpcClientAuthenticatorTests
     _fakeTimeProvider = new FakeTimeProvider();
 
     _authenticator = new IpcClientAuthenticator(
-      _mockCredentialsProvider.Object,
       _fakeTimeProvider,
+      _mockCredentialsProvider.Object,
       _mockSystemEnvironment.Object,
       _mockLogger.Object);
   }
