@@ -193,18 +193,13 @@ public class IpcClientAuthenticator(
           return ValidateWindowsCodeSignature(executablePath);
         }
       case SystemPlatform.MacOs:
-        {
-          return Result.Ok();
-        }
       case SystemPlatform.Linux:
+      default:
         {
           return Result.Ok();
         }
     }
-
-    return Result.Fail("Code signing certificate validation not implemented for this OS.");
   }
-
 
   private Result ValidateExecutablePath(string executablePath)
   {

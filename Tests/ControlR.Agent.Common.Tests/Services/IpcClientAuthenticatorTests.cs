@@ -13,26 +13,26 @@ namespace ControlR.Agent.Common.Tests.Services;
 
 public class IpcClientAuthenticatorTests
 {
-  private readonly Mock<IClientCredentialsProvider> _mockCredentialsProvider;
-  private readonly Mock<ISystemEnvironment> _mockSystemEnvironment;
-  private readonly Mock<ILogger<IpcClientAuthenticator>> _mockLogger;
-  private readonly Mock<IIpcServer> _mockServer;
-  private readonly FakeTimeProvider _fakeTimeProvider;
+  private readonly Mock<IClientCredentialsProvider> _credentialProvider;
+  private readonly Mock<ISystemEnvironment> _systemEnvironment;
+  private readonly Mock<ILogger<IpcClientAuthenticator>> _logger;
+  private readonly Mock<IIpcServer> _server;
+  private readonly FakeTimeProvider _timeProvider;
   private readonly IIpcClientAuthenticator _authenticator;
 
   public IpcClientAuthenticatorTests()
   {
-    _mockCredentialsProvider = new Mock<IClientCredentialsProvider>();
-    _mockSystemEnvironment = new Mock<ISystemEnvironment>();
-    _mockLogger = new Mock<ILogger<IpcClientAuthenticator>>();
-    _mockServer = new Mock<IIpcServer>();
-    _fakeTimeProvider = new FakeTimeProvider();
+    _credentialProvider = new Mock<IClientCredentialsProvider>();
+    _systemEnvironment = new Mock<ISystemEnvironment>();
+    _logger = new Mock<ILogger<IpcClientAuthenticator>>();
+    _server = new Mock<IIpcServer>();
+    _timeProvider = new FakeTimeProvider();
 
     _authenticator = new IpcClientAuthenticator(
-      _fakeTimeProvider,
-      _mockCredentialsProvider.Object,
-      _mockSystemEnvironment.Object,
-      _mockLogger.Object);
+      _timeProvider,
+      _credentialProvider.Object,
+      _systemEnvironment.Object,
+      _logger.Object);
   }
 
   [Fact]
@@ -41,16 +41,16 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var startupDir = "/expected/path";
     var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
     var credentials = new ClientCredentials(12345, expectedPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -60,12 +60,12 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithFailedCredentialRetrieval_ReturnsFailure()
   {
     // Arrange
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Fail<ClientCredentials>("Failed to get credentials"));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.False(result.IsSuccess);
@@ -76,16 +76,16 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithInvalidPath_RecordsFailureAndReturnsFailure()
   {
     // Arrange
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
     var credentials = new ClientCredentials(12345, "/wrong/path/malicious.exe");
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.False(result.IsSuccess);
@@ -100,12 +100,12 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var attackPath = "/attack/path/malicious.exe";
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
     var credentials = new ClientCredentials(12345, attackPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Record 5 failed attempts to exceed rate limit
@@ -115,7 +115,7 @@ public class IpcClientAuthenticatorTests
     }
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.False(result.IsSuccess);
@@ -126,16 +126,16 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithDebugModeDotnetExe_ReturnsSuccess()
   {
     // Arrange
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(true);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(true);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
 
     var credentials = new ClientCredentials(12345, "/usr/bin/dotnet");
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -146,12 +146,12 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var credentials = new ClientCredentials(12345, null!);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.False(result.IsSuccess);
@@ -162,12 +162,12 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithException_ReturnsFailure()
   {
     // Arrange
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Throws(new InvalidOperationException("Test exception"));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.False(result.IsSuccess);
@@ -179,8 +179,8 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var attackPath = "/attack/path/test.exe";
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
     // Record 5 failed attempts
     for (var i = 0; i < 5; i++)
@@ -189,11 +189,11 @@ public class IpcClientAuthenticatorTests
     }
 
     // Advance time by 61 seconds to expire the rate limit window
-    _fakeTimeProvider.Advance(TimeSpan.FromSeconds(61));
+    _timeProvider.Advance(TimeSpan.FromSeconds(61));
 
     var credentials = new ClientCredentials(12345, attackPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act - rate limit should be cleared, but path validation will still fail
@@ -208,19 +208,19 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var startupDir = "/Applications/ControlR";
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
     // Note: SystemEnvironment.Instance.Platform (not the mock) is used in GetDesktopExecutablePath
     // So we need to construct the expected path based on the actual platform running the test
     // For testing purposes, let's test the non-macOS path since we can't easily mock the static Instance
     var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
     var credentials = new ClientCredentials(12345, expectedPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -232,18 +232,18 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var startupDir = "/expected/path";
     var validPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
     var credentials = new ClientCredentials(12345, validPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act - authenticate 10 times successfully
     for (var i = 0; i < 10; i++)
     {
-      var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+      var result = await _authenticator.AuthenticateConnection(_server.Object);
       Assert.True(result.IsSuccess, $"Attempt {i + 1} should succeed");
     }
 
@@ -259,16 +259,16 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithDebugModeDifferentDotnetNames_ReturnsSuccess(string dotnetName)
   {
     // Arrange
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(true);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(true);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
 
     var credentials = new ClientCredentials(12345, $"/usr/bin/{dotnetName}");
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Act
-    var result = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -280,7 +280,7 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var executablePath = "C:\\test\\app.exe";
     var startTime = DateTimeOffset.Parse("2024-01-01T12:00:00Z");
-    _fakeTimeProvider.SetUtcNow(startTime);
+    _timeProvider.SetUtcNow(startTime);
     
     // Record 5 failures at T+0
     for (var i = 0; i < 5; i++)
@@ -289,7 +289,7 @@ public class IpcClientAuthenticatorTests
     }
 
     // Move time forward 61 seconds (past the 1-minute window)
-    _fakeTimeProvider.SetUtcNow(startTime.AddSeconds(61));
+    _timeProvider.SetUtcNow(startTime.AddSeconds(61));
 
     // Act
     var result = await _authenticator.CheckRateLimit(executablePath);
@@ -304,7 +304,7 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var executablePath = "C:\\test\\app.exe";
     var startTime = DateTimeOffset.Parse("2024-01-01T12:00:00Z");
-    _fakeTimeProvider.SetUtcNow(startTime);
+    _timeProvider.SetUtcNow(startTime);
     
     // Record 3 old failures
     for (var i = 0; i < 3; i++)
@@ -313,7 +313,7 @@ public class IpcClientAuthenticatorTests
     }
 
     // Move time forward 61 seconds
-    _fakeTimeProvider.SetUtcNow(startTime.AddSeconds(61));
+    _timeProvider.SetUtcNow(startTime.AddSeconds(61));
     
     // Record 2 new failures (total would be 5, but only 2 are recent)
     for (var i = 0; i < 2; i++)
@@ -355,12 +355,12 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var attackPath = "/attack/path/malicious.exe";
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
     var credentials = new ClientCredentials(12345, attackPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     var tasks = new List<Task<Result>>();
@@ -368,7 +368,7 @@ public class IpcClientAuthenticatorTests
     // Act - simulate concurrent authentication attempts from multiple threads
     for (var i = 0; i < 10; i++)
     {
-      tasks.Add(Task.Run(async () => await _authenticator.AuthenticateConnection(_mockServer.Object)));
+      tasks.Add(Task.Run(async () => await _authenticator.AuthenticateConnection(_server.Object)));
     }
 
     var results = await Task.WhenAll(tasks);
@@ -388,14 +388,14 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var attackPath = "/attack/malicious.exe";
     var startTime = DateTimeOffset.Parse("2024-01-01T12:00:00Z");
-    _fakeTimeProvider.SetUtcNow(startTime);
+    _timeProvider.SetUtcNow(startTime);
     
-    _mockSystemEnvironment.Setup(x => x.IsDebug).Returns(false);
-    _mockSystemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
     var credentials = new ClientCredentials(12345, attackPath);
-    _mockCredentialsProvider
-      .Setup(x => x.GetClientCredentials(_mockServer.Object))
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
     // Simulate an attacker making rapid failed authentication attempts
@@ -404,7 +404,7 @@ public class IpcClientAuthenticatorTests
       var rateLimitCheck = await _authenticator.CheckRateLimit(attackPath);
       Assert.True(rateLimitCheck.IsSuccess, $"Attempt {i + 1} should not be rate-limited yet");
       
-      var authResult = await _authenticator.AuthenticateConnection(_mockServer.Object);
+      var authResult = await _authenticator.AuthenticateConnection(_server.Object);
       Assert.False(authResult.IsSuccess, "Auth should fail due to invalid path");
     }
 
@@ -412,12 +412,12 @@ public class IpcClientAuthenticatorTests
     var blockedCheck = await _authenticator.CheckRateLimit(attackPath);
     Assert.False(blockedCheck.IsSuccess, "6th attempt should be rate-limited");
 
-    var blockedAuth = await _authenticator.AuthenticateConnection(_mockServer.Object);
+    var blockedAuth = await _authenticator.AuthenticateConnection(_server.Object);
     Assert.False(blockedAuth.IsSuccess);
     Assert.Contains("Rate limit exceeded", blockedAuth.Reason);
 
     // Move time forward past the rate limit window
-    _fakeTimeProvider.SetUtcNow(startTime.AddMinutes(2));
+    _timeProvider.SetUtcNow(startTime.AddMinutes(2));
 
     // Should be able to try again (though still fail due to invalid path)
     var allowedCheck = await _authenticator.CheckRateLimit(attackPath);
