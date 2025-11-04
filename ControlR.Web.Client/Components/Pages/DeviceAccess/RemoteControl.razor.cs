@@ -13,11 +13,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private bool _isReconnecting;
   private string? _loadingMessage = "Loading";
   private DesktopSession[]? _systemSessions;
-
-
-  [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
-
+  
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
@@ -44,6 +40,11 @@ public partial class RemoteControl : ViewportAwareComponent
 
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }
+
+
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+
 
   private string AlertIcon =>
     _alertSeverity switch
@@ -139,7 +140,7 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     try
     {
-      _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
+      _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
     }
     catch (Exception ex)
     {
@@ -245,7 +246,7 @@ public partial class RemoteControl : ViewportAwareComponent
       _isReconnecting = true;
       _alertMessage = null;
       _loadingMessage = null;
-      
+
       await InvokeAsync(StateHasChanged);
 
       for (var i = 0; i < 5; i++)
@@ -268,7 +269,7 @@ public partial class RemoteControl : ViewportAwareComponent
             break;
           }
 
-          if (await StartRemoteControl(_systemSessions[0], quiet: true))
+          if (await StartRemoteControl(_systemSessions[0], true))
           {
             return true;
           }
@@ -298,7 +299,7 @@ public partial class RemoteControl : ViewportAwareComponent
       {
         _loadingMessage = "Starting remote control session";
       }
-      
+
       _systemSessions = null;
 
       var session = new RemoteControlSession(
@@ -330,7 +331,7 @@ public partial class RemoteControl : ViewportAwareComponent
         session.Device.Id,
         notifyUser);
 
-      var streamingSessionResult = await DeviceAccessHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
+      var streamingSessionResult = await ViewerHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
 
       _loadingMessage = null;
 
@@ -358,6 +359,7 @@ public partial class RemoteControl : ViewportAwareComponent
         _alertMessage = "An error occurred while requesting the remote control session.";
         _alertSeverity = Severity.Error;
       }
+
       RemoteControlState.CurrentSession = null;
       return false;
     }

@@ -30,7 +30,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
@@ -140,7 +140,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
         Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
-        await HubConnector.Connect<IDeviceAccessHub>(AppConstants.DeviceAccessHubPath);
+        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
         await GetDeviceInfo();
       }
     }
@@ -275,12 +275,12 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   {
     try
     {
-      if (!DeviceAccessHub.IsConnected || ChatState.CurrentSession is null)
+      if (!ViewerHub.IsConnected || ChatState.CurrentSession is null)
       {
         return;
       }
       
-      await DeviceAccessHub.Server.CloseChatSession(
+      await ViewerHub.Server.CloseChatSession(
         DeviceAccessState.CurrentDevice.Id,
         ChatState.SessionId,
         ChatState.CurrentSession.ProcessId);
@@ -296,11 +296,11 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   {
     try
     {
-      if (!DeviceAccessHub.IsConnected || TerminalState.Id == Guid.Empty)
+      if (!ViewerHub.IsConnected || TerminalState.Id == Guid.Empty)
       {
         return;
       }
-      await DeviceAccessHub.Server.CloseTerminalSession(
+      await ViewerHub.Server.CloseTerminalSession(
         DeviceAccessState.CurrentDevice.Id,
         TerminalState.Id);
     }

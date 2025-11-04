@@ -12,8 +12,7 @@ namespace ControlR.Web.Server.Hubs;
 public class AgentHub(
   AppDb appDb,
   TimeProvider timeProvider,
-  IHubContext<MainBrowserHub, IMainBrowserHubClient> mainHub,
-  IHubContext<DeviceAccessHub, IDeviceAccessHubClient> deviceAccessHub,
+  IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IDeviceManager deviceManager,
   IOptions<AppOptions> appOptions,
   IOutputCacheStore outputCacheStore,
@@ -22,13 +21,12 @@ public class AgentHub(
 {
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
-  private readonly IHubContext<DeviceAccessHub, IDeviceAccessHubClient> _deviceAccessHub = deviceAccessHub;
   private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<AgentHub> _logger = logger;
-  private readonly IHubContext<MainBrowserHub, IMainBrowserHubClient> _mainHub = mainHub;
   private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
   private DeviceDto? Device
   {
@@ -117,7 +115,7 @@ public class AgentHub(
         responseDto.ViewerConnectionId,
         responseDto.SessionId);
 
-      return await _deviceAccessHub.Clients
+      return await _viewerHub.Clients
         .Client(responseDto.ViewerConnectionId)
         .ReceiveChatResponse(responseDto);
     }
@@ -221,7 +219,7 @@ public class AgentHub(
   {
     try
     {
-      await _deviceAccessHub.Clients
+      await _viewerHub.Clients
         .Client(viewerConnectionId)
         .ReceiveTerminalOutput(outputDto);
     }
@@ -311,6 +309,7 @@ public class AgentHub(
     await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTenantDevicesGroupName(deviceEntity.TenantId));
     await Groups.AddToGroupAsync(Context.ConnectionId,
       HubGroupNames.GetDeviceGroupName(deviceEntity.Id, deviceEntity.TenantId));
+    
     if (deviceEntity.Tags is { Count: > 0 } tags)
     {
       foreach (var tag in tags)
@@ -359,7 +358,7 @@ public class AgentHub(
 
   private async Task SendDeviceUpdate(Device device, DeviceDto dto)
   {
-    await _mainHub.Clients
+    await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
 
@@ -373,7 +372,7 @@ public class AgentHub(
     }
 
     var groupNames = device.Tags.Select(x => HubGroupNames.GetTagGroupName(x.Id, x.TenantId));
-    await _mainHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
+    await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
   private DeviceDto UpdateDeviceDtoState(DeviceDto deviceDto)

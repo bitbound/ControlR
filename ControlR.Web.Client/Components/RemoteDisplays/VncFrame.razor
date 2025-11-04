@@ -37,7 +37,7 @@ else if (_noVncUri is not null)
   public required NavigationManager NavManager { get; init; }
 
   [Inject]
-  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
+  public required IHubConnection<IViewerHub> MainHub { get; init; }
 
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }

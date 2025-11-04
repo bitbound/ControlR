@@ -39,7 +39,7 @@ public partial class Dashboard
   public required ILogger<Dashboard> Logger { get; init; }
 
   [Inject]
-  public required IHubConnection<IMainBrowserHub> MainHub { get; init; }
+  public required IHubConnection<IViewerHub> MainHub { get; init; }
 
   [Inject]
   public required IMessenger Messenger { get; init; }

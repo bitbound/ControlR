@@ -32,7 +32,7 @@
 
       <MudSpacer/>
 
-      <ConnectionIndicator THub="@IMainBrowserHub" />
+      <ConnectionIndicator THub="@IViewerHub" />
 
       <MudTooltip Text="GitHub">
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
@@ -110,7 +110,7 @@
 
       if (_isAuthenticated)
       {
-        await HubConnector.Connect<IMainBrowserHub>(AppConstants.MainBrowserHubPath);
+        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
     }
   }
@@ -125,7 +125,7 @@
 
       if (_isAuthenticated)
       {
-        await HubConnector.Connect<IMainBrowserHub>(AppConstants.MainBrowserHubPath);
+        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
     }
     catch (Exception ex)

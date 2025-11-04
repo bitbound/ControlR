@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public partial class Terminal : IAsyncDisposable
 {
   private readonly Dictionary<string, object> _commandInputAttributes = new()
@@ -16,7 +17,7 @@ public partial class Terminal : IAsyncDisposable
 
   private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
 
-  private MudTextField<string> _commandInputElement = null!;
+  private MudTextField<string>? _commandInputElement;
 
   // Provided by UI.  Never null
   private MudAutocomplete<PwshCompletionMatch> _completionsAutoComplete = null!;
@@ -25,9 +26,6 @@ public partial class Terminal : IAsyncDisposable
   private bool _loading = true;
   private bool _taboutPrevented;
   private ElementReference _terminalOutputContainer;
-
-  [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
 
   [Inject]
   public required IDeviceState DeviceState { get; init; }
@@ -47,6 +45,9 @@ public partial class Terminal : IAsyncDisposable
   [Inject]
   public required ITerminalState TerminalState { get; init; }
 
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+
   private int CommandInputLineCount => TerminalState.EnableMultiline
     ? 6
     : 1;
@@ -64,7 +65,10 @@ public partial class Terminal : IAsyncDisposable
     {
       // Clear completions and focus command input
       _currentCompletions = null;
-      await _commandInputElement.FocusAsync();
+      if (_commandInputElement is not null)
+      {
+        await _commandInputElement.FocusAsync();
+      }
       await InvokeAsync(StateHasChanged);
     }
   }
@@ -97,7 +101,7 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await DeviceAccessHub.Server.CreateTerminalSession(
+      var result = await ViewerHub.Server.CreateTerminalSession(
         DeviceState.CurrentDevice.Id,
         TerminalState.Id);
 
@@ -171,7 +175,6 @@ public partial class Terminal : IAsyncDisposable
   {
     try
     {
-
       if (string.IsNullOrWhiteSpace(TerminalState.LastCompletionInput))
       {
         TerminalState.LastCompletionInput = TerminalState.CommandInputText;
@@ -186,7 +189,7 @@ public partial class Terminal : IAsyncDisposable
       // Start with an empty list to collect all completions
       var allMatches = new List<PwshCompletionMatch>();
       var currentPage = 0;
-      PwshCompletionsResponseDto? lastResponse = null;
+      PwshCompletionsResponseDto? lastResponse;
 
       // Keep requesting pages until we have all completions
       do
@@ -200,7 +203,7 @@ public partial class Terminal : IAsyncDisposable
           null,
           currentPage);
 
-        var completionResult = await DeviceAccessHub.Server.GetPwshCompletions(requestDto);
+        var completionResult = await ViewerHub.Server.GetPwshCompletions(requestDto);
 
         if (!completionResult.IsSuccess)
         {
@@ -270,7 +273,7 @@ public partial class Terminal : IAsyncDisposable
         string.Empty, // ViewerConnectionId will be set by server
         forward);
 
-      var completionResult = await DeviceAccessHub.Server.GetPwshCompletions(requestDto);
+      var completionResult = await ViewerHub.Server.GetPwshCompletions(requestDto);
 
       if (!completionResult.IsSuccess)
       {
@@ -335,10 +338,10 @@ public partial class Terminal : IAsyncDisposable
       TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
 
       var dto = new TerminalInputDto(TerminalState.Id, TerminalState.CommandInputText);
-      var result = await DeviceAccessHub.Server.SendTerminalInput(
+      var result = await ViewerHub.Server.SendTerminalInput(
         DeviceState.CurrentDevice.Id,
         dto);
-        
+
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);
@@ -395,7 +398,10 @@ public partial class Terminal : IAsyncDisposable
     TerminalState.CommandInputText = replacementText;
 
     _currentCompletions = null;
-    await _commandInputElement.FocusAsync();
+    if (_commandInputElement is not null)
+    {
+      await _commandInputElement.FocusAsync();
+    }
     await InvokeAsync(StateHasChanged);
   }
 
@@ -463,8 +469,11 @@ public partial class Terminal : IAsyncDisposable
 
   private async Task SetCommandInputText(string text)
   {
-    await _commandInputElement.SetText(text);
-    await Task.Delay(50);
-    await _commandInputElement.SelectRangeAsync(text.Length, text.Length);
+    if (_commandInputElement is not null)
+    {
+      await _commandInputElement.SetText(text);
+      await Task.Delay(50);
+      await _commandInputElement.SelectRangeAsync(text.Length, text.Length);
+    }
   }
 }

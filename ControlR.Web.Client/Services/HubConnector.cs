@@ -14,7 +14,7 @@ public interface IHubConnector
 internal class HubConnector(
   NavigationManager navMan,
   IServiceProvider serviceProvider,
-  IHubConnection<IMainBrowserHub> viewerHub,
+  IHubConnection<IViewerHub> viewerHub,
   IBusyCounter busyCounter,
   IMessenger messenger,
   ILogger<HubConnector> logger) : IHubConnector
@@ -26,7 +26,7 @@ internal class HubConnector(
   private readonly IMessenger _messenger = messenger;
   private readonly NavigationManager _navMan = navMan;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
-  private readonly IHubConnection<IMainBrowserHub> _viewerHub = viewerHub;
+  private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
 
   public async Task Connect<THub>(string relativeHubEndpoint, CancellationToken cancellationToken = default)
     where THub : class

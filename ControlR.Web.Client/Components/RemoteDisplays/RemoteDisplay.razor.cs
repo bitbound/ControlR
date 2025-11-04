@@ -51,7 +51,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
   [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   [Parameter]
   [EditorRequired]
@@ -555,7 +555,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await DeviceAccessHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
+      await ViewerHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
       Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
     }
     catch (Exception ex)

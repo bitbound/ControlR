@@ -9,8 +9,7 @@ public static class AppConstants
   public const string AgentEtagFileName = "agent-etag.txt";
   public const string AgentHubPath = "/hubs/agent";
   public const int DefaultVncPort = 5900;
-  public const string DeviceAccessHubPath = "/hubs/device-access";
-  public const string MainBrowserHubPath = "/hubs/main-browser";
+  public const string ViewerHubPath = "/hubs/viewer";
 
   public static string DesktopClientFileName =>
     SystemEnvironment.Instance.Platform switch

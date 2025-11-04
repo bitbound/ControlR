@@ -94,8 +94,7 @@ app.UseWhen(
 
 app.MapAdditionalIdentityEndpoints();
 
-app.MapHub<MainBrowserHub>(AppConstants.MainBrowserHubPath);
-app.MapHub<DeviceAccessHub>(AppConstants.DeviceAccessHubPath);
+app.MapHub<ViewerHub>(AppConstants.ViewerHubPath);
 
 if (appOptions.UseInMemoryDatabase)
 {

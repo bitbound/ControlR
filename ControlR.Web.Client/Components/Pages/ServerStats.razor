@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
 
 @inject IMessenger Messenger;
-@inject IHubConnection<IMainBrowserHub> MainHub;
+@inject IHubConnection<IViewerHub> MainHub;
 @inject ISnackbar Snackbar;
 @inject ILogger<ServerStats> Logger;
 

@@ -1,6 +1,6 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Full Stack" type="CompoundRunConfigurationType">
-    <toRun name="Agent (Run)" type="LaunchSettings" />
+    <toRun name="ControlR.Agent: Run" type="LaunchSettings" />
     <toRun name="ControlR.DesktopClient: Run" type="LaunchSettings" />
     <toRun name="ControlR.Web.Server: https" type="LaunchSettings" />
     <toRun name="compose (dev)" type="docker-deploy" />

@@ -27,9 +27,6 @@ public partial class FileSystem : JsInteropableComponent
   public required IControlrApi ControlrApi { get; set; }
 
   [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; set; }
-
-  [Inject]
   public required IDeviceState DeviceState { get; init; }
 
   [Inject]
@@ -62,6 +59,9 @@ public partial class FileSystem : JsInteropableComponent
   [Inject]
   public required ISnackbar Snackbar { get; set; }
 
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; set; }
+
   private Guid DeviceId => DeviceState.IsDeviceLoaded
     ? DeviceState.CurrentDevice.Id
     : Guid.Empty;
@@ -71,7 +71,8 @@ public partial class FileSystem : JsInteropableComponent
   private bool IsLoading { get; set; }
   private bool IsLoadingContents { get; set; }
   private bool IsNewFolderInProgress { get; set; }
-  private bool IsUpButtonDisabled => string.IsNullOrEmpty(SelectedPath) 
+
+  private bool IsUpButtonDisabled => string.IsNullOrEmpty(SelectedPath)
                                      || InitialTreeItems.Any(item => item.Value == SelectedPath);
 
   public override async ValueTask DisposeAsync()
@@ -272,7 +273,6 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-
       var downloadUrl =
         $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
@@ -548,7 +548,8 @@ public partial class FileSystem : JsInteropableComponent
       {
         var itemNames = string.Join(", ", oversizedItems.Select(x => x.Name));
         var maxMb = (double)maxFileSize / (1024 * 1024);
-        Snackbar.Add($"The following files exceed the maximum download size of {maxMb:N2} MB and cannot be downloaded: {itemNames}",
+        Snackbar.Add(
+          $"The following files exceed the maximum download size of {maxMb:N2} MB and cannot be downloaded: {itemNames}",
           Severity.Warning);
         Logger.LogWarning("Some selected files exceed max download size: {ItemNames}", itemNames);
         return;
@@ -593,6 +594,7 @@ public partial class FileSystem : JsInteropableComponent
         var uploadTask = UploadSingleFile(file);
         uploadTasks.Add(uploadTask);
       }
+
       StateHasChanged();
 
       await Task.WhenAll(uploadTasks);
@@ -680,6 +682,19 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private async Task OnUploadFileClick()
+  {
+    try
+    {
+      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error triggering file input click");
+      Snackbar.Add("Failed to open file picker", Severity.Error);
+    }
+  }
+
   private async Task OnUpOneLevel()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -739,19 +754,6 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private async Task OnUploadFileClick()
-  {
-    try
-    {
-      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error triggering file input click");
-      Snackbar.Add("Failed to open file picker", Severity.Error);
-    }
-  }
-
   private async Task UploadSingleFile(IBrowserFile file)
   {
     var snackbarKey = Guid.NewGuid().ToString();
@@ -801,14 +803,14 @@ public partial class FileSystem : JsInteropableComponent
       using var cts = new CancellationTokenSource();
       await using var fileStream = file.OpenReadStream(maxFileSize, cts.Token);
       await using var observer = new StreamObserver(
-        observedStream: fileStream,
-        observationInterval: TimeSpan.FromMilliseconds(500));
+        fileStream,
+        TimeSpan.FromMilliseconds(500));
 
       using var snackbar = Snackbar.Add<FileUploadIndicator>(
-        new Dictionary<string, object>()
+        new Dictionary<string, object>
         {
-          {"File", file },
-          {"StreamObserver", observer }
+          { "File", file },
+          { "StreamObserver", observer }
         },
         Severity.Normal,
         config =>
@@ -826,14 +828,11 @@ public partial class FileSystem : JsInteropableComponent
             return Task.CompletedTask;
           };
         },
-        key: snackbarKey);
+        snackbarKey);
 
       if (snackbar is not null)
       {
-        snackbar.OnClose += _ =>
-        {
-          cts.Cancel();
-        };
+        snackbar.OnClose += _ => { cts.Cancel(); };
       }
 
       var metadata = new FileUploadMetadata(
@@ -859,6 +858,7 @@ public partial class FileSystem : JsInteropableComponent
             var chunk = buffer[..bytesRead];
             await channel.Writer.WriteAsync(chunk, cts.Token);
           }
+
           channel.Writer.TryComplete();
         }
         catch (OperationCanceledException)
@@ -872,7 +872,7 @@ public partial class FileSystem : JsInteropableComponent
         }
       }, cts.Token);
 
-      var result = await DeviceAccessHub.Server
+      var result = await ViewerHub.Server
         .UploadFile(metadata, channel.Reader)
         .WaitAsync(cts.Token);
 
@@ -899,6 +899,7 @@ public partial class FileSystem : JsInteropableComponent
           Snackbar.Add($"Upload cancelled for '{file.Name}'", Severity.Info);
           return;
         }
+
         Logger.LogError("Upload failed for {FileName}: {Error}", file.Name, result.Reason);
         Snackbar.Add($"Upload failed for '{file.Name}': {result.Reason}", Severity.Error);
       }

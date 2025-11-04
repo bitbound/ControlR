@@ -49,8 +49,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IRoleStore, RoleStore>();
     services.AddScoped<IInviteStore, InviteStore>();
 
-    services.AddStronglyTypedSignalrClient<IMainBrowserHub, IMainBrowserHubClient, MainBrowserHubClient>(ServiceLifetime.Scoped);
-    services.AddStronglyTypedSignalrClient<IDeviceAccessHub, IDeviceAccessHubClient, DeviceAccessHubClient>(ServiceLifetime.Scoped);
+    services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
 
     return services;
   }

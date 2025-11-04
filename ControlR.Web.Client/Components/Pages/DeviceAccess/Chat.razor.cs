@@ -21,7 +21,7 @@ public partial class Chat : ComponentBase, IDisposable
   public required IChatState ChatState { get; init; }
 
   [Inject]
-  public required IHubConnection<IDeviceAccessHub> DeviceAccessHub { get; init; }
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
@@ -142,7 +142,7 @@ public partial class Chat : ComponentBase, IDisposable
     {
         try
         {
-            var result = await DeviceAccessHub.Server.CloseChatSession(
+            var result = await ViewerHub.Server.CloseChatSession(
                 DeviceAccessState.CurrentDevice.Id,
                 ChatState.SessionId,
                 ChatState.CurrentSession.ProcessId);
@@ -190,7 +190,7 @@ public partial class Chat : ComponentBase, IDisposable
   {
     try
     {
-        _systemSessions = await DeviceAccessHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
+        _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
     }
     catch (Exception ex)
     {
@@ -250,7 +250,7 @@ public partial class Chat : ComponentBase, IDisposable
       ChatState.NewMessage = string.Empty;
 
       // Send to the device
-      var result = await DeviceAccessHub.Server.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
+      var result = await ViewerHub.Server.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
       if (!result.IsSuccess)
       {
         Logger.LogError("Failed to send chat message: {Error}", result.Exception?.Message);
