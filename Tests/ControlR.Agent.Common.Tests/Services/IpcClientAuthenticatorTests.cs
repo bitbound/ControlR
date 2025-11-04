@@ -15,6 +15,7 @@ public class IpcClientAuthenticatorTests
 {
   private readonly Mock<IClientCredentialsProvider> _credentialProvider;
   private readonly Mock<ISystemEnvironment> _systemEnvironment;
+  private readonly Mock<IDesktopClientFileVerifier> _fileVerifier;
   private readonly Mock<ILogger<IpcClientAuthenticator>> _logger;
   private readonly Mock<IIpcServer> _server;
   private readonly FakeTimeProvider _timeProvider;
@@ -24,14 +25,21 @@ public class IpcClientAuthenticatorTests
   {
     _credentialProvider = new Mock<IClientCredentialsProvider>();
     _systemEnvironment = new Mock<ISystemEnvironment>();
+    _fileVerifier = new Mock<IDesktopClientFileVerifier>();
     _logger = new Mock<ILogger<IpcClientAuthenticator>>();
     _server = new Mock<IIpcServer>();
     _timeProvider = new FakeTimeProvider();
+
+    // By default, file verifier returns success
+    _fileVerifier
+      .Setup(x => x.VerifyFile(It.IsAny<string>()))
+      .Returns(Result.Ok());
 
     _authenticator = new IpcClientAuthenticator(
       _timeProvider,
       _credentialProvider.Object,
       _systemEnvironment.Object,
+      _fileVerifier.Object,
       _logger.Object);
   }
 
@@ -70,6 +78,36 @@ public class IpcClientAuthenticatorTests
     // Assert
     Assert.False(result.IsSuccess);
     Assert.Contains("Failed to get credentials", result.Reason);
+  }
+
+  [Fact]
+  public async Task AuthenticateConnection_WithFailedFileVerification_ReturnsFailure()
+  {
+    // Arrange
+    var startupDir = "/expected/path";
+    var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
+    _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
+    _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
+
+    var credentials = new ClientCredentials(12345, expectedPath);
+    _credentialProvider
+      .Setup(x => x.GetClientCredentials(_server.Object))
+      .Returns(Result.Ok(credentials));
+
+    _fileVerifier
+      .Setup(x => x.VerifyFile(expectedPath))
+      .Returns(Result.Fail("Certificate validation failed"));
+
+    // Act
+    var result = await _authenticator.AuthenticateConnection(_server.Object);
+
+    // Assert
+    Assert.False(result.IsSuccess);
+    Assert.Contains("Certificate validation failed", result.Reason);
+    
+    // Verify failure was recorded for rate limiting
+    var rateLimitCheck = await _authenticator.CheckRateLimit(expectedPath);
+    Assert.True(rateLimitCheck.IsSuccess); // Should still be under limit with just 1 failure
   }
 
   [Fact]

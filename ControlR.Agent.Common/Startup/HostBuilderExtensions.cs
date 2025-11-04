@@ -110,6 +110,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IPowerControl, PowerControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
       services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderWindows>();
+      services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierWin>();
     }
     else if (OperatingSystem.IsLinux())
     {
@@ -123,6 +124,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
       services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderLinux>();
+      services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierLinux>();
     }
     else if (OperatingSystem.IsMacOS())
     {
@@ -135,6 +137,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
       services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderMac>();
+      services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierMac>();
     }
     else
     {
