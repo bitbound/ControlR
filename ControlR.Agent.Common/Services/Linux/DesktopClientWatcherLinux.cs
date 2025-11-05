@@ -15,11 +15,13 @@ internal class DesktopClientWatcherLinux(
   ISystemEnvironment systemEnvironment,
   IFileSystem fileSystem,
   IControlrMutationLock mutationLock,
+  ILoggedInUserProvider loggedInUserProvider,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
+  private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
@@ -90,7 +92,7 @@ internal class DesktopClientWatcherLinux(
       await CheckLoginScreenDesktopClient(cancellationToken);
 
       // Then check for logged-in users
-      var loggedInUsers = await GetLoggedInUsersAsync();
+      var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
       if (loggedInUsers.Count == 0)
       {
         _logger.LogIfChanged(LogLevel.Information, "No logged-in users found.");
@@ -331,46 +333,6 @@ internal class DesktopClientWatcherLinux(
     }
 
     return Path.Combine(dir, _instanceOptions.Value.InstanceId);
-  }
-
-  private async Task<List<string>> GetLoggedInUsersAsync()
-  {
-    try
-    {
-      var result = await _processManager.GetProcessOutput("who", "-u", 5000);
-      var users = new List<string>();
-
-      if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
-      {
-        var lines = result.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
-        {
-          // Parse the output of 'who' to extract username
-          // Format: username pts/0 timestamp (IP)
-          var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-          if (parts.Length >= 1)
-          {
-            var username = parts[0];
-            // Get the UID for the user
-            var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-            if (uidResult.IsSuccess &&
-                !string.IsNullOrWhiteSpace(uidResult.Value) &&
-                int.TryParse(uidResult.Value.Trim(), out var uid) &&
-                uid >= 1000) // Exclude system users (typically UID < 1000 on Linux)
-            {
-              users.Add(uidResult.Value.Trim());
-            }
-          }
-        }
-      }
-
-      return [.. users.Distinct()];
-    }
-    catch (Exception ex)
-    {
-      _logger.LogIfChanged(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
-      return [];
-    }
   }
 
   private async Task<bool> HasActiveUserSessions()

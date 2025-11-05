@@ -7,11 +7,13 @@ namespace ControlR.Agent.Common.Services.Linux;
 internal class ServiceControlLinux(
     IProcessManager processManager,
     IHeadlessServerDetector headlessServerDetector,
+    ILoggedInUserProvider loggedInUserProvider,
     IOptions<InstanceOptions> instanceOptions,
     ILogger<ServiceControlLinux> logger) : IServiceControl
 {
     private static readonly TimeSpan _serviceStatusTimeout = TimeSpan.FromSeconds(10);
     private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
+    private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
     private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
     private readonly ILogger<ServiceControlLinux> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
@@ -56,7 +58,7 @@ internal class ServiceControlLinux(
             var serviceName = GetDesktopClientServiceName();
             _logger.LogInformation("Starting desktop client service for all logged-in users: {ServiceName}", serviceName);
 
-            var loggedInUsers = await GetLoggedInUsers();
+            var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
             if (loggedInUsers.Count == 0)
             {
                 _logger.LogWarning("No logged-in users found. Desktop client service will not be started.");
@@ -126,7 +128,7 @@ internal class ServiceControlLinux(
             var serviceName = GetDesktopClientServiceName();
             _logger.LogInformation("Stopping desktop client service for all logged-in users: {ServiceName}", serviceName);
 
-            var loggedInUsers = await GetLoggedInUsers();
+            var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
             if (loggedInUsers.Count == 0)
             {
                 _logger.LogInformation("No logged-in users found. Nothing to stop.");
@@ -174,47 +176,6 @@ internal class ServiceControlLinux(
         }
 
         return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
-    }
-
-    private async Task<List<string>> GetLoggedInUsers()
-    {
-        try
-        {
-            // Get currently logged-in users using 'who' command
-            var result = await _processManager.GetProcessOutput("who", "", 5000);
-
-            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Value))
-            {
-                _logger.LogWarning("Failed to get logged-in users: {Reason}", result.Reason);
-                return [];
-            }
-
-            var lines = result.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            var users = new HashSet<string>();
-
-            foreach (var line in lines)
-            {
-                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 0)
-                {
-                    var username = parts[0];
-                    // Get the UID for this username
-                    var idResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-                    if (idResult.IsSuccess && !string.IsNullOrWhiteSpace(idResult.Value))
-                    {
-                        var uid = idResult.Value.Trim();
-                        users.Add(uid);
-                    }
-                }
-            }
-
-            return users.ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while getting logged-in users.");
-            return [];
-        }
     }
 
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)

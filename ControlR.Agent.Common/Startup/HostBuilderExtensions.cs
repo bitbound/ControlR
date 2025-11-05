@@ -120,6 +120,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
+      services.AddSingleton<ILoggedInUserProvider, LoggedInUserProviderLinux>();
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
