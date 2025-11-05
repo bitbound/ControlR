@@ -95,20 +95,14 @@ internal class AgentInstallerMac(
       var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
 
       _logger.LogInformation("Writing plist files.");
-      await _fileSystem.WriteAllTextAsync(agentPlistPath, agentPlistFile);
-      await _fileSystem.WriteAllTextAsync(desktopPlistPath, desktopPlistFile);
+      await WriteFileIfChanged(agentPlistPath, agentPlistFile);
+      await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
       await UpdateAppSettings(serverUri, tenantId, deviceId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
       if (!createResult.IsSuccess)
       {
         return;
-      }
-
-      var etagResult = await WriteCurrentAgentEtag(installDir);
-      if (!etagResult.IsSuccess)
-      {
-        _logger.LogWarning("Failed to write ETag, but continuing with installation.");
       }
 
       await _serviceControl.StartAgentService(throwOnFailure: false);
@@ -273,5 +267,21 @@ internal class AgentInstallerMac(
     }
 
     return $"/Library/LaunchDaemons/app.controlr.agent.{_instanceOptions.Value.InstanceId}.plist";
+  }
+
+  private async Task WriteFileIfChanged(string filePath, string content)
+  {
+    if (_fileSystem.FileExists(filePath))
+    {
+      var existingContent = await _fileSystem.ReadAllTextAsync(filePath);
+      if (existingContent.Trim() == content)
+      {
+        _logger.LogInformation("File {FilePath} already exists with the same content. Skipping write.", filePath);
+        return;
+      }
+    }
+
+    _logger.LogInformation("Writing file {FilePath}.", filePath);
+    await _fileSystem.WriteAllTextAsync(filePath, content);
   }
 }

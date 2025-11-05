@@ -1,0 +1,99 @@
+@inject IControlrApi ControlrApi
+@inject ILocalStorageAccessor LocalStorage
+@inject ILogger<ServerAlertDisplay> Logger
+
+@if (_isVisible && _alert is not null)
+{
+  <div class="@Class">
+    <MudAlert Severity="_mudSeverity"
+              ShowCloseIcon="_alert.IsDismissable"
+              CloseIconClicked="HandleDismiss"
+              Class="ma-0 rounded-0">
+      @_alert.Message
+    </MudAlert>
+  </div>
+}
+
+@code {
+  private ServerAlertResponseDto? _alert;
+  private bool _isVisible;
+  private Severity _mudSeverity = Severity.Info;
+
+  [Parameter]
+  public string? Class { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      if (!RendererInfo.IsInteractive)
+      {
+        return;
+      }
+
+      var result = await ControlrApi.GetServerAlert();
+      if (!result.IsSuccess || result.Value is null)
+      {
+        return;
+      }
+
+      _alert = result.Value;
+
+      if (!_alert.IsEnabled)
+      {
+        return;
+      }
+
+      // Map MessageSeverity to MudBlazor Severity
+      _mudSeverity = _alert.Severity.ToMudSeverity();
+
+      // Check if the user previously dismissed this alert (only if not sticky)
+      if (!_alert.IsSticky)
+      {
+        if (await HasAlertBeenDismissed(_alert.Message, _alert.Severity))
+        {
+          return;
+        }
+      }
+
+      _isVisible = true;
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error loading server alert");
+    }
+  }
+
+  private async Task HandleDismiss()
+  {
+    if (_alert is null)
+    {
+      return;
+    }
+
+    _isVisible = false;
+
+    // If not sticky, save dismiss state to localStorage
+    if (!_alert.IsSticky)
+    {
+      try
+      {
+        await LocalStorage.SetItem(LocalStorageKey, $"{_alert.Message}-{_alert.Severity}");
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error saving dismiss state");
+      }
+    }
+  }
+
+  private const string LocalStorageKey = "controlr-server-alert-dismissed";
+
+  private async Task<bool> HasAlertBeenDismissed(string message, MessageSeverity severity)
+  {
+    var existing = await LocalStorage.GetItem(LocalStorageKey);
+    var newMessage = $"{message}-{severity}";
+    return existing == newMessage;
+  }
+
+}

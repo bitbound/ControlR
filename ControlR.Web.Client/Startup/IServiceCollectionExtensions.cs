@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IClipboardManager, ClipboardManager>();
     services.AddScoped<IScreenWake, ScreenWake>();
     services.AddScoped<ISessionStorageAccessor, SessionStorageAccessor>();
+    services.AddScoped<ILocalStorageAccessor, LocalStorageAccessor>();
     services.AddScoped<IDeviceState, DeviceState>();
     services.AddScoped<IRemoteControlState, RemoteControlState>();
     services.AddScoped<ITerminalState, TerminalState>();

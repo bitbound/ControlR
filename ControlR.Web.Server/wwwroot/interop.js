@@ -231,3 +231,34 @@ function removeFromSessionStorage(key) {
 function clearSessionStorage() {
   return sessionStorage.clear();
 }
+
+/** Local Storage */
+
+/**
+*
+* @param {string} key
+*/
+function getFromLocalStorage(key) {
+  return localStorage.getItem(key);
+}
+
+/**
+ *
+ * @param {string} key
+ * @param {string} value
+ */
+function setToLocalStorage(key, value) {
+  localStorage.setItem(key, value);
+}
+
+/**
+ *
+ * @param {string} key
+ */
+function removeFromLocalStorage(key) {
+  return localStorage.removeItem(key);
+}
+
+function clearLocalStorage() {
+  return localStorage.clear();
+}

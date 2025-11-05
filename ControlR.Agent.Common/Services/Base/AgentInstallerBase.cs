@@ -112,7 +112,7 @@ internal abstract class AgentInstallerBase(
     var updatedTenantId =
       tenantId ??
       currentOptions.TenantId;
-    
+
     var updatedDeviceId =
       deviceId ??
       currentOptions.DeviceId;
@@ -122,7 +122,7 @@ internal abstract class AgentInstallerBase(
 
     Logger.LogInformation("Setting tenant ID to {TenantId}.", updatedTenantId);
     currentOptions.TenantId = updatedTenantId;
-    
+
     if (updatedDeviceId == Guid.Empty)
     {
       Logger.LogInformation("DeviceId is empty.  Generating new one.");
@@ -136,29 +136,5 @@ internal abstract class AgentInstallerBase(
 
     Logger.LogInformation("Writing results to disk.");
     await _settingsProvider.UpdateAppOptions(currentOptions);
-  }
-
-  protected async Task<Result> WriteCurrentAgentEtag(string installDir)
-  {
-    try
-    {
-      Logger.LogInformation("Fetching current ETag for agent binary.");
-      var etagResult = await _controlrApi.GetCurrentAgentETag(_systemEnvironment.Runtime);
-      if (!etagResult.IsSuccess)
-      {
-        Logger.LogResult(etagResult);
-        return etagResult.ToResult();
-      }
-
-      var etagFilePath = Path.Combine(installDir, AppConstants.AgentEtagFileName);
-      await FileSystem.WriteAllTextAsync(etagFilePath, etagResult.Value);
-      Logger.LogInformation("ETag written to {ETagFilePath}", etagFilePath);
-      return Result.Ok();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while writing current ETag file.");
-      return Result.Fail(ex);
-    }
   }
 }

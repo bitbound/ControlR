@@ -11,7 +11,7 @@ namespace ControlR.Agent.Common.Services;
 /// <summary>
 /// Stores IPC server connections to UI sessions.
 /// </summary>
-internal interface IIpcServerStore
+public interface IIpcServerStore
 {
   ReadOnlyDictionary<int, IpcServerRecord> Servers { get; }
 
@@ -50,7 +50,7 @@ internal class IpcServerStore(ILogger<IpcServerStore> logger) : IIpcServerStore
     _ipcServers.AddOrUpdate(
       process.Id,
       serverRecord,
-      (key, existing) =>
+      (_, existing) =>
       {
         Disposer.DisposeAll(existing.Process, existing.Server);
         return serverRecord;
@@ -94,4 +94,4 @@ internal class IpcServerStore(ILogger<IpcServerStore> logger) : IIpcServerStore
     return _ipcServers.TryRemove(processId, out serverRecord);
   }
 }
-internal record IpcServerRecord(IProcess Process, IIpcServer Server);
+public record IpcServerRecord(IProcess Process, IIpcServer Server);

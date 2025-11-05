@@ -21,6 +21,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   public required DbSet<Device> Devices { get; init; }
   public required DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
+  public required DbSet<ServerAlert> ServerAlerts { get; init; }
   public required DbSet<Tag> Tags { get; init; }
   public required DbSet<TenantInvite> TenantInvites { get; init; }
   public required DbSet<TenantSetting> TenantSettings { get; init; }
@@ -41,6 +42,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     SeedDatabase(builder);
 
     ConfigurePersonalAccessTokens(builder);
+    ConfigureServerAlert(builder);
     ConfigureTenant(builder);
     ConfigureDevices(builder);
     ConfigureRoles(builder);
@@ -67,6 +69,19 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     builder
         .Entity<AppRole>()
         .HasData(builtInRoles);
+
+    // Seed default ServerAlert (singleton)
+    builder
+        .Entity<ServerAlert>()
+        .HasData(new ServerAlert
+        {
+          Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+          Message = string.Empty,
+          Severity = MessageSeverity.Information,
+          IsDismissable = true,
+          IsSticky = false,
+          IsEnabled = false
+        });
   }
 
   private void ConfigureDevices(ModelBuilder builder)
@@ -110,6 +125,15 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
+
+  private static void ConfigureServerAlert(ModelBuilder builder)
+  {
+    // Singleton table pattern - only one row allowed
+    builder
+      .Entity<ServerAlert>()
+      .HasKey(x => x.Id);
+  }
+
   private void ConfigureTags(ModelBuilder builder)
   {
     builder

@@ -1,0 +1,148 @@
+@attribute [Route(ClientRoutes.ServerSettings)]
+@attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
+
+@inject ISnackbar Snackbar
+@inject IControlrApi ControlrApi
+@inject ILogger<ServerSettings> Logger
+
+<PageTitle>Server Settings</PageTitle>
+
+<PrimaryTitle>
+  Server Settings
+</PrimaryTitle>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Server Alert
+  </MudText>
+  <MudText Typo="Typo.caption" Class="mb-3">
+    Configure a server-wide alert message that will appear at the top of all pages for all users.
+  </MudText>
+
+  <MudTextField T="string"
+                @bind-Value="_alertMessage"
+                Label="Alert Message"
+                MaxLength="500"
+                Lines="3"
+                Variant="Variant.Outlined"
+                Class="mb-3"/>
+
+  <MudSelect T="MessageSeverity"
+             @bind-Value="_alertSeverity"
+             Label="Severity"
+             Variant="Variant.Outlined"
+             Class="mb-3">
+    <MudSelectItem Value="MessageSeverity.Information">Information</MudSelectItem>
+    <MudSelectItem Value="MessageSeverity.Warning">Warning</MudSelectItem>
+    <MudSelectItem Value="MessageSeverity.Error">Error</MudSelectItem>
+    <MudSelectItem Value="MessageSeverity.Success">Success</MudSelectItem>
+  </MudSelect>
+
+  <MudCheckBox T="bool"
+               @bind-Value="_alertIsDismissable"
+               Label="Users can dismiss the alert"
+               Class="mb-3"/>
+
+  <MudTooltip Text="When unchecked, users' dismissals will be remembered across sessions.">
+    <MudCheckBox T="bool"
+                 @bind-Value="_alertIsSticky"
+                 Label="Alert reappears on next visit (sticky)"
+                 Class="mb-3">
+    </MudCheckBox>
+  </MudTooltip>
+
+  <div class="mb-6">
+    <MudTooltip Text="When disabled, the alert will not be shown to users.">
+      <MudSwitch T="bool"
+                 Label="Enabled"
+                 Color="Color.Success"
+                 @bind-Value="_alertIsEnabled"/>
+    </MudTooltip>
+  </div>
+
+  <MudButton Variant="Variant.Filled"
+             Color="Color.Primary"
+             OnClick="SaveServerAlert"
+             Disabled="_isLoadingAlert">
+    @if (_isLoadingAlert)
+    {
+      <MudProgressCircular Size="Size.Small" Indeterminate/>
+    }
+    else
+    {
+      <text>Save</text>
+    }
+  </MudButton>
+</div>
+
+@code {
+  private string _alertMessage = string.Empty;
+  private MessageSeverity _alertSeverity = MessageSeverity.Information;
+  private bool _alertIsDismissable = true;
+  private bool _alertIsSticky;
+  private bool _alertIsEnabled;
+  private bool _isLoadingAlert;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadServerAlert();
+    await base.OnInitializedAsync();
+  }
+
+  private async Task LoadServerAlert()
+  {
+    try
+    {
+      var result = await ControlrApi.GetServerAlert();
+      if (result is { IsSuccess: true, Value: not null })
+      {
+        var alert = result.Value;
+        _alertMessage = alert.Message;
+        _alertSeverity = alert.Severity;
+        _alertIsDismissable = alert.IsDismissable;
+        _alertIsSticky = alert.IsSticky;
+        _alertIsEnabled = alert.IsEnabled;
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error loading server alert");
+      Snackbar.Add("Failed to load server alert settings", Severity.Error);
+    }
+  }
+
+  private async Task SaveServerAlert()
+  {
+    _isLoadingAlert = true;
+    try
+    {
+      var request = new ServerAlertRequestDto(
+        _alertMessage,
+        _alertSeverity,
+        _alertIsDismissable,
+        _alertIsSticky,
+        _alertIsEnabled);
+
+      var result = await ControlrApi.UpdateServerAlert(request);
+
+      if (result.IsSuccess)
+      {
+        Snackbar.Add("Server alert updated successfully", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to update server alert: {result.Reason}", Severity.Error);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error saving server alert");
+      Snackbar.Add("Failed to save server alert", Severity.Error);
+    }
+    finally
+    {
+      _isLoadingAlert = false;
+    }
+  }
+
+}

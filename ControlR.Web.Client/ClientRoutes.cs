@@ -10,6 +10,7 @@ public static class ClientRoutes
   public const string InviteConfirmationBase = "/invite-confirmation";
   public const string Permissions = "/permissions";
   public const string PersonalAccessTokens = "/personal-access-tokens";
+  public const string ServerSettings = "/server-settings";
   public const string ServerStats = "/server-stats";
   public const string Settings = "/settings";
   public const string TenantSettings = "/tenant-settings";

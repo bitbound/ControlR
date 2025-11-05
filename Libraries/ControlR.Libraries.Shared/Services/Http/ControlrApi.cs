@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net;
+using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
@@ -21,7 +22,6 @@ public interface IControlrApi
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
   Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType);
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string inviteeEmail);
-
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory);
   Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId);
@@ -35,11 +35,8 @@ public interface IControlrApi
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
   Task<Result<TagResponseDto[]>> GetAllowedTags();
-  Task<Result<string>> GetCurrentAgentETag(RuntimeId runtime, CancellationToken cancellationToken = default);
   Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default);
   Task<Result<Version>> GetCurrentAgentVersion();
-  Task<Result<string>> GetCurrentDesktopClientETag(RuntimeId runtime);
-  Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime);
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
@@ -50,6 +47,7 @@ public interface IControlrApi
   Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId);
+  Task<Result<ServerAlertResponseDto?>> GetServerAlert();
   Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
@@ -62,6 +60,7 @@ public interface IControlrApi
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
+  Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
   Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
 }
@@ -72,7 +71,6 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
-
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -175,7 +173,7 @@ public class ControlrApi(
     {
       var request = new TenantInviteRequestDto(inviteeEmail);
       using var response = await _client.PostAsJsonAsync(HttpConstants.InvitesEndpoint, request);
-      if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+      if (response.StatusCode == HttpStatusCode.Conflict)
       {
         var content = await response.Content.ReadAsStringAsync();
         if (!string.IsNullOrWhiteSpace(content))
@@ -310,30 +308,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
-
-  public async Task<Result<string>> GetCurrentAgentETag(RuntimeId runtime, CancellationToken cancellationToken = default)
-  {
-    try
-    {
-      var fileRelativePath = AppConstants.GetAgentFileDownloadPath(runtime);
-      using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
-      using var response = await _client.SendAsync(request, cancellationToken);
-      response.EnsureSuccessStatusCode();
-
-      if (response.Headers.ETag is null || string.IsNullOrWhiteSpace(response.Headers.ETag.Tag))
-      {
-        return Result.Fail<string>("Failed to get agent file ETag. ETag header missing or empty.");
-      }
-
-      return Result.Ok(response.Headers.ETag.Tag);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting agent ETag.");
-      return Result.Fail<string>(ex);
-    }
-  }
-
+  
   public async Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default)
   {
     return await TryCallApi(async () => await _client.GetStringAsync(
@@ -350,56 +325,7 @@ public class ControlrApi(
       return version;
     });
   }
-
-  public async Task<Result<string>> GetCurrentDesktopClientETag(RuntimeId runtime)
-  {
-    try
-    {
-      var fileRelativePath = AppConstants.GetDesktopClientDownloadPath(runtime);
-      using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
-      using var response = await _client.SendAsync(request);
-      response.EnsureSuccessStatusCode();
-
-      if (response.Headers.ETag is null || string.IsNullOrWhiteSpace(response.Headers.ETag.Tag))
-      {
-        return Result.Fail<string>("Failed to get desktop client file ETag. ETag header missing or empty.");
-      }
-
-      return Result.Ok(response.Headers.ETag.Tag);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting desktop client ETag.");
-      return Result.Fail<string>(ex);
-    }
-  }
-
-  public async Task<Result<byte[]>> GetCurrentDesktopClientHash(RuntimeId runtime)
-  {
-    try
-    {
-      var fileRelativePath = AppConstants.GetDesktopClientDownloadPath(runtime);
-      using var request = new HttpRequestMessage(HttpMethod.Head, fileRelativePath);
-      using var response = await _client.SendAsync(request);
-      response.EnsureSuccessStatusCode();
-
-      if (!response.Headers.TryGetValues("Content-Hash", out var values) ||
-          values.FirstOrDefault() is not { } hashString ||
-          string.IsNullOrWhiteSpace(hashString))
-      {
-        return Result.Fail<byte[]>("Failed to get desktop client file hash. 'Content-Hash' header missing or empty.");
-      }
-
-      var fileHash = Convert.FromHexString(hashString);
-      return Result.Ok(fileHash);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while checking for new desktop client hash.");
-      return Result.Fail<byte[]>(ex);
-    }
-  }
-
+  
   public async Task<Result<Version>> GetCurrentServerVersion()
   {
     return await TryCallApi(async () =>
@@ -485,6 +411,20 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result<ServerAlertResponseDto?>> GetServerAlert()
+  {
+    return await TryGetNullableResponse(async () =>
+    {
+      using var response = await _client.GetAsync(HttpConstants.ServerAlertEndpoint);
+      if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
+      {
+        return null;
+      }
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
+    });
+  }
+
   public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)
   {
     return await TryCallApi(async () =>
@@ -501,7 +441,7 @@ public class ControlrApi(
     return await TryGetNullableResponse(async () =>
     {
       using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}");
-      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+      if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return null;
       }
@@ -514,7 +454,7 @@ public class ControlrApi(
     return await TryGetNullableResponse(async () =>
     {
       using var response = await _client.GetAsync($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}");
-      if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+      if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return null;
       }
@@ -605,6 +545,16 @@ public class ControlrApi(
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
+    });
+  }
+
+  public async Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.ServerAlertEndpoint, request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
     });
   }
 

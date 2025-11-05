@@ -120,12 +120,6 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      var etagResult = await WriteCurrentAgentEtag(installDir);
-      if (!etagResult.IsSuccess)
-      {
-        Logger.LogWarning("Failed to write ETag, but continuing with installation.");
-      }
-
       var serviceName = GetServiceName();
 
       var subcommand = "run";

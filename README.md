@@ -41,10 +41,6 @@ Additional proxy IPs can be added to the `KnownProxies` list in the docker-compo
 
 If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.
 
-## Cloudflare Caching:
-
-ControlR relies on custom headers returned by `HEAD` requests for files under the `/downloads` path. If you're using Cloudflare proxy, you must bypass the cache for all requests under `/downloads`.
-
 ## Multi-tenancy
 
 By default, the server is single-tenant (although you can organize customer tenants via tags). The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.

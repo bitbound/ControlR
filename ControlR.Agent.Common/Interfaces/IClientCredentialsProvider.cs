@@ -1,5 +1,4 @@
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Common.Interfaces;
 

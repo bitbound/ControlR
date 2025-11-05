@@ -2,6 +2,7 @@
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Agent.Common.Interfaces;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services.Base;
@@ -11,35 +12,97 @@ internal abstract class IpcServerInitializerBase(
   IIpcConnectionFactory ipcFactory,
   IIpcServerStore ipcStore,
   IProcessManager processManager,
+  IIpcClientAuthenticator ipcAuthenticator,
   IHubConnection<IAgentHub> hubConnection,
   ILogger logger) : BackgroundService
 {
-  protected readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
-  protected readonly IIpcConnectionFactory _ipcFactory = ipcFactory;
-  protected readonly IIpcServerStore _ipcStore = ipcStore;
-  protected readonly ILogger _logger = logger;
-  protected readonly IProcessManager _processManager = processManager;
-  protected readonly TimeProvider _timeProvider = timeProvider;
+  protected IHubConnection<IAgentHub> HubConnection { get; } = hubConnection;
+  protected IIpcConnectionFactory IpcFactory { get; } = ipcFactory;
+  protected IIpcClientAuthenticator IpcAuthenticator { get; } = ipcAuthenticator;
+  protected IIpcServerStore IpcStore { get; } = ipcStore;
+  protected ILogger Logger { get; } = logger;
+  protected IProcessManager ProcessManager { get; } = processManager;
+  protected TimeProvider TimeProvider { get; } = timeProvider;
 
-  protected Task HandleConnection(IIpcServer server, CancellationToken cancellationToken)
+  protected abstract Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken);
+
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), TimeProvider);
+
     try
     {
-      _logger.LogInformation("Accepted IPC connection.  Waiting for PID attestation.");
-      server.On<IpcClientIdentityAttestationDto>(dto =>
+      while (await timer.WaitForNextTickAsync(stoppingToken))
       {
         try
         {
-          _logger.LogInformation("Received IPC client identity attestation for process {ProcessId}.", dto.ProcessId);
-          var process = _processManager.GetProcessById(dto.ProcessId);
-          _ipcStore.AddServer(process, server);
+          await AcceptConnection(stoppingToken);
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Error while processing IPC client identity attestation for process {ProcessId}.",
-            dto.ProcessId);
+          Logger.LogError(ex, "Error while accepting IPC connections.");
         }
-      });
+      }
+    }
+    catch (OperationCanceledException ex)
+    {
+      Logger.LogInformation(ex, "Stopping IPC server. Application is shutting down.");
+    }
+  }
+
+  protected virtual async Task AcceptConnection(CancellationToken cancellationToken)
+  {
+    try
+    {
+      var pipeName = GetPipeName();
+      Logger.LogInformation("Creating IPC server for pipe: {PipeName}", pipeName);
+      var server = await CreateServer(pipeName, cancellationToken);
+      Logger.LogInformation("Waiting for incoming IPC connection.");
+
+      if (!await server.WaitForConnection(cancellationToken))
+      {
+        Logger.LogWarning("Failed to accept incoming IPC connection.");
+        return;
+      }
+
+      // Authenticate the connection
+      var authResult = await IpcAuthenticator.AuthenticateConnection(server);
+      if (!authResult.IsSuccess)
+      {
+        Logger.LogCritical(
+          "IPC connection authentication FAILED: {Reason}. Connection rejected and disconnected.",
+          authResult.Reason);
+
+        // TODO: Send authentication failure event to server's event notification system
+        // once that feature is implemented. Include: timestamp, attempted process ID,
+        // executable path, and failure reason.
+
+        server.Dispose();
+        return;
+      }
+
+      Logger.LogInformation("IPC connection authenticated successfully.");
+      HandleConnection(server, authResult.Value, cancellationToken).Forget();
+    }
+    catch (OperationCanceledException ex)
+    {
+      Logger.LogInformation(ex, "Stopping IPC server. Application is shutting down.");
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while accepting IPC connection.");
+    }
+  }
+
+  protected abstract string GetPipeName();
+
+  protected Task HandleConnection(IIpcServer server, ClientCredentials credentials, CancellationToken cancellationToken)
+  {
+    try
+    {
+      Logger.LogInformation("Setting up IPC connection for process {ProcessId}.", credentials.ProcessId);
+      var process = ProcessManager.GetProcessById(credentials.ProcessId);
+      IpcStore.AddServer(process, server);
 
       server.On<ChatResponseIpcDto, Task<bool>>(async dto =>
       {
@@ -53,16 +116,16 @@ internal abstract class IpcServerInitializerBase(
             dto.ViewerConnectionId,
             dto.Timestamp);
 
-          _logger.LogInformation(
+          Logger.LogInformation(
             "Sending chat response for session {SessionId} from {Username}",
             responseDto.SessionId,
             responseDto.SenderUsername);
 
-          return await _hubConnection.Server.SendChatResponse(responseDto);
+          return await HubConnection.Server.SendChatResponse(responseDto);
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
+          Logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
           return false;
         }
       });
@@ -71,7 +134,7 @@ internal abstract class IpcServerInitializerBase(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while handling IPC connection.");
+      Logger.LogError(ex, "Error while handling IPC connection.");
       Disposer.DisposeAll(server);
     }
 

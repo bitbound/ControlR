@@ -2,7 +2,6 @@ using System.IO.Pipes;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
@@ -14,92 +13,23 @@ namespace ControlR.Agent.Common.Services.Windows;
 internal class IpcServerInitializerWindows(
   TimeProvider timeProvider,
   IIpcConnectionFactory ipcFactory,
-  IIpcServerStore desktopIpcStore,
+  IIpcServerStore ipcStore,
   IProcessManager processManager,
-  IHubConnection<IAgentHub> hubConnection,
   IIpcClientAuthenticator ipcAuthenticator,
+  IHubConnection<IAgentHub> hubConnection,
   IOptions<InstanceOptions> instanceOptions,
-  ILogger<IpcServerInitializerWindows> logger) 
-  : IpcServerInitializerBase(timeProvider, ipcFactory, desktopIpcStore, processManager, hubConnection, logger)
+  ILogger<IpcServerInitializerWindows> logger)
+  : IpcServerInitializerBase(timeProvider, ipcFactory, ipcStore, processManager, ipcAuthenticator, hubConnection,
+    logger)
 {
-  private readonly IIpcClientAuthenticator _ipcAuthenticator = ipcAuthenticator;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly int _sessionId = processManager.GetCurrentProcess().SessionId;
 
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-  {
-    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), _timeProvider);
-
-    try
-    {
-      while (await timer.WaitForNextTickAsync(stoppingToken))
-      {
-        try
-        {
-          await AcceptConnection(stoppingToken);
-        }
-        catch (Exception ex)
-        {
-          _logger.LogError(ex, "Error while accepting IPC connections.");
-        }
-      }
-    }
-    catch (OperationCanceledException ex)
-    {
-      _logger.LogInformation(ex, "Stopping IPC server.  Application is shutting down.");
-    }
-  }
-
-  private async Task AcceptConnection(CancellationToken cancellationToken)
-  {
-    try
-    {
-      var pipeName = IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
-      _logger.LogInformation("Creating IPC server for pipe: {PipeName}", pipeName);
-      var server = await CreateServer(pipeName);
-      _logger.LogInformation("Waiting for incoming IPC connection.");
-
-      if (!await server.WaitForConnection(cancellationToken))
-      {
-        _logger.LogWarning("Failed to accept incoming IPC connection.");
-        return;
-      }
-
-      // Authenticate the connection
-      var authResult = await _ipcAuthenticator.AuthenticateConnection(server);
-      if (!authResult.IsSuccess)
-      {
-        _logger.LogCritical(
-          "IPC connection authentication FAILED: {Reason}. Connection rejected and disconnected.",
-          authResult.Reason);
-
-        // TODO: Send authentication failure event to server's event notification system
-        // once that feature is implemented. Include: timestamp, attempted process ID,
-        // executable path, and failure reason.
-
-        server.Dispose();
-        return;
-      }
-
-      _logger.LogInformation("IPC connection authenticated successfully.");
-      HandleConnection(server, cancellationToken).Forget();
-    }
-    catch (OperationCanceledException ex)
-    {
-      _logger.LogInformation(ex, "Stopping IPC server.  Application is shutting down.");
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while accepting IPC connection.");
-      return;
-    }
-  }
-
-  private async Task<IIpcServer> CreateServer(string pipeName)
+  protected override async Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken)
   {
     if (_sessionId != 0)
     {
-      var pipeServer = await _ipcFactory.CreateServer(pipeName);
+      var pipeServer = await IpcFactory.CreateServer(pipeName);
       return pipeServer;
     }
 
@@ -123,6 +53,11 @@ internal class IpcServerInitializerWindows(
       PipeAccessRights.FullControl,
       AccessControlType.Deny));
 
-    return await _ipcFactory.CreateServer(pipeName, pipeSecurity);
+    return await IpcFactory.CreateServer(pipeName, pipeSecurity);
+  }
+
+  protected override string GetPipeName()
+  {
+    return IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
   }
 }

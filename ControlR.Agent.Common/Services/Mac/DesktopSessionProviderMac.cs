@@ -2,6 +2,7 @@
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 
 namespace ControlR.Agent.Common.Services.Mac;
+
 internal class DesktopSessionProviderMac(
   IIpcServerStore ipcStore,
   IProcessManager processManager,
@@ -10,7 +11,7 @@ internal class DesktopSessionProviderMac(
   private readonly IIpcServerStore _ipcStore = ipcStore;
   private readonly ILogger<DesktopSessionProviderMac> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
-  
+
   public async Task<DesktopSession[]> GetActiveDesktopClients()
   {
     var uiSessions = new List<DesktopSession>();
@@ -22,7 +23,8 @@ internal class DesktopSessionProviderMac(
       {
         ProcessId = server.Value.Process.Id,
         SystemSessionId = server.Value.Process.SessionId,
-        Type = DesktopSessionType.Console // On macOS, we typically have console sessions
+        Name = "Console",
+        Type = DesktopSessionType.Console
       };
 
       // Try to find the username for this session
@@ -30,13 +32,8 @@ internal class DesktopSessionProviderMac(
       if (getUserResult.IsSuccess)
       {
         uiSession.Username = getUserResult.Value;
-        uiSession.Name = $"Console - {getUserResult.Value}";
       }
-      else
-      {
-        uiSession.Name = $"Console - Session {server.Value.Process.SessionId}";
-      }
-
+      
       uiSessions.Add(uiSession);
     }
 
@@ -53,31 +50,6 @@ internal class DesktopSessionProviderMac(
       .ToArray();
   }
 
-
-  private static DesktopSessionType DetermineSessionType(string tty)
-  {
-    // On macOS:
-    // - "console" typically means the main physical display
-    // - "ttys000", "ttys001", etc. are typically remote sessions or additional terminals
-    // For simplicity, we'll treat everything as Console since macOS doesn't have
-    // the same RDP concept as Windows
-    return DesktopSessionType.Console;
-  }
-
-  private static string FormatSessionName(string username, string tty, DesktopSessionType sessionType)
-  {
-    var sessionTypeStr = sessionType == DesktopSessionType.Console ? "Console" : "Remote";
-    
-    if (tty == "console")
-    {
-      return $"{sessionTypeStr} - {username}";
-    }
-    else
-    {
-      return $"{sessionTypeStr} - {username} ({tty})";
-    }
-  }
-
   /// <summary>
   /// Generate a deterministic session ID based on username and TTY.
   /// This should match the logic used by the desktop client.
@@ -86,7 +58,7 @@ internal class DesktopSessionProviderMac(
   {
     var sessionKey = $"{username}:{tty}";
     var hash = sessionKey.GetHashCode();
-    
+
     // Make sure it's positive and in a reasonable range
     return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
   }
@@ -105,14 +77,14 @@ internal class DesktopSessionProviderMac(
       foreach (var line in vncLines)
       {
         // Look for VNC server processes or Screen Sharing
-        if (line.Contains("vnc", StringComparison.OrdinalIgnoreCase) || 
+        if (line.Contains("vnc", StringComparison.OrdinalIgnoreCase) ||
             line.Contains("screensharing", StringComparison.OrdinalIgnoreCase))
         {
           var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
           if (parts.Length < 2) continue;
 
           var vncUsername = parts[0];
-          
+
           // Avoid duplicates and system users
           if (sessions.Any(s => s.Username == vncUsername) || vncUsername == "root")
             continue;
@@ -168,24 +140,20 @@ internal class DesktopSessionProviderMac(
 
           // Get UID for the user to exclude system users
           var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-          if (!uidResult.IsSuccess || 
-              !int.TryParse(uidResult.Value.Trim(), out var uid) || 
+          if (!uidResult.IsSuccess ||
+              !int.TryParse(uidResult.Value.Trim(), out var uid) ||
               uid < 500) // Exclude system users
             continue;
 
           // Generate a deterministic session ID based on username and TTY
           var sessionId = GenerateSessionId(username, tty);
 
-          // Determine session type based on tty
-          var sessionType = DetermineSessionType(tty);
-          var sessionName = FormatSessionName(username, tty, sessionType);
-
           var session = new DesktopSession
           {
             Username = username,
             SystemSessionId = sessionId,
-            Name = sessionName,
-            Type = sessionType,
+            Name = "Console",
+            Type = DesktopSessionType.Console,
             ProcessId = 0 // Will be set when desktop client connects
           };
 
@@ -247,9 +215,10 @@ internal class DesktopSessionProviderMac(
     return userMap;
   }
 
-  private async Task<Result<string>> TryGetUsernameForProcess(IProcess process, Dictionary<string, string> loggedInUsers)
+  private async Task<Result<string>> TryGetUsernameForProcess(IProcess process,
+    Dictionary<string, string> loggedInUsers)
   {
-     try
+    try
     {
       // Try to get the user ID of the process owner
       var result = await _processManager.GetProcessOutput("ps", $"-o uid= -p {process.Id}", 3000);

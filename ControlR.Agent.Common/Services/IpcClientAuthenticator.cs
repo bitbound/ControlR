@@ -8,7 +8,7 @@ namespace ControlR.Agent.Common.Services;
 
 public interface IIpcClientAuthenticator
 {
-  Task<Result> AuthenticateConnection(IIpcServer server);
+  Task<Result<ClientCredentials>> AuthenticateConnection(IIpcServer server);
   Task<Result> CheckRateLimit(string executablePath);
   Task RecordFailedAttempt(string executablePath);
 }
@@ -22,15 +22,16 @@ public class IpcClientAuthenticator(
 {
   private const int MaxFailuresPerMinute = 5;
 
+
   private readonly IClientCredentialsProvider _credentialsProvider = credentialsProvider;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
-  private readonly IDesktopClientFileVerifier _fileVerifier = fileVerifier;
   private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _failedAttempts = new();
+  private readonly IDesktopClientFileVerifier _fileVerifier = fileVerifier;
   private readonly ILogger<IpcClientAuthenticator> _logger = logger;
   private readonly SemaphoreSlim _rateLimitLock = new(1, 1);
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
-
-  public async Task<Result> AuthenticateConnection(IIpcServer server)
+  
+  public async Task<Result<ClientCredentials>> AuthenticateConnection(IIpcServer server)
   {
     try
     {
@@ -41,7 +42,7 @@ public class IpcClientAuthenticator(
         _logger.LogCritical(
           "Failed to get IPC client credentials: {Reason}",
           credsResult.Reason);
-        return Result.Fail(credsResult.Reason);
+        return Result.Fail<ClientCredentials>(credsResult.Reason);
       }
 
       var credentials = credsResult.Value;
@@ -59,7 +60,7 @@ public class IpcClientAuthenticator(
           "IPC authentication rate limit exceeded for {ExecutablePath}. PID: {ProcessId}",
           credentials.ExecutablePath,
           credentials.ProcessId);
-        return rateLimitResult;
+        return Result.Fail<ClientCredentials>(rateLimitResult.Reason);
       }
 
       // 3. Validate executable path matches expected location
@@ -72,7 +73,7 @@ public class IpcClientAuthenticator(
           credentials.ProcessId,
           credentials.ExecutablePath,
           validationResult.Reason);
-        return validationResult;
+        return Result.Fail<ClientCredentials>(validationResult.Reason);
       }
 
       // 4. Validate code signing certificate.
@@ -85,7 +86,7 @@ public class IpcClientAuthenticator(
           credentials.ProcessId,
           credentials.ExecutablePath,
           certificateValidationResult.Reason);
-        return certificateValidationResult;
+        return Result.Fail<ClientCredentials>(certificateValidationResult.Reason);
       }
 
       // 5. Log successful authentication
@@ -94,12 +95,12 @@ public class IpcClientAuthenticator(
         credentials.ProcessId,
         credentials.ExecutablePath);
 
-      return Result.Ok();
+      return credsResult;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Unexpected error during IPC authentication.");
-      return Result.Fail($"Unexpected error during authentication: {ex.Message}");
+      return Result.Fail<ClientCredentials>($"Unexpected error during authentication: {ex.Message}");
     }
   }
 
@@ -167,6 +168,7 @@ public class IpcClientAuthenticator(
       _rateLimitLock.Release();
     }
   }
+
 
   private Result ValidateExecutablePath(string executablePath)
   {

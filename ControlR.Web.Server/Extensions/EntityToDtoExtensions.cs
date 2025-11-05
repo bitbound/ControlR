@@ -55,6 +55,17 @@ public static class EntityToDtoExtensions
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
 
+  public static ServerAlertResponseDto ToDto(this ServerAlert serverAlert)
+  {
+    return new ServerAlertResponseDto(
+      serverAlert.Id,
+      serverAlert.Message,
+      serverAlert.Severity,
+      serverAlert.IsDismissable,
+      serverAlert.IsSticky,
+      serverAlert.IsEnabled);
+  }
+
   public static TenantSettingResponseDto ToDto(this TenantSetting tenantSetting)
   {
     return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);

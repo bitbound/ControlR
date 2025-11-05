@@ -6,7 +6,6 @@ namespace ControlR.Libraries.Shared.Constants;
 
 public static class AppConstants
 {
-  public const string AgentEtagFileName = "agent-etag.txt";
   public const string AgentHubPath = "/hubs/agent";
   public const int DefaultVncPort = 5900;
   public const string ViewerHubPath = "/hubs/viewer";

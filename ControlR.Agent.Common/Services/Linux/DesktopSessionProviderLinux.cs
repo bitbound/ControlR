@@ -85,7 +85,7 @@ internal class DesktopSessionProviderLinux(
       }
 
       // Prefer a DISPLAY value (X11), else wayland display, else TTY
-      string? sessionKey = null;
+      string? sessionKey;
       string sessionLabel;
       DesktopSessionType sessionType;
 
@@ -169,15 +169,15 @@ internal class DesktopSessionProviderLinux(
 
     if (tty.StartsWith(':'))
     {
-      return $"{sessionTypeStr} - (X11 {tty})";
+      return $"{sessionTypeStr} (X11 {tty})";
     }
     else if (tty.StartsWith("tty"))
     {
-      return $"{sessionTypeStr} - {tty}";
+      return $"{sessionTypeStr} ({tty})";
     }
     else
     {
-      return $"{sessionTypeStr} - {tty}";
+      return $"{sessionTypeStr} ({tty})";
     }
   }
 

@@ -73,51 +73,23 @@ internal class AgentInstallerLinux(
 
       var installDir = GetInstallDirectory();
 
-      var exePath = _environment.StartupExePath;
-      var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
+      var startupExePath = _environment.StartupExePath;
+      var targetAgentPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environment.Platform));
       _fileSystem.CreateDirectory(installDir);
 
-      if (_fileSystem.FileExists(targetPath))
+      if (_fileSystem.FileExists(targetAgentPath))
       {
-        _fileSystem.MoveFile(targetPath, $"{targetPath}.old", true);
+        _fileSystem.MoveFile(targetAgentPath, $"{targetAgentPath}.old", true);
       }
 
-      _logger.LogInformation("Copying agent executable to {TargetPath}.", targetPath);
+      _logger.LogInformation("Copying agent executable to {TargetPath}.", targetAgentPath);
       await retryer.Retry(
         () =>
         {
-          _fileSystem.CopyFile(exePath, targetPath, true);
+          _fileSystem.CopyFile(startupExePath, targetAgentPath, true);
           return Task.CompletedTask;
         }, 5, TimeSpan.FromSeconds(1));
-
-      // Create DesktopClient directory and copy executable if it exists
-      var desktopClientDir = Path.Combine(installDir, "DesktopClient");
-      _fileSystem.CreateDirectory(desktopClientDir);
-
-      var desktopClientExeName = AppConstants.DesktopClientFileName;
-      var sourceDesktopClientPath = Path.Combine(Path.GetDirectoryName(exePath)!, desktopClientExeName);
-      var targetDesktopClientPath = Path.Combine(desktopClientDir, desktopClientExeName);
-
-      if (_fileSystem.FileExists(sourceDesktopClientPath))
-      {
-        _logger.LogInformation("Copying desktop client executable to {TargetPath}.", targetDesktopClientPath);
-        if (_fileSystem.FileExists(targetDesktopClientPath))
-        {
-          _fileSystem.MoveFile(targetDesktopClientPath, $"{targetDesktopClientPath}.old", true);
-        }
-        await retryer.Retry(
-          () =>
-          {
-            _fileSystem.CopyFile(sourceDesktopClientPath, targetDesktopClientPath, true);
-            return Task.CompletedTask;
-          },
-          tryCount: 5,
-          retryDelay: TimeSpan.FromSeconds(1));
-      }
-      else
-      {
-        _logger.LogWarning("Desktop client executable not found at {SourcePath}. User service may not work correctly.", sourceDesktopClientPath);
-      }
+      
       var serviceFile = (await GetAgentServiceFile()).Trim();
       var desktopServiceFile = (await GetDesktopServiceFile()).Trim();
 
@@ -125,8 +97,8 @@ internal class AgentInstallerLinux(
       _fileSystem.CreateDirectory(Path.GetDirectoryName(GetServiceFilePath())!);
       _fileSystem.CreateDirectory(Path.GetDirectoryName(GetDesktopServiceFilePath())!);
 
-      await _fileSystem.WriteAllTextAsync(GetServiceFilePath(), serviceFile);
-      await _fileSystem.WriteAllTextAsync(GetDesktopServiceFilePath(), desktopServiceFile);
+      await WriteFileIfChanged(GetServiceFilePath(), serviceFile);
+      await WriteFileIfChanged(GetDesktopServiceFilePath(), desktopServiceFile);
       await UpdateAppSettings(serverUri, tenantId, deviceId);
 
       var createResult = await CreateDeviceOnServer(installerKey, tags);
@@ -135,24 +107,22 @@ internal class AgentInstallerLinux(
         return;
       }
 
-      var etagResult = await WriteCurrentAgentEtag(installDir);
-      if (!etagResult.IsSuccess)
-      {
-        _logger.LogWarning("Failed to write ETag, but continuing with installation.");
-      }
-
       var serviceName = GetServiceName();
       var desktopServiceName = GetDesktopServiceName();
 
       var psi = new ProcessStartInfo
       {
         FileName = "sudo",
-        Arguments = $"systemctl enable {serviceName}",
         WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
 
+      _logger.LogInformation("Reloading systemd daemon.");
+      psi.Arguments = "systemctl daemon-reload";
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
       _logger.LogInformation("Enabling agent service.");
+      psi.Arguments = $"systemctl enable {serviceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
       _logger.LogInformation("Enabling desktop user service.");
@@ -345,5 +315,21 @@ internal class AgentInstallerLinux(
     {
       _logger.LogError(ex, "Error while cleaning up .net extraction directory.");
     }
+  }
+
+  private async Task WriteFileIfChanged(string filePath, string content)
+  {
+    if (_fileSystem.FileExists(filePath))
+    {
+      var existingContent = await _fileSystem.ReadAllTextAsync(filePath);
+      if (existingContent.Trim() == content.Trim())
+      {
+        _logger.LogInformation("File {FilePath} already exists with the same content. Skipping write.", filePath);
+        return;
+      }
+    }
+
+    _logger.LogInformation("Writing file {FilePath}.", filePath);
+    await _fileSystem.WriteAllTextAsync(filePath, content);
   }
 }

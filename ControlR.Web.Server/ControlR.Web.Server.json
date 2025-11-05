@@ -1319,6 +1319,82 @@
         }
       }
     },
+    "/api/server-alert": {
+      "get": {
+        "tags": [
+          "ServerAlert"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ServerAlert"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAlertRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAlertRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAlertRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Tags": {
       "post": {
         "tags": [
@@ -2890,6 +2966,9 @@
           }
         }
       },
+      "MessageSeverity": {
+        "type": "integer"
+      },
       "PersonalAccessTokenDto": {
         "required": [
           "id",
@@ -2949,6 +3028,65 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "ServerAlertRequestDto": {
+        "required": [
+          "message",
+          "severity",
+          "isDismissable",
+          "isSticky",
+          "isEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/MessageSeverity"
+          },
+          "isDismissable": {
+            "type": "boolean"
+          },
+          "isSticky": {
+            "type": "boolean"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ServerAlertResponseDto": {
+        "required": [
+          "message",
+          "severity",
+          "isDismissable",
+          "isSticky",
+          "isEnabled",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/MessageSeverity"
+          },
+          "isDismissable": {
+            "type": "boolean"
+          },
+          "isSticky": {
+            "type": "boolean"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -3263,6 +3401,9 @@
     },
     {
       "name": "Roles"
+    },
+    {
+      "name": "ServerAlert"
     },
     {
       "name": "Tags"

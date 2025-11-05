@@ -51,6 +51,7 @@
       <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" />
     </MudDrawer>
     <MudMainContent Class="h-100">
+      <ServerAlertDisplay Class="mb-4" />
       @if (!RendererInfo.IsInteractive || !string.IsNullOrWhiteSpace(_loadingText))
       {
         <LoadingIndicator IsVisible Message="@(_loadingText ?? "Loading")" Class="mt-8" />

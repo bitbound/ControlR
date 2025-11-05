@@ -1,8 +1,6 @@
-using System.Reflection.Metadata;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
@@ -19,7 +17,6 @@ public class IpcClientManager(
   IIpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
   IClassicDesktopStyleApplicationLifetime appLifetime,
-  IProcessManager processManager,
   IScreenGrabber screenGrabber,
   IImageUtility imageUtility,
   IOptions<DesktopClientOptions> desktopClientOptions,
@@ -32,7 +29,6 @@ public class IpcClientManager(
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
-  private readonly IProcessManager _processManager = processManager;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly TimeProvider _timeProvider = timeProvider;
@@ -43,10 +39,8 @@ public class IpcClientManager(
     await CreateClientConnection(stoppingToken);
   }
 
-
   private async Task CreateClientConnection(CancellationToken stoppingToken)
   {
-    var processId = _processManager.GetCurrentProcess().Id;
     var pipeName = IpcPipeNames.GetPipeName(_desktopClientOptions.Value.InstanceId);
 
     while (!stoppingToken.IsCancellationRequested)
@@ -72,13 +66,7 @@ public class IpcClientManager(
         _logger.LogInformation("Connected to IPC server.");
         _ipcClientAccessor.SetConnection(client);
         client.BeginRead(stoppingToken);
-        _logger.LogInformation("Read started.");
-
-        _logger.LogInformation("Sending client identity attestation. Process ID: {ProcessId}", processId);
-        var dto = new IpcClientIdentityAttestationDto(processId);
-        await client.Send(dto, stoppingToken);
-
-        _logger.LogInformation("Waiting for connection end.");
+        _logger.LogInformation("Read started. Waiting for connection end.");
         await client.WaitForConnectionEnd(stoppingToken);
         _ipcClientAccessor.SetConnection(null);
       }
