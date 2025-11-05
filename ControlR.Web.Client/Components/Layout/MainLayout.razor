@@ -1,73 +1,78 @@
-﻿@inherits LayoutComponentBase
+﻿@using ControlR.Libraries.Shared.Enums
+@inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavManager
 @inject IMessenger Messenger
 @inject IHubConnector HubConnector
 @inject ISnackbar Snackbar
 @inject ILogger<MainLayout> Logger
+@inject IUserSettingsProvider UserSettings
+@inject IJsInterop JsInterop
+@inject PersistentComponentState ApplicationState
+@implements IDisposable
 
-<div>
-  <MudThemeProvider IsDarkMode Theme="CustomTheme"/>
-  <MudPopoverProvider/>
-  <MudDialogProvider/>
-  <MudSnackbarProvider/>
+<div class="@ThemeClass">
+  <CascadingValue Value="CurrentPalette">
+    <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="CustomTheme" />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
 
-  <MudLayout>
-    <MudAppBar Elevation="1">
+    <MudLayout>
+      <MudAppBar Elevation="1">
 
-      @if (RendererInfo.IsInteractive)
-      {
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => ToggleNavDrawer())" />
-      }
-      else
-      {
-        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-                                  Edge="Edge.Start"/>
-      }
+        @if (RendererInfo.IsInteractive)
+        {
+          <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+            OnClick="@(_ => ToggleNavDrawer())" />
+        }
+        else
+        {
+          <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+            Edge="Edge.Start" />
+        }
 
-      <MudImage Src=@Assets["icon-192.png"] Height="30" Class="mx-2" />
-      <MudLink Href="/" Underline="Underline.None">
-        <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
-      </MudLink>
+        <MudImage Src=@Assets["icon-192.png"] Height="30" Class="mx-2" />
+        <MudLink Href="/" Underline="Underline.None">
+          <MudText Typo="Typo.h6" Color="Color.Primary">ControlR</MudText>
+        </MudLink>
 
-      <MudSpacer/>
+        <MudSpacer />
 
-      <ConnectionIndicator THub="@IViewerHub" />
+        <ConnectionIndicator THub="@IViewerHub" />
 
-      <MudTooltip Text="GitHub">
-        <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
-                       Color="Color.Inherit"
-                       Href="https://github.com/bitbound/controlr/"
-                       Target="_blank"/>
+        <ThemeToggle OnThemeChanged="HandleThemeChanged" />
 
-      </MudTooltip>
-    </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen"
-               id="nav-drawer"
-               ClipMode="DrawerClipMode.Always"
-               Elevation="2">
+        <MudTooltip Text="GitHub">
+          <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+            Href="https://github.com/bitbound/controlr/" Target="_blank" />
 
-      <NavMenu />
-    </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
-      <ServerAlertDisplay Class="mb-4" />
-      @if (!RendererInfo.IsInteractive && !_isIdentityPage)
-      {
-        <div class="w-100 text-center mt-8">
-          <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
-            Loading
-          </MudText>
-          <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large"/>
-        </div>
-      }
-      else
-      {
-        @Body
-      }
-    </MudMainContent>
-  </MudLayout>
+        </MudTooltip>
+      </MudAppBar>
+      <MudDrawer @bind-Open="_drawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
 
-  <DeviceContentHarness/>
+        <NavMenu />
+      </MudDrawer>
+      <MudMainContent Class="mt-16 pa-4">
+        <ServerAlertDisplay Class="mb-4" />
+        @if (!RendererInfo.IsInteractive && !_isIdentityPage)
+        {
+          <div class="w-100 text-center mt-8">
+            <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+              Loading
+            </MudText>
+            <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+          </div>
+        }
+        else
+        {
+          @Body
+        }
+      </MudMainContent>
+    </MudLayout>
+
+    <DeviceContentHarness />
+  </CascadingValue>
 </div>
 
 <div id="blazor-error-ui">
@@ -80,8 +85,15 @@
   private bool _drawerOpen = true;
   private bool _isAuthenticated;
   private bool _isIdentityPage;
-  
+  private bool _isDarkMode = true;
+  private ThemeMode _themeMode = ThemeMode.Auto;
+  private PersistingComponentStateSubscription _persistingSubscription;
+
   private MudTheme? _customTheme;
+
+  private Palette CurrentPalette => _isDarkMode
+  ? CustomTheme.PaletteDark
+  : CustomTheme.PaletteLight;
 
   private MudTheme CustomTheme
   {
@@ -89,16 +101,46 @@
     {
       return _customTheme ??= new MudTheme
       {
-        PaletteDark = Theme.DarkPalette
+        PaletteDark = Theme.DarkPalette,
+        PaletteLight = Theme.LightPalette
       };
     }
   }
+
+  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
 
-    _isAuthenticated = await AuthState.IsAuthenticated();
+    // Try to restore persisted state from SSR
+    if (!ApplicationState.TryTakeFromJson<bool>("isDarkMode", out var persistedIsDarkMode))
+    {
+      // No persisted state, this is SSR or first load
+      _isAuthenticated = await AuthState.IsAuthenticated();
+
+      if (_isAuthenticated)
+      {
+        _themeMode = await UserSettings.GetThemeMode();
+        await UpdateIsDarkMode();
+      }
+
+      // Register a callback to persist state before SSR completes
+      _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
+    }
+    else
+    {
+      // Restored from persisted state (this is WASM after SSR)
+      _isDarkMode = persistedIsDarkMode;
+
+      // Still need to load authenticated state and set up theme mode
+      _isAuthenticated = await AuthState.IsAuthenticated();
+      if (_isAuthenticated)
+      {
+        _themeMode = await UserSettings.GetThemeMode();
+      }
+    }
+
     _isIdentityPage =
       Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
       currentUri.PathAndQuery.StartsWith("/Account");
@@ -106,6 +148,7 @@
     if (RendererInfo.IsInteractive)
     {
       Messenger.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
 
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
@@ -142,9 +185,60 @@
     return Task.CompletedTask;
   }
 
+  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  {
+    await HandleThemeChanged(message.ThemeMode);
+  }
+
   private void ToggleNavDrawer()
   {
     _drawerOpen = !_drawerOpen;
+  }
+
+  private async Task UpdateIsDarkMode()
+  {
+    _isDarkMode = _themeMode switch
+    {
+      ThemeMode.Light => false,
+      ThemeMode.Dark => true,
+      ThemeMode.Auto => await GetSystemDarkMode(),
+      _ => true
+    };
+  }
+
+  private async Task<bool> GetSystemDarkMode()
+  {
+    try
+    {
+      if (RendererInfo.IsInteractive)
+      {
+        return await JsInterop.GetSystemDarkMode();
+      }
+      return true; // Default to dark during prerendering
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
+      return true;
+    }
+  }
+
+  private async Task HandleThemeChanged(ThemeMode mode)
+  {
+    _themeMode = mode;
+    await UpdateIsDarkMode();
+    StateHasChanged();
+  }
+
+  private Task PersistThemeState()
+  {
+    ApplicationState.PersistAsJson("isDarkMode", _isDarkMode);
+    return Task.CompletedTask;
+  }
+
+  public void Dispose()
+  {
+    _persistingSubscription.Dispose();
   }
 
 }

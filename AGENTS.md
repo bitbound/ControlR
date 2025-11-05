@@ -166,7 +166,6 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 
 ### General Coding Standards
 - Use 2 spaces for indentation
-- Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name
 
 ### Build and Task System
 - Use the following build command to verify that changes compile: `dotnet build ControlR.sln --verbosity quiet`
@@ -182,6 +181,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 - Always prefer collection expressions to initialize collections (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
 - Do not leave comments that reference historical changes, prior implementations, or what was fixed. Comments should explain current intent only.
+- Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name
 
 ### Platform-Specific Development
 - Use `[SupportedOSPlatform]` attributes for platform-specific code
@@ -190,6 +190,7 @@ All inherit from base and implement `CreateDevice()` â†’ returns `DeviceModel` â
 
 ### Web UI Guidelines
 - Use MudBlazor components where appropriate for the UI.
+- When making changes to `.razor` files, check if there's a code-behind `.cs` file associated with it.  If so, add your C# code there, including service injections.
 - Prefer using code-behind CS files for Razor components instead of using the `@code {}` block in Razor files.
 
 ### Project Organization

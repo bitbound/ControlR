@@ -10,6 +10,9 @@ public partial class Overview : IDisposable
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
+  [CascadingParameter]
+  public required Palette Palette { get; init; }
+
   public void Dispose()
   {
     Disposer.DisposeAll(_disposables);

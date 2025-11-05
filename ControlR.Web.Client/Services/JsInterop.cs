@@ -17,6 +17,7 @@ public interface IJsInterop
 
   ValueTask<int> GetCursorIndex(ElementReference inputElement);
   ValueTask<int> GetCursorIndexById(string inputElementId);
+  ValueTask<bool> GetSystemDarkMode();
 
   ValueTask InvokeClick(string elementId);
   ValueTask<bool> IsTouchScreen();
@@ -84,6 +85,11 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask<int> GetCursorIndexById(string inputElementId)
   {
     return jsRuntime.InvokeAsync<int>("getSelectionStartById", inputElementId);
+  }
+
+  public ValueTask<bool> GetSystemDarkMode()
+  {
+    return jsRuntime.InvokeAsync<bool>("getSystemDarkMode");
   }
 
   public ValueTask InvokeClick(string elementId)

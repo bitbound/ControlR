@@ -1,4 +1,5 @@
-﻿@attribute [Route(ClientRoutes.Settings)]
+﻿@using ControlR.Libraries.Shared.Enums
+@attribute [Route(ClientRoutes.Settings)]
 @attribute [Authorize]
 
 @inject ISnackbar Snackbar
@@ -6,6 +7,7 @@
 @inject ITenantSettingsProvider TenantSettingsProvider
 @inject IClipboardManager ClipboardManager
 @inject AuthenticationStateProvider AuthState
+@inject IMessenger Messenger
 
 <PageTitle>Settings</PageTitle>
 
@@ -82,6 +84,48 @@
                Label="Notify users when a remote control session starts"/>
 </div>
 
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Theme
+  </MudText>
+
+  <MudRadioGroup @bind-Value:get="_themeMode" @bind-Value:set="SetThemeMode" T="ThemeMode">
+    <MudRadio Value="@ThemeMode.Auto" Color="Color.Primary">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.Brightness4" Class="me-2" Size="Size.Small" />
+        <div>
+          <MudText>Auto</MudText>
+          <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Follows your system preference
+          </MudText>
+        </div>
+      </div>
+    </MudRadio>
+    <MudRadio Value="@ThemeMode.Light" Color="Color.Primary" Class="mt-2">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.LightMode" Class="me-2" Size="Size.Small" />
+        <div>
+          <MudText>Light</MudText>
+          <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Light theme
+          </MudText>
+        </div>
+      </div>
+    </MudRadio>
+    <MudRadio Value="@ThemeMode.Dark" Color="Color.Primary" Class="mt-2">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.DarkMode" Class="me-2" Size="Size.Small" />
+        <div>
+          <MudText>Dark</MudText>
+          <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Dark theme
+          </MudText>
+        </div>
+      </div>
+    </MudRadio>
+  </MudRadioGroup>
+</div>
+
 @code {
 
   private bool _notifyUser;
@@ -89,6 +133,7 @@
   private Guid? _tenantId;
   private Guid? _userId;
   private bool? _tenantNotifySetting;
+  private ThemeMode _themeMode = ThemeMode.Auto;
 
   protected override async Task OnInitializedAsync()
   {
@@ -105,10 +150,11 @@
 
     // Check if tenant has enforced the notify user setting
     _tenantNotifySetting = await TenantSettingsProvider.GetNotifyUserOnSessionStart();
-    
+
     _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
     _userDisplayName = await SettingsStore.GetUserDisplayName();
-    
+    _themeMode = await SettingsStore.GetThemeMode();
+
     // If tenant setting is enforced, override the user setting display
     if (_tenantNotifySetting.HasValue)
     {
@@ -140,6 +186,14 @@
     
     _notifyUser = value;
     await SettingsStore.SetNotifyUserOnSessionStart(value);
+  }
+
+  private async Task SetThemeMode(ThemeMode value)
+  {
+    _themeMode = value;
+    await SettingsStore.SetThemeMode(value);
+    await Messenger.Send(new ThemeChangedMessage(value));
+    Snackbar.Add("Theme updated", Severity.Success);
   }
 
   private async Task SetUserDisplayName(string value)

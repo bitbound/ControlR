@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using ControlR.Libraries.Shared.Enums;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.Services.DeviceAccess;
 using ControlR.Web.Client.Services.DeviceAccess.Chat;
@@ -18,7 +19,10 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   private string? _errorText;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private bool _isAuthenticated;
+  private bool _isDarkMode = true;
   private string? _loadingText = "Loading";
+  private ThemeMode _themeMode = ThemeMode.Auto;
+  private PersistingComponentStateSubscription _persistingSubscription;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -39,6 +43,9 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   public required IHubConnector HubConnector { get; init; }
 
   [Inject]
+  public required IJsInterop JsInterop { get; init; }
+
+  [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
 
   [Inject]
@@ -56,11 +63,24 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   [Inject]
   public required ITerminalState TerminalState { get; init; }
 
+  [Inject]
+  public required IUserSettingsProvider UserSettings { get; init; }
+
+  [Inject]
+  public required PersistentComponentState ApplicationState { get; init; }
+
+  private Palette CurrentPalette => _isDarkMode
+    ? CustomTheme.PaletteDark
+    : CustomTheme.PaletteLight;
+
   private MudTheme CustomTheme =>
     _customTheme ??= new MudTheme
     {
-      PaletteDark = Theme.DarkPalette
+      PaletteDark = Theme.DarkPalette,
+      PaletteLight = Theme.LightPalette
     };
+
+  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
 
   private bool IsNavMenuDisabled
   {
@@ -93,6 +113,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       await TryDisposeTerminal();
       ChatState.Clear();
       Messenger.UnregisterAll(this);
+      _persistingSubscription.Dispose();
     }
     catch (Exception ex)
     {
@@ -107,7 +128,33 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     {
       await base.OnInitializedAsync();
       _loadingText = "Loading";
+
       _isAuthenticated = await AuthState.IsAuthenticated();
+
+      // Try to restore persisted state from SSR
+      if (!ApplicationState.TryTakeFromJson<bool>("isDarkMode", out var persistedIsDarkMode))
+      {
+        // No persisted state, this is SSR or first load
+        if (_isAuthenticated)
+        {
+          _themeMode = await UserSettings.GetThemeMode();
+        }
+        await UpdateIsDarkMode();
+
+        // Register a callback to persist state before SSR completes
+        _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
+      }
+      else
+      {
+        // Restored from persisted state (this is WASM after SSR)
+        _isDarkMode = persistedIsDarkMode;
+
+        // Still need to load theme mode
+        if (_isAuthenticated)
+        {
+          _themeMode = await UserSettings.GetThemeMode();
+        }
+      }
 
       if (!_isAuthenticated)
       {
@@ -136,6 +183,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         await InvokeAsync(StateHasChanged);
 
         Messenger.Register<ToastMessage>(this, HandleToastMessage);
+        Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
         Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
         Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
@@ -266,6 +314,11 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     return Task.CompletedTask;
   }
 
+  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  {
+    await HandleThemeChanged(message.ThemeMode);
+  }
+
   private void ToggleNavDrawer()
   {
     _drawerOpen = !_drawerOpen;
@@ -279,7 +332,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       {
         return;
       }
-      
+
       await ViewerHub.Server.CloseChatSession(
         DeviceAccessState.CurrentDevice.Id,
         ChatState.SessionId,
@@ -308,5 +361,46 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     {
       Logger.LogError(ex, "Error disposing terminal session.");
     }
+  }
+
+  private async Task UpdateIsDarkMode()
+  {
+    _isDarkMode = _themeMode switch
+    {
+      ThemeMode.Light => false,
+      ThemeMode.Dark => true,
+      ThemeMode.Auto => await GetSystemDarkMode(),
+      _ => true
+    };
+  }
+
+  private async Task<bool> GetSystemDarkMode()
+  {
+    try
+    {
+      if (RendererInfo.IsInteractive)
+      {
+        return await JsInterop.GetSystemDarkMode();
+      }
+      return true; // Default to dark during prerendering
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
+      return true;
+    }
+  }
+
+  private async Task HandleThemeChanged(ThemeMode mode)
+  {
+    _themeMode = mode;
+    await UpdateIsDarkMode();
+    StateHasChanged();
+  }
+
+  private Task PersistThemeState()
+  {
+    ApplicationState.PersistAsJson("isDarkMode", _isDarkMode);
+    return Task.CompletedTask;
   }
 }

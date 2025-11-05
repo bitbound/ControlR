@@ -2,7 +2,7 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     column-gap: 15px;
-    background-color: rgb(25,25,25);
+    background-color: var(--mud-palette-surface);
     align-items: center;
     white-space: nowrap;
 }
@@ -16,7 +16,7 @@
 .device-content {
     display: grid;
     grid-template-rows: auto 1fr;
-    background-color: rgb(40,40,40);
+    background-color: var(--mud-palette-background-gray);
     pointer-events: auto;
 }
 

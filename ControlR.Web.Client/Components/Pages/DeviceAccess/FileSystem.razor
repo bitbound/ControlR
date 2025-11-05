@@ -1,9 +1,10 @@
-@layout DeviceAccessLayout
-@page "/device-access/file-system"
-@attribute [Authorize]
-@inherits JsInteropableComponent
+@using ControlR.Web.Client.Components.FileSystem
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 @using ControlR.Libraries.Shared.Helpers
+@layout DeviceAccessLayout
+@attribute [Route(ClientRoutes.DeviceAccessFileSystem)]
+@attribute [Authorize]
+@inherits JsInteropableComponent
 
 <div @ref="_containerRef" class="file-system-container h-100">
   <div class="address-bar-container">

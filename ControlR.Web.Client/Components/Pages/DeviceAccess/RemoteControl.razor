@@ -1,6 +1,6 @@
 ﻿@layout DeviceAccessLayout
 @inherits ViewportAwareComponent
-@page "/device-access/remote-control"
+@attribute [Route(ClientRoutes.DeviceAccessRemoteControl)]
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 
@@ -62,7 +62,7 @@
                 <MudCardContent>
                   <div class="session-card-grid">
                     <div>
-                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                      <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                         Session ID:
                       </MudText>
                     </div>
@@ -70,7 +70,7 @@
                       @(session.SystemSessionId)
                     </div>
                     <div>
-                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                      <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                         Process ID:
                       </MudText>
                     </div>
@@ -78,7 +78,7 @@
                       @(session.ProcessId)
                     </div>
                     <div>
-                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                      <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                         Session Name:
                       </MudText>
                     </div>
@@ -86,7 +86,7 @@
                       @(session.Name)
                     </div>
                     <div>
-                      <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                      <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                         User:
                       </MudText>
                     </div>
@@ -96,7 +96,7 @@
                   </div>
                 </MudCardContent>
                 <MudCardActions>
-                  <MudButton Variant="Variant.Outlined" Color="Color.Info"
+                  <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                              OnClick="@(_ => StartRemoteControl(session, quiet: false))">
                     Connect
                   </MudButton>

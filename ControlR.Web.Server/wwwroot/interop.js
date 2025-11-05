@@ -55,6 +55,18 @@ function getSelectionStartById(elementId) {
   return element.selectionStart;
 }
 
+/**
+ * Check if the system/browser prefers dark mode
+ * @returns {boolean} True if dark mode is preferred
+ */
+function getSystemDarkMode() {
+  if (window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  // Default to dark if media queries not supported
+  return true;
+}
+
 function invokeClick(elementId) {
   document.getElementById(elementId).click();
 }

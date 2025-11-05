@@ -5,7 +5,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationIcon>appicon.ico</ApplicationIcon>
+    <ApplicationIcon>..\.assets\appicon.ico</ApplicationIcon>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Authors>jaredg</Authors>
     <UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
@@ -14,10 +14,12 @@
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
+    <None Include="..\.assets\appicon.ico">
+      <Link>appicon.ico</Link>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="appicon.ico" />
     <Content Include="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

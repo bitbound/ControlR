@@ -16,7 +16,7 @@
 
 .chat-app-bar {
   display: flex;
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: var(--mud-palette-surface);
   align-items: center;
   white-space: nowrap;
   overflow-x: auto;
@@ -34,7 +34,7 @@
   border-radius: 10px;
   margin: .25rem;
   padding: .75rem;
-  background-color: rgb(12, 12, 12);
+  background-color: var(--mud-palette-background);
 }
 
 .chat-message-container {
@@ -73,12 +73,19 @@
 }
 
 .viewer-message {
+    margin-left: 20%;
+}
+
+.dark-mode .viewer-message {
   background-color: #1e3a5f;
-  margin-left: 20%;
+}
+
+.light-mode .viewer-message {
+  background-color: #bbdefb;
 }
 
 .desktop-message {
-  background-color: #2d2d2d;
+  background-color: var(--mud-palette-background-gray);
   margin-right: 20%;
 }
 

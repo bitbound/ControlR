@@ -46,12 +46,15 @@
   [Parameter]
   public string? Width { get; set; }
 
+  [CascadingParameter]
+  public required Palette CurrentPalette { get; init; }
+
   private string GaugeColor => Percent switch
   {
-    var v when v >= .9 => "rgba(246,78,98,1)",
-    var v when v >= .8 => "rgba(255,168,0,1)",
-    _ => "rgba(11,186,131,1)"
-  };
+    var v when v >= .9 => CurrentPalette.Error.ToString(),
+    var v when v >= .8 => CurrentPalette.Warning.ToString(),
+    _ => CurrentPalette.Success.ToString()
+  } ?? string.Empty;
 
   private string OuterDivStyle
   {

@@ -17,18 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Assets\appicon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ApplicationDefinition Include="Assets\appicon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Assets\appicon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.7" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />

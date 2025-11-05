@@ -8,7 +8,7 @@
   border-radius: 10px;
   margin: .25rem;
   padding: .75rem;
-  background-color: rgb(12,12,12);
+  background-color: var(--mud-palette-background);
 }
 
 .terminal-output-container {

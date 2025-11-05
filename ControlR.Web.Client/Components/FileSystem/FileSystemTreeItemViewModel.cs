@@ -1,4 +1,4 @@
-namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
+namespace ControlR.Web.Client.Components.FileSystem;
 
 public class FileSystemTreeItemViewModel
 {

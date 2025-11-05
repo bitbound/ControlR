@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
+using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Web.Client.Services;
 
@@ -7,9 +8,11 @@ public interface IUserSettingsProvider
 {
   Task<bool> GetHideOfflineDevices();
   Task<bool> GetNotifyUserOnSessionStart();
+  Task<ThemeMode> GetThemeMode();
   Task<string> GetUserDisplayName();
   Task SetHideOfflineDevices(bool value);
   Task SetNotifyUserOnSessionStart(bool value);
+  Task SetThemeMode(ThemeMode value);
   Task SetUserDisplayName(string value);
 }
 
@@ -34,6 +37,11 @@ internal class UserSettingsProvider(
     return await GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
   }
 
+  public async Task<ThemeMode> GetThemeMode()
+  {
+    return await GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
+  }
+
   public async Task<string> GetUserDisplayName()
   {
     return await GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
@@ -47,6 +55,11 @@ internal class UserSettingsProvider(
   public async Task SetNotifyUserOnSessionStart(bool value)
   {
     await SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
+  }
+
+  public async Task SetThemeMode(ThemeMode value)
+  {
+    await SetPref(UserPreferenceNames.ThemeMode, value);
   }
 
   public async Task SetUserDisplayName(string value)
@@ -89,6 +102,25 @@ internal class UserSettingsProvider(
         // Get the underlying type (e.g., bool from bool?)
         targetType = Nullable.GetUnderlyingType(targetType) ??
           throw new InvalidOperationException($"Failed to convert setting value to type {targetType.Name}.");
+      }
+
+      if (targetType.IsEnum)
+      {
+        if (Enum.TryParse(targetType, getResult.Value.Value, true, out var enumValue))
+        {
+          _preferences[preferenceName] = enumValue;
+          return (T)enumValue;
+        }
+        else
+        {
+          _logger.LogError(
+            "Failed to parse enum preference {PreferenceName} with value {PreferenceValue} to type {TargetType}.",
+            preferenceName,
+            getResult.Value.Value,
+            targetType.Name);
+
+          return defaultValue;
+        }
       }
 
       if (Convert.ChangeType(getResult.Value.Value, targetType) is not T typedResult)

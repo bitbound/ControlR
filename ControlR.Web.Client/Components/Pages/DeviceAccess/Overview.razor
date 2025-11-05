@@ -1,7 +1,7 @@
-﻿@layout DeviceAccessLayout
-@page "/device-access"
+﻿@using ControlR.Web.Client.Components.Layout.DeviceAccess
+@layout DeviceAccessLayout
+@attribute [Route(ClientRoutes.DeviceAccess)]
 @attribute [Authorize]
-@using ControlR.Web.Client.Components.Layout.DeviceAccess
 
 <div class="ma-4">
   <MudGrid>
@@ -217,11 +217,11 @@
           InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
           InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
           <CustomGraphics>
-            <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+            <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="@(Palette?.TextPrimary)" font-family="Helvetica"
               font-size="16">
               Total
             </text>
-            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Helvetica"
+            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="@(Palette?.TextPrimary)" font-family="Helvetica"
               font-size="20">
               @(drive.TotalSize.ToString("N0")) GB
             </text>
@@ -229,7 +229,7 @@
         </MudChart>
         <div class="w-100">
           <div class="child-content-grid">
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">
               Name:
             </MudText>
             <MudTooltip Text="@drive.Name">
@@ -238,7 +238,7 @@
               </MudText>
             </MudTooltip>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">
               Volume Label:
             </MudText>
             <MudTooltip Text="@drive.VolumeLabel">
@@ -247,14 +247,14 @@
               </MudText>
             </MudTooltip>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">
               Format:
             </MudText>
             <MudText Typo="Typo.body1">
               @drive.DriveFormat
             </MudText>
 
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">
               Root Directory:
             </MudText>
             <MudTooltip Text="@drive.RootDirectory">
@@ -267,6 +267,5 @@
 
       </MudItem>
     }
-
   </MudGrid>
 </div>

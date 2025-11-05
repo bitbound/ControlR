@@ -1,0 +1,94 @@
+@using ControlR.Libraries.Shared.Enums
+@inject IUserSettingsProvider UserSettings
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<MudTooltip Text="@GetTooltipText()">
+  <MudMenu Icon="@GetCurrentIcon()" Color="Color.Inherit" AnchorOrigin="Origin.BottomLeft">
+    <MudMenuItem OnClick="@(() => SetTheme(ThemeMode.Auto))">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.Brightness4" Class="me-2" />
+        <MudText>Auto</MudText>
+        @if (_currentMode == ThemeMode.Auto)
+        {
+          <MudIcon Icon="@Icons.Material.Filled.Check" Class="ms-2" Size="Size.Small" Color="Color.Primary" />
+        }
+      </div>
+    </MudMenuItem>
+    <MudMenuItem OnClick="@(() => SetTheme(ThemeMode.Light))">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.LightMode" Class="me-2" />
+        <MudText>Light</MudText>
+        @if (_currentMode == ThemeMode.Light)
+        {
+          <MudIcon Icon="@Icons.Material.Filled.Check" Class="ms-2" Size="Size.Small" Color="Color.Primary" />
+        }
+      </div>
+    </MudMenuItem>
+    <MudMenuItem OnClick="@(() => SetTheme(ThemeMode.Dark))">
+      <div class="d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.DarkMode" Class="me-2" />
+        <MudText>Dark</MudText>
+        @if (_currentMode == ThemeMode.Dark)
+        {
+          <MudIcon Icon="@Icons.Material.Filled.Check" Class="ms-2" Size="Size.Small" Color="Color.Primary" />
+        }
+      </div>
+    </MudMenuItem>
+  </MudMenu>
+</MudTooltip>
+
+@code {
+  [Parameter]
+  public EventCallback<ThemeMode> OnThemeChanged { get; set; }
+
+  private ThemeMode _currentMode = ThemeMode.Auto;
+
+  protected override async Task OnInitializedAsync()
+  {
+    if (await AuthState.IsAuthenticated())
+    {
+      _currentMode = await UserSettings.GetThemeMode();
+    }
+  }
+
+  private string GetCurrentIcon()
+  {
+    return _currentMode switch
+    {
+      ThemeMode.Light => Icons.Material.Filled.LightMode,
+      ThemeMode.Dark => Icons.Material.Filled.DarkMode,
+      _ => Icons.Material.Filled.Brightness4
+    };
+  }
+
+  private string GetTooltipText()
+  {
+    return _currentMode switch
+    {
+      ThemeMode.Light => "Theme: Light",
+      ThemeMode.Dark => "Theme: Dark",
+      _ => "Theme: Auto"
+    };
+  }
+
+  private async Task SetTheme(ThemeMode mode)
+  {
+    _currentMode = mode;
+    if (await AuthState.IsAuthenticated())
+    {
+      await UserSettings.SetThemeMode(mode);
+    }
+    await OnThemeChanged.InvokeAsync(mode);
+
+    var modeText = mode switch
+    {
+      ThemeMode.Auto => "Auto",
+      ThemeMode.Light => "Light",
+      ThemeMode.Dark => "Dark",
+      _ => "Unknown"
+    };
+
+    Snackbar.Add($"Theme set to {modeText}", Severity.Success);
+  }
+}

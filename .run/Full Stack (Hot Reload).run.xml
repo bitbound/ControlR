@@ -1,9 +1,9 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Full Stack" type="CompoundRunConfigurationType">
+  <configuration default="false" name="Full Stack (Hot Reload)" type="CompoundRunConfigurationType">
     <toRun name="ControlR.Agent: Run" type="LaunchSettings" />
     <toRun name="ControlR.DesktopClient: Run" type="LaunchSettings" />
-    <toRun name="ControlR.Web.Server: https" type="LaunchSettings" />
     <toRun name="compose (dev)" type="docker-deploy" />
+    <toRun name="Server (hot reload)" type="RunDotNetWatch" />
     <method v="2" />
   </configuration>
 </component>

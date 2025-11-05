@@ -54,6 +54,6 @@
 }
 
 .components-reconnect-dialog {
-  background-color: rgba(0, 0, 0, 0.9) !important;
-  color: white !important;
+  background-color: var(--mud-palette-surface) !important;
+  color: var(--mud-palette-text-primary) !important;
 }

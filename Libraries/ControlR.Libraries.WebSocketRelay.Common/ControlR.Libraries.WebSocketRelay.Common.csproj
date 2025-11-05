@@ -26,4 +26,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\.assets\appicon.png">
+      <Link>appicon.png</Link>
+    </Content>
+  </ItemGroup>
 </Project>

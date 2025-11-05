@@ -1,0 +1,11 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Server (hot reload)" type="RunDotNetWatch" factoryName="RunDotNetWatch">
+    <option name="exePath" value="$PROJECT_DIR$/ControlR.Web.Server/bin/Debug/net9.0/ControlR.Web.Server.exe" />
+    <option name="programParameters" value="" />
+    <option name="projectFilePath" value="$PROJECT_DIR$/ControlR.Web.Server/ControlR.Web.Server.csproj" />
+    <option name="projectTfm" value="net9.0" />
+    <option name="watchParameters" value="--launch-profile https" />
+    <option name="workingDirectory" value="$PROJECT_DIR$/ControlR.Web.Server" />
+    <method v="2" />
+  </configuration>
+</component>
