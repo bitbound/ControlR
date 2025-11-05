@@ -391,16 +391,26 @@ internal class DesktopClientWatcherLinux(
         if (parts.Length > 0)
         {
           var sessionId = parts[0]; // The session ID is always the first column
-          
+
           // Get the detailed session info using show-session (key-value format)
           var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
           if (sessionInfoResult.IsSuccess && !string.IsNullOrWhiteSpace(sessionInfoResult.Value))
           {
             var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
-            
+
+            // Session is closing OR it's an active display manager session (login screen)
+            if (sessionInfo.TryGetValue("State", out var sessionState) &&
+                sessionInfo.TryGetValue("User", out var userValue) &&
+                (sessionState?.Equals("closing", StringComparison.OrdinalIgnoreCase) == true ||
+                 (sessionState?.Equals("active", StringComparison.OrdinalIgnoreCase) == true &&
+                  IsDisplayManagerUser(userValue))))
+            {
+              continue;
+            }
+
             // Check if this is an active session with a regular user UID (≥1000)
-            if (sessionInfo.TryGetValue("Active", out string? activeValue) &&
-                sessionInfo.TryGetValue("User", out string? userValue) &&
+            if (sessionInfo.TryGetValue("Active", out var activeValue) &&
+                sessionInfo.TryGetValue("User", out userValue) &&
                 string.Equals(activeValue, "yes", StringComparison.OrdinalIgnoreCase) &&
                 int.TryParse(userValue, out var uid) &&
                 uid >= 1000)
@@ -410,7 +420,7 @@ internal class DesktopClientWatcherLinux(
           }
         }
       }
-      
+
       return false;
     }
     catch (Exception ex)
@@ -418,6 +428,15 @@ internal class DesktopClientWatcherLinux(
       _logger.LogError(ex, "Error checking for active user sessions");
       return false;
     }
+  }
+
+  private bool IsDisplayManagerUser(string userValue)
+  {
+    // List of common display manager user names
+    string[] displayManagerUsers = { "gdm", "lightdm", "sddm" };
+
+    // Check if userValue is in the list of displayManagerUsers
+    return displayManagerUsers.Any(user => string.Equals(userValue, user, StringComparison.OrdinalIgnoreCase));
   }
 
   private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
