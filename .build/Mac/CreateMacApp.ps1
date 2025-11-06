@@ -20,7 +20,11 @@ $ContentsPath = Join-Path $AppPath "Contents"
 $MacOSPath = Join-Path $ContentsPath "MacOS"
 $ResourcesPath = Join-Path $ContentsPath "Resources"
 $InfoPlistSource = Join-Path $ScriptDir "Info.plist"
-$IconSource = Join-Path $ScriptDir "appicon.icns"
+$IconSource = Join-Path (Split-Path (Split-Path $ScriptDir -Parent) -Parent) ".assets\appicon.icns"
+if (-not (Test-Path $IconSource)) { 
+    Write-Error "Required .assets appicon.icns not found at $IconSource"; 
+    exit 1 
+}
 
 # Clean up existing app bundle if it exists
 if (Test-Path $AppPath) {
