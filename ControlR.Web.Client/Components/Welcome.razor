@@ -3,35 +3,33 @@
 <div class="welcome-container">
   <div class="welcome-card">
     <div class="icon-wrapper">
-      <img src="/appicon-512.png" alt="ControlR Icon" class="app-icon" />
+      <img src="/appicon-transparent.png" alt="ControlR Icon" class="app-icon" />
       <div class="icon-glow"></div>
     </div>
 
-    <MudText Typo="Typo.h2" Class="welcome-title">
-      Welcome to ControlR
+    <MudText Typo="Typo.h4" Class="mt-4">
+      Welcome to
     </MudText>
 
-    <MudText Typo="Typo.body1" Class="welcome-subtitle">
-      Secure Remote Desktop & Device Management
+    <MudText Typo="Typo.h2" Class="welcome-title mb-4">
+      ControlR
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="welcome-subtitle mb-6">
+      Open-source remote control and device access
     </MudText>
 
     <div class="action-buttons">
-      <MudButton Color="Color.Primary"
-                 Size="Size.Large"
-                 Href="/Account/Login"
-                 Variant="Variant.Filled"
-                 Class="action-button">
+      <MudButton Color="Color.Primary" Size="Size.Large" Href="/Account/Login" Variant="Variant.Outlined"
+        Class="action-button">
         <MudIcon Icon="@Icons.Material.Filled.Login" Class="me-2" />
         Login
       </MudButton>
 
-      @if (_isPublicRegistrationEnabled)
+      @if (!_isPublicRegistrationEnabled)
       {
-        <MudButton Color="Color.Secondary"
-                   Size="Size.Large"
-                   Href="/Account/Register"
-                   Variant="Variant.Outlined"
-                   Class="action-button">
+        <MudButton Color="Color.Tertiary" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined"
+          Class="action-button">
           <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" />
           Register
         </MudButton>
@@ -46,21 +44,13 @@
       </MudText>
 
       <div class="external-links">
-        <MudButton Href="https://github.com/bitbound/controlr"
-                   Target="_blank"
-                   Variant="Variant.Text"
-                   StartIcon="@Icons.Custom.Brands.GitHub"
-                   Color="Color.Default"
-                   Class="external-link">
+        <MudButton Href="https://github.com/bitbound/controlr" Target="_blank" Variant="Variant.Text"
+          StartIcon="@Icons.Custom.Brands.GitHub" Color="Color.Default" Class="external-link">
           View on GitHub
         </MudButton>
 
-        <MudButton Href="https://github.com/sponsors/bitbound"
-                   Target="_blank"
-                   Variant="Variant.Text"
-                   StartIcon="@Icons.Material.Filled.Favorite"
-                   Color="Color.Error"
-                   Class="external-link">
+        <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
+          StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
           Sponsor Project
         </MudButton>
       </div>

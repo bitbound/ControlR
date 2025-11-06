@@ -37,7 +37,6 @@
 .icon-wrapper {
   position: relative;
   display: inline-block;
-  margin-bottom: 2rem;
 }
 
 .app-icon {
@@ -45,12 +44,6 @@
   height: 128px;
   position: relative;
   z-index: 1;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
 }
 
 .icon-glow {
@@ -58,8 +51,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   background: radial-gradient(circle, rgba(33, 150, 243, 0.3), transparent 70%);
   border-radius: 50%;
   animation: pulse 2s ease-in-out infinite;
@@ -70,18 +63,16 @@
   50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
 }
 
-.welcome-title {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+::deep .welcome-title {
+  font-weight: 600 !important;
   background: linear-gradient(135deg, #2196F3, #00ffd5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.welcome-subtitle {
+::deep .welcome-subtitle {
   color: var(--mud-palette-text-secondary);
-  margin-bottom: 2rem;
 }
 
 .action-buttons {
@@ -91,12 +82,8 @@
   flex-wrap: wrap;
 }
 
-.action-button {
+::deep .action-button {
   min-width: 150px;
-}
-
-.links-section {
-  margin-top: 1rem;
 }
 
 .links-title {
