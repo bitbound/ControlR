@@ -26,15 +26,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
     // Create test tenant and user
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tag
     var tagId = Guid.NewGuid();
@@ -93,8 +95,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SearchDevices(
         request,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+        services.GetRequiredService<IAuthorizationService>(),
+        services.GetRequiredService<ILogger<DevicesController>>());
 
     var response = result.Value;
 
@@ -113,17 +115,19 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with different online status
-    for (int i = 0; i < 5; i++)
+    for (var i = 0; i < 5; i++)
     {
       var deviceDto = new DeviceDto(
         Name: $"Device {i}",
@@ -165,8 +169,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var onlineResult = await controller.SearchDevices(
       onlineRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test IsOnline = false filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test IsOnline = false filter
     var offlineRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "false" }],
@@ -177,8 +181,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var offlineResult = await controller.SearchDevices(
       offlineRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(onlineResult.Value);
@@ -197,14 +201,16 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific combinations for multi-filter testing
     var testData = new[]
@@ -265,8 +271,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var multiFilterResult = await controller.SearchDevices(
       multiFilterRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test OS + Online filters
     var osOnlineRequest = new DeviceSearchRequestDto
@@ -282,8 +288,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var osOnlineResult = await controller.SearchDevices(
       osOnlineRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(multiFilterResult.Value);
@@ -311,17 +317,19 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with varying numeric properties
-    var cpuValues = new double[] { 0.1, 0.3, 0.5, 0.7, 0.9 }; // 10%, 30%, 50%, 70%, 90%
+    var cpuValues = new[] { 0.1, 0.3, 0.5, 0.7, 0.9 }; // 10%, 30%, 50%, 70%, 90%
     for (int i = 0; i < cpuValues.Length; i++)
     {
       var deviceDto = new DeviceDto(
@@ -364,8 +372,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuGtResult = await controller.SearchDevices(
       cpuGtRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization Equal filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization Equal filter
     var cpuEqRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Equal, Value = "0.3" }],
@@ -376,8 +384,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuEqResult = await controller.SearchDevices(
       cpuEqRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization LessThanOrEqual filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization LessThanOrEqual filter
     var cpuLteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.LessThanOrEqual, Value = "0.5" }],
@@ -388,8 +396,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuLteResult = await controller.SearchDevices(
       cpuLteRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedMemoryPercent GreaterThanOrEqual filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedMemoryPercent GreaterThanOrEqual filter
     var memGteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedMemoryPercent", Operator = FilterOperator.Number.GreaterThanOrEqual, Value = "0.6" }],
@@ -400,8 +408,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var memGteResult = await controller.SearchDevices(
       memGteRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedStoragePercent NotEqual filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedStoragePercent NotEqual filter
     var storageNeRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedStoragePercent", Operator = FilterOperator.Number.NotEqual, Value = "0.5" }],
@@ -412,8 +420,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var storageNeResult = await controller.SearchDevices(
       storageNeRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
     Assert.NotNull(cpuGtResult.Value);
     Assert.NotNull(cpuGtResult.Value.Items);
     Assert.Equal(2, cpuGtResult.Value.Items.Count); // Devices with 0.7 and 0.9
@@ -445,15 +453,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
     // Create test tenant and user
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test devices with varying string properties
     var devices = new[]
@@ -509,8 +519,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var nameResult = await controller.SearchDevices(
       nameRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test OsDescription contains filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test OsDescription contains filter
     var osRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "OsDescription", Operator = FilterOperator.String.Contains, Value = "Ubuntu" }],
@@ -521,8 +531,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var osResult = await controller.SearchDevices(
       osRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test ConnectionId equals filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test ConnectionId equals filter
     var connRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "ConnectionId", Operator = FilterOperator.String.Equal, Value = "conn-003" }],
@@ -533,8 +543,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var connResult = await controller.SearchDevices(
       connRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
     Assert.NotNull(nameResult.Value);
     Assert.NotNull(nameResult.Value.Items);
     Assert.Single(nameResult.Value.Items);
@@ -556,14 +566,16 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with specific patterns for testing
     var testDevices = new[]
@@ -627,8 +639,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var startsWithResult = await controller.SearchDevices(
       startsWithRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test EndsWith filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test EndsWith filter
     var endsWithRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.EndsWith, Value = "-03" }],
@@ -639,8 +651,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var endsWithResult = await controller.SearchDevices(
       endsWithRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test NotContains filter
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test NotContains filter
     var notContainsRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.NotContains, Value = "Prod" }],
@@ -651,8 +663,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notContainsResult = await controller.SearchDevices(
       notContainsRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test Empty filter for Alias
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test Empty filter for Alias
     var emptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.Empty, Value = "" }],
@@ -663,8 +675,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var emptyResult = await controller.SearchDevices(
       emptyRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test NotEmpty filter for Alias
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test NotEmpty filter for Alias
     var notEmptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.NotEmpty, Value = "" }],
@@ -675,8 +687,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notEmptyResult = await controller.SearchDevices(
       notEmptyRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
     Assert.NotNull(startsWithResult.Value);
     Assert.NotNull(startsWithResult.Value.Items);
     Assert.Single(startsWithResult.Value.Items);
@@ -708,17 +720,19 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with 0 and non-zero CPU utilization
-    var cpuValues = new double[] { 0.0, 0.5, 0.0, 0.8 };
+    var cpuValues = new[] { 0.0, 0.5, 0.0, 0.8 };
     for (int i = 0; i < cpuValues.Length; i++)
     {
       var deviceDto = new DeviceDto(
@@ -763,8 +777,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var emptyResult = await controller.SearchDevices(
       emptyRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test NotEmpty filter (CpuUtilization != 0)
     var notEmptyRequest = new DeviceSearchRequestDto
@@ -777,8 +791,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notEmptyResult = await controller.SearchDevices(
       notEmptyRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(emptyResult.Value);
@@ -797,14 +811,16 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create a test device
     var deviceDto = new DeviceDto(
@@ -845,8 +861,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidNumericResult = await controller.SearchDevices(
       invalidNumericRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid boolean value - should return all devices (filter ignored)
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid boolean value - should return all devices (filter ignored)
     var invalidBooleanRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "maybe" }],
@@ -857,8 +873,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidBooleanResult = await controller.SearchDevices(
       invalidBooleanRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid property name - should be ignored gracefully
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid property name - should be ignored gracefully
     var invalidPropertyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "NonExistentProperty", Operator = FilterOperator.String.Equal, Value = "test" }],
@@ -869,8 +885,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidPropertyResult = await controller.SearchDevices(
       invalidPropertyRequest,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());    // Assert - Invalid filters should be ignored and return all devices
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<ILogger<DevicesController>>());    // Assert - Invalid filters should be ignored and return all devices
     Assert.NotNull(invalidNumericResult.Value);
     Assert.NotNull(invalidNumericResult.Value.Items);
     Assert.Single(invalidNumericResult.Value.Items);
@@ -889,18 +905,20 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
     // Create two tenants
-    var tenant1 = await testApp.App.Services.CreateTestTenant("Tenant 1");
-    var tenant2 = await testApp.App.Services.CreateTestTenant("Tenant 2");
+    var tenant1 = await services.CreateTestTenant("Tenant 1");
+    var tenant2 = await services.CreateTestTenant("Tenant 2");
 
     // Create user for tenant 1
-    var user1 = await testApp.App.Services.CreateTestUser(tenant1.Id, email: "user1@example.com", roles: RoleNames.DeviceSuperUser);
+    var user1 = await services.CreateTestUser(tenant1.Id, email: "user1@example.com", roles: RoleNames.DeviceSuperUser);
 
     // Create devices for both tenants
     for (int i = 0; i < 5; i++)
@@ -979,8 +997,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SearchDevices(
         request,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<DevicesController>>());
+        services.GetRequiredService<IAuthorizationService>(),
+        services.GetRequiredService<ILogger<DevicesController>>());
     var response = result.Value;
 
     // Assert
@@ -996,20 +1014,22 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var logger = testApp.App.Services.GetRequiredService<ILogger<DevicesController>>();
-    var authorizationService = testApp.App.Services.GetRequiredService<IAuthorizationService>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var logger = services.GetRequiredService<ILogger<DevicesController>>();
+    var authorizationService = services.GetRequiredService<IAuthorizationService>();
 
     // Create test tenant and user
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create test tags
-    var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
+    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
     foreach (var tagId in tagIds)
     {
       db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenant.Id });

@@ -3,14 +3,11 @@ using ControlR.Web.Server.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
 using System.Security.Claims;
-using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
 
-public class DeviceGridCachePolicyTests(ITestOutputHelper testOutput)
+public class DeviceGridCachePolicyTests
 {
-    private readonly ITestOutputHelper _testOutputHelper = testOutput;
-
     [Fact]
     public async Task CacheRequestAsync_Authenticated_EnablesCachingWithTags()
     {

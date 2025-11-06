@@ -52,8 +52,11 @@ public static class WebApplicationBuilderExtensions
     // Configure logging.
     builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
-    // Add telemetry.
-    builder.AddServiceDefaults(ServiceNames.Controlr);
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+      // Add telemetry.
+      builder.AddServiceDefaults(ServiceNames.Controlr);
+    }
 
     if (appOptions.UseInMemoryDatabase)
     {

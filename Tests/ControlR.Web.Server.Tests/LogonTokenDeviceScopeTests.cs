@@ -43,7 +43,7 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
     Assert.NotNull(logonTokenResult);
 
     // Consume logon token (first access) to establish cookie session
-    var firstAccess = await httpClient.GetAsync(logonTokenResult!.DeviceAccessUrl);
+    var firstAccess = await httpClient.GetAsync(logonTokenResult.DeviceAccessUrl);
     Assert.True(firstAccess.IsSuccessStatusCode || firstAccess.StatusCode == HttpStatusCode.Redirect || firstAccess.StatusCode == HttpStatusCode.Found);
 
     // Remove PAT header so that subsequent API requests use the established cookie session

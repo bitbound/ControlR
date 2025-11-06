@@ -9,6 +9,10 @@ using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
+/// <summary>
+/// Creates <see cref="TestApp"/> for service-only integration/functional tests.
+/// Use <see cref="TestWebServerBuilder"/> for full end-to-end tests involving HTTP requests.
+/// </summary>
 internal static class TestAppBuilder
 {
   public static async Task<TestApp> CreateTestApp(

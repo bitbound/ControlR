@@ -15,7 +15,7 @@ public class InputSimulatorX11 : IInputSimulator
     _logger = logger;
   }
 
-  public void InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, string code, bool isPressed)
   {
     var display = LibX11.XOpenDisplay("");
     if (display == nint.Zero)
@@ -26,12 +26,12 @@ public class InputSimulatorX11 : IInputSimulator
 
     try
     {
-      var keySym = ConvertBrowserKeyArgToX11Key(key);
+      var keySym = ConvertBrowserKeyArgToX11Key(key, code);
       var keySymPtr = LibX11.XStringToKeysym(keySym);
 
       if (keySymPtr == nint.Zero)
       {
-        _logger.LogWarning("Failed to convert key symbol: {Key} -> {KeySym}", key, keySym);
+        _logger.LogWarning("Failed to convert key symbol: {Key} ({Code}) -> {KeySym}", key, code, keySym);
         return;
       }
 
@@ -237,16 +237,197 @@ public class InputSimulatorX11 : IInputSimulator
     }
   }
 
-  private static string ConvertBrowserKeyArgToX11Key(string key)
+  private static string ConvertBrowserKeyArgToX11Key(string key, string code)
   {
-    var keySym = key switch
+    // Code-first approach: Try to map browser KeyboardEvent.code to X11 keysym
+    // This provides layout-independent physical key simulation, which is the standard for
+    // remote desktop protocols (RDP, VNC, etc.)
+    if (!string.IsNullOrEmpty(code))
+    {
+      var keySym = code switch
+      {
+        // Letter keys (physical key position, layout-independent)
+        "KeyA" => "a",
+        "KeyB" => "b",
+        "KeyC" => "c",
+        "KeyD" => "d",
+        "KeyE" => "e",
+        "KeyF" => "f",
+        "KeyG" => "g",
+        "KeyH" => "h",
+        "KeyI" => "i",
+        "KeyJ" => "j",
+        "KeyK" => "k",
+        "KeyL" => "l",
+        "KeyM" => "m",
+        "KeyN" => "n",
+        "KeyO" => "o",
+        "KeyP" => "p",
+        "KeyQ" => "q",
+        "KeyR" => "r",
+        "KeyS" => "s",
+        "KeyT" => "t",
+        "KeyU" => "u",
+        "KeyV" => "v",
+        "KeyW" => "w",
+        "KeyX" => "x",
+        "KeyY" => "y",
+        "KeyZ" => "z",
+
+        // Digit keys (main keyboard row)
+        "Digit0" => "0",
+        "Digit1" => "1",
+        "Digit2" => "2",
+        "Digit3" => "3",
+        "Digit4" => "4",
+        "Digit5" => "5",
+        "Digit6" => "6",
+        "Digit7" => "7",
+        "Digit8" => "8",
+        "Digit9" => "9",
+
+        // Numpad keys
+        "Numpad0" => "KP_0",
+        "Numpad1" => "KP_1",
+        "Numpad2" => "KP_2",
+        "Numpad3" => "KP_3",
+        "Numpad4" => "KP_4",
+        "Numpad5" => "KP_5",
+        "Numpad6" => "KP_6",
+        "Numpad7" => "KP_7",
+        "Numpad8" => "KP_8",
+        "Numpad9" => "KP_9",
+        "NumpadMultiply" => "KP_Multiply",
+        "NumpadAdd" => "KP_Add",
+        "NumpadSubtract" => "KP_Subtract",
+        "NumpadDecimal" => "KP_Decimal",
+        "NumpadDivide" => "KP_Divide",
+        "NumpadEnter" => "KP_Enter",
+
+        // Function keys
+        "F1" => "F1",
+        "F2" => "F2",
+        "F3" => "F3",
+        "F4" => "F4",
+        "F5" => "F5",
+        "F6" => "F6",
+        "F7" => "F7",
+        "F8" => "F8",
+        "F9" => "F9",
+        "F10" => "F10",
+        "F11" => "F11",
+        "F12" => "F12",
+        "F13" => "F13",
+        "F14" => "F14",
+        "F15" => "F15",
+        "F16" => "F16",
+        "F17" => "F17",
+        "F18" => "F18",
+        "F19" => "F19",
+        "F20" => "F20",
+        "F21" => "F21",
+        "F22" => "F22",
+        "F23" => "F23",
+        "F24" => "F24",
+
+        // Navigation keys
+        "ArrowDown" => "Down",
+        "ArrowUp" => "Up",
+        "ArrowLeft" => "Left",
+        "ArrowRight" => "Right",
+        "Home" => "Home",
+        "End" => "End",
+        "PageUp" => "Page_Up",
+        "PageDown" => "Page_Down",
+
+        // Editing keys
+        "Backspace" => "BackSpace",
+        "Tab" => "Tab",
+        "Enter" => "Return",
+        "Delete" => "Delete",
+        "Insert" => "Insert",
+
+        // Modifier keys
+        "ShiftLeft" => "Shift_L",
+        "ShiftRight" => "Shift_R",
+        "ControlLeft" => "Control_L",
+        "ControlRight" => "Control_R",
+        "AltLeft" => "Alt_L",
+        "AltRight" => "Alt_R",
+        "MetaLeft" => "Super_L",
+        "MetaRight" => "Super_R",
+
+        // Lock keys
+        "CapsLock" => "Caps_Lock",
+        "NumLock" => "Num_Lock",
+        "ScrollLock" => "Scroll_Lock",
+
+        // Special keys
+        "Escape" => "Escape",
+        "Space" => "space",
+        "Pause" => "Pause",
+        "ContextMenu" => "Menu",
+        "PrintScreen" => "Print",
+
+        // OEM/Punctuation keys (US layout physical positions)
+        "Semicolon" => "semicolon",
+        "Equal" => "equal",
+        "Comma" => "comma",
+        "Minus" => "minus",
+        "Period" => "period",
+        "Slash" => "slash",
+        "Backquote" => "grave",
+        "BracketLeft" => "bracketleft",
+        "Backslash" => "backslash",
+        "BracketRight" => "bracketright",
+        "Quote" => "apostrophe",
+        "IntlBackslash" => "less", // <> key (non-US keyboards)
+
+        // Media keys
+        "AudioVolumeUp" => "XF86AudioRaiseVolume",
+        "AudioVolumeDown" => "XF86AudioLowerVolume",
+        "AudioVolumeMute" => "XF86AudioMute",
+        "MediaTrackNext" => "XF86AudioNext",
+        "MediaTrackPrevious" => "XF86AudioPrev",
+        "MediaStop" => "XF86AudioStop",
+        "MediaPlayPause" => "XF86AudioPlay",
+
+        // Browser keys
+        "BrowserBack" => "XF86Back",
+        "BrowserForward" => "XF86Forward",
+        "BrowserRefresh" => "XF86Reload",
+        "BrowserStop" => "XF86Stop",
+        "BrowserSearch" => "XF86Search",
+        "BrowserFavorites" => "XF86Favorites",
+        "BrowserHome" => "XF86HomePage",
+
+        // Japanese/Korean IME keys
+        "Convert" => "Henkan",
+        "NonConvert" => "Muhenkan",
+        "KanaMode" => "Hiragana_Katakana",
+        "KanjiMode" => "Kanji",
+        "Lang1" => "Hangul",
+        "Lang2" => "Hangul_Hanja",
+
+        _ => null
+      };
+
+      if (keySym is not null)
+      {
+        return keySym;
+      }
+    }
+
+    // Fallback to key-based mapping for compatibility with older code or edge cases
+    // This handles cases where code is not provided (shouldn't happen in modern browsers)
+    var fallbackKeySym = key switch
     {
       "ArrowDown" => "Down",
       "ArrowUp" => "Up",
       "ArrowLeft" => "Left",
       "ArrowRight" => "Right",
       "Enter" => "Return",
-      "Esc" => "Escape",
+      "Esc" or "Escape" => "Escape",
       "Alt" => "Alt_L",
       "Control" => "Control_L",
       "Shift" => "Shift_L",
@@ -295,7 +476,7 @@ public class InputSimulatorX11 : IInputSimulator
       "~" => "asciitilde",
       _ => key,
     };
-    return keySym;
+    return fallbackKeySym;
   }
 
   private static (string keySym, bool needsShift) ConvertCharacterToX11KeySymWithModifier(char character)

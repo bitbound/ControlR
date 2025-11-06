@@ -50,7 +50,7 @@ public interface IWin32Interop
   bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
-  void InvokeKeyEvent(string key, bool isPressed);
+  void InvokeKeyEvent(string key, string code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   void MovePointer(int x, int y, MovePointerType moveType);
@@ -567,11 +567,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     PInvoke.SendSAS(!isService);
   }
 
-  public void InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, string code, bool isPressed)
   {
-    if (!ConvertBrowserKeyArgToVirtualKey(key, out var convertResult))
+    if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var convertResult))
     {
-      _logger.LogWarning("Failed to convert key '{Key}' to virtual key.", key);
+      _logger.LogWarning("Failed to convert key '{Key}' (code: '{Code}') to virtual key.", key, code);
       return;
     }
 
@@ -581,7 +581,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (result == 0)
     {
-      _logger.LogWarning("Failed to send key input. Key: {Key}, IsPressed: {IsPressed}.", key, isPressed);
+      _logger.LogWarning("Failed to send key input. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}.", key, code, isPressed);
     }
   }
 
@@ -1230,8 +1230,189 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return "Default";
   }
 
-  private bool ConvertBrowserKeyArgToVirtualKey(string key, [NotNullWhen(true)] out VIRTUAL_KEY? result)
+  private bool ConvertBrowserKeyArgToVirtualKey(string key, string code, [NotNullWhen(true)] out VIRTUAL_KEY? result)
   {
+    // Code-first approach: Try to map browser KeyboardEvent.code to Windows Virtual Key
+    // This provides layout-independent physical key simulation, which is the standard for
+    // remote desktop protocols (RDP, VNC, etc.)
+    if (!string.IsNullOrEmpty(code))
+    {
+      result = code switch
+      {
+        // Letter keys (physical key position, layout-independent)
+        "KeyA" => VIRTUAL_KEY.VK_A,
+        "KeyB" => VIRTUAL_KEY.VK_B,
+        "KeyC" => VIRTUAL_KEY.VK_C,
+        "KeyD" => VIRTUAL_KEY.VK_D,
+        "KeyE" => VIRTUAL_KEY.VK_E,
+        "KeyF" => VIRTUAL_KEY.VK_F,
+        "KeyG" => VIRTUAL_KEY.VK_G,
+        "KeyH" => VIRTUAL_KEY.VK_H,
+        "KeyI" => VIRTUAL_KEY.VK_I,
+        "KeyJ" => VIRTUAL_KEY.VK_J,
+        "KeyK" => VIRTUAL_KEY.VK_K,
+        "KeyL" => VIRTUAL_KEY.VK_L,
+        "KeyM" => VIRTUAL_KEY.VK_M,
+        "KeyN" => VIRTUAL_KEY.VK_N,
+        "KeyO" => VIRTUAL_KEY.VK_O,
+        "KeyP" => VIRTUAL_KEY.VK_P,
+        "KeyQ" => VIRTUAL_KEY.VK_Q,
+        "KeyR" => VIRTUAL_KEY.VK_R,
+        "KeyS" => VIRTUAL_KEY.VK_S,
+        "KeyT" => VIRTUAL_KEY.VK_T,
+        "KeyU" => VIRTUAL_KEY.VK_U,
+        "KeyV" => VIRTUAL_KEY.VK_V,
+        "KeyW" => VIRTUAL_KEY.VK_W,
+        "KeyX" => VIRTUAL_KEY.VK_X,
+        "KeyY" => VIRTUAL_KEY.VK_Y,
+        "KeyZ" => VIRTUAL_KEY.VK_Z,
+
+        // Digit keys (main keyboard row)
+        "Digit0" => VIRTUAL_KEY.VK_0,
+        "Digit1" => VIRTUAL_KEY.VK_1,
+        "Digit2" => VIRTUAL_KEY.VK_2,
+        "Digit3" => VIRTUAL_KEY.VK_3,
+        "Digit4" => VIRTUAL_KEY.VK_4,
+        "Digit5" => VIRTUAL_KEY.VK_5,
+        "Digit6" => VIRTUAL_KEY.VK_6,
+        "Digit7" => VIRTUAL_KEY.VK_7,
+        "Digit8" => VIRTUAL_KEY.VK_8,
+        "Digit9" => VIRTUAL_KEY.VK_9,
+
+        // Numpad keys
+        "Numpad0" => VIRTUAL_KEY.VK_NUMPAD0,
+        "Numpad1" => VIRTUAL_KEY.VK_NUMPAD1,
+        "Numpad2" => VIRTUAL_KEY.VK_NUMPAD2,
+        "Numpad3" => VIRTUAL_KEY.VK_NUMPAD3,
+        "Numpad4" => VIRTUAL_KEY.VK_NUMPAD4,
+        "Numpad5" => VIRTUAL_KEY.VK_NUMPAD5,
+        "Numpad6" => VIRTUAL_KEY.VK_NUMPAD6,
+        "Numpad7" => VIRTUAL_KEY.VK_NUMPAD7,
+        "Numpad8" => VIRTUAL_KEY.VK_NUMPAD8,
+        "Numpad9" => VIRTUAL_KEY.VK_NUMPAD9,
+        "NumpadMultiply" => VIRTUAL_KEY.VK_MULTIPLY,
+        "NumpadAdd" => VIRTUAL_KEY.VK_ADD,
+        "NumpadSubtract" => VIRTUAL_KEY.VK_SUBTRACT,
+        "NumpadDecimal" => VIRTUAL_KEY.VK_DECIMAL,
+        "NumpadDivide" => VIRTUAL_KEY.VK_DIVIDE,
+        "NumpadEnter" => VIRTUAL_KEY.VK_RETURN,
+
+        // Function keys
+        "F1" => VIRTUAL_KEY.VK_F1,
+        "F2" => VIRTUAL_KEY.VK_F2,
+        "F3" => VIRTUAL_KEY.VK_F3,
+        "F4" => VIRTUAL_KEY.VK_F4,
+        "F5" => VIRTUAL_KEY.VK_F5,
+        "F6" => VIRTUAL_KEY.VK_F6,
+        "F7" => VIRTUAL_KEY.VK_F7,
+        "F8" => VIRTUAL_KEY.VK_F8,
+        "F9" => VIRTUAL_KEY.VK_F9,
+        "F10" => VIRTUAL_KEY.VK_F10,
+        "F11" => VIRTUAL_KEY.VK_F11,
+        "F12" => VIRTUAL_KEY.VK_F12,
+        "F13" => VIRTUAL_KEY.VK_F13,
+        "F14" => VIRTUAL_KEY.VK_F14,
+        "F15" => VIRTUAL_KEY.VK_F15,
+        "F16" => VIRTUAL_KEY.VK_F16,
+        "F17" => VIRTUAL_KEY.VK_F17,
+        "F18" => VIRTUAL_KEY.VK_F18,
+        "F19" => VIRTUAL_KEY.VK_F19,
+        "F20" => VIRTUAL_KEY.VK_F20,
+        "F21" => VIRTUAL_KEY.VK_F21,
+        "F22" => VIRTUAL_KEY.VK_F22,
+        "F23" => VIRTUAL_KEY.VK_F23,
+        "F24" => VIRTUAL_KEY.VK_F24,
+
+        // Navigation keys
+        "ArrowDown" => VIRTUAL_KEY.VK_DOWN,
+        "ArrowUp" => VIRTUAL_KEY.VK_UP,
+        "ArrowLeft" => VIRTUAL_KEY.VK_LEFT,
+        "ArrowRight" => VIRTUAL_KEY.VK_RIGHT,
+        "Home" => VIRTUAL_KEY.VK_HOME,
+        "End" => VIRTUAL_KEY.VK_END,
+        "PageUp" => VIRTUAL_KEY.VK_PRIOR,
+        "PageDown" => VIRTUAL_KEY.VK_NEXT,
+
+        // Editing keys
+        "Backspace" => VIRTUAL_KEY.VK_BACK,
+        "Tab" => VIRTUAL_KEY.VK_TAB,
+        "Enter" => VIRTUAL_KEY.VK_RETURN,
+        "Delete" => VIRTUAL_KEY.VK_DELETE,
+        "Insert" => VIRTUAL_KEY.VK_INSERT,
+
+        // Modifier keys
+        "ShiftLeft" => VIRTUAL_KEY.VK_LSHIFT,
+        "ShiftRight" => VIRTUAL_KEY.VK_RSHIFT,
+        "ControlLeft" => VIRTUAL_KEY.VK_LCONTROL,
+        "ControlRight" => VIRTUAL_KEY.VK_RCONTROL,
+        "AltLeft" => VIRTUAL_KEY.VK_LMENU,
+        "AltRight" => VIRTUAL_KEY.VK_RMENU,
+        "MetaLeft" => VIRTUAL_KEY.VK_LWIN,
+        "MetaRight" => VIRTUAL_KEY.VK_RWIN,
+
+        // Lock keys
+        "CapsLock" => VIRTUAL_KEY.VK_CAPITAL,
+        "NumLock" => VIRTUAL_KEY.VK_NUMLOCK,
+        "ScrollLock" => VIRTUAL_KEY.VK_SCROLL,
+
+        // Special keys
+        "Escape" => VIRTUAL_KEY.VK_ESCAPE,
+        "Space" => VIRTUAL_KEY.VK_SPACE,
+        "Pause" => VIRTUAL_KEY.VK_PAUSE,
+        "ContextMenu" => VIRTUAL_KEY.VK_APPS,
+        "PrintScreen" => VIRTUAL_KEY.VK_SNAPSHOT,
+
+        // OEM/Punctuation keys (US layout physical positions)
+        "Semicolon" => VIRTUAL_KEY.VK_OEM_1,      // ;: key
+        "Equal" => VIRTUAL_KEY.VK_OEM_PLUS,        // =+ key
+        "Comma" => VIRTUAL_KEY.VK_OEM_COMMA,       // ,< key
+        "Minus" => VIRTUAL_KEY.VK_OEM_MINUS,       // -_ key
+        "Period" => VIRTUAL_KEY.VK_OEM_PERIOD,     // .> key
+        "Slash" => VIRTUAL_KEY.VK_OEM_2,           // /? key
+        "Backquote" => VIRTUAL_KEY.VK_OEM_3,       // `~ key
+        "BracketLeft" => VIRTUAL_KEY.VK_OEM_4,     // [{ key
+        "Backslash" => VIRTUAL_KEY.VK_OEM_5,       // \| key
+        "BracketRight" => VIRTUAL_KEY.VK_OEM_6,    // ]} key
+        "Quote" => VIRTUAL_KEY.VK_OEM_7,           // '" key
+        "IntlBackslash" => VIRTUAL_KEY.VK_OEM_102, // <> key (non-US keyboards)
+
+        // Media keys
+        "AudioVolumeUp" => VIRTUAL_KEY.VK_VOLUME_UP,
+        "AudioVolumeDown" => VIRTUAL_KEY.VK_VOLUME_DOWN,
+        "AudioVolumeMute" => VIRTUAL_KEY.VK_VOLUME_MUTE,
+        "MediaTrackNext" => VIRTUAL_KEY.VK_MEDIA_NEXT_TRACK,
+        "MediaTrackPrevious" => VIRTUAL_KEY.VK_MEDIA_PREV_TRACK,
+        "MediaStop" => VIRTUAL_KEY.VK_MEDIA_STOP,
+        "MediaPlayPause" => VIRTUAL_KEY.VK_MEDIA_PLAY_PAUSE,
+
+        // Browser keys
+        "BrowserBack" => VIRTUAL_KEY.VK_BROWSER_BACK,
+        "BrowserForward" => VIRTUAL_KEY.VK_BROWSER_FORWARD,
+        "BrowserRefresh" => VIRTUAL_KEY.VK_BROWSER_REFRESH,
+        "BrowserStop" => VIRTUAL_KEY.VK_BROWSER_STOP,
+        "BrowserSearch" => VIRTUAL_KEY.VK_BROWSER_SEARCH,
+        "BrowserFavorites" => VIRTUAL_KEY.VK_BROWSER_FAVORITES,
+        "BrowserHome" => VIRTUAL_KEY.VK_BROWSER_HOME,
+
+        // Japanese/Korean IME keys
+        "Convert" => VIRTUAL_KEY.VK_CONVERT,
+        "NonConvert" => VIRTUAL_KEY.VK_NONCONVERT,
+        "KanaMode" => VIRTUAL_KEY.VK_KANA,
+        "KanjiMode" => VIRTUAL_KEY.VK_KANJI,
+        "Lang1" => VIRTUAL_KEY.VK_HANGUL,
+        "Lang2" => VIRTUAL_KEY.VK_HANJA,
+
+        _ => null
+      };
+
+      if (result is not null)
+      {
+        return true;
+      }
+    }
+
+    // Fallback to key-based mapping for compatibility with older code or edge cases
+    // This handles cases where code is not provided (shouldn't happen in modern browsers)
     result = key switch
     {
       " " => VIRTUAL_KEY.VK_SPACE,
@@ -1270,7 +1451,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       "F11" => VIRTUAL_KEY.VK_F11,
       "F12" => VIRTUAL_KEY.VK_F12,
       "Meta" => VIRTUAL_KEY.VK_LWIN,
-      "ContextMenu" => VIRTUAL_KEY.VK_MENU,
+      "ContextMenu" => VIRTUAL_KEY.VK_APPS,
       "Hankaku" => VIRTUAL_KEY.VK_OEM_AUTO,
       "Hiragana" => VIRTUAL_KEY.VK_OEM_COPY,
       "KanaMode" => VIRTUAL_KEY.VK_KANA,
@@ -1278,9 +1459,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       "Katakana" => VIRTUAL_KEY.VK_OEM_FINISH,
       "Romaji" => VIRTUAL_KEY.VK_OEM_BACKTAB,
       "Zenkaku" => VIRTUAL_KEY.VK_OEM_ENLW,
-      _ => key.Length == 1
-        ? (VIRTUAL_KEY)PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout())
-        : null
+      _ => null
     };
 
     if (result is not null)
@@ -1288,7 +1467,25 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       return true;
     }
 
-    _logger.LogWarning("Unable to parse key input: {key}.", key);
+    // Final fallback: Use VkKeyScanEx for single-character keys
+    // This is mainly for edge cases and ensures we can handle any printable character
+    if (key.Length == 1)
+    {
+      var scanResult = PInvoke.VkKeyScanEx(Convert.ToChar(key), GetKeyboardLayout());
+
+      // VkKeyScanEx returns -1 if the key is not found in the current keyboard layout
+      if (scanResult == -1)
+      {
+        _logger.LogWarning("Key '{Key}' (code: '{Code}') not found in current keyboard layout.", key, code);
+        return false;
+      }
+
+      // Mask to get only the low byte (virtual key code), ignoring the shift state in the high byte
+      result = (VIRTUAL_KEY)(scanResult & 0xFF);
+      return true;
+    }
+
+    _logger.LogWarning("Unable to parse key input: {Key} (code: {Code}).", key, code);
     return false;
   }
 

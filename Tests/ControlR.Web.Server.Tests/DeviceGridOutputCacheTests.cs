@@ -25,12 +25,13 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var controller = testApp.App.Services.CreateController<Api.DevicesController>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
-    var outputCacheStore = testApp.App.Services.GetRequiredService<IOutputCacheStore>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    var userCreator = testApp.App.Services.GetRequiredService<IUserCreator>();
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
+    using var scope = testApp.Services.CreateScope();
+    var controller = scope.CreateController<Api.DevicesController>();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var outputCacheStore = scope.ServiceProvider.GetRequiredService<IOutputCacheStore>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
+    var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
 
     // Create test user
     var userResult = await userCreator.CreateUser("cachetest@example.com", "T3stP@ssw0rd!",returnUrl: null);
@@ -90,8 +91,8 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var result1 = await controller.SearchDevices(
         request,
         db,
-        testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-        testApp.App.Services.GetRequiredService<ILogger<Api.DevicesController>>());
+        scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
+        scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
@@ -99,14 +100,14 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await deviceManager.AddOrUpdate(newDeviceDto, addTagIds: true);
 
     // Simulate cache invalidation
-    await outputCacheStore.EvictByTagAsync("device-grid", default);
+    await outputCacheStore.EvictByTagAsync("device-grid", CancellationToken.None);
 
     // Act - Third call after invalidation should get updated data
     var result3 = await controller.SearchDevices(
       request,
       db,
-      testApp.App.Services.GetRequiredService<IAuthorizationService>(),
-      testApp.App.Services.GetRequiredService<ILogger<Api.DevicesController>>());
+      scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
+      scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Assert
     Assert.NotNull(result1.Value);

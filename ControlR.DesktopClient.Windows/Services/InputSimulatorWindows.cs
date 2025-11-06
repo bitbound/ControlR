@@ -18,7 +18,7 @@ internal class InputSimulatorWindows(
   private readonly IWin32Interop _win32Interop = win32Interop;
   private Thread? _processorThread;
 
-  public void InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, string code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -26,7 +26,7 @@ internal class InputSimulatorWindows(
       return;
     }
 
-    _actionQueue.Add(() => _win32Interop.InvokeKeyEvent(key, isPressed));
+    _actionQueue.Add(() => _win32Interop.InvokeKeyEvent(key, code, isPressed));
   }
 
   public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)

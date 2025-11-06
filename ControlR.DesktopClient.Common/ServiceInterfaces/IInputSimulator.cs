@@ -4,7 +4,7 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 public interface IInputSimulator
 {
-  void InvokeKeyEvent(string key, bool isPressed);
+  void InvokeKeyEvent(string key, string code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display,  int button, bool isPressed);
   void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType);
   void ResetKeyboardState();

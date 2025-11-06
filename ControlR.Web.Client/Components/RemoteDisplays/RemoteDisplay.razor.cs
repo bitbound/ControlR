@@ -144,9 +144,9 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
-  public async Task SendKeyEvent(string key, bool isPressed)
+  public async Task SendKeyEvent(string key, string code, bool isPressed)
   {
-    await StreamingClient.SendKeyEvent(key, isPressed, _componentClosing.Token);
+    await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
   }
 
   [JSInvokable]
@@ -657,10 +657,13 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     await JsModuleReady.Wait(_componentClosing.Token);
 
-    if (args.Key is "Enter" or "Backspace")
+    // Handle special keys that reliably fire key events on mobile keyboards
+    // These keys should use key event simulation rather than text input
+    if (args.Key is "Enter" or "Backspace" or "Tab" or "Escape" or
+        "ArrowUp" or "ArrowDown" or "ArrowLeft" or "ArrowRight")
     {
-      await SendKeyEvent(args.Key, true);
-      await SendKeyEvent(args.Key, false);
+      await SendKeyEvent(args.Key, args.Code, true);
+      await SendKeyEvent(args.Key, args.Code, false);
     }
   }
 

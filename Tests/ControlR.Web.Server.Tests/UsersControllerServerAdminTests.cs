@@ -20,13 +20,14 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
   public async Task NonServerAdmin_CannotCreate_ServerAdministratorRole()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var services = testApp.App.Services;
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
 
     // Create a tenant admin caller (not a server admin)
-    var (controller, tenant, adminUser) = await services.CreateControllerWithTestData<UsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
 
-    using var db = services.GetRequiredService<AppDb>();
+    await using var db = services.GetRequiredService<AppDb>();
 
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator);
 
@@ -51,13 +52,14 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
   public async Task ServerAdmin_CanCreate_ServerAdministratorRole()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var services = testApp.App.Services;
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
 
     // Create a server admin caller
-    var (controller, tenant, serverAdmin) = await services.CreateControllerWithTestData<UsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.ServerAdministrator);
 
-    using var db = services.GetRequiredService<AppDb>();
+    await using var db = services.GetRequiredService<AppDb>();
 
     // Ensure the ServerAdministrator role exists using RoleManager
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator);
@@ -81,7 +83,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     Assert.NotNull(createdUser);
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
-    var roles = await userManager.GetRolesAsync(createdUser!);
+    var roles = await userManager.GetRolesAsync(createdUser);
     Assert.Contains(RoleNames.ServerAdministrator, roles);
   }
 }

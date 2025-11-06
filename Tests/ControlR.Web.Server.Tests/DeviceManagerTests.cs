@@ -24,13 +24,14 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.App.Services.CreateScope();
+    var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
+    scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
-    var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
+    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
 
     // Create test tags
     foreach (var tagId in tagIds)
@@ -130,9 +131,10 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.App.Services.CreateScope();
+    var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var tenantId = Guid.NewGuid();
     var otherTenantId = Guid.NewGuid();
@@ -214,12 +216,13 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var deviceManager = testApp.App.Services.GetRequiredService<IDeviceManager>();
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    using var scope = testApp.App.Services.CreateScope();
+    var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
+    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
-    var tagIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
+    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
 
     // Create test tags
     foreach (var tagId in tagIds)

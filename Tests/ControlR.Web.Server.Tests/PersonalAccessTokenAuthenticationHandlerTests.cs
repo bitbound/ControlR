@@ -26,17 +26,19 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var serverAdmin = await testApp.App.Services.CreateTestUser("admin@example.com");
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var serverAdmin = await services.CreateTestUser("admin@example.com");
     var tenantId = serverAdmin.TenantId;
 
-    var patManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
+    var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
     var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, tenantId, serverAdmin.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
     var context = CreateHttpContext(plainTextToken);
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(services, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -64,17 +66,19 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var user = await testApp.App.Services.CreateTestUser();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var user = await services.CreateTestUser();
     var tenantId = user.TenantId;
-    var personalAccessTokenManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var personalAccessTokenManager = services.GetRequiredService<IPersonalAccessTokenManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await personalAccessTokenManager.CreateToken(createRequest, tenantId, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
     var context = CreateHttpContext(plainTextToken);
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(services, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -105,8 +109,9 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
     var context = CreateHttpContext("invalid-token");
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(scope.ServiceProvider, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -121,8 +126,9 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
     var context = CreateHttpContext("");
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(scope.ServiceProvider, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -137,8 +143,9 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
     var context = CreateHttpContext(null);
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(scope.ServiceProvider, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -153,8 +160,9 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
     var context = CreateHttpContext("   ");
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(scope.ServiceProvider, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -169,13 +177,15 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var tenant = await testApp.App.Services.CreateTestTenant();
-    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
-    var patManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id);
+    var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
     var timeProvider = testApp.TimeProvider;
-    using var db = testApp.App.Services.GetRequiredService<AppDb>();
+    await using var db = services.GetRequiredService<AppDb>();
 
-    var createRequest = new ControlR.Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, tenant.Id, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -184,7 +194,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var expectedLastUsed = timeProvider.GetUtcNow();
 
     var context = CreateHttpContext(plainTextToken);
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(services, context);
 
     // Act
     await handler.AuthenticateAsync();
@@ -205,21 +215,23 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    var serverAdmin = await testApp.App.Services.CreateTestUser("admin@example.com");
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var serverAdmin = await services.CreateTestUser("admin@example.com");
     var tenantId = serverAdmin.TenantId;
 
-    var normalUser = await testApp.App.Services.CreateTestUser(
+    var normalUser = await services.CreateTestUser(
       tenantId: tenantId,
       roles: [RoleNames.DeviceSuperUser, RoleNames.AgentInstaller]);
 
-    var patManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
+    var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
     var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, tenantId, normalUser.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
     var context = CreateHttpContext(plainTextToken);
-    var handler = await CreateHandler(testApp, context);
+    var handler = await CreateHandler(services, context);
 
     // Act
     var result = await handler.AuthenticateAsync();
@@ -255,12 +267,12 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     return context;
   }
 
-  private async Task<PersonalAccessTokenAuthenticationHandler> CreateHandler(TestApp testApp, HttpContext context)
+  private async Task<PersonalAccessTokenAuthenticationHandler> CreateHandler(IServiceProvider services, HttpContext context)
   {
-    var options = testApp.App.Services.GetRequiredService<IOptionsMonitor<PersonalAccessTokenAuthenticationSchemeOptions>>();
-    var loggerFactory = testApp.App.Services.GetRequiredService<ILoggerFactory>();
-    var personalAccessTokenManager = testApp.App.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var userManager = testApp.App.Services.GetRequiredService<UserManager<AppUser>>();
+    var options = services.GetRequiredService<IOptionsMonitor<PersonalAccessTokenAuthenticationSchemeOptions>>();
+    var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+    var personalAccessTokenManager = services.GetRequiredService<IPersonalAccessTokenManager>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
     var scheme = new AuthenticationScheme(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,

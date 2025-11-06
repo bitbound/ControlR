@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,7 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 
 public interface IMacInterop
 {
-  Result InvokeKeyEvent(string key, bool isPressed);
+  Result InvokeKeyEvent(string key, string code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   bool IsAccessibilityPermissionGranted();
@@ -34,9 +33,9 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
 
   private readonly ILogger<MacInterop> _logger = logger;
 
-  private bool _commandDown = false;
-  private bool _controlDown = false;
-  private int _currentClickCount = 0;
+  private bool _commandDown;
+  private bool _controlDown;
+  private int _currentClickCount;
   private int _lastCalculatedClickCount = 1; // Store the last calculated click count for mouse up events
   private int _lastClickButton = -1;
 
@@ -46,15 +45,15 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   private int _lastClickY = -1;
 
   // Track mouse button states for proper drag events
-  private bool _leftButtonDown = false;
-  private bool _middleButtonDown = false;
-  private bool _optionDown = false;
-  private bool _rightButtonDown = false;
+  private bool _leftButtonDown;
+  private bool _middleButtonDown;
+  private bool _optionDown;
+  private bool _rightButtonDown;
 
   // Track modifier key states
-  private bool _shiftDown = false;
+  private bool _shiftDown;
 
-  public Result InvokeKeyEvent(string key, bool isPressed)
+  public Result InvokeKeyEvent(string key, string code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -63,23 +62,23 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
 
     // Handle modifier keys: update state and send modifier event only
-    if (key == "Shift" || key == "Control" || key == "Alt" || key == "Meta" || key == "Command" || key == "Option")
+    if (key is "Shift" or "Control" or "Alt" or "Meta" or "Command" or "Option")
     {
       switch (key)
       {
         case "Shift": _shiftDown = isPressed; break;
         case "Control": _controlDown = isPressed; break;
-        case "Alt": _optionDown = isPressed; break;
+        case "Alt":
         case "Option": _optionDown = isPressed; break;
-        case "Meta": _commandDown = isPressed; break;
+        case "Meta":
         case "Command": _commandDown = isPressed; break;
       }
 
       // Send modifier key event
-      if (!ConvertBrowserKeyArgToVirtualKey(key, out var modVirtualKey))
+      if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var modVirtualKey))
       {
-        _logger.LogWarning("Failed to convert modifier key to virtual key: {Key}", key);
-        return Result.Fail($"Failed to convert modifier key to virtual key: {key}");
+        _logger.LogWarning("Failed to convert modifier key to virtual key: {Key} (code: {Code})", key, code);
+        return Result.Fail($"Failed to convert modifier key to virtual key: {key} (code: {code})");
       }
       try
       {
@@ -103,7 +102,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
 
     // Non-modifier key: set modifier flags if any are down
-    if (!ConvertBrowserKeyArgToVirtualKey(key, out var virtualKey))
+    if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var virtualKey))
     {
       // TODO: Consider enhanced international keyboard support:
       // 1. Add common international characters to the key map
@@ -152,7 +151,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       var location = new MacInputSimulation.CGPoint(x, y);
       uint mouseType;
       uint mouseButton;
-      int clickCount = 1;
+      int clickCount;
 
       switch (button)
       {
@@ -212,7 +211,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   {
     try
     {
-      var location = new MacInputSimulation.CGPoint(x, y);
+      MovePointer(x, y, MovePointerType.Absolute);
 
       // Normalize scroll values to direction only, then use a fixed reasonable scroll amount for macOS
       const int macScrollAmount = 3; // Lines to scroll per wheel tick - adjust as needed
@@ -447,7 +446,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         assertionType,
         IOKit.kIOPMAssertionLevelOn,
         reasonString,
-        out uint assertionID);
+        out var assertionId);
 
       if (result != IOKit.kIOReturnSuccess)
       {
@@ -459,11 +458,11 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
 
       // Release the assertion immediately after creating it
       // This is enough to wake the screen without keeping it awake permanently
-      var releaseResult = IOKit.IOPMAssertionRelease(assertionID);
+      var releaseResult = IOKit.IOPMAssertionRelease(assertionId);
       if (releaseResult != IOKit.kIOReturnSuccess)
       {
         _logger.LogWarning("Failed to release power assertion {AssertionID}. IOReturn: {Result}",
-          assertionID, releaseResult);
+          assertionId, releaseResult);
       }
 
       _logger.LogInformation("Screen wake assertion created and released successfully");
@@ -484,13 +483,158 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  private static bool ConvertBrowserKeyArgToVirtualKey(string key, [NotNullWhen(true)] out ushort virtualKey)
+  private static bool ConvertBrowserKeyArgToVirtualKey(string key, string code, out ushort virtualKey)
   {
-    var keyMap = GetJavaScriptKeyMap();
-    return keyMap.TryGetValue(key, out virtualKey);
+    // Code-first approach: Try to map browser KeyboardEvent.code to macOS virtual key
+    // This provides layout-independent physical key simulation, which is the standard for
+    // remote desktop protocols (RDP, VNC, etc.)
+    if (!string.IsNullOrEmpty(code))
+    {
+      virtualKey = code switch
+      {
+        // Letter keys (physical key position, layout-independent)
+        "KeyA" => MacInputSimulation.kVK_ANSI_A,
+        "KeyB" => MacInputSimulation.kVK_ANSI_B,
+        "KeyC" => MacInputSimulation.kVK_ANSI_C,
+        "KeyD" => MacInputSimulation.kVK_ANSI_D,
+        "KeyE" => MacInputSimulation.kVK_ANSI_E,
+        "KeyF" => MacInputSimulation.kVK_ANSI_F,
+        "KeyG" => MacInputSimulation.kVK_ANSI_G,
+        "KeyH" => MacInputSimulation.kVK_ANSI_H,
+        "KeyI" => MacInputSimulation.kVK_ANSI_I,
+        "KeyJ" => MacInputSimulation.kVK_ANSI_J,
+        "KeyK" => MacInputSimulation.kVK_ANSI_K,
+        "KeyL" => MacInputSimulation.kVK_ANSI_L,
+        "KeyM" => MacInputSimulation.kVK_ANSI_M,
+        "KeyN" => MacInputSimulation.kVK_ANSI_N,
+        "KeyO" => MacInputSimulation.kVK_ANSI_O,
+        "KeyP" => MacInputSimulation.kVK_ANSI_P,
+        "KeyQ" => MacInputSimulation.kVK_ANSI_Q,
+        "KeyR" => MacInputSimulation.kVK_ANSI_R,
+        "KeyS" => MacInputSimulation.kVK_ANSI_S,
+        "KeyT" => MacInputSimulation.kVK_ANSI_T,
+        "KeyU" => MacInputSimulation.kVK_ANSI_U,
+        "KeyV" => MacInputSimulation.kVK_ANSI_V,
+        "KeyW" => MacInputSimulation.kVK_ANSI_W,
+        "KeyX" => MacInputSimulation.kVK_ANSI_X,
+        "KeyY" => MacInputSimulation.kVK_ANSI_Y,
+        "KeyZ" => MacInputSimulation.kVK_ANSI_Z,
+
+        // Digit keys (main keyboard row)
+        "Digit0" => MacInputSimulation.kVK_ANSI_0,
+        "Digit1" => MacInputSimulation.kVK_ANSI_1,
+        "Digit2" => MacInputSimulation.kVK_ANSI_2,
+        "Digit3" => MacInputSimulation.kVK_ANSI_3,
+        "Digit4" => MacInputSimulation.kVK_ANSI_4,
+        "Digit5" => MacInputSimulation.kVK_ANSI_5,
+        "Digit6" => MacInputSimulation.kVK_ANSI_6,
+        "Digit7" => MacInputSimulation.kVK_ANSI_7,
+        "Digit8" => MacInputSimulation.kVK_ANSI_8,
+        "Digit9" => MacInputSimulation.kVK_ANSI_9,
+
+        // Numpad keys
+        "Numpad0" => MacInputSimulation.kVK_ANSI_Keypad0,
+        "Numpad1" => MacInputSimulation.kVK_ANSI_Keypad1,
+        "Numpad2" => MacInputSimulation.kVK_ANSI_Keypad2,
+        "Numpad3" => MacInputSimulation.kVK_ANSI_Keypad3,
+        "Numpad4" => MacInputSimulation.kVK_ANSI_Keypad4,
+        "Numpad5" => MacInputSimulation.kVK_ANSI_Keypad5,
+        "Numpad6" => MacInputSimulation.kVK_ANSI_Keypad6,
+        "Numpad7" => MacInputSimulation.kVK_ANSI_Keypad7,
+        "Numpad8" => MacInputSimulation.kVK_ANSI_Keypad8,
+        "Numpad9" => MacInputSimulation.kVK_ANSI_Keypad9,
+        "NumpadMultiply" => MacInputSimulation.kVK_ANSI_KeypadMultiply,
+        "NumpadAdd" => MacInputSimulation.kVK_ANSI_KeypadPlus,
+        "NumpadSubtract" => MacInputSimulation.kVK_ANSI_KeypadMinus,
+        "NumpadDecimal" => MacInputSimulation.kVK_ANSI_KeypadDecimal,
+        "NumpadDivide" => MacInputSimulation.kVK_ANSI_KeypadDivide,
+        "NumpadEnter" => MacInputSimulation.kVK_ANSI_KeypadEnter,
+        "NumpadEquals" => MacInputSimulation.kVK_ANSI_KeypadEquals,
+
+        // Function keys
+        "F1" => MacInputSimulation.kVK_F1,
+        "F2" => MacInputSimulation.kVK_F2,
+        "F3" => MacInputSimulation.kVK_F3,
+        "F4" => MacInputSimulation.kVK_F4,
+        "F5" => MacInputSimulation.kVK_F5,
+        "F6" => MacInputSimulation.kVK_F6,
+        "F7" => MacInputSimulation.kVK_F7,
+        "F8" => MacInputSimulation.kVK_F8,
+        "F9" => MacInputSimulation.kVK_F9,
+        "F10" => MacInputSimulation.kVK_F10,
+        "F11" => MacInputSimulation.kVK_F11,
+        "F12" => MacInputSimulation.kVK_F12,
+        "F13" => MacInputSimulation.kVK_F13,
+        "F14" => MacInputSimulation.kVK_F14,
+        "F15" => MacInputSimulation.kVK_F15,
+        "F16" => MacInputSimulation.kVK_F16,
+        "F17" => MacInputSimulation.kVK_F17,
+        "F18" => MacInputSimulation.kVK_F18,
+        "F19" => MacInputSimulation.kVK_F19,
+        "F20" => MacInputSimulation.kVK_F20,
+
+        // Navigation keys
+        "ArrowDown" => MacInputSimulation.kVK_DownArrow,
+        "ArrowUp" => MacInputSimulation.kVK_UpArrow,
+        "ArrowLeft" => MacInputSimulation.kVK_LeftArrow,
+        "ArrowRight" => MacInputSimulation.kVK_RightArrow,
+        "Home" => MacInputSimulation.kVK_Home,
+        "End" => MacInputSimulation.kVK_End,
+        "PageUp" => MacInputSimulation.kVK_PageUp,
+        "PageDown" => MacInputSimulation.kVK_PageDown,
+
+        // Editing keys
+        "Backspace" => MacInputSimulation.kVK_Delete,
+        "Tab" => MacInputSimulation.kVK_Tab,
+        "Enter" => MacInputSimulation.kVK_Return,
+        "Delete" => MacInputSimulation.kVK_ForwardDelete,
+        "Insert" => MacInputSimulation.kVK_Help, // Mac doesn't have Insert, using Help
+
+        // Modifier keys (left/right specific)
+        "ShiftLeft" => MacInputSimulation.kVK_Shift,
+        "ShiftRight" => MacInputSimulation.kVK_RightShift,
+        "ControlLeft" => MacInputSimulation.kVK_Control,
+        "ControlRight" => MacInputSimulation.kVK_RightControl,
+        "AltLeft" => MacInputSimulation.kVK_Option,
+        "AltRight" => MacInputSimulation.kVK_RightOption,
+        "MetaLeft" => MacInputSimulation.kVK_Command,
+        "MetaRight" => MacInputSimulation.kVK_RightCommand,
+
+        // Lock keys
+        "CapsLock" => MacInputSimulation.kVK_CapsLock,
+
+        // Special keys
+        "Escape" => MacInputSimulation.kVK_Escape,
+        "Space" => MacInputSimulation.kVK_Space,
+
+        // OEM/Punctuation keys (US layout physical positions)
+        "Semicolon" => MacInputSimulation.kVK_ANSI_Semicolon,
+        "Equal" => MacInputSimulation.kVK_ANSI_Equal,
+        "Comma" => MacInputSimulation.kVK_ANSI_Comma,
+        "Minus" => MacInputSimulation.kVK_ANSI_Minus,
+        "Period" => MacInputSimulation.kVK_ANSI_Period,
+        "Slash" => MacInputSimulation.kVK_ANSI_Slash,
+        "Backquote" => MacInputSimulation.kVK_ANSI_Grave,
+        "BracketLeft" => MacInputSimulation.kVK_ANSI_LeftBracket,
+        "Backslash" => MacInputSimulation.kVK_ANSI_Backslash,
+        "BracketRight" => MacInputSimulation.kVK_ANSI_RightBracket,
+        "Quote" => MacInputSimulation.kVK_ANSI_Quote,
+
+        _ => ushort.MaxValue
+      };
+
+      if (virtualKey != ushort.MaxValue)
+      {
+        return true;
+      }
+    }
+
+    // Fallback to key-based mapping for compatibility with older code or edge cases
+    // This handles cases where code is not provided (shouldn't happen in modern browsers)
+    return GetLegacyKeyMap().TryGetValue(key, out virtualKey);
   }
 
-  private static FrozenDictionary<string, ushort> GetJavaScriptKeyMap()
+  private static FrozenDictionary<string, ushort> GetLegacyKeyMap()
   {
     return new Dictionary<string, ushort>
     {

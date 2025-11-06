@@ -194,7 +194,7 @@ internal sealed class DesktopStreamingClient(
         case DtoType.KeyEvent:
           {
             var payload = wrapper.GetPayload<KeyEventDto>();
-            _inputSimulator.InvokeKeyEvent(payload.Key, payload.IsPressed);
+            _inputSimulator.InvokeKeyEvent(payload.Key, payload.Code, payload.IsPressed);
             break;
           }
         case DtoType.ResetKeyboardState:

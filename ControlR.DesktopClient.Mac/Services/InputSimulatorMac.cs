@@ -13,7 +13,7 @@ public class InputSimulatorMac(
   private readonly ILogger<InputSimulatorMac> _logger = logger;
   private readonly IMacInterop _macInterop = macInterop;
   
-  public void InvokeKeyEvent(string key, bool isPressed)
+  public void InvokeKeyEvent(string key, string code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -23,16 +23,16 @@ public class InputSimulatorMac(
 
     try
     {
-      var result = _macInterop.InvokeKeyEvent(key, isPressed);
+      var result = _macInterop.InvokeKeyEvent(key, code, isPressed);
       if (!result.IsSuccess)
       {
-        _logger.LogWarning("Failed to invoke key event. Key: {Key}, IsPressed: {IsPressed}, Reason: {Reason}", 
-          key, isPressed, result.Reason);
+        _logger.LogWarning("Failed to invoke key event. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}, Reason: {Reason}",
+          key, code, isPressed, result.Reason);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error processing key event for key: {Key}", key);
+      _logger.LogError(ex, "Error processing key event for key: {Key} (code: {Code})", key, code);
     }
   }
 

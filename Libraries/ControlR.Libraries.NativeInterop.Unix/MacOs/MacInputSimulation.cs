@@ -1,6 +1,7 @@
 #pragma warning disable CA1707 // Identifiers should not contain underscores
 #pragma warning disable IDE1006 // Naming Styles
 using System.Runtime.InteropServices;
+// ReSharper disable InconsistentNaming
 
 namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 
@@ -162,6 +163,7 @@ public static class MacInputSimulation
   public const ushort kVK_RightControl = 0x3E;
   public const ushort kVK_RightOption = 0x3D;
   public const ushort kVK_RightShift = 0x3C;
+  public const ushort kVK_RightCommand = 0x36; // Added: right Command key virtual-key code
   public const ushort kVK_Shift = 0x38;
   public const ushort kVK_Space = 0x31;
   public const ushort kVK_Tab = 0x30;

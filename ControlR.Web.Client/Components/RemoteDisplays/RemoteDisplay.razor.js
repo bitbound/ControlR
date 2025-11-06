@@ -316,7 +316,7 @@ export async function initialize(componentRef, canvasId) {
       ev.preventDefault();
     }
 
-    await state.invokeDotNet("SendKeyEvent", ev.key, true);
+    await state.invokeDotNet("SendKeyEvent", ev.key, ev.code, true);
   };
   window.addEventListener("keydown", onKeyDown);
   state.windowEventHandlers.push(new WindowEventHandler("keydown", onKeyDown));
@@ -332,7 +332,7 @@ export async function initialize(componentRef, canvasId) {
     }
 
     ev.preventDefault();
-    state.invokeDotNet("SendKeyEvent", ev.key, false);
+    state.invokeDotNet("SendKeyEvent", ev.key, ev.code, false);
   }
   window.addEventListener("keyup", onKeyUp);
   state.windowEventHandlers.push(new WindowEventHandler("keyup", onKeyUp));

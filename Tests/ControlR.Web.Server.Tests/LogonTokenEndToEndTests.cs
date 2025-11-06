@@ -3,7 +3,6 @@ using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
@@ -18,7 +17,6 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   {
     // Arrange
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
     using var httpClient = testServer.Factory.CreateClient();
 
     var deviceId1 = Guid.NewGuid();
@@ -81,7 +79,6 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
   {
     // Arrange
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var options = new WebApplicationFactoryClientOptions() { AllowAutoRedirect = false };
     using var httpClient = testServer.Factory.CreateClient();
 
     var deviceId = Guid.NewGuid();

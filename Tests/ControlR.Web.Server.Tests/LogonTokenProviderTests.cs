@@ -14,12 +14,13 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var deviceId = Guid.NewGuid();
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
-    
+
     // Act
     var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
@@ -38,12 +39,13 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var deviceId = Guid.NewGuid();
     var tenant = await testApp.App.Services.CreateTestTenant();
     var invalidUserId = Guid.NewGuid();
-    
+
     // Act & Assert
     await Assert.ThrowsAsync<InvalidOperationException>(async () =>
       await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId));
@@ -54,12 +56,13 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var deviceId = Guid.NewGuid();
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
-    
+
     // Create a token
     var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
@@ -80,13 +83,14 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var deviceId = Guid.NewGuid();
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
     var expirationMinutes = 15;
-    
+
     // Create a token that will expire soon
     var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, expirationMinutes);
     
@@ -105,10 +109,11 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var invalidToken = "invalid-token";
-    
+
     // Act
     var result = await logonTokenProvider.ValidateTokenAsync(invalidToken);
     
@@ -121,12 +126,13 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   {
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var logonTokenProvider = testApp.App.Services.GetRequiredService<ILogonTokenProvider>();
-    
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
     var deviceId = Guid.NewGuid();
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
-    
+
     // Create a token
     var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
