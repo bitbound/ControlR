@@ -659,7 +659,8 @@ public partial class RemoteDisplay : JsInteropableComponent
 
     if (args.Key is "Enter" or "Backspace")
     {
-      await JsModule.InvokeVoidAsync("sendKeyPress", args.Key, _canvasId);
+      await SendKeyEvent(args.Key, true);
+      await SendKeyEvent(args.Key, false);
     }
   }
 
