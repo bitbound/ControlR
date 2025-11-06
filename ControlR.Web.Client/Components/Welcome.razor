@@ -1,22 +1,61 @@
 @inject IControlrApi ServerSettingsApi
 
-<div class="mt-8 text-center">
-  <MudText Typo="Typo.h3" Class="mb-8">
-    Welcome to ControlR
-  </MudText>
-  <div class="mb-4">
-    <MudButton Color="Color.Primary" Size="Size.Large" Href="/Account/Login" Variant="Variant.Outlined">
-      Login
-    </MudButton>
-  </div>
-  @if (_isPublicRegistrationEnabled)
-  {
-    <div>
-      <MudButton Color="Color.Default" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined">
-        Register
-      </MudButton>
+<div class="welcome-container">
+  <div class="welcome-card">
+    <div class="icon-wrapper">
+      <img src="/appicon-transparent.png" alt="ControlR Icon" class="app-icon" />
+      <div class="icon-glow"></div>
     </div>
-  }
+
+    <MudText Typo="Typo.h4" Class="mt-4">
+      Welcome to
+    </MudText>
+
+    <MudText Typo="Typo.h2" Class="welcome-title mb-4">
+      ControlR
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="welcome-subtitle mb-6">
+      Open-source remote control and device access
+    </MudText>
+
+    <div class="action-buttons">
+      <MudButton Color="Color.Primary" Size="Size.Large" Href="/Account/Login" Variant="Variant.Outlined"
+        Class="action-button">
+        <MudIcon Icon="@Icons.Material.Filled.Login" Class="me-2" />
+        Login
+      </MudButton>
+
+      @if (!_isPublicRegistrationEnabled)
+      {
+        <MudButton Color="Color.Tertiary" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined"
+          Class="action-button">
+          <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" />
+          Register
+        </MudButton>
+      }
+    </div>
+
+    <MudDivider Class="my-6" />
+
+    <div class="links-section">
+      <MudText Typo="Typo.body2" Class="mb-3 links-title">
+        Learn More & Support
+      </MudText>
+
+      <div class="external-links">
+        <MudButton Href="https://github.com/bitbound/controlr" Target="_blank" Variant="Variant.Text"
+          StartIcon="@Icons.Custom.Brands.GitHub" Color="Color.Default" Class="external-link">
+          View on GitHub
+        </MudButton>
+
+        <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
+          StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
+          Sponsor Project
+        </MudButton>
+      </div>
+    </div>
+  </div>
 </div>
 
 @code {

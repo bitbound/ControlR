@@ -2,8 +2,9 @@
 @inject IHubConnection<THub> HubConnection
 @inject IBusyCounter BusyCounter
 @inject IMessenger Messenger
+@inject AuthenticationStateProvider AuthState
 
-@if (!RendererInfo.IsInteractive)
+@if (!RendererInfo.IsInteractive || !_isAuthenticated)
 {
   <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
 }
@@ -48,15 +49,17 @@ else
   private bool _isBusy;
   private int _pendingOperations;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
+  private bool _isAuthenticated;
 
-  protected override Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
   {
+    _isAuthenticated = await AuthState.IsAuthenticated();
     if (RendererInfo.IsInteractive)
     {
       Messenger.RegisterEvent(this, HandleEvent);
       Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
     }
-    return base.OnInitializedAsync();
+    await base.OnInitializedAsync();
   }
 
   protected override bool ShouldRender()
