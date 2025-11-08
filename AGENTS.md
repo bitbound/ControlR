@@ -160,6 +160,8 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 
 ### General Coding Standards
 - Use 2 spaces for indentation
+- Don't try to be overly clever.  Code should be easily readable.
+- Don't try to fit everything on one line.  Use white space for readability.
 
 ### Build and Task System
 - Use the following build command to verify that changes compile: `dotnet build ControlR.sln --verbosity quiet`
@@ -175,7 +177,8 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Always prefer collection expressions to initialize collections (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
 - Do not leave comments that reference historical changes, prior implementations, or what was fixed. Comments should explain current intent only.
-- Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name
+- Don't append "Async" suffix to async method names, unless to specifically distinguish from an existing sync method of the same name.
+- Open and close braces should be on their own lines.
 
 ### Platform-Specific Development
 - Use `[SupportedOSPlatform]` attributes for platform-specific code
