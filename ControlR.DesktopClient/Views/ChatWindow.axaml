@@ -30,7 +30,7 @@
                            HorizontalAlignment="Center"
                            Margin="0,50"
                            FontStyle="Italic"
-                           Foreground="Gray" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
 
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
@@ -41,13 +41,13 @@
                                         Padding="12"
                                         CornerRadius="8"
                                         MaxWidth="400"
-                                        Background="#2d2d2d"
+                                        Background="{DynamicResource ChatViewerMessageBrush}"
                                         HorizontalAlignment="Left"
                                         Margin="0,0,100,0">
                                     <StackPanel>
                                         <TextBlock FontSize="10"
                                                    Margin="0,0,0,4"
-                                                   Foreground="#8C6ED2">
+                                                   Foreground="{DynamicResource SecondaryColor}">
                                             <Run Text="{Binding SenderName}" />
                                             <Run Text=" - " />
                                             <Run Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
@@ -55,7 +55,7 @@
                                         <TextBlock Text="{Binding Message}"
                                                    TextWrapping="Wrap"
                                                    FontSize="14"
-                                                   Foreground="White" />
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                                     </StackPanel>
                                 </Border>
 
@@ -64,13 +64,13 @@
                                         Padding="12"
                                         CornerRadius="8"
                                         MaxWidth="400"
-                                        Background="#1e3a5f"
+                                        Background="{DynamicResource ChatUserMessageBrush}"
                                         HorizontalAlignment="Right"
                                         Margin="100,0,0,0">
                                     <StackPanel>
                                         <TextBlock FontSize="10"
                                                    Margin="0,0,0,4"
-                                                   Foreground="#8C6ED2">
+                                                   Foreground="{DynamicResource SecondaryColor}">
                                             <Run Text="{Binding SenderName}" />
                                             <Run Text=" - " />
                                             <Run Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
@@ -78,7 +78,7 @@
                                         <TextBlock Text="{Binding Message}"
                                                    TextWrapping="Wrap"
                                                    FontSize="14"
-                                                   Foreground="White" />
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -90,9 +90,9 @@
 
         <!-- Input Area -->
         <Border Grid.Row="1"
-                Background="#333"
+                Background="{DynamicResource ChatInputBackgroundBrush}"
                 Padding="10"
-                BorderBrush="#555"
+                BorderBrush="{DynamicResource ChatInputBorderBrush}"
                 BorderThickness="0,1,0,0">
             <Grid RowDefinitions="*,Auto">
 
@@ -111,14 +111,13 @@
                 <Button Grid.Row="1"
                         HorizontalAlignment="Right"
                         Command="{Binding SendMessageCommand}"
-                        Background="{StaticResource InfoColor}"
-                        Foreground="White"
+                        Background="{DynamicResource PrimaryColor}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         Padding="20,8">
 
                     <PathIcon Data="{StaticResource send_regular}"
                               Width="24"
-                              Height="24"
-                              Foreground="{DynamicResource SendRegular}" />
+                              Height="24"  />
                 </Button>
             </Grid>
         </Border>

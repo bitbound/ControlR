@@ -32,5 +32,8 @@
   "ChatSessionClosedToastTitle": "Chat Session Closed",
   "ChatSessionClosedToastMessage": "The chat session has been closed by the remote user.",
   "You": "You",
-  "Version": "Version"
+  "Version": "Version",
+  "ThemeAuto": "Theme: Auto",
+  "ThemeLight": "Theme: Light",
+  "ThemeDark": "Theme: Dark"
 }

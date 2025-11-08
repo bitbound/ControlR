@@ -8,6 +8,7 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 // ReSharper disable once ClassNeverInstantiated.Global
 public partial class RemoteControl : ViewportAwareComponent
 {
+  private readonly int _commandTimeoutSeconds = 30;
   private string? _alertMessage;
   private Severity _alertSeverity;
   private bool _isReconnecting;
@@ -100,12 +101,9 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     get
     {
-      if (CurrentState == SignalingState.ConnectionActive)
-      {
-        return "h-100";
-      }
-
-      return "h-100 ma-4";
+      return CurrentState == SignalingState.ConnectionActive
+        ? "h-100"
+        : "h-100 ma-4";
     }
   }
 
@@ -313,7 +311,7 @@ public partial class RemoteControl : ViewportAwareComponent
       var uriBuilder = new UriBuilder(serverUri)
       {
         Path = "/relay",
-        Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout=30"
+        Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout={_commandTimeoutSeconds}"
       };
 
       if (!quiet)
@@ -343,7 +341,8 @@ public partial class RemoteControl : ViewportAwareComponent
         return false;
       }
 
-      await StreamingClient.Connect(uriBuilder.Uri, CancellationToken.None);
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_commandTimeoutSeconds));
+      await StreamingClient.Connect(uriBuilder.Uri, cts.Token);
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
@@ -364,7 +363,6 @@ public partial class RemoteControl : ViewportAwareComponent
       return false;
     }
   }
-
 
   private enum SignalingState
   {

@@ -6,6 +6,7 @@
              xmlns:vm="using:ControlR.DesktopClient.ViewModels"
              xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
              xmlns:common="using:ControlR.DesktopClient.Common"
+             xmlns:avalonia="using:Avalonia"
              x:Class="ControlR.DesktopClient.Views.ManagedDeviceView"
              x:DataType="vm:IManagedDeviceViewModel">
 
@@ -14,11 +15,41 @@
   </Design.DataContext>
 
   <Border Margin="10" HorizontalAlignment="Center">
-    <Grid>
-      <StackPanel>
-        <TextBlock Classes="h1 Primary"
+    <Grid RowDefinitions="Auto,*,Auto">
+      <!-- Header row with theme toggle button -->
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+        <TextBlock Grid.Column="0"
+                   Classes="h1 Primary"
                    Text="{x:Static common:Localization.ManagedDeviceTitle}"
-                   Margin="0,0,0,20"/>
+                   VerticalAlignment="Center" />
+
+        <Button Grid.Column="1"
+                Command="{Binding ToggleThemeCommand}"
+                Background="Transparent"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource DividerBrush}"
+                CornerRadius="4"
+                Padding="12,6"
+                ToolTip.Tip="{Binding ThemeModeText}">
+            <Panel Width="16" Height="16">
+                <!-- Auto mode icon -->
+                <PathIcon Data="{StaticResource arrow_sync_circle_regular}"
+                          IsVisible="{Binding ThemeIconKey, Converter={StaticResource StringEqualsConverter}, ConverterParameter=arrow_sync_circle_regular}"
+                          Foreground="{DynamicResource TextPrimaryBrush}" />
+                <!-- Light mode icon -->
+                <PathIcon Data="{StaticResource weather_sunny_regular}"
+                          IsVisible="{Binding ThemeIconKey, Converter={StaticResource StringEqualsConverter}, ConverterParameter=weather_sunny_regular}"
+                          Foreground="{DynamicResource TextPrimaryBrush}" />
+                <!-- Dark mode icon -->
+                <PathIcon Data="{StaticResource weather_moon_regular}"
+                          IsVisible="{Binding ThemeIconKey, Converter={StaticResource StringEqualsConverter}, ConverterParameter=weather_moon_regular}"
+                          Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Panel>
+        </Button>
+      </Grid>
+
+      <!-- Main content -->
+      <StackPanel Grid.Row="1">
         <TextBlock Text="{x:Static common:Localization.ManagedDeviceMessage}"
                    TextWrapping="Wrap" />
 
@@ -32,11 +63,11 @@
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="#E6F4EA" IsVisible="{Binding IsAccessibilityPermissionGranted}">
-                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="Green" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" Opacity="0.2" IsVisible="{Binding IsAccessibilityPermissionGranted}">
+                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessColor}" FontWeight="Bold" />
                   </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="#FDEAEA" IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
-                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="Red" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" Opacity="0.2" IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorColor}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
                 <Button Content="{x:Static common:Localization.OpenSettings}"
@@ -56,11 +87,11 @@
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="#E6F4EA" IsVisible="{Binding IsScreenCapturePermissionGranted}">
-                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="Green" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" Opacity="0.2" IsVisible="{Binding IsScreenCapturePermissionGranted}">
+                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessColor}" FontWeight="Bold" />
                   </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="#FDEAEA" IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
-                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="Red" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" Opacity="0.2" IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorColor}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
                 <Button Content="{x:Static common:Localization.OpenSettings}"
@@ -75,12 +106,12 @@
         </StackPanel>
 
       </StackPanel>
-      
+
       <!-- Version information positioned at bottom right -->
-      <TextBlock Grid.Row="0"
+      <TextBlock Grid.Row="2"
                  HorizontalAlignment="Right"
                  VerticalAlignment="Bottom"
-                 Margin="0,0,0,10"
+                 Margin="0,20,0,10"
                  Classes="Small"
                  Opacity="0.8">
         <Run Text="{x:Static common:Localization.Version}" />

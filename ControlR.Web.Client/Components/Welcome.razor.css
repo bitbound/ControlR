@@ -25,7 +25,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #2196F3, #00ffd5, #FA1791);
+  background: linear-gradient(90deg, #2196F3, #21f3e9, #7b21f3);
   animation: gradient-shift 3s ease infinite;
 }
 
@@ -65,7 +65,7 @@
 
 ::deep .welcome-title {
   font-weight: 600 !important;
-  background: linear-gradient(135deg, #2196F3, #00ffd5);
+  background: linear-gradient(135deg, #2196F3, #21f3e9);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

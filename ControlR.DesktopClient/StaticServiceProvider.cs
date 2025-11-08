@@ -74,6 +74,7 @@ internal static class StaticServiceProvider
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<INavigationProvider, NavigationProvider>()
+      .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
       .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()

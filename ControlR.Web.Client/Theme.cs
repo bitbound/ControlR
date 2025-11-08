@@ -5,12 +5,12 @@ public static class Theme
   public static PaletteDark DarkPalette { get; } = new PaletteDark
   {
     Primary = "#2196F3",
-    Secondary = "#00ffd5",
-    Tertiary = "#FA1791",
-    Info = "#42A5F5",
-    Success = "#00C853",
-    Warning = "#FFA726",
-    Error = "#F44336",
+    Secondary = "#21f3e9",
+    Tertiary = "#7b21f3",
+    Info = "#89b4f8",
+    Success = "#2cb67d",
+    Warning = "#facc15",
+    Error = "#f87171",
     Dark = "#212121",
 
     TextPrimary = "rgba(255, 255, 255, 0.87)",
@@ -48,11 +48,11 @@ public static class Theme
   {
     Primary = "#2196F3",
     Secondary = "#008c7a",
-    Tertiary = "#FA1791",
-    Info = "#0288D1",
-    Success = "#00C853",
-    Warning = "#F57C00",
-    Error = "#C62828",
+    Tertiary = "#7b21f3",
+    Info = "#0d6efd",
+    Success = "#28a745",
+    Warning = "#ffc107",
+    Error = "#dc3545",
     Dark = "#424242",
 
     TextPrimary = "rgba(0, 0, 0, 0.87)",

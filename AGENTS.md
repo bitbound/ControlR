@@ -111,6 +111,10 @@ graph TD
 - **Avalonia UI** - Cross-platform .NET UI framework
 - **Multi-targeting** - Supports Windows, Linux, and macOS
 - **Native Interop** - Platform-specific functionality via P/Invoke
+- **Avalonia Icons** - Avalonia Icons can be retrieved from here: https://avaloniaui.github.io/icons.html.  They should be added to the `Icons.axaml` resource dictionary as needed.
+- **Localization** - Don't use hardcoded strings in the UI. 
+  - In AXAML, bind to the `Localization` class properties.  Example: `Content="{x:Static common:Localization.OkText}"`
+  - Add keys and values to the JSON files under `/ControlR.DesktopClient.Common/Resources/Strings/`.
 
 ## Architecture Patterns
 
@@ -138,18 +142,8 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - **Shared Libraries** - Common functionality across platforms
 - **Platform Abstraction** - Interface-based platform-specific implementations
 - **Conditional Compilation** - Platform-specific code paths
-- **Device Data Generation** - Platform-specific `DeviceDataGenerator` implementations (Windows uses Win32 APIs, Mac/Linux use shell commands)
-
-## Key Development Workflows
-
-### Device Data Collection Pattern
-Device information flows from platform-specific generators:
-- `DeviceDataGeneratorBase` - Shared logic (drives, MAC addresses, local IPs)
-- `DeviceDataGeneratorWin` - Windows-specific (uses Win32Interop for memory/sessions)
-- `DeviceDataGeneratorMac` - macOS-specific (shell commands: `sysctl`, `ps`)
-- `DeviceDataGeneratorLinux` - Linux-specific (reads `/proc/meminfo`, uses `ps`)
-
-All inherit from base and implement `CreateDevice()` → returns `DeviceModel` → converted to `DeviceDto` for transport
+- **Agent service layout** — The shared library `ControlR.Agent.Common` organizes platform-specific implementations under platform-named `Services` sub-namespaces/folders (for example `.Services.Windows`, `.Services.Linux`, `.Services.Mac`). Interfaces live in the common namespace and the platform implementations are selected via conditional compilation, platform attributes, or at host registration time.
+- **DesktopClient per-platform projects** — The Desktop client isolates native UI/OS integrations into separate projects (`ControlR.DesktopClient.Windows`, `.Linux`, `.Mac`) while keeping shared UI and view-model code in `ControlR.DesktopClient.Common`. `ControlR.DesktopClient.csproj` conditionally references or multi-targets the appropriate platform project so only the target-OS code is built and linked. This keeps native UI and OS integrations isolated in their own projects while allowing shared UI and view-model code to remain common.
 
 ## Key Features
 - **Remote Desktop Control** - Full desktop access and control

@@ -54,6 +54,9 @@ public static class Localization
   public static string ShareScreenSecurityWarning => GetString();
   public static string Status => GetString();
   public static string SubmitText => GetString();
+  public static string ThemeAuto => GetString();
+  public static string ThemeDark => GetString();
+  public static string ThemeLight => GetString();
   public static string Version => GetString();
   public static string YesText => GetString();
   public static string You => GetString();

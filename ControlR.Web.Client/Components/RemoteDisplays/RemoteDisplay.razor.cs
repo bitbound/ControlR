@@ -17,7 +17,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
 
-
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
   private double _canvasCssWidth;

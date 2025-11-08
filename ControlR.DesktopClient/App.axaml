@@ -4,14 +4,13 @@
              xmlns:local="using:ControlR.DesktopClient"
 						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
 						 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
-             RequestedThemeVariant="Dark"
 						 x:DataType="vm:AppViewModel"
              Name="ControlR">
 
 	<Application.DataTemplates>
 		<local:ViewLocator/>
 	</Application.DataTemplates>
-	
+
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
@@ -26,11 +25,14 @@
 		<FluentTheme>
 			<FluentTheme.Palettes>
 				<ColorPaletteResources x:Key="Dark"
-															 Accent="#46AA46"
-															 RegionColor="#0F0F0F"/>
+															 Accent="#2196F3"
+															 RegionColor="#121212"/>
+				<ColorPaletteResources x:Key="Light"
+															 Accent="#2196F3"
+															 RegionColor="#FAFAFA"/>
 			</FluentTheme.Palettes>
 		</FluentTheme>
-		
+
 		<StyleInclude Source="/Resources/Styles.axaml" />
 	</Application.Styles>
 

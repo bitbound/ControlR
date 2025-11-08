@@ -59,6 +59,10 @@ public partial class App : Application
 
       ReportAssemblyVersion();
 
+      // Initialize theme from ThemeService
+      var themeService = StaticServiceProvider.Instance.GetRequiredService<Services.IThemeProvider>();
+      RequestedThemeVariant = themeService.CurrentTheme;
+
       // Start the hosted services on a different thread.
       // This prevents hooks in the current UI thread from blocking
       // SetThreadDesktop when a remote control session starts.

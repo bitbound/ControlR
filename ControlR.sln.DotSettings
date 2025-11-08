@@ -133,6 +133,48 @@
             &lt;/Entry.SortBy&gt;
         &lt;/Entry&gt;
 
+        &lt;Entry DisplayName="Public Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Public" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
+        &lt;Entry DisplayName="Protected Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Protected" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
+        &lt;Entry DisplayName="Private Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Private" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
         &lt;Entry DisplayName="Teardown Methods"&gt;
             &lt;Entry.Match&gt;
                 &lt;And&gt;
@@ -284,6 +326,48 @@
 
             &lt;Entry.SortBy&gt;
                 &lt;Static /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
+        &lt;Entry DisplayName="Public Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Public" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
+        &lt;Entry DisplayName="Protected Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Protected" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
+            &lt;/Entry.SortBy&gt;
+        &lt;/Entry&gt;
+
+        &lt;Entry DisplayName="Private Events"&gt;
+            &lt;Entry.Match&gt;
+                &lt;And&gt;
+                    &lt;Access Is="Private" /&gt;
+                    &lt;Kind Is="Event" /&gt;
+                &lt;/And&gt;
+            &lt;/Entry.Match&gt;
+
+            &lt;Entry.SortBy&gt;
+                &lt;Static /&gt;
+                &lt;Name /&gt;
             &lt;/Entry.SortBy&gt;
         &lt;/Entry&gt;
 

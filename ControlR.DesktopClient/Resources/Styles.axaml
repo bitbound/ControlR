@@ -21,23 +21,31 @@
 	</Style>
 
 	<Style Selector="TextBlock.Primary">
-		<Setter Property="Foreground" Value="{StaticResource PrimaryColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource PrimaryColor}" />
 	</Style>
 
 	<Style Selector="TextBlock.Info">
-		<Setter Property="Foreground" Value="{StaticResource InfoColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
 	</Style>
 
 	<Style Selector="TextBlock.Error">
-		<Setter Property="Foreground" Value="{StaticResource ErrorColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
 	</Style>
 
 	<Style Selector="Button.Info">
-		<Setter Property="Background" Value="{StaticResource InfoColor}" />
+		<Setter Property="Background" Value="{DynamicResource InfoColor}" />
 	</Style>
 
 	<Style Selector="Button.Primary">
-		<Setter Property="Background" Value="{StaticResource PrimaryColor}" />
+		<Setter Property="Background" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+
+	<Style Selector="Border.Card">
+		<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+		<Setter Property="BorderThickness" Value="1" />
+		<Setter Property="CornerRadius" Value="8" />
+		<Setter Property="Padding" Value="16" />
 	</Style>
 
 </Styles>
