@@ -1,14 +1,14 @@
-﻿using ControlR.Libraries.Shared.Collections;
+﻿using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
+using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Services;
-using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 
 namespace ControlR.Libraries.Clients.Services;
 
 public interface IStreamingClient
 {
-  TimeSpan CurrentLatency { get; }
+  bool IsConnected { get; }
   WebSocketState State { get; }
   Task Close();
   Task Connect(Uri websocketUri, CancellationToken cancellationToken);
@@ -26,27 +26,32 @@ public abstract class StreamingClient(
   IWaiter waiter,
   ILogger<StreamingClient> logger) : IStreamingClient
 {
+  private const int MaxSendBufferLength = ushort.MaxValue * 2;
+
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
-
-  private readonly IWaiter _waiter = waiter;
+  
   private readonly ILogger<StreamingClient> _logger = logger;
-  private readonly int _maxSendBufferLength = ushort.MaxValue * 2;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
   private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
-
+  private readonly IWaiter _waiter = waiter;
+  
   private ClientWebSocket? _client;
   private volatile int _sendBufferLength;
 
+
   public TimeSpan CurrentLatency { get; private set; }
 
+  public bool IsConnected => State == WebSocketState.Open;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+
 
   protected ClientWebSocket Client => _client ?? throw new InvalidOperationException("Client not initialized.");
 
   protected bool IsDisposed { get; private set; }
+
 
   public async Task Close()
   {
@@ -80,13 +85,11 @@ public abstract class StreamingClient(
     _logger.LogInformation("Connection successful.");
     ReadFromStream(cancellationToken).Forget();
   }
+
   public IDisposable OnClosed(Func<Task> callback)
   {
     _onCloseHandlers.Add(callback);
-    return new CallbackDisposable(() =>
-    {
-      _onCloseHandlers.Remove(callback);
-    });
+    return new CallbackDisposable(() => { _onCloseHandlers.Remove(callback); });
   }
 
   public IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler)
@@ -123,10 +126,10 @@ public abstract class StreamingClient(
       var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: linkedCts.Token);
 
       await Client.SendAsync(
-          dtoBytes,
-          WebSocketMessageType.Binary,
-          true,
-          linkedCts.Token);
+        dtoBytes,
+        WebSocketMessageType.Binary,
+        true,
+        linkedCts.Token);
 
       _ = Interlocked.Add(ref _sendBufferLength, dtoBytes.Length);
     }
@@ -150,6 +153,7 @@ public abstract class StreamingClient(
       }
     }
   }
+
 
   private async Task<bool> FillStream(MemoryStream dtoStream, byte[] dtoBuffer, CancellationToken cancellationToken)
   {
@@ -218,6 +222,7 @@ public abstract class StreamingClient(
       }
     }
   }
+
   private async Task ReadFromStream(CancellationToken cancellationToken)
   {
     var dtoBuffer = new byte[ushort.MaxValue];
@@ -248,18 +253,18 @@ public abstract class StreamingClient(
         switch (receivedWrapper.DtoType)
         {
           case DtoType.Ack:
-            {
-              var ackDto = receivedWrapper.GetPayload<AckDto>();
-              _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
-              CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
-              break;
-            }
+          {
+            var ackDto = receivedWrapper.GetPayload<AckDto>();
+            _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
+            CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
+            break;
+          }
           default:
-            {
-              await SendAck(totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
-              await InvokeMessageHandlers(receivedWrapper, cancellationToken);
-              break;
-            }
+          {
+            await SendAck(totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
+            await InvokeMessageHandlers(receivedWrapper, cancellationToken);
+            break;
+          }
         }
       }
       catch (OperationCanceledException)
@@ -276,6 +281,7 @@ public abstract class StreamingClient(
 
     await Close();
   }
+
   private async Task SendAck(int receivedBytes, long sendTimestamp, CancellationToken cancellationToken)
   {
     var ackDto = new AckDto(receivedBytes, sendTimestamp);
@@ -287,9 +293,10 @@ public abstract class StreamingClient(
       true,
       cancellationToken);
   }
+
   private async Task WaitForSendBuffer(CancellationToken cancellationToken)
   {
-    if (_sendBufferLength < _maxSendBufferLength)
+    if (_sendBufferLength < MaxSendBufferLength)
     {
       return;
     }
@@ -298,9 +305,9 @@ public abstract class StreamingClient(
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
     var waitResult = await _waiter.WaitFor(
-        () => _sendBufferLength < _maxSendBufferLength,
-        pollingDelay: TimeSpan.FromMilliseconds(25),
-        cancellationToken: linkedCts.Token);
+      () => _sendBufferLength < MaxSendBufferLength,
+      TimeSpan.FromMilliseconds(25),
+      cancellationToken: linkedCts.Token);
 
     if (!waitResult)
     {

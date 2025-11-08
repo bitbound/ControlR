@@ -33,6 +33,8 @@ class State {
   touchList;
   /** @type {WindowEventHandler[]} */
   windowEventHandlers;
+  /** @type {MutationObserver|null} */
+  mutationObserver;
 
   constructor() {
     this.windowEventHandlers = [];
@@ -41,6 +43,7 @@ class State {
     this.mouseMoveTimeout = -1;
     this.touchClickTimeout = -1;
     this.lastMouseMove = Date.now();
+    this.mutationObserver = null;
   }
 
   /**
@@ -70,6 +73,7 @@ class WindowEventHandler {
     this.handler = handler;
   }
 }
+
 
 /**
  * Draws the encoded image onto the canvas at the specified region.
@@ -105,6 +109,30 @@ export async function initialize(componentRef, canvasId) {
   state.canvasId = canvasId;
   state.canvasElement = canvas;
   state.canvas2dContext = canvas.getContext("2d");
+
+  // Create a MutationObserver that watches for the canvas being removed from the DOM.
+  // We observe document.body with subtree:true to catch removals anywhere in the tree.
+  // When the canvas is no longer contained in the document we call dispose to clean up.
+  try {
+    const observer = new MutationObserver(() => {
+      try {
+        if (!document.body.contains(canvas)) {
+          // disconnect first to avoid re-entrancy
+          try { observer.disconnect(); } catch (e) {}
+          // call dispose to run cleanup logic
+          try { dispose(canvasId); } catch (e) { console.error('Error disposing canvas after removal', e); }
+        }
+      } catch (e) {
+        console.error('MutationObserver callback error', e);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    state.mutationObserver = observer;
+  } catch (e) {
+    // In very constrained environments MutationObserver may not be available; ignore safely.
+    console.warn('MutationObserver not available or failed to initialize', e);
+    state.mutationObserver = null;
+  }
 
   canvas.addEventListener("pointerup", async ev => {
     if (state.currentPointerType !== "touch") {
@@ -342,6 +370,8 @@ export async function initialize(componentRef, canvasId) {
   }
   window.addEventListener("blur", onBlur);
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
+
+  console.log("Initialized with state: ", state);
 }
 
 /**
@@ -369,6 +399,30 @@ export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, 
   const scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
 
   contentDiv.scrollBy(scrollByX, scrollByY);
+}
+
+/**
+ *
+ * @param {string} canvasId
+ */
+export async function dispose(canvasId) {
+  const state = getState(canvasId);
+
+  // Disconnect mutation observer if present
+  try {
+    if (state.mutationObserver) {
+      try { state.mutationObserver.disconnect(); } catch (e) {}
+      state.mutationObserver = null;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  state.windowEventHandlers.forEach(x => {
+    console.log("Removing event handler: ", x);
+    window.removeEventListener(x.type, x.handler);
+  })
+  delete window[`controlr-canvas-${canvasId}`];
 }
 
 /**

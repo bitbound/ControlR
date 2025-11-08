@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices.JavaScript;
+﻿using System.Net.WebSockets;
+using System.Runtime.InteropServices.JavaScript;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Web.Client.Services.DeviceAccess;
 using Microsoft.AspNetCore.Components;
@@ -13,9 +14,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   private const double MinCanvasScale = 0.25;
 
 
+
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
+
 
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
@@ -31,7 +34,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private ElementReference _screenArea;
   private bool _streamStarted;
   private ElementReference _virtualKeyboard;
-
+  
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -49,9 +52,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   [Inject]
   public required ILogger<RemoteDisplay> Logger { get; init; }
 
-  [Inject]
-  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
-
   [Parameter]
   [EditorRequired]
   public EventCallback OnDisconnectRequested { get; set; }
@@ -64,6 +64,10 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
+
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+
 
 
   private string CanvasClasses
@@ -108,6 +112,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
 
+
   [JSImport("drawFrame", "RemoteDisplay")]
   public static partial Task DrawFrame(
     string canvasId,
@@ -118,13 +123,17 @@ public partial class RemoteDisplay : JsInteropableComponent
     byte[] encodedImage);
 
 
+
   public override async ValueTask DisposeAsync()
   {
-    await base.DisposeAsync();
     await _componentClosing.CancelAsync();
-    _messageHandlerRegistration?.Dispose();
-    _componentRef?.Dispose();
-    _remoteControlStateChangedToken?.Dispose();
+    
+    Disposer.DisposeAll(
+      _messageHandlerRegistration,
+      _componentRef,
+      _remoteControlStateChangedToken);
+    
+    await base.DisposeAsync();
     GC.SuppressFinalize(this);
   }
 
@@ -145,6 +154,10 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyEvent(string key, string code, bool isPressed)
   {
+    if (StreamingClient.State != WebSocketState.Open)
+    {
+      return;
+    }
     await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
   }
 
@@ -198,6 +211,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
 
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
@@ -236,15 +250,18 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       _canvasCssWidth = selectedDisplay.Width;
       _canvasCssHeight = selectedDisplay.Height;
-
-      _streamStarted = true;
-
-      await StreamingClient.RequestKeyFrame(_componentClosing.Token);
     }
 
     if (RemoteControlState.IsVirtualKeyboardToggled)
     {
       await _virtualKeyboard.FocusAsync();
+    }
+
+    if (StreamingClient.IsConnected)
+    {
+      _streamStarted = true;
+      await StreamingClient.RequestKeyFrame(_componentClosing.Token);
+
     }
 
     _remoteControlStateChangedToken = RemoteControlState.OnStateChanged(async () =>
@@ -254,12 +271,14 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
 
+
   private static double GetDistance(double x1, double y1, double x2, double y2)
   {
     var dx = x1 - x2;
     var dy = y1 - y2;
     return Math.Sqrt(dx * dx + dy * dy);
   }
+
 
 
   private async Task ChangeDisplays(DisplayDto display)
@@ -655,6 +674,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   private async Task OnVkKeyDown(KeyboardEventArgs args)
   {
     await JsModuleReady.Wait(_componentClosing.Token);
+    
+    if (StreamingClient.State != WebSocketState.Open)
+    {
+      return;
+    }
 
     // Handle special keys that reliably fire key events on mobile keyboards
     // These keys should use key event simulation rather than text input
