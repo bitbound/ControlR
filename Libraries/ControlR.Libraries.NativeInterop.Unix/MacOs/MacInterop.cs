@@ -8,7 +8,7 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 
 public interface IMacInterop
 {
-  Result InvokeKeyEvent(string key, string code, bool isPressed);
+  Result InvokeKeyEvent(string key, string? code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   bool IsAccessibilityPermissionGranted();
@@ -53,7 +53,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   // Track modifier key states
   private bool _shiftDown;
 
-  public Result InvokeKeyEvent(string key, string code, bool isPressed)
+  public Result InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -483,12 +483,12 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  private static bool ConvertBrowserKeyArgToVirtualKey(string key, string code, out ushort virtualKey)
+  private static bool ConvertBrowserKeyArgToVirtualKey(string key, string? code, out ushort virtualKey)
   {
-    // Code-first approach: Try to map browser KeyboardEvent.code to macOS virtual key
-    // This provides layout-independent physical key simulation, which is the standard for
-    // remote desktop protocols (RDP, VNC, etc.)
-    if (!string.IsNullOrEmpty(code))
+    // Code-first approach (physical mode): Try to map browser KeyboardEvent.code to macOS virtual key
+    // This provides layout-independent physical key simulation
+    // When code is null, we skip this and use logical mode (key-based) instead
+    if (!string.IsNullOrWhiteSpace(code))
     {
       virtualKey = code switch
       {

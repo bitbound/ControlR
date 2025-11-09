@@ -50,7 +50,7 @@ public interface IWin32Interop
   bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
-  void InvokeKeyEvent(string key, string code, bool isPressed);
+  void InvokeKeyEvent(string key, string? code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   void MovePointer(int x, int y, MovePointerType moveType);
@@ -152,15 +152,14 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         winLogonToken.Close();
         return false;
       }
-
+      
       // Target the interactive windows station and desktop.
       var startupInfo = new STARTUPINFOW
       {
         cb = (uint)sizeof(STARTUPINFOW)
       };
 
-      var desktopName = ResolveDesktopName(sessionId);
-      var desktopPtr = Marshal.StringToHGlobalAuto($"winsta0\\{desktopName}\0");
+      var desktopPtr = Marshal.StringToHGlobalAuto("winsta0\\Default\0");
       startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
       // Flags that specify the priority and creation method of the process.
@@ -567,7 +566,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     PInvoke.SendSAS(!isService);
   }
 
-  public void InvokeKeyEvent(string key, string code, bool isPressed)
+  public void InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var convertResult))
     {
@@ -575,7 +574,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       return;
     }
 
-    var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed);
+    var kbdInput = CreateKeyboardInput(convertResult.Value, isPressed, code);
 
     var result = PInvoke.SendInput([kbdInput], sizeof(INPUT));
 
@@ -1067,12 +1066,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed)
+  private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed, string? code = null)
   {
     var extraInfo = PInvoke.GetMessageExtraInfo();
     KEYBD_EVENT_FLAGS kbdFlags = 0;
 
-    if (IsExtendedKey(key))
+    if (IsExtendedKey(key, code))
     {
       kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
     }
@@ -1085,7 +1084,47 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     var kbdInput = new KEYBDINPUT
     {
       wVk = key,
-      wScan = (ushort)PInvoke.MapVirtualKeyEx((uint)key, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC_EX, GetKeyboardLayout()),
+      wScan = 0, // Not used for VK-based injection (would need KEYEVENTF_SCANCODE flag)
+      dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
+      dwFlags = kbdFlags,
+      time = 0
+    };
+
+    var input = new INPUT
+    {
+      type = INPUT_TYPE.INPUT_KEYBOARD,
+      Anonymous = { ki = kbdInput }
+    };
+    return input;
+  }
+
+  /// <summary>
+  /// Creates a scancode-based keyboard input for physical key simulation.
+  /// TODO: This will be used when physical input mode is enabled on the viewer side.
+  /// </summary>
+  /// <param name="scancode">The hardware scancode for the physical key</param>
+  /// <param name="isPressed">True for key down, false for key up</param>
+  /// <param name="isExtended">True if this is an extended scancode (E0 prefix)</param>
+  /// <returns>INPUT structure for scancode-based injection</returns>
+  private static INPUT CreateScancodeInput(ushort scancode, bool isPressed, bool isExtended = false)
+  {
+    var extraInfo = PInvoke.GetMessageExtraInfo();
+    KEYBD_EVENT_FLAGS kbdFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_SCANCODE;
+
+    if (isExtended)
+    {
+      kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+    }
+
+    if (!isPressed)
+    {
+      kbdFlags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+    }
+
+    var kbdInput = new KEYBDINPUT
+    {
+      wVk = 0, // Not used for scancode injection
+      wScan = scancode,
       dwExtraInfo = new nuint(extraInfo.Value.ToPointer()),
       dwFlags = kbdFlags,
       time = 0
@@ -1184,30 +1223,42 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   [LibraryImport("kernel32.dll", SetLastError = true)]
   private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
 
-  private static bool IsExtendedKey(VIRTUAL_KEY vk)
+  private static bool IsExtendedKey(VIRTUAL_KEY vk, string? code = null)
   {
+    // Special handling for VK_RETURN: only NumpadEnter should be extended
+    if (vk == VIRTUAL_KEY.VK_RETURN)
+    {
+      // If we have code, check if it's NumpadEnter
+      if (!string.IsNullOrEmpty(code))
+      {
+        return code == "NumpadEnter";
+      }
+      // Mobile fallback: assume regular Enter (non-extended) when code is missing
+      return false;
+    }
+
     return vk switch
     {
-      VIRTUAL_KEY.VK_SHIFT or
-        VIRTUAL_KEY.VK_CONTROL or
-        VIRTUAL_KEY.VK_MENU or
-        VIRTUAL_KEY.VK_RCONTROL or
+      // Right-side modifiers are extended (left-side are not)
+      VIRTUAL_KEY.VK_RCONTROL or
         VIRTUAL_KEY.VK_RMENU or
+        // Navigation cluster keys (not numpad)
         VIRTUAL_KEY.VK_INSERT or
         VIRTUAL_KEY.VK_DELETE or
         VIRTUAL_KEY.VK_HOME or
         VIRTUAL_KEY.VK_END or
         VIRTUAL_KEY.VK_PRIOR or
         VIRTUAL_KEY.VK_NEXT or
+        // Arrow keys
         VIRTUAL_KEY.VK_LEFT or
         VIRTUAL_KEY.VK_UP or
         VIRTUAL_KEY.VK_RIGHT or
         VIRTUAL_KEY.VK_DOWN or
+        // Other extended keys
         VIRTUAL_KEY.VK_NUMLOCK or
         VIRTUAL_KEY.VK_CANCEL or
         VIRTUAL_KEY.VK_DIVIDE or
-        VIRTUAL_KEY.VK_SNAPSHOT or
-        VIRTUAL_KEY.VK_RETURN => true,
+        VIRTUAL_KEY.VK_SNAPSHOT => true,
       _ => false
     };
   }
@@ -1230,12 +1281,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return "Default";
   }
 
-  private bool ConvertBrowserKeyArgToVirtualKey(string key, string code, [NotNullWhen(true)] out VIRTUAL_KEY? result)
+  private bool ConvertBrowserKeyArgToVirtualKey(string key, string? code, [NotNullWhen(true)] out VIRTUAL_KEY? result)
   {
-    // Code-first approach: Try to map browser KeyboardEvent.code to Windows Virtual Key
-    // This provides layout-independent physical key simulation, which is the standard for
-    // remote desktop protocols (RDP, VNC, etc.)
-    if (!string.IsNullOrEmpty(code))
+    // Code-first approach (physical mode): Try to map browser KeyboardEvent.code to Windows Virtual Key
+    // This provides layout-independent physical key simulation
+    // When code is null, we skip this and use logical mode (key-based) instead
+    if (!string.IsNullOrWhiteSpace(code))
     {
       result = code switch
       {

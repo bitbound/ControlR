@@ -13,7 +13,7 @@ public class InputSimulatorMac(
   private readonly ILogger<InputSimulatorMac> _logger = logger;
   private readonly IMacInterop _macInterop = macInterop;
   
-  public void InvokeKeyEvent(string key, string code, bool isPressed)
+  public void InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -21,6 +21,22 @@ public class InputSimulatorMac(
       return;
     }
 
+    // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
+    // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
+    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+
+    if (isPrintableCharacter)
+    {
+      // For printable characters, use Unicode injection on key down only
+      // Key up events are ignored since TypeText handles both down and up internally
+      if (isPressed)
+      {
+        TypeText(key);
+      }
+      return;
+    }
+
+    // For commands, shortcuts, and non-printable keys, use virtual key simulation
     try
     {
       var result = _macInterop.InvokeKeyEvent(key, code, isPressed);

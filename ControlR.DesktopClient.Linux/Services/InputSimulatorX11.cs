@@ -15,8 +15,24 @@ public class InputSimulatorX11 : IInputSimulator
     _logger = logger;
   }
 
-  public void InvokeKeyEvent(string key, string code, bool isPressed)
+  public void InvokeKeyEvent(string key, string? code, bool isPressed)
   {
+    // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
+    // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
+    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+
+    if (isPrintableCharacter)
+    {
+      // For printable characters, use Unicode injection on key down only
+      // Key up events are ignored since TypeText handles both down and up internally
+      if (isPressed)
+      {
+        TypeText(key);
+      }
+      return;
+    }
+
+    // For commands, shortcuts, and non-printable keys, use virtual key simulation
     var display = LibX11.XOpenDisplay("");
     if (display == nint.Zero)
     {
@@ -237,12 +253,12 @@ public class InputSimulatorX11 : IInputSimulator
     }
   }
 
-  private static string ConvertBrowserKeyArgToX11Key(string key, string code)
+  private static string ConvertBrowserKeyArgToX11Key(string key, string? code)
   {
-    // Code-first approach: Try to map browser KeyboardEvent.code to X11 keysym
-    // This provides layout-independent physical key simulation, which is the standard for
-    // remote desktop protocols (RDP, VNC, etc.)
-    if (!string.IsNullOrEmpty(code))
+    // Code-first approach (physical mode): Try to map browser KeyboardEvent.code to X11 keysym
+    // This provides layout-independent physical key simulation
+    // When code is null, we skip this and use logical mode (key-based) instead
+    if (!string.IsNullOrWhiteSpace(code))
     {
       var keySym = code switch
       {

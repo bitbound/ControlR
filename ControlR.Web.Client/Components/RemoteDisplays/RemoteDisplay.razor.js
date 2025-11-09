@@ -344,7 +344,14 @@ export async function initialize(componentRef, canvasId) {
       ev.preventDefault();
     }
 
-    await state.invokeDotNet("SendKeyEvent", ev.key, ev.code, true);
+    // Hybrid approach: intelligently choose between physical key mode and character mode
+    // - For shortcuts (modifier keys held) or non-printable keys -> send code for physical key simulation
+    // - For normal typing (printable characters) -> send null to use Unicode injection
+    const hasModifiers = ev.ctrlKey || ev.altKey || ev.metaKey;
+    const isNonPrintable = ev.key.length > 1;
+    const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
+
+    await state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, true);
   };
   window.addEventListener("keydown", onKeyDown);
   state.windowEventHandlers.push(new WindowEventHandler("keydown", onKeyDown));
@@ -360,7 +367,13 @@ export async function initialize(componentRef, canvasId) {
     }
 
     ev.preventDefault();
-    state.invokeDotNet("SendKeyEvent", ev.key, ev.code, false);
+
+    // Use same hybrid logic as keydown for consistency
+    const hasModifiers = ev.ctrlKey || ev.altKey || ev.metaKey;
+    const isNonPrintable = ev.key.length > 1;
+    const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
+
+    state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, false);
   }
   window.addEventListener("keyup", onKeyUp);
   state.windowEventHandlers.push(new WindowEventHandler("keyup", onKeyUp));

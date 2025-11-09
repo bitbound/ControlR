@@ -18,7 +18,7 @@ internal class InputSimulatorWindows(
   private readonly IWin32Interop _win32Interop = win32Interop;
   private Thread? _processorThread;
 
-  public void InvokeKeyEvent(string key, string code, bool isPressed)
+  public void InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -26,7 +26,24 @@ internal class InputSimulatorWindows(
       return;
     }
 
-    _actionQueue.Add(() => _win32Interop.InvokeKeyEvent(key, code, isPressed));
+    // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
+    // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
+    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+
+    if (isPrintableCharacter)
+    {
+      // For printable characters, use Unicode injection on key down only
+      // Key up events are ignored since TypeText handles both down and up internally
+      if (isPressed)
+      {
+        _actionQueue.Add(() => _win32Interop.TypeText(key));
+      }
+    }
+    else
+    {
+      // For commands, shortcuts, and non-printable keys, use virtual key simulation
+      _actionQueue.Add(() => _win32Interop.InvokeKeyEvent(key, code, isPressed));
+    }
   }
 
   public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)

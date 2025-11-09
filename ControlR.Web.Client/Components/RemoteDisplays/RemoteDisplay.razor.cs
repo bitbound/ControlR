@@ -18,8 +18,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
-
-
+  
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
   private double _canvasCssWidth;
@@ -152,19 +151,20 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
-  public async Task SendKeyEvent(string key, string code, bool isPressed)
+  public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
     if (StreamingClient.State != WebSocketState.Open)
     {
       return;
     }
+
     await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
   }
 
   [JSInvokable]
   public async Task SendKeyboardStateReset()
   {
-    if (StreamingClient.State != System.Net.WebSockets.WebSocketState.Open)
+    if (StreamingClient.State != WebSocketState.Open)
     {
       return;
     }
@@ -269,9 +269,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
     });
   }
-
-
-
+  
   private static double GetDistance(double x1, double y1, double x2, double y2)
   {
     var dx = x1 - x2;
