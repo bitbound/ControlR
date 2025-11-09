@@ -867,16 +867,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       return false;
     }
 
-    using var primaryTokenCallback = new CallbackDisposable(primaryToken.Close);
-    uint tokenSize = sizeof(uint);
-    var tokenValue = stackalloc uint[] { 1 };
-
-    if (!PInvoke.SetTokenInformation(primaryToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, tokenValue, tokenSize))
-    {
-      _logger.LogWarning("Failed to set token UI access on duplicated token.");
-      return false;
-    }
-
     using var openWinstaResult = PInvoke.OpenWindowStation(
       "WinSta0",
       false,
