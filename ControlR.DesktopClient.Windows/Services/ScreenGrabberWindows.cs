@@ -234,7 +234,7 @@ internal sealed class ScreenGrabberWindows(
 
     try
     {
-      outputDuplication.GetFrameDirtyRects(0, out _, out bufferSizeNeeded);
+      outputDuplication.GetFrameDirtyRects(out _, out bufferSizeNeeded);
     }
     catch
     {
