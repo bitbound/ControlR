@@ -138,6 +138,8 @@ public static unsafe class LibX11
     [DllImport(LibraryName)]
     public static extern int XPending(nint display);
     [DllImport(LibraryName)]
+    public static extern int XQueryKeymap(nint display, byte* keys);
+    [DllImport(LibraryName)]
     public static extern nint XRootWindow(nint display, int screen_number);
 
     [DllImport(LibraryName)]

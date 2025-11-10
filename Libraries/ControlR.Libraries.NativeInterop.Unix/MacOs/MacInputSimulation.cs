@@ -22,6 +22,9 @@ public static class MacInputSimulation
   public const uint kCGEventKeyDown = 10;
   public const uint kCGEventKeyUp = 11;
 
+  // Event source state constants
+  public const int kCGEventSourceStateHIDSystemState = 1;
+
   // Event types
   public const uint kCGEventLeftMouseDown = 1;
   public const uint kCGEventLeftMouseDragged = 6;
@@ -211,6 +214,9 @@ public static class MacInputSimulation
   // CGEvent creation
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSourceCreate")]
   public static extern nint CGEventSourceCreate(uint stateID);
+
+  [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSourceKeyState")]
+  public static extern bool CGEventSourceKeyState(int stateID, ushort virtualKey);
 
   // Mouse position
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGWarpMouseCursorPosition")]

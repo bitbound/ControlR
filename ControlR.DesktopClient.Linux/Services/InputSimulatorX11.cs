@@ -131,11 +131,60 @@ public class InputSimulatorX11 : IInputSimulator
     }
   }
 
-  public void ResetKeyboardState()
+  public unsafe void ResetKeyboardState()
   {
-    // For X11, we don't need to explicitly reset keyboard state
-    // The X server manages key state automatically
-    _logger.LogDebug("ResetKeyboardState called - no action needed for X11");
+    var display = LibX11.XOpenDisplay("");
+    if (display == nint.Zero)
+    {
+      _logger.LogWarning("Failed to open X display for keyboard state reset");
+      return;
+    }
+
+    try
+    {
+      // Query current keyboard state (32 bytes = 256 bits for 256 keycodes)
+      var keymap = stackalloc byte[32];
+      var result = LibX11.XQueryKeymap(display, keymap);
+
+      if (result == 0)
+      {
+        _logger.LogWarning("XQueryKeymap failed during keyboard state reset");
+        return;
+      }
+
+      var keysReleased = 0;
+
+      // Release all pressed keys
+      // Keycodes start at 8 on most X11 servers (0-7 are reserved)
+      for (int keycode = 8; keycode < 256; keycode++)
+      {
+        int byteIndex = keycode / 8;
+        int bitIndex = keycode % 8;
+
+        // Check if this key is currently pressed
+        if ((keymap[byteIndex] & (1 << bitIndex)) != 0)
+        {
+          // Send key release event
+          LibXtst.XTestFakeKeyEvent(display, (byte)keycode, false, 0);
+          keysReleased++;
+        }
+      }
+
+      LibX11.XSync(display, false);
+
+      if (keysReleased > 0)
+      {
+        _logger.LogDebug("Released {Count} stuck keys during keyboard state reset", keysReleased);
+      }
+      else
+      {
+        _logger.LogDebug("No stuck keys found during keyboard state reset");
+      }
+    }
+    finally
+    {
+      LibX11.XCloseDisplay(display);
+    }
   }
 
   public void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX)

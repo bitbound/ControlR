@@ -370,9 +370,38 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   {
     try
     {
-      // On macOS, we don't need to explicitly reset keyboard state like on Windows
-      // The system handles this automatically when events are posted
-      _logger.LogDebug("Keyboard state reset (no-op on macOS)");
+      var keysReleased = 0;
+
+      // Query and release all pressed keys
+      // macOS virtual key codes range from 0 to 127
+      for (ushort keycode = 0; keycode < 128; keycode++)
+      {
+        // Query if this virtual key is currently pressed
+        if (MacInputSimulation.CGEventSourceKeyState(
+          MacInputSimulation.kCGEventSourceStateHIDSystemState, keycode))
+        {
+          // Create and post key release event
+          var keyupEvent = MacInputSimulation.CGEventCreateKeyboardEvent(
+            _eventSource, keycode, false);
+
+          if (keyupEvent != nint.Zero)
+          {
+            MacInputSimulation.CGEventPost(
+              MacInputSimulation.kCGHIDEventTap, keyupEvent);
+            MacInputSimulation.CFRelease(keyupEvent);
+            keysReleased++;
+          }
+        }
+      }
+
+      if (keysReleased > 0)
+      {
+        _logger.LogDebug("Released {Count} stuck keys during keyboard state reset", keysReleased);
+      }
+      else
+      {
+        _logger.LogDebug("No stuck keys found during keyboard state reset");
+      }
     }
     catch (Exception ex)
     {

@@ -1,5 +1,7 @@
 ﻿// noinspection JSUnusedGlobalSymbols
 
+const MAX_KEYPRESS_AGE_MS = 5000;
+
 class State {
   /** @type {CanvasRenderingContext2D} */
   canvas2dContext;
@@ -35,8 +37,10 @@ class State {
   windowEventHandlers;
   /** @type {MutationObserver|null} */
   mutationObserver;
-  /** @type {Map<string, string|null>} */
+  /** @type {Map<string, {code: string|null, timestamp: number}>} */
   pressedKeysWithCode;
+  /** @type {number} */
+  cleanupIntervalId;
 
   constructor() {
     this.windowEventHandlers = [];
@@ -47,6 +51,7 @@ class State {
     this.lastMouseMove = Date.now();
     this.mutationObserver = null;
     this.pressedKeysWithCode = new Map();
+    this.cleanupIntervalId = -1;
   }
 
   /**
@@ -354,8 +359,11 @@ export async function initialize(componentRef, canvasId) {
     const isNonPrintable = ev.key.length > 1;
     const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
 
-    // Track which code was sent for this key, so keyup can match
-    state.pressedKeysWithCode.set(ev.code, codeToSend);
+    // Track which code was sent for this key with timestamp, so keyup can match
+    state.pressedKeysWithCode.set(ev.code, {
+      code: codeToSend,
+      timestamp: Date.now()
+    });
 
     await state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, true);
   };
@@ -376,7 +384,8 @@ export async function initialize(componentRef, canvasId) {
 
     // Use the same code that was sent during keydown for this key
     // This ensures keydown/keyup are paired correctly even if modifiers change between events
-    const codeToSend = state.pressedKeysWithCode.get(ev.code);
+    const trackedKey = state.pressedKeysWithCode.get(ev.code);
+    const codeToSend = trackedKey ? trackedKey.code : null;
 
     // Remove from tracking map since the key is now released
     state.pressedKeysWithCode.delete(ev.code);
@@ -393,6 +402,24 @@ export async function initialize(componentRef, canvasId) {
   }
   window.addEventListener("blur", onBlur);
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
+
+  // Start periodic cleanup of orphaned tracking entries
+  // Keys held longer than 5 seconds are considered stuck/orphaned
+  state.cleanupIntervalId = window.setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    for (const [code, data] of state.pressedKeysWithCode.entries()) {
+      if (now - data.timestamp > MAX_KEYPRESS_AGE_MS) {
+        state.pressedKeysWithCode.delete(code);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      console.log(`Cleaned up ${cleanedCount} orphaned key tracking entries`);
+    }
+  }, 1000);
 
   console.log("Initialized with state: ", state);
 }
@@ -436,6 +463,16 @@ export async function dispose(canvasId) {
     if (state.mutationObserver) {
       try { state.mutationObserver.disconnect(); } catch (e) {}
       state.mutationObserver = null;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Stop cleanup interval
+  try {
+    if (state.cleanupIntervalId !== -1) {
+      window.clearInterval(state.cleanupIntervalId);
+      state.cleanupIntervalId = -1;
     }
   } catch (e) {
     // ignore

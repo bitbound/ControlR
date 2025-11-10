@@ -754,6 +754,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
     }
 
+    if (inputs.Count > 0)
+    {
+      _logger.LogDebug("Releasing {Count} stuck keys during keyboard state reset", inputs.Count);
+    }
+    else
+    {
+      _logger.LogDebug("No stuck keys found during keyboard state reset");
+    }
+
     foreach (var input in inputs)
     {
       try
