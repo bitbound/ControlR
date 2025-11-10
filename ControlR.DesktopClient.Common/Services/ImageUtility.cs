@@ -58,7 +58,7 @@ public class ImageUtility : IImageUtility
 
     if (previousFrame is null || forceFullscreen)
     {
-      return Result.Ok(currentFrame.ToRect());
+      return Result.Ok(currentFrame.ToSkRect());
     }
 
     if (currentFrame.Height != previousFrame.Height || currentFrame.Width != previousFrame.Width)

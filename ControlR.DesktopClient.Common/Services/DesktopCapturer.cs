@@ -188,37 +188,27 @@ internal class DesktopCapturer : IDesktopCapturer
       return;
     }
 
-    if (captureResult.DirtyRects is not { } dirtyRects)
+    var bitmapArea = captureResult.Bitmap.ToSkRect();
+    SKRect dirtyRect;
+
+    if (captureResult.DirtyRects is { } dirtyRects)
     {
-      dirtyRects = GetDirtyRects(
-        bitmap: captureResult.Bitmap,
-        previousFrame: previousFrame);
+      dirtyRect = dirtyRects.Aggregate(SKRect.Empty, (current, rect) => SKRect.Union(current, rect.ToSkRect()));
+      SKRect.Intersect(dirtyRect, bitmapArea);
+    }
+    else
+    {
+      dirtyRect = GetDirtyRect(captureResult.Bitmap, previousFrame);
     }
 
     // If there are no dirty rects, nothing changed.
-    if (dirtyRects.Length == 0)
+    if (dirtyRect.IsEmpty)
     {
       await Task.Delay(_noChangeDelay, cancellationToken);
       return;
     }
 
-    var bitmapArea = captureResult.Bitmap.ToRect();
-    foreach (var region in dirtyRects)
-    {
-      if (region.IsEmpty)
-      {
-        _logger.LogDebug("Skipping empty region.");
-        continue;
-      }
-
-      var intersect = SKRect.Intersect(region.ToRect(), bitmapArea);
-      if (intersect.IsEmpty)
-      {
-        continue;
-      }
-
-      await EncodeRegion(captureResult.Bitmap, intersect, quality);
-    }
+    await EncodeRegion(captureResult.Bitmap, dirtyRect, quality);
   }
 
   private async Task EncodeRegion(
@@ -248,11 +238,11 @@ internal class DesktopCapturer : IDesktopCapturer
     }
   }
 
-  private Rectangle[] GetDirtyRects(SKBitmap bitmap, SKBitmap? previousFrame)
+  private SKRect GetDirtyRect(SKBitmap bitmap, SKBitmap? previousFrame)
   {
     if (previousFrame is null)
     {
-      return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
+      return new SKRect(0, 0, bitmap.Width, bitmap.Height);
     }
 
     try
@@ -260,18 +250,18 @@ internal class DesktopCapturer : IDesktopCapturer
       var diff = _imageUtility.GetChangedArea(bitmap, previousFrame);
       if (!diff.IsSuccess)
       {
-        return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
+        return new SKRect(0, 0, bitmap.Width, bitmap.Height);
       }
 
       return diff.Value.IsEmpty
-        ? []
-        : [diff.Value.ToRectangle()];
+        ? SKRect.Empty
+        : diff.Value;
 
     }
     catch (Exception ex)
     {
       _logger.LogDebug(ex, "Failed to compute dirty rect diff for X11 virtual capture.");
-      return [new Rectangle(0, 0, bitmap.Width, bitmap.Height)];
+      return new SKRect(0, 0, bitmap.Width, bitmap.Height);
     }
   }
 
@@ -398,7 +388,7 @@ internal class DesktopCapturer : IDesktopCapturer
         {
           await EncodeRegion(
             currentCapture.Bitmap,
-            currentCapture.Bitmap.ToRect(),
+            currentCapture.Bitmap.ToSkRect(),
             DefaultImageQuality,
             isKeyFrame: true);
 

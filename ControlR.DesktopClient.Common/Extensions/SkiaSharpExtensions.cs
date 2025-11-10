@@ -12,19 +12,6 @@ public static class SkiaSharpExtensions
     canvas.DrawBitmap(bitmap, 0, 0);
     return clone;
   }
-  public static SKRect ToRect(this SKBitmap bitmap)
-  {
-    return new SKRect(0, 0, bitmap.Width, bitmap.Height);
-  }
-
-  public static SKRect ToRect(this Rectangle rectangle)
-  {
-    return new SKRect(
-      rectangle.X,
-      rectangle.Y,
-      rectangle.X + rectangle.Width,
-      rectangle.Y + rectangle.Height);
-  }
 
   public static Rectangle ToRectangle(this SKRect rect)
   {
@@ -33,5 +20,18 @@ public static class SkiaSharpExtensions
       (int)rect.Top,
       (int)(rect.Right - rect.Left),
       (int)(rect.Bottom - rect.Top));
+  }
+  public static SKRect ToSkRect(this SKBitmap bitmap)
+  {
+    return new SKRect(0, 0, bitmap.Width, bitmap.Height);
+  }
+
+  public static SKRect ToSkRect(this Rectangle rectangle)
+  {
+    return new SKRect(
+      rectangle.X,
+      rectangle.Y,
+      rectangle.X + rectangle.Width,
+      rectangle.Y + rectangle.Height);
   }
 }
