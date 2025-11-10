@@ -29,7 +29,8 @@ internal class ScreenGrabberX11(
 
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
-    bool captureCursor = true)
+    bool captureCursor = true,
+    bool forceKeyFrame = false)
   {
     try
     {

@@ -21,11 +21,13 @@ public interface IScreenGrabber
   /// </summary>
   /// <param name="targetDisplay">The display to capture.  Retrieve current displays from <see cref="GetDisplays" />. </param>
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
+  /// <param name="forceKeyFrame">Whether to force a full frame capture, even if no changes have occurred since the last capture.</param>
   /// <returns>
   ///   A result object indicating whether the capture was successful.
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
   CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
-    bool captureCursor = true);
+    bool captureCursor = true,
+    bool forceKeyFrame = false);
 }

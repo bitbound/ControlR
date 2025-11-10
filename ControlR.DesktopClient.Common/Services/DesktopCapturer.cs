@@ -355,7 +355,8 @@ internal class DesktopCapturer : IDesktopCapturer
 
         using var currentCapture = _screenGrabber.CaptureDisplay(
               targetDisplay: selectedDisplay,
-              captureCursor: false);
+              captureCursor: false,
+              forceKeyFrame: _forceKeyFrame);
 
         if (currentCapture.HadNoChanges && !_forceKeyFrame)
         {

@@ -41,7 +41,8 @@ internal sealed class ScreenGrabberWindows(
 
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
-    bool captureCursor = true)
+    bool captureCursor = true,
+    bool forceKeyFrame = false)
   {
     try
     {
@@ -49,7 +50,7 @@ internal sealed class ScreenGrabberWindows(
 
       var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
 
-      if (dxResult.HadNoChanges || dxResult.IsSuccess)
+      if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
       {
         return dxResult;
       }

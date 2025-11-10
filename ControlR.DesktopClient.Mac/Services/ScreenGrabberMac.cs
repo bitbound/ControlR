@@ -28,7 +28,8 @@ public class ScreenGrabberMac(
 
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
-    bool captureCursor = true)
+    bool captureCursor = true,
+    bool forceKeyFrame = false)
   {
     try
     {
