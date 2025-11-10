@@ -152,14 +152,14 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<ITerminalSessionFactory, TerminalSessionFactory>();
       services.AddSingleton<ITerminalStore, TerminalStore>();
       services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
-      services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
       services.AddSingleton<IIpcServerStore, IpcServerStore>();
       services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
       services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
+      services.AddSingleton<IAgentHeartbeatTimer, AgentHeartbeatTimer>();
       services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
       services.AddHostedService<IpcServerWatcher>();
       services.AddHostedService<HubConnectionInitializer>();
-      services.AddHostedService<AgentHeartbeatTimer>();
+      services.AddHostedService(x => x.GetRequiredService<IAgentHeartbeatTimer>());
       services.AddHostedService(s => s.GetRequiredService<IDesktopClientUpdater>());
       services.AddHostedService<MessageHandler>();
 

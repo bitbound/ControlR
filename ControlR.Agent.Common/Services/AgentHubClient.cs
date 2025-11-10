@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Models.Messages;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
@@ -15,7 +14,6 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services;
@@ -39,10 +37,12 @@ internal class AgentHubClient(
   IDeviceDataGenerator deviceDataGenerator,
   IAgentUpdater agentUpdater,
   IWakeOnLanService wakeOnLan,
+  IAgentHeartbeatTimer heartbeatTimer,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly IAgentHeartbeatTimer _heartbeatTimer = heartbeatTimer;
   private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
@@ -437,7 +437,7 @@ internal class AgentHubClient(
 
   public async Task RefreshDeviceInfo()
   {
-    await SendDeviceHeartbeat();
+    await _heartbeatTimer.SendDeviceHeartbeat();
   }
 
   public async Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto)
@@ -761,43 +761,7 @@ internal class AgentHubClient(
       yield return buffer.ToArray();
     }
   }
-
-  private async Task SendDeviceHeartbeat()
-  {
-    try
-    {
-      using var _ = _logger.BeginMemberScope();
-
-      if (_hubConnection.ConnectionState != HubConnectionState.Connected)
-      {
-        _logger.LogWarning("Not connected to hub when trying to send device update.");
-        return;
-      }
-
-      var device = await _deviceDataGenerator.CreateDevice(_settings.DeviceId);
-
-      var dto = device.CloneAs<DeviceModel, DeviceDto>();
-
-      var updateResult = await _hubConnection.Server.UpdateDevice(dto);
-
-      if (!updateResult.IsSuccess)
-      {
-        _logger.LogResult(updateResult);
-        return;
-      }
-
-      if (updateResult.Value.Id != device.Id)
-      {
-        _logger.LogInformation("Device ID changed.  Updating appsettings.");
-        await _settings.UpdateId(updateResult.Value.Id);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending device update.");
-    }
-  }
-
+  
   private async Task SendFileStream(
     Guid streamId,
     string fileSystemPath)

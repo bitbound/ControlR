@@ -375,25 +375,46 @@ internal sealed class HubConnection<THub, TClient>(
 
   private async Task HandleClosed(Exception? exception)
   {
-    if (Closed is not null)
+    try
     {
-      await Closed.Invoke(exception);
+      if (Closed is not null)
+      {
+        await Closed.Invoke(exception);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error in Closed event handler.");
     }
   }
 
   private async Task HandleReconnected(string? arg)
   {
-    if (Reconnected is not null)
+    try
     {
-      await Reconnected.Invoke(arg);
+      if (Reconnected is not null)
+      {
+        await Reconnected.Invoke(arg);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error in Reconnected event handler.");
     }
   }
 
   private async Task HandleReconnecting(Exception? exception)
   {
-    if (Reconnecting is not null)
+    try
     {
-      await Reconnecting.Invoke(exception);
+      if (Reconnecting is not null)
+      {
+        await Reconnecting.Invoke(exception);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error in Reconnecting event handler.");
     }
   }
 
