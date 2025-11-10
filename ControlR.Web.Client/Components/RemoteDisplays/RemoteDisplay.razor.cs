@@ -18,7 +18,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
-  
+
   private string _canvasCssCursor = "default";
   private double _canvasCssHeight;
   private double _canvasCssWidth;
@@ -31,9 +31,8 @@ public partial class RemoteDisplay : JsInteropableComponent
   private IDisposable? _messageHandlerRegistration;
   private IDisposable? _remoteControlStateChangedToken;
   private ElementReference _screenArea;
-  private bool _streamStarted;
   private ElementReference _virtualKeyboard;
-  
+
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -87,7 +86,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     get
     {
-      var display = _streamStarted
+      var display = StreamingClient.IsConnected
         ? "display: unset;"
         : "display: none;";
 
@@ -126,12 +125,12 @@ public partial class RemoteDisplay : JsInteropableComponent
   public override async ValueTask DisposeAsync()
   {
     await _componentClosing.CancelAsync();
-    
+
     Disposer.DisposeAll(
       _messageHandlerRegistration,
       _componentRef,
       _remoteControlStateChangedToken);
-    
+
     await base.DisposeAsync();
     GC.SuppressFinalize(this);
   }
@@ -226,6 +225,11 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
 
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
+
+      if (StreamingClient.IsConnected)
+      {
+        await StreamingClient.RequestKeyFrame(_componentClosing.Token);
+      }
     }
   }
 
@@ -257,19 +261,12 @@ public partial class RemoteDisplay : JsInteropableComponent
       await _virtualKeyboard.FocusAsync();
     }
 
-    if (StreamingClient.IsConnected)
-    {
-      _streamStarted = true;
-      await StreamingClient.RequestKeyFrame(_componentClosing.Token);
-
-    }
-
     _remoteControlStateChangedToken = RemoteControlState.OnStateChanged(async () =>
     {
       await InvokeAsync(StateHasChanged);
     });
   }
-  
+
   private static double GetDistance(double x1, double y1, double x2, double y2)
   {
     var dx = x1 - x2;
@@ -400,8 +397,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     _canvasCssWidth = selectedDisplay.Width;
     _canvasCssHeight = selectedDisplay.Height;
 
-    _streamStarted = true;
-
     await InvokeAsync(StateHasChanged);
   }
 
@@ -485,47 +480,47 @@ public partial class RemoteDisplay : JsInteropableComponent
       switch (message.DtoType)
       {
         case DtoType.DisplayData:
-        {
-          var dto = message.GetPayload<DisplayDataDto>();
-          await HandleDisplayDataReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<DisplayDataDto>();
+            await HandleDisplayDataReceived(dto);
+            break;
+          }
         case DtoType.ScreenRegion:
-        {
-          var dto = message.GetPayload<ScreenRegionDto>();
-          await DrawRegion(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ScreenRegionDto>();
+            await DrawRegion(dto);
+            break;
+          }
         case DtoType.ClipboardText:
-        {
-          var dto = message.GetPayload<ClipboardTextDto>();
-          await HandleClipboardTextReceived(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<ClipboardTextDto>();
+            await HandleClipboardTextReceived(dto);
+            break;
+          }
         case DtoType.CursorChanged:
-        {
-          var dto = message.GetPayload<CursorChangedDto>();
-          await HandleCursorChanged(dto);
-          break;
-        }
+          {
+            var dto = message.GetPayload<CursorChangedDto>();
+            await HandleCursorChanged(dto);
+            break;
+          }
         case DtoType.WindowsSessionEnding:
-        {
-          Snackbar.Add("Remote Windows session ending", Severity.Warning);
-          await OnDisconnectRequested.InvokeAsync();
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session ending", Severity.Warning);
+            await OnDisconnectRequested.InvokeAsync();
+            break;
+          }
         case DtoType.WindowsSessionSwitched:
-        {
-          Snackbar.Add("Remote Windows session switched", Severity.Info);
-          break;
-        }
+          {
+            Snackbar.Add("Remote Windows session switched", Severity.Info);
+            break;
+          }
         case DtoType.CaptureMetricsChanged:
-        {
-          var dto = message.GetPayload<CaptureMetricsDto>();
-          _latestCaptureMetrics = dto;
-          await InvokeAsync(StateHasChanged);
-          break;
-        }
+          {
+            var dto = message.GetPayload<CaptureMetricsDto>();
+            _latestCaptureMetrics = dto;
+            await InvokeAsync(StateHasChanged);
+            break;
+          }
         default:
           Logger.LogWarning("Received unsupported DTO type: {DtoType}", message.DtoType);
           Snackbar.Add($"Unsupported DTO type: {message.DtoType}", Severity.Warning);
@@ -672,7 +667,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private async Task OnVkKeyDown(KeyboardEventArgs args)
   {
     await JsModuleReady.Wait(_componentClosing.Token);
-    
+
     if (StreamingClient.State != WebSocketState.Open)
     {
       return;
