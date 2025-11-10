@@ -9,7 +9,6 @@ internal class HubConnectionInitializer(
   IHubConnection<IAgentHub> hubConnection,
   IHostApplicationLifetime appLifetime,
   ISettingsProvider settings,
-  IDesktopClientUpdater desktopClientUpdater,
   IAgentUpdater agentUpdater,
   IAgentHeartbeatTimer agentHeartbeatTimer,
   ILogger<HubConnectionInitializer> logger) : IHostedService
@@ -17,7 +16,6 @@ internal class HubConnectionInitializer(
   private readonly IAgentHeartbeatTimer _agentHeartbeatTimer = agentHeartbeatTimer;
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly IDesktopClientUpdater _desktopClientUpdater = desktopClientUpdater;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<HubConnectionInitializer> _logger = logger;
   private readonly ISettingsProvider _settings = settings;
@@ -78,11 +76,13 @@ internal class HubConnectionInitializer(
   {
     try
     {
-      await _agentHeartbeatTimer.SendDeviceHeartbeat();
-      await _agentUpdater.CheckForUpdate();
-      await _desktopClientUpdater.EnsureLatestVersion(
-        true,
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+        cts.Token,
         _appLifetime.ApplicationStopping);
+
+      await _agentHeartbeatTimer.SendDeviceHeartbeat();
+      await _agentUpdater.CheckForUpdate(linkedCts.Token);
     }
     catch (Exception ex)
     {
