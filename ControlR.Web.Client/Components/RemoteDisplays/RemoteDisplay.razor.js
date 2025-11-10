@@ -35,6 +35,8 @@ class State {
   windowEventHandlers;
   /** @type {MutationObserver|null} */
   mutationObserver;
+  /** @type {Map<string, string|null>} */
+  pressedKeysWithCode;
 
   constructor() {
     this.windowEventHandlers = [];
@@ -44,6 +46,7 @@ class State {
     this.touchClickTimeout = -1;
     this.lastMouseMove = Date.now();
     this.mutationObserver = null;
+    this.pressedKeysWithCode = new Map();
   }
 
   /**
@@ -351,6 +354,9 @@ export async function initialize(componentRef, canvasId) {
     const isNonPrintable = ev.key.length > 1;
     const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
 
+    // Track which code was sent for this key, so keyup can match
+    state.pressedKeysWithCode.set(ev.code, codeToSend);
+
     await state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, true);
   };
   window.addEventListener("keydown", onKeyDown);
@@ -368,10 +374,12 @@ export async function initialize(componentRef, canvasId) {
 
     ev.preventDefault();
 
-    // Use same hybrid logic as keydown for consistency
-    const hasModifiers = ev.ctrlKey || ev.altKey || ev.metaKey;
-    const isNonPrintable = ev.key.length > 1;
-    const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
+    // Use the same code that was sent during keydown for this key
+    // This ensures keydown/keyup are paired correctly even if modifiers change between events
+    const codeToSend = state.pressedKeysWithCode.get(ev.code);
+
+    // Remove from tracking map since the key is now released
+    state.pressedKeysWithCode.delete(ev.code);
 
     state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, false);
   }
@@ -379,6 +387,8 @@ export async function initialize(componentRef, canvasId) {
   state.windowEventHandlers.push(new WindowEventHandler("keyup", onKeyUp));
 
   const onBlur = async () => {
+    // Clear tracking map since we can't track keys released outside the window
+    state.pressedKeysWithCode.clear();
     await state.invokeDotNet("SendKeyboardStateReset");
   }
   window.addEventListener("blur", onBlur);
