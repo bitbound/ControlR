@@ -4,6 +4,7 @@ using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
@@ -51,6 +52,9 @@ internal class DesktopClientWatcherWin(
         var activeSessions = _win32Interop.GetActiveSessions();
         var desktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
 
+        // Dispose of duplicate clients - those connected to the same session but not the "active" one
+        await DisposeDuplicateClients(desktopClients, stoppingToken);
+
         foreach (var session in activeSessions)
         {
           if (desktopClients.Any(x => x.SystemSessionId == session.SystemSessionId))
@@ -91,6 +95,77 @@ internal class DesktopClientWatcherWin(
     }
   }
 
+  private async Task DisposeDuplicateClients(DesktopSession[] activeClients, CancellationToken cancellationToken)
+  {
+    try
+    {
+      // Get all IPC servers grouped by session ID
+      var allServers = _ipcServerStore.Servers.Values;
+      var serversBySession = allServers
+        .GroupBy(s => s.Process.SessionId)
+        .ToDictionary(g => g.Key, g => g.ToList());
+
+      // For each session with active clients, find and dispose duplicates
+      foreach (var activeClient in activeClients)
+      {
+        if (!serversBySession.TryGetValue(activeClient.SystemSessionId, out var serversInSession))
+        {
+          continue;
+        }
+
+        // Find duplicate servers (those with different PIDs than the active client)
+        var duplicates = serversInSession
+          .Where(s => s.Process.Id != activeClient.ProcessId)
+          .ToList();
+
+        if (duplicates.Count == 0)
+        {
+          continue;
+        }
+
+        _logger.LogWarning(
+          "Found {DuplicateCount} duplicate desktop client(s) in session {SessionId}. " +
+          "Active PID: {ActivePid}. Duplicate PIDs: {DuplicatePids}",
+          duplicates.Count,
+          activeClient.SystemSessionId,
+          activeClient.ProcessId,
+          string.Join(", ", duplicates.Select(d => d.Process.Id)));
+
+        // Send shutdown command to each duplicate and remove from store
+        foreach (var duplicate in duplicates)
+        {
+          try
+          {
+            _logger.LogInformation(
+              "Shutting down duplicate desktop client. Session: {SessionId}, PID: {ProcessId}",
+              activeClient.SystemSessionId,
+              duplicate.Process.Id);
+
+            var shutdownDto = new ShutdownCommandDto("Duplicate client detected");
+            await duplicate.Server.Send(shutdownDto);
+
+            // Remove from store
+            _ipcServerStore.TryRemove(duplicate.Process.Id, out _);
+
+            // Dispose the server and process
+            Disposer.DisposeAll(duplicate.Process, duplicate.Server);
+          }
+          catch (Exception ex)
+          {
+            _logger.LogWarning(
+              ex,
+              "Failed to shutdown duplicate desktop client. Session: {SessionId}, PID: {ProcessId}",
+              activeClient.SystemSessionId,
+              duplicate.Process.Id);
+          }
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while disposing duplicate clients.");
+    }
+  }
 
   // For debugging.
   private static Result<string> GetSolutionDir(string currentDir)

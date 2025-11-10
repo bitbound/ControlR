@@ -32,6 +32,7 @@ public class IpcClientManager(
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private DateTimeOffset? _firstConnectionAttempt;
 
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,6 +43,7 @@ public class IpcClientManager(
   private async Task CreateClientConnection(CancellationToken stoppingToken)
   {
     var pipeName = IpcPipeNames.GetPipeName(_desktopClientOptions.Value.InstanceId);
+    var connectionTimeout = TimeSpan.FromSeconds(60);
 
     while (!stoppingToken.IsCancellationRequested)
     {
@@ -59,11 +61,34 @@ public class IpcClientManager(
         if (!await client.Connect(stoppingToken))
         {
           _logger.LogWarning("Failed to connect to IPC server.");
+
+          // Track the first connection attempt
+          _firstConnectionAttempt ??= _timeProvider.GetUtcNow();
+
+          // Check if we've exceeded the connection timeout
+          var elapsed = _timeProvider.GetUtcNow() - _firstConnectionAttempt.Value;
+          if (elapsed > connectionTimeout)
+          {
+            _logger.LogError(
+              "Unable to connect to IPC server after {Elapsed:N0} seconds. Shutting down.",
+              elapsed.TotalSeconds);
+
+            if (!_appLifetime.TryShutdown())
+            {
+              _logger.LogWarning("Failed to initiate application shutdown.");
+            }
+            return;
+          }
+
           await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken);
           continue;
         }
 
         _logger.LogInformation("Connected to IPC server.");
+
+        // Reset the connection attempt tracker on successful connection
+        _firstConnectionAttempt = null;
+
         _ipcClientAccessor.SetConnection(client);
         client.BeginRead(stoppingToken);
         _logger.LogInformation("Read started. Waiting for connection end.");
