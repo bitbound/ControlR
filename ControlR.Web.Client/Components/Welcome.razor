@@ -26,7 +26,7 @@
         Login
       </MudButton>
 
-      @if (!_isPublicRegistrationEnabled)
+      @if (_isPublicRegistrationEnabled)
       {
         <MudButton Color="Color.Secondary" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined"
           Class="action-button">
