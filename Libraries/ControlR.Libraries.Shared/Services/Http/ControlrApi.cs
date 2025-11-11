@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
 
@@ -48,6 +49,7 @@ public interface IControlrApi
   Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings();
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId);
   Task<Result<ServerAlertResponseDto?>> GetServerAlert();
+  Task<Result<ServerStatsDto>> GetServerStats();
   Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
@@ -423,6 +425,12 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
     });
+  }
+
+  public async Task<Result<ServerStatsDto>> GetServerStats()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<ServerStatsDto>(HttpConstants.ServerStatsEndpoint));
   }
 
   public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)

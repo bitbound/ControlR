@@ -18,7 +18,6 @@ public interface IViewerHub
 
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
-  Task<Result<ServerStatsDto>> GetServerStats();
   Task InvokeCtrlAltDel(Guid deviceId);
   Task RefreshDeviceInfo(Guid deviceId);
 

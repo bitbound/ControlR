@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
 
 @inject IMessenger Messenger;
-@inject IHubConnection<IViewerHub> MainHub;
+@inject IControlrApi ControlrApi;
 @inject ISnackbar Snackbar;
 @inject ILogger<ServerStats> Logger;
 
@@ -136,7 +136,7 @@
   {
     try
     {
-      var result = await MainHub.Server.GetServerStats();
+      var result = await ControlrApi.GetServerStats();
       if (result.IsSuccess)
       {
         _serverStats = result.Value;

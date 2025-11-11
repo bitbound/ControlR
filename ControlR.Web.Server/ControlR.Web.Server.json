@@ -1395,6 +1395,35 @@
         }
       }
     },
+    "/api/server-stats": {
+      "get": {
+        "tags": [
+          "ServerStats"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStatsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStatsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStatsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Tags": {
       "post": {
         "tags": [
@@ -3090,6 +3119,38 @@
           }
         }
       },
+      "ServerStatsDto": {
+        "required": [
+          "totalTenants",
+          "onlineAgents",
+          "totalAgents",
+          "onlineUsers",
+          "totalUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "totalTenants": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "onlineAgents": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalAgents": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "onlineUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalUsers": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "SystemPlatform": {
         "type": "integer"
       },
@@ -3404,6 +3465,9 @@
     },
     {
       "name": "ServerAlert"
+    },
+    {
+      "name": "ServerStats"
     },
     {
       "name": "Tags"

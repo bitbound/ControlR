@@ -15,7 +15,6 @@ public class ViewerHub(
   AppDb appDb,
   IAuthorizationService authorizationService,
   IHubContext<AgentHub, IAgentHubClient> agentHub,
-  IServerStatsProvider serverStatsProvider,
   IHubStreamStore hubStreamStore,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger)
@@ -27,7 +26,6 @@ public class ViewerHub(
   private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<ViewerHub> _logger = logger;
-  private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
@@ -139,24 +137,6 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<ServerStatsDto>> GetServerStats()
-  {
-    try
-    {
-      if (!VerifyIsServerAdmin())
-      {
-        return Result.Fail<ServerStatsDto>("Unauthorized.");
-      }
-
-      return await _serverStatsProvider.GetServerStats();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting agent count.");
-      return Result.Fail<ServerStatsDto>("Failed to get agent count.");
-    }
-  }
-
   public async Task InvokeCtrlAltDel(Guid deviceId)
   {
     try
@@ -210,12 +190,6 @@ public class ViewerHub(
       if (Context.User.IsInRole(RoleNames.ServerAdministrator))
       {
         await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAdministrators);
-
-        var getResult = await _serverStatsProvider.GetServerStats();
-        if (getResult.IsSuccess)
-        {
-          await Clients.Caller.ReceiveServerStats(getResult.Value);
-        }
       }
 
       if (Context.User.IsInRole(RoleNames.TenantAdministrator))
