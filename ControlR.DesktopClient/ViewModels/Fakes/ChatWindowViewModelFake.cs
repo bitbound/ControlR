@@ -37,6 +37,10 @@ public class ChatWindowViewModelFake : IChatWindowViewModel
     NewMessage = "Let me take a look at that for you...";
   }
 
+#pragma warning disable CS0067 // Event is never used - this is a fake/mock implementation
+  public event EventHandler? MessagesChanged;
+#pragma warning restore CS0067
+
   public string ChatTitle => "Chat with viewer@example.com";
   public ObservableCollection<ChatMessageViewModel> Messages => Session?.Messages ?? [];
   public string NewMessage { get; set; } = string.Empty;

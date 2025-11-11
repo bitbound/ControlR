@@ -15,4 +15,5 @@ public class ChatSession
   public int TargetProcessId { get; init; }
   public int TargetSystemSession { get; init; }
   public string ViewerConnectionId { get; set; } = string.Empty;
+  public string ViewerName { get; init; } = string.Empty;
 }

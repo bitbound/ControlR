@@ -10,7 +10,7 @@ public partial class ChatWindow : Window
   {
     DataContext = StaticServiceProvider.Instance.GetRequiredService<IChatWindowViewModel>();
     InitializeComponent();
-    ViewModel.Messages.CollectionChanged += HandleMessagesChanged;
+    ViewModel.MessagesChanged += HandleMessagesChanged;
   }
 
   public IChatWindowViewModel ViewModel =>
@@ -20,11 +20,11 @@ public partial class ChatWindow : Window
   protected override async void OnClosed(EventArgs e)
   {
     await ViewModel.HandleChatWindowClosed();
-    ViewModel.Messages.CollectionChanged -= HandleMessagesChanged;
+    ViewModel.MessagesChanged -= HandleMessagesChanged;
     base.OnClosed(e);
   }
 
-  private void HandleMessagesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+  private void HandleMessagesChanged(object? sender, EventArgs e)
   {
     // Scroll to the bottom when a new message is added
     _messagesScrollViewer.ScrollToEnd();

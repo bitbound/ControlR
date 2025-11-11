@@ -165,6 +165,7 @@ internal class ChatSessionManager(
           TargetSystemSession = message.TargetSystemSession,
           TargetProcessId = message.TargetProcessId,
           ViewerConnectionId = message.ViewerConnectionId,
+          ViewerName = message.SenderName,
           CreatedAt = DateTimeOffset.Now,
         };
 

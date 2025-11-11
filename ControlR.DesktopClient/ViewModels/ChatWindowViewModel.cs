@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
@@ -9,6 +10,8 @@ namespace ControlR.DesktopClient.ViewModels;
 
 public interface IChatWindowViewModel
 {
+  event EventHandler? MessagesChanged;
+  
   string ChatTitle { get; }
   ObservableCollection<ChatMessageViewModel> Messages { get; }
   string NewMessage { get; set; }
@@ -33,11 +36,13 @@ public class ChatWindowViewModel(
   private string _newMessage = string.Empty;
   private ChatSession? _session;
 
+  public event EventHandler? MessagesChanged;
+
   public string ChatTitle => Session is not null
     ? string.Format(Localization.ChatWindowTitle, Session.ViewerConnectionId)
     : Localization.ChatWindowDefaultTitle;
 
-  public ObservableCollection<ChatMessageViewModel> Messages =>
+  public ObservableCollection<ChatMessageViewModel> Messages => 
     Session?.Messages ?? [];
 
   public string NewMessage
@@ -48,15 +53,30 @@ public class ChatWindowViewModel(
 
   public ICommand SendMessageCommand => new AsyncRelayCommand(SendMessage);
 
-  public ChatSession? Session
-  {
+  public ChatSession? Session 
+  { 
     get => _session;
     set
     {
+      // Unsubscribe from old session's messages
+      if (_session?.Messages is not null)
+      {
+        _session.Messages.CollectionChanged -= OnMessagesCollectionChanged;
+      }
+
       if (SetProperty(ref _session, value))
       {
         OnPropertyChanged(nameof(ChatTitle));
         OnPropertyChanged(nameof(Messages));
+
+        // Subscribe to new session's messages
+        if (_session?.Messages is not null)
+        {
+          _session.Messages.CollectionChanged += OnMessagesCollectionChanged;
+        }
+
+        // Notify that messages collection changed
+        MessagesChanged?.Invoke(this, EventArgs.Empty);
       }
     }
   }
@@ -109,5 +129,11 @@ public class ChatWindowViewModel(
       _logger.LogWarning("Failed to send message for session {SessionId}", Session.SessionId);
       await _toaster.ShowToast("Send Failure", "Failed to send message", ToastIcon.Error);
     }
+  }
+
+  private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+  {
+    // Forward the collection changed event to our MessagesChanged event
+    MessagesChanged?.Invoke(this, EventArgs.Empty);
   }
 }
