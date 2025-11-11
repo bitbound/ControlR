@@ -28,7 +28,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: self-hosted
+    runs-on: windows-latest
     defaults:
       run:
         shell: pwsh
