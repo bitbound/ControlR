@@ -426,29 +426,27 @@ export async function initialize(componentRef, canvasId) {
 
 /**
  *
- * @param {number} pinchCenterX
- * @param {number} pinchCenterY
  * @param {HTMLDivElement} contentDiv
  * @param {HTMLCanvasElement} canvasRef
  * @param {number} canvasCssWidth
  * @param {number} canvasCssHeight
  * @param {number} widthChange
  * @param {number} heightChange
+ * @param {number} scrollDeltaX
+ * @param {number} scrollDeltaY
  */
-export async function scrollTowardPinch(pinchCenterX, pinchCenterY, contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange) {
+export async function scrollFromPinch(contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange, scrollDeltaX, scrollDeltaY) {
   canvasRef.style.width = `${canvasCssWidth}px`;
   canvasRef.style.height = `${canvasCssHeight}px`;
 
-  const clientAdjustedScrollLeftPercent = (contentDiv.scrollLeft + (contentDiv.clientWidth * .5)) / contentDiv.scrollWidth;
-  const clientAdjustedScrollTopPercent = (contentDiv.scrollTop + (contentDiv.clientHeight * .5)) / contentDiv.scrollHeight;
+  // center of the visible client area expressed as a percent of the full scrollable size
+  const clientCenterPercentX = (contentDiv.scrollLeft + contentDiv.clientWidth * 0.5) / contentDiv.scrollWidth;
+  const clientCenterPercentY = (contentDiv.scrollTop + contentDiv.clientHeight * 0.5) / contentDiv.scrollHeight;
 
-  const pinchAdjustX = pinchCenterX / window.innerWidth - .5;
-  const pinchAdjustY = pinchCenterY / window.innerHeight - .5;
+  const scrollByX = widthChange * clientCenterPercentX;
+  const scrollByY = heightChange * clientCenterPercentY;
 
-  const scrollByX = widthChange * (clientAdjustedScrollLeftPercent + (pinchAdjustX * contentDiv.clientWidth / contentDiv.scrollWidth));
-  const scrollByY = heightChange * (clientAdjustedScrollTopPercent + (pinchAdjustY * contentDiv.clientHeight / contentDiv.scrollHeight));
-
-  contentDiv.scrollBy(scrollByX, scrollByY);
+  contentDiv.scrollBy(scrollByX + scrollDeltaX * 2, scrollByY + scrollDeltaY * 2);
 }
 
 /**

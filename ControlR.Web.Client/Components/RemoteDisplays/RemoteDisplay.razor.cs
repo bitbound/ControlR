@@ -13,8 +13,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   private const double MaxCanvasScale = 3;
   private const double MinCanvasScale = 0.25;
 
-
-
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
   private readonly CancellationTokenSource _componentClosing = new();
   private readonly SemaphoreSlim _typeLock = new(1, 1);
@@ -27,6 +25,10 @@ public partial class RemoteDisplay : JsInteropableComponent
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
   private double _lastPinchDistance = -1;
+  private double _lastTouch0X = -1;
+  private double _lastTouch0Y = -1;
+  private double _lastTouch1X = -1;
+  private double _lastTouch1Y = -1;
   private CaptureMetricsDto? _latestCaptureMetrics;
   private IDisposable? _messageHandlerRegistration;
   private IDisposable? _remoteControlStateChangedToken;
@@ -221,7 +223,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       if (OperatingSystem.IsBrowser())
       {
-        await JSHost.ImportAsync("RemoteDisplay", "/Components/RemoteDisplays/RemoteDisplay.razor.js");
+        await ImportJsHost();
       }
 
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
@@ -579,11 +581,19 @@ public partial class RemoteDisplay : JsInteropableComponent
   private void OnTouchCancel(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
+    _lastTouch0X = -1;
+    _lastTouch0Y = -1;
+    _lastTouch1X = -1;
+    _lastTouch1Y = -1;
   }
 
   private void OnTouchEnd(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
+    _lastTouch0X = -1;
+    _lastTouch0Y = -1;
+    _lastTouch1X = -1;
+    _lastTouch1Y = -1;
   }
 
   private async void OnTouchMove(TouchEventArgs ev)
@@ -612,13 +622,15 @@ public partial class RemoteDisplay : JsInteropableComponent
       if (_lastPinchDistance <= 0)
       {
         _lastPinchDistance = pinchDistance;
+        _lastTouch0X = ev.Touches[0].ClientX;
+        _lastTouch0Y = ev.Touches[0].ClientY;
+        _lastTouch1X = ev.Touches[1].ClientX;
+        _lastTouch1Y = ev.Touches[1].ClientY;
         return;
       }
 
-
       if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
       {
-        // When switching from scaled to original, zoom out so the transition is less jarring.
         RemoteControlState.ViewMode = ViewMode.Original;
         _canvasScale = MinCanvasScale;
       }
@@ -629,7 +641,6 @@ public partial class RemoteDisplay : JsInteropableComponent
         _canvasScale = Math.Clamp(newScale, MinCanvasScale, MaxCanvasScale);
       }
 
-
       var newWidth = RemoteControlState.SelectedDisplay.Width * _canvasScale;
       var widthChange = newWidth - _canvasCssWidth;
       _canvasCssWidth = newWidth;
@@ -638,20 +649,29 @@ public partial class RemoteDisplay : JsInteropableComponent
       var heightChange = newHeight - _canvasCssHeight;
       _canvasCssHeight = newHeight;
 
+      var touch0DeltaX = ev.Touches[0].ClientX - _lastTouch0X;
+      var touch0DeltaY = ev.Touches[0].ClientY - _lastTouch0Y;
+      var touch1DeltaX = ev.Touches[1].ClientX - _lastTouch1X;
+      var touch1DeltaY = ev.Touches[1].ClientY - _lastTouch1Y;
+
+      var scrollDeltaX = -(touch0DeltaX + touch1DeltaX) / 2;
+      var scrollDeltaY = -(touch0DeltaY + touch1DeltaY) / 2;
+
       _lastPinchDistance = pinchDistance;
+      _lastTouch0X = ev.Touches[0].ClientX;
+      _lastTouch0Y = ev.Touches[0].ClientY;
+      _lastTouch1X = ev.Touches[1].ClientX;
+      _lastTouch1Y = ev.Touches[1].ClientY;
 
-      var pinchCenterX = (ev.Touches[0].ScreenX + ev.Touches[1].ScreenX) / 2;
-      var pinchCenterY = (ev.Touches[0].ScreenY + ev.Touches[1].ScreenY) / 2;
-
-      await JsModule.InvokeVoidAsync("scrollTowardPinch",
-        pinchCenterX,
-        pinchCenterY,
+      await JsModule.InvokeVoidAsync("scrollFromPinch",
         _screenArea,
         _canvasRef,
         _canvasCssWidth,
         _canvasCssHeight,
         widthChange,
-        heightChange);
+        heightChange,
+        scrollDeltaX,
+        scrollDeltaY);
     }
     catch (Exception ex)
     {
@@ -662,6 +682,10 @@ public partial class RemoteDisplay : JsInteropableComponent
   private void OnTouchStart(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
+    _lastTouch0X = -1;
+    _lastTouch0Y = -1;
+    _lastTouch1X = -1;
+    _lastTouch1Y = -1;
   }
 
   private async Task OnVkKeyDown(KeyboardEventArgs args)

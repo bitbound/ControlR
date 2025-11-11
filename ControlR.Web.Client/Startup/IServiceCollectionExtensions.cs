@@ -20,6 +20,15 @@ public static class ServiceCollectionExtensions
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
+    if (OperatingSystem.IsBrowser())
+    {
+      services.AddScoped<IAppEnvironment, BrowserAppEnvironment>();
+    }
+    else
+    {
+      services.AddScoped<IAppEnvironment, ServerAppEnvironment>();
+    }
+
     services.AddSingleton(TimeProvider.System);
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<IUserSettingsProvider, UserSettingsProvider>();
