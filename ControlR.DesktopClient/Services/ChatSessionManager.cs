@@ -19,7 +19,8 @@ internal class ChatSessionManager(
   IToaster toaster,
   ILogger<ChatSessionManager> logger) : IChatSessionManager
 {
-  private readonly ConcurrentDictionary<Guid, ChatSession> _activeSessions = new();
+  private readonly ConcurrentDictionary<Guid, ChatSession> _sessions = new();
+  private readonly ConcurrentDictionary<Guid, ChatWindow> _windows = new();
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<ChatSessionManager> _logger = logger;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
@@ -30,18 +31,17 @@ internal class ChatSessionManager(
   {
     Dispatcher.UIThread.Invoke(async () =>
     {
-      var session = AddOrGetSession(sessionId, message);
-      Guard.IsNotNull(session.ChatWindow);
+      var (session, window) = GetOrCreateSession(sessionId, message);
 
       session.Messages.Add(new ChatMessageViewModel(message, true));
 
-      if (!session.ChatWindow.IsVisible)
+      if (!window.IsVisible)
       {
-        session.ChatWindow.Show();
-        session.ChatWindow.Activate();
+        window.Show();
+        window.Activate();
       }
 
-      if (session.ChatWindow.WindowState == WindowState.Minimized)
+      if (window.WindowState == WindowState.Minimized)
       {
         await _toaster.ShowToast(
           title: Localization.NewChatMessageToastTitle,
@@ -49,8 +49,8 @@ internal class ChatSessionManager(
           toastIcon: ToastIcon.Info,
           onClick: () =>
           {
-            session.ChatWindow.WindowState = WindowState.Normal;
-            session.ChatWindow.Show();
+            window.WindowState = WindowState.Normal;
+            window.Show();
           });
       }
     });
@@ -62,12 +62,15 @@ internal class ChatSessionManager(
   {
     Dispatcher.UIThread.Invoke(async () =>
     {
-      if (_activeSessions.TryRemove(sessionId, out var session))
+      if (_sessions.TryRemove(sessionId, out _))
       {
         _logger.LogInformation("Chat session {SessionId} closed", sessionId);
 
-        // Close the chat window if it exists
-        session.ChatWindow?.Close();
+        // Close and remove the chat window if it exists
+        if (_windows.TryRemove(sessionId, out var window))
+        {
+          window.Close();
+        }
 
         if (notifyUser)
         {
@@ -89,12 +92,12 @@ internal class ChatSessionManager(
 
   public bool IsSessionActive(Guid sessionId)
   {
-    return _activeSessions.TryGetValue(sessionId, out _);
+    return _sessions.ContainsKey(sessionId);
   }
 
   public async Task<bool> SendResponse(Guid sessionId, string message)
   {
-    if (!_activeSessions.TryGetValue(sessionId, out var session))
+    if (!_sessions.TryGetValue(sessionId, out var session))
     {
       _logger.LogWarning("Chat session {SessionId} not found when sending response", sessionId);
       return false;
@@ -149,47 +152,58 @@ internal class ChatSessionManager(
     }
   }
 
-  private ChatSession AddOrGetSession(Guid sessionId, ChatMessageIpcDto message)
+  private (ChatSession session, ChatWindow window) GetOrCreateSession(Guid sessionId, ChatMessageIpcDto message)
   {
-    return _activeSessions.AddOrUpdate(
-        sessionId,
-        _ =>
+    // Get or create the session data
+    var session = _sessions.GetOrAdd(
+      sessionId,
+      _ =>
+      {
+        var newSession = new ChatSession
         {
-          var chatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
-          chatWindow.DataContext ??= _serviceProvider.GetRequiredService<IChatWindowViewModel>();
+          SessionId = sessionId,
+          TargetSystemSession = message.TargetSystemSession,
+          TargetProcessId = message.TargetProcessId,
+          ViewerConnectionId = message.ViewerConnectionId,
+          CreatedAt = DateTimeOffset.Now,
+        };
 
-          var newSession = new ChatSession
-          {
-            ChatWindow = chatWindow,
-            SessionId = sessionId,
-            TargetSystemSession = message.TargetSystemSession,
-            TargetProcessId = message.TargetProcessId,
-            ViewerConnectionId = message.ViewerConnectionId,
-            CreatedAt = DateTimeOffset.Now,
-          };
+        _logger.LogInformation(
+          "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
+          sessionId,
+          message.TargetSystemSession,
+          message.TargetProcessId);
 
-          chatWindow.ViewModel.Session = newSession;
+        return newSession;
+      });
 
-          _logger.LogInformation(
-            "New chat session created. Session ID: {SessionId}, Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
-            sessionId,
-            message.TargetSystemSession,
-            message.TargetProcessId);
+    // Update viewer connection ID if it changed
+    if (session.ViewerConnectionId != message.ViewerConnectionId)
+    {
+      session.ViewerConnectionId = message.ViewerConnectionId;
+    }
 
-          return newSession;
-        },
-        (_, existingSession) =>
-        {
-          if (existingSession.ChatWindow?.PlatformImpl is null)
-          {
-            existingSession.ChatWindow = _serviceProvider.GetRequiredService<ChatWindow>();
-            existingSession.ChatWindow.DataContext = _serviceProvider.GetRequiredService<IChatWindowViewModel>();
-            existingSession.ChatWindow.ViewModel.Session = existingSession;
-          }
+    // Get or create the window
+    var window = _windows.GetOrAdd(
+      sessionId,
+      _ => CreateWindowForSession(session));
 
-          existingSession.ViewerConnectionId = message.ViewerConnectionId;
-          return existingSession;
-        });
+    // If window was closed/disposed, recreate it
+    if (window.PlatformImpl is null)
+    {
+      window = CreateWindowForSession(session);
+      _windows[sessionId] = window;
+    }
 
+    return (session, window);
+  }
+
+  private ChatWindow CreateWindowForSession(ChatSession session)
+  {
+    var window = _serviceProvider.GetRequiredService<ChatWindow>();
+    var viewModel = window.ViewModel;
+    viewModel.Session = session;
+
+    return window;
   }
 }

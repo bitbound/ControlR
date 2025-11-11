@@ -31,12 +31,14 @@ public class ChatWindowViewModel(
   private readonly IToaster _toaster = toaster;
 
   private string _newMessage = string.Empty;
+  private ChatSession? _session;
 
   public string ChatTitle => Session is not null
     ? string.Format(Localization.ChatWindowTitle, Session.ViewerConnectionId)
     : Localization.ChatWindowDefaultTitle;
 
-  public ObservableCollection<ChatMessageViewModel> Messages { get; } = [];
+  public ObservableCollection<ChatMessageViewModel> Messages =>
+    Session?.Messages ?? [];
 
   public string NewMessage
   {
@@ -46,7 +48,18 @@ public class ChatWindowViewModel(
 
   public ICommand SendMessageCommand => new AsyncRelayCommand(SendMessage);
 
-  public ChatSession? Session { get; set; }
+  public ChatSession? Session
+  {
+    get => _session;
+    set
+    {
+      if (SetProperty(ref _session, value))
+      {
+        OnPropertyChanged(nameof(ChatTitle));
+        OnPropertyChanged(nameof(Messages));
+      }
+    }
+  }
 
   public async Task HandleChatWindowClosed()
   {
