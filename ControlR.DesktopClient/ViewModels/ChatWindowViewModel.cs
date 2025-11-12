@@ -39,7 +39,7 @@ public class ChatWindowViewModel(
   public event EventHandler? MessagesChanged;
 
   public string ChatTitle => Session is not null
-    ? string.Format(Localization.ChatWindowTitle, Session.ViewerConnectionId)
+    ? string.Format(Localization.ChatWindowTitle, Session.ViewerName)
     : Localization.ChatWindowDefaultTitle;
 
   public ObservableCollection<ChatMessageViewModel> Messages => 
