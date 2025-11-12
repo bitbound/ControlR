@@ -19,7 +19,7 @@ wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/doc
 sudo docker compose up -d
 ```
 
-**IMPORTANT:** Read the below sections regarding reverse proxy and Cloudflare caching.
+**IMPORTANT:** Read the below section regarding reverse proxy configuration.
 
 At minimum, you will need to supply environment variables (e.g. `ControlR_POSTGRES_USER`) for the anchors (e.g. `$pgUser`) at the top of the docker-compose file. Alternatively, you could also use Docker secrets, an environment file, or hard-code them in the docker-compose file.  Whatever works for your setup and security requirements.
 
