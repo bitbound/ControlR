@@ -19,11 +19,11 @@ public static class Theme
 
     ActionDefault = "rgba(255, 255, 255, 0.87)",
     ActionDisabled = "rgba(255, 255, 255, 0.38)",
-
+    
     Background = "#121212",
     BackgroundGray = "#1E1E1E",
     Surface = "#1E1E1E",
-
+    
     AppbarBackground = "#1E1E1E",
     AppbarText = "rgba(255, 255, 255, 0.87)",
 
