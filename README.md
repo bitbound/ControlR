@@ -166,6 +166,8 @@ If the project gains support, I intend to add full remote control support for Ma
 
 ## Screenshots
 
+![Login Screen](.assets/screenshots/login-screen.png)
+
 ![Device Grid](.assets/screenshots/device-grid.png)
 
 ![Device Overview](.assets/screenshots/device-overview.png)
