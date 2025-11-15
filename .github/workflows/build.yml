@@ -1,16 +1,16 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
+  #push:
+  #  branches:
+  #    - main
+  #  paths-ignore:
+  #    - 'README.md'
   workflow_dispatch:
 
 env:
-  MAJOR_BUILD: 1
-  MINOR_BUILD: 0
+  MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
+  MINOR_VERSION: ${{vars.MINOR_VERSION}}
 
 jobs:
   mac-build:
@@ -19,13 +19,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           clean: true
           fetch-depth: 0  # Fetch all history and tags
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.x'
 
@@ -139,14 +139,14 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           clean: true
           fetch-depth: 0  # Fetch all history and tags for version tagging
           submodules: recursive
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.x'
 
@@ -154,13 +154,13 @@ jobs:
         run: dotnet test "**/Tests/**/*Tests.csproj"
 
       - name: Download macOS ARM64 Agent
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Web.Server\wwwroot\downloads\osx-arm64\
 
       - name: Download macOS x64 Agent
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: Agent-macOS-x64
           path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
