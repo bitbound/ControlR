@@ -251,14 +251,22 @@ internal abstract class ConnectionBase(
 
   private async Task ReadFromStream(CancellationToken cancellationToken)
   {
-    while (_pipeStream?.IsConnected == true)
+    // Allow BeginRead to be called before the pipe is connected by waiting until a connection exists.
+    while (!_isDisposed && !cancellationToken.IsCancellationRequested)
     {
       try
       {
-        if (cancellationToken.IsCancellationRequested)
+        if (_pipeStream is null)
         {
-          _logger.LogDebug("IPC connection read cancellation requested.  Pipe Name: {pipeName}", PipeName);
+          _logger.LogInformation("Pipe stream is null. Ending read loop. Pipe Name: {pipeName}", PipeName);
           break;
+        }
+
+        // If not connected yet, wait briefly and try again.
+        if (!_pipeStream.IsConnected)
+        {
+          await Task.Delay(10, cancellationToken);
+          continue;
         }
 
         // Check if the pipe is still connected before attempting to read
@@ -279,14 +287,15 @@ internal abstract class ConnectionBase(
           {
             // Stream was closed by the other end
             _logger.LogInformation("Pipe stream was closed while reading message size header.");
-            break;
+            // Exit the outer loop and end the read task
+            return;
           }
           sizeBytesRead += bytesRead;
         }
 
         var messageSize = BitConverter.ToInt32(messageSizeBuffer, 0);
 
-        if (messageSize <= 0 || messageSize > 100_000_000) // 100MB max message size
+        if (messageSize is <= 0 or > 100_000_000) // 100MB max message size
         {
           _logger.LogWarning("Invalid message size received: {messageSize}. Closing connection.", messageSize);
           break;
@@ -303,7 +312,8 @@ internal abstract class ConnectionBase(
           {
             // Stream was closed by the other end
             _logger.LogInformation("Pipe stream was closed while reading message content.");
-            break;
+            // Exit the outer loop and end the read task
+            return;
           }
           messageBytesRead += bytesRead;
         }

@@ -13,9 +13,30 @@ env:
   MINOR_VERSION: ${{vars.MINOR_VERSION}}
 
 jobs:
+  set-version:
+    name: Set Current Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
+    steps:
+      - name: Compute Build Version (run number only)
+        id: setver
+        run: |
+          MAJOR=${{ env.MAJOR_VERSION }}
+          MINOR=${{ env.MINOR_VERSION }}
+          BUILD=${{ github.run_number }}
+          VERSION="${MAJOR}.${MINOR}.${BUILD}.0"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Computed version (run number): $VERSION"
+    
   mac-build:
     name: Apple Build
     runs-on: macos-latest
+    needs: set-version
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -29,42 +50,13 @@ jobs:
         with:
           dotnet-version: '9.x'
 
-      - name: Calculate Build Number
-        id: version
-        run: |
-          MAJOR=${{ env.MAJOR_BUILD }}
-          MINOR=${{ env.MINOR_BUILD }}
-
-          # Fetch all tags
-          git fetch --tags
-
-          # Get all tags matching the pattern vMAJOR.MINOR.*
-          MATCHING_TAGS=$(git tag -l "v${MAJOR}.${MINOR}.*" | sed 's/^v//' || echo "")
-
-          # Find the highest build number for this major.minor version
-          BUILD_NUM=0
-          if [ -n "$MATCHING_TAGS" ]; then
-            for tag in $MATCHING_TAGS; do
-              # Extract build number (third component)
-              CURRENT_BUILD=$(echo "$tag" | cut -d. -f3)
-              if [ "$CURRENT_BUILD" -ge "$BUILD_NUM" ]; then
-                BUILD_NUM=$((CURRENT_BUILD + 1))
-              fi
-            done
-          fi
-
-          VERSION="${MAJOR}.${MINOR}.${BUILD_NUM}.0"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Building version: $VERSION"
-          echo "Major: $MAJOR, Minor: $MINOR, Build: $BUILD_NUM"
-
       - name: Publish DesktopClient + Agent (ARM64)
         run: |
           # Clean Resources folder
           rm -f "./ControlR.Agent.Common/Resources/*.zip"
 
           # Build DesktopClient
-          dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-arm64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-arm64/" -p:Version=${{ steps.version.outputs.VERSION }} -p:FileVersion=${{ steps.version.outputs.VERSION }}
+          dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-arm64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-arm64/" -p:Version=$VERSION -p:FileVersion=$VERSION
           sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.DesktopClient"
           pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-arm64/"
           ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-arm64/" "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip"
@@ -74,7 +66,7 @@ jobs:
           cp "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip" "./ControlR.Agent.Common/Resources/ControlR.app.zip"
 
           # Build Agent
-          dotnet publish "./ControlR.Agent/" -c Release -r osx-arm64 --self-contained -o "./ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=${{ steps.version.outputs.VERSION }} -p:FileVersion=${{ steps.version.outputs.VERSION }} -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          dotnet publish "./ControlR.Agent/" -c Release -r osx-arm64 --self-contained -o "./ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
           sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
 
       - name: Publish DesktopClient + Agent (x64)
@@ -83,17 +75,17 @@ jobs:
           rm -f "./ControlR.Agent.Common/Resources/*.zip"
 
           # Build DesktopClient
-          dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-x64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-x64/" -p:Version=${{ steps.version.outputs.VERSION }} -p:FileVersion=${{ steps.version.outputs.VERSION }}
+          dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-x64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-x64/" -p:Version=$VERSION -p:FileVersion=$VERSION
           sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.DesktopClient"
           pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-x64/"
           ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-x64/" "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip"
 
           # Copy DesktopClient ZIP to Agent Resources
           mkdir -p "./ControlR.Agent.Common/Resources"
-          cp "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip" "./ControlR.Agent.Common/Resources/ControlR.app.zip"
+          mv "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip" "./ControlR.Agent.Common/Resources/ControlR.app.zip"
 
           # Build Agent
-          dotnet publish "./ControlR.Agent/" -c Release -r osx-x64 --self-contained -o "./ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=${{ steps.version.outputs.VERSION }} -p:FileVersion=${{ steps.version.outputs.VERSION }} -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          dotnet publish "./ControlR.Agent/" -c Release -r osx-x64 --self-contained -o "./ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
           sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
 
       - name: Upload Agent (macOS ARM64)
@@ -110,27 +102,17 @@ jobs:
           path: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
           retention-days: 90
 
-      - name: Upload DesktopClient (macOS ARM64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: DesktopClient-macOS-ARM64
-          path: ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip
-          retention-days: 90
 
-      - name: Upload DesktopClient (macOS x64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: DesktopClient-macOS-x64
-          path: ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip
-          retention-days: 90
-
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
 
   windows-build:
     name: Windows Build
     runs-on: windows-latest
-    needs: mac-build
+    needs: [set-version, mac-build]
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Install SSH Key
@@ -151,7 +133,7 @@ jobs:
           dotnet-version: '9.x'
 
       - name: Run Tests
-        run: dotnet test "**/Tests/**/*Tests.csproj"
+        run: dotnet test -c Release
 
       - name: Download macOS ARM64 Agent
         uses: actions/download-artifact@v5
@@ -166,7 +148,7 @@ jobs:
           path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
       - name: Pack ControlR.ApiClient (Release)
-        run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ needs.mac-build.outputs.version }}
+        run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ env.VERSION }}
 
       - name: Find ApiClient nupkg
         id: find-nupkg
@@ -193,6 +175,14 @@ jobs:
           path: ${{ steps.find-nupkg.outputs.APICLIENT_NUPKG }}
           retention-days: 90
 
+      # ===== Azure Login with OIDC =====
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # ===== Install AzureSignTool =====
       - name: Install AzureSignTool
         shell: pwsh
@@ -207,21 +197,19 @@ jobs:
           Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
 
           # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r win-x86 --self-contained -o ControlR.DesktopClient\bin\publish\win-x86\ -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }}
+          dotnet publish ControlR.DesktopClient\ -c Release -r win-x86 --self-contained -o ControlR.DesktopClient\bin\publish\win-x86\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
 
       - name: Sign DesktopClient (win-x86)
         shell: pwsh
         run: |
           AzureSignTool sign `
-            -du "${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            -fd sha256 `
-            -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            -kvi "${{ secrets.AZURE_KEY_VAULT_CLIENT_ID }}" `
-            -kvt "${{ secrets.AZURE_KEY_VAULT_TENANT_ID }}" `
-            -kvs "${{ secrets.AZURE_KEY_VAULT_CLIENT_SECRET }}" `
-            -kvc "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            -tr http://timestamp.digicert.com `
-            -td sha256 `
+            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
+            --fd=sha256 `
+            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
+            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
+            --kvm `
+            --tr=http://timestamp.digicert.com `
+            --td=sha256 `
             "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\win-x86\ControlR.DesktopClient.exe"
 
       - name: Package and Prepare DesktopClient (win-x86)
@@ -241,21 +229,19 @@ jobs:
         shell: pwsh
         run: |
           New-Item -Path "ControlR.Web.Server\wwwroot\downloads\win-x86" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r win-x86 -o ControlR.Web.Server\wwwroot\downloads\win-x86\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }} -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          dotnet publish ControlR.Agent\ -c Release -r win-x86 -o ControlR.Web.Server\wwwroot\downloads\win-x86\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Sign Agent (win-x86)
         shell: pwsh
         run: |
           AzureSignTool sign `
-            -du "${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            -fd sha256 `
-            -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            -kvi "${{ secrets.AZURE_KEY_VAULT_CLIENT_ID }}" `
-            -kvt "${{ secrets.AZURE_KEY_VAULT_TENANT_ID }}" `
-            -kvs "${{ secrets.AZURE_KEY_VAULT_CLIENT_SECRET }}" `
-            -kvc "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            -tr http://timestamp.digicert.com `
-            -td sha256 `
+            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
+            --fd=sha256 `
+            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
+            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
+            --kvm `
+            --tr=http://timestamp.digicert.com `
+            --td=sha256 `
             "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\win-x86\ControlR.Agent.exe"
 
       # ===== Build Windows x64 =====
@@ -266,21 +252,19 @@ jobs:
           Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
 
           # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r win-x64 --self-contained -o ControlR.DesktopClient\bin\publish\win-x64\ -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }}
+          dotnet publish ControlR.DesktopClient\ -c Release -r win-x64 --self-contained -o ControlR.DesktopClient\bin\publish\win-x64\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
 
       - name: Sign DesktopClient (win-x64)
         shell: pwsh
         run: |
           AzureSignTool sign `
-            -du "${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            -fd sha256 `
-            -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            -kvi "${{ secrets.AZURE_KEY_VAULT_CLIENT_ID }}" `
-            -kvt "${{ secrets.AZURE_KEY_VAULT_TENANT_ID }}" `
-            -kvs "${{ secrets.AZURE_KEY_VAULT_CLIENT_SECRET }}" `
-            -kvc "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            -tr http://timestamp.digicert.com `
-            -td sha256 `
+            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
+            --fd=sha256 `
+            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
+            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
+            --kvm `
+            --tr=http://timestamp.digicert.com `
+            --td=sha256 `
             "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\win-x64\ControlR.DesktopClient.exe"
 
       - name: Package and Prepare DesktopClient (win-x64)
@@ -300,21 +284,19 @@ jobs:
         shell: pwsh
         run: |
           New-Item -Path "ControlR.Web.Server\wwwroot\downloads\win-x64" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r win-x64 -o ControlR.Web.Server\wwwroot\downloads\win-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }} -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          dotnet publish ControlR.Agent\ -c Release -r win-x64 -o ControlR.Web.Server\wwwroot\downloads\win-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Sign Agent (win-x64)
         shell: pwsh
         run: |
           AzureSignTool sign `
-            -du "${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            -fd sha256 `
-            -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            -kvi "${{ secrets.AZURE_KEY_VAULT_CLIENT_ID }}" `
-            -kvt "${{ secrets.AZURE_KEY_VAULT_TENANT_ID }}" `
-            -kvs "${{ secrets.AZURE_KEY_VAULT_CLIENT_SECRET }}" `
-            -kvc "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            -tr http://timestamp.digicert.com `
-            -td sha256 `
+            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
+            --fd=sha256 `
+            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
+            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
+            --kvm `
+            --tr=http://timestamp.digicert.com `
+            --td=sha256 `
             "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\win-x64\ControlR.Agent.exe"
 
       # ===== Build Linux x64 =====
@@ -325,7 +307,7 @@ jobs:
           Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
 
           # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r linux-x64 --self-contained -o ControlR.DesktopClient\bin\publish\linux-x64\ -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }}
+          dotnet publish ControlR.DesktopClient\ -c Release -r linux-x64 --self-contained -o ControlR.DesktopClient\bin\publish\linux-x64\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
 
           # Create staging directory
           New-Item -Path ".build\staging-desktop\linux-x64" -ItemType Directory -Force | Out-Null
@@ -339,20 +321,20 @@ jobs:
 
           # Build Agent
           New-Item -Path "ControlR.Web.Server\wwwroot\downloads\linux-x64" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r linux-x64 -o ControlR.Web.Server\wwwroot\downloads\linux-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }} -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          dotnet publish ControlR.Agent\ -c Release -r linux-x64 -o ControlR.Web.Server\wwwroot\downloads\linux-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       # ===== Create AgentVersion.txt =====
       - name: Create AgentVersion.txt
         shell: pwsh
         run: |
-          Set-Content -Path "ControlR.Web.Server\wwwroot\downloads\AgentVersion.txt" -Value "${{ needs.mac-build.outputs.version }}" -Force -Encoding UTF8
+          Set-Content -Path "ControlR.Web.Server\wwwroot\downloads\AgentVersion.txt" -Value $env:VERSION -Force -Encoding UTF8
 
       # ===== Build Web Server =====
       - name: Build Web Server
         shell: pwsh
         run: |
           New-Item -Path "ControlR.Server\bin\publish" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Web.Server\ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=${{ needs.mac-build.outputs.version }} -p:FileVersion=${{ needs.mac-build.outputs.version }} --output ControlR.Server\bin\publish --self-contained true
+          dotnet publish ControlR.Web.Server\ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Server\bin\publish --self-contained true
 
       - name: Verify Agent Binaries
         shell: pwsh
@@ -380,13 +362,6 @@ jobs:
           path: ControlR.Server\bin\publish
           retention-days: 90
 
-      - name: Upload Build Scripts
-        uses: actions/upload-artifact@v4
-        with:
-          name: BuildScripts
-          path: .build\
-          retention-days: 90
-
       - name: Upload docker-compose
         uses: actions/upload-artifact@v4
         with:
@@ -400,5 +375,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ needs.mac-build.outputs.version }}" -m "Release v${{ needs.mac-build.outputs.version }}"
-          git push origin "v${{ needs.mac-build.outputs.version }}"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"

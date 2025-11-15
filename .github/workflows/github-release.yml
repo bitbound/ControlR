@@ -51,14 +51,6 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
-      - name: Download Build Scripts
-        uses: actions/download-artifact@v5
-        with:
-          name: BuildScripts
-          path: ./build-scripts
-          github-token: ${{ github.token }}
-          run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
-
       - name: Download ApiClient NuGet
         uses: actions/download-artifact@v5
         with:

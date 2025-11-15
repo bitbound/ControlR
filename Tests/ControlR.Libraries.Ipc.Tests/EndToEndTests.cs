@@ -7,20 +7,15 @@ using Xunit.Abstractions;
 
 namespace ControlR.Libraries.Ipc.Tests;
 
-public class E2ETests : IAsyncLifetime
+public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 {
-  private readonly ITestOutputHelper _testOutputHelper;
+  private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
   private IIpcClient _client;
   private IIpcConnectionFactory _connectionFactory;
   private CancellationTokenSource _cts;
   private string _pipeName;
   private IIpcServer _server;
   private ServiceProvider _services;
-
-  public E2ETests(ITestOutputHelper testOutputHelper)
-  {
-    _testOutputHelper = testOutputHelper;
-  }
 
   public async Task DisposeAsync()
   {
@@ -161,7 +156,7 @@ public class E2ETests : IAsyncLifetime
     _server.Off<Ping>();
 
     await _client.Send(new Ping());
-    await Task.Delay(1_000);
+    await Task.Delay(500);
 
     Assert.Equal(1, count);
   }
