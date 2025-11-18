@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using IPNetwork = System.Net.IPNetwork;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
@@ -12,7 +13,6 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
-using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
@@ -97,10 +97,10 @@ public static class WebApplicationBuilderExtensions
     var authBuilder = builder.Services
       .AddAuthentication(options =>
       {
-        options.DefaultScheme = CustomSchemes.Smart;
+        options.DefaultScheme = CustomSchemes.Dynamic;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
       })
-      .AddPolicyScheme(CustomSchemes.Smart, "Smart Authentication Scheme", options =>
+      .AddPolicyScheme(CustomSchemes.Dynamic, "Smart Authentication Scheme", options =>
       {
         options.ForwardDefaultSelector = context =>
         {
@@ -189,7 +189,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services
       .AddAuthorizationBuilder()
       .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(CustomSchemes.Smart)
+        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
         .RequireAuthenticatedUser()
         .Build())
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
@@ -206,6 +206,7 @@ public static class WebApplicationBuilderExtensions
         options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
         options.Password.RequiredLength = 8;
         options.Password.RequireNonAlphanumeric = false;
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
       })
       .AddRoles<AppRole>()
       .AddEntityFrameworkStores<AppDb>()
@@ -397,10 +398,10 @@ public static class WebApplicationBuilderExtensions
       {
         foreach (var network in knownNetworks)
         {
-          if (IPNetwork.TryParse(network, out var ipNetwork))
+          if (System.Net.IPNetwork.TryParse(network, out var ipNetwork))
           {
             Console.WriteLine($"Adding KnownNetwork: {network}");
-            options.KnownNetworks.Add(ipNetwork);
+            options.KnownIPNetworks.Add(ipNetwork);
           }
           else
           {
@@ -413,7 +414,7 @@ public static class WebApplicationBuilderExtensions
       {
         foreach (var cloudflareIp in cloudflareIps)
         {
-          options.KnownNetworks.Add(cloudflareIp);
+          options.KnownIPNetworks.Add(cloudflareIp);
         }
       }
     });

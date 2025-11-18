@@ -101,7 +101,7 @@ internal class WebSocketRelayMiddleware(
 
   private void SetBadRequest(HttpContext context, string message)
   {
-    _logger.LogWarning("Bad request. Uri: {RequestUri}}", context.Request.GetDisplayUrl());
+    _logger.LogWarning("Bad request. Uri: {RequestUri}", context.Request.GetDisplayUrl());
     context.Response.StatusCode = StatusCodes.Status400BadRequest;
     var body = 
       $"{message}\n\nPath should be in the form of " +

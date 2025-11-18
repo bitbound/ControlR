@@ -59,15 +59,6 @@ public static class CollectionExtensions
     return string.Join(separator, self);
   }
 
-  public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> enumerable)
-  {
-    foreach (var item in enumerable)
-    {
-      yield return item;
-      await Task.Yield();
-    }
-  }
-
   public static ConcurrentList<T> ToConcurrentList<T>(this IEnumerable<T> enumerable)
   {
     var list = new ConcurrentList<T>();

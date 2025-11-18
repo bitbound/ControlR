@@ -42,10 +42,12 @@
   private HttpContext HttpContext { get; set; } = default!;
 
   [SupplyParameterFromForm]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
+    Input ??= new InputModel();
+    
     _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
     _userId = _user.Id;
     _username = await UserManager.GetUserNameAsync(_user);

@@ -10,12 +10,14 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   private readonly Guid? _tenantId;
   private readonly Guid? _userId;
 
+
   public AppDb(DbContextOptions<AppDb> options) : base(options)
   {
     var extension = options.FindExtension<ClaimsDbContextOptionsExtension>();
     _tenantId = extension?.Options.TenantId;
     _userId = extension?.Options.UserId;
   }
+
 
   public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
@@ -27,6 +29,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public required DbSet<TenantSetting> TenantSettings { get; init; }
   public required DbSet<Tenant> Tenants { get; init; }
   public required DbSet<UserPreference> UserPreferences { get; init; }
+
 
   protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
   {
@@ -53,6 +56,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantInvites(builder);
   }
 
+
   private static void ConfigureRoles(ModelBuilder builder)
   {
     builder
@@ -60,6 +64,13 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasMany(x => x.UserRoles)
       .WithOne()
       .HasForeignKey(x => x.RoleId);
+  }
+
+  private static void ConfigureServerAlert(ModelBuilder builder)
+  {
+    builder
+      .Entity<ServerAlert>()
+      .HasKey(x => x.Id);
   }
 
   private static void SeedDatabase(ModelBuilder builder)
@@ -70,7 +81,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .Entity<AppRole>()
         .HasData(builtInRoles);
 
-    // Seed default ServerAlert (singleton)
     builder
         .Entity<ServerAlert>()
         .HasData(new ServerAlert
@@ -83,6 +93,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           IsEnabled = false
         });
   }
+
 
   private void ConfigureDevices(ModelBuilder builder)
   {
@@ -125,15 +136,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
-  private static void ConfigureServerAlert(ModelBuilder builder)
-  {
-    // Singleton table pattern - only one row allowed
-    builder
-      .Entity<ServerAlert>()
-      .HasKey(x => x.Id);
-  }
-
   private void ConfigureTags(ModelBuilder builder)
   {
     builder

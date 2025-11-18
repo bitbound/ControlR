@@ -57,7 +57,7 @@ else
   protected override async Task OnInitializedAsync()
   {
     _externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
-      .Where(x => x.Name != CustomSchemes.Smart)
+      .Where(x => x.Name != CustomSchemes.Dynamic)
       .ToArray();
   }
 

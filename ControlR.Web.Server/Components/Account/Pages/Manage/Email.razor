@@ -55,10 +55,11 @@
   private HttpContext HttpContext { get; set; } = default!;
 
   [SupplyParameterFromForm(FormName = "change-email")]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
+    Input ??= new InputModel();
     _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
     _email = await UserManager.GetEmailAsync(_user);
     _isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(_user);

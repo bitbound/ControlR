@@ -1,24 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+	<PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="10.0.0" />
+	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0" />
+	<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.0" />
+	<PackageReference Include="Bitbound.SimpleMessenger" Version="2.4.24" />
+	<PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+  </ItemGroup>
 
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="9.0.10" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.10" />
-        <PackageReference Include="Bitbound.SimpleMessenger" Version="2.3.19" />
-        <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+  </ItemGroup>
 
 </Project>

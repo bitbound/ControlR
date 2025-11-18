@@ -113,7 +113,7 @@
     _currentLogins = await UserManager.GetLoginsAsync(_user);
     _otherLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
       .Where(auth => _currentLogins.All(ul => auth.Name != ul.LoginProvider))
-      .Where(x => x.Name != CustomSchemes.Smart)
+      .Where(x => x.Name != CustomSchemes.Dynamic)
       .ToList();
 
     string? passwordHash = null;

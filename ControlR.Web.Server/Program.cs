@@ -46,6 +46,7 @@ else
 {
   app.UseHttpsRedirection();
   app.UseExceptionHandler("/Error", true);
+  app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
   app.UseHsts();
 }
 

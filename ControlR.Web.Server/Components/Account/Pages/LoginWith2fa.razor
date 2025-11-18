@@ -46,7 +46,8 @@
 
 <MudText Class="mt-4">
   Don't have access to your authenticator device? You can
-  <a class="mud-link mud-primary-text mud-link-underline-hover" href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
+  <a class="mud-link mud-primary-text mud-link-underline-hover"
+    href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
 </MudText>
 
 @code {
@@ -54,7 +55,7 @@
   private AppUser _user = default!;
 
   [SupplyParameterFromForm]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; set; } = default!;
 
   [SupplyParameterFromQuery]
   private string? ReturnUrl { get; set; }
@@ -64,15 +65,17 @@
 
   protected override async Task OnInitializedAsync()
   {
+    Input ??= new();
     // Ensure the user has gone through the username & password screen first
     _user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
-            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+    throw new InvalidOperationException("Unable to load two-factor authentication user.");
   }
 
   private async Task OnValidSubmitAsync()
   {
     var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
-    var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+    var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe,
+    Input.RememberMachine);
     var userId = await UserManager.GetUserIdAsync(_user);
 
     if (result.Succeeded)

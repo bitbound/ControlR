@@ -10,26 +10,27 @@
 
 <MudText Typo="Typo.h6" GutterBottom="true">Delete personal data</MudText>
 
-<StatusMessage Message="@_message"/>
+<StatusMessage Message="@_message" />
 
 <MudAlert Severity="Severity.Error" Variant="Variant.Text">
   Deleting this data will permanently remove your account, and this cannot be recovered.
 </MudAlert>
 
 <EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
-  <DataAnnotationsValidator/>
+  <DataAnnotationsValidator />
 
   <MudGrid>
     @if (_requirePassword)
     {
       <MudItem xs="12">
         <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" InputType="InputType.Password"
-                            Label="Password" Placeholder="password" HelperText="Please enter your password."
-                            UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })"/>
+          Label="Password" Placeholder="password" HelperText="Please enter your password."
+          UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })" />
       </MudItem>
     }
     <MudItem xs="12">
-      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Delete data and close my account</MudStaticButton>
+      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+        Delete data and close my account</MudStaticButton>
     </MudItem>
   </MudGrid>
 </EditForm>
@@ -43,7 +44,7 @@
   private HttpContext HttpContext { get; set; } = default!;
 
   [SupplyParameterFromForm]
-  private InputModel Input { get; set; } = new();
+  private InputModel Input { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
