@@ -1,0 +1,50 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Libraries/">
+    <Project Path="Libraries/ControlR.Libraries.Clients/ControlR.Libraries.Clients.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.DevicesCommon/ControlR.Libraries.DevicesCommon.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.NativeInterop.Unix/ControlR.Libraries.NativeInterop.Unix.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.NativeInterop.Windows/ControlR.Libraries.NativeInterop.Windows.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Common/ControlR.Libraries.WebSocketRelay.Common.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/.build/">
+    <File Path=".build/Build.ps1" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj" />
+    <Project Path="Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />
+    <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
+    <Project Path="Tests/ControlR.Tests.TestingUtilities/ControlR.Tests.TestingUtilities.csproj" />
+    <Project Path="Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj" />
+  </Folder>
+  <Project Path="ControlR.Agent.Common/ControlR.Agent.Common.csproj" />
+  <Project Path="ControlR.Agent/ControlR.Agent.csproj" />
+  <Project Path="ControlR.ApiClient/ControlR.ApiClient.csproj" />
+  <Project Path="ControlR.DesktopClient.Common/ControlR.DesktopClient.Common.csproj" />
+  <Project Path="ControlR.DesktopClient.Linux/ControlR.DesktopClient.Linux.csproj" />
+  <Project Path="ControlR.DesktopClient.Mac/ControlR.DesktopClient.Mac.csproj" />
+  <Project Path="ControlR.DesktopClient.Windows/ControlR.DesktopClient.Windows.csproj" />
+  <Project Path="ControlR.DesktopClient/ControlR.DesktopClient.csproj" />
+  <Project Path="ControlR.Web.AppHost/ControlR.Web.AppHost.csproj" />
+  <Project Path="ControlR.Web.Client/ControlR.Web.Client.csproj" />
+  <Project Path="ControlR.Web.Server/ControlR.Web.Server.csproj" />
+  <Project Path="ControlR.Web.ServiceDefaults/ControlR.Web.ServiceDefaults.csproj" />
+  <Project Path="ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj" />
+  <Project Path="docker-compose/docker-compose.dcproj">
+    <Build Solution="*|Any CPU" />
+  </Project>
+</Solution>

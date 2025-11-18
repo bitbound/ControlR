@@ -143,10 +143,33 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
           return;
         }
 
-        if (result is Task resultTask)
+        if (result is Task task)
         {
-          result = ((dynamic)resultTask).GetAwaiter().GetResult();
-          returnType = result.GetType();
+          // Await completion
+          await task;
+
+          var rt = result.GetType();
+          if (rt.IsGenericType && rt.GetGenericTypeDefinition() == typeof(Task<>))
+          {
+            // Read Task<T>.Result via reflection
+            var value = rt.GetProperty("Result")!.GetValue(result);
+            if (value is null)
+            {
+              _logger.LogError("Handler result is null.");
+              return;
+            }
+
+            result = value;
+            returnType = value.GetType();
+
+            // do something with the extracted value
+          }
+          else
+          {
+            // non-generic Task (Task with no result)
+            returnType = typeof(void);
+            // handle as needed
+          }
         }
 
         var responseWrapper = new MessageWrapper(

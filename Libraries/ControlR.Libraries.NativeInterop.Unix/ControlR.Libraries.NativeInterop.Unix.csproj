@@ -11,4 +11,8 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Tmds.DBus" Version="0.21.2" />
+      <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.2" />
+    </ItemGroup>
 </Project>

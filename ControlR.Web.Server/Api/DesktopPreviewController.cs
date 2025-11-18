@@ -52,9 +52,23 @@ public class DesktopPreviewController : ControllerBase
       streamId,
       targetProcessId);
 
-    await agentHub.Clients
+    var requestResult = await agentHub.Clients
       .Client(device.ConnectionId)
       .RequestDesktopPreview(desktopPreviewRequestDto);
+
+    if (!requestResult.IsSuccess)
+    {
+      logger.LogWarning(
+        "Desktop preview request for device {DeviceId} and process {TargetProcessId} failed: {ErrorMessage}",
+        deviceId,
+        targetProcessId,
+        requestResult.Reason);
+
+      return Problem(
+        detail: requestResult.Reason,
+        statusCode: StatusCodes.Status503ServiceUnavailable,
+        title: "Desktop preview request failed");
+    }
 
     try
     {

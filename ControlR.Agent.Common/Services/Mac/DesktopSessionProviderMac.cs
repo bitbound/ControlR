@@ -231,7 +231,7 @@ internal class DesktopSessionProviderMac(
         }
 
         // If not in logged-in users, try to get username from UID
-        var usernameResult = _processManager.GetProcessOutput("id", $"-un {uid}", 3000).GetAwaiter().GetResult();
+        var usernameResult = await _processManager.GetProcessOutput("id", $"-un {uid}", 3000);
         if (usernameResult.IsSuccess && !string.IsNullOrWhiteSpace(usernameResult.Value))
         {
           return Result.Ok(usernameResult.Value.Trim());

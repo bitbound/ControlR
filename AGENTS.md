@@ -162,6 +162,23 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Use 2 spaces for indentation
 - Don't try to be overly clever.  Code should be easily readable.
 - Don't try to fit everything on one line.  Use white space for readability.
+- **CRITICAL: All code written is production code.** Never write placeholder implementations, TODOs, or comments suggesting the code needs improvement "in production" or is a "simplification". Every implementation must be complete, correct, and production-ready.
+- **Never use phrases like:**
+  - "In production, you should..."
+  - "This is a simplification..."
+  - "This assumes..." (unless documenting actual API contracts)
+  - "This is an estimate..."
+  - "// TODO:", "// FIXME:", "// HACK:", etc.
+- **If you don't know how to implement something correctly:**
+  - Research the proper implementation
+  - Ask for clarification
+  - DO NOT write incomplete code with apologetic comments
+- **All implementations must handle:**
+  - Edge cases appropriately
+  - Error conditions with proper error handling
+  - Resource cleanup (dispose patterns, etc.)
+  - Thread safety where applicable
+  - Format variations, null checks, boundary conditions
 
 ### Build and Task System
 - Use the following build command to verify that changes compile: `dotnet build ControlR.sln --verbosity quiet`
@@ -200,6 +217,11 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
   - `ServerApi` contains DTOs used in the REST API.
   - `StreamerDtos` contain DTOs used by remote control, which get routed through the websocket relay.
 - Maintain clear separation between business logic and UI code.
+- **Planning documents and implementation notes** should be placed in the `/.plans/` directory, NOT committed to the main source tree.
+- **Do not create random public classes** in files containing other classes. Instead:
+  - Use existing shared types from `ControlR.Libraries.Shared.Primitives` when available (e.g., `Result<T>`)
+  - If a new type is needed, create it in its own file in the appropriate namespace
+  - Check for existing types before creating duplicates
 
 ### SignalR Communication Patterns
 - Device heartbeats flow: `Agent` → `AgentHub.UpdateDevice()` → `ViewerHub` groups

@@ -10,7 +10,7 @@ public static class IoHelper
       throw new DirectoryNotFoundException($"Directory '{currentDir}' does not exist.");
     }
 
-    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
+    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.slnx"))
     {
       return Result.Ok(dirInfo.FullName);
     }

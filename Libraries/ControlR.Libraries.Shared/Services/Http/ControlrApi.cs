@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
@@ -73,6 +74,7 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
+
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -336,14 +338,10 @@ public class ControlrApi(
 
   public async Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId)
   {
-    return await TryCallApi(async () =>
-    {
-      using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}");
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadAsByteArrayAsync();
-    });
+    return await TryCallApi(
+      async () => await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}"),
+      async response => await response.Content.ReadAsByteArrayAsync());
   }
-
   public async Task<Result<DeviceDto>> GetDevice(Guid deviceId)
   {
     return await TryCallApi(async () =>
@@ -556,16 +554,6 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request)
-  {
-    return await TryCallApi(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.ServerAlertEndpoint, request);
-      response.EnsureSuccessStatusCode();
-      return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
-    });
-  }
-
   public async Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request)
   {
     return await TryCallApi(async () =>
@@ -573,6 +561,16 @@ public class ControlrApi(
       using var response = await _client.PutAsJsonAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>();
+    });
+  }
+
+  public async Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(HttpConstants.ServerAlertEndpoint, request);
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
     });
   }
 
@@ -586,6 +584,113 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ??
         new ValidateFilePathResponseDto(false, "Failed to deserialize response");
     });
+  }
+
+  private static async Task<string> ExtractErrorMessage(HttpResponseMessage response)
+  {
+    try
+    {
+      var content = await response.Content.ReadAsStringAsync();
+      if (string.IsNullOrWhiteSpace(content))
+      {
+        return $"{(int)response.StatusCode} {response.ReasonPhrase}";
+      }
+
+      var mediaType = response.Content.Headers.ContentType?.MediaType;
+      if (string.Equals(mediaType, "application/problem+json", StringComparison.OrdinalIgnoreCase))
+      {
+        // Best-effort parse of RFC 7807 ProblemDetails
+        if (TryGetProblemDetail(content, out var problemMessage))
+        {
+          return problemMessage;
+        }
+      }
+      else
+      {
+        // Content might still be JSON with a `detail` field; try anyway
+        if (TryGetProblemDetail(content, out var problemMessage))
+        {
+          return problemMessage;
+        }
+      }
+
+      return content;
+    }
+    catch
+    {
+      return $"{(int)response.StatusCode} {response.ReasonPhrase}";
+    }
+  }
+
+  private static bool TryGetProblemDetail(string json, out string message)
+  {
+    try
+    {
+      using var doc = JsonDocument.Parse(json);
+      var root = doc.RootElement;
+      if (root.ValueKind == JsonValueKind.Object)
+      {
+        if (root.TryGetProperty("detail", out var detailEl) && detailEl.ValueKind == JsonValueKind.String)
+        {
+          message = detailEl.GetString() ?? string.Empty;
+          return !string.IsNullOrWhiteSpace(message);
+        }
+
+        if (root.TryGetProperty("title", out var titleEl) && titleEl.ValueKind == JsonValueKind.String)
+        {
+          message = titleEl.GetString() ?? string.Empty;
+          return !string.IsNullOrWhiteSpace(message);
+        }
+      }
+    }
+    catch
+    {
+      // fall through
+    }
+
+    message = string.Empty;
+    return false;
+  }
+
+  
+  private async Task<Result<T>> TryCallApi<T>(
+    Func<Task<HttpResponseMessage>> send,
+    Func<HttpResponseMessage, Task<T>> readSuccess,
+    Func<HttpResponseMessage, Task<string>>? readError = null)
+  {
+    try
+    {
+      using var response = await send.Invoke();
+      if (response.IsSuccessStatusCode)
+      {
+        var value = await readSuccess(response);
+        return Result.Ok(value);
+      }
+
+      var message = readError is not null
+        ? await readError(response)
+        : await ExtractErrorMessage(response);
+
+      return Result.Fail<T>(message).Log(_logger);
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail<T>(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (OperationCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+    {
+      return Result
+        .Fail<T>(ex, "The operation was canceled by the caller.")
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<T>(ex, $"The request failed with error: {ex.Message}")
+        .Log(_logger);
+    }
   }
 
 

@@ -26,6 +26,7 @@ internal class DesktopSessionProviderLinux(
       string? username = null;
       string? display = null;
       string? waylandDisplay = null;
+      string? xdgSessionType = null;
       string? tty = null;
 
       // Try to find the username for this session
@@ -72,9 +73,15 @@ internal class DesktopSessionProviderLinux(
             }
             else if (waylandDisplay is null && entry.StartsWith("WAYLAND_DISPLAY=", StringComparison.Ordinal))
             {
-              var val = entry[15..].Trim();
+              var val = entry[16..].Trim();
               if (!string.IsNullOrWhiteSpace(val))
                 waylandDisplay = val;
+            }
+            else if (xdgSessionType is null && entry.StartsWith("XDG_SESSION_TYPE=", StringComparison.Ordinal))
+            {
+              var val = entry[17..].Trim();
+              if (!string.IsNullOrWhiteSpace(val))
+                xdgSessionType = val.ToLowerInvariant();
             }
           }
         }
@@ -84,12 +91,18 @@ internal class DesktopSessionProviderLinux(
         _logger.LogDebug(ex, "Failed to read environment for process {Pid}", process.Id);
       }
 
-      // Prefer a DISPLAY value (X11), else wayland display, else TTY
+      // Prefer Wayland if detected (WAYLAND_DISPLAY or XDG_SESSION_TYPE=wayland), else DISPLAY (X11), else TTY
       string? sessionKey;
       string sessionLabel;
       DesktopSessionType sessionType;
 
-      if (!string.IsNullOrWhiteSpace(display))
+      if (!string.IsNullOrWhiteSpace(waylandDisplay) || string.Equals(xdgSessionType, "wayland", StringComparison.Ordinal))
+      {
+        sessionKey = waylandDisplay ?? "wayland";
+        sessionLabel = sessionKey; // e.g. wayland-0
+        sessionType = DesktopSessionType.Console;
+      }
+      else if (!string.IsNullOrWhiteSpace(display))
       {
         sessionKey = display;
         sessionLabel = display; // ":0" etc. FormatSessionName will render as X11
@@ -169,7 +182,11 @@ internal class DesktopSessionProviderLinux(
 
     if (tty.StartsWith(':'))
     {
-      return $"{sessionTypeStr} (X11 {tty})";
+      return $"{sessionTypeStr} (X11: {tty})";
+    }
+    else if (tty.StartsWith("wayland", StringComparison.OrdinalIgnoreCase))
+    {
+      return $"{sessionTypeStr} (Wayland: {tty})";
     }
     else if (tty.StartsWith("tty"))
     {

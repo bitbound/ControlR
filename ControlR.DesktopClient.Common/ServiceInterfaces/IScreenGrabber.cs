@@ -15,7 +15,7 @@ public interface IScreenGrabber
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
   CaptureResult CaptureAllDisplays(bool captureCursor = true);
-  
+
   /// <summary>
   ///   Gets a capture of a specific display.
   /// </summary>

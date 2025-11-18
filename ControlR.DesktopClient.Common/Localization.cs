@@ -33,6 +33,7 @@ public static class Localization
   public static string GetSupportDescription => GetString();
   public static string GetTechSupportTitle => GetString();
   public static string Granted => GetString();
+  public static string LearnMore => GetString();
   public static string MacOsPermissions => GetString();
   public static string ManagedDeviceMessage => GetString();
   public static string ManagedDeviceTitle => GetString();
@@ -47,7 +48,11 @@ public static class Localization
   public static string OpenSettings => GetString();
   public static string RemoteControlSessionToastMessage => GetString();
   public static string RemoteControlSessionToastTitle => GetString();
+  public static string RemoteDesktopPermission => GetString();
+  public static string RemoteDesktopPermissionDescription => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
+  public static string ScreenCastPermission => GetString();
+  public static string ScreenCastPermissionDescription => GetString();
   public static string ScreenRecording => GetString();
   public static string SendMessageText => GetString();
   public static string SendText => GetString();
@@ -58,6 +63,7 @@ public static class Localization
   public static string ThemeDark => GetString();
   public static string ThemeLight => GetString();
   public static string Version => GetString();
+  public static string WaylandPermissions => GetString();
   public static string YesText => GetString();
   public static string You => GetString();
 

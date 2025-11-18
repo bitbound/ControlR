@@ -176,7 +176,7 @@ internal class DesktopClientWatcherWin(
       return Result.Fail<string>("Not found.");
     }
 
-    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.sln"))
+    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.slnx"))
     {
       return Result.Ok(currentDir);
     }

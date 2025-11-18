@@ -4,6 +4,8 @@ using ControlR.Libraries.NativeInterop.Unix;
 using Microsoft.Extensions.DependencyInjection;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.Services;
+using Microsoft.Extensions.Logging;
+using ControlR.Libraries.DevicesCommon.Services;
 
 namespace ControlR.DesktopClient.Linux;
 
@@ -13,17 +15,41 @@ public static class HostAppBuilderExtensions
     this IHostApplicationBuilder builder,
     string appDataFolder)
   {
+
+    var desktopEnvironemnt = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+    var logger = new SerilogLogger<IHostApplicationBuilder>();
+
+    // Register services based on detected desktop environment
+    switch (desktopEnvironemnt)
+    {
+      case DesktopEnvironmentType.Wayland:
+        logger.LogInformation("Detected Wayland desktop environment.");
+        builder.Services
+          .AddSingleton<IDisplayManager, DisplayManagerWayland>()
+          .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
+          .AddSingleton<IInputSimulator, InputSimulatorWayland>()
+          .AddSingleton<IWaylandInterop, WaylandInterop>();
+        break;
+      case DesktopEnvironmentType.X11:
+        logger.LogInformation("Detected X11 desktop environment.");
+        builder.Services
+          .AddSingleton<IDisplayManager, DisplayManagerX11>()
+          .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
+          .AddSingleton<IInputSimulator, InputSimulatorX11>()
+          .AddHostedService<CursorWatcherX11>();
+        break;
+      default:
+        logger.LogError("Could not detect desktop environment.");
+        throw new NotSupportedException("Unsupported desktop environment detected.");
+    }
+
+    // Common services
+    builder.Services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
+    builder.Services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
     builder.Services
-      .AddSingleton<IFileSystemUnix, FileSystemUnix>()
-      .AddSingleton<IDisplayManager, DisplayManagerX11>()
-      .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
-      //.AddSingleton<IClipboardManager, ClipboardManagerX11>()
-      //.AddSingleton<IClipboardManager, ClipboardManagerGtk>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>()
-      .AddSingleton<IInputSimulator, InputSimulatorX11>()
-      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
-      .AddHostedService<CursorWatcherX11>();
-      
+      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>());
+
     builder.BootstrapSerilog(
       logFilePath: PathConstants.GetLogsPath(appDataFolder),
       logRetention: TimeSpan.FromDays(7));

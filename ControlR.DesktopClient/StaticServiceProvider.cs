@@ -60,7 +60,7 @@ internal static class StaticServiceProvider
 
     // Options
     services.AddOptions();
-    
+
     services.Configure<DesktopClientOptions>(options =>
     {
       options.InstanceId = instanceId;
@@ -94,7 +94,7 @@ internal static class StaticServiceProvider
       .AddHostedService<IpcClientManager>()
       // Cross-platform Avalonia-based toaster
       .AddSingleton<IToaster, Toaster>();
-    
+
 
 #if WINDOWS_BUILD
     services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>();
@@ -108,8 +108,20 @@ internal static class StaticServiceProvider
 #endif
 
 #if LINUX_BUILD
-    services.AddSingleton<IScreenGrabber, ScreenGrabberX11>();
-    services.AddSingleton<IDisplayManager, DisplayManagerX11>();
+    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+    switch (desktopEnvironment)
+    {
+      case DesktopEnvironmentType.Wayland:
+        services.AddSingleton<IScreenGrabber, ScreenGrabberWayland>();
+        services.AddSingleton<IDisplayManager, DisplayManagerWayland>();
+        break;
+      case DesktopEnvironmentType.X11:
+        services.AddSingleton<IScreenGrabber, ScreenGrabberX11>();
+        services.AddSingleton<IDisplayManager, DisplayManagerX11>();
+        break;
+      default:
+        throw new NotSupportedException("Unsupported desktop environment detected.");
+    }
 #endif
 
 #if MAC_BUILD
