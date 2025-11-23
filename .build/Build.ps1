@@ -53,7 +53,7 @@ if (!(Test-Path $SignToolPath)) {
 
 Set-Location $Root
 
-if (!(Test-Path -Path "$Root\ControlR.sln")) {
+if (!(Test-Path -Path "$Root\ControlR.slnx")) {
   Write-Host "Unable to determine solution directory." -ForegroundColor Red
   return
 }
@@ -112,13 +112,13 @@ function Build-DesktopAndAgent {
       Check-LastExitCode
     }
     
-  Write-Host "Creating DesktopClient ZIP (staged, not copied to server)..." -ForegroundColor Green
-  New-Item -Path "$StagingFolder\$RuntimeId" -ItemType Directory -Force | Out-Null
-  Compress-Archive -Path "$DesktopPublishPath\$RuntimeId\*" -DestinationPath "$StagingFolder\$RuntimeId\$ZipFileName" -Force
+    Write-Host "Creating DesktopClient ZIP (staged, not copied to server)..." -ForegroundColor Green
+    New-Item -Path "$StagingFolder\$RuntimeId" -ItemType Directory -Force | Out-Null
+    Compress-Archive -Path "$DesktopPublishPath\$RuntimeId\*" -DestinationPath "$StagingFolder\$RuntimeId\$ZipFileName" -Force
     
     # Copy to Resources folder for embedding
-  Write-Host "Copying $ZipFileName to Agent Resources folder..." -ForegroundColor Green
-  Copy-Item "$StagingFolder\$RuntimeId\$ZipFileName" "$AgentResourcesFolder\$ZipFileName" -Force
+    Write-Host "Copying $ZipFileName to Agent Resources folder..." -ForegroundColor Green
+    Copy-Item "$StagingFolder\$RuntimeId\$ZipFileName" "$AgentResourcesFolder\$ZipFileName" -Force
   }
   
   # Build Agent

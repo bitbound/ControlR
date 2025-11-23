@@ -7,6 +7,15 @@ on:
   #  paths-ignore:
   #    - 'README.md'
   workflow_dispatch:
+    inputs:
+      windows_runner:
+        description: 'Windows Runner'
+        required: true
+        default: 'windows-latest'
+        type: choice
+        options:
+          - windows-latest
+          - self-hosted
 
 env:
   MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
@@ -106,7 +115,8 @@ jobs:
 
   windows-build:
     name: Windows Build
-    runs-on: windows-latest
+    runs-on: ${{ inputs.windows_runner || 'windows-latest' }}
+    environment: secure-signing
     needs: [set-version, mac-build]
     env:
       VERSION: ${{ needs.set-version.outputs.version }}
