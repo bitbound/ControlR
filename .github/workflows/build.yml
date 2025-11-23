@@ -378,12 +378,3 @@ jobs:
           name: DockerCompose
           path: docker-compose\
           retention-days: 90
-
-      - name: Create Version Tag
-        if: github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push origin "v${VERSION}"
