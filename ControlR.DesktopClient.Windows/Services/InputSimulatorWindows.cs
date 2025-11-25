@@ -18,12 +18,12 @@ internal class InputSimulatorWindows(
   private readonly IWin32Interop _win32Interop = win32Interop;
   private Thread? _processorThread;
 
-  public void InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
       _logger.LogWarning("Key cannot be empty.");
-      return;
+      return Task.CompletedTask;
     }
 
     // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
@@ -44,26 +44,32 @@ internal class InputSimulatorWindows(
       // For commands, shortcuts, and non-printable keys, use virtual key simulation
       _actionQueue.Add(() => _win32Interop.InvokeKeyEvent(key, code, isPressed));
     }
+
+    return Task.CompletedTask;
   }
 
-  public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)
+  public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
-    _actionQueue.Add(() => _win32Interop.InvokeMouseButtonEvent(x, y, button, isPressed));
+    _actionQueue.Add(() => _win32Interop.InvokeMouseButtonEvent(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, button, isPressed));
+    return Task.CompletedTask;
   }
 
-  public void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType)
+  public Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
-    _actionQueue.Add(() => _win32Interop.MovePointer(x, y, moveType));
+    _actionQueue.Add(() => _win32Interop.MovePointer(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, moveType));
+    return Task.CompletedTask;
   }
 
-  public void ResetKeyboardState()
+  public Task ResetKeyboardState()
   {
     _actionQueue.Add(() => _win32Interop.ResetKeyboardState());
+    return Task.CompletedTask;
   }
 
-  public void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX)
+  public Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
-    _actionQueue.Add(() => _win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX));
+    _actionQueue.Add(() => _win32Interop.InvokeWheelScroll(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, scrollY, scrollX));
+    return Task.CompletedTask;
   }
   
   public Task SetBlockInput(bool isBlocked)
@@ -90,9 +96,10 @@ internal class InputSimulatorWindows(
     _logger.LogInformation("Input simulator processor thread stopped.");
   }
 
-  public void TypeText(string text)
+  public Task TypeText(string text)
   {
     _actionQueue.Add(() => { _win32Interop.TypeText(text); });
+    return Task.CompletedTask;
   }
 
   private void ProcessActions()

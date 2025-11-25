@@ -1,17 +1,23 @@
-﻿using ControlR.Web.Client.Services.DeviceAccess;
+﻿using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class Overview : IDisposable
 {
+
   private readonly ConcurrentList<IDisposable> _disposables = [];
 
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
 
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
+
+
   [CascadingParameter]
   public required Palette Palette { get; init; }
+
 
   public void Dispose()
   {

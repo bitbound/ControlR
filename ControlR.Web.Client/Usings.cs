@@ -29,6 +29,6 @@ global using ControlR.Web.Client.Authz.Policies;
 global using ControlR.Libraries.Shared.Dtos.HubDtos;
 global using ControlR.Libraries.Shared.Constants;
 global using ControlR.Libraries.Shared.Dtos.Interfaces;
-global using ControlR.Web.Client.Services.Stores;
+global using ControlR.Web.Client.StateManagement.Stores;
 global using ControlR.Web.Client.ViewModels;
 global using ControlR.Web.Client.Components.ContentWindows;

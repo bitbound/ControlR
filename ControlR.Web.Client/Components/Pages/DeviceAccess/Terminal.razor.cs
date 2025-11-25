@@ -1,5 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -17,6 +17,7 @@ public partial class Terminal : IAsyncDisposable
 
   private readonly string _commandInputElementId = $"terminal-input-{Guid.NewGuid()}";
 
+
   private MudTextField<string>? _commandInputElement;
 
   // Provided by UI.  Never null
@@ -26,6 +27,10 @@ public partial class Terminal : IAsyncDisposable
   private bool _loading = true;
   private bool _taboutPrevented;
   private ElementReference _terminalOutputContainer;
+
+
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
 
   [Inject]
   public required IDeviceState DeviceState { get; init; }

@@ -82,6 +82,56 @@ class WindowEventHandler {
   }
 }
 
+/**
+ * Applies mouse wheel zoom with panning towards cursor position
+ * @param {HTMLDivElement} contentDiv
+ * @param {HTMLCanvasElement} canvasRef
+ * @param {number} canvasCssWidth
+ * @param {number} canvasCssHeight
+ * @param {number} widthChange
+ * @param {number} heightChange
+ * @param {number} cursorX - Cursor X position relative to canvas
+ * @param {number} cursorY - Cursor Y position relative to canvas
+ */
+export async function applyMouseWheelZoom(contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange, cursorX, cursorY) {
+    canvasRef.style.width = `${canvasCssWidth}px`;
+    canvasRef.style.height = `${canvasCssHeight}px`;
+
+    // Calculate cursor position as percentage of canvas
+    const cursorPercentX = cursorX / canvasRef.clientWidth;
+    const cursorPercentY = cursorY / canvasRef.clientHeight;
+
+    // Scroll to maintain cursor position relative to the canvas
+    const scrollByX = widthChange * cursorPercentX;
+    const scrollByY = heightChange * cursorPercentY;
+
+    contentDiv.scrollBy(scrollByX, scrollByY);
+}
+
+/**
+ *
+ * @param {HTMLDivElement} contentDiv
+ * @param {HTMLCanvasElement} canvasRef
+ * @param {number} canvasCssWidth
+ * @param {number} canvasCssHeight
+ * @param {number} widthChange
+ * @param {number} heightChange
+ * @param {number} scrollDeltaX
+ * @param {number} scrollDeltaY
+ */
+export async function applyPinchZoom(contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange, scrollDeltaX, scrollDeltaY) {
+    canvasRef.style.width = `${canvasCssWidth}px`;
+    canvasRef.style.height = `${canvasCssHeight}px`;
+
+    // center of the visible client area expressed as a percent of the full scrollable size
+    const clientCenterPercentX = (contentDiv.scrollLeft + contentDiv.clientWidth * 0.5) / contentDiv.scrollWidth;
+    const clientCenterPercentY = (contentDiv.scrollTop + contentDiv.clientHeight * 0.5) / contentDiv.scrollHeight;
+
+    const scrollByX = widthChange * clientCenterPercentX;
+    const scrollByY = heightChange * clientCenterPercentY;
+
+    contentDiv.scrollBy(scrollByX + scrollDeltaX * 2, scrollByY + scrollDeltaY * 2);
+}
 
 /**
  * Draws the encoded image onto the canvas at the specified region.
@@ -308,20 +358,6 @@ export async function initialize(componentRef, canvasId) {
     await sendMouseClick(ev.offsetX, ev.offsetY, ev.button, true, state);
   });
 
-  canvas.addEventListener("wheel", async ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-
-    if (canvas.classList.contains("minimized")) {
-      return;
-    }
-
-    const percentX = ev.offsetX / state.canvasElement.clientWidth;
-    const percentY = ev.offsetY / state.canvasElement.clientHeight;
-
-    await state.invokeDotNet("SendWheelScroll", percentX, percentY, -ev.deltaY, 0);
-  });
-
   canvas.addEventListener("contextmenu", async ev => {
     ev.preventDefault();
     ev.stopPropagation();
@@ -404,7 +440,7 @@ export async function initialize(componentRef, canvasId) {
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
 
   // Start periodic cleanup of orphaned tracking entries
-  // Keys held longer than 5 seconds are considered stuck/orphaned
+  // Keys held longer than 5 seconds are considered stuck-orphaned
   state.cleanupIntervalId = window.setInterval(() => {
     const now = Date.now();
     let cleanedCount = 0;
@@ -422,31 +458,6 @@ export async function initialize(componentRef, canvasId) {
   }, 1000);
 
   console.log("Initialized with state: ", state);
-}
-
-/**
- *
- * @param {HTMLDivElement} contentDiv
- * @param {HTMLCanvasElement} canvasRef
- * @param {number} canvasCssWidth
- * @param {number} canvasCssHeight
- * @param {number} widthChange
- * @param {number} heightChange
- * @param {number} scrollDeltaX
- * @param {number} scrollDeltaY
- */
-export async function scrollFromPinch(contentDiv, canvasRef, canvasCssWidth, canvasCssHeight, widthChange, heightChange, scrollDeltaX, scrollDeltaY) {
-  canvasRef.style.width = `${canvasCssWidth}px`;
-  canvasRef.style.height = `${canvasCssHeight}px`;
-
-  // center of the visible client area expressed as a percent of the full scrollable size
-  const clientCenterPercentX = (contentDiv.scrollLeft + contentDiv.clientWidth * 0.5) / contentDiv.scrollWidth;
-  const clientCenterPercentY = (contentDiv.scrollTop + contentDiv.clientHeight * 0.5) / contentDiv.scrollHeight;
-
-  const scrollByX = widthChange * clientCenterPercentX;
-  const scrollByY = heightChange * clientCenterPercentY;
-
-  contentDiv.scrollBy(scrollByX + scrollDeltaX * 2, scrollByY + scrollDeltaY * 2);
 }
 
 /**

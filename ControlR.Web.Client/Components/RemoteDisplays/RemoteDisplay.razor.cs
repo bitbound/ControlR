@@ -1,7 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.InteropServices.JavaScript;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -68,8 +68,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
-
-
   private string CanvasClasses
   {
     get
@@ -83,6 +81,8 @@ public partial class RemoteDisplay : JsInteropableComponent
       return classNames.ToLower();
     }
   }
+
+  private double CanvasHeight => RemoteControlState.SelectedDisplay?.Height ?? 0;
 
   private string CanvasStyle
   {
@@ -99,6 +99,7 @@ public partial class RemoteDisplay : JsInteropableComponent
         $"height: {_canvasCssHeight}px;";
     }
   }
+  private double CanvasWidth => RemoteControlState.SelectedDisplay?.Width ?? 0;
 
   private string OuterClass =>
     IsVisible
@@ -121,8 +122,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     float width,
     float height,
     byte[] encodedImage);
-
-
 
   public override async ValueTask DisposeAsync()
   {
@@ -152,17 +151,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
-  public async Task SendKeyEvent(string key, string? code, bool isPressed)
-  {
-    if (StreamingClient.State != WebSocketState.Open)
-    {
-      return;
-    }
-
-    await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
-  }
-
-  [JSInvokable]
   public async Task SendKeyboardStateReset()
   {
     if (StreamingClient.State != WebSocketState.Open)
@@ -173,6 +161,16 @@ public partial class RemoteDisplay : JsInteropableComponent
     await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
   }
 
+  [JSInvokable]
+  public async Task SendKeyEvent(string key, string? code, bool isPressed)
+  {
+    if (StreamingClient.State != WebSocketState.Open)
+    {
+      return;
+    }
+
+    await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
+  }
   [JSInvokable]
   public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
   {
@@ -210,8 +208,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     RemoteControlState.DisplayData = displays;
     await InvokeAsync(StateHasChanged);
   }
-
-
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -298,11 +294,11 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       if (OperatingSystem.IsBrowser())
       {
-        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage.ToArray());
       }
       else
       {
-        await JsModule.InvokeVoidAsync("drawFrame", _canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage);
+        await JsModule.InvokeVoidAsync("drawFrame", _canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage.ToArray());
       }
     }
     catch (Exception ex)
@@ -578,6 +574,74 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
+  private async Task OnCanvasWheel(WheelEventArgs e)
+  {
+    try
+    {
+      await JsModuleReady.Wait(_componentClosing.Token);
+
+      if (StreamingClient.State != WebSocketState.Open)
+      {
+        return;
+      }
+
+      // Handle zoom when both Ctrl and Shift are held
+      if (e.ShiftKey && e.CtrlKey && RemoteControlState.SelectedDisplay is not null)
+      {
+        const double zoomStep = 0.1; // 10% zoom per scroll
+        var zoomIn = e.DeltaY < 0;
+
+        var oldWidth = _canvasCssWidth;
+        var oldHeight = _canvasCssHeight;
+
+        var newScale = Math.Clamp(
+          _canvasScale + (zoomIn ? zoomStep : -zoomStep),
+          MinCanvasScale,
+          MaxCanvasScale);
+
+        // Only proceed if scale actually changed
+        if (Math.Abs(newScale - _canvasScale) < 0.001)
+        {
+          return;
+        }
+
+        _canvasScale = newScale;
+        _canvasCssWidth = RemoteControlState.SelectedDisplay.Width * newScale;
+        _canvasCssHeight = RemoteControlState.SelectedDisplay.Height * newScale;
+
+        if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
+        {
+          RemoteControlState.ViewMode = ViewMode.Original;
+        }
+
+        await JsModule.InvokeVoidAsync("applyMouseWheelZoom",
+          _screenArea,
+          _canvasRef,
+          _canvasCssWidth,
+          _canvasCssHeight,
+          _canvasCssWidth - oldWidth,
+          _canvasCssHeight - oldHeight,
+          e.OffsetX,
+          e.OffsetY);
+
+        await InvokeAsync(StateHasChanged);
+        return;
+      }
+
+      // Normal scroll - send to remote
+      if (_canvasCssWidth > 0 && _canvasCssHeight > 0)
+      {
+        var percentX = e.OffsetX / _canvasCssWidth;
+        var percentY = e.OffsetY / _canvasCssHeight;
+        await StreamingClient.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, _componentClosing.Token);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error handling wheel event.");
+    }
+  }
+
   private void OnTouchCancel(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
@@ -663,7 +727,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       _lastTouch1X = ev.Touches[1].ClientX;
       _lastTouch1Y = ev.Touches[1].ClientY;
 
-      await JsModule.InvokeVoidAsync("scrollFromPinch",
+      await JsModule.InvokeVoidAsync("applyPinchZoom",
         _screenArea,
         _canvasRef,
         _canvasCssWidth,
@@ -706,7 +770,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       await SendKeyEvent(args.Key, args.Code, false);
     }
   }
-
   private async Task TypeText(string text)
   {
     await _typeLock.WaitAsync();

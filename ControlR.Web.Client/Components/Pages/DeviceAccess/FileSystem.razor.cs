@@ -2,7 +2,7 @@ using System.Threading.Channels;
 using ControlR.Libraries.Shared.IO;
 using ControlR.Web.Client.Components.FileSystem;
 using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
@@ -25,6 +25,9 @@ public partial class FileSystem : JsInteropableComponent
 
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
+
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
 
   [Inject]
   public required IDeviceState DeviceState { get; init; }
@@ -61,10 +64,6 @@ public partial class FileSystem : JsInteropableComponent
 
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; set; }
-
-  private Guid DeviceId => DeviceState.IsDeviceLoaded
-    ? DeviceState.CurrentDevice.Id
-    : Guid.Empty;
 
   private List<TreeItemData<string>> InitialTreeItems { get; set; } = [];
   private bool IsDeleteInProgress { get; set; }

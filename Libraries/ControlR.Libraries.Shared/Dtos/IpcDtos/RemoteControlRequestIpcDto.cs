@@ -9,5 +9,6 @@ public record RemoteControlRequestIpcDto(
   string ViewerConnectionId,
   Guid DeviceId,
   bool NotifyUserOnSessionStart,
+  bool RequireConsent,
   string DataFolder,
   string ViewerName = "");

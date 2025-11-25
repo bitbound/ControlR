@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models.Messages;
@@ -13,6 +13,7 @@ using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 
@@ -181,6 +182,7 @@ internal class AgentHubClient(
         dto.ViewerConnectionId,
         dto.DeviceId,
         dto.NotifyUserOnSessionStart,
+        dto.RequireConsent,
         dataFolder,
         dto.ViewerName);
 
@@ -481,44 +483,18 @@ internal class AgentHubClient(
         return Result.Fail(response.ErrorMessage ?? "Desktop preview failed on target process.");
       }
 
-      // Stream the JPEG data back through SignalR
       _logger.LogInformation(
         "Streaming desktop preview data. JPEG size: {Size} bytes, Stream ID: {StreamId}",
         response.JpegData.Length,
         dto.StreamId);
 
-      var channel = Channel.CreateBounded<byte[]>(10);
-
-      // ReSharper disable AccessToDisposedClosure
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-
-      // Write chunks to channel in the background
-      var writeTask = Task.Run(async () =>
-      {
-        try
-        {
-          foreach (var chunk in response.JpegData.Chunk(AppConstants.SignalrMaxMessageSize))
-          {
-            cts.Token.ThrowIfCancellationRequested();
-            await channel.Writer.WriteAsync(chunk, cts.Token);
-          }
-
-          channel.Writer.TryComplete();
-        }
-        catch (Exception ex)
-        {
-          channel.Writer.TryComplete(ex);
-          _logger.LogError(ex, "Error writing desktop preview chunks to channel.");
-        }
-      }, cts.Token);
-
-      await _hubConnection.Send(
+      await _hubConnection.StreamBytes(
         nameof(IAgentHub.SendDesktopPreviewStream),
-        [dto.StreamId, channel.Reader],
-        cts.Token
-      );
-
-      await writeTask;
+        [dto.StreamId],
+        response.JpegData,
+        10,
+        cts.Token);
 
       _logger.LogInformation(
         "Desktop preview stream sent successfully. Stream ID: {StreamId}",
@@ -585,32 +561,16 @@ internal class AgentHubClient(
         dto.DirectoryPath);
 
       var result = await _fileManager.GetDirectoryContents(dto.DirectoryPath);
-      var chunkSize = _settings.HubDtoChunkSize;
-      var channel = Channel.CreateUnbounded<FileSystemEntryDto[]>();
+      var chunkSize = _settings.HubDtoChunkSize > 0 ? _settings.HubDtoChunkSize : 400;
 
-      // Write chunks to channel in the background
-      _ = Task.Run(async () =>
-      {
-        try
-        {
-          await foreach (var chunk in CreateChunks(result.Entries, chunkSize))
-          {
-            await channel.Writer.WriteAsync(chunk);
-          }
-
-          channel.Writer.TryComplete();
-        }
-        catch (Exception ex)
-        {
-          channel.Writer.TryComplete(ex);
-          _logger.LogError(ex, "Error writing directory contents chunks to channel.");
-        }
-      });
-
-      await _hubConnection.Server.SendDirectoryContentsStream(
-        dto.StreamId,
-        result.DirectoryExists,
-        channel.Reader);
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+      await _hubConnection.StreamData(
+        nameof(IAgentHub.SendDirectoryContentsStream),
+        [dto.StreamId, result.DirectoryExists],
+        result.Entries,
+        chunkSize,
+        100,
+        cts.Token);
 
       return Result.Ok();
     }
@@ -629,29 +589,17 @@ internal class AgentHubClient(
       _logger.LogInformation("Streaming subdirectories for {DeviceId}: {DirectoryPath}", dto.DeviceId,
         dto.DirectoryPath);
       var subdirs = await _fileManager.GetSubdirectories(dto.DirectoryPath);
-      var chunkSize = _settings.HubDtoChunkSize;
-      var channel = Channel.CreateUnbounded<FileSystemEntryDto[]>();
+      var chunkSize = _settings.HubDtoChunkSize > 0 ? _settings.HubDtoChunkSize : 400;
 
-      // Write chunks to channel in the background
-      _ = Task.Run(async () =>
-      {
-        try
-        {
-          await foreach (var chunk in CreateChunks(subdirs, chunkSize))
-          {
-            await channel.Writer.WriteAsync(chunk);
-          }
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+      await _hubConnection.StreamData(
+        nameof(IAgentHub.SendSubdirectoriesStream),
+        [dto.StreamId],
+        subdirs,
+        chunkSize,
+        100,
+        cts.Token);
 
-          channel.Writer.TryComplete();
-        }
-        catch (Exception ex)
-        {
-          channel.Writer.TryComplete(ex);
-          _logger.LogError(ex, "Error writing subdirectories chunks to channel.");
-        }
-      });
-
-      await _hubConnection.Server.SendSubdirectoriesStream(dto.StreamId, channel.Reader);
       return Result.Ok();
     }
     catch (Exception ex)
@@ -735,36 +683,7 @@ internal class AgentHubClient(
     }
   }
 
-  private static async IAsyncEnumerable<T[]> CreateChunks<T>(IEnumerable<T> source, int chunkSize)
-  {
-    if (chunkSize <= 0)
-    {
-      chunkSize = 400;
-    }
-
-    var buffer = new List<T>(chunkSize);
-    foreach (var item in source)
-    {
-      buffer.Add(item);
-      if (buffer.Count < chunkSize)
-      {
-        continue;
-      }
-
-      yield return buffer.ToArray();
-      buffer.Clear();
-      await Task.Yield();
-    }
-
-    if (buffer.Count > 0)
-    {
-      yield return buffer.ToArray();
-    }
-  }
-  
-  private async Task SendFileStream(
-    Guid streamId,
-    string fileSystemPath)
+  private async Task SendFileStream(Guid streamId, string fileSystemPath)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
     await using var fileStream = _fileSystem.OpenFileStream(fileSystemPath, FileMode.Open,
@@ -772,60 +691,33 @@ internal class AgentHubClient(
 
     var channel = Channel.CreateUnbounded<byte[]>();
 
-    // Write file chunks to channel in the background
     var writeTask = Task.Run(async () =>
     {
       try
       {
         var buffer = new byte[AppConstants.SignalrMaxMessageSize];
         int bytesRead;
-
         while ((bytesRead = await fileStream.ReadAsync(buffer, cts.Token)) > 0)
         {
-          var chunk = buffer[..bytesRead];
-          await channel.Writer.WriteAsync(chunk, cts.Token);
+          await channel.Writer.WriteAsync(buffer[..bytesRead], cts.Token);
         }
-
-        channel.Writer.TryComplete();
-      }
-      catch (OperationCanceledException)
-      {
-        // Expected when download is canceled
         channel.Writer.TryComplete();
       }
       catch (Exception ex)
       {
         channel.Writer.TryComplete(ex);
-        _logger.LogError(ex, "Error writing file stream chunks to channel for stream ID: {StreamId}", streamId);
+        _logger.LogError(ex, "Error writing file stream chunks for stream ID: {StreamId}", streamId);
       }
     }, cts.Token);
 
     try
     {
-      var result = await _hubConnection.Server
-        .SendFileDownloadStream(streamId, channel.Reader)
-        .WaitAsync(cts.Token);
-
-      if (result.IsSuccess)
-      {
-        _logger.LogInformation("File stream sent successfully for stream ID: {StreamId}", streamId);
-        // Wait for the write task to complete successfully
-        await writeTask;
-      }
-      else
-      {
-        // Server rejected or canceled the stream - cancel our write task
-        _logger.LogInformation("File stream was not accepted by server for stream ID: {StreamId}, Reason: {Error}",
-          streamId, result.Reason);
-        await cts.CancelAsync();
-        // Don't await writeTask here - it may throw OperationCanceledException
-      }
-    }
-    catch (OperationCanceledException)
-    {
-      // Download was canceled from the server side - this is normal
-      _logger.LogInformation("File stream download was canceled by viewer for stream ID: {StreamId}", streamId);
-      await cts.CancelAsync();
+      await _hubConnection.Send(
+        nameof(IAgentHub.SendFileDownloadStream),
+        [streamId, channel.Reader],
+        cts.Token);
+      await writeTask;
+      _logger.LogInformation("File stream sent successfully for stream ID: {StreamId}", streamId);
     }
     catch (Exception ex)
     {

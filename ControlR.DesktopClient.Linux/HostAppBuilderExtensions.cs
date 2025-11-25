@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Libraries.NativeInterop.Unix.Linux;
 using Microsoft.Extensions.DependencyInjection;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.Services;
@@ -25,10 +26,12 @@ public static class HostAppBuilderExtensions
       case DesktopEnvironmentType.Wayland:
         logger.LogInformation("Detected Wayland desktop environment.");
         builder.Services
+          .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
           .AddSingleton<IDisplayManager, DisplayManagerWayland>()
           .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
           .AddSingleton<IInputSimulator, InputSimulatorWayland>()
-          .AddSingleton<IWaylandInterop, WaylandInterop>();
+          .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
+          .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
         break;
       case DesktopEnvironmentType.X11:
         logger.LogInformation("Detected X11 desktop environment.");

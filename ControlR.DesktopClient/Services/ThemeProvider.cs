@@ -66,8 +66,8 @@ public class ThemeProvider : IThemeProvider
 
   private static ThemeVariant GetSystemTheme()
   {
-    // On Windows, theme detection isn't working yet. Default to Dark.
-    if (OperatingSystem.IsWindows())
+    // On Windows and Linux, theme detection isn't working yet. Default to Dark.
+    if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
     {
       return ThemeVariant.Dark;
     }

@@ -42,6 +42,16 @@ public class ScreenGrabberMac(
     }
   }
 
+  public Task Initialize(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task Uninitialize(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
   private CaptureResult CaptureAllDisplaysImpl(bool captureCursor)
   {
     try

@@ -22,4 +22,5 @@ public enum DtoType
   Ack = 39,
   CaptureMetricsChanged = 40,
   RequestKeyFrame = 41,
+  VideoStreamPacket = 42,
 }

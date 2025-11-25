@@ -52,6 +52,12 @@ public class DesktopPreviewController : ControllerBase
       streamId,
       targetProcessId);
 
+    logger.LogInformation(
+      "Sending desktop preview request for device {DeviceId} and process {TargetProcessId} from user {UserName}.",
+      deviceId,
+      targetProcessId,
+      User.Identity?.Name);
+
     var requestResult = await agentHub.Clients
       .Client(device.ConnectionId)
       .RequestDesktopPreview(desktopPreviewRequestDto);

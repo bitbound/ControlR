@@ -1,8 +1,7 @@
 ﻿using System.Web;
-using ControlR.Libraries.Shared.Enums;
 using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.Services.DeviceAccess;
-using ControlR.Web.Client.Services.DeviceAccess.Chat;
+using ControlR.Web.Client.StateManagement;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -11,7 +10,6 @@ namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
 
 public partial class DeviceAccessLayout : IAsyncDisposable
 {
-  private const string DeviceIdSessionStorageKey = "controlr-device-id";
   private MudTheme? _customTheme;
   private Guid _deviceId;
   private string? _deviceName;
@@ -53,9 +51,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
   [Inject]
   public required NavigationManager NavManager { get; init; }
-
-  [Inject]
-  public required ISessionStorageAccessor SessionStorageAccessor { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
@@ -132,7 +127,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       _isAuthenticated = await AuthState.IsAuthenticated();
 
       // Try to restore persisted state from SSR
-      if (!ApplicationState.TryTakeFromJson<bool>("isDarkMode", out var persistedIsDarkMode))
+      if (!ApplicationState.TryTakeFromJson<bool>(PersistentStateKeys.IsDarkMode, out var persistedIsDarkMode))
       {
         // No persisted state, this is SSR or first load
         if (_isAuthenticated)
@@ -162,35 +157,36 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         return;
       }
 
-      // If authenticated and logonToken/deviceId are present in URL, navigate to clean URL (omit secret token)
-      if (RendererInfo.IsInteractive)
+      if (!RendererInfo.IsInteractive)
       {
-        var uri = new Uri(NavManager.Uri);
-        if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("logonToken", StringComparison.OrdinalIgnoreCase))
-        {
-          var basePath = uri.GetLeftPart(UriPartial.Path);
-          var query = HttpUtility.ParseQueryString(uri.Query);
-          query.Remove("logonToken");
-          // Rebuild the remaining query string (retain deviceId and any future params)
-          var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) : string.Empty;
-          NavManager.NavigateTo(basePath + remaining, replace: true);
-        }
+        // Skip further initialization during prerendering
+        return;
       }
 
-      if (RendererInfo.IsInteractive)
+      // If authenticated and logonToken/deviceId are present in URL, navigate to clean URL.
+      var uri = new Uri(NavManager.Uri);
+      if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("logonToken", StringComparison.OrdinalIgnoreCase))
       {
-        _loadingText = "Connecting";
-        await InvokeAsync(StateHasChanged);
-
-        Messenger.Register<ToastMessage>(this, HandleToastMessage);
-        Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
-        Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
-        Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
-        Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
-
-        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
-        await GetDeviceInfo();
+        var basePath = uri.GetLeftPart(UriPartial.Path);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+        query.Remove("logonToken");
+        // Rebuild the remaining query string (retain deviceId and any future params).
+        var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) : string.Empty;
+        NavManager.NavigateTo(basePath + remaining, replace: true);
+        return;
       }
+
+      _loadingText = "Connecting";
+      await InvokeAsync(StateHasChanged);
+
+      Messenger.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
+      Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
+      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+      Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
+
+      await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      await GetDeviceInfo();
     }
     catch (Exception ex)
     {
@@ -212,13 +208,8 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
     if (string.IsNullOrWhiteSpace(deviceIdString))
     {
-      deviceIdString = await SessionStorageAccessor.GetItem(DeviceIdSessionStorageKey);
-
-      if (string.IsNullOrWhiteSpace(deviceIdString))
-      {
-        _errorText = "A valid Device ID was not provided.";
-        return;
-      }
+      _errorText = "A valid Device ID was not provided.";
+      return;
     }
 
     if (!Guid.TryParse(deviceIdString, out _deviceId) || _deviceId == Guid.Empty)
@@ -226,8 +217,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       _errorText = "A valid Device ID was not provided.";
       return;
     }
-
-    await SessionStorageAccessor.SetItem(DeviceIdSessionStorageKey, $"{_deviceId}");
 
     try
     {
@@ -243,7 +232,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       _errorText = null;
       if (!result.Value.IsOnline)
       {
-        NavManager.NavigateTo("/device-access", false);
+        NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
       }
     }
     catch (Exception ex)
@@ -295,7 +284,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       if (!message.Dto.IsOnline)
       {
         Snackbar.Add("Agent went offline", Severity.Warning);
-        NavManager.NavigateTo("/device-access", false);
+        NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
       }
 
       await InvokeAsync(StateHasChanged);
@@ -400,7 +389,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
   private Task PersistThemeState()
   {
-    ApplicationState.PersistAsJson("isDarkMode", _isDarkMode);
+    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
     return Task.CompletedTask;
   }
 }

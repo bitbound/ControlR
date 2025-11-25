@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Web.Client.Services.DeviceAccess;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
@@ -17,6 +17,9 @@ public partial class RemoteControl : ViewportAwareComponent
   
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
+
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
 
   [Inject]
   public required IDialogService DialogService { get; init; }
@@ -327,7 +330,8 @@ public partial class RemoteControl : ViewportAwareComponent
         session.TargetProcessId,
         string.Empty, // ViewerConnectionId is set by hub.
         session.Device.Id,
-        notifyUser);
+        notifyUser,
+        RequireConsent: false);
 
       var streamingSessionResult = await ViewerHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
 

@@ -10,6 +10,7 @@
   "WaylandPermissions": "Wayland Permissions",
   "Accessibility": "Accessibility",
   "Status": "Status:",
+  "GrantPermission": "Grant Permission",
   "Granted": "Granted",
   "NotGranted": "Not Granted",
   "AccessibilityPermissionDescription": "Required to remote control your device.",
@@ -17,8 +18,8 @@
   "ScreenCapturePermissionDescription": "Required to view your device's screen.",
   "ScreenCastPermission": "Screen Capture (ScreenCast)",
   "ScreenCastPermissionDescription": "Required to capture and share your screen via XDG Desktop Portal.",
-  "RemoteDesktopPermission": "Remote Desktop",
-  "RemoteDesktopPermissionDescription": "Required to simulate keyboard and mouse input via XDG Desktop Portal.",
+  "RemoteControlPermission": "Remote Control",
+  "RemoteControlPermissionDescription": "Required for screen capture and input simulation via XDG Desktop Portal.",
   "Notifications": "Notifications",
   "NotificationPermissionDescription": "Required to show notifications and alerts.",
   "OpenSettings": "Open Settings",
@@ -41,5 +42,8 @@
   "Version": "Version",
   "ThemeAuto": "Theme: Auto",
   "ThemeLight": "Theme: Light",
-  "ThemeDark": "Theme: Dark"
+  "ThemeDark": "Theme: Dark",
+  "ADeviceAdministrator": "a device administrator",
+  "RemoteControlRequestTitle": "Remote Control Request",
+  "RemoteControlRequestMessage": "Allow remote control session from {0}?"
 }

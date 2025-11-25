@@ -29,7 +29,8 @@ internal sealed class DesktopStreamingClient(
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
-  IDesktopCapturer desktopCapturer,
+  ISessionConsentService sessionConsentService,
+  IDesktopCapturerFactory desktopCapturerFactory,
   IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
@@ -41,7 +42,8 @@ internal sealed class DesktopStreamingClient(
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
-  private readonly IDesktopCapturer _desktopCapturer = desktopCapturer;
+  private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
+  private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.Create();
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly ILogger<DesktopStreamingClient> _logger = logger;
@@ -70,6 +72,21 @@ internal sealed class DesktopStreamingClient(
   {
     try
     {
+      var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
+          ? vn
+          : Localization.ADeviceAdministrator;
+
+      if (_startupOptions.Value.RequireConsent)
+      {
+        var consentGranted = await _sessionConsentService.RequestConsentAsync(viewerName, cancellationToken);
+        if (!consentGranted)
+        {
+          _logger.LogWarning("User denied consent for remote control session. Shutting down.");
+          _appLifetime.StopApplication();
+          return;
+        }
+      }
+
       await Connect(_startupOptions.Value.WebSocketUri, _appLifetime.ApplicationStopping);
       Messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
       Messenger.Register<WindowsSessionEndingMessage>(this, HandleWindowsSessionEndingMessage);
@@ -82,10 +99,6 @@ internal sealed class DesktopStreamingClient(
 
       if (_startupOptions.Value.NotifyUser)
       {
-        var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
-          ? vn
-          : Localization.ADeviceAdministrator;
-
         var message = string.Format(Localization.RemoteControlSessionToastMessage, viewerName);
         await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
       }
@@ -110,6 +123,7 @@ internal sealed class DesktopStreamingClient(
     {
       await _streamTask.WaitAsync(cancellationToken);
     }
+    await _desktopCapturer.DisposeAsync();
   }
 
   private async Task HandleCaptureMetricsChanged(object subscriber, CaptureMetricsChangedMessage message)
@@ -183,23 +197,23 @@ internal sealed class DesktopStreamingClient(
         case DtoType.WheelScroll:
           {
             var payload = wrapper.GetPayload<WheelScrollDto>();
-            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
-            if (displayPoint == null)
+            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            if (coordinates == null)
             {
               break;
             }
-            _inputSimulator.ScrollWheel(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, (int)payload.ScrollY, (int)payload.ScrollX);
+            await _inputSimulator.ScrollWheel(coordinates, (int)payload.ScrollY, (int)payload.ScrollX);
             break;
           }
         case DtoType.KeyEvent:
           {
             var payload = wrapper.GetPayload<KeyEventDto>();
-            _inputSimulator.InvokeKeyEvent(payload.Key, payload.Code, payload.IsPressed);
+            await _inputSimulator.InvokeKeyEvent(payload.Key, payload.Code, payload.IsPressed);
             break;
           }
         case DtoType.ResetKeyboardState:
           {
-            _inputSimulator.ResetKeyboardState();
+            await _inputSimulator.ResetKeyboardState();
             break;
           }
         case DtoType.ClipboardText:
@@ -218,48 +232,48 @@ internal sealed class DesktopStreamingClient(
         case DtoType.TypeText:
           {
             var payload = wrapper.GetPayload<TypeTextDto>();
-            _inputSimulator.TypeText(payload.Text);
+            await _inputSimulator.TypeText(payload.Text);
             break;
           }
         case DtoType.MovePointer:
           {
             var payload = wrapper.GetPayload<MovePointerDto>();
-            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
-            if (displayPoint == null)
+            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            if (coordinates == null)
             {
               break;
             }
-            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
+            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
             break;
           }
         case DtoType.MouseButtonEvent:
           {
             var payload = wrapper.GetPayload<MouseButtonEventDto>();
-            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
-            if (displayPoint == null)
+            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            if (coordinates == null)
             {
               break;
             }
-            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
-            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, payload.IsPressed);
+            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
+            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, payload.IsPressed);
             break;
           }
         case DtoType.MouseClick:
           {
             var payload = wrapper.GetPayload<MouseClickDto>();
-            var displayPoint = await TryGetSelectedDisplayPoint(payload.PercentX, payload.PercentY);
-            if (displayPoint == null)
+            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            if (coordinates == null)
             {
               break;
             }
-            _inputSimulator.MovePointer(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, MovePointerType.Absolute);
-            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, true);
-            _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, false);
+            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
+            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, true);
+            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, false);
 
             if (payload.IsDoubleClick)
             {
-              _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, true);
-              _inputSimulator.InvokeMouseButtonEvent(displayPoint.Point.X, displayPoint.Point.Y, displayPoint.Display, payload.Button, false);
+              await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, true);
+              await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, false);
             }
             break;
           }
@@ -351,9 +365,8 @@ internal sealed class DesktopStreamingClient(
     {
       try
       {
-        await foreach (var region in _desktopCapturer.GetCaptureStream(cancellationToken))
+        await foreach (var wrapper in _desktopCapturer.GetCaptureStream(cancellationToken))
         {
-          var wrapper = DtoWrapper.Create(region, DtoType.ScreenRegion);
           await Send(wrapper, _appLifetime.ApplicationStopping);
         }
       }
@@ -376,7 +389,7 @@ internal sealed class DesktopStreamingClient(
     _appLifetime.StopApplication();
   }
 
-  private async Task<DisplayPointResult?> TryGetSelectedDisplayPoint(double percentX, double percentY)
+  private async Task<PointerCoordinates?> TryGetPointerCoordinates(double percentX, double percentY)
   {
     if (!_desktopCapturer.TryGetSelectedDisplay(out var selectedDisplay))
     {
@@ -395,8 +408,6 @@ internal sealed class DesktopStreamingClient(
       return null;
     }
 
-    return new DisplayPointResult(selectedDisplay, point);
+    return new PointerCoordinates(percentX, percentY, point, selectedDisplay);
   }
-
-  private record DisplayPointResult(DisplayInfo Display, Point Point);
 }

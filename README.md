@@ -71,6 +71,8 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
   - Tested on Ubuntu, Kubuntu, and Mint
   - On Ubuntu, you must enable X11 for the login screen
     - Edit `/etc/gdm3/custom.conf` and uncomment the line `WaylandEnable=false`, then reboot
+- Experimental remote control on Wayland via XDG Desktop Portal
+  - Requires GStreamer: `sudo apt install libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
 - Experimental remote control via VNC
 
 ### All Operating Systems

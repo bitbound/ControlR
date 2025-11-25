@@ -13,12 +13,12 @@ public class InputSimulatorMac(
   private readonly ILogger<InputSimulatorMac> _logger = logger;
   private readonly IMacInterop _macInterop = macInterop;
   
-  public void InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (string.IsNullOrEmpty(key))
     {
       _logger.LogWarning("Key cannot be empty.");
-      return;
+      return Task.CompletedTask;
     }
 
     // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
@@ -31,9 +31,9 @@ public class InputSimulatorMac(
       // Key up events are ignored since TypeText handles both down and up internally
       if (isPressed)
       {
-        TypeText(key);
+        return TypeText(key);
       }
-      return;
+      return Task.CompletedTask;
     }
 
     // For commands, shortcuts, and non-printable keys, use virtual key simulation
@@ -50,51 +50,47 @@ public class InputSimulatorMac(
     {
       _logger.LogError(ex, "Error processing key event for key: {Key} (code: {Code})", key, code);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)
+  public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
     try
     {
-      if (display is null)
-      {
-        _logger.LogError("DisplayInfo cannot be null for mouse button events on Mac.");
-        return;
-      }
       // Mac expects the logical coordinates for mouse events, not the pixel coordinates,
       // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = x / display.ScaleFactor;
-      var logicalY = y / display.ScaleFactor;
+      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
+      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
       _macInterop.InvokeMouseButtonEvent((int)logicalX, (int)logicalY, button, isPressed);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error processing mouse button event for button: {Button}", button);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType)
+  public Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
     try
     {
-      if (display is null)
-      {
-        _logger.LogError("DisplayInfo cannot be null for pointer move events on Mac.");
-        return;
-      }
       // Mac expects the logical coordinates for pointer moves, not the pixel coordinates,
       // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = x / display.ScaleFactor;
-      var logicalY = y / display.ScaleFactor;
+      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
+      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
       _macInterop.MovePointer((int)logicalX, (int)logicalY, moveType);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error processing pointer move to ({X}, {Y})", x, y);
+      _logger.LogError(ex, "Error processing pointer move to ({X}, {Y})", coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void ResetKeyboardState()
+  public Task ResetKeyboardState()
   {
     try
     {
@@ -104,27 +100,26 @@ public class InputSimulatorMac(
     {
       _logger.LogError(ex, "Error processing keyboard state reset");
     }
+
+    return Task.CompletedTask;
   }
 
-  public void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX)
+  public Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
     try
     {
-      if (display is null)
-      {
-        _logger.LogError("DisplayInfo cannot be null for wheel scroll events on Mac.");
-        return;
-      }
       // Mac expects the logical coordinates for wheel scrolls, not the pixel coordinates,
       // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = x / display.ScaleFactor;
-      var logicalY = y / display.ScaleFactor;
+      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
+      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
       _macInterop.InvokeWheelScroll((int)logicalX, (int)logicalY, scrollY, scrollX);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error processing wheel scroll at ({X}, {Y})", x, y);
+      _logger.LogError(ex, "Error processing wheel scroll at ({X}, {Y})", coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
     }
+
+    return Task.CompletedTask;
   }
 
   public Task SetBlockInput(bool isBlocked)
@@ -132,7 +127,7 @@ public class InputSimulatorMac(
     throw new NotImplementedException();
   }
 
-  public void TypeText(string text)
+  public Task TypeText(string text)
   {
     try
     {
@@ -142,5 +137,7 @@ public class InputSimulatorMac(
     {
       _logger.LogError(ex, "Error processing text input: {Text}", text);
     }
+
+    return Task.CompletedTask;
   }
 }

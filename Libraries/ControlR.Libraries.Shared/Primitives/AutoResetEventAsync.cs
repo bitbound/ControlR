@@ -60,6 +60,7 @@ public sealed class AutoResetEventAsync : IDisposable
 
   public Task Wait(CancellationToken cancellationToken)
   {
+    Task task;
     lock (_lock)
     {
       if (_isSet)
@@ -71,8 +72,9 @@ public sealed class AutoResetEventAsync : IDisposable
       {
         var tsc = new TaskCompletionSource();
         _queue.Enqueue(tsc);
-        return tsc.Task.WaitAsync(cancellationToken);
+        task = tsc.Task;
       }
     }
+    return task.WaitAsync(cancellationToken);
   }
 }

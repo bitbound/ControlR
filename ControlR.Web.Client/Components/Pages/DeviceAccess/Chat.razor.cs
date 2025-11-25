@@ -1,5 +1,4 @@
-using ControlR.Web.Client.Services.DeviceAccess;
-using ControlR.Web.Client.Services.DeviceAccess.Chat;
+using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -19,6 +18,9 @@ public partial class Chat : ComponentBase, IDisposable
 
   [Inject]
   public required IChatState ChatState { get; init; }
+
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
 
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }

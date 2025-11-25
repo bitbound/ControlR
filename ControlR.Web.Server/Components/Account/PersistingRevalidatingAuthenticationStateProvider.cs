@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using ControlR.Web.Client.StateManagement;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
@@ -113,7 +114,7 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
         "User is authenticated but not found in the database. Username: {UserName}",
         principal.Identity?.Name);
     }
-    _state.PersistAsJson(nameof(UserInfo), userInfo);
+    _state.PersistAsJson(PersistentStateKeys.UserInfo, userInfo);
   }
 
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)

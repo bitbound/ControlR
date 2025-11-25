@@ -1,10 +1,14 @@
 ﻿using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common;
+using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Services;
 
@@ -16,10 +20,14 @@ public interface IRemoteControlHostManager
 }
 
 public class RemoteControlHostManager(
+  IUserInteractionService userInteractionService,
+  IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   ILogger<RemoteControlHostManager> logger) : IRemoteControlHostManager
 {
+  private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly ILogger<RemoteControlHostManager> _logger = logger;
   private readonly ConcurrentDictionary<Guid, RemoteControlSession> _sessions = new();
+  private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
   public async Task StartHost(RemoteControlRequestIpcDto requestDto)
   {
@@ -41,10 +49,17 @@ public class RemoteControlHostManager(
           options.WebSocketUri = requestDto.WebsocketUri;
           options.SessionId = requestDto.SessionId;
           options.NotifyUser = requestDto.NotifyUserOnSessionStart;
+          options.RequireConsent = requestDto.RequireConsent;
           options.ViewerName = requestDto.ViewerName;
         });
 
+      builder.Services.Configure<DesktopClientOptions>(options =>
+      {
+        options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
+      });
+
       builder.Services.AddSingleton<IToaster, Toaster>();
+      builder.Services.AddSingleton(_userInteractionService);
       builder.Services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
 #if WINDOWS_BUILD
       builder.AddWindowsDesktopServices(requestDto.DataFolder);
@@ -136,5 +151,12 @@ public class RemoteControlHostManager(
         // Ignore.
       }
     }
-  };
+  }
+
+  private class OptionsMonitorWrapper<T>(T currentValue) : IOptionsMonitor<T>
+  {
+    public T CurrentValue => currentValue;
+    public T Get(string? name) => currentValue;
+    public IDisposable? OnChange(Action<T, string?> listener) => null;
+  }
 }

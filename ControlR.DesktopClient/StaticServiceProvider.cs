@@ -79,6 +79,8 @@ internal static class StaticServiceProvider
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
       .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()
       .AddSingleton<IDialogProvider, DialogProvider>()
+      .AddSingleton<IUserInteractionService, UserInteractionService>()
+      .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
       .AddSingleton<IIpcClientAccessor, IpcClientAccessor>()
       .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
@@ -109,11 +111,15 @@ internal static class StaticServiceProvider
 
 #if LINUX_BUILD
     var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+    services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
     switch (desktopEnvironment)
     {
       case DesktopEnvironmentType.Wayland:
+        services.AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>();
         services.AddSingleton<IScreenGrabber, ScreenGrabberWayland>();
         services.AddSingleton<IDisplayManager, DisplayManagerWayland>();
+        services.AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>();
+        services.AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
         break;
       case DesktopEnvironmentType.X11:
         services.AddSingleton<IScreenGrabber, ScreenGrabberX11>();

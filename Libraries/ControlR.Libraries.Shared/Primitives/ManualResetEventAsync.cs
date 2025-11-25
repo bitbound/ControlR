@@ -52,17 +52,24 @@ public sealed class ManualResetEventAsync : IDisposable
 
   public Task Wait(CancellationToken cancellationToken)
   {
+    Task task;
     lock (_taskLock)
     {
-      return _tcs.Task.WaitAsync(cancellationToken);
+      task = _tcs.Task;
     }
+    return task.WaitAsync(cancellationToken);
   }
 
   public async Task<bool> Wait(TimeSpan timeout, bool throwOnCancellation)
   {
+    Task task;
+    lock (_taskLock)
+    {
+      task = _tcs.Task;
+    }
     try
     {
-      await _tcs.Task.WaitAsync(timeout);
+      await task.WaitAsync(timeout);
       return true;
     }
     catch (TimeoutException) when (!throwOnCancellation)

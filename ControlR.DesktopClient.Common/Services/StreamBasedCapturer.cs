@@ -1,0 +1,139 @@
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using ControlR.DesktopClient.Common.Models;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services.Encoders;
+using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using Microsoft.Extensions.Logging;
+
+namespace ControlR.DesktopClient.Common.Services;
+
+internal class StreamBasedCapturer(
+    IScreenGrabber screenGrabber,
+    IStreamEncoder encoder,
+    IDisplayManager displayManager,
+    ILogger<StreamBasedCapturer> logger) : IDesktopCapturer
+{
+    private readonly IScreenGrabber _screenGrabber = screenGrabber;
+    private readonly IStreamEncoder _encoder = encoder;
+    private readonly IDisplayManager _displayManager = displayManager;
+    private readonly ILogger<StreamBasedCapturer> _logger = logger;
+    private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(new BoundedChannelOptions(100) { FullMode = BoundedChannelFullMode.DropOldest });
+    private Task? _captureTask;
+    private bool _disposed;
+    private DisplayInfo? _selectedDisplay;
+    private readonly Lock _displayLock = new();
+    private volatile bool _forceKeyFrame;
+
+  public Task ChangeDisplays(string displayId)
+    {
+        if (_displayManager.TryFindDisplay(displayId, out var display))
+        {
+            lock (_displayLock)
+            {
+                _selectedDisplay = display;
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+        {
+            yield return item;
+        }
+    }
+
+    public Task RequestKeyFrame()
+    {
+        _forceKeyFrame = true;
+        return Task.CompletedTask;
+    }
+
+    public Task StartCapturingChanges(CancellationToken cancellationToken)
+    {
+        _captureTask = CaptureLoop(cancellationToken);
+        return Task.CompletedTask;
+    }
+
+    public bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display)
+    {
+        lock (_displayLock)
+        {
+            display = _selectedDisplay ?? _displayManager.GetPrimaryDisplay();
+            return display != null;
+        }
+    }
+
+    private async Task CaptureLoop(CancellationToken ct)
+    {
+        if (!TryGetSelectedDisplay(out var display))
+        {
+            return;
+        }
+
+        _encoder.Start(display.MonitorArea.Width, display.MonitorArea.Height, 75);
+
+        // Producer: Capture and feed to encoder
+        var producer = Task.Run(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    using var capture = _screenGrabber.CaptureDisplay(display, captureCursor: true);
+                    if (capture.IsSuccess)
+                    {
+                        _encoder.EncodeFrame(capture.Bitmap, _forceKeyFrame);
+                        _forceKeyFrame = false;
+                    }
+                    else
+                    {
+                        await Task.Delay(100, ct);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error capturing frame.");
+                }
+            }
+        }, ct);
+
+        // Consumer: Read packets and push to channel
+        while (!ct.IsCancellationRequested)
+        {
+            var packet = _encoder.GetNextPacket();
+            if (packet != null)
+            {
+                var dto = new VideoStreamPacketDto(packet, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                var wrapper = DtoWrapper.Create(dto, DtoType.VideoStreamPacket);
+                await _channel.Writer.WriteAsync(wrapper, ct);
+            }
+            else
+            {
+                await Task.Delay(1, ct);
+            }
+        }
+        
+        await producer;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _encoder.Dispose();
+        if (_captureTask != null)
+        {
+            try
+            {
+                await _captureTask;
+            }
+            catch { }
+        }
+    }
+}

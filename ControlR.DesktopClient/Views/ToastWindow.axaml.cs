@@ -9,13 +9,15 @@ namespace ControlR.DesktopClient.Views;
 
 public partial class ToastWindow : Window
 {
+  private TimeSpan _closeAfter;
   private DispatcherTimer? _timer;
+  
   public ToastWindow()
   {
     InitializeComponent();
   }
 
-  public static async Task<ToastWindow> Show(string title, string message, ToastIcon icon, Func<Task>? onClick = null)
+  public static async Task<ToastWindow> Show(string title, string message, ToastIcon icon, Func<Task>? onClick = null, TimeSpan? closeAfter = null)
   {
     return await Dispatcher.UIThread.InvokeAsync(() =>
     {
@@ -26,6 +28,7 @@ public partial class ToastWindow : Window
       viewModel.ToastIcon = icon;
       viewModel.OnClick = onClick;
       toastWindow.DataContext = viewModel;
+      toastWindow._closeAfter = closeAfter ?? TimeSpan.FromSeconds(10);
       toastWindow.Show();
 
       return toastWindow;
@@ -88,7 +91,7 @@ public partial class ToastWindow : Window
   {
     _timer = new DispatcherTimer
     {
-      Interval = TimeSpan.FromSeconds(10),
+      Interval = _closeAfter,
     };
     _timer.Tick += (_, _) => Close();
     _timer.Start();

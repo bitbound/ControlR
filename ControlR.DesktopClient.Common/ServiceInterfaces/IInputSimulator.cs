@@ -4,11 +4,11 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 public interface IInputSimulator
 {
-  void InvokeKeyEvent(string key, string? code, bool isPressed);
-  void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display,  int button, bool isPressed);
-  void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType);
-  void ResetKeyboardState();
-  void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX);
+  Task InvokeKeyEvent(string key, string? code, bool isPressed);
+  Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed);
+  Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType);
+  Task ResetKeyboardState();
+  Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX);
   Task SetBlockInput(bool isBlocked);
-  void TypeText(string text);
+  Task TypeText(string text);
 }

@@ -1,7 +1,9 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -19,26 +21,39 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// 2. User grants permission via system dialog (one-time)
 /// 3. Application can simulate input events via portal DBus calls
 /// </summary>
-public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
+public class InputSimulatorWayland(
+  IWaylandPortalAccessor portalAccessor,
+  ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
+  private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
+  private readonly SemaphoreSlim _initLock = new(1, 1);
   private XdgDesktopPortal? _portal;
   private string? _sessionHandle;
   private uint _streamNodeId;
   private bool _isInitialized;
-  private bool _permissionDenied;
   private bool _disposed;
-  private readonly SemaphoreSlim _initLock = new(1, 1);
 
-  public void InvokeKeyEvent(string key, string? code, bool isPressed)
+  public async Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
-    if (_permissionDenied || !EnsureInitializedAsync().GetAwaiter().GetResult())
+    if (!await EnsureInitializedAsync())
     {
       return;
     }
 
     try
     {
+      var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+
+      if (isPrintableCharacter)
+      {
+        if (isPressed)
+        {
+          await TypeText(key);
+        }
+        return;
+      }
+      
       var keycode = LinuxKeycodeMapper.BrowserCodeToLinuxKeycode(code);
       if (keycode < 0)
       {
@@ -46,7 +61,10 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
         return;
       }
 
-      _portal!.NotifyKeyboardKeycodeAsync(_sessionHandle!, keycode, isPressed).GetAwaiter().GetResult();
+      Guard.IsNotNull(_portal);
+      Guard.IsNotNull(_sessionHandle);
+
+      await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
     }
     catch (Exception ex)
     {
@@ -54,9 +72,9 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
     }
   }
 
-  public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)
+  public async Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
-    if (_permissionDenied || !EnsureInitializedAsync().GetAwaiter().GetResult())
+    if (!await EnsureInitializedAsync())
     {
       return;
     }
@@ -64,7 +82,11 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
     try
     {
       var linuxButton = LinuxKeycodeMapper.MouseButtonToLinuxCode(button);
-      _portal!.NotifyPointerButtonAsync(_sessionHandle!, linuxButton, isPressed).GetAwaiter().GetResult();
+
+      Guard.IsNotNull(_portal);
+      Guard.IsNotNull(_sessionHandle);
+
+      await _portal.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
     }
     catch (Exception ex)
     {
@@ -72,25 +94,37 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
     }
   }
 
-  public void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType)
+  public async Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
-    if (_permissionDenied || !EnsureInitializedAsync().GetAwaiter().GetResult())
+    if (!await EnsureInitializedAsync())
     {
       return;
     }
 
     try
     {
-      if (moveType == MovePointerType.Absolute)
+      Guard.IsNotNull(_portal);
+      Guard.IsNotNull(_sessionHandle);
+
+      switch (moveType)
       {
-        // Use absolute positioning relative to the stream
-        _portal!.NotifyPointerMotionAbsoluteAsync(_sessionHandle!, _streamNodeId, x, y).GetAwaiter().GetResult();
-      }
-      else
-      {
-        // Relative movement - calculate delta from current position
-        // Note: In practice, the caller should provide deltas for relative movement
-        _portal!.NotifyPointerMotionAsync(_sessionHandle!, x, y).GetAwaiter().GetResult();
+        case MovePointerType.Absolute:
+          {
+            await _portal.NotifyPointerMotionAbsoluteAsync(
+              _sessionHandle,
+              _streamNodeId,
+              coordinates.AbsolutePoint.X,
+              coordinates.AbsolutePoint.Y);
+            break;
+          }
+
+        case MovePointerType.Relative:
+          // Use relative movement
+          await _portal.NotifyPointerMotionAsync(_sessionHandle, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
+          break;
+        default:
+          _logger.LogWarning("Unknown move type: {MoveType}", moveType);
+          break;
       }
     }
     catch (Exception ex)
@@ -99,32 +133,38 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
     }
   }
 
-  public void ResetKeyboardState()
+  public Task ResetKeyboardState()
   {
     // Not applicable for Wayland RemoteDesktop portal
     _logger.LogDebug("Keyboard state reset not applicable on Wayland");
+    return Task.CompletedTask;
   }
 
-  public void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX)
+  public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
-    if (_permissionDenied || !EnsureInitializedAsync().GetAwaiter().GetResult())
+    if (!await EnsureInitializedAsync())
     {
       return;
     }
 
     try
     {
+      Guard.IsNotNull(_portal);
+      Guard.IsNotNull(_sessionHandle);
+
+      const int scrollSteps = 3;
+
       // Use discrete scroll for more reliable behavior
       if (scrollY != 0)
       {
-        var steps = scrollY / 120; // 120 units per notch
-        _portal!.NotifyPointerAxisDiscreteAsync(_sessionHandle!, 0, steps).GetAwaiter().GetResult();
+        var steps = scrollY < 0 ? scrollSteps : -scrollSteps;
+        await _portal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
       }
 
       if (scrollX != 0)
       {
-        var steps = scrollX / 120;
-        _portal!.NotifyPointerAxisDiscreteAsync(_sessionHandle!, 1, steps).GetAwaiter().GetResult();
+        var steps = scrollX < 0 ? scrollSteps : -scrollSteps;
+        await _portal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
       }
     }
     catch (Exception ex)
@@ -138,15 +178,18 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
     throw new NotImplementedException("Input blocking is not supported on Wayland");
   }
 
-  public void TypeText(string text)
+  public async Task TypeText(string text)
   {
-    if (_permissionDenied || !EnsureInitializedAsync().GetAwaiter().GetResult())
+    if (!await EnsureInitializedAsync())
     {
       return;
     }
 
     try
     {
+      Guard.IsNotNull(_portal);
+      Guard.IsNotNull(_sessionHandle);
+
       foreach (var ch in text)
       {
         var (keycode, needsShift) = CharacterToKeycode(ch);
@@ -158,19 +201,19 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
 
         if (needsShift)
         {
-          _portal!.NotifyKeyboardKeycodeAsync(_sessionHandle!, 42, true).GetAwaiter().GetResult();
+          await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
         }
 
-        _portal!.NotifyKeyboardKeycodeAsync(_sessionHandle!, keycode, true).GetAwaiter().GetResult();
-        Thread.Sleep(10);
-        _portal!.NotifyKeyboardKeycodeAsync(_sessionHandle!, keycode, false).GetAwaiter().GetResult();
+        await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
+        await Task.Delay(10);
+        await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
 
         if (needsShift)
         {
-          _portal!.NotifyKeyboardKeycodeAsync(_sessionHandle!, 42, false).GetAwaiter().GetResult();
+          await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
         }
 
-        Thread.Sleep(10);
+        await Task.Delay(10);
       }
     }
     catch (Exception ex)
@@ -232,83 +275,47 @@ public class InputSimulatorWayland(ILogger<InputSimulatorWayland> logger) : IInp
       return;
     }
 
-    _portal?.Dispose();
-    _portal = null;
-
     _initLock?.Dispose();
-
     _disposed = true;
   }
 
   private async Task<bool> EnsureInitializedAsync()
   {
-    if (_isInitialized)
+    if (_isInitialized && _portal is not null && _sessionHandle is not null)
     {
       return true;
-    }
-
-    if (_permissionDenied)
-    {
-      return false;
     }
 
     await _initLock.WaitAsync();
     try
     {
-      if (_isInitialized)
+      if (_isInitialized && _portal is not null && _sessionHandle is not null)
       {
         return true;
       }
 
-      _portal = await XdgDesktopPortal.CreateAsync(_logger);
-
-      if (!await _portal.IsRemoteDesktopAvailableAsync())
+      var remoteDesktopSession = await _portalAccessor.GetRemoteDesktopSession();
+      if (remoteDesktopSession == null)
       {
-        _logger.LogError(
-          "XDG Desktop Portal RemoteDesktop is not available. " +
-          "Ensure xdg-desktop-portal and a backend are installed.");
+        _logger.LogError("Failed to get RemoteDesktop session from portal accessor");
         return false;
       }
 
-      // Create RemoteDesktop session
-      var sessionResult = await _portal.CreateRemoteDesktopSessionAsync();
-      if (!sessionResult.IsSuccess || sessionResult.Value is null)
+      _portal = remoteDesktopSession.Value.Portal;
+      _sessionHandle = remoteDesktopSession.Value.SessionHandle;
+
+      var screenCastStreams = await _portalAccessor.GetScreenCastStreams();
+      if (screenCastStreams.Count > 0)
       {
-        _logger.LogError("Failed to create RemoteDesktop session: {Error}", sessionResult.Reason);
-        return false;
+        _streamNodeId = screenCastStreams[0].NodeId;
       }
-
-      _sessionHandle = sessionResult.Value;
-      _logger.LogInformation("Created RemoteDesktop session: {Session}", _sessionHandle);
-
-      // Select devices (keyboard and pointer)
-      var selectResult = await _portal.SelectRemoteDesktopDevicesAsync(
-        _sessionHandle,
-        deviceTypes: 3);  // 1 = keyboard, 2 = pointer, 3 = both
-
-      if (!selectResult.IsSuccess)
+      else
       {
-        _logger.LogError("Failed to select RemoteDesktop devices: {Error}", selectResult.Reason);
-        return false;
-      }
-
-      // Start the session (shows permission dialog to user)
-      var startResult = await _portal.StartRemoteDesktopAsync(_sessionHandle);
-      if (!startResult.IsSuccess)
-      {
-        _logger.LogError("Failed to start RemoteDesktop: {Error}", startResult.Reason);
-        _permissionDenied = true;
-        return false;
-      }
-
-      // Get stream node ID if available (needed for absolute positioning)
-      if (startResult.Value != null && startResult.Value.Count > 0)
-      {
-        _streamNodeId = startResult.Value[0].NodeId;
+        _logger.LogWarning("No ScreenCast streams available. Absolute positioning may not work.");
       }
 
       _isInitialized = true;
-      _logger.LogInformation("Wayland input simulation fully initialized");
+      _logger.LogInformation("Wayland input simulation initialized");
       return true;
     }
     catch (Exception ex)

@@ -30,4 +30,18 @@ public interface IScreenGrabber
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false);
+
+  /// <summary>
+  ///   Initializes the screen grabber, preparing any necessary resources.
+  /// </summary>
+  /// <param name="cancellationToken"></param>
+  /// <returns></returns>
+  Task Initialize(CancellationToken cancellationToken);
+
+  /// <summary>
+  ///   Uninitializes the screen grabber, releasing any resources.
+  /// </summary>
+  /// <param name="cancellationToken"></param>
+  /// <returns></returns>
+  Task Uninitialize(CancellationToken cancellationToken);
 }

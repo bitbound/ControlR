@@ -25,11 +25,13 @@ internal static class PathConstants
     // ReSharper disable once InvertIf
     if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
-      var logsDir = ElevationCheckerLinux.Instance.IsElevated()
+      var isElevated = ElevationCheckerLinux.Instance.IsElevated();
+      var rootDir = isElevated
         ? "/var/log/controlr"
-        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr", "logs");
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
 
-      logsDir = AppendSubDirectories(logsDir, instanceId);
+      rootDir = AppendSubDirectories(rootDir, instanceId);
+      var logsDir = isElevated ? rootDir : Path.Combine(rootDir, "logs");
       return Path.Combine(logsDir, "ControlR.Agent", "LogFile.log");
     }
 

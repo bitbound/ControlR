@@ -15,7 +15,7 @@ public class InputSimulatorX11 : IInputSimulator
     _logger = logger;
   }
 
-  public void InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
     // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
@@ -27,9 +27,9 @@ public class InputSimulatorX11 : IInputSimulator
       // Key up events are ignored since TypeText handles both down and up internally
       if (isPressed)
       {
-        TypeText(key);
+        return TypeText(key);
       }
-      return;
+      return Task.CompletedTask;
     }
 
     // For commands, shortcuts, and non-printable keys, use virtual key simulation
@@ -37,7 +37,7 @@ public class InputSimulatorX11 : IInputSimulator
     if (display == nint.Zero)
     {
       _logger.LogError("Failed to open X display for key event");
-      return;
+      return Task.CompletedTask;
     }
 
     try
@@ -48,14 +48,14 @@ public class InputSimulatorX11 : IInputSimulator
       if (keySymPtr == nint.Zero)
       {
         _logger.LogWarning("Failed to convert key symbol: {Key} ({Code}) -> {KeySym}", key, code, keySym);
-        return;
+        return Task.CompletedTask;
       }
 
       var keycode = LibX11.XKeysymToKeycode(display, keySymPtr);
       if (keycode == 0)
       {
         _logger.LogWarning("Failed to get keycode for key symbol: {KeySym}", keySym);
-        return;
+        return Task.CompletedTask;
       }
 
       LibXtst.XTestFakeKeyEvent(display, keycode, isPressed, 0);
@@ -65,21 +65,23 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(display);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void InvokeMouseButtonEvent(int x, int y, DisplayInfo? display, int button, bool isPressed)
+  public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
     var xDisplay = LibX11.XOpenDisplay("");
     if (xDisplay == nint.Zero)
     {
       _logger.LogError("Failed to open X display for mouse button event");
-      return;
+      return Task.CompletedTask;
     }
 
     try
     {
       // Convert coordinates if display is specified
-      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, x, y, display);
+      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
 
       // Move cursor to position first
       LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
@@ -100,26 +102,28 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(xDisplay);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void MovePointer(int x, int y, DisplayInfo? display, MovePointerType moveType)
+  public Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
     var xDisplay = LibX11.XOpenDisplay("");
     if (xDisplay == nint.Zero)
     {
       _logger.LogError("Failed to open X display for mouse move");
-      return;
+      return Task.CompletedTask;
     }
 
     try
     {
       if (moveType == MovePointerType.Relative)
       {
-        LibXtst.XTestFakeRelativeMotionEvent(xDisplay, x, y, 0);
+        LibXtst.XTestFakeRelativeMotionEvent(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, 0);
       }
       else
       {
-        var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, x, y, display);
+        var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
         LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
       }
 
@@ -129,15 +133,17 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(xDisplay);
     }
+
+    return Task.CompletedTask;
   }
 
-  public unsafe void ResetKeyboardState()
+  public unsafe Task ResetKeyboardState()
   {
     var display = LibX11.XOpenDisplay("");
     if (display == nint.Zero)
     {
       _logger.LogWarning("Failed to open X display for keyboard state reset");
-      return;
+      return Task.CompletedTask;
     }
 
     try
@@ -149,7 +155,7 @@ public class InputSimulatorX11 : IInputSimulator
       if (result == 0)
       {
         _logger.LogWarning("XQueryKeymap failed during keyboard state reset");
-        return;
+        return Task.CompletedTask;
       }
 
       var keysReleased = 0;
@@ -185,20 +191,22 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(display);
     }
+
+    return Task.CompletedTask;
   }
 
-  public void ScrollWheel(int x, int y, DisplayInfo? display, int scrollY, int scrollX)
+  public Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
     var xDisplay = LibX11.XOpenDisplay("");
     if (xDisplay == nint.Zero)
     {
       _logger.LogError("Failed to open X display for scroll wheel");
-      return;
+      return Task.CompletedTask;
     }
 
     try
     {
-      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, x, y, display);
+      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
 
       // Move cursor to position first
       LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
@@ -237,6 +245,8 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(xDisplay);
     }
+
+    return Task.CompletedTask;
   }
 
   public Task SetBlockInput(bool isBlocked)
@@ -244,13 +254,13 @@ public class InputSimulatorX11 : IInputSimulator
     throw new NotImplementedException();
   }
 
-  public void TypeText(string text)
+  public Task TypeText(string text)
   {
     var display = LibX11.XOpenDisplay("");
     if (display == nint.Zero)
     {
       _logger.LogError("Failed to open X display for typing text");
-      return;
+      return Task.CompletedTask;
     }
 
     try
@@ -300,6 +310,8 @@ public class InputSimulatorX11 : IInputSimulator
     {
       LibX11.XCloseDisplay(display);
     }
+
+    return Task.CompletedTask;
   }
 
   private static string ConvertBrowserKeyArgToX11Key(string key, string? code)

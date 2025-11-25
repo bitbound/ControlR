@@ -1,4 +1,5 @@
 ﻿@using ControlR.Libraries.Shared.Enums
+@using ControlR.Web.Client.StateManagement
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavManager
@@ -114,7 +115,7 @@
     await base.OnInitializedAsync();
 
     // Try to restore persisted state from SSR
-    if (!ApplicationState.TryTakeFromJson<bool>("isDarkMode", out var persistedIsDarkMode))
+    if (!ApplicationState.TryTakeFromJson<bool>(PersistentStateKeys.IsDarkMode, out var persistedIsDarkMode))
     {
       // No persisted state, this is SSR or first load
       _isAuthenticated = await AuthState.IsAuthenticated();
@@ -232,7 +233,7 @@
 
   private Task PersistThemeState()
   {
-    ApplicationState.PersistAsJson("isDarkMode", _isDarkMode);
+    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
     return Task.CompletedTask;
   }
 

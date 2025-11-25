@@ -43,6 +43,16 @@ internal class ScreenGrabberX11(
     }
   }
 
+  public Task Initialize(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task Uninitialize(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
   private static unsafe void ConvertRgb24ToBgra32Unsafe(byte* src, byte* dst, int width, int height, int srcBytesPerLine)
   {
     for (var y = 0; y < height; y++)

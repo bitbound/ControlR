@@ -6,6 +6,8 @@ namespace ControlR.DesktopClient.ViewModels.Fakes;
 internal class ManagedDeviceViewModelFake : ViewModelBaseFake, IManagedDeviceViewModel
 {
   public string? AppVersion { get; set; } = "1.0.0";
+
+  public IAsyncRelayCommand GrantWaylandPermissionCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public bool IsAccessibilityPermissionGranted { get; set; } = false;
 
   public bool IsLinuxWayland
@@ -33,19 +35,17 @@ internal class ManagedDeviceViewModelFake : ViewModelBaseFake, IManagedDeviceVie
   }
 
   public bool IsScreenCapturePermissionGranted { get; set; } = true;
-  public bool IsWaylandRemoteDesktopPermissionGranted { get; set; } = false;
-
+  public bool IsWaylandPermissionGranted { get; set; } = false;
   public IRelayCommand OpenAccessibilitySettingsCommand { get; } = new RelayCommand(() => { });
-
   public IRelayCommand OpenScreenCaptureSettingsCommand { get; } = new RelayCommand(() => { });
-  public IRelayCommand OpenRemoteDesktopSettingsCommand { get; } = new RelayCommand(() => { });
-  public IRelayCommand ToggleThemeCommand { get; } = new RelayCommand(() => { });
-
-  public string ThemeModeText { get; set; } = Localization.ThemeAuto;
   public string ThemeIconKey { get; set; } = "arrow_sync_circle_regular";
 
-  public void SetPermissionValues()
+  public string ThemeModeText { get; set; } = Localization.ThemeAuto;
+  public IRelayCommand ToggleThemeCommand { get; } = new RelayCommand(() => { });
+
+  public Task SetPermissionValues()
   {
     // No-op for the fake implementation
+    return Task.CompletedTask;
   }
 }

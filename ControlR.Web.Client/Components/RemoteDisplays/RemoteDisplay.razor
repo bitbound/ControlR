@@ -27,16 +27,16 @@
           @if (CurrentBreakpoint < Breakpoint.Sm)
           {
             <MudIconButton Icon="@(Icons.Material.Filled.Shield)"
-                          Variant="Variant.Outlined"
-                          Size="Size.Small"
-                          OnClick="InvokeCtrlAltDel" />
+                           Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           OnClick="InvokeCtrlAltDel" />
           }
           else
           {
             <MudButton Variant="Variant.Outlined"
-                      StartIcon="@(Icons.Material.Filled.Shield)"
-                      Size="Size.Small"
-                      OnClick="InvokeCtrlAltDel">
+                       StartIcon="@(Icons.Material.Filled.Shield)"
+                       Size="Size.Small"
+                       OnClick="InvokeCtrlAltDel">
               Ctrl+Alt+Del
             </MudButton>
           }
@@ -98,6 +98,9 @@
     </div>
     <div class="screen-area"
          @ref="_screenArea"
+         @onwheel="OnCanvasWheel"
+         @onwheel:preventDefault
+         @onwheel:stopPropagation
          @ontouchstart="OnTouchStart"
          @ontouchmove="OnTouchMove"
          @ontouchcancel="OnTouchCancel"
@@ -105,8 +108,8 @@
 
       <canvas id="@_canvasId"
               @ref="_canvasRef"
-              width="@(RemoteControlState.SelectedDisplay?.Width ?? 0)"
-              height="@(RemoteControlState.SelectedDisplay?.Height ?? 0)"
+              width="@CanvasWidth"
+              height="@CanvasHeight"
               class='@($"remote-screen {CanvasClasses}")'
               style="@(CanvasStyle)"></canvas>
     </div>

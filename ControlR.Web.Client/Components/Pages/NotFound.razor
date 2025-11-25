@@ -1,3 +1,57 @@
 ﻿@attribute [Route(ClientRoutes.NotFound)]
 @layout MainLayout
+@inject NavigationManager NavManager
+
+<PageTitle>Page Not Found</PageTitle>
+
+<div class="not-found-container">
+  <MudPaper Elevation="0" Class="not-found-card pa-8">
+    <div class="text-center mb-6">
+      <div class="icon-wrapper mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Primary" Style="font-size: 120px;" />
+      </div>
+      
+      <MudText Typo="Typo.h2" Color="Color.Primary" GutterBottom Class="not-found-title">
+        404
+      </MudText>
+      
+      <MudText Typo="Typo.h4" GutterBottom>
+        Page Not Found
+      </MudText>
+      
+      <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        The page you're looking for doesn't exist or has been moved.
+      </MudText>
+    </div>
+
+    <MudDivider Class="my-6" />
+
+    <div class="text-center">
+      <div class="action-buttons">
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Home"
+                   Href="@ClientRoutes.Home"
+                   Class="action-button">
+          Go Home
+        </MudButton>
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="GoBack"
+                   Class="action-button">
+          Go Back
+        </MudButton>
+      </div>
+    </div>
+  </MudPaper>
+</div>
+
+@code {
+  private void GoBack()
+  {
+    NavManager.NavigateTo("/");
+  }
+}
 

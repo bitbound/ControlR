@@ -1,6 +1,8 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Services;
@@ -28,10 +30,16 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IProcessManager, ProcessManager>()
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<IImageUtility, ImageUtility>()
+      .AddSingleton<IFrameEncoder, JpegEncoder>()
+      .AddSingleton<IStreamEncoder, H264Encoder>()
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<IDesktopStreamingClient, DesktopStreamingClient>()
-      .AddSingleton<IDesktopCapturer, DesktopCapturer>()
+      .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
+      .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
+      .AddSingleton<ISessionConsentService, SessionConsentService>()
+      .AddTransient<FrameBasedCapturer>()
+      .AddTransient<StreamBasedCapturer>()
       .AddSingleton<IWaiter, Waiter>()
       .AddHostedService<HostLifetimeEventResponder>()
       .AddHostedService(x => x.GetRequiredService<IDesktopStreamingClient>())

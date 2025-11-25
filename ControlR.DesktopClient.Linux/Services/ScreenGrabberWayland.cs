@@ -1,80 +1,118 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
 /// <summary>
 /// Screen grabber for Wayland using XDG Desktop Portal and PipeWire.
-///
-/// Implementation:
-/// - Uses XDG Desktop Portal for permission management and stream setup
-/// - Uses PipeWire for receiving video frames
-/// - Converts frames to SKBitmap for compatibility with existing code
-///
-/// Wayland security model:
-/// 1. Create ScreenCast session via portal
-/// 2. User grants permission via system dialog (one-time)
-/// 3. Portal provides PipeWire stream with screen content
-/// 4. Application receives frames via PipeWire callbacks
+/// <para>
+/// This implementation uses the XDG Desktop Portal for permission management and stream setup,
+/// PipeWire for receiving video frames, and converts frames to SKBitmap for compatibility.
+/// </para>
+/// <para>
+/// Wayland security model workflow:
+/// <list type="number">
+/// <item>Create ScreenCast session via XDG Desktop Portal</item>
+/// <item>User grants permission via system dialog (one-time)</item>
+/// <item>Portal provides PipeWire node IDs for screen content</item>
+/// <item>PipeWire streams deliver frames via callbacks</item>
+/// <item>Frames are converted to SKBitmap for capture operations</item>
+/// </list>
+/// </para>
+/// <para>
+/// Supports both single and multi-display configurations. Multi-display captures are composited
+/// into a single bitmap representing the virtual screen bounds.
+/// </para>
 /// </summary>
 internal class ScreenGrabberWayland(
   IDisplayManager displayManager,
+  IWaylandPortalAccessor portalService,
+  IPipeWireStreamFactory streamFactory,
   ILogger<ScreenGrabberWayland> logger) : IScreenGrabber, IDisposable
 {
+  private const int StreamStartPollingIntervalMs = 100;
+  private const int StreamStartTimeoutMs = 3_000;
+
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<ScreenGrabberWayland> _logger = logger;
+  private readonly IWaylandPortalAccessor _portalService = portalService;
+  private readonly IPipeWireStreamFactory _streamFactory = streamFactory;
+  private readonly ConcurrentDictionary<string, PipeWireStream> _streams = [];
 
   private bool _disposed;
   private bool _isInitialized;
-  private XdgDesktopPortal? _portal;
-  private string? _sessionHandle;
-  private PipeWireStream? _stream;
+
+
+  /// <summary>
+  /// Gets the PipeWire streams mapped by display device name
+  /// </summary>
+  public IReadOnlyDictionary<string, PipeWireStream> Streams => _streams;
 
 
   public CaptureResult CaptureAllDisplays(bool captureCursor = true)
   {
     try
     {
-      if (!EnsureInitializedAsync().GetAwaiter().GetResult())
+      if (!_isInitialized)
       {
-        //_permissionDenied = true;
-        return CaptureResult.Fail(
-          "Failed to initialize Wayland screen capture. " +
-          "XDG Desktop Portal ScreenCast may not be available, or permission was denied.");
+        return CaptureResult.Fail("Wayland screen capture not initialized. Call InitializeAsync first.");
       }
 
-      var frameData = _stream?.GetLatestFrame();
-      if (frameData is null)
+      if (_streams.Count == 0)
       {
-        return CaptureResult.Fail("No frame available yet. Stream may still be initializing.");
+        return CaptureResult.Fail("No streams available.");
       }
 
-      var info = new SKImageInfo(frameData.Width, frameData.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-      var bitmap = new SKBitmap(info);
-
-      unsafe
+      // For single display, just return that display's capture
+      if (_streams.Count == 1)
       {
-        var dstBase = (byte*)bitmap.GetPixels();
-        var dstRowBytes = bitmap.Info.RowBytes; // width * 4 for BGRA8888
-        var srcRowBytes = frameData.Stride > 0 ? frameData.Stride : dstRowBytes;
+        var stream = _streams.Values.First();
+        return CaptureStream(stream);
+      }
 
-        fixed (byte* srcBase = frameData.Data)
+      // For multiple displays, we need to composite them together
+      // This requires knowing the virtual screen bounds and each display's position
+      var virtualBounds = _displayManager.GetVirtualScreenBounds();
+      var displays = _displayManager.GetDisplays().Result;
+
+      var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
+      using var canvas = new SKCanvas(compositeBitmap);
+      canvas.Clear(SKColors.Black);
+
+      foreach (var display in displays)
+      {
+        if (!_streams.TryGetValue(display.DeviceName, out var stream))
         {
-          var copyBytesPerRow = Math.Min(dstRowBytes, srcRowBytes);
-          for (var y = 0; y < frameData.Height; y++)
-          {
-            var srcRow = srcBase + (y * srcRowBytes);
-            var dstRow = dstBase + (y * dstRowBytes);
-            Buffer.MemoryCopy(srcRow, dstRow, copyBytesPerRow, copyBytesPerRow);
-          }
+          _logger.LogWarning("No stream found for display {DisplayName}", display.DeviceName);
+          continue;
         }
+
+        var captureResult = CaptureStream(stream);
+        if (!captureResult.IsSuccess || captureResult.Bitmap is null)
+        {
+          _logger.LogWarning("Failed to capture display {DisplayName}", display.DeviceName);
+          continue;
+        }
+
+        using var displayBitmap = captureResult.Bitmap;
+        var destRect = SKRect.Create(
+          display.MonitorArea.X - virtualBounds.X,
+          display.MonitorArea.Y - virtualBounds.Y,
+          display.MonitorArea.Width,
+          display.MonitorArea.Height);
+
+        canvas.DrawBitmap(displayBitmap, destRect);
       }
 
-      return CaptureResult.Ok(bitmap, isUsingGpu: false);
+      return CaptureResult.Ok(compositeBitmap, isUsingGpu: false);
     }
     catch (Exception ex)
     {
@@ -88,9 +126,31 @@ internal class ScreenGrabberWayland(
     bool captureCursor = true,
     bool forceKeyFrame = false)
   {
-    // For Wayland, we capture all displays and return the composite
-    // Individual display selection would require multiple portal sessions
-    return CaptureAllDisplays(captureCursor);
+    try
+    {
+      if (!_isInitialized)
+      {
+        return CaptureResult.Fail("Wayland screen capture not initialized. Call InitializeAsync first.");
+      }
+
+      // Find the stream for the target display
+      if (!_streams.TryGetValue(targetDisplay.DeviceName, out var stream))
+      {
+        _logger.LogWarning("No stream found for display {DisplayName}. Falling back to first available stream.", targetDisplay.DeviceName);
+        stream = _streams.Values.FirstOrDefault();
+        if (stream is null)
+        {
+          return CaptureResult.Fail($"No stream available for display {targetDisplay.DeviceName}");
+        }
+      }
+
+      return CaptureStream(stream);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error capturing display {DisplayName} on Wayland", targetDisplay.DeviceName);
+      return CaptureResult.Fail(ex);
+    }
   }
 
   public void Dispose()
@@ -100,124 +160,148 @@ internal class ScreenGrabberWayland(
       return;
     }
 
-    _stream?.Dispose();
-    _stream = null;
+    Disposer.DisposeAll(_streams.Values);
 
-    _portal?.Dispose();
-    _portal = null;
-
+    _streams.Clear();
     _initLock?.Dispose();
 
     _disposed = true;
   }
 
-
-  private async Task<bool> EnsureInitializedAsync()
+  public async Task Initialize(CancellationToken cancellationToken)
   {
     if (_isInitialized)
     {
-      return true;
+      return;
     }
 
-    await _initLock.WaitAsync();
+    await _initLock.WaitAsync(cancellationToken);
     try
     {
       if (_isInitialized)
       {
-        return true;
+        return;
       }
 
-      _portal = await XdgDesktopPortal.CreateAsync(_logger);
+      // Get portal connection (reuses existing session if already initialized)
+      var portalStreams = await _portalService.GetScreenCastStreams();
+      var connection = await _portalService.GetPipeWireConnection();
 
-      if (!await _portal.IsScreenCastAvailableAsync())
+      if (portalStreams.Count == 0 || connection is null)
       {
-        _logger.LogError(
-          "XDG Desktop Portal ScreenCast is not available. " +
-          "Ensure xdg-desktop-portal and a backend (xdg-desktop-portal-gtk, -kde, -gnome, or -wlr) are installed.");
-        return false;
+        throw new InvalidOperationException("Failed to get portal streams or connection");
       }
 
-      // Create ScreenCast session
-      var sessionResult = await _portal.CreateScreenCastSessionAsync();
-      if (!sessionResult.IsSuccess || sessionResult.Value is null)
+      _logger.LogInformation("Using portal session with {Count} stream(s)", portalStreams.Count);
+
+      // Create a PipeWireStream for each display
+      // Each stream corresponds to a monitor when using ScreenCast + Remote Desktop
+      for (int i = 0; i < portalStreams.Count; i++)
       {
-        _logger.LogError("Failed to create ScreenCast session: {Error}", sessionResult.Reason);
-        return false;
-      }
+        var streamInfo = portalStreams[i];
+        int logicalWidth = 0, logicalHeight = 0;
 
-      _sessionHandle = sessionResult.Value;
-      _logger.LogInformation("Created ScreenCast session: {Session}", _sessionHandle);
-
-      // Select sources (monitors)
-      var selectResult = await _portal.SelectScreenCastSourcesAsync(
-        _sessionHandle,
-        sourceTypes: 1,  // Monitor
-        multipleSources: true,
-        cursorMode: 2);  // Embedded cursor
-
-      if (!selectResult.IsSuccess)
-      {
-        _logger.LogError("Failed to select ScreenCast sources: {Error}", selectResult.Reason);
-        return false;
-      }
-
-      // Start the session (shows permission dialog to user)
-      var startResult = await _portal.StartScreenCastAsync(_sessionHandle);
-      if (!startResult.IsSuccess || startResult.Value is null)
-      {
-        _logger.LogError("Failed to start ScreenCast: {Error}", startResult.Reason);
-        return false;
-      }
-
-      var streams = startResult.Value;
-      if (streams.Count == 0)
-      {
-        _logger.LogError("No streams returned from ScreenCast portal");
-        return false;
-      }
-
-      _logger.LogInformation("ScreenCast started with {Count} stream(s)", streams.Count);
-
-      // Open PipeWire remote
-      var fdResult = await _portal.OpenPipeWireRemoteAsync(_sessionHandle);
-      if (!fdResult.IsSuccess || fdResult.Value is null)
-      {
-        _logger.LogError("Failed to open PipeWire remote: {Error}", fdResult.Reason);
-        return false;
-      }
-
-      // Create PipeWire stream for the first video stream
-      var nodeId = streams[0].NodeId;
-      _stream = new PipeWireStream(_logger, nodeId, fdResult.Value);
-
-      // Wait briefly for the stream to start; poll for readiness
-      var started = false;
-      for (var i = 0; i < 10; i++)
-      {
-        if (_stream.IsStreaming)
+        if (streamInfo.Properties.TryGetValue("size", out var sizeObj) && sizeObj is ValueTuple<int, int> sizeTuple)
         {
-          started = true;
-          break;
+          logicalWidth = sizeTuple.Item1;
+          logicalHeight = sizeTuple.Item2;
+          _logger.LogInformation("Portal stream {Index} reported logical dimensions: {Width}x{Height}", i, logicalWidth, logicalHeight);
         }
-        await Task.Delay(100);
-      }
-      if (!started)
-      {
-        _logger.LogWarning("PipeWire stream created but not yet streaming. Frames may not be available immediately.");
+
+        // Pass logical dimensions so PipeWireStream can calculate scale factor
+        var stream = _streamFactory.Create(streamInfo.NodeId, connection.Value.Fd, logicalWidth, logicalHeight);
+
+        // Map this stream to the display device name (which matches the index)
+        var deviceName = i.ToString();
+        _streams[deviceName] = stream;
+
+        // Wait for the stream to start and have frames available
+        for (var j = 0; j < StreamStartTimeoutMs / StreamStartPollingIntervalMs; j++)
+        {
+          if (stream.IsStreaming && stream.TryGetLatestFrame(out _))
+          {
+            break;
+          }
+          await Task.Delay(StreamStartPollingIntervalMs, cancellationToken);
+        }
+
+        // Log actual physical dimensions
+        if (stream.ActualWidth > 0 && stream.ActualHeight > 0)
+        {
+          _logger.LogInformation(
+            "Stream {Index} initialized with physical dimensions: {Width}x{Height} (scale: {Scale:F2}x)",
+            i, stream.ActualWidth, stream.ActualHeight, stream.ScaleFactor);
+        }
       }
 
       _isInitialized = true;
       _logger.LogInformation("Wayland screen capture fully initialized");
-      return true;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error initializing Wayland screen capture");
-      return false;
+      throw;
     }
     finally
     {
       _initLock.Release();
+    }
+  }
+
+  public async Task Uninitialize(CancellationToken cancellationToken)
+  {
+    using var acquiredLock = await _initLock.AcquireLockAsync(cancellationToken);
+    Disposer.DisposeAll(_streams.Values);
+    _streams.Clear();
+    _isInitialized = false;
+  }
+
+
+  private CaptureResult CaptureStream(PipeWireStream stream)
+  {
+    try
+    {
+      var frameData = stream.GetLatestFrame();
+      if (frameData is null)
+      {
+        return CaptureResult.Fail("No frame available yet. Stream may still be initializing.");
+      }
+
+      var info = new SKImageInfo(frameData.Width, frameData.Height, SKColorType.Bgra8888, SKAlphaType.Opaque);
+      var bitmap = new SKBitmap();
+
+      var gcHandle = GCHandle.Alloc(frameData.Data, GCHandleType.Pinned);
+      try
+      {
+        var dataPtr = gcHandle.AddrOfPinnedObject();
+        var contextPtr = GCHandle.ToIntPtr(gcHandle);
+
+        // InstallPixels takes ownership of the pixel data pointer
+        // We pass a release delegate to unpin the GCHandle when the bitmap is disposed
+        if (!bitmap.InstallPixels(info, dataPtr, frameData.Stride, (address, context) =>
+        {
+          if (context is IntPtr ptr && ptr != IntPtr.Zero)
+          {
+            GCHandle.FromIntPtr(ptr).Free();
+          }
+        }, contextPtr))
+        {
+          gcHandle.Free();
+          return CaptureResult.Fail("Failed to install pixels into SKBitmap");
+        }
+      }
+      catch
+      {
+        gcHandle.Free();
+        throw;
+      }
+
+      return CaptureResult.Ok(bitmap, isUsingGpu: false);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error capturing stream");
+      return CaptureResult.Fail(ex);
     }
   }
 }

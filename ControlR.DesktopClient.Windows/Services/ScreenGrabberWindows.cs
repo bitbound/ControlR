@@ -64,6 +64,17 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  public Task Initialize(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task Uninitialize(CancellationToken cancellationToken)
+  {
+    _dxOutputGenerator.Uninitialize();
+    return Task.CompletedTask;
+  }
+
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
     bool captureCursor)

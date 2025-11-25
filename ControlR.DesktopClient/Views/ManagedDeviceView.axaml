@@ -110,49 +110,25 @@
         <StackPanel IsVisible="{Binding IsLinuxWayland}" Margin="0,28,0,0">
           <TextBlock Classes="h2 Info" Text="{x:Static common:Localization.WaylandPermissions}" />
 
-          <!-- ScreenCast Permission -->
           <Border Classes="Card" Margin="0,20,0,0">
             <StackPanel>
-              <TextBlock Text="{x:Static common:Localization.ScreenCastPermission}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+              <TextBlock Text="{x:Static common:Localization.RemoteControlPermission}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" Opacity="0.2" IsVisible="{Binding IsScreenCapturePermissionGranted}">
-                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessColor}" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsWaylandPermissionGranted}">
+                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessContrastText}" FontWeight="Bold" />
                   </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" Opacity="0.2" IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
-                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorColor}" FontWeight="Bold" />
-                  </Border>
-                </StackPanel>
-                <Button Content="{x:Static common:Localization.LearnMore}"
-                        Command="{Binding OpenScreenCaptureSettingsCommand}"
-                        Margin="16,0,0,0" />
-              </StackPanel>
-              <TextBlock Text="{x:Static common:Localization.ScreenCastPermissionDescription}"
-                         Classes="Small"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <!-- RemoteDesktop Permission -->
-          <Border Classes="Card" Margin="0,20,0,0">
-            <StackPanel>
-              <TextBlock Text="{x:Static common:Localization.RemoteDesktopPermission}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-                  <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" Opacity="0.2" IsVisible="{Binding IsWaylandRemoteDesktopPermissionGranted}">
-                    <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessColor}" FontWeight="Bold" />
-                  </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" Opacity="0.2" IsVisible="{Binding IsWaylandRemoteDesktopPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
-                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorColor}" FontWeight="Bold" />
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" IsVisible="{Binding IsWaylandPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                    <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorContrastText}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
-                <Button Content="{x:Static common:Localization.LearnMore}"
-                        Command="{Binding OpenRemoteDesktopSettingsCommand}"
+                <Button Content="{x:Static common:Localization.GrantPermission}"
+                        Command="{Binding GrantWaylandPermissionCommand}"
+                        IsEnabled="{Binding IsWaylandPermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
                         Margin="16,0,0,0" />
               </StackPanel>
-              <TextBlock Text="{x:Static common:Localization.RemoteDesktopPermissionDescription}"
+              <TextBlock Text="{x:Static common:Localization.RemoteControlPermissionDescription}"
                          Classes="Small"
                          TextWrapping="Wrap" />
             </StackPanel>

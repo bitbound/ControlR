@@ -32,6 +32,7 @@ public static class Localization
   public static string EnterMessagePlaceholder => GetString();
   public static string GetSupportDescription => GetString();
   public static string GetTechSupportTitle => GetString();
+  public static string GrantPermission => GetString();
   public static string Granted => GetString();
   public static string LearnMore => GetString();
   public static string MacOsPermissions => GetString();
@@ -48,8 +49,10 @@ public static class Localization
   public static string OpenSettings => GetString();
   public static string RemoteControlSessionToastMessage => GetString();
   public static string RemoteControlSessionToastTitle => GetString();
-  public static string RemoteDesktopPermission => GetString();
-  public static string RemoteDesktopPermissionDescription => GetString();
+  public static string RemoteControlRequestTitle => GetString();
+  public static string RemoteControlRequestMessage => GetString();
+  public static string RemoteControlPermission => GetString();
+  public static string RemoteControlPermissionDescription => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
   public static string ScreenCastPermission => GetString();
   public static string ScreenCastPermissionDescription => GetString();

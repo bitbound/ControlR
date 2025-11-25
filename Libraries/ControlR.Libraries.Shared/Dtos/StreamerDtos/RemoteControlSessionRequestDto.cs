@@ -13,4 +13,5 @@ public record RemoteControlSessionRequestDto(
   string ViewerConnectionId,
   Guid DeviceId,
   bool NotifyUserOnSessionStart,
+  bool RequireConsent,
   string ViewerName = "");

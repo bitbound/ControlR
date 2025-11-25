@@ -1,9 +1,9 @@
-using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Tmds.DBus.Protocol;
+using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
 
 namespace ControlR.DesktopClient.Linux.Tests;
 
@@ -127,7 +127,7 @@ public class XdgDesktopPortalTests
       sessionResult.Value!,
       sourceTypes: 1,
       multipleSources: false,
-      cursorMode: 2);
+      cursorMode: 4);
     
     Assert.True(selectResult.IsSuccess, $"Failed to select sources: {selectResult.Reason}");
   }

@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.Libraries.NativeInterop.Unix.Linux;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -18,11 +19,15 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// Some compositors expose display info via wlr-output-management protocol,
 /// but this is not universal.
 /// </summary>
-internal class DisplayManagerWayland(ILogger<DisplayManagerWayland> logger) : IDisplayManager
+internal class DisplayManagerWayland(
+  ILogger<DisplayManagerWayland> logger,
+  IWaylandPortalAccessor portalService) : IDisplayManager
 {
   private readonly Lock _displayLock = new();
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerWayland> _logger = logger;
+  private readonly IWaylandPortalAccessor _portalService = portalService;
+  private readonly Dictionary<string, uint> _displayNodeIds = new(); // Maps DeviceName to NodeId
 
   public Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {
@@ -107,6 +112,19 @@ internal class DisplayManagerWayland(ILogger<DisplayManagerWayland> logger) : ID
     }
   }
 
+  /// <summary>
+  /// Gets the PipeWire NodeId for a given display device name.
+  /// This is useful for mapping displays to their corresponding PipeWire streams.
+  /// </summary>
+  public bool TryGetNodeId(string deviceName, out uint nodeId)
+  {
+    lock (_displayLock)
+    {
+      EnsureDisplaysLoaded();
+      return _displayNodeIds.TryGetValue(deviceName, out nodeId);
+    }
+  }
+
   private void EnsureDisplaysLoaded()
   {
     if (_displays.Count == 0)
@@ -120,27 +138,64 @@ internal class DisplayManagerWayland(ILogger<DisplayManagerWayland> logger) : ID
     try
     {
       _displays.Clear();
+      _displayNodeIds.Clear();
 
-      // Wayland doesn't provide a standardized way to query displays
-      // We'll create a default display entry
-      // In a full implementation, this would use compositor-specific protocols
-      // or wlr-output-management if available
+      var streams = _portalService.GetScreenCastStreams().GetAwaiter().GetResult();
 
-      var defaultDisplay = new DisplayInfo
+      if (streams.Count > 0)
       {
-        DeviceName = "0",
-        DisplayName = "Wayland Display",
-        MonitorArea = new Rectangle(0, 0, 1920, 1080),
-        WorkArea = new Rectangle(0, 0, 1920, 1080),
-        IsPrimary = true,
-        ScaleFactor = 1.0
-      };
+        int offsetX = 0;
 
-      _displays[defaultDisplay.DeviceName] = defaultDisplay;
+        for (int i = 0; i < streams.Count; i++)
+        {
+          var stream = streams[i];
+          int logicalWidth = 1920, logicalHeight = 1080;
 
-      _logger.LogInformation(
-        "Loaded default Wayland display. " +
-        "Actual display information requires compositor-specific implementation.");
+          // Get logical dimensions from portal properties
+          if (stream.Properties.TryGetValue("size", out var sizeObj) && sizeObj is ValueTuple<int, int> sizeTuple)
+          {
+            logicalWidth = sizeTuple.Item1;
+            logicalHeight = sizeTuple.Item2;
+          }
+
+          // For Wayland with ScreenCast, the logical dimensions are what we use
+          // The actual physical dimensions will be determined by the ScreenGrabber when it creates the stream
+          // We use logical dimensions here to match what the compositor reports
+          var deviceName = i.ToString();
+
+          var display = new DisplayInfo
+          {
+            DeviceName = deviceName,
+            DisplayName = $"Wayland Display {i + 1}",
+            MonitorArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
+            WorkArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
+            IsPrimary = i == 0,
+            ScaleFactor = 1.0 // Will be updated by ScreenGrabber when stream is created
+          };
+
+          _displays[display.DeviceName] = display;
+          _displayNodeIds[deviceName] = stream.NodeId;
+
+          // Position displays horizontally side-by-side for multi-monitor setups
+          offsetX += logicalWidth;
+        }
+
+        _logger.LogInformation("Loaded {Count} Wayland display(s) from portal", streams.Count);
+      }
+      else
+      {
+        var defaultDisplay = new DisplayInfo
+        {
+          DeviceName = "0",
+          DisplayName = "Wayland Display",
+          MonitorArea = new Rectangle(0, 0, 1920, 1080),
+          WorkArea = new Rectangle(0, 0, 1920, 1080),
+          IsPrimary = true,
+          ScaleFactor = 1.0
+        };
+        _displays[defaultDisplay.DeviceName] = defaultDisplay;
+        _logger.LogWarning("Using fallback display info - portal returned no streams");
+      }
     }
     catch (Exception ex)
     {

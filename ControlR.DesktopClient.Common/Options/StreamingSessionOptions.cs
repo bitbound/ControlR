@@ -1,11 +1,18 @@
-﻿namespace ControlR.DesktopClient.Common.Options;
+﻿using ControlR.Libraries.Shared.Enums;
+
+namespace ControlR.DesktopClient.Common.Options;
 
 public class StreamingSessionOptions
 {
   private Uri? _serverOrigin;
   private Uri? _webSocketUri;
 
+  public CaptureEncoderType EncoderType { get; set; } = CaptureEncoderType.Jpeg;
+
   public bool NotifyUser { get; set; }
+  public bool RequireConsent { get; set; }
+
+  public int Quality { get; set; } = 75;
 
   public Uri ServerOrigin
   {

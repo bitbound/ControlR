@@ -21,7 +21,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
   protected readonly IProcessManager ProcessManager = serviceProvider.GetRequiredService<IProcessManager>();
   protected readonly ISystemEnvironment SystemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
 
-  private readonly ManualResetEventAsync _bandwidthAvailableSignal = new();
+  private volatile bool _bandwidthAvailable = true;
   private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
@@ -42,7 +42,6 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
   public override void Dispose()
   {
     base.Dispose();
-    Disposer.DisposeAll(_bandwidthAvailableSignal);
     GC.SuppressFinalize(this);
   }
 
@@ -65,7 +64,10 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
 
   public async Task WaitForBandwidth(CancellationToken cancellationToken)
   {
-    await _bandwidthAvailableSignal.Wait(cancellationToken);
+    while (!_bandwidthAvailable && !cancellationToken.IsCancellationRequested)
+    {
+      await Task.Delay(10, cancellationToken);
+    }
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -185,15 +187,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
           _ => 0
         };
 
-        switch (Mbps)
-        {
-          case >= MaxMbps when _bandwidthAvailableSignal.IsSet:
-            _bandwidthAvailableSignal.Reset();
-            break;
-          case < MaxMbps when !_bandwidthAvailableSignal.IsSet:
-            _bandwidthAvailableSignal.Set();
-            break;
-        }
+        _bandwidthAvailable = Mbps < MaxMbps;
       }
       catch (OperationCanceledException ex)
       {

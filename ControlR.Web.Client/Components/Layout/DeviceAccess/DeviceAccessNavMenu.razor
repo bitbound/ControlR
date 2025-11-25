@@ -1,10 +1,6 @@
-﻿@using ControlR.Web.Client.Services.DeviceAccess
-@inject NavigationManager NavMan
-@inject AuthenticationStateProvider AuthState
-@inject ILogger<NavMenu> Logger
-@inject IControlrApi ControlrApi
-@inject ISnackbar Snackbar
+﻿@using ControlR.Web.Client.StateManagement.DeviceAccess
 @inject IDeviceState DeviceAccessState
+
 
 <MudNavMenu>
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={DeviceAccessState.CurrentDeviceMaybe?.Id}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
@@ -48,6 +44,7 @@
     Logs
   </MudNavLink> *@
 </MudNavMenu>
+
 @code {
   [Parameter]
   public bool IsDisabled { get; set; }

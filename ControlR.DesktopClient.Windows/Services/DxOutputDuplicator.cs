@@ -16,14 +16,17 @@ internal interface IDxOutputDuplicator : IDisposable
 {
   DxOutput? DuplicateOutput(string deviceName);
   void SetCurrentOutputFaulted();
+  void Uninitialize();
 }
 
 internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutputDuplicator
 {
   private readonly MemoryCache _faultedDevices = new(new MemoryCacheOptions());
   private readonly ILogger<DxOutputDuplicator> _logger = logger;
+
   private DxOutput? _currentOutput;
   private bool _disposedValue;
+
 
   public void Dispose()
   {
@@ -156,6 +159,12 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
     _currentOutput = null;
   }
 
+  public void Uninitialize()
+  {
+    Disposer.DisposeAll(_currentOutput);
+    _currentOutput = null;
+  }
+  
   protected virtual void Dispose(bool disposing)
   {
     if (!_disposedValue)

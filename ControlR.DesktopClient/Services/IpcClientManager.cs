@@ -17,20 +17,18 @@ public class IpcClientManager(
   IIpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
   IClassicDesktopStyleApplicationLifetime appLifetime,
-  IScreenGrabber screenGrabber,
-  IImageUtility imageUtility,
+  IDesktopPreviewProvider desktopPreviewService,
   IOptions<DesktopClientOptions> desktopClientOptions,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
   private readonly IClassicDesktopStyleApplicationLifetime _appLifetime = appLifetime;
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
   private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
-  private readonly IImageUtility _imageUtility = imageUtility;
+  private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
-  private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly TimeProvider _timeProvider = timeProvider;
   private DateTimeOffset? _firstConnectionAttempt;
 
@@ -164,27 +162,20 @@ public class IpcClientManager(
         dto.StreamId,
         dto.TargetProcessId);
 
-      // Capture all displays (synchronous call)
-      using var captureResult = _screenGrabber.CaptureAllDisplays(captureCursor: false);
-      if (!captureResult.IsSuccess || captureResult.Bitmap is null)
-      {
-        _logger.LogWarning("Failed to capture displays: {Error}", captureResult.FailureReason);
-        return new DesktopPreviewResponseIpcDto([], false, captureResult.FailureReason);
-      }
+      // Capture preview (synchronous wait for async task)
+      var result = _desktopPreviewService.CapturePreview().GetAwaiter().GetResult();
 
-      // Encode as JPEG
-      var jpegData = _imageUtility.EncodeJpeg(captureResult.Bitmap, 75, compressOutput: false);
-      if (jpegData.Length == 0)
+      if (!result.IsSuccess)
       {
-        _logger.LogWarning("Failed to encode JPEG: No data returned");
-        return new DesktopPreviewResponseIpcDto([], false, "Failed to encode JPEG");
+        _logger.LogWarning("Failed to capture preview: {Error}", result.Reason);
+        return new DesktopPreviewResponseIpcDto([], false, result.Reason);
       }
 
       _logger.LogInformation(
         "Desktop preview captured successfully. JPEG size: {Size} bytes",
-        jpegData.Length);
+        result.Value.Length);
 
-      return new DesktopPreviewResponseIpcDto(jpegData, true);
+      return new DesktopPreviewResponseIpcDto(result.Value, true);
     }
     catch (Exception ex)
     {

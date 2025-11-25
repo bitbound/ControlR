@@ -13,6 +13,7 @@ global using ControlR.Libraries.NativeInterop.Unix.MacOs;
 #elif LINUX_BUILD
 global using ControlR.DesktopClient.Linux;
 global using ControlR.DesktopClient.Linux.Services;
+global using ControlR.Libraries.NativeInterop.Unix.Linux;
 #endif
 
 #if UNIX_BUILD

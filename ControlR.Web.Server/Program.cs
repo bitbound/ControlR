@@ -2,7 +2,6 @@ using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Client.Components.Layout;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
-using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
 using Microsoft.Extensions.FileProviders;
@@ -46,13 +45,8 @@ else
 {
   app.UseHttpsRedirection();
   app.UseExceptionHandler("/Error", true);
-  app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
   app.UseHsts();
 }
-
-app.UseWhen(
-  ctx => HttpMethods.IsHead(ctx.Request.Method) && ctx.Request.Path.StartsWithSegments("/downloads"),
-  appBuilder => appBuilder.UseMiddleware<ContentHashHeaderMiddleware>());
 
 app.MapStaticAssets();
 
