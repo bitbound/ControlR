@@ -32,6 +32,9 @@ public interface IProcess : IDisposable
   [SupportedOSPlatform("linux")]
   nint ProcessorAffinity { get; set; }
 
+  StreamWriter StandardInput { get; }
+  StreamReader StandardOutput { get; }
+
   bool Responding { get; }
   int SessionId { get; }
   ProcessStartInfo StartInfo { get; set; }
@@ -75,6 +78,8 @@ public class ProcessWrapper(Process process) : IProcess
 
   public bool Responding => _process.Responding;
   public int SessionId => _process.SessionId;
+  public StreamWriter StandardInput => _process.StandardInput;
+  public StreamReader StandardOutput => _process.StandardOutput;
   public ProcessStartInfo StartInfo { get => _process.StartInfo; set => _process.StartInfo = value; }
 
   public void Dispose()

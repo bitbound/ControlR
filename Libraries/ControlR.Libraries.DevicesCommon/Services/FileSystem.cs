@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Versioning;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.DevicesCommon.Services;
 
@@ -52,7 +53,16 @@ public interface IFileSystem
   Task<string> ReadAllTextAsync(string path);
 
   Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1);
-  
+
+  /// <summary>
+  /// Resolves the absolute file path for the specified file name using `which` on Unix-based systems or `where.exe` on Windows.
+  /// </summary>
+  /// <param name="fileName">The name of the file to resolve. Cannot be null or empty.</param>
+  /// <returns>A task that represents the asynchronous operation. The result contains the absolute file path if the file is
+  /// found; otherwise, an error result.</returns>
+  Task<Result<string>> ResolveFilePath(string fileName);
+
+
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   void SetUnixFileMode(string filePath, UnixFileMode fileMode);
@@ -65,8 +75,10 @@ public interface IFileSystem
   Task WriteAllTextAsync(string path, string content);
 }
 
-public class FileSystem : IFileSystem
+public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
 {
+  private readonly ILogger<FileSystem> _logger = logger;
+  
   public Task AppendAllLinesAsync(string path, IEnumerable<string> lines)
   {
     return File.AppendAllLinesAsync(path, lines);
@@ -216,6 +228,65 @@ public class FileSystem : IFileSystem
     await File.WriteAllLinesAsync(filePath, lines);
   }
 
+  public async Task<Result<string>> ResolveFilePath(string fileName)
+  {
+    try
+    {
+      var psi = new ProcessStartInfo
+      {
+        FileName = OperatingSystem.IsWindows() ? "where.exe" : "which",
+        Arguments = fileName,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+      };
+
+      using var process = Process.Start(psi);
+      if (process == null)
+      {
+        return Result
+          .Fail<string>($"Failed to start process to resolve file path for file name '{fileName}'.")
+          .Log(_logger);
+      }
+
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      var output = await process.StandardOutput.ReadToEndAsync(cts.Token);
+      if (string.IsNullOrWhiteSpace(output))
+      {
+        var errorOutput = await process.StandardError.ReadToEndAsync(cts.Token);
+        return Result
+          .Fail<string>($"File '{fileName}' not found. Error: {errorOutput}")
+          .Log(_logger);
+      }
+
+      output = output.Trim();
+      var firstItem = output
+        .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+        .FirstOrDefault();
+      
+      if (string.IsNullOrWhiteSpace(firstItem) || !FileExists(firstItem))
+      {
+        return Result
+          .Fail<string>($"File '{fileName}' not found.")
+          .Log(_logger);
+      }
+
+      return Result.Ok(firstItem);
+    }
+    catch (OperationCanceledException)
+    {
+      return Result
+        .Fail<string>($"Timed out while resolving file path for file name '{fileName}'.")
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail<string>(ex, $"Failed to resolve file path for file name '{fileName}'.")
+        .Log(_logger);
+    }
+  }
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   public void SetUnixFileMode(string filePath, UnixFileMode fileMode)

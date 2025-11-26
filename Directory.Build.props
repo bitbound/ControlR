@@ -39,6 +39,6 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-		<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.6" />
+		<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.22" />
 	</ItemGroup>
 </Project>

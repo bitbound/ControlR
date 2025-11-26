@@ -22,7 +22,7 @@ public static class AppConstants
       SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
       _ => throw new PlatformNotSupportedException()
     };
-  
+
   public static string DesktopClientZipFileName =>
     SystemEnvironment.Instance.Platform switch
     {
@@ -31,6 +31,15 @@ public static class AppConstants
       SystemPlatform.Linux => "ControlR.DesktopClient.zip",
       _ => throw new PlatformNotSupportedException()
     };
+
+  public static string FfmpegFileName =>
+    SystemEnvironment.Instance.Platform switch
+    {
+      SystemPlatform.Windows => "ffmpeg.exe",
+      SystemPlatform.Linux or SystemPlatform.MacOs => "ffmpeg",
+      _ => throw new PlatformNotSupportedException()
+    };
+
 
   public static Uri? ServerUri
   {

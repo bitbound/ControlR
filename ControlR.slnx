@@ -25,8 +25,11 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj" />
     <Project Path="Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />
-    <Project Path="Tests/ControlR.DesktopClient.Linux.CaptureSample/ControlR.DesktopClient.Linux.CaptureSample.csproj"/>
+    <Project Path="Tests/ControlR.DesktopClient.Linux.CaptureSample/ControlR.DesktopClient.Linux.CaptureSample.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
+    <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj">
+      <BuildType Solution="Debug|*" Project="&#xD;&#xA;&#x9;&#x9;&#x9;Debug" />
+    </Project>
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Tests.TestingUtilities/ControlR.Tests.TestingUtilities.csproj" />
