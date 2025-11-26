@@ -43,12 +43,12 @@ internal class AgentHubClient(
 {
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-  private readonly IAgentHeartbeatTimer _heartbeatTimer = heartbeatTimer;
   private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
   private readonly IFileManager _fileManager = fileManager;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IAgentHeartbeatTimer _heartbeatTimer = heartbeatTimer;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly IIpcServerStore _ipcServerStore = ipcServerStore;
   private readonly ILocalSocketProxy _localProxy = localProxy;
@@ -60,6 +60,7 @@ internal class AgentHubClient(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly ITerminalStore _terminalStore = terminalStore;
   private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
+
 
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
   {
@@ -682,6 +683,7 @@ internal class AgentHubClient(
       return new ValidateFilePathResponseDto(false, "An error occurred while validating file path.");
     }
   }
+
 
   private async Task SendFileStream(Guid streamId, string fileSystemPath)
   {

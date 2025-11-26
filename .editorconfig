@@ -20,9 +20,6 @@ csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 
-# BB0001: Configure Bitbound analyzer rule severity
-dotnet_diagnostic.BB0001.severity = suggestion
-
 # CS0618: 'member' is obsolete
 dotnet_diagnostic.CS0618.severity = suggestion
 

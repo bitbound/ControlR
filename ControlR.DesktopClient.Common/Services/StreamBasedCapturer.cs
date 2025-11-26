@@ -17,16 +17,18 @@ internal class StreamBasedCapturer(
     IDisplayManager displayManager,
     ILogger<StreamBasedCapturer> logger) : IDesktopCapturer
 {
-    private readonly IScreenGrabber _screenGrabber = screenGrabber;
-    private readonly IStreamEncoder _encoder = encoder;
-    private readonly IDisplayManager _displayManager = displayManager;
-    private readonly ILogger<StreamBasedCapturer> _logger = logger;
     private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(new BoundedChannelOptions(100) { FullMode = BoundedChannelFullMode.DropOldest });
+    private readonly Lock _displayLock = new();
+    private readonly IDisplayManager _displayManager = displayManager;
+    private readonly IStreamEncoder _encoder = encoder;
+    private readonly ILogger<StreamBasedCapturer> _logger = logger;
+    private readonly IScreenGrabber _screenGrabber = screenGrabber;
+
     private Task? _captureTask;
     private bool _disposed;
-    private DisplayInfo? _selectedDisplay;
-    private readonly Lock _displayLock = new();
     private volatile bool _forceKeyFrame;
+    private DisplayInfo? _selectedDisplay;
+
 
   public Task ChangeDisplays(string displayId)
     {
@@ -38,6 +40,21 @@ internal class StreamBasedCapturer(
             }
         }
         return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _encoder.Dispose();
+        if (_captureTask != null)
+        {
+            try
+            {
+                await _captureTask;
+            }
+            catch { }
+        }
     }
 
     public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] CancellationToken cancellationToken)
@@ -120,20 +137,5 @@ internal class StreamBasedCapturer(
         }
         
         await producer;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _encoder.Dispose();
-        if (_captureTask != null)
-        {
-            try
-            {
-                await _captureTask;
-            }
-            catch { }
-        }
     }
 }

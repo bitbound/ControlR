@@ -24,7 +24,7 @@ internal static class StaticServiceProvider
   public static IServiceProvider Instance => _provider ?? GetDesignTimeProvider();
 
   public static void Build(
-    IClassicDesktopStyleApplicationLifetime lifetime,
+    IControlledApplicationLifetime lifetime,
     string? instanceId)
   {
     if (_provider is not null)
@@ -74,6 +74,7 @@ internal static class StaticServiceProvider
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<INavigationProvider, NavigationProvider>()
+      .AddSingleton<IMainWindowProvider, MainWindowProvider>()
       .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
@@ -99,10 +100,10 @@ internal static class StaticServiceProvider
 
 
 #if WINDOWS_BUILD
-    services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>();
-    services.AddSingleton<IWin32Interop, Win32Interop>();
-    services.AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>();
-    services.AddSingleton<IDisplayManager, DisplayManagerWindows>();
+    services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
+      .AddSingleton<IWin32Interop, Win32Interop>()
+      .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
+      .AddSingleton<IDisplayManager, DisplayManagerWindows>();
 #endif
 
 #if UNIX_BUILD
@@ -110,20 +111,25 @@ internal static class StaticServiceProvider
 #endif
 
 #if LINUX_BUILD
-    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
     services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
+
+    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+
     switch (desktopEnvironment)
     {
       case DesktopEnvironmentType.Wayland:
-        services.AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>();
-        services.AddSingleton<IScreenGrabber, ScreenGrabberWayland>();
-        services.AddSingleton<IDisplayManager, DisplayManagerWayland>();
-        services.AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>();
-        services.AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
+        services
+          .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
+          .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
+          .AddSingleton<IDisplayManager, DisplayManagerWayland>()
+          .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
+          .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
+          .AddHostedService<RemoteControlPermissionMonitor>();
         break;
       case DesktopEnvironmentType.X11:
-        services.AddSingleton<IScreenGrabber, ScreenGrabberX11>();
-        services.AddSingleton<IDisplayManager, DisplayManagerX11>();
+        services
+          .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
+          .AddSingleton<IDisplayManager, DisplayManagerX11>();
         break;
       default:
         throw new NotSupportedException("Unsupported desktop environment detected.");
@@ -131,10 +137,10 @@ internal static class StaticServiceProvider
 #endif
 
 #if MAC_BUILD
-    services.AddHostedService<PermissionsInitializerMac>();
-    services.AddSingleton<IScreenGrabber, ScreenGrabberMac>();
-    services.AddSingleton<IMacInterop, MacInterop>();
-    services.AddSingleton<IDisplayManager, DisplayManagerMac>();
+    services.AddHostedService<PermissionsInitializerMac>()
+      .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
+      .AddSingleton<IMacInterop, MacInterop>()
+      .AddSingleton<IDisplayManager, DisplayManagerMac>();
 #endif
 
     return services;

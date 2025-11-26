@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using ControlR.DesktopClient.Services;
 
 namespace ControlR.DesktopClient.ViewModels;
 
@@ -7,18 +8,18 @@ public interface IMainWindowViewModel : IViewModelBase
 {
   IViewModelBase CurrentViewModel { get; set; }
 
-  void SetMainWindowNull();
+  void HandleMainWindowClosed();
 }
 
-public partial class MainWindowViewModel(IClassicDesktopStyleApplicationLifetime desktop) : ViewModelBase, IMainWindowViewModel
+public partial class MainWindowViewModel(IMainWindowProvider mainWindowProvider) : ViewModelBase, IMainWindowViewModel
 {
-  private readonly IClassicDesktopStyleApplicationLifetime _desktop = desktop;
+  private readonly IMainWindowProvider _mainWindowProvider = mainWindowProvider;
 
   [ObservableProperty]
   private IViewModelBase? _currentViewModel;
 
-  public void SetMainWindowNull()
+  public void HandleMainWindowClosed()
   {
-    _desktop.MainWindow = null;
+    _mainWindowProvider.HandleMainWindowClosed();
   }
 }

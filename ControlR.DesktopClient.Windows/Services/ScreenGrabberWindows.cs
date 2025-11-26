@@ -69,9 +69,9 @@ internal sealed class ScreenGrabberWindows(
     return Task.CompletedTask;
   }
 
-  public Task Uninitialize(CancellationToken cancellationToken)
+  public Task Deinitialize(CancellationToken cancellationToken)
   {
-    _dxOutputGenerator.Uninitialize();
+    _dxOutputGenerator.Deinitialize();
     return Task.CompletedTask;
   }
 

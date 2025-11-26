@@ -26,8 +26,8 @@ env:
   MINOR_VERSION: ${{vars.MINOR_VERSION}}
 
 jobs:
-  build:
-    name: Build
+  test:
+    name: test
     runs-on: windows-latest
     defaults:
       run:

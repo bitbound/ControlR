@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using ControlR.DesktopClient.Common.Startup;
+using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
 using Microsoft.Extensions.Hosting;
@@ -19,48 +20,52 @@ public partial class App : Application
   public static Window MainWindow
   {
     get =>
-      ServiceProvider.GetRequiredService<IClassicDesktopStyleApplicationLifetime>().MainWindow ??=
-      ServiceProvider.GetRequiredService<MainWindow>();
+      ServiceProvider.GetRequiredService<IMainWindowProvider>().MainWindow;
   }
   public static IServiceProvider ServiceProvider => StaticServiceProvider.Instance;
   public override void Initialize()
   {
     AvaloniaXamlLoader.Load(this);
   }
-  
+
   public override void OnFrameworkInitializationCompleted()
   {
     var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
 
-    if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+    if (ApplicationLifetime is IControlledApplicationLifetime controlledLifetime)
     {
-      desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-      desktop.ShutdownRequested += (_, _) =>
+      // Set explicit shutdown for classic desktop style.
+      if (controlledLifetime is ClassicDesktopStyleApplicationLifetime desktop)
       {
-        _appShutdownTokenSource.Cancel();
-      };
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        desktop.ShutdownRequested += (_, _) =>
+        {
+          _appShutdownTokenSource.Cancel();
+        };
+      }
 
+      // Listen for signals on POSIX systems to trigger a graceful shutdown.
       if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
       {
         _ = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
         {
           context.Cancel = true;
-          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => desktop.Shutdown());
+          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
         });
 
         _ = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
         {
           context.Cancel = true;
-          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => desktop.Shutdown());
+          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
         });
       }
 
-      StaticServiceProvider.Build(desktop, instanceId);
+      StaticServiceProvider.Build(controlledLifetime, instanceId);
 
       ReportAssemblyVersion();
 
       // Initialize theme from ThemeService
-      var themeService = StaticServiceProvider.Instance.GetRequiredService<Services.IThemeProvider>();
+      var themeService = StaticServiceProvider.Instance.GetRequiredService<IThemeProvider>();
       RequestedThemeVariant = themeService.CurrentTheme;
 
       // Start the hosted services on a different thread.
@@ -73,6 +78,8 @@ public partial class App : Application
       // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
       // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
       DisableAvaloniaDataAnnotationValidation();
+
+      // Set the DataContext for App.
       DataContext = StaticServiceProvider.Instance.GetRequiredService<IAppViewModel>();
     }
     else if (!Design.IsDesignMode)

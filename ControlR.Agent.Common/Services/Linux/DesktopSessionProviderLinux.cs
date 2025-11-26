@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services.Linux;
 
@@ -15,7 +16,7 @@ internal class DesktopSessionProviderLinux(
 
   public async Task<DesktopSession[]> GetActiveDesktopClients()
   {
-    var uiSessions = new List<DesktopSession>();
+    var desktopSessions = new List<DesktopSession>();
     var loggedInUsers = await GetLoggedInUserMap();
 
     foreach (var server in _ipcStore.Servers)
@@ -96,7 +97,9 @@ internal class DesktopSessionProviderLinux(
       string sessionLabel;
       DesktopSessionType sessionType;
 
-      if (!string.IsNullOrWhiteSpace(waylandDisplay) || string.Equals(xdgSessionType, "wayland", StringComparison.Ordinal))
+      var isWayland = !string.IsNullOrWhiteSpace(waylandDisplay) || string.Equals(xdgSessionType, "wayland", StringComparison.Ordinal);
+
+      if (isWayland)
       {
         sessionKey = waylandDisplay ?? "wayland";
         sessionLabel = sessionKey; // e.g. wayland-0
@@ -144,10 +147,20 @@ internal class DesktopSessionProviderLinux(
         Name = name
       };
 
-      uiSessions.Add(uiSession);
+      // Check permissions - X11 doesn't need permissions, Wayland does
+      if (isWayland)
+      {
+        uiSession.AreRemoteControlPermissionsGranted = await CheckDesktopRemoteControlPermissions(server.Value);
+      }
+      else
+      {
+        uiSession.AreRemoteControlPermissionsGranted = true;
+      }
+
+      desktopSessions.Add(uiSession);
     }
 
-    return [.. uiSessions];
+    return [.. desktopSessions];
   }
 
   public async Task<string[]> GetLoggedInUsers()
@@ -212,6 +225,7 @@ internal class DesktopSessionProviderLinux(
   }
 
 
+
   private async Task AddX11Sessions(List<DesktopSession> sessions)
   {
     try
@@ -262,6 +276,28 @@ internal class DesktopSessionProviderLinux(
     catch (Exception ex)
     {
       _logger.LogDebug(ex, "Error detecting X11 sessions");
+    }
+  }
+
+  private async Task<bool> CheckDesktopRemoteControlPermissions(IpcServerRecord serverInfo)
+  {
+    try
+    {
+      var ipcDto = new CheckOsPermissionsIpcDto(serverInfo.Process.Id);
+      var ipcResult = await serverInfo.Server.Invoke<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(ipcDto, timeoutMs: 3000);
+
+      if (ipcResult.IsSuccess && ipcResult.Value is not null)
+      {
+        return ipcResult.Value.ArePermissionsGranted;
+      }
+
+      _logger.LogWarning("Failed to get permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
     }
   }
 

@@ -248,7 +248,7 @@ internal class ScreenGrabberWayland(
     }
   }
 
-  public async Task Uninitialize(CancellationToken cancellationToken)
+  public async Task Deinitialize(CancellationToken cancellationToken)
   {
     using var acquiredLock = await _initLock.AcquireLockAsync(cancellationToken);
     Disposer.DisposeAll(_streams.Values);

@@ -45,5 +45,7 @@
   "ThemeDark": "Theme: Dark",
   "ADeviceAdministrator": "a device administrator",
   "RemoteControlRequestTitle": "Remote Control Request",
-  "RemoteControlRequestMessage": "Allow remote control session from {0}?"
+  "RemoteControlRequestMessage": "Allow remote control session from {0}?",
+  "PermissionsMissingToastTitle": "Permissions Required",
+  "PermissionsMissingToastMessage": "Required permissions are missing. Click here to enable."
 }

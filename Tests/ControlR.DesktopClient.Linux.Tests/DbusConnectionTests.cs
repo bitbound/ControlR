@@ -23,7 +23,7 @@ public class DbusConnectionTests
     _logger = loggerFactory.CreateLogger<DbusConnectionTests>();
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanConnectToSessionBus()
   {
     var address = Address.Session;
@@ -40,7 +40,7 @@ public class DbusConnectionTests
     connection.Dispose();
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCallPortalPropertyGet()
   {
     var address = Address.Session!;
@@ -87,7 +87,7 @@ public class DbusConnectionTests
     }
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCallCreateSessionDirectly()
   {
     var address = Address.Session!;

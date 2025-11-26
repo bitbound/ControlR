@@ -20,15 +20,14 @@ public static class Guard
     throw new ArgumentNullException(name);
   }
 
-  public static void IsNotNull<T>([NotNull] T? value, [CallerArgumentExpression(nameof(value))] string name = "")
-      where T : struct
+  public static void IsNotNull<T>([NotNull] T? value, string message, [CallerArgumentExpression(nameof(value))] string name = "")
   {
     if (value is not null)
     {
       return;
     }
 
-    throw new ArgumentNullException(name);
+    throw new ArgumentNullException(name, message);
   }
 
   public static void IsNotNullOrEmpty([NotNull] string? text, [CallerArgumentExpression(nameof(text))] string name = "")

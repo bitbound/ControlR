@@ -47,7 +47,7 @@ public class ScreenGrabberMac(
     return Task.CompletedTask;
   }
 
-  public Task Uninitialize(CancellationToken cancellationToken)
+  public Task Deinitialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
   }

@@ -5,9 +5,9 @@ namespace ControlR.Tests.TestingUtilities;
 /// <summary>
 /// Xunit attribute to skip tests when not running on a Wayland desktop session.
 /// </summary>
-public class WaylandOnlyAttribute : FactAttribute
+public class WaylandOnlyFactAttribute : FactAttribute
 {
-  public WaylandOnlyAttribute()
+  public WaylandOnlyFactAttribute()
   {
     if (!IsWaylandSession())
     {

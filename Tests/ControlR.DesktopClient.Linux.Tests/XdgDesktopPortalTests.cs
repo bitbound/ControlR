@@ -21,14 +21,14 @@ public class XdgDesktopPortalTests
     _logger = loggerFactory.CreateLogger<XdgDesktopPortalTests>();
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanConnectToDBus()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
     Assert.NotNull(portal);
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCheckScreenCastAvailability()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
@@ -36,7 +36,7 @@ public class XdgDesktopPortalTests
     Assert.True(isAvailable, "ScreenCast portal should be available on Wayland");
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCheckRemoteDesktopAvailability()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
@@ -44,7 +44,7 @@ public class XdgDesktopPortalTests
     Assert.True(isAvailable, "RemoteDesktop portal should be available on Wayland");
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCallPortalDirectly()
   {
     var address = Address.Session;
@@ -91,7 +91,7 @@ public class XdgDesktopPortalTests
     connection.Dispose();
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCreateScreenCastSession()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
@@ -103,7 +103,7 @@ public class XdgDesktopPortalTests
     _logger.LogInformation("Created session: {Session}", result.Value);
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanCreateRemoteDesktopSession()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
@@ -115,7 +115,7 @@ public class XdgDesktopPortalTests
     _logger.LogInformation("Created session: {Session}", result.Value);
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanSelectScreenCastSources()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
@@ -132,7 +132,7 @@ public class XdgDesktopPortalTests
     Assert.True(selectResult.IsSuccess, $"Failed to select sources: {selectResult.Reason}");
   }
 
-  [WaylandOnly]
+  [WaylandOnlyFact]
   public async Task CanSelectRemoteDesktopDevices()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);

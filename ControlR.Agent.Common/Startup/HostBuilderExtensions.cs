@@ -126,6 +126,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
       services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderLinux>();
       services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierLinux>();
+      services.AddSingleton<IDesktopEnvironmentDetectorAgent, DesktopEnvironmentDetectorAgent>();
     }
     else if (OperatingSystem.IsMacOS())
     {

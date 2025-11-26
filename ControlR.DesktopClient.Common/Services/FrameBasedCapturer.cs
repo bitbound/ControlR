@@ -304,8 +304,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
     {
       try
       {
-        await _captureMetrics.WaitForBandwidth(cancellationToken);
-
         // Wait for a space before capturing the screen.  We want the most recent image possible.
         if (!await _captureChannel.Writer.WaitToWriteAsync(cancellationToken))
         {

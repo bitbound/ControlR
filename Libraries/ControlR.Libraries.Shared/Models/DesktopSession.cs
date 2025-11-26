@@ -9,6 +9,7 @@ public enum DesktopSessionType
 [MessagePackObject(keyAsPropertyName: true)]
 public class DesktopSession
 {
+  public bool AreRemoteControlPermissionsGranted { get; set; }
   public string Name { get; set; } = string.Empty;
   public int ProcessId { get; set; }
   public int SystemSessionId { get; set; }

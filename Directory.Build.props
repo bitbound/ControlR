@@ -1,40 +1,44 @@
 <Project>
-  <PropertyGroup>
-	<TargetFramework>net10.0</TargetFramework>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
 
-	<Authors>Jared Goodwin</Authors>
-	<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
-	<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
-	<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
-	<Company>Bitbound</Company>
-	<Description>Open-source remote control and remote access.</Description>
-	<Nullable>enable</Nullable>
-	<ImplicitUsings>enable</ImplicitUsings>
-	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<Configurations>
-	  Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux
-	</Configurations>
-  </PropertyGroup>
+		<Authors>Jared Goodwin</Authors>
+		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+		<Company>Bitbound</Company>
+		<Description>Open-source remote control and remote access.</Description>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<Configurations>
+			Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux
+		</Configurations>
+	</PropertyGroup>
 
-  <PropertyGroup>
-	<!-- Commented code. It can be helpful for examples/docs. -->
-	<NoWarn>S125</NoWarn>
-	<NoWarn>NU1608</NoWarn>
-  </PropertyGroup>
+	<PropertyGroup>
+		<!-- Commented code. It can be helpful for examples/docs. -->
+		<NoWarn>S125</NoWarn>
+		<NoWarn>NU1608</NoWarn>
+		<WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001</WarningsNotAsErrors>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
-	<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup
+		Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
+		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
-	<DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup
+		Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
+		<DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
-	<DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup
+		Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
+		<DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
+	</PropertyGroup>
 
-  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-	<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.6" />
-  </ItemGroup>
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+		<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.6" />
+	</ItemGroup>
 </Project>

@@ -59,7 +59,7 @@
           {
             <MudItem xs="12" sm="6" md="4" lg="3">
               <MudCard @key=session Class="mb-3" Outlined>
-                <MudCardContent>
+                <MudCardContent Class="overflow-hidden">
                   <div class="session-card-grid">
                     <div>
                       <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
@@ -95,6 +95,15 @@
                     </div>
                   </div>
                 </MudCardContent>
+                @if (!session.AreRemoteControlPermissionsGranted)
+                {
+                  <MudCardContent Class="pt-0">
+                    <MudText Typo="Typo.caption" Color="Color.Warning" Class="d-flex align-center">
+                      <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="me-1" />
+                      Permissions not granted. User will be prompted.
+                    </MudText>
+                  </MudCardContent>
+                }
                 <MudCardActions>
                   <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                              OnClick="@(_ => StartRemoteControl(session, quiet: false))">

@@ -14,9 +14,9 @@ namespace ControlR.DesktopClient.Windows.Services;
 
 internal interface IDxOutputDuplicator : IDisposable
 {
+  void Deinitialize();
   DxOutput? DuplicateOutput(string deviceName);
   void SetCurrentOutputFaulted();
-  void Uninitialize();
 }
 
 internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutputDuplicator
@@ -27,6 +27,11 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
   private DxOutput? _currentOutput;
   private bool _disposedValue;
 
+  public void Deinitialize()
+  {
+    Disposer.DisposeAll(_currentOutput);
+    _currentOutput = null;
+  }
 
   public void Dispose()
   {
@@ -159,11 +164,7 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
     _currentOutput = null;
   }
 
-  public void Uninitialize()
-  {
-    Disposer.DisposeAll(_currentOutput);
-    _currentOutput = null;
-  }
+
   
   protected virtual void Dispose(bool disposing)
   {
@@ -176,6 +177,7 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
       _disposedValue = true;
     }
   }
+
 
   private static DxAdapterOutput? FindOutput(IDXGIFactory1 factory, string deviceName)
   {
@@ -198,6 +200,7 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
     }
     return null;
   }
+
 
   private sealed record DxAdapterOutput(IDXGIAdapter1 Adapter, IDXGIOutput1 Output) : IDisposable
   {

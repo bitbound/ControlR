@@ -16,12 +16,13 @@ public class IpcClientManager(
   IChatSessionManager chatSessionManager,
   IIpcClientAccessor ipcClientAccessor,
   IIpcConnectionFactory ipcConnectionFactory,
-  IClassicDesktopStyleApplicationLifetime appLifetime,
+  IControlledApplicationLifetime appLifetime,
   IDesktopPreviewProvider desktopPreviewService,
+  IServiceProvider serviceProvider,
   IOptions<DesktopClientOptions> desktopClientOptions,
   ILogger<IpcClientManager> logger) : BackgroundService
 {
-  private readonly IClassicDesktopStyleApplicationLifetime _appLifetime = appLifetime;
+  private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
   private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
@@ -29,6 +30,7 @@ public class IpcClientManager(
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
   private readonly TimeProvider _timeProvider = timeProvider;
   private DateTimeOffset? _firstConnectionAttempt;
 
@@ -54,6 +56,7 @@ public class IpcClientManager(
         client.On<ChatMessageIpcDto>(HandleChatMessage);
         client.On<CloseChatSessionIpcDto>(HandleCloseChatSession);
         client.On<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(HandleDesktopPreviewRequest);
+        client.On<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(HandleCheckOsPermissions);
         client.On<ShutdownCommandDto>(HandleShutdownCommand);
 
         if (!await client.Connect(stoppingToken))
@@ -71,10 +74,7 @@ public class IpcClientManager(
               "Unable to connect to IPC server after {Elapsed:N0} seconds. Shutting down.",
               elapsed.TotalSeconds);
 
-            if (!_appLifetime.TryShutdown())
-            {
-              _logger.LogWarning("Failed to initiate application shutdown.");
-            }
+            _appLifetime.Shutdown(1);
             return;
           }
 
@@ -189,16 +189,61 @@ public class IpcClientManager(
     _remoteControlHostManager.StartHost(dto).Forget();
   }
 
+  private CheckOsPermissionsResponseIpcDto HandleCheckOsPermissions(CheckOsPermissionsIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Handling OS permissions check request for process ID: {ProcessId}", dto.TargetProcessId);
+
+      var arePermissionsGranted = false;
+
+#if MAC_BUILD
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
+      var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
+      arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
+
+      _logger.LogInformation(
+        "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
+        isAccessibilityGranted,
+        isScreenCaptureGranted);
+#elif LINUX_BUILD
+      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+      if (detector.IsWayland())
+      {
+        var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
+        arePermissionsGranted = waylandPermissions.IsRemoteControlPermissionGranted().GetAwaiter().GetResult();
+
+        _logger.LogInformation("Wayland permissions check: RemoteControl={RemoteControl}", arePermissionsGranted);
+      }
+      else
+      {
+        // X11 doesn't require special permissions
+        arePermissionsGranted = true;
+        _logger.LogInformation("X11 detected, no special permissions required");
+      }
+#else
+      // Windows doesn't require special OS-level permissions for remote control
+      arePermissionsGranted = true;
+      _logger.LogInformation("Windows detected, no special permissions required");
+#endif
+
+      return new CheckOsPermissionsResponseIpcDto(arePermissionsGranted);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while checking OS permissions.");
+      return new CheckOsPermissionsResponseIpcDto(false);
+    }
+  }
+
   private async void HandleShutdownCommand(ShutdownCommandDto dto)
   {
     try
     {
       _logger.LogInformation("Handling shutdown command. Reason: {Reason}", dto.Reason);
       await _remoteControlHostManager.StopAllHosts(dto.Reason);
-      if (!_appLifetime.TryShutdown())
-      {
-        _logger.LogWarning("Failed to initiate application shutdown.");
-      }
+      _appLifetime.Shutdown(0);
     }
     catch (Exception ex)
     {

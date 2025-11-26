@@ -2,11 +2,8 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,12 +13,8 @@ namespace ControlR.DesktopClient.Common.Services;
 
 public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundService, ICaptureMetrics
 {
-  public const double MaxMbps = 10;
-
-  protected readonly IProcessManager ProcessManager = serviceProvider.GetRequiredService<IProcessManager>();
   protected readonly ISystemEnvironment SystemEnvironment = serviceProvider.GetRequiredService<ISystemEnvironment>();
 
-  private volatile bool _bandwidthAvailable = true;
   private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(3);
   private readonly ConcurrentQueue<SentPayload> _bytesSent = [];
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
@@ -60,14 +53,6 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
   public void SetIsUsingGpu(bool isUsingGpu)
   {
     IsUsingGpu = isUsingGpu;
-  }
-
-  public async Task WaitForBandwidth(CancellationToken cancellationToken)
-  {
-    while (!_bandwidthAvailable && !cancellationToken.IsCancellationRequested)
-    {
-      await Task.Delay(10, cancellationToken);
-    }
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -186,8 +171,6 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
           1 => ConvertBytesToMbps(bytesSent.First().Size, _broadcastInterval),
           _ => 0
         };
-
-        _bandwidthAvailable = Mbps < MaxMbps;
       }
       catch (OperationCanceledException ex)
       {
@@ -203,6 +186,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
       }
     }
   }
+
 
   private record SentPayload(int Size, DateTimeOffset Timestamp);
 }

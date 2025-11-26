@@ -26,7 +26,7 @@ public partial class MainWindow : Window
 
   protected override void OnClosing(WindowClosingEventArgs e)
   {
-    ViewModel.SetMainWindowNull();
+    ViewModel.HandleMainWindowClosed();
     base.OnClosing(e);
   }
 }

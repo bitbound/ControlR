@@ -51,7 +51,7 @@ internal class WaylandPermissionProvider(
     }
     finally
     {
-      await _portalAccessor.Uninitialize();
+      await _portalAccessor.Deinitialize();
     }
   }
 }

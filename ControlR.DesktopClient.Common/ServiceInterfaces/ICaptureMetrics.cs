@@ -38,11 +38,4 @@ public interface ICaptureMetrics : IHostedService, IDisposable
   /// </summary>
   /// <param name="isUsingGpu">True if the GPU is being used; otherwise, false.</param>
   void SetIsUsingGpu(bool isUsingGpu);
-
-  /// <summary>
-  /// Waits until the current bandwidth usage is below the maximum allowed limit.
-  /// </summary>
-  /// <param name="cancellationToken">A token to cancel the wait operation.</param>
-  /// <returns>A task that completes when bandwidth is available.</returns>
-  Task WaitForBandwidth(CancellationToken cancellationToken);
 }

@@ -6,6 +6,11 @@ Open-source, self-hostable remote control and remote access.
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/vwiDkP?referralCode=yr3zmo&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+(Use the above link or my referral code, `yr3zmo`, to give me a referral bonus on Railway.  Thanks! 🙏)
+
+Website: https://contorlr.app  
 Demo Server: https://demo.controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
 DeepWiki: https://deepwiki.com/bitbound/ControlR  
@@ -59,12 +64,11 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 - Full remote control support
   - Controlling the login window is only possible after a user has logged in
 - Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using adhoc certificate (this may change in the future)
+- Signed using adhoc certificate (this will change soon)
 
 ### macOS Intel (untested)
 - Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using adhoc certificate (this may change in the future)
-
+- Signed using adhoc certificate (this will change soon)
 ### Ubuntu x64 (latest LTS)
 
 - Full remote control support on X11
@@ -72,7 +76,8 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
   - On Ubuntu, you must enable X11 for the login screen
     - Edit `/etc/gdm3/custom.conf` and uncomment the line `WaylandEnable=false`, then reboot
 - Experimental remote control on Wayland via XDG Desktop Portal
-  - Requires GStreamer: `sudo apt install libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
+  - Requires GStreamer v1.26: `sudo apt install libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
+  - Requires X11 to be used for the login/greeter screen
 - Experimental remote control via VNC
 
 ### All Operating Systems

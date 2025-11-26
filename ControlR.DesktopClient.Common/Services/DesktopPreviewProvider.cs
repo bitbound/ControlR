@@ -51,7 +51,7 @@ public class DesktopPreviewProvider(
     }
     finally
     {
-      await _screenGrabber.Uninitialize(cts.Token);
+      await _screenGrabber.Deinitialize(cts.Token);
     }
   }
 
@@ -98,7 +98,7 @@ public class DesktopPreviewProvider(
     }
     finally
     {
-      await _screenGrabber.Uninitialize(cts.Token);
+      await _screenGrabber.Deinitialize(cts.Token);
     }
   }
 }

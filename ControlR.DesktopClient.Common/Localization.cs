@@ -20,6 +20,8 @@ public static class Localization
 
   public static string ADeviceAdministrator => GetString();
   public static string Accessibility => GetString();
+  public static string PermissionsMissingToastTitle => GetString();
+  public static string PermissionsMissingToastMessage => GetString();
   public static string AccessibilityPermissionDescription => GetString();
   public static string CancelText => GetString();
   public static string ChatSessionClosedToastMessage => GetString();

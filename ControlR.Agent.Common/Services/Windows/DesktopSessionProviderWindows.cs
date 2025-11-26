@@ -41,6 +41,7 @@ internal class DesktopSessionProviderWindows(
 
       uiSessions.Add(new DesktopSession
       {
+        AreRemoteControlPermissionsGranted = true, // Windows doesn't require special permissions
         ProcessId = server.Process.Id,
         SystemSessionId = server.Process.SessionId,
         Name = winSession.Name,

@@ -10,6 +10,11 @@ public static class AppConstants
   public const int DefaultVncPort = 5900;
   public const string ViewerHubPath = "/hubs/viewer";
 
+  /// <summary>
+  /// The environment variable indicating that the desktop client is running in a Wayland login screen.
+  /// </summary>
+  public const string WaylandLoginScreenVariable = "WAYLAND_LOGIN_SCREEN";
+
   public static string DesktopClientFileName =>
     SystemEnvironment.Instance.Platform switch
     {

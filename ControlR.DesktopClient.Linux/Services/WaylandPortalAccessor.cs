@@ -11,11 +11,12 @@ namespace ControlR.DesktopClient.Linux.Services;
 
 public interface IWaylandPortalAccessor
 {
+  // TODO: Replace with scoped services.
+  Task Deinitialize();
   Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection();
   Task<(XdgDesktopPortal Portal, string SessionHandle)?> GetRemoteDesktopSession();
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
   Task Initialize();
-  Task Uninitialize();
 }
 
 internal class WaylandPortalAccessor(
@@ -73,7 +74,7 @@ internal class WaylandPortalAccessor(
   {
     await EnsureInitializedAsync();
   }
-  public async Task Uninitialize()
+  public async Task Deinitialize()
   {
     try
     {

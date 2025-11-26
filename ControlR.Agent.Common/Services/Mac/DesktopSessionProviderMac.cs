@@ -1,5 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services.Mac;
 
@@ -33,7 +34,10 @@ internal class DesktopSessionProviderMac(
       {
         uiSession.Username = getUserResult.Value;
       }
-      
+
+      // Check permissions via IPC
+      uiSession.AreRemoteControlPermissionsGranted = await CheckPermissionsViaIpc(server.Value);
+
       uiSessions.Add(uiSession);
     }
 
@@ -244,5 +248,27 @@ internal class DesktopSessionProviderMac(
     }
 
     return Result.Fail<string>("Failed to get username");
+  }
+
+  private async Task<bool> CheckPermissionsViaIpc(IpcServerRecord serverInfo)
+  {
+    try
+    {
+      var ipcDto = new CheckOsPermissionsIpcDto(serverInfo.Process.Id);
+      var ipcResult = await serverInfo.Server.Invoke<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(ipcDto, timeoutMs: 3000);
+
+      if (ipcResult.IsSuccess && ipcResult.Value is not null)
+      {
+        return ipcResult.Value.ArePermissionsGranted;
+      }
+
+      _logger.LogWarning("Failed to get permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
+    }
   }
 }

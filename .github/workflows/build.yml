@@ -16,10 +16,16 @@ on:
         options:
           - windows-latest
           - self-hosted
+      retention_days_artifacts:
+        description: 'Retention Days for Artifacts'
+        required: false
+        default: "1"
+        type: string
 
 env:
   MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
   MINOR_VERSION: ${{vars.MINOR_VERSION}}
+  RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || '1' }}
 
 jobs:
   set-version:
@@ -102,16 +108,14 @@ jobs:
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent
-          retention-days: 90
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload Agent (macOS x64)
         uses: actions/upload-artifact@v4
         with:
           name: Agent-macOS-x64
           path: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
-          retention-days: 90
-
-
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
   windows-build:
     name: Windows Build
@@ -183,7 +187,7 @@ jobs:
         with:
           name: ApiClientNuGet
           path: ${{ steps.find-nupkg.outputs.APICLIENT_NUPKG }}
-          retention-days: 90
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       # ===== Azure Login with OIDC =====
       - name: Azure Login
@@ -370,11 +374,11 @@ jobs:
         with:
           name: Server
           path: ControlR.Server\bin\publish
-          retention-days: 90
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload docker-compose
         uses: actions/upload-artifact@v4
         with:
           name: DockerCompose
           path: docker-compose\
-          retention-days: 90
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}

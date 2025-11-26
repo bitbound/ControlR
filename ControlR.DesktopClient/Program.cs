@@ -1,5 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.LinuxFramebuffer;
+using ControlR.Libraries.Shared.Constants;
 
 namespace ControlR.DesktopClient;
 
@@ -7,8 +9,8 @@ namespace ControlR.DesktopClient;
 internal sealed class Program
 {
   private static AppBuilder? _appBuilder;
-  private static IClassicDesktopStyleApplicationLifetime? _lifetime;
-  
+  private static IControlledApplicationLifetime? _lifetime;
+
   // Avalonia configuration, don't remove; also used by visual designer.
   // ReSharper disable once MemberCanBePrivate.Global
   public static AppBuilder BuildAvaloniaApp()
@@ -30,7 +32,17 @@ internal sealed class Program
         if (_appBuilder is null)
         {
           _appBuilder = BuildAvaloniaApp();
-          _appBuilder.StartWithClassicDesktopLifetime(args, lifetime => { _lifetime = lifetime; });
+
+          if (Environment.GetEnvironmentVariable(AppConstants.WaylandLoginScreenVariable) is { } waylandLoginScreen &&
+              bool.TryParse(waylandLoginScreen, out var isLoginScreen) &&
+              isLoginScreen)
+          {
+            _appBuilder.StartLinuxFbDev(args);
+          }
+          else
+          {
+            _appBuilder.StartWithClassicDesktopLifetime(args, lifetime => { _lifetime = lifetime; });
+          }
         }
         else if (_lifetime is ClassicDesktopStyleApplicationLifetime desktop)
         {

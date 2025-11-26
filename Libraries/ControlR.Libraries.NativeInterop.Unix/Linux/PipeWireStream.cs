@@ -66,7 +66,7 @@ public class PipeWireStream : IDisposable
 
   public PipeWireFrameData GetLatestFrame()
   {
-    return Volatile.Read(ref _latestFrame) 
+    return Volatile.Read(ref _latestFrame)
       ?? throw new InvalidOperationException("No frame available yet.");
   }
 
@@ -109,11 +109,11 @@ public class PipeWireStream : IDisposable
 
       // We use 'appsink' to get the buffers directly in the process memory.
       // max-buffers=1 limits the queue to a single buffer.
-      var pipelineStr = 
-        $"pipewiresrc fd={_pipewireFd} path={_nodeId} always-copy=true ! " + 
-        $"videoconvert ! videoscale ! " + 
-        $"video/x-raw,format=BGRA,width={_width},height={_height} ! " + 
-        $"appsink name=sink max-buffers=1";
+      var pipelineStr =
+        $"pipewiresrc fd={_pipewireFd} path={_nodeId} always-copy=true ! " +
+        $"videoconvert ! videoscale ! " +
+        $"video/x-raw,format=BGRA,width={_width},height={_height} ! " +
+        $"appsink name=sink max-buffers=1 drop=true";
 
       _logger.LogInformation("Initializing GStreamer pipeline: {Pipeline}", pipelineStr);
 
@@ -157,9 +157,11 @@ public class PipeWireStream : IDisposable
   {
     try
     {
+      const ulong appSinkPullTimeout = 100 * 1000000;
+
       while (!_disposed)
       {
-        var sample = GStreamer.gst_app_sink_try_pull_sample(_appsink, 100 * 1000000);
+        var sample = GStreamer.gst_app_sink_try_pull_sample(_appsink, appSinkPullTimeout);
 
         if (sample == nint.Zero)
         {
@@ -170,30 +172,41 @@ public class PipeWireStream : IDisposable
         try
         {
           var buffer = GStreamer.gst_sample_get_buffer(sample);
-          if (buffer != nint.Zero)
+          if (buffer == nint.Zero)
           {
-            if (GStreamer.gst_buffer_map(buffer, out var mapInfo, GStreamer.GST_MAP_READ))
-            {
-              try
-              {
-                var size = (int)mapInfo.size;
-                var data = new byte[size];
-                Marshal.Copy(mapInfo.data, data, 0, size);
+            continue;
+          }
 
-                Volatile.Write(ref _latestFrame, new PipeWireFrameData
-                {
-                  Data = data,
-                  Width = _width,
-                  Height = _height,
-                  Stride = _width * 4,
-                  PixelFormat = SPA_VIDEO_FORMAT_BGRA
-                });
-              }
-              finally
+          if (!GStreamer.gst_buffer_map(buffer, out var mapInfo, GStreamer.GST_MAP_READ))
+          {
+            continue;
+          }
+
+          try
+          {
+            var size = (int)mapInfo.size;
+            var data = new byte[size];
+
+            unsafe
+            {
+              fixed (byte* dest = data)
               {
-                GStreamer.gst_buffer_unmap(buffer, ref mapInfo);
+                Buffer.MemoryCopy((void*)mapInfo.data, dest, size, size);
               }
             }
+
+            Volatile.Write(ref _latestFrame, new PipeWireFrameData
+            {
+              Data = data,
+              Width = _width,
+              Height = _height,
+              Stride = _width * 4,
+              PixelFormat = SPA_VIDEO_FORMAT_BGRA
+            });
+          }
+          finally
+          {
+            GStreamer.gst_buffer_unmap(buffer, ref mapInfo);
           }
         }
         finally

@@ -32,16 +32,17 @@ public interface IScreenGrabber
     bool forceKeyFrame = false);
 
   /// <summary>
+  ///   Deinitializes the screen grabber, releasing any resources.
+  /// </summary>
+  /// <param name="cancellationToken"></param>
+  /// <returns></returns>
+  // TODO: Replace with scoped services.
+  Task Deinitialize(CancellationToken cancellationToken);
+
+  /// <summary>
   ///   Initializes the screen grabber, preparing any necessary resources.
   /// </summary>
   /// <param name="cancellationToken"></param>
   /// <returns></returns>
   Task Initialize(CancellationToken cancellationToken);
-
-  /// <summary>
-  ///   Uninitializes the screen grabber, releasing any resources.
-  /// </summary>
-  /// <param name="cancellationToken"></param>
-  /// <returns></returns>
-  Task Uninitialize(CancellationToken cancellationToken);
 }

@@ -119,7 +119,6 @@ public class InputSimulatorWayland(
           }
 
         case MovePointerType.Relative:
-          // Use relative movement
           await _portal.NotifyPointerMotionAsync(_sessionHandle, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
           break;
         default:

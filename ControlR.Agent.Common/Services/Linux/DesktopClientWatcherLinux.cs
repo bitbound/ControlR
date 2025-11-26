@@ -1,5 +1,7 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
@@ -10,19 +12,21 @@ namespace ControlR.Agent.Common.Services.Linux;
 internal class DesktopClientWatcherLinux(
   TimeProvider timeProvider,
   IServiceControl serviceControl,
-  IProcessManager processManager,
+  IDesktopEnvironmentDetectorAgent desktopEnvironmentDetector,
   IHeadlessServerDetector headlessServerDetector,
   ISystemEnvironment systemEnvironment,
   IFileSystem fileSystem,
   IControlrMutationLock mutationLock,
   ILoggedInUserProvider loggedInUserProvider,
+  IProcessManager processManager,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
+  private readonly IDesktopEnvironmentDetectorAgent _desktopEnvironmentDetector = desktopEnvironmentDetector;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
-  private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
+  private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
@@ -30,7 +34,7 @@ internal class DesktopClientWatcherLinux(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
 
-  private int? _loginScreenDesktopClientPid;
+  private IProcess? _loginScreenProcess;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -64,25 +68,7 @@ internal class DesktopClientWatcherLinux(
 
     await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
-  
-  private static Dictionary<string, string> ParseSessionInfo(string sessionOutput)
-  {
-    var info = new Dictionary<string, string>();
-    var lines = sessionOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-    
-    foreach (var line in lines)
-    {
-      var parts = line.Split('=', 2);
-      if (parts.Length == 2)
-      {
-        var key = parts[0].Trim();
-        var value = parts[1].Trim();
-        info[key] = value;
-      }
-    }
-    
-    return info;
-  }
+
 
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
   {
@@ -118,7 +104,7 @@ internal class DesktopClientWatcherLinux(
     {
       var serviceName = GetDesktopClientServiceName();
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
-      
+
       cancellationToken.ThrowIfCancellationRequested();
 
       if (!isRunning)
@@ -139,7 +125,7 @@ internal class DesktopClientWatcherLinux(
 
   private async Task CheckLoginScreenDesktopClient(CancellationToken cancellationToken)
   {
-    var displayInfo = await DetectDisplayEnvironment();
+    var displayInfo = await _desktopEnvironmentDetector.DetectDisplayEnvironment();
     if (!displayInfo.IsLoginScreen)
     {
       // If not at the login screen, ensure the login screen client is stopped
@@ -147,169 +133,25 @@ internal class DesktopClientWatcherLinux(
       return;
     }
 
-    _logger.LogIfChanged(
-      LogLevel.Information,
-      "Login screen detected. Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
-      args: (displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"));
+    if (displayInfo.IsWayland)
+    {
+      _logger.LogIfChanged(
+        LogLevel.Information,
+        "Login screen detected. Type: Wayland, Display: {WaylandDisplay}, DM: {DisplayManager}",
+        args: (displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.DisplayManager ?? "unknown"));
+    }
+    else
+    {
+      _logger.LogIfChanged(
+        LogLevel.Information,
+        "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
+        args: (displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"));
+    }
 
     // Launch the desktop client for the login screen if needed
     if (!await IsLoginScreenDesktopClientRunning())
     {
-      await LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
-    }
-  }
-
-  private Task<string> DetectCurrentDisplay()
-  {
-    try
-    {
-      // Check for the active X11 displays
-      var displays = new[] { ":0", ":1", ":10" }; // Common display numbers
-
-      foreach (var display in displays)
-      {
-        if (_fileSystem.FileExists($"/tmp/.X11-unix/X{display[1..]}"))
-        {
-          return Task.FromResult(display);
-        }
-      }
-
-      // Fall back to the environment variable or a default
-      return Task.FromResult(Environment.GetEnvironmentVariable("DISPLAY") ?? ":0");
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error detecting current display");
-      return Task.FromResult(":0");
-    }
-  }
-
-  private async Task<string?> DetectCurrentXAuthPath(string? displayManager)
-  {
-    try
-    {
-      // Method 1: Check the display-manager-specific patterns
-      switch (displayManager?.ToLowerInvariant())
-      {
-        case "sddm":
-          // SDDM creates temporary auth files in /tmp with random names
-          var sddmAuth = await _processManager.GetProcessOutput("bash", "-c \"find /tmp -name 'xauth_*' -type f -newer /proc/1 2>/dev/null | head -1\"", 3000);
-          if (sddmAuth.IsSuccess && !string.IsNullOrEmpty(sddmAuth.Value.Trim()))
-          {
-            return sddmAuth.Value.Trim();
-          }
-          break;
-
-        case "gdm":
-        case "gdm3":
-          // GDM stores the auth in /run/gdm3 or similar
-          var gdmAuth = await _processManager.GetProcessOutput("bash", "-c \"find /run/gdm* -name '*database*' -type f 2>/dev/null | head -1\"", 3000);
-          if (gdmAuth.IsSuccess && !string.IsNullOrEmpty(gdmAuth.Value.Trim()))
-          {
-            return gdmAuth.Value.Trim();
-          }
-          break;
-
-        case "lightdm":
-          // LightDM typically uses fixed paths
-          if (_fileSystem.FileExists("/run/lightdm/root/:0"))
-          {
-            return "/run/lightdm/root/:0";
-          }
-          break;
-      }
-
-      // Method 2: Try to extract the auth path from the running X server process
-      var xorgCmd = await _processManager.GetProcessOutput("ps", "aux", 5000);
-      if (xorgCmd.IsSuccess)
-      {
-        var xorgLines = xorgCmd.Value.Split('\n')
-          .Where(line => line.Contains("Xorg") || line.Contains("/usr/bin/X"))
-          .ToArray();
-
-        foreach (var line in xorgLines)
-        {
-          var authMatch = Regex.Match(line, @"-auth\s+(\S+)");
-          if (authMatch.Success)
-          {
-            var authPath = authMatch.Groups[1].Value;
-            if (_fileSystem.FileExists(authPath))
-            {
-              return authPath;
-            }
-          }
-        }
-      }
-
-      // Method 3: Check common fallback locations
-      var fallbackPaths = new[]
-      {
-        "/var/lib/gdm3/.Xauthority",
-        "/run/user/0/.Xauthority",
-        "/root/.Xauthority"
-      };
-
-      foreach (var path in fallbackPaths)
-      {
-        if (_fileSystem.FileExists(path))
-        {
-          return path;
-        }
-      }
-
-      return null;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error detecting XAUTH path");
-      return null;
-    }
-  }
-
-  private async Task<DisplayEnvironmentInfo> DetectDisplayEnvironment()
-  {
-    var info = new DisplayEnvironmentInfo();
-
-    try
-    {
-      // First, detect which display manager is running
-      var dmResult = await _processManager.GetProcessOutput("systemctl", "status display-manager --no-pager -l", 3000);
-      if (dmResult.IsSuccess && !string.IsNullOrWhiteSpace(dmResult.Value))
-      {
-        var output = dmResult.Value.ToLowerInvariant();
-        if (output.Contains("sddm.service"))
-        {
-          info.DisplayManager = "sddm";
-        }
-        else if (output.Contains("gdm") || output.Contains("gdm3"))
-        {
-          info.DisplayManager = "gdm";
-        }
-        else if (output.Contains("lightdm"))
-        {
-          info.DisplayManager = "lightdm";
-        }
-      }
-
-      // Check if we're at the login screen by looking for active user sessions
-      // Use a more robust approach that doesn't rely on the column order
-      var hasActiveUserSessions = await HasActiveUserSessions();
-
-      info.IsLoginScreen = !hasActiveUserSessions;
-
-      if (info.IsLoginScreen)
-      {
-        // Dynamically detect the XAUTH path and the display for the current session
-        info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
-        info.Display = await DetectCurrentDisplay();
-      }
-
-      return info;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error detecting display environment");
-      return info;
+      _ = LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
     }
   }
 
@@ -333,72 +175,6 @@ internal class DesktopClientWatcherLinux(
     }
 
     return Path.Combine(dir, _instanceOptions.Value.InstanceId);
-  }
-
-  private async Task<bool> HasActiveUserSessions()
-  {
-    try
-    {
-      // First, get a list of session IDs
-      var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
-      if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
-      {
-        return false;
-      }
-
-      var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-      foreach (var line in sessionLines)
-      {
-        var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 0)
-        {
-          var sessionId = parts[0]; // The session ID is always the first column
-
-          // Get the detailed session info using show-session (key-value format)
-          var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
-          if (sessionInfoResult.IsSuccess && !string.IsNullOrWhiteSpace(sessionInfoResult.Value))
-          {
-            var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
-
-            // Session is closing OR it's an active display manager session (login screen)
-            if (sessionInfo.TryGetValue("State", out var sessionState) &&
-                sessionInfo.TryGetValue("User", out var userValue) &&
-                (sessionState?.Equals("closing", StringComparison.OrdinalIgnoreCase) == true ||
-                 (sessionState?.Equals("active", StringComparison.OrdinalIgnoreCase) == true &&
-                  IsDisplayManagerUser(userValue))))
-            {
-              continue;
-            }
-
-            // Check if this is an active session with a regular user UID (≥1000)
-            if (sessionInfo.TryGetValue("Active", out var activeValue) &&
-                sessionInfo.TryGetValue("User", out userValue) &&
-                string.Equals(activeValue, "yes", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(userValue, out var uid) &&
-                uid >= 1000)
-            {
-              return true;
-            }
-          }
-        }
-      }
-
-      return false;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error checking for active user sessions");
-      return false;
-    }
-  }
-
-  private bool IsDisplayManagerUser(string userValue)
-  {
-    // List of common display manager user names
-    string[] displayManagerUsers = { "gdm", "lightdm", "sddm" };
-
-    // Check if userValue is in the list of displayManagerUsers
-    return displayManagerUsers.Any(user => string.Equals(userValue, user, StringComparison.OrdinalIgnoreCase));
   }
 
   private async Task<bool> IsDesktopClientServiceRunning(string uid, string serviceName)
@@ -434,21 +210,7 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
-      if (_loginScreenDesktopClientPid.HasValue)
-      {
-        // Check if the process is still running
-        var processCheck = await _processManager.GetProcessOutput("ps", $"-p {_loginScreenDesktopClientPid.Value}", 3000);
-        if (processCheck.IsSuccess && processCheck.Value.Contains(_loginScreenDesktopClientPid.Value.ToString()))
-        {
-          return true;
-        }
-        else
-        {
-          _loginScreenDesktopClientPid = null;
-        }
-      }
-
-      return false;
+      return _loginScreenProcess is { HasExited: false };
     }
     catch (Exception ex)
     {
@@ -457,7 +219,7 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
-  private Task LaunchLoginScreenDesktopClient(DisplayEnvironmentInfo displayInfo, CancellationToken cancellationToken)
+  private async Task LaunchLoginScreenDesktopClient(DisplayEnvironmentInfo displayInfo, CancellationToken cancellationToken)
   {
     try
     {
@@ -467,28 +229,49 @@ internal class DesktopClientWatcherLinux(
       if (!_fileSystem.FileExists(desktopClientPath))
       {
         _logger.LogError("Desktop client executable not found at {Path}", desktopClientPath);
-        return Task.CompletedTask;
+        return;
       }
 
       var instanceArgs = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
         ? ""
         : $" --instance-id {_instanceOptions.Value.InstanceId}";
 
-      // Set up the environment variables for X11 access
+      // Set up the environment variables based on session type
       var envVars = new Dictionary<string, string>
       {
-        ["DISPLAY"] = displayInfo.Display,
-        ["XDG_SESSION_TYPE"] = "x11",
         ["DOTNET_ENVIRONMENT"] = "Production"
       };
 
-      if (!string.IsNullOrEmpty(displayInfo.XAuthPath))
+      if (displayInfo.IsWayland)
       {
-        envVars["XAUTHORITY"] = displayInfo.XAuthPath;
-      }
+        // Configure for Wayland session
+        envVars[AppConstants.WaylandLoginScreenVariable] = "true";
+        envVars["XDG_SESSION_TYPE"] = "wayland";
+        envVars["WAYLAND_DISPLAY"] = displayInfo.WaylandDisplay ?? "wayland-0";
 
-      _logger.LogInformation("Starting login screen desktop client. Display: {Display}, XAUTH: {XAuth}",
-        displayInfo.Display, displayInfo.XAuthPath ?? "none");
+        // Set XDG_RUNTIME_DIR to the greeter's runtime directory
+        if (!string.IsNullOrEmpty(displayInfo.WaylandRuntimeDir))
+        {
+          envVars["XDG_RUNTIME_DIR"] = displayInfo.WaylandRuntimeDir;
+        }
+
+        _logger.LogInformation("Starting login screen desktop client. Type: Wayland, Display: {WaylandDisplay}, RuntimeDir: {RuntimeDir}",
+          displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.WaylandRuntimeDir ?? "unknown");
+      }
+      else
+      {
+        // Configure for X11 session
+        envVars["DISPLAY"] = displayInfo.Display;
+        envVars["XDG_SESSION_TYPE"] = "x11";
+
+        if (!string.IsNullOrEmpty(displayInfo.XAuthPath))
+        {
+          envVars["XAUTHORITY"] = displayInfo.XAuthPath;
+        }
+
+        _logger.LogInformation("Starting login screen desktop client. Type: X11, Display: {Display}, XAUTH: {XAuth}",
+          displayInfo.Display, displayInfo.XAuthPath ?? "none");
+      }
 
       // Start the process with the proper environment
       var startInfo = new ProcessStartInfo
@@ -506,77 +289,53 @@ internal class DesktopClientWatcherLinux(
         startInfo.Environment[kvp.Key] = kvp.Value;
       }
 
-      var process = _processManager.Start(startInfo);
-      if (process != null)
-      {
-        _loginScreenDesktopClientPid = process.Id;
-        _logger.LogInformation("Login screen desktop client started with PID {PID}", process.Id);
+      _loginScreenProcess = _processManager.Start(startInfo);
 
-        // Don't wait for the process to exit; it should run continuously
-        _ = Task.Run(async () =>
-        {
-          try
-          {
-            await process.WaitForExitAsync(cancellationToken);
-            _logger.LogInformation("Login screen desktop client (PID {PID}) has exited", process.Id);
-            _loginScreenDesktopClientPid = null;
-          }
-          catch (Exception ex)
-          {
-            _logger.LogError(ex, "Error waiting for login screen desktop client process");
-          }
-        }, cancellationToken);
-      }
-      else
+      if (_loginScreenProcess is null)
       {
         _logger.LogError("Failed to start login screen desktop client process");
+        return;
+      }
+
+      try
+      {
+        _logger.LogInformation("Login screen desktop client started with PID {PID}", _loginScreenProcess.Id);
+        await _loginScreenProcess.WaitForExitAsync(cancellationToken);
+        _logger.LogInformation("Login screen desktop client (PID {PID}) has exited", _loginScreenProcess.Id);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error waiting for login screen desktop client process");
+      }
+      finally
+      {
+        _loginScreenProcess.KillAndDispose();
+        _loginScreenProcess = null;
       }
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error launching login screen desktop client");
     }
-
-    return Task.CompletedTask;
   }
 
   private async Task StopLoginScreenDesktopClient()
   {
     try
     {
-      if (!_loginScreenDesktopClientPid.HasValue)
+      if (_loginScreenProcess is null)
       {
         return;
       }
 
-      _logger.LogInformation("Stopping login screen desktop client (PID {PID})", _loginScreenDesktopClientPid.Value);
-
-      // Try a graceful termination first
-      await _processManager.GetProcessOutput("kill", $"-TERM {_loginScreenDesktopClientPid.Value}", 3000);
-
-      // Wait a moment for a graceful shutdown
-      await Task.Delay(2000);
-
-      // Check if it is still running and force-kill it if necessary
-      var processCheck = await _processManager.GetProcessOutput("ps", $"-p {_loginScreenDesktopClientPid.Value}", 3000);
-      if (processCheck.IsSuccess && processCheck.Value.Contains(_loginScreenDesktopClientPid.Value.ToString()))
-      {
-        await _processManager.GetProcessOutput("kill", $"-KILL {_loginScreenDesktopClientPid.Value}", 3000);
-      }
-
-      _loginScreenDesktopClientPid = null;
+      _logger.LogInformation("Stopping login screen desktop client (PID {PID})", _loginScreenProcess.Id);
+      _loginScreenProcess.KillAndDispose();
+      _loginScreenProcess = null;
+      _logger.LogInformation("Login screen desktop client stopped");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error stopping login screen desktop client");
     }
-  }
-  
-  private class DisplayEnvironmentInfo
-  {
-    public string Display { get; set; } = ":0";
-    public string? DisplayManager { get; set; }
-    public bool IsLoginScreen { get; set; }
-    public string? XAuthPath { get; set; }
   }
 }
