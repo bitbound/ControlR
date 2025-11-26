@@ -52,6 +52,7 @@ public interface IControlrApi
   Task<Result<ServerAlertResponseDto?>> GetServerAlert();
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
+  Task<Result> SendTestEmail();
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
@@ -586,6 +587,11 @@ public class ControlrApi(
     });
   }
 
+  public async Task<Result> SendTestEmail()
+  {
+    return await TryCallApi(() => _client.PostAsync(HttpConstants.TestEmailEndpoint, null));
+  }
+
   private static async Task<string> ExtractErrorMessage(HttpResponseMessage response)
   {
     try
@@ -652,7 +658,39 @@ public class ControlrApi(
     return false;
   }
 
-  
+  private async Task<Result> TryCallApi(Func<Task<HttpResponseMessage>> send)
+  {
+    try
+    {
+      using var response = await send.Invoke();
+      if (response.IsSuccessStatusCode)
+      {
+        return Result.Ok();
+      }
+
+      var message = await ExtractErrorMessage(response);
+
+      return Result.Fail(message).Log(_logger);
+    }
+    catch (HttpRequestException ex)
+    {
+      return Result
+        .Fail(ex, ex.Message)
+        .Log(_logger);
+    }
+    catch (OperationCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+    {
+      return Result
+        .Fail(ex, "The operation was canceled by the caller.")
+        .Log(_logger);
+    }
+    catch (Exception ex)
+    {
+      return Result
+        .Fail(ex, $"The request failed with error: {ex.Message}")
+        .Log(_logger);
+    }
+  }
   private async Task<Result<T>> TryCallApi<T>(
     Func<Task<HttpResponseMessage>> send,
     Func<HttpResponseMessage, Task<T>> readSuccess,

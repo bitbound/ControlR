@@ -3,6 +3,7 @@ using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
+using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +42,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
-      services.GetRequiredService<Services.Users.IUserCreator>(),
+      services.GetRequiredService<IUserCreator>(),
       request);
 
     // Forbid translates to ForbidResult
@@ -74,7 +75,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
-      services.GetRequiredService<Services.Users.IUserCreator>(),
+      services.GetRequiredService<IUserCreator>(),
       request);
 
     Assert.IsType<CreatedAtActionResult>(result.Result);

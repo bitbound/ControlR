@@ -33,14 +33,16 @@ public interface IUserCreator
 }
 
 public class UserCreator(
+  AppDb appDb,
   UserManager<AppUser> userManager,
   NavigationManager navigationManager,
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
-  ILogger<UserCreator> logger,
-  AppDb appDb) : IUserCreator
+  IOptionsMonitor<AppOptions> appOptions,
+  ILogger<UserCreator> logger) : IUserCreator
 {
   private readonly AppDb _appDb = appDb;
+  private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
@@ -248,7 +250,14 @@ public class UserCreator(
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-      if (isNewTenant && !isServerAdmin)
+      if (_appOptions.CurrentValue.DisableEmailSending && _appOptions.CurrentValue.RequireUserEmailConfirmation)
+      {
+        throw new InvalidOperationException(
+          "Email sending is disabled, but user email confirmation is required. " +
+          "Cannot proceed with user creation.");
+      }
+
+      if (isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = _navigationManager.GetUriWithQueryParameters(

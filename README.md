@@ -6,10 +6,6 @@ Open-source, self-hostable remote control and remote access.
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/vwiDkP?referralCode=yr3zmo&utm_medium=integration&utm_source=template&utm_campaign=generic)
-
-(Use the above link or my referral code, `yr3zmo`, to give me a referral bonus on Railway.  Thanks! 🙏)
-
 Website: https://contorlr.app  
 Demo Server: https://demo.controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
@@ -32,6 +28,14 @@ See the comments in the docker-compose file for additional configuration info.
 
 Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy."
 
+## Deploy on Railway:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/vwiDkP?referralCode=yr3zmo&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+You can deploy ControlR on Railway using the above button.  I've been testing out their service, and so far, I really like it.  The link includes my referral code, `yr3zmo`, which gives me a referral credits on Railway.
+
+Note that SMTP ports are blocked on Free and Hobby plans.  You'll want to disable email sending via the `ControlR_AppOptions__DisableEmailSending` environment variable.
+
 ## Reverse Proxy Configuration:
 
 Some ControlR features require [forwarded headers](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer). These concepts are not unique to ASP.NET Core, so it's important to understand them when self-hosting.
@@ -46,9 +50,13 @@ Additional proxy IPs can be added to the `KnownProxies` list in the docker-compo
 
 If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.
 
+## Server Configuration:
+
+The environment variables for the server can be found in the [docker-compose.yml](./docker-compose/docker-compose.yml) file.  See the comments there for more information.
+
 ## Multi-tenancy
 
-By default, the server is single-tenant (although you can organize customer tenants via tags). The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.
+By default, the server is single-tenant, in the sense that there can only be one admin/tech/MSP tenant.  The first user created will be the server and tenant administrator, and subsequent accounts must be explicitly created by the tenant admin.  Customer devices can be organized using tags.
 
 Setting `ControlR_AppOptions__EnablePublicRegistration` to `true` in the docker-compose file will allow anyone to create a new account on the server. A new tenant is created for each account created this way.
 
@@ -69,7 +77,7 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 ### macOS Intel (untested)
 - Experimental remote control via VNC (Apple Screen Sharing)
 - Signed using adhoc certificate (this will change soon)
-### Ubuntu x64 (latest LTS)
+### Ubuntu AMD64 (latest LTS)
 
 - Full remote control support on X11
   - Tested on Ubuntu, Kubuntu, and Mint

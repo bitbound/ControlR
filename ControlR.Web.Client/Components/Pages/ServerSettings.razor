@@ -15,7 +15,7 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Server Alert
   </MudText>
-  <MudText Typo="Typo.caption" Class="mb-3">
+  <MudText Typo="Typo.body2" Class="mb-3">
     Configure a server-wide alert message that will appear at the top of all pages for all users.
   </MudText>
 
@@ -75,6 +75,29 @@
   </MudButton>
 </div>
 
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Test Email
+  </MudText>
+  <MudText Typo="Typo.body2" Class="mb-3">
+    Send a test email to your account to verify SMTP configuration.
+  </MudText>
+
+  <MudButton Variant="Variant.Filled"
+             Color="Color.Primary"
+             OnClick="SendTestEmail"
+             Disabled="_isSendingEmail">
+    @if (_isSendingEmail)
+    {
+      <MudProgressCircular Size="Size.Small" Indeterminate/>
+    }
+    else
+    {
+      <text>Send Test Email</text>
+    }
+  </MudButton>
+</div>
+
 @code {
   private string _alertMessage = string.Empty;
   private MessageSeverity _alertSeverity = MessageSeverity.Information;
@@ -82,6 +105,7 @@
   private bool _alertIsSticky;
   private bool _alertIsEnabled;
   private bool _isLoadingAlert;
+  private bool _isSendingEmail;
 
   protected override async Task OnInitializedAsync()
   {
@@ -145,4 +169,31 @@
     }
   }
 
+  private async Task SendTestEmail()
+  {
+    _isSendingEmail = true;
+    StateHasChanged();
+    try
+    {
+      var result = await ControlrApi.SendTestEmail();
+
+      if (result.IsSuccess)
+      {
+        Snackbar.Add("Test email sent successfully", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to send test email: {result.Reason}", Severity.Error);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error sending test email");
+      Snackbar.Add("Failed to send test email", Severity.Error);
+    }
+    finally
+    {
+      _isSendingEmail = false;
+    }
+  }
 }

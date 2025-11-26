@@ -2,6 +2,7 @@
 
 @inject UserManager<AppUser> UserManager
 @inject IEmailSender<AppUser> EmailSender
+@inject IOptionsMonitor<AppOptions> AppOptions
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
@@ -9,25 +10,35 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Resend email confirmation</MudText>
 
-<MudText Typo="Typo.body1" GutterBottom="true">Enter your email.</MudText>
+@if (AppOptions.CurrentValue.DisableEmailSending)
+{
+  <MudAlert Severity="Severity.Warning">
+    System emails are disabled.  Please contact your administrator.
+  </MudAlert>
+}
+else
+{
+  <StatusMessage Message="@_message" Class="mb-4" />
 
-<StatusMessage Message="@_message" />
+  <MudText Typo="Typo.body1" GutterBottom="true">Enter your email</MudText>
 
-<EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-  <DataAnnotationsValidator />
+  <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <DataAnnotationsValidator />
 
-  <MudGrid>
-    <MudItem xs="12">
-      <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email"
-        Placeholder="name@example.com"
-        UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })" />
-    </MudItem>
-    <MudItem xs="12">
-      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
-        Resend</MudStaticButton>
-    </MudItem>
-  </MudGrid>
-</EditForm>
+    <MudGrid>
+      <MudItem xs="12">
+        <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email"
+                            Placeholder="name@example.com"
+                            UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })" />
+      </MudItem>
+      <MudItem xs="12">
+        <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+          Resend
+        </MudStaticButton>
+      </MudItem>
+    </MudGrid>
+  </EditForm>
+}
 
 @code {
   private string? _message;
@@ -42,6 +53,11 @@
   }
   private async Task OnValidSubmitAsync()
   {
+    if (AppOptions.CurrentValue.DisableEmailSending)
+    {
+      return;
+    }
+
     var user = await UserManager.FindByEmailAsync(Input.Email!);
     if (user is null)
     {

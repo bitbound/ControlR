@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Common.Services;
 
+// Mock implementation. A real POC will be implemented later.
 internal class StreamBasedCapturer(
     IScreenGrabber screenGrabber,
     IStreamEncoder encoder,

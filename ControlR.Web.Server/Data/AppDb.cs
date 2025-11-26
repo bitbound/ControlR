@@ -10,7 +10,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   private readonly Guid? _tenantId;
   private readonly Guid? _userId;
 
-
   public AppDb(DbContextOptions<AppDb> options) : base(options)
   {
     var extension = options.FindExtension<ClaimsDbContextOptionsExtension>();
@@ -18,18 +17,16 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     _userId = extension?.Options.UserId;
   }
 
+  public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
-  public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
-
-  public required DbSet<Device> Devices { get; init; }
-  public required DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
-  public required DbSet<ServerAlert> ServerAlerts { get; init; }
-  public required DbSet<Tag> Tags { get; init; }
-  public required DbSet<TenantInvite> TenantInvites { get; init; }
-  public required DbSet<TenantSetting> TenantSettings { get; init; }
-  public required DbSet<Tenant> Tenants { get; init; }
-  public required DbSet<UserPreference> UserPreferences { get; init; }
-
+  public DbSet<Device> Devices { get; init; }
+  public DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
+  public DbSet<ServerAlert> ServerAlerts { get; init; }
+  public DbSet<Tag> Tags { get; init; }
+  public DbSet<TenantInvite> TenantInvites { get; init; }
+  public DbSet<TenantSetting> TenantSettings { get; init; }
+  public DbSet<Tenant> Tenants { get; init; }
+  public DbSet<UserPreference> UserPreferences { get; init; }
 
   protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
   {
@@ -55,7 +52,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
   }
-
 
   private static void ConfigureRoles(ModelBuilder builder)
   {
@@ -93,7 +89,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
           IsEnabled = false
         });
   }
-
 
   private void ConfigureDevices(ModelBuilder builder)
   {
@@ -136,6 +131,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
+
   private void ConfigureTags(ModelBuilder builder)
   {
     builder

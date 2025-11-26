@@ -60,7 +60,16 @@ services:
       # Set to 0 or less for no limit.  Default is 100MB.
       ControlR_AppOptions__MaxFileTransferSize: 104857600
 
+      # Whether users must confirm their email address before being allowed to log in.
+      # If true, you must also configure SMTP settings below.
       ControlR_AppOptions__RequireUserEmailConfirmation: true
+
+      # Disable all email sending from the application.
+      ControlR_AppOptions__DisableEmailSending: false
+
+      # SMTP settings are used for sending account-related emails, such as
+      # account confirmation and password reset emails.  As of this writing,
+      # emails are only used for Microsoft's Identity system.
       ControlR_AppOptions__SmtpDisplayName: ""
       ControlR_AppOptions__SmtpEmail: ""
       ControlR_AppOptions__SmtpHost: ""

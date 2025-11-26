@@ -32,6 +32,9 @@ dotnet_diagnostic.SYSLIB1054.severity = silent
 # xUnit1004: Test methods should not be skipped
 dotnet_diagnostic.xUnit1004.severity = none
 
+# CA1848: Use the LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none
+
 [*.{cs,vb}]
 #### Naming styles ####
 

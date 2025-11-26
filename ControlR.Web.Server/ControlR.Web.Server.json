@@ -1734,6 +1734,18 @@
         }
       }
     },
+    "/api/test-email": {
+      "post": {
+        "tags": [
+          "TestEmail"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/user-preferences": {
       "get": {
         "tags": [
@@ -3599,6 +3611,9 @@
     },
     {
       "name": "TenantSettings"
+    },
+    {
+      "name": "TestEmail"
     },
     {
       "name": "UserPreferences"

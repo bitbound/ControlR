@@ -17,6 +17,7 @@ internal static class TestAppBuilder
 {
   public static async Task<TestApp> CreateTestApp(
     ITestOutputHelper testOutput,
+    Dictionary<string, string?>? extraConfiguration = null,
     [CallerMemberName] string testDatabaseName = "")
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
@@ -28,6 +29,11 @@ internal static class TestAppBuilder
       new KeyValuePair<string, string?>("AppOptions:UseInMemoryDatabase", "true"),
       new KeyValuePair<string, string?>("AppOptions:InMemoryDatabaseName", $"{testDatabaseName}-app")
     ]);
+
+    if (extraConfiguration is not null)
+    {
+      builder.Configuration.AddInMemoryCollection(extraConfiguration);
+    }
 
     _ = await builder.AddControlrServer(false);
 

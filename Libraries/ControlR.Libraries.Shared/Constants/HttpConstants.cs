@@ -19,6 +19,7 @@ public static class HttpConstants
   public const string ServerAlertEndpoint = "/api/server-alert";
   public const string ServerStatsEndpoint = "/api/server-stats";
   public const string ServerVersionEndpoint = "/api/version/server";
+  public const string TestEmailEndpoint = "/api/test-email";
   public const string TagsEndpoint = "/api/tags";
   public const string TenantSettingsEndpoint = "/api/tenant-settings";
   public const string UserPreferencesEndpoint = "/api/user-preferences";

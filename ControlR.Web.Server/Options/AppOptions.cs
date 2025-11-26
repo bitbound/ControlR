@@ -6,6 +6,7 @@ public class AppOptions
 
   public bool AllowAgentsToSelfBootstrap { get; init; }
   public string? AuthenticatorIssuerName { get; init; }
+  public bool DisableEmailSending { get; init; }
   public string? DockerGatewayIp { get; init; }
   public bool EnableCloudflareProxySupport { get; init; }
   public bool EnablePublicRegistration { get; init; }

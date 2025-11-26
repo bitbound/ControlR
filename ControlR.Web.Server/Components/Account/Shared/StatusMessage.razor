@@ -2,13 +2,19 @@
 {
   var severity = DisplayMessage.StartsWith("Error") ? Severity.Error : Severity.Success;
 
-  <MudAlert Variant="Variant.Outlined" Severity="@severity">@DisplayMessage</MudAlert>
+  <div class="@Class">
+    <MudAlert Variant="Variant.Outlined" Severity="@severity">@DisplayMessage</MudAlert>
+  </div>
 }
 
 @code {
   private string? _messageFromCookie;
 
-  [Parameter] public string? Message { get; set; }
+  [Parameter]
+  public string? Message { get; set; }
+
+  [Parameter]
+  public string? Class { get; set; }
 
   [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
