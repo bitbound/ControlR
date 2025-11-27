@@ -36,7 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Download Server Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Server
           path: ./server-publish
@@ -44,7 +44,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download docker-compose file
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: DockerCompose
           path: ./docker-compose-download
@@ -52,7 +52,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download ApiClient NuGet
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ApiClientNuGet
           path: ./apiclient-nuget
@@ -60,7 +60,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download macOS Agents
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Agent-macOS-ARM64
           path: ./macos-agents/arm64
@@ -68,7 +68,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download macOS x64 Agent
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Agent-macOS-x64
           path: ./macos-agents/x64
@@ -76,7 +76,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download macOS DesktopClients
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: DesktopClient-macOS-ARM64
           path: ./macos-desktop/arm64
@@ -84,7 +84,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download macOS x64 DesktopClient
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: DesktopClient-macOS-x64
           path: ./macos-desktop/x64
