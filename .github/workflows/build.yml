@@ -104,14 +104,14 @@ jobs:
           sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
 
       - name: Upload Agent (macOS ARM64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload Agent (macOS x64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Agent-macOS-x64
           path: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
@@ -183,7 +183,7 @@ jobs:
           echo "APICLIENT_NUPKG=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: Upload ApiClient NuGet
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ApiClientNuGet
           path: ${{ steps.find-nupkg.outputs.APICLIENT_NUPKG }}
@@ -370,14 +370,14 @@ jobs:
           }
 
       - name: Upload Server
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Server
           path: ControlR.Server\bin\publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload docker-compose
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: DockerCompose
           path: docker-compose\
