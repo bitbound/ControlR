@@ -1,48 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <None Remove="Resources\LaunchAgent.plist" />
-    <None Remove="Resources\LaunchDaemon.plist" />
-    <None Remove="Resources\controlr.agent.service" />
-    <None Remove="Resources\controlr.desktop.service" />
-    <None Remove="Resources\ControlR.DesktopClient.zip" />
-    <None Remove="Resources\ControlR.app.zip" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\LaunchAgent.plist" />
-    <EmbeddedResource Include="Resources\LaunchDaemon.plist" />
-    <EmbeddedResource Include="Resources\controlr.agent.service" />
-    <EmbeddedResource Include="Resources\controlr.desktop.service" />
-    <EmbeddedResource Include="Resources\ControlR.DesktopClient.zip" Condition="Exists('Resources\ControlR.DesktopClient.zip')" />
-    <EmbeddedResource Include="Resources\ControlR.app.zip" Condition="Exists('Resources\ControlR.app.zip')" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Bitbound.SimpleMessenger" Version="2.4.24" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.0" />
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Unix\ControlR.Libraries.NativeInterop.Unix.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Extensions\" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Remove="Resources\LaunchAgent.plist" />
+		<None Remove="Resources\LaunchDaemon.plist" />
+		<None Remove="Resources\controlr.agent.service" />
+		<None Remove="Resources\controlr.desktop.service" />
+		<None Remove="Resources\ControlR.DesktopClient.zip" />
+		<None Remove="Resources\ControlR.app.zip" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\LaunchAgent.plist" />
+		<EmbeddedResource Include="Resources\LaunchDaemon.plist" />
+		<EmbeddedResource Include="Resources\controlr.agent.service" />
+		<EmbeddedResource Include="Resources\controlr.desktop.service" />
+		<EmbeddedResource Include="Resources\ControlR.DesktopClient.zip" Condition="Exists('Resources\ControlR.DesktopClient.zip')" />
+		<EmbeddedResource Include="Resources\ControlR.app.zip" Condition="Exists('Resources\ControlR.app.zip')" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Bitbound.SimpleMessenger" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" />
+		<PackageReference Include="Microsoft.PowerShell.SDK" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Unix\ControlR.Libraries.NativeInterop.Unix.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="Extensions\" />
+	</ItemGroup>
 </Project>

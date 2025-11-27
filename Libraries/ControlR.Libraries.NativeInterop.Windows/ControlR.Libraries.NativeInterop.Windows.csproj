@@ -1,21 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.248">
+		<PackageReference Include="Microsoft.Windows.CsWin32">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-
 	<ItemGroup>
-    <AdditionalFiles Include="NativeMethods.txt" />
-  </ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+		<AdditionalFiles Include="NativeMethods.txt" />
 	</ItemGroup>
-
+	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+	</ItemGroup>
 </Project>

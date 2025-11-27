@@ -1,40 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <ApplicationIcon>..\.assets\appicon.ico</ApplicationIcon>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <Authors>jaredg</Authors>
-    <UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="appsettings.Development.json" />
-    <None Remove="appsettings.json" />
-    <None Include="..\.assets\appicon.ico">
-      <Link>appicon.ico</Link>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.0" />
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
-  </ItemGroup>
-
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<ApplicationIcon>..\.assets\appicon.ico</ApplicationIcon>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<Authors>jaredg</Authors>
+		<UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Remove="appsettings.Development.json" />
+		<None Remove="appsettings.json" />
+		<None Include="..\.assets\appicon.ico">
+			<Link>appicon.ico</Link>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Content Include="appsettings.Development.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="System.CommandLine" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
+	</ItemGroup>
 </Project>

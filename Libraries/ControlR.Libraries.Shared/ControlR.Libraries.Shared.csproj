@@ -1,19 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <PackageReference Include="MessagePack" Version="3.1.4" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
-    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
-  </ItemGroup>
-
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<PackageReference Include="MessagePack" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+		<PackageReference Include="Microsoft.Extensions.Logging" />
+		<PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
+		<PackageReference Include="Microsoft.Extensions.Http" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
+	</ItemGroup>
 </Project>

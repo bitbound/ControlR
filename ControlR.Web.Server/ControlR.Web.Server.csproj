@@ -1,72 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <PropertyGroup>
-    <UserSecretsId>aspnet-ControlR.Web-5aea8da1-1536-4f6c-b6d7-c7c0db228eca</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(SelfContained)' == 'true'">
-    <OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount"
-      Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore"
-      Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.10.3" />
-    <ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
-    <ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
-    <PackageReference Include="MailKit" Version="4.14.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore"
-      Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.2.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets"
-      Version="1.22.1" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-rc.2" />
-    <PackageReference Include="QRCoder" Version="1.7.0" />
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup Condition="$(DefineConstants.Contains('WINDOWS_BUILD'))">
-    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\Migrations\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Remove="novnc\**\*" />
-    <None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
-  </ItemGroup>
+	<PropertyGroup>
+		<UserSecretsId>aspnet-ControlR.Web-5aea8da1-1536-4f6c-b6d7-c7c0db228eca</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	</PropertyGroup>
+	<PropertyGroup>
+		<OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(SelfContained)' == 'true'">
+		<OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="AspNet.Security.OAuth.GitHub" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
+		<PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+		<PackageReference Include="Scalar.AspNetCore" />
+		<ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
+		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
+		<PackageReference Include="MailKit" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Extensions.MudBlazor.StaticInput" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+		<PackageReference Include="QRCoder" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup Condition="$(DefineConstants.Contains('WINDOWS_BUILD'))">
+		<PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="Data\Migrations\" />
+	</ItemGroup>
+	<ItemGroup>
+		<Content Remove="novnc\**\*" />
+		<None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

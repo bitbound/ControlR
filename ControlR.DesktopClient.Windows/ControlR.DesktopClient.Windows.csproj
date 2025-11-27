@@ -1,20 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 	</PropertyGroup>
-
 	<ItemGroup>
-	  <ProjectReference Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
-	  <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
+		<ProjectReference Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
 	</ItemGroup>
-
 	<ItemGroup>
-		<PackageReference Include="System.Drawing.Common" Version="10.0.0" />
-		<PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		<PackageReference Include="System.Drawing.Common" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 </Project>

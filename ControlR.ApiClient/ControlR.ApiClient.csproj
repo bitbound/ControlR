@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
+	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Title>ControlR API Client</Title>
@@ -8,33 +7,29 @@
 		<PackageIcon>appicon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="..\.assets\appicon.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <OpenApiReference Include="..\ControlR.Web.Server\ControlR.Web.Server.json" ClassName="ControlrApiClient" Link="OpenAPIs\ControlR.Web.Server.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="NSwag.ApiDescription.Client" Version="14.6.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\.assets\appicon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<OpenApiReference Include="..\ControlR.Web.Server\ControlR.Web.Server.json" ClassName="ControlrApiClient" Link="OpenAPIs\ControlR.Web.Server.json" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="NSwag.ApiDescription.Client">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 </Project>

@@ -1,27 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-
-  <PropertyGroup>
-    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
-    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.2.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.0" />
-    <PackageReference Include="MudBlazor" Version="8.14.0" />
-    <PackageReference Include="Bitbound.SimpleMessenger" Version="2.4.24" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0" />
-    <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
-  </ItemGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+	<PropertyGroup>
+		<NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+		<StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Extensions.MudBlazor.StaticInput" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" />
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="Bitbound.SimpleMessenger" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
+	</ItemGroup>
 </Project>

@@ -1,6 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
 		<Authors>Jared Goodwin</Authors>
 		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
@@ -39,6 +40,6 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-		<PackageReference Include="Bitbound.Analyzers.MemberOrder" Version="1.0.22" />
+		<PackageReference Include="Bitbound.Analyzers.MemberOrder" />
 	</ItemGroup>
 </Project>

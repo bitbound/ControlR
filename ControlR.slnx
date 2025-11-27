@@ -17,6 +17,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Solution Items/.build/">
@@ -27,9 +28,7 @@
     <Project Path="Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.CaptureSample/ControlR.DesktopClient.Linux.CaptureSample.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
-    <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj">
-      <BuildType Solution="Debug|*" Project="&#xD;&#xA;&#x9;&#x9;&#x9;Debug" />
-    </Project>
+    <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Tests.TestingUtilities/ControlR.Tests.TestingUtilities.csproj" />

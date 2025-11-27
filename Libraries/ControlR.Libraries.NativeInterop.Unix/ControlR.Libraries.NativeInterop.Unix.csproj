@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    </PropertyGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-    </ItemGroup>
-    <ItemGroup>
-      <PackageReference Update="Bitbound.Analyzers.MemberOrder" Version="1.0.20">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-    </ItemGroup>
-    <ItemGroup>
-      <PackageReference Include="Tmds.DBus" Version="0.21.2" />
-      <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.2" />
-    </ItemGroup>
+	<PropertyGroup>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Tmds.DBus" />
+		<PackageReference Include="Tmds.DBus.Protocol" />
+	</ItemGroup>
 </Project>
