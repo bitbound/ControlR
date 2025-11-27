@@ -17,6 +17,10 @@ on:
         required: false
         type: string
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to Docker Hub
