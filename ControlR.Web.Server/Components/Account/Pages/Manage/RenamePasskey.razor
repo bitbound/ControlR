@@ -1,0 +1,127 @@
+@page "/Account/Manage/RenamePasskey"
+
+@inject UserManager<AppUser> UserManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Rename passkey</PageTitle>
+
+@if (IsNewPasskey)
+{
+  <MudText Typo="Typo.h6" GutterBottom="true">Name your new passkey</MudText>
+}
+else
+{
+  <MudText Typo="Typo.h6" GutterBottom="true">Rename passkey</MudText>
+}
+
+<StatusMessage />
+
+@if (_passkey is null)
+{
+  <MudAlert Severity="Severity.Error" Variant="Variant.Text">
+    Passkey not found.
+  </MudAlert>
+}
+else
+{
+  <EditForm Model="Input" FormName="rename-passkey" OnValidSubmit="RenamePasskeySubmit" method="post">
+    <DataAnnotationsValidator />
+
+    <MudGrid>
+      <MudItem xs="12" md="6">
+        <MudStaticTextField For="@(() => Input.Name)"
+                            @bind-Value="Input.Name"
+                            Label="Passkey name"
+                            Placeholder="e.g. Windows Hello, Touch ID, etc."
+                            UserAttributes="@(new Dictionary<string, object?> { { "autofocus", true } })" />
+      </MudItem>
+      <MudItem xs="12">
+        <MudStaticButton FormAction="FormAction.Submit"
+                         Variant="Variant.Filled"
+                         Color="Color.Primary">
+          Save
+        </MudStaticButton>
+        @if (!IsNewPasskey)
+        {
+          <MudLink Href="Account/Manage/Passkeys" Class="ml-4">Cancel</MudLink>
+        }
+      </MudItem>
+    </MudGrid>
+  </EditForm>
+}
+
+@code {
+  private AppUser _user = default!;
+  private UserPasskeyInfo? _passkey;
+  private byte[]? _credentialId;
+
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromQuery(Name = "id")]
+  private string? CredentialIdBase64 { get; set; }
+
+  [SupplyParameterFromQuery(Name = "newPasskey")]
+  private bool IsNewPasskey { get; set; }
+
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = default!;
+
+  protected override async Task OnInitializedAsync()
+  {
+    Input ??= new();
+
+    if (string.IsNullOrEmpty(CredentialIdBase64))
+    {
+      return;
+    }
+
+    try
+    {
+      _credentialId = Convert.FromBase64String(CredentialIdBase64);
+    }
+    catch
+    {
+      return;
+    }
+
+    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _passkey = await UserManager.GetPasskeyAsync(_user, _credentialId);
+
+    if (_passkey is not null && string.IsNullOrEmpty(Input.Name))
+    {
+      Input.Name = _passkey.Name ?? string.Empty;
+    }
+  }
+
+  private async Task RenamePasskeySubmit()
+  {
+    if (_passkey is null || _credentialId is null)
+    {
+      return;
+    }
+
+    _passkey.Name = Input.Name;
+    var result = await UserManager.AddOrUpdatePasskeyAsync(_user, _passkey);
+
+    if (result.Succeeded)
+    {
+      var message = IsNewPasskey ? "Passkey added successfully." : "Passkey renamed successfully.";
+      RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", message, HttpContext);
+    }
+    else
+    {
+      var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+      RedirectManager.RedirectToCurrentPageWithStatus($"Error: {errors}", HttpContext);
+    }
+  }
+
+  private sealed class InputModel
+  {
+    [Required]
+    [StringLength(100, ErrorMessage = "The {0} must be at most {1} characters long.")]
+    [Display(Name = "Passkey name")]
+    public string Name { get; set; } = string.Empty;
+  }
+}

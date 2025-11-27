@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using ControlR.Web.Server.Components.Account.Pages;
 using ControlR.Web.Server.Components.Account.Pages.Manage;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -101,10 +102,57 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
       }
 
       personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(user))!);
+
+      var passkeys = await userManager.GetPasskeysAsync(user);
+      var passkeyIndex = 0;
+      foreach (var passkey in passkeys)
+      {
+        personalData.Add($"Passkey[{passkeyIndex++}]", passkey.Name ?? "unnamed");
+      }
+
       var fileBytes = JsonSerializer.SerializeToUtf8Bytes(personalData);
 
       context.Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");
       return TypedResults.File(fileBytes, "application/json", "PersonalData.json");
+    });
+
+    accountGroup.MapPost("/PasskeyCreationOptions", async (
+      HttpContext context,
+      [FromServices] UserManager<AppUser> userManager,
+      [FromServices] SignInManager<AppUser> signInManager,
+      [FromServices] IAntiforgery antiforgery) =>
+    {
+      await antiforgery.ValidateRequestAsync(context);
+
+      var user = await userManager.GetUserAsync(context.User);
+      if (user is null)
+      {
+        return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+      }
+
+      var userId = await userManager.GetUserIdAsync(user);
+      var userName = await userManager.GetUserNameAsync(user) ?? "User";
+      var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
+      {
+        Id = userId,
+        Name = userName,
+        DisplayName = userName
+      });
+      return TypedResults.Content(optionsJson, contentType: "application/json");
+    });
+
+    accountGroup.MapPost("/PasskeyRequestOptions", async (
+      HttpContext context,
+      [FromServices] UserManager<AppUser> userManager,
+      [FromServices] SignInManager<AppUser> signInManager,
+      [FromServices] IAntiforgery antiforgery,
+      [FromQuery] string? username) =>
+    {
+      await antiforgery.ValidateRequestAsync(context);
+
+      var user = string.IsNullOrEmpty(username) ? null : await userManager.FindByNameAsync(username);
+      var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
+      return TypedResults.Content(optionsJson, contentType: "application/json");
     });
 
     return accountGroup;

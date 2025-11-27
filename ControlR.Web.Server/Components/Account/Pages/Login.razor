@@ -1,5 +1,7 @@
 ﻿@page "/Account/Login"
 
+@using ControlR.Web.Server.Components.Account.Shared
+
 @inject SignInManager<AppUser> SignInManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
@@ -13,7 +15,7 @@
 <MudGrid>
     <MudItem md="6">
         <StatusMessage Message="@_errorMessage" />
-        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+        <EditForm EditContext="_editContext" method="post" OnSubmit="LoginUser" FormName="login">
             <DataAnnotationsValidator />
 
             <MudText GutterBottom="true" Typo="Typo.body1" Color="Color.Primary">
@@ -24,7 +26,7 @@
                 <MudItem xs="12">
                     <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email"
                         Placeholder="name@example.com"
-                        UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })" />
+                        UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "username webauthn" }, { "aria-required", "true" } })" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Label="Password"
@@ -35,12 +37,26 @@
                     <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me
                     </MudStaticCheckBox>
                 </MudItem>
-                <MudItem xs="12">
-                    <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                <MudItem xs="12" Class="d-flex gap-4">
+                    <MudStaticButton Variant="Variant.Outlined" Color="Color.Primary"
                         FormAction="FormAction.Submit">Log in</MudStaticButton>
+                    <PasskeySubmit Operation="PasskeyOperation.Request"
+                                   Name="Input.Passkey"
+                                   EmailName="Input.Email"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Secondary">
+                        Sign in with a passkey
+                    </PasskeySubmit>
                 </MudItem>
             </MudGrid>
         </EditForm>
+
+        @if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Class="mt-4">
+                @Input.Passkey.Error
+            </MudAlert>
+        }
 
         <MudGrid Class="mt-4">
             <MudItem xs="12">
@@ -68,6 +84,7 @@
 @code {
     private string? _errorMessage;
     private bool _isPublicRegistrationEnabled;
+    private EditContext _editContext = default!;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -81,6 +98,8 @@
     protected override async Task OnInitializedAsync()
     {
         Input ??= new InputModel();
+        _editContext = new EditContext(Input);
+
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
             // Clear the existing external cookie to ensure a clean login process
@@ -96,9 +115,22 @@
 
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, true);
+        Microsoft.AspNetCore.Identity.SignInResult result;
+
+        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+        {
+            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+        }
+        else
+        {
+            if (!_editContext.Validate())
+            {
+                return;
+            }
+
+            result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, true);
+        }
+
         if (result.Succeeded)
         {
             Logger.LogInformation("User '{Email}' logged in.", Input.Email);
@@ -133,6 +165,8 @@
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
+
+        public PasskeyInputModel? Passkey { get; set; }
     }
 
 }

@@ -1,0 +1,142 @@
+@page "/Account/Manage/Passkeys"
+
+@inject UserManager<AppUser> UserManager
+@inject SignInManager<AppUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Manage passkeys</PageTitle>
+
+<MudText Typo="Typo.h6" GutterBottom="true">Manage passkeys</MudText>
+
+<StatusMessage />
+
+@if (_passkeys is null)
+{
+  <MudProgressCircular Indeterminate="true" />
+}
+else if (_passkeys.Count == 0)
+{
+  <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mt-4">
+    You have no passkeys. Add a passkey to sign in without a password.
+  </MudAlert>
+}
+else
+{
+  <MudTable Items="_passkeys" Dense="true" Hover="true" Striped="true" Class="mt-4">
+    <HeaderContent>
+      <MudTh>Name</MudTh>
+      <MudTh Style="width: 200px;">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+      <MudTd DataLabel="Name">@context.Name</MudTd>
+      <MudTd DataLabel="Actions">
+        <div class="d-flex gap-2">
+          <form action="Account/Manage/RenamePasskey" method="get" style="display: inline;">
+            <input type="hidden" name="id" value="@Convert.ToBase64String(context.CredentialId)" />
+            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Primary" Variant="Variant.Text">Rename</MudStaticButton>
+          </form>
+          <form @formname="@($"delete-passkey-{Convert.ToBase64String(context.CredentialId)}")"
+                @onsubmit="() => DeletePasskey(context.CredentialId)"
+                method="post"
+                style="display: inline;">
+            <AntiforgeryToken />
+            <input type="hidden" name="credentialId" value="@Convert.ToBase64String(context.CredentialId)" />
+            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Error" Variant="Variant.Text">Delete</MudStaticButton>
+          </form>
+        </div>
+      </MudTd>
+    </RowTemplate>
+  </MudTable>
+}
+
+@if (_passkeys is not null && _passkeys.Count < 100)
+{
+  <EditForm Model="Input" FormName="add-passkey" OnValidSubmit="AddPasskey" method="post" class="mt-4">
+    <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-4">Add a new passkey</MudText>
+
+    @if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+    {
+      <MudAlert Severity="Severity.Error" Variant="Variant.Text" Class="mb-4">
+        @Input.Passkey.Error
+      </MudAlert>
+    }
+
+    <PasskeySubmit Operation="PasskeyOperation.Create"
+                   Name="Input.Passkey"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary">
+      Add a passkey
+    </PasskeySubmit>
+  </EditForm>
+}
+
+@code {
+  private AppUser _user = default!;
+  private IList<UserPasskeyInfo>? _passkeys;
+
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = default!;
+
+  [SupplyParameterFromForm(Name = "credentialId")]
+  private string? CredentialIdToDelete { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    Input ??= new();
+    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _passkeys = await UserManager.GetPasskeysAsync(_user);
+  }
+
+  private async Task AddPasskey()
+  {
+    if (string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+    {
+      return;
+    }
+
+    var result = await SignInManager.PerformPasskeyAttestationAsync(Input.Passkey.CredentialJson);
+    if (!result.Succeeded)
+    {
+      RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to add passkey.", HttpContext);
+      return;
+    }
+
+    var addResult = await UserManager.AddOrUpdatePasskeyAsync(_user, result.Passkey);
+    if (!addResult.Succeeded)
+    {
+      var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+      RedirectManager.RedirectToCurrentPageWithStatus($"Error: {errors}", HttpContext);
+      return;
+    }
+
+    var credentialIdBase64 = Convert.ToBase64String(result.Passkey.CredentialId);
+    RedirectManager.RedirectTo("Account/Manage/RenamePasskey", new Dictionary<string, object?>
+    {
+      ["id"] = credentialIdBase64,
+      ["newPasskey"] = true
+    });
+  }
+
+  private async Task DeletePasskey(byte[] credentialId)
+  {
+    var result = await UserManager.RemovePasskeyAsync(_user, credentialId);
+    if (result.Succeeded)
+    {
+      RedirectManager.RedirectToCurrentPageWithStatus("Passkey removed successfully.", HttpContext);
+    }
+    else
+    {
+      var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+      RedirectManager.RedirectToCurrentPageWithStatus($"Error: {errors}", HttpContext);
+    }
+  }
+
+  private sealed class InputModel
+  {
+    public PasskeyInputModel? Passkey { get; set; }
+  }
+}

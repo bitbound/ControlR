@@ -2,24 +2,25 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <base href="/"/>
-  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
-  <link rel="icon" type="image/ico" href="@Assets["favicon.ico"]"/>
-  <link href="manifest.webmanifest" rel="manifest"/>
-  <link rel="apple-touch-icon" sizes="512x512" href="@Assets["appicon-512.png"]"/>
-  <link rel="apple-touch-icon" sizes="192x192" href="@Assets["appicon-192.png"]"/>
+  <link rel="icon" type="image/ico" href="@Assets["favicon.ico"]" />
+  <link href="manifest.webmanifest" rel="manifest" />
+  <link rel="apple-touch-icon" sizes="512x512" href="@Assets["appicon-512.png"]" />
+  <link rel="apple-touch-icon" sizes="192x192" href="@Assets["appicon-192.png"]" />
   <link rel="stylesheet" href="@Assets["app.css"]" />
   <link rel="stylesheet" href="@Assets["ControlR.Web.Server.styles.css"]" />
   <ImportMap />
-  <HeadOutlet @rendermode="PageRenderMode"/>
+  <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
   <Routes @rendermode="PageRenderMode" />
-  <script src="_framework/blazor.web.js"></script>
+  <script src="@Assets["_framework/blazor.web.js"]"></script>
+  <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
   <script src="_content/MudBlazor/MudBlazor.min.js"></script>
   <script src="_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"></script>
   <script src="interop.js"></script>
@@ -32,7 +33,7 @@
 
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
-  
+
   [Inject]
   private IOptions<DeveloperOptions> DeveloperOptions { get; set; } = default!;
 
@@ -40,7 +41,7 @@
   {
     get
     {
-      if(!HttpContext.AcceptsInteractiveRouting())
+      if (!HttpContext.AcceptsInteractiveRouting())
       {
         return null;
       }
@@ -58,6 +59,6 @@
       }
     }
   }
-      
+
 
 }

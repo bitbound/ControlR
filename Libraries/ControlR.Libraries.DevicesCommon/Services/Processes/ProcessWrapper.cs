@@ -18,6 +18,7 @@ namespace ControlR.Libraries.DevicesCommon.Services.Processes;
 public interface IProcess : IDisposable
 {
   event EventHandler? Exited;
+
   int BasePriority { get; }
   bool EnableRaisingEvents { get; set; }
   int ExitCode { get; }
@@ -31,12 +32,10 @@ public interface IProcess : IDisposable
   [SupportedOSPlatform("windows")]
   [SupportedOSPlatform("linux")]
   nint ProcessorAffinity { get; set; }
-
-  StreamWriter StandardInput { get; }
-  StreamReader StandardOutput { get; }
-
   bool Responding { get; }
   int SessionId { get; }
+  StreamWriter StandardInput { get; }
+  StreamReader StandardOutput { get; }
   ProcessStartInfo StartInfo { get; set; }
 
   void Kill();
