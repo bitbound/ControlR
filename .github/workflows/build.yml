@@ -150,13 +150,13 @@ jobs:
         run: dotnet test -c Release
 
       - name: Download macOS ARM64 Agent
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Web.Server\wwwroot\downloads\osx-arm64\
 
       - name: Download macOS x64 Agent
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: Agent-macOS-x64
           path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
