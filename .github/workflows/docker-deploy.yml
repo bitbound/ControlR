@@ -113,7 +113,7 @@ jobs:
           password: ${{ secrets.DOCKER_PAT }}
 
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./server-publish
           file: ./server-publish/Dockerfile
