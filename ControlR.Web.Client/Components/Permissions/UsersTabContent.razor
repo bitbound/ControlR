@@ -33,7 +33,7 @@
         <MudIconButton Color="Color.Error"
                        ButtonType="ButtonType.Button"
                        Icon="@(Icons.Material.Filled.Delete)"
-                       Disabled="@(_selectedUser == null)"
+                       Disabled="@(_selectedUser == null || _selectedUser.Id == _currentUserId)"
                        OnClick="DeleteSelectedUser" />
       </MudTooltip>
     </div>
