@@ -1,5 +1,6 @@
 @inject IControlrApi ControlrApi
 @inject ILocalStorageAccessor LocalStorage
+@inject AuthenticationStateProvider AuthState
 @inject ILogger<ServerAlertDisplay> Logger
 
 @if (_isVisible && _alert is not null)
@@ -27,6 +28,11 @@
     try
     {
       if (!RendererInfo.IsInteractive)
+      {
+        return;
+      }
+
+      if (!await AuthState.IsAuthenticated())
       {
         return;
       }
