@@ -1,5 +1,4 @@
 ﻿using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.StateManagement.Stores;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Collections.Immutable;
@@ -87,7 +86,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
 
   private async Task DeleteSelectedUser()
   {
-    if (_selectedUser is null)
+    if (_selectedUser is null || _selectedUser.Id == _currentUserId)
       return;
 
     try

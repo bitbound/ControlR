@@ -23,6 +23,7 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" />
 		<PackageReference Include="Microsoft.PowerShell.SDK" />
+		<PackageReference Include="Microsoft.Security.Extensions" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" />
 		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
 			<PrivateAssets>all</PrivateAssets>
