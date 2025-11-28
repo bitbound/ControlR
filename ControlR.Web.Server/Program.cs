@@ -50,16 +50,6 @@ else
 
 app.MapStaticAssets();
 
-// Configure static files with cache control for Cloudflare
-app.UseStaticFiles(new StaticFileOptions
-{
-  OnPrepareResponse = ctx =>
-  {
-    // Set cache control for static files (5 minute max-age)
-    ctx.Context.Response.Headers.CacheControl = "public, max-age=300, must-revalidate";
-  }
-});
-
 app.UseStaticFiles(new StaticFileOptions
 {
   FileProvider = new PhysicalFileProvider(
