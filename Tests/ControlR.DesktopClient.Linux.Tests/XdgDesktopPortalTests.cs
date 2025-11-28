@@ -22,29 +22,6 @@ public class XdgDesktopPortalTests
   }
 
   [WaylandOnlyFact]
-  public async Task CanConnectToDBus()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    Assert.NotNull(portal);
-  }
-
-  [WaylandOnlyFact]
-  public async Task CanCheckScreenCastAvailability()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var isAvailable = await portal.IsScreenCastAvailableAsync();
-    Assert.True(isAvailable, "ScreenCast portal should be available on Wayland");
-  }
-
-  [WaylandOnlyFact]
-  public async Task CanCheckRemoteDesktopAvailability()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var isAvailable = await portal.IsRemoteDesktopAvailableAsync();
-    Assert.True(isAvailable, "RemoteDesktop portal should be available on Wayland");
-  }
-
-  [WaylandOnlyFact]
   public async Task CanCallPortalDirectly()
   {
     var address = Address.Session;
@@ -90,19 +67,26 @@ public class XdgDesktopPortalTests
     
     connection.Dispose();
   }
-
   [WaylandOnlyFact]
-  public async Task CanCreateScreenCastSession()
+  public async Task CanCheckRemoteDesktopAvailability()
   {
     using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var result = await portal.CreateScreenCastSessionAsync();
-    
-    Assert.True(result.IsSuccess, $"Failed to create session: {result.Reason}");
-    Assert.NotNull(result.Value);
-    Assert.NotEmpty(result.Value);
-    _logger.LogInformation("Created session: {Session}", result.Value);
+    var isAvailable = await portal.IsRemoteDesktopAvailableAsync();
+    Assert.True(isAvailable, "RemoteDesktop portal should be available on Wayland");
   }
-
+  [WaylandOnlyFact]
+  public async Task CanCheckScreenCastAvailability()
+  {
+    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
+    var isAvailable = await portal.IsScreenCastAvailableAsync();
+    Assert.True(isAvailable, "ScreenCast portal should be available on Wayland");
+  }
+  [WaylandOnlyFact]
+  public async Task CanConnectToDBus()
+  {
+    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
+    Assert.NotNull(portal);
+  }
   [WaylandOnlyFact]
   public async Task CanCreateRemoteDesktopSession()
   {
@@ -114,7 +98,31 @@ public class XdgDesktopPortalTests
     Assert.NotEmpty(result.Value);
     _logger.LogInformation("Created session: {Session}", result.Value);
   }
-
+  [WaylandOnlyFact]
+  public async Task CanCreateScreenCastSession()
+  {
+    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
+    var result = await portal.CreateScreenCastSessionAsync();
+    
+    Assert.True(result.IsSuccess, $"Failed to create session: {result.Reason}");
+    Assert.NotNull(result.Value);
+    Assert.NotEmpty(result.Value);
+    _logger.LogInformation("Created session: {Session}", result.Value);
+  }
+  [WaylandOnlyFact]
+  public async Task CanSelectRemoteDesktopDevices()
+  {
+    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
+    
+    var sessionResult = await portal.CreateRemoteDesktopSessionAsync();
+    Assert.True(sessionResult.IsSuccess);
+    
+    var selectResult = await portal.SelectRemoteDesktopDevicesAsync(
+      sessionResult.Value!,
+      deviceTypes: 3);
+    
+    Assert.True(selectResult.IsSuccess, $"Failed to select devices: {selectResult.Reason}");
+  }
   [WaylandOnlyFact]
   public async Task CanSelectScreenCastSources()
   {
@@ -130,20 +138,5 @@ public class XdgDesktopPortalTests
       cursorMode: 4);
     
     Assert.True(selectResult.IsSuccess, $"Failed to select sources: {selectResult.Reason}");
-  }
-
-  [WaylandOnlyFact]
-  public async Task CanSelectRemoteDesktopDevices()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    
-    var sessionResult = await portal.CreateRemoteDesktopSessionAsync();
-    Assert.True(sessionResult.IsSuccess);
-    
-    var selectResult = await portal.SelectRemoteDesktopDevicesAsync(
-      sessionResult.Value!,
-      deviceTypes: 3);
-    
-    Assert.True(selectResult.IsSuccess, $"Failed to select devices: {selectResult.Reason}");
   }
 }

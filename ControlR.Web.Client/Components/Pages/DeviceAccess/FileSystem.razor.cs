@@ -16,32 +16,23 @@ public partial class FileSystem : JsInteropableComponent
   private ElementReference _contentPanelRef;
   private InputFile _fileInputRef = null!;
   private string _searchText = string.Empty;
-
   private string? _selectedPath;
   private ElementReference _splitterRef;
   private ElementReference _treePanelRef;
 
   public string AddressBarValue { get; set; } = string.Empty;
-
   [Inject]
   public required IControlrApi ControlrApi { get; set; }
-
   [SupplyParameterFromQuery]
   public required Guid DeviceId { get; init; }
-
   [Inject]
   public required IDeviceState DeviceState { get; init; }
-
   [Inject]
   public required IDialogService DialogService { get; set; }
-
   public List<FileSystemEntryViewModel> DirectoryContents { get; set; } = [];
-
   [Inject]
   public required ILogger<FileSystem> Logger { get; set; }
-
   public HashSet<FileSystemEntryViewModel> SelectedItems { get; set; } = [];
-
   public string? SelectedPath
   {
     get => _selectedPath;
@@ -58,10 +49,8 @@ public partial class FileSystem : JsInteropableComponent
       InvokeAsync(async () => await OnSelectedPathChanged(value));
     }
   }
-
   [Inject]
   public required ISnackbar Snackbar { get; set; }
-
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; set; }
 
@@ -70,7 +59,6 @@ public partial class FileSystem : JsInteropableComponent
   private bool IsLoading { get; set; }
   private bool IsLoadingContents { get; set; }
   private bool IsNewFolderInProgress { get; set; }
-
   private bool IsUpButtonDisabled => string.IsNullOrEmpty(SelectedPath)
                                      || InitialTreeItems.Any(item => item.Value == SelectedPath);
 
@@ -104,7 +92,6 @@ public partial class FileSystem : JsInteropableComponent
         _contentPanelRef);
     }
   }
-
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -121,7 +108,6 @@ public partial class FileSystem : JsInteropableComponent
   {
     return $"{path1.TrimEnd(pathSeparator.ToCharArray())}{pathSeparator}{path2.TrimStart(pathSeparator.ToCharArray())}";
   }
-
   private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
   {
     return new TreeItemData<string>
@@ -132,7 +118,6 @@ public partial class FileSystem : JsInteropableComponent
       Expandable = dto is { IsDirectory: true, HasSubfolders: true }
     };
   }
-
   private static FileSystemEntryViewModel ConvertToViewModel(FileSystemEntryDto dto)
   {
     return new FileSystemEntryViewModel
@@ -147,7 +132,6 @@ public partial class FileSystem : JsInteropableComponent
       CanWrite = dto.CanWrite
     };
   }
-
   private static TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
   {
     return items?.FirstOrDefault(item =>
@@ -236,7 +220,6 @@ public partial class FileSystem : JsInteropableComponent
       return false;
     }
   }
-
   private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(
     TreeItemData<string> treeItem)
   {
@@ -248,7 +231,6 @@ public partial class FileSystem : JsInteropableComponent
         .ToList();
     });
   }
-
   private async Task DeleteSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -267,7 +249,6 @@ public partial class FileSystem : JsInteropableComponent
       throw;
     }
   }
-
   private async Task DownloadSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -284,7 +265,6 @@ public partial class FileSystem : JsInteropableComponent
       throw;
     }
   }
-
   private async Task<Result<long>> GetMaxFileSize()
   {
     var getMaxSizeResult = await ControlrApi.GetFileUploadMaxSize();
@@ -300,7 +280,6 @@ public partial class FileSystem : JsInteropableComponent
       : getMaxSizeResult.Value;
     return Result.Ok(maxFileSize);
   }
-
   private async Task HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
   {
     if (args.MouseEventArgs.CtrlKey || !args.Item.IsDirectory)
@@ -320,7 +299,6 @@ public partial class FileSystem : JsInteropableComponent
       await NavigateToAddress();
     }
   }
-
   private async Task LoadDirectoryContents(string directoryPath)
   {
     try
@@ -366,7 +344,6 @@ public partial class FileSystem : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
     }
   }
-
   private async Task LoadRootDrives()
   {
     try
@@ -406,7 +383,6 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
-
   private async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
   {
     try
@@ -432,7 +408,6 @@ public partial class FileSystem : JsInteropableComponent
       return [];
     }
   }
-
   private async Task NavigateToAddress()
   {
     var targetPath = AddressBarValue.Trim();
@@ -463,7 +438,6 @@ public partial class FileSystem : JsInteropableComponent
       Snackbar.Add($"An error occurred while navigating to '{targetPath}'", Severity.Error);
     }
   }
-
   private async Task OnDeleteClick()
   {
     if (SelectedItems.Count == 0)
@@ -518,7 +492,6 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
-
   private async Task OnDownloadClick()
   {
     if (SelectedItems.Count == 0)
@@ -569,7 +542,6 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
-
   private async Task OnFilesSelected(InputFileChangeEventArgs e)
   {
     try
@@ -611,7 +583,6 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
-
   private async Task OnNewFolderClick()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -659,7 +630,6 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
-
   private async Task OnRefreshClick()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -671,7 +641,6 @@ public partial class FileSystem : JsInteropableComponent
       await LoadDirectoryContents(SelectedPath);
     }
   }
-
   private async Task OnSelectedPathChanged(string? newPath)
   {
     if (!string.IsNullOrEmpty(newPath))
@@ -680,20 +649,6 @@ public partial class FileSystem : JsInteropableComponent
       await LoadDirectoryContents(newPath);
     }
   }
-
-  private async Task OnUploadFileClick()
-  {
-    try
-    {
-      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error triggering file input click");
-      Snackbar.Add("Failed to open file picker", Severity.Error);
-    }
-  }
-
   private async Task OnUpOneLevel()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -752,7 +707,18 @@ public partial class FileSystem : JsInteropableComponent
       Snackbar.Add("An error occurred while navigating up one level", Severity.Error);
     }
   }
-
+  private async Task OnUploadFileClick()
+  {
+    try
+    {
+      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error triggering file input click");
+      Snackbar.Add("Failed to open file picker", Severity.Error);
+    }
+  }
   private async Task UploadSingleFile(IBrowserFile file)
   {
     var snackbarKey = Guid.NewGuid().ToString();

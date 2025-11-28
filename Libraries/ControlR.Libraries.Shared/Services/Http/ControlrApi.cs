@@ -14,7 +14,6 @@ public interface IControlrApi
       string activationCode,
       string emailAddress,
       string password);
-
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
@@ -52,7 +51,6 @@ public interface IControlrApi
   Task<Result<ServerAlertResponseDto?>> GetServerAlert();
   Task<Result<ServerStatsDto>> GetServerStats();
   Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath);
-  Task<Result> SendTestEmail();
   Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName);
   Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName);
   Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false);
@@ -62,10 +60,11 @@ public interface IControlrApi
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
+  Task<Result> SendTestEmail();
   Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue);
   Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue);
-  Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request);
   Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request);
+  Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request);
   Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName);
 }
 
@@ -75,7 +74,6 @@ public class ControlrApi(
 {
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
-
 
   public async Task<Result<AcceptInvitationResponseDto>> AcceptInvitation(
     string activationCode,
@@ -90,7 +88,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>();
     });
   }
-
   public async Task<Result> AddDeviceTag(Guid deviceId, Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -100,7 +97,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> AddUserRole(Guid userId, Guid roleId)
   {
     return await TryCallApi(async () =>
@@ -110,7 +106,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> AddUserTag(Guid userId, Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -120,7 +115,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> CreateDevice(DeviceDto device, string installerKey)
   {
     return await TryCallApi(async () =>
@@ -130,7 +124,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName)
   {
     return await TryCallApi(async () =>
@@ -140,7 +133,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto)
   {
     return await TryCallApi(async () =>
@@ -150,7 +142,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<CreateInstallerKeyResponseDto>();
     });
   }
-
   public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request)
   {
     return await TryCallApi(async () =>
@@ -160,7 +151,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<CreatePersonalAccessTokenResponseDto>();
     });
   }
-
   public async Task<Result<TagResponseDto>> CreateTag(string tagName, TagType tagType)
   {
     return await TryCallApi(async () =>
@@ -171,7 +161,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<TagResponseDto>();
     });
   }
-
   public async Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string inviteeEmail)
   {
     return await TryCallApi(async () =>
@@ -196,7 +185,6 @@ public class ControlrApi(
       return Result.Ok(inviteDto);
     });
   }
-
   public async Task<Result> DeleteDevice(Guid deviceId)
   {
     return await TryCallApi(async () =>
@@ -205,7 +193,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory)
   {
     return await TryCallApi(async () =>
@@ -218,7 +205,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId)
   {
     return await TryCallApi(async () =>
@@ -227,7 +213,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeleteTag(Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -236,7 +221,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeleteTenantInvite(Guid inviteId)
   {
     return await TryCallApi(async () =>
@@ -245,7 +229,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeleteTenantSetting(string settingName)
   {
     return await TryCallApi(async () =>
@@ -255,7 +238,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> DeleteUser(Guid userId)
   {
     return await TryCallApi(async () =>
@@ -264,7 +246,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result<Stream>> DownloadFile(Guid deviceId, string filePath)
   {
     return await TryCallApi(async () =>
@@ -274,7 +255,6 @@ public class ControlrApi(
       return await response.Content.ReadAsStreamAsync();
     });
   }
-
   public async IAsyncEnumerable<DeviceDto> GetAllDevices()
   {
     var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceDto>(HttpConstants.DevicesEndpoint);
@@ -288,39 +268,33 @@ public class ControlrApi(
       yield return device;
     }
   }
-
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.RolesEndpoint));
   }
-
   public async Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false)
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TagResponseDto[]>(
         $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}"));
   }
-
   public async Task<Result<UserResponseDto[]>> GetAllUsers()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<UserResponseDto[]>(HttpConstants.UsersEndpoint));
   }
-
   public async Task<Result<TagResponseDto[]>> GetAllowedTags()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint));
   }
-  
   public async Task<Result<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default)
   {
     return await TryCallApi(async () => await _client.GetStringAsync(
       $"{HttpConstants.AgentUpdateEndpoint}/get-hash-sha256/{runtime}",
       cancellationToken));
   }
-
   public async Task<Result<Version>> GetCurrentAgentVersion()
   {
     return await TryCallApi(async () =>
@@ -330,13 +304,11 @@ public class ControlrApi(
       return version;
     });
   }
-  
   public async Task<Result<Version>> GetCurrentServerVersion()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<Version>(HttpConstants.ServerVersionEndpoint));
   }
-
   public async Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId)
   {
     return await TryCallApi(
@@ -348,7 +320,6 @@ public class ControlrApi(
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<DeviceDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}"));
   }
-
   public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath)
   {
     return await TryCallApi(async () =>
@@ -359,7 +330,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>();
     });
   }
-
   public async Task<Result<long>> GetFileUploadMaxSize()
   {
     return await TryCallApi(async () =>
@@ -371,7 +341,6 @@ public class ControlrApi(
       return dto.MaxFileSize;
     });
   }
-
   public async Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath)
   {
     return await TryCallApi(async () =>
@@ -382,25 +351,21 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<PathSegmentsResponseDto>();
     });
   }
-
   public async Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint));
   }
-
   public async Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.PersonalAccessTokensEndpoint));
   }
-
   public async Task<Result<PublicRegistrationSettings>> GetPublicRegistrationSettings()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.PublicRegistrationSettingsEndpoint));
   }
-
   public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(Guid deviceId)
   {
     return await TryCallApi(async () =>
@@ -411,7 +376,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<GetRootDrivesResponseDto>();
     });
   }
-
   public async Task<Result<ServerAlertResponseDto?>> GetServerAlert()
   {
     return await TryGetNullableResponse(async () =>
@@ -425,13 +389,11 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
     });
   }
-
   public async Task<Result<ServerStatsDto>> GetServerStats()
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<ServerStatsDto>(HttpConstants.ServerStatsEndpoint));
   }
-
   public async Task<Result<GetSubdirectoriesResponseDto>> GetSubdirectories(Guid deviceId, string directoryPath)
   {
     return await TryCallApi(async () =>
@@ -442,7 +404,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<GetSubdirectoriesResponseDto>();
     });
   }
-
   public async Task<Result<TenantSettingResponseDto?>> GetTenantSetting(string settingName)
   {
     return await TryGetNullableResponse(async () =>
@@ -455,7 +416,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
     });
   }
-
   public async Task<Result<UserPreferenceResponseDto?>> GetUserPreference(string preferenceName)
   {
     return await TryGetNullableResponse(async () =>
@@ -468,14 +428,12 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
     });
   }
-
   public async Task<Result<TagResponseDto[]>> GetUserTags(Guid userId, bool includeLinkedIds = false)
   {
     return await TryCallApi(async () =>
       await _client.GetFromJsonAsync<TagResponseDto[]>(
         $"{HttpConstants.UserTagsEndpoint}/{userId}"));
   }
-
   public async Task<Result> LogOut()
   {
     return await TryCallApi(async () =>
@@ -484,7 +442,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -493,7 +450,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> RemoveUserRole(Guid userId, Guid roleId)
   {
     return await TryCallApi(async () =>
@@ -502,7 +458,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result> RemoveUserTag(Guid userId, Guid tagId)
   {
     return await TryCallApi(async () =>
@@ -511,7 +466,6 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-
   public async Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName)
   {
     return await TryCallApi(async () =>
@@ -522,7 +476,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<TagResponseDto>();
     });
   }
-
   public async Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request)
   {
     return await TryCallApi(async () =>
@@ -532,7 +485,10 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>();
     });
   }
-
+  public async Task<Result> SendTestEmail()
+  {
+    return await TryCallApi(() => _client.PostAsync(HttpConstants.TestEmailEndpoint, null));
+  }
   public async Task<Result<TenantSettingResponseDto>> SetTenantSetting(string settingName, string settingValue)
   {
     return await TryCallApi(async () =>
@@ -543,7 +499,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>();
     });
   }
-
   public async Task<Result<UserPreferenceResponseDto>> SetUserPreference(string preferenceName, string preferenceValue)
   {
     return await TryCallApi(async () =>
@@ -554,7 +509,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>();
     });
   }
-
   public async Task<Result<PersonalAccessTokenDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request)
   {
     return await TryCallApi(async () =>
@@ -564,7 +518,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>();
     });
   }
-
   public async Task<Result<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request)
   {
     return await TryCallApi(async () =>
@@ -574,7 +527,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>();
     });
   }
-
   public async Task<Result<ValidateFilePathResponseDto>> ValidateFilePath(Guid deviceId, string directoryPath, string fileName)
   {
     return await TryCallApi(async () =>
@@ -585,11 +537,6 @@ public class ControlrApi(
       return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ??
         new ValidateFilePathResponseDto(false, "Failed to deserialize response");
     });
-  }
-
-  public async Task<Result> SendTestEmail()
-  {
-    return await TryCallApi(() => _client.PostAsync(HttpConstants.TestEmailEndpoint, null));
   }
 
   private static async Task<string> ExtractErrorMessage(HttpResponseMessage response)
@@ -627,7 +574,6 @@ public class ControlrApi(
       return $"{(int)response.StatusCode} {response.ReasonPhrase}";
     }
   }
-
   private static bool TryGetProblemDetail(string json, out string message)
   {
     try
@@ -730,8 +676,6 @@ public class ControlrApi(
         .Log(_logger);
     }
   }
-
-
   private async Task<Result> TryCallApi(Func<Task> func)
   {
     try
@@ -758,7 +702,6 @@ public class ControlrApi(
         .Log(_logger);
     }
   }
-
   private async Task<Result<T>> TryCallApi<T>(Func<Task<T?>> func)
   {
     try
@@ -781,7 +724,6 @@ public class ControlrApi(
         .Log(_logger);
     }
   }
-
   private async Task<Result<T>> TryCallApi<T>(Func<Task<Result<T>>> func)
   {
     try
@@ -801,7 +743,6 @@ public class ControlrApi(
         .Log(_logger);
     }
   }
-
   private async Task<Result<T?>> TryGetNullableResponse<T>(Func<Task<T?>> func)
   {
     try

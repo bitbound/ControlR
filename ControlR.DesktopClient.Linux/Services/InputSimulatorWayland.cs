@@ -25,15 +25,26 @@ public class InputSimulatorWayland(
   IWaylandPortalAccessor portalAccessor,
   ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
+  private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
   private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
-  private readonly SemaphoreSlim _initLock = new(1, 1);
+
+  private bool _disposed;
+  private bool _isInitialized;
   private XdgDesktopPortal? _portal;
   private string? _sessionHandle;
   private uint _streamNodeId;
-  private bool _isInitialized;
-  private bool _disposed;
 
+  public void Dispose()
+  {
+    if (_disposed)
+    {
+      return;
+    }
+
+    _initLock?.Dispose();
+    _disposed = true;
+  }
   public async Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (!await EnsureInitializedAsync())
@@ -71,7 +82,6 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating key event on Wayland: {Code}", code);
     }
   }
-
   public async Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
     if (!await EnsureInitializedAsync())
@@ -93,7 +103,6 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating mouse button event on Wayland");
     }
   }
-
   public async Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
     if (!await EnsureInitializedAsync())
@@ -131,14 +140,12 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating pointer motion on Wayland");
     }
   }
-
   public Task ResetKeyboardState()
   {
     // Not applicable for Wayland RemoteDesktop portal
     _logger.LogDebug("Keyboard state reset not applicable on Wayland");
     return Task.CompletedTask;
   }
-
   public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
     if (!await EnsureInitializedAsync())
@@ -171,12 +178,10 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating scroll wheel on Wayland");
     }
   }
-
   public Task SetBlockInput(bool isBlocked)
   {
     throw new NotImplementedException("Input blocking is not supported on Wayland");
   }
-
   public async Task TypeText(string text)
   {
     if (!await EnsureInitializedAsync())
@@ -265,17 +270,6 @@ public class InputSimulatorWayland(
       '\t' => (15, false),
       _ => (-1, false)
     };
-  }
-
-  public void Dispose()
-  {
-    if (_disposed)
-    {
-      return;
-    }
-
-    _initLock?.Dispose();
-    _disposed = true;
   }
 
   private async Task<bool> EnsureInitializedAsync()

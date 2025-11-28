@@ -19,64 +19,47 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   private bool _isAuthenticated;
   private bool _isDarkMode = true;
   private string? _loadingText = "Loading";
-  private ThemeMode _themeMode = ThemeMode.Auto;
   private PersistingComponentStateSubscription _persistingSubscription;
-
-  [Inject]
-  public required AuthenticationStateProvider AuthState { get; init; }
-
-  [Inject]
-  public required IChatState ChatState { get; init; }
-
-  [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-
-  [Inject]
-  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
-
-  [Inject]
-  public required IDeviceState DeviceAccessState { get; init; }
-
-  [Inject]
-  public required IHubConnector HubConnector { get; init; }
-
-  [Inject]
-  public required IJsInterop JsInterop { get; init; }
-
-  [Inject]
-  public required ILogger<DeviceAccessLayout> Logger { get; init; }
-
-  [Inject]
-  public required IMessenger Messenger { get; init; }
-
-  [Inject]
-  public required NavigationManager NavManager { get; init; }
-
-  [Inject]
-  public required ISnackbar Snackbar { get; init; }
-
-  [Inject]
-  public required ITerminalState TerminalState { get; init; }
-
-  [Inject]
-  public required IUserSettingsProvider UserSettings { get; init; }
+  private ThemeMode _themeMode = ThemeMode.Auto;
 
   [Inject]
   public required PersistentComponentState ApplicationState { get; init; }
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
+  [Inject]
+  public required IChatState ChatState { get; init; }
+  [Inject]
+  public required IControlrApi ControlrApi { get; init; }
+  [Inject]
+  public required IDeviceState DeviceAccessState { get; init; }
+  [Inject]
+  public required IHubConnector HubConnector { get; init; }
+  [Inject]
+  public required IJsInterop JsInterop { get; init; }
+  [Inject]
+  public required ILogger<DeviceAccessLayout> Logger { get; init; }
+  [Inject]
+  public required IMessenger Messenger { get; init; }
+  [Inject]
+  public required NavigationManager NavManager { get; init; }
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+  [Inject]
+  public required ITerminalState TerminalState { get; init; }
+  [Inject]
+  public required IUserSettingsProvider UserSettings { get; init; }
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   private Palette CurrentPalette => _isDarkMode
     ? CustomTheme.PaletteDark
     : CustomTheme.PaletteLight;
-
   private MudTheme CustomTheme =>
     _customTheme ??= new MudTheme
     {
       PaletteDark = Theme.DarkPalette,
       PaletteLight = Theme.LightPalette
     };
-
-  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
-
   private bool IsNavMenuDisabled
   {
     get
@@ -99,6 +82,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       return !DeviceAccessState.CurrentDevice.IsOnline;
     }
   }
+  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
 
   public async ValueTask DisposeAsync()
   {
@@ -241,7 +225,22 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Logger.LogError(ex, "Error fetching device details for {DeviceId}", _deviceId);
     }
   }
-
+  private async Task<bool> GetSystemDarkMode()
+  {
+    try
+    {
+      if (RendererInfo.IsInteractive)
+      {
+        return await JsInterop.GetSystemDarkMode();
+      }
+      return true; // Default to dark during prerendering
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
+      return true;
+    }
+  }
   private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
   {
     var response = message.Dto;
@@ -269,7 +268,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Snackbar.Add("New chat message received", Severity.Info);
     }
   }
-
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     if (DeviceAccessState.CurrentDeviceMaybe is null)
@@ -290,29 +288,35 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       await InvokeAsync(StateHasChanged);
     }
   }
-
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     _hubConnectionState = message.NewState;
     await InvokeAsync(StateHasChanged);
   }
-
+  private async Task HandleThemeChanged(ThemeMode mode)
+  {
+    _themeMode = mode;
+    await UpdateIsDarkMode();
+    StateHasChanged();
+  }
+  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  {
+    await HandleThemeChanged(message.ThemeMode);
+  }
   private Task HandleToastMessage(object subscriber, ToastMessage toast)
   {
     Snackbar.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
-
-  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  private Task PersistThemeState()
   {
-    await HandleThemeChanged(message.ThemeMode);
+    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
+    return Task.CompletedTask;
   }
-
   private void ToggleNavDrawer()
   {
     _drawerOpen = !_drawerOpen;
   }
-
   private async Task TryDisposeChat()
   {
     try
@@ -333,7 +337,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Logger.LogError(ex, "Error disposing chat session.");
     }
   }
-
   private async Task TryDisposeTerminal()
   {
     try
@@ -351,7 +354,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Logger.LogError(ex, "Error disposing terminal session.");
     }
   }
-
   private async Task UpdateIsDarkMode()
   {
     _isDarkMode = _themeMode switch
@@ -361,35 +363,5 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       ThemeMode.Auto => await GetSystemDarkMode(),
       _ => true
     };
-  }
-
-  private async Task<bool> GetSystemDarkMode()
-  {
-    try
-    {
-      if (RendererInfo.IsInteractive)
-      {
-        return await JsInterop.GetSystemDarkMode();
-      }
-      return true; // Default to dark during prerendering
-    }
-    catch (Exception ex)
-    {
-      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
-      return true;
-    }
-  }
-
-  private async Task HandleThemeChanged(ThemeMode mode)
-  {
-    _themeMode = mode;
-    await UpdateIsDarkMode();
-    StateHasChanged();
-  }
-
-  private Task PersistThemeState()
-  {
-    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
-    return Task.CompletedTask;
   }
 }

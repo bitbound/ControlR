@@ -24,10 +24,10 @@ internal class DisplayManagerWayland(
   IWaylandPortalAccessor portalService) : IDisplayManager
 {
   private readonly Lock _displayLock = new();
+  private readonly Dictionary<string, uint> _displayNodeIds = new(); // Maps DeviceName to NodeId
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerWayland> _logger = logger;
   private readonly IWaylandPortalAccessor _portalService = portalService;
-  private readonly Dictionary<string, uint> _displayNodeIds = new(); // Maps DeviceName to NodeId
 
   public Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {
@@ -42,7 +42,6 @@ internal class DisplayManagerWayland(
 
     return Task.FromResult(new Point(absoluteX, absoluteY));
   }
-
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
     lock (_displayLock)
@@ -56,7 +55,6 @@ internal class DisplayManagerWayland(
       return Task.FromResult(displayDtos);
     }
   }
-
   public DisplayInfo? GetPrimaryDisplay()
   {
     lock (_displayLock)
@@ -66,7 +64,6 @@ internal class DisplayManagerWayland(
         ?? _displays.Values.FirstOrDefault();
     }
   }
-
   public Rectangle GetVirtualScreenBounds()
   {
     try
@@ -93,7 +90,6 @@ internal class DisplayManagerWayland(
       return new Rectangle(0, 0, 1920, 1080);
     }
   }
-
   public Task ReloadDisplays()
   {
     lock (_displayLock)
@@ -102,7 +98,6 @@ internal class DisplayManagerWayland(
     }
     return Task.CompletedTask;
   }
-
   public bool TryFindDisplay(string deviceName, [NotNullWhen(true)] out DisplayInfo? display)
   {
     lock (_displayLock)
@@ -111,7 +106,6 @@ internal class DisplayManagerWayland(
       return _displays.TryGetValue(deviceName, out display);
     }
   }
-
   /// <summary>
   /// Gets the PipeWire NodeId for a given display device name.
   /// This is useful for mapping displays to their corresponding PipeWire streams.
@@ -132,7 +126,6 @@ internal class DisplayManagerWayland(
       ReloadDisplaysImpl();
     }
   }
-
   private void ReloadDisplaysImpl()
   {
     try

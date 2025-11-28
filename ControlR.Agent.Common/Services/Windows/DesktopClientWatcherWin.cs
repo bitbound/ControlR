@@ -37,8 +37,8 @@ internal class DesktopClientWatcherWin(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWaiter _waiter = waiter;
   private readonly IWin32Interop _win32Interop = win32Interop;
-  private int _launchFailCount;
 
+  private int _launchFailCount;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -95,6 +95,90 @@ internal class DesktopClientWatcherWin(
     }
   }
 
+  // For debugging.
+  private static Result<string> GetSolutionDir(string currentDir)
+  {
+    var dirInfo = new DirectoryInfo(currentDir);
+    if (!dirInfo.Exists)
+    {
+      return Result.Fail<string>("Not found.");
+    }
+
+    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.slnx"))
+    {
+      return Result.Ok(currentDir);
+    }
+
+    if (dirInfo.Parent is not null)
+    {
+      return GetSolutionDir(dirInfo.Parent.FullName);
+    }
+
+    return Result.Fail<string>("Not found.");
+  }
+
+  // Kills all desktop client processes, deletes the archive, and deletes the folder.
+  private async Task DeleteDesktopClient()
+  {
+    try
+    {
+      if (_environment.IsDebug)
+      {
+        _logger.LogDebug("Skipping desktop client deletion because we're in Debug mode.");
+        return;
+      }
+
+      var processName = Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName);
+      var processes = _processManager.GetProcessesByName(processName);
+      foreach (var process in processes)
+      {
+        try
+        {
+          process.KillAndDispose();
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Failed to kill desktop client process {ProcessId}.", process.Id);
+        }
+      }
+
+      var startupDir = _environment.StartupDirectory;
+      var desktopDir = Path.Combine(startupDir, "DesktopClient");
+      var zipPath = Path.Combine(startupDir, AppConstants.DesktopClientZipFileName);
+
+      if (_fileSystem.FileExists(zipPath))
+      {
+        try
+        {
+          _fileSystem.DeleteFile(zipPath);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Failed to delete desktop client archive: {ZipPath}", zipPath);
+        }
+      }
+
+      if (_fileSystem.DirectoryExists(desktopDir))
+      {
+        try
+        {
+          _fileSystem.DeleteDirectory(desktopDir, true);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Failed to delete desktop client directory: {DesktopDir}", desktopDir);
+        }
+      }
+
+      _logger.LogInformation("Desktop client removed and will be reinstalled.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while deleting desktop client files.");
+    }
+
+    await Task.CompletedTask;
+  }
   private async Task DisposeDuplicateClients(DesktopSession[] activeClients, CancellationToken cancellationToken)
   {
     try
@@ -166,93 +250,6 @@ internal class DesktopClientWatcherWin(
       _logger.LogError(ex, "Error while disposing duplicate clients.");
     }
   }
-
-  // For debugging.
-  private static Result<string> GetSolutionDir(string currentDir)
-  {
-    var dirInfo = new DirectoryInfo(currentDir);
-    if (!dirInfo.Exists)
-    {
-      return Result.Fail<string>("Not found.");
-    }
-
-    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.slnx"))
-    {
-      return Result.Ok(currentDir);
-    }
-
-    if (dirInfo.Parent is not null)
-    {
-      return GetSolutionDir(dirInfo.Parent.FullName);
-    }
-
-    return Result.Fail<string>("Not found.");
-  }
-
-
-  // Kills all desktop client processes, deletes the archive, and deletes the folder.
-  private async Task DeleteDesktopClient()
-  {
-    try
-    {
-      if (_environment.IsDebug)
-      {
-        _logger.LogDebug("Skipping desktop client deletion because we're in Debug mode.");
-        return;
-      }
-
-      var processName = Path.GetFileNameWithoutExtension(AppConstants.DesktopClientFileName);
-      var processes = _processManager.GetProcessesByName(processName);
-      foreach (var process in processes)
-      {
-        try
-        {
-          process.KillAndDispose();
-        }
-        catch (Exception ex)
-        {
-          _logger.LogWarning(ex, "Failed to kill desktop client process {ProcessId}.", process.Id);
-        }
-      }
-
-      var startupDir = _environment.StartupDirectory;
-      var desktopDir = Path.Combine(startupDir, "DesktopClient");
-      var zipPath = Path.Combine(startupDir, AppConstants.DesktopClientZipFileName);
-
-      if (_fileSystem.FileExists(zipPath))
-      {
-        try
-        {
-          _fileSystem.DeleteFile(zipPath);
-        }
-        catch (Exception ex)
-        {
-          _logger.LogWarning(ex, "Failed to delete desktop client archive: {ZipPath}", zipPath);
-        }
-      }
-
-      if (_fileSystem.DirectoryExists(desktopDir))
-      {
-        try
-        {
-          _fileSystem.DeleteDirectory(desktopDir, true);
-        }
-        catch (Exception ex)
-        {
-          _logger.LogWarning(ex, "Failed to delete desktop client directory: {DesktopDir}", desktopDir);
-        }
-      }
-
-      _logger.LogInformation("Desktop client removed and will be reinstalled.");
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while deleting desktop client files.");
-    }
-
-    await Task.CompletedTask;
-  }
-
   private async Task<bool> LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
   {
     try
@@ -293,7 +290,6 @@ internal class DesktopClientWatcherWin(
       return false;
     }
   }
-
   private async Task<bool> StartDebugSession()
   {
     var solutionDirResult = GetSolutionDir(Environment.CurrentDirectory);

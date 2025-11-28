@@ -43,7 +43,6 @@ internal class DesktopSessionProviderMac(
 
     return [.. uiSessions];
   }
-
   public async Task<string[]> GetLoggedInUsers()
   {
     var sessions = await GetActiveUiSessions();
@@ -66,7 +65,6 @@ internal class DesktopSessionProviderMac(
     // Make sure it's positive and in a reasonable range
     return Math.Abs(hash % 9000) + 1000; // Range: 1000-9999
   }
-
 
   private async Task AddVncSessions(List<DesktopSession> sessions)
   {
@@ -114,7 +112,27 @@ internal class DesktopSessionProviderMac(
       _logger.LogDebug(ex, "Error detecting VNC sessions");
     }
   }
+  private async Task<bool> CheckPermissionsViaIpc(IpcServerRecord serverInfo)
+  {
+    try
+    {
+      var ipcDto = new CheckOsPermissionsIpcDto(serverInfo.Process.Id);
+      var ipcResult = await serverInfo.Server.Invoke<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(ipcDto, timeoutMs: 3000);
 
+      if (ipcResult.IsSuccess && ipcResult.Value is not null)
+      {
+        return ipcResult.Value.ArePermissionsGranted;
+      }
+
+      _logger.LogWarning("Failed to get permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error checking permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
+      return false;
+    }
+  }
   private async Task<DesktopSession[]> GetActiveUiSessions()
   {
     var sessions = new List<DesktopSession>();
@@ -179,7 +197,6 @@ internal class DesktopSessionProviderMac(
 
     return [.. sessions];
   }
-
   private async Task<Dictionary<string, string>> GetLoggedInUserMap()
   {
     var userMap = new Dictionary<string, string>(); // uid -> username
@@ -218,7 +235,6 @@ internal class DesktopSessionProviderMac(
 
     return userMap;
   }
-
   private async Task<Result<string>> TryGetUsernameForProcess(IProcess process,
     Dictionary<string, string> loggedInUsers)
   {
@@ -248,27 +264,5 @@ internal class DesktopSessionProviderMac(
     }
 
     return Result.Fail<string>("Failed to get username");
-  }
-
-  private async Task<bool> CheckPermissionsViaIpc(IpcServerRecord serverInfo)
-  {
-    try
-    {
-      var ipcDto = new CheckOsPermissionsIpcDto(serverInfo.Process.Id);
-      var ipcResult = await serverInfo.Server.Invoke<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(ipcDto, timeoutMs: 3000);
-
-      if (ipcResult.IsSuccess && ipcResult.Value is not null)
-      {
-        return ipcResult.Value.ArePermissionsGranted;
-      }
-
-      _logger.LogWarning("Failed to get permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
-      return false;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error checking permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
-      return false;
-    }
   }
 }

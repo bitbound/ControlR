@@ -22,33 +22,29 @@ internal class NavigationProvider(
   private readonly IMainWindowViewModel _mainWindowViewModel = mainWindowViewModel;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-  public void ShowMainWindow()
-  {
-    _mainWindowProvider.MainWindow.Show();
-  }
-
-  public async Task ShowMainWindowAndNavigateTo<TViewModel>() where TViewModel : IViewModelBase
-  {
-    ShowMainWindow();
-    await NavigateTo<TViewModel>();
-  }
-
-  public async Task ShowMainWindowAndNavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase
-  {
-    ShowMainWindow();
-    await NavigateTo(viewModel);
-  }
-
   public async Task NavigateTo<TViewModel>() where TViewModel : IViewModelBase
   {
     _mainWindowViewModel.CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
     await _mainWindowViewModel.CurrentViewModel.Initialize();
   }
-
   public async Task NavigateTo<TViewModel>(TViewModel viewModel)
     where TViewModel : IViewModelBase
   {
     _mainWindowViewModel.CurrentViewModel = viewModel;
     await _mainWindowViewModel.CurrentViewModel.Initialize();
+  }
+  public void ShowMainWindow()
+  {
+    _mainWindowProvider.MainWindow.Show();
+  }
+  public async Task ShowMainWindowAndNavigateTo<TViewModel>() where TViewModel : IViewModelBase
+  {
+    ShowMainWindow();
+    await NavigateTo<TViewModel>();
+  }
+  public async Task ShowMainWindowAndNavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase
+  {
+    ShowMainWindow();
+    await NavigateTo(viewModel);
   }
 }

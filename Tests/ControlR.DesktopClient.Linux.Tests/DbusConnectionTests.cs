@@ -24,70 +24,6 @@ public class DbusConnectionTests
   }
 
   [WaylandOnlyFact]
-  public async Task CanConnectToSessionBus()
-  {
-    var address = Address.Session;
-    _output.WriteLine($"Session bus address: {address}");
-    Assert.False(string.IsNullOrEmpty(address));
-
-    var connection = new Connection(address);
-    await connection.ConnectAsync();
-
-    _output.WriteLine($"Connected as: {connection.UniqueName}");
-    Assert.NotNull(connection.UniqueName);
-    Assert.StartsWith(":", connection.UniqueName);
-
-    connection.Dispose();
-  }
-
-  [WaylandOnlyFact]
-  public async Task CanCallPortalPropertyGet()
-  {
-    var address = Address.Session!;
-    var connection = new Connection(address);
-    await connection.ConnectAsync();
-
-    _output.WriteLine($"Connected as: {connection.UniqueName}");
-
-    // Try to get a property from the portal (this shouldn't require any user interaction)
-    MessageBuffer message;
-    using (var writer = connection.GetMessageWriter())
-    {
-      writer.WriteMethodCallHeader(
-        destination: "org.freedesktop.portal.Desktop",
-        path: "/org/freedesktop/portal/desktop",
-        @interface: "org.freedesktop.DBus.Properties",
-        signature: "ss",
-        member: "Get");
-      writer.WriteString("org.freedesktop.portal.ScreenCast");
-      writer.WriteString("version");
-      message = writer.CreateMessage();
-    }
-
-    try
-    {
-      var result = await connection.CallMethodAsync(message, (Message m, object? s) =>
-      {
-        var r = m.GetBodyReader();
-        var variant = r.ReadVariantValue();
-        return variant.GetUInt32();
-      });
-
-      _output.WriteLine($"ScreenCast portal version: {result}");
-      Assert.True(result > 0);
-    }
-    catch (Exception ex)
-    {
-      _output.WriteLine($"Error calling Get property: {ex.GetType().Name}: {ex.Message}");
-      throw;
-    }
-    finally
-    {
-      connection.Dispose();
-    }
-  }
-
-  [WaylandOnlyFact]
   public async Task CanCallCreateSessionDirectly()
   {
     var address = Address.Session!;
@@ -142,5 +78,67 @@ public class DbusConnectionTests
     {
       connection.Dispose();
     }
+  }
+  [WaylandOnlyFact]
+  public async Task CanCallPortalPropertyGet()
+  {
+    var address = Address.Session!;
+    var connection = new Connection(address);
+    await connection.ConnectAsync();
+
+    _output.WriteLine($"Connected as: {connection.UniqueName}");
+
+    // Try to get a property from the portal (this shouldn't require any user interaction)
+    MessageBuffer message;
+    using (var writer = connection.GetMessageWriter())
+    {
+      writer.WriteMethodCallHeader(
+        destination: "org.freedesktop.portal.Desktop",
+        path: "/org/freedesktop/portal/desktop",
+        @interface: "org.freedesktop.DBus.Properties",
+        signature: "ss",
+        member: "Get");
+      writer.WriteString("org.freedesktop.portal.ScreenCast");
+      writer.WriteString("version");
+      message = writer.CreateMessage();
+    }
+
+    try
+    {
+      var result = await connection.CallMethodAsync(message, (Message m, object? s) =>
+      {
+        var r = m.GetBodyReader();
+        var variant = r.ReadVariantValue();
+        return variant.GetUInt32();
+      });
+
+      _output.WriteLine($"ScreenCast portal version: {result}");
+      Assert.True(result > 0);
+    }
+    catch (Exception ex)
+    {
+      _output.WriteLine($"Error calling Get property: {ex.GetType().Name}: {ex.Message}");
+      throw;
+    }
+    finally
+    {
+      connection.Dispose();
+    }
+  }
+  [WaylandOnlyFact]
+  public async Task CanConnectToSessionBus()
+  {
+    var address = Address.Session;
+    _output.WriteLine($"Session bus address: {address}");
+    Assert.False(string.IsNullOrEmpty(address));
+
+    var connection = new Connection(address);
+    await connection.ConnectAsync();
+
+    _output.WriteLine($"Connected as: {connection.UniqueName}");
+    Assert.NotNull(connection.UniqueName);
+    Assert.StartsWith(":", connection.UniqueName);
+
+    connection.Dispose();
   }
 }

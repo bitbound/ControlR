@@ -12,9 +12,10 @@ internal class ServiceControlLinux(
     ILogger<ServiceControlLinux> logger) : IServiceControl
 {
     private static readonly TimeSpan _serviceStatusTimeout = TimeSpan.FromSeconds(10);
+
     private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
-    private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
     private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
+    private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
     private readonly ILogger<ServiceControlLinux> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
 
@@ -42,7 +43,6 @@ internal class ServiceControlLinux(
             }
         }
     }
-
     public async Task StartDesktopClientService(bool throwOnFailure)
     {
         // Check if running on headless server
@@ -87,7 +87,6 @@ internal class ServiceControlLinux(
             }
         }
     }
-
     public async Task StopAgentService(bool throwOnFailure)
     {
         try
@@ -112,7 +111,6 @@ internal class ServiceControlLinux(
             }
         }
     }
-
     public async Task StopDesktopClientService(bool throwOnFailure)
     {
         // Check if running on headless server
@@ -167,7 +165,6 @@ internal class ServiceControlLinux(
 
         return $"controlr.agent-{_instanceOptions.Value.InstanceId}.service";
     }
-
     private string GetDesktopClientServiceName()
     {
         if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -177,7 +174,6 @@ internal class ServiceControlLinux(
 
         return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
     }
-
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try
@@ -204,7 +200,6 @@ internal class ServiceControlLinux(
             }
         }
     }
-
     private async Task StopDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try

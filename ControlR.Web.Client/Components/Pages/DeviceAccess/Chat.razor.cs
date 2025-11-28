@@ -18,24 +18,18 @@ public partial class Chat : ComponentBase, IDisposable
 
   [Inject]
   public required IChatState ChatState { get; init; }
-
-  [SupplyParameterFromQuery]
-  public required Guid DeviceId { get; init; }
-
-  [Inject]
-  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
-
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
-
+  [SupplyParameterFromQuery]
+  public required Guid DeviceId { get; init; }
   [Inject]
   public required IJsInterop JsInterop { get; init; }
-
   [Inject]
   public required ILogger<Chat> Logger { get; init; }
-
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   private string AlertIcon =>
     _alertSeverity switch
@@ -46,15 +40,12 @@ public partial class Chat : ComponentBase, IDisposable
       Severity.Error => Icons.Material.Outlined.Error,
       _ => Icons.Material.Outlined.Info
     };
-
   private string ChatInputHelperText => ChatState.EnableMultiline
     ? "Type a message and press Ctrl+Enter to send, or Enter for new line"
     : "Type a message and press Enter to send";
-
   private int ChatInputLineCount => ChatState.EnableMultiline
     ? 6
     : 1;
-
   private ChatPageState CurrentState
   {
     get
@@ -87,7 +78,6 @@ public partial class Chat : ComponentBase, IDisposable
         : ChatPageState.Unknown;
     }
   }
-
   private string OuterDivClass
   {
     get
@@ -118,7 +108,6 @@ public partial class Chat : ComponentBase, IDisposable
       await JsInterop.ScrollToEnd(_chatMessagesContainer);
     }
   }
-
   protected override async Task OnInitializedAsync()
   {
     if (!DeviceAccessState.IsDeviceLoaded)
@@ -165,14 +154,12 @@ public partial class Chat : ComponentBase, IDisposable
     ChatState.Clear();
     await InvokeAsync(StateHasChanged);
   }
-
   private async Task HandleChatStateChanged()
   {
     // Update the UI
     await InvokeAsync(StateHasChanged);
     await JsInterop.ScrollToEnd(_chatMessagesContainer);
   }
-
   private async Task HandleInputKeyDown(KeyboardEventArgs args)
   {
     if (args.Key == "Enter" && !args.ShiftKey)
@@ -187,7 +174,6 @@ public partial class Chat : ComponentBase, IDisposable
       }
     }
   }
-
   private async Task LoadSystemSessions()
   {
     try
@@ -206,19 +192,16 @@ public partial class Chat : ComponentBase, IDisposable
       await InvokeAsync(StateHasChanged);
     }
   }
-
   private async Task RefreshSystemSessions()
   {
     await LoadSystemSessions();
   }
-
   private async Task Reload()
   {
     _alertMessage = null;
     _loadingMessage = null;
     await LoadSystemSessions();
   }
-
   private async Task SendMessage()
   {
     if (string.IsNullOrWhiteSpace(ChatState.NewMessage) || ChatState.CurrentSession is null)
@@ -270,7 +253,6 @@ public partial class Chat : ComponentBase, IDisposable
       Snackbar.Add("Error sending message", Severity.Error);
     }
   }
-
   private async Task StartChatSession(DesktopSession session)
   {
     try

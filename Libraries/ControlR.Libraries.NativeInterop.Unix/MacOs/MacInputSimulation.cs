@@ -8,7 +8,6 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 public static class MacInputSimulation
 {
   public const uint kCGAnnotatedSessionEventTap = 2;
-
   // Modifier flags
   public const ulong kCGEventFlagMaskAlphaShift = 0x00010000;
   public const ulong kCGEventFlagMaskAlternate = 0x00080000;
@@ -21,10 +20,6 @@ public static class MacInputSimulation
   public const ulong kCGEventFlagMaskShift = 0x00020000;
   public const uint kCGEventKeyDown = 10;
   public const uint kCGEventKeyUp = 11;
-
-  // Event source state constants
-  public const int kCGEventSourceStateHIDSystemState = 1;
-
   // Event types
   public const uint kCGEventLeftMouseDown = 1;
   public const uint kCGEventLeftMouseDragged = 6;
@@ -37,20 +32,18 @@ public static class MacInputSimulation
   public const uint kCGEventRightMouseDragged = 7;
   public const uint kCGEventRightMouseUp = 4;
   public const uint kCGEventScrollWheel = 22;
-
+  // Event source state constants
+  public const int kCGEventSourceStateHIDSystemState = 1;
   // Constants for event taps
   public const uint kCGHIDEventTap = 0;
-
   // Event field constants
   public const uint kCGKeyboardEventKeycode = 9;
   public const uint kCGMouseButtonCenter = 2;
-
   // Mouse buttons
   public const uint kCGMouseButtonLeft = 0;
   public const uint kCGMouseButtonRight = 1;
   public const uint kCGMouseEventClickState = 1;
   public const uint kCGScrollEventUnitLine = 1;
-
   // Scroll wheel units
   public const uint kCGScrollEventUnitPixel = 0;
   public const uint kCGScrollWheelEventDeltaAxis1 = 11;
@@ -66,7 +59,6 @@ public static class MacInputSimulation
   public const ushort kVK_ANSI_7 = 0x1A;
   public const ushort kVK_ANSI_8 = 0x1C;
   public const ushort kVK_ANSI_9 = 0x19;
-
   // Key codes (Virtual key codes)
   public const ushort kVK_ANSI_A = 0x00;
   public const ushort kVK_ANSI_B = 0x0B;
@@ -159,14 +151,13 @@ public static class MacInputSimulation
   public const ushort kVK_Option = 0x3A;
   public const ushort kVK_PageDown = 0x79;
   public const ushort kVK_PageUp = 0x74;
-
   // Function keys
   public const ushort kVK_Return = 0x24;
   public const ushort kVK_RightArrow = 0x7C;
+  public const ushort kVK_RightCommand = 0x36; // Added: right Command key virtual-key code
   public const ushort kVK_RightControl = 0x3E;
   public const ushort kVK_RightOption = 0x3D;
   public const ushort kVK_RightShift = 0x3C;
-  public const ushort kVK_RightCommand = 0x36; // Added: right Command key virtual-key code
   public const ushort kVK_Shift = 0x38;
   public const ushort kVK_Space = 0x31;
   public const ushort kVK_Tab = 0x30;
@@ -179,45 +170,32 @@ public static class MacInputSimulation
   // Memory management
   [DllImport(CoreGraphicsFramework, EntryPoint = "CFRelease")]
   public static extern void CFRelease(nint cf);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGDisplayMoveCursorToPoint")]
   public static extern int CGDisplayMoveCursorToPoint(uint display, CGPoint point);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventCreateKeyboardEvent")]
   public static extern nint CGEventCreateKeyboardEvent(nint source, ushort virtualKey, bool keyDown);
-
   // Text input
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventCreateKeyboardEvent")]
   public static extern nint CGEventCreateKeyboardEventWithUnicode(nint source, ushort virtualKey, bool keyDown);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventCreateMouseEvent")]
   public static extern nint CGEventCreateMouseEvent(nint source, uint mouseType, CGPoint mouseCursorPosition, uint mouseButton);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventCreateScrollWheelEvent")]
   public static extern nint CGEventCreateScrollWheelEvent(nint source, uint units, uint wheelCount, int wheel1, int wheel2);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventKeyboardSetUnicodeString")]
   public static extern void CGEventKeyboardSetUnicodeString(nint @event, nint stringLength, char[] unicodeString);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventPost")]
   public static extern void CGEventPost(uint tap, nint @event);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventPostToPid")]
   public static extern void CGEventPostToPid(int pid, nint @event);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSetFlags")]
   public static extern void CGEventSetFlags(nint @event, ulong flags);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSetIntegerValueField")]
   public static extern void CGEventSetIntegerValueField(nint @event, uint field, long value);
-
   // CGEvent creation
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSourceCreate")]
   public static extern nint CGEventSourceCreate(uint stateID);
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGEventSourceKeyState")]
   public static extern bool CGEventSourceKeyState(int stateID, ushort virtualKey);
-
   // Mouse position
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGWarpMouseCursorPosition")]
   public static extern int CGWarpMouseCursorPosition(CGPoint newCursorPosition);

@@ -18,9 +18,9 @@ internal class WaylandPermissionProvider(
   ILogger<WaylandPermissionProvider> logger) : IWaylandPermissionProvider
 {
   private readonly IFileSystem _fileSystem = fileSystem;
-  private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
   private readonly ILogger<WaylandPermissionProvider> _logger = logger;
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
+  private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
 
   public async Task<bool> IsRemoteControlPermissionGranted()
   {
@@ -35,7 +35,6 @@ internal class WaylandPermissionProvider(
       return false;
     }
   }
-
   public async Task<bool> RequestRemoteControlPermission()
   {
     try

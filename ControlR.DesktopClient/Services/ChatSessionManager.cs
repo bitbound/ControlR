@@ -19,13 +19,13 @@ internal class ChatSessionManager(
   IToaster toaster,
   ILogger<ChatSessionManager> logger) : IChatSessionManager
 {
-  private readonly ConcurrentDictionary<Guid, ChatSession> _sessions = new();
-  private readonly ConcurrentDictionary<Guid, ChatWindow> _windows = new();
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<ChatSessionManager> _logger = logger;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly ConcurrentDictionary<Guid, ChatSession> _sessions = new();
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
+  private readonly ConcurrentDictionary<Guid, ChatWindow> _windows = new();
 
   public Task AddMessage(Guid sessionId, ChatMessageIpcDto message)
   {
@@ -57,7 +57,6 @@ internal class ChatSessionManager(
 
     return Task.CompletedTask;
   }
-
   public Task CloseChatSession(Guid sessionId, bool notifyUser)
   {
     Dispatcher.UIThread.Invoke(async () =>
@@ -89,12 +88,10 @@ internal class ChatSessionManager(
 
     return Task.CompletedTask;
   }
-
   public bool IsSessionActive(Guid sessionId)
   {
     return _sessions.ContainsKey(sessionId);
   }
-
   public async Task<bool> SendResponse(Guid sessionId, string message)
   {
     if (!_sessions.TryGetValue(sessionId, out var session))
@@ -152,6 +149,14 @@ internal class ChatSessionManager(
     }
   }
 
+  private ChatWindow CreateWindowForSession(ChatSession session)
+  {
+    var window = _serviceProvider.GetRequiredService<ChatWindow>();
+    var viewModel = window.ViewModel;
+    viewModel.Session = session;
+
+    return window;
+  }
   private (ChatSession session, ChatWindow window) GetOrCreateSession(Guid sessionId, ChatMessageIpcDto message)
   {
     // Get or create the session data
@@ -197,14 +202,5 @@ internal class ChatSessionManager(
     }
 
     return (session, window);
-  }
-
-  private ChatWindow CreateWindowForSession(ChatSession session)
-  {
-    var window = _serviceProvider.GetRequiredService<ChatWindow>();
-    var viewModel = window.ViewModel;
-    viewModel.Session = session;
-
-    return window;
   }
 }

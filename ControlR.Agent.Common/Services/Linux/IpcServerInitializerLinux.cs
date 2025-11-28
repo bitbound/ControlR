@@ -22,14 +22,13 @@ internal class IpcServerInitializerLinux(
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
 
-  protected override string GetPipeName() => IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
-
   protected override async Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken)
   {
     var pipeServer = await IpcFactory.CreateServer(pipeName);
     SetPipePermissions(pipeName, pipeServer, cancellationToken).Forget();
     return pipeServer;
   }
+  protected override string GetPipeName() => IpcPipeNames.GetPipeName(_instanceOptions.Value.InstanceId);
 
   private async Task SetPipePermissions(string pipeName, IIpcServer pipeServer, CancellationToken cancellationToken)
   {

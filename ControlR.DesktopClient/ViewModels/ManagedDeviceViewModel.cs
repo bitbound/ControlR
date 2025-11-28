@@ -37,25 +37,19 @@ public partial class ManagedDeviceViewModel(
 
   [ObservableProperty]
   private string? _appVersion;
-
   [ObservableProperty]
   private bool _isAccessibilityPermissionGranted;
-
   [ObservableProperty]
   private bool _isScreenCapturePermissionGranted;
-
   [ObservableProperty]
   private bool _isWaylandPermissionGranted;
-
   [ObservableProperty]
   private string _themeIconKey = "arrow_sync_circle_regular";
-
   [ObservableProperty]
   private string _themeModeText = Localization.ThemeAuto;
 
-  public bool IsMacOs { get; } = OperatingSystem.IsMacOS();
-
   public bool IsLinuxWayland { get; private set; }
+  public bool IsMacOs { get; } = OperatingSystem.IsMacOS();
 
   public override async Task Initialize()
   {
@@ -65,7 +59,6 @@ public partial class ManagedDeviceViewModel(
     UpdateThemeModeText();
     _themeProvider.ThemeChanged += OnThemeChanged;
   }
-
   public async Task SetPermissionValues()
   {
 #if MAC_BUILD
@@ -89,30 +82,6 @@ public partial class ManagedDeviceViewModel(
     IsLinuxWayland = detector.IsWayland();
 #endif
   }
-
-  private void OnThemeChanged(object? sender, EventArgs e)
-  {
-    UpdateThemeModeText();
-  }
-
-  [RelayCommand]
-  private void OpenAccessibilitySettings()
-  {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenAccessibilityPreferences();
-#endif
-  }
-
-  [RelayCommand]
-  private void OpenScreenCaptureSettings()
-  {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenScreenRecordingPreferences();
-#endif
-  }
-
   [RelayCommand]
   private async Task GrantWaylandPermission()
   {
@@ -125,13 +94,31 @@ public partial class ManagedDeviceViewModel(
     }
 #endif
   }
-
+  private void OnThemeChanged(object? sender, EventArgs e)
+  {
+    UpdateThemeModeText();
+  }
+  [RelayCommand]
+  private void OpenAccessibilitySettings()
+  {
+#if MAC_BUILD
+    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+    macInterop.OpenAccessibilityPreferences();
+#endif
+  }
+  [RelayCommand]
+  private void OpenScreenCaptureSettings()
+  {
+#if MAC_BUILD
+    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+    macInterop.OpenScreenRecordingPreferences();
+#endif
+  }
   [RelayCommand]
   private void ToggleTheme()
   {
     _themeProvider.ToggleTheme();
   }
-
   private void UpdateThemeModeText()
   {
     (ThemeModeText, ThemeIconKey) = _themeProvider.CurrentThemeMode switch

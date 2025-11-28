@@ -14,8 +14,8 @@ public interface IDesktopCapturerFactory
 
 public class DesktopCapturerFactory(IServiceProvider serviceProvider, IOptions<StreamingSessionOptions> options) : IDesktopCapturerFactory
 {
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly IOptions<StreamingSessionOptions> _options = options;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
 
     public IDesktopCapturer Create()
     {

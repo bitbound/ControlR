@@ -11,9 +11,9 @@ internal class InputDesktopReporter(
   IWaiter waiter,
   ILogger<InputDesktopReporter> logger) : BackgroundService
 {
-  private readonly IWaiter _waiter = waiter;
   private readonly ILogger<InputDesktopReporter> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly IWaiter _waiter = waiter;
   private readonly IWin32Interop _win32Interop = win32Interop;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)

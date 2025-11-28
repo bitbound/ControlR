@@ -15,13 +15,10 @@ public static class Localization
   };
 
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
-
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings();
 
   public static string ADeviceAdministrator => GetString();
   public static string Accessibility => GetString();
-  public static string PermissionsMissingToastTitle => GetString();
-  public static string PermissionsMissingToastMessage => GetString();
   public static string AccessibilityPermissionDescription => GetString();
   public static string CancelText => GetString();
   public static string ChatSessionClosedToastMessage => GetString();
@@ -49,12 +46,14 @@ public static class Localization
   public static string Notifications => GetString();
   public static string OkText => GetString();
   public static string OpenSettings => GetString();
-  public static string RemoteControlSessionToastMessage => GetString();
-  public static string RemoteControlSessionToastTitle => GetString();
-  public static string RemoteControlRequestTitle => GetString();
-  public static string RemoteControlRequestMessage => GetString();
+  public static string PermissionsMissingToastMessage => GetString();
+  public static string PermissionsMissingToastTitle => GetString();
   public static string RemoteControlPermission => GetString();
   public static string RemoteControlPermissionDescription => GetString();
+  public static string RemoteControlRequestMessage => GetString();
+  public static string RemoteControlRequestTitle => GetString();
+  public static string RemoteControlSessionToastMessage => GetString();
+  public static string RemoteControlSessionToastTitle => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
   public static string ScreenCastPermission => GetString();
   public static string ScreenCastPermissionDescription => GetString();
@@ -96,7 +95,6 @@ public static class Localization
     return JsonSerializer.Deserialize<Dictionary<string, string>>(content, _jsonOptions)
            ?? throw new InvalidOperationException("Unable to deserialize localization file.");
   }
-
   private static string GetString([CallerMemberName] string key = "")
   {
     if (_localizationStrings.TryGetValue(key, out var value))

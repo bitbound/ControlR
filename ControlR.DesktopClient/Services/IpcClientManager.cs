@@ -32,8 +32,8 @@ public class IpcClientManager(
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
   private readonly TimeProvider _timeProvider = timeProvider;
-  private DateTimeOffset? _firstConnectionAttempt;
 
+  private DateTimeOffset? _firstConnectionAttempt;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -114,7 +114,6 @@ public class IpcClientManager(
       }
     }
   }
-
   private async void HandleChatMessage(ChatMessageIpcDto dto)
   {
     try
@@ -133,62 +132,6 @@ public class IpcClientManager(
       _logger.LogError(ex, "Error while handling chat message.");
     }
   }
-
-  private async void HandleCloseChatSession(CloseChatSessionIpcDto dto)
-  {
-    try
-    {
-      _logger.LogInformation(
-        "Handling close chat session request. Session ID: {SessionId}, Process ID: {ProcessId}",
-        dto.SessionId,
-        dto.TargetProcessId);
-
-      // Close the session through the chat session manager
-      await _chatSessionManager.CloseChatSession(dto.SessionId, true);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while handling close chat session request.");
-    }
-  }
-
-  private DesktopPreviewResponseIpcDto HandleDesktopPreviewRequest(DesktopPreviewRequestIpcDto dto)
-  {
-    try
-    {
-      _logger.LogInformation(
-        "Handling desktop preview request. Requester ID: {RequesterId}, Stream ID: {StreamId}, Process ID: {ProcessId}",
-        dto.RequesterId,
-        dto.StreamId,
-        dto.TargetProcessId);
-
-      // Capture preview (synchronous wait for async task)
-      var result = _desktopPreviewService.CapturePreview().GetAwaiter().GetResult();
-
-      if (!result.IsSuccess)
-      {
-        _logger.LogWarning("Failed to capture preview: {Error}", result.Reason);
-        return new DesktopPreviewResponseIpcDto([], false, result.Reason);
-      }
-
-      _logger.LogInformation(
-        "Desktop preview captured successfully. JPEG size: {Size} bytes",
-        result.Value.Length);
-
-      return new DesktopPreviewResponseIpcDto(result.Value, true);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while handling desktop preview request.");
-      return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
-    }
-  }
-
-  private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
-  {
-    _remoteControlHostManager.StartHost(dto).Forget();
-  }
-
   private CheckOsPermissionsResponseIpcDto HandleCheckOsPermissions(CheckOsPermissionsIpcDto dto)
   {
     try
@@ -236,7 +179,58 @@ public class IpcClientManager(
       return new CheckOsPermissionsResponseIpcDto(false);
     }
   }
+  private async void HandleCloseChatSession(CloseChatSessionIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling close chat session request. Session ID: {SessionId}, Process ID: {ProcessId}",
+        dto.SessionId,
+        dto.TargetProcessId);
 
+      // Close the session through the chat session manager
+      await _chatSessionManager.CloseChatSession(dto.SessionId, true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling close chat session request.");
+    }
+  }
+  private DesktopPreviewResponseIpcDto HandleDesktopPreviewRequest(DesktopPreviewRequestIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling desktop preview request. Requester ID: {RequesterId}, Stream ID: {StreamId}, Process ID: {ProcessId}",
+        dto.RequesterId,
+        dto.StreamId,
+        dto.TargetProcessId);
+
+      // Capture preview (synchronous wait for async task)
+      var result = _desktopPreviewService.CapturePreview().GetAwaiter().GetResult();
+
+      if (!result.IsSuccess)
+      {
+        _logger.LogWarning("Failed to capture preview: {Error}", result.Reason);
+        return new DesktopPreviewResponseIpcDto([], false, result.Reason);
+      }
+
+      _logger.LogInformation(
+        "Desktop preview captured successfully. JPEG size: {Size} bytes",
+        result.Value.Length);
+
+      return new DesktopPreviewResponseIpcDto(result.Value, true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling desktop preview request.");
+      return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
+    }
+  }
+  private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
+  {
+    _remoteControlHostManager.StartHost(dto).Forget();
+  }
   private async void HandleShutdownCommand(ShutdownCommandDto dto)
   {
     try

@@ -25,7 +25,6 @@ public class ScreenGrabberMac(
       return CaptureResult.Fail(ex);
     }
   }
-
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -41,13 +40,11 @@ public class ScreenGrabberMac(
       return CaptureResult.Fail(ex);
     }
   }
-
-  public Task Initialize(CancellationToken cancellationToken)
+  public Task Deinitialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
   }
-
-  public Task Deinitialize(CancellationToken cancellationToken)
+  public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
   }
@@ -101,7 +98,6 @@ public class ScreenGrabberMac(
       return CaptureResult.Fail(ex);
     }
   }
-
   private CaptureResult CaptureDisplayImpl(DisplayInfo display, bool captureCursor)
   {
     nint cgImageRef = nint.Zero;

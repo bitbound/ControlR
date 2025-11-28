@@ -18,8 +18,8 @@ public class DesktopPreviewProvider(
   ILogger<DesktopPreviewProvider> logger) : IDesktopPreviewProvider
 {
   private readonly SemaphoreSlim _captureLock = new(1, 1);
-  private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly ILogger<DesktopPreviewProvider> _logger = logger;
+  private readonly IScreenGrabber _screenGrabber = screenGrabber;
   private readonly TimeProvider _timeProvider = timeProvider;
 
   public async Task<Result<byte[]>> CapturePreview(int jpegQuality = 80)
@@ -54,7 +54,6 @@ public class DesktopPreviewProvider(
       await _screenGrabber.Deinitialize(cts.Token);
     }
   }
-
   public async Task<Result<byte[]>> CapturePreview(int width, int height, int jpegQuality = 80)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15), _timeProvider);

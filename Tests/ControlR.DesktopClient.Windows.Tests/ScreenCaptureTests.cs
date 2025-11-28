@@ -152,12 +152,12 @@ public class ScreenCaptureTests
 
     // Configure ffmpeg process
     // Input: raw BGRA video from stdin
-    // Output: WebM VP9 encoded video file
+    // Output: WebM VP9 encoded video to stdout (pipe:1), which this test will capture and write to a file
     // -y flag: overwrite output file without asking
     var ffmpegArgs = $"-y -f rawvideo -pixel_format bgra -video_size {frameWidth}x{frameHeight} " +
-                     $"-framerate {frameRate} -i pipe:0 -g {frameRate * 2} " +
-                     $"-vf \"format=yuv420p\" -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -row-mt 1 " +
-                     $"-f webm  \"{outputFile}\"";
+             $"-framerate {frameRate} -i pipe:0 -g {frameRate * 2} " +
+             $"-vf \"format=yuv420p\" -c:v libvpx-vp9 -deadline realtime -row-mt 1 " +
+             $"-f webm pipe:1";
 
     var processStartInfo = new ProcessStartInfo
     {
@@ -176,6 +176,23 @@ public class ScreenCaptureTests
 
     // Capture stderr output for diagnostics (read to end asynchronously)
     var stderrTask = ffmpegProcess.StandardError.ReadToEndAsync();
+
+    // Open file for writing the streamed stdout from ffmpeg
+    await using var outputFs = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None);
+
+    // Copy stdout bytes to file in the background while we feed FFmpeg with frames
+    var stdoutCopyTask = Task.Run(async () =>
+    {
+      try
+      {
+        await ffmpegProcess.StandardOutput.BaseStream.CopyToAsync(outputFs);
+      }
+      catch (Exception ex)
+      {
+        // If copying fails, surface a helpful assertion-like exception later
+        throw new IOException("Failed to copy ffmpeg stdout to file", ex);
+      }
+    });
 
     try
     {
@@ -254,6 +271,9 @@ public class ScreenCaptureTests
         Assert.Fail($"FFmpeg exited with error code {ffmpegProcess.ExitCode}.\n\nStderr output:\n{stderrOutput}");
       }
 
+      // Wait for the stdout copy to complete to ensure file has all bytes
+      await stdoutCopyTask;
+
       // Verify the output file was created
       Assert.True(File.Exists(outputFile), $"Output file was not created at {outputFile}");
 
@@ -269,6 +289,19 @@ public class ScreenCaptureTests
       if (!ffmpegProcess.HasExited)
       {
         ffmpegProcess.Kill(entireProcessTree: true);
+      }
+      
+      // Ensure stdout copy task is observed; if it failed it will propagate here
+      try
+      {
+        if (!stdoutCopyTask.IsCompleted)
+        {
+          await stdoutCopyTask;
+        }
+      }
+      catch
+      {
+        // Ignore here; assertions above will fail if copy failed
       }
     }
   }

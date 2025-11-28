@@ -17,38 +17,12 @@ internal abstract class IpcServerInitializerBase(
   ILogger logger) : BackgroundService
 {
   protected IHubConnection<IAgentHub> HubConnection { get; } = hubConnection;
-  protected IIpcConnectionFactory IpcFactory { get; } = ipcFactory;
   protected IIpcClientAuthenticator IpcAuthenticator { get; } = ipcAuthenticator;
+  protected IIpcConnectionFactory IpcFactory { get; } = ipcFactory;
   protected IIpcServerStore IpcStore { get; } = ipcStore;
   protected ILogger Logger { get; } = logger;
   protected IProcessManager ProcessManager { get; } = processManager;
   protected TimeProvider TimeProvider { get; } = timeProvider;
-
-  protected abstract Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken);
-
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-  {
-    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), TimeProvider);
-
-    try
-    {
-      while (await timer.WaitForNextTickAsync(stoppingToken))
-      {
-        try
-        {
-          await AcceptConnection(stoppingToken);
-        }
-        catch (Exception ex)
-        {
-          Logger.LogError(ex, "Error while accepting IPC connections.");
-        }
-      }
-    }
-    catch (OperationCanceledException ex)
-    {
-      Logger.LogInformation(ex, "Stopping IPC server. Application is shutting down.");
-    }
-  }
 
   protected virtual async Task AcceptConnection(CancellationToken cancellationToken)
   {
@@ -93,9 +67,31 @@ internal abstract class IpcServerInitializerBase(
       Logger.LogError(ex, "Error while accepting IPC connection.");
     }
   }
+  protected abstract Task<IIpcServer> CreateServer(string pipeName, CancellationToken cancellationToken);
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+  {
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), TimeProvider);
 
+    try
+    {
+      while (await timer.WaitForNextTickAsync(stoppingToken))
+      {
+        try
+        {
+          await AcceptConnection(stoppingToken);
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Error while accepting IPC connections.");
+        }
+      }
+    }
+    catch (OperationCanceledException ex)
+    {
+      Logger.LogInformation(ex, "Stopping IPC server. Application is shutting down.");
+    }
+  }
   protected abstract string GetPipeName();
-
   protected Task HandleConnection(IIpcServer server, ClientCredentials credentials, CancellationToken cancellationToken)
   {
     try

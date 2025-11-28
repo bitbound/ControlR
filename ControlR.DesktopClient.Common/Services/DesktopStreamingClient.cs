@@ -42,11 +42,11 @@ internal sealed class DesktopStreamingClient(
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
-  private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.Create();
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly ILogger<DesktopStreamingClient> _logger = logger;
+  private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<StreamingSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
 
@@ -67,7 +67,6 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while sending clipboard text.");
     }
   }
-
   public async Task StartAsync(CancellationToken cancellationToken)
   {
     try
@@ -114,7 +113,6 @@ internal sealed class DesktopStreamingClient(
       _appLifetime.StopApplication();
     }
   }
-
   public async Task StopAsync(CancellationToken cancellationToken)
   {
     await Close();
@@ -143,7 +141,6 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while handling capture metrics change.");
     }
   }
-
   private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
   {
     try
@@ -167,13 +164,11 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while handling cursor change.");
     }
   }
-
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
   {
     await _displayManager.ReloadDisplays();
     await SendDisplayData();
   }
-
   private async Task HandleMessageReceived(DtoWrapper wrapper)
   {
     try
@@ -293,7 +288,6 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while handling DTO.");
     }
   }
-
   private async Task HandleWindowsSessionEndingMessage(object subscriber, WindowsSessionEndingMessage message)
   {
     try
@@ -307,7 +301,6 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while handling Windows session ending.");
     }
   }
-
   private async Task HandleWindowsSessionSwitchedMessage(object subscriber, WindowsSessionSwitchedMessage message)
   {
     try
@@ -321,7 +314,6 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while handling Windows session switch.");
     }
   }
-
   private async Task SendDisplayData()
   {
     try
@@ -356,7 +348,6 @@ internal sealed class DesktopStreamingClient(
       _appLifetime.StopApplication();
     }
   }
-
   private async Task StreamScreenToViewer(CancellationToken cancellationToken)
   {
     await _desktopCapturer.StartCapturingChanges(cancellationToken);
@@ -388,7 +379,6 @@ internal sealed class DesktopStreamingClient(
     _logger.LogInformation("Remote control session ended.  Shutting down.");
     _appLifetime.StopApplication();
   }
-
   private async Task<PointerCoordinates?> TryGetPointerCoordinates(double percentX, double percentY)
   {
     if (!_desktopCapturer.TryGetSelectedDisplay(out var selectedDisplay))

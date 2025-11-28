@@ -35,36 +35,26 @@ public partial class RemoteDisplay : JsInteropableComponent
   private ElementReference _screenArea;
   private ElementReference _virtualKeyboard;
 
-
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
-
   [Inject]
   public required IDeviceState DeviceState { get; init; }
-
   [Parameter]
   [EditorRequired]
   public required bool IsVisible { get; set; }
-
   [Inject]
   public required IJsInterop JsInterop { get; init; }
-
   [Inject]
   public required ILogger<RemoteDisplay> Logger { get; init; }
-
   [Parameter]
   [EditorRequired]
   public EventCallback OnDisconnectRequested { get; set; }
-
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
-
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-
   [Inject]
   public required IViewerStreamingClient StreamingClient { get; init; }
-
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
@@ -81,9 +71,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return classNames.ToLower();
     }
   }
-
   private double CanvasHeight => RemoteControlState.SelectedDisplay?.Height ?? 0;
-
   private string CanvasStyle
   {
     get
@@ -100,19 +88,15 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
   private double CanvasWidth => RemoteControlState.SelectedDisplay?.Width ?? 0;
-
   private string OuterClass =>
     IsVisible
       ? string.Empty
       : "d-none";
-
   private string VirtualKeyboardText
   {
     get => string.Empty;
     set => _ = TypeText(value);
   }
-
-
 
   [JSImport("drawFrame", "RemoteDisplay")]
   public static partial Task DrawFrame(
@@ -135,32 +119,18 @@ public partial class RemoteDisplay : JsInteropableComponent
     await base.DisposeAsync();
     GC.SuppressFinalize(this);
   }
-
   [JSInvokable]
   public Task LogError(string message)
   {
     Logger.LogError("JS Log: {Message}", message);
     return Task.CompletedTask;
   }
-
   [JSInvokable]
   public Task LogInfo(string message)
   {
     Logger.LogInformation("JS Log: {Message}", message);
     return Task.CompletedTask;
   }
-
-  [JSInvokable]
-  public async Task SendKeyboardStateReset()
-  {
-    if (StreamingClient.State != WebSocketState.Open)
-    {
-      return;
-    }
-
-    await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
-  }
-
   [JSInvokable]
   public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
@@ -172,36 +142,41 @@ public partial class RemoteDisplay : JsInteropableComponent
     await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
   }
   [JSInvokable]
+  public async Task SendKeyboardStateReset()
+  {
+    if (StreamingClient.State != WebSocketState.Open)
+    {
+      return;
+    }
+
+    await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
+  }
+  [JSInvokable]
   public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
   {
     await StreamingClient.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
   }
-
   [JSInvokable]
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
   {
     await StreamingClient.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
   }
-
   [JSInvokable]
   public async Task SendPointerMove(double percentX, double percentY)
   {
     await StreamingClient.SendPointerMove(percentX, percentY, _componentClosing.Token);
   }
-
   [JSInvokable]
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
   {
     await StreamingClient.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
   }
-
   [JSInvokable]
   public async Task SetCurrentDisplay(DisplayDto display)
   {
     RemoteControlState.SelectedDisplay = display;
     await InvokeAsync(StateHasChanged);
   }
-
   [JSInvokable]
   public async Task SetDisplays(DisplayDto[] displays)
   {
@@ -230,7 +205,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
     }
   }
-
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -272,8 +246,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     return Math.Sqrt(dx * dx + dy * dy);
   }
 
-
-
   private async Task ChangeDisplays(DisplayDto display)
   {
     try
@@ -287,7 +259,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while changing displays", Severity.Error);
     }
   }
-
   private async Task DrawRegion(ScreenRegionDto dto)
   {
     try
@@ -306,7 +277,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error while drawing frame.");
     }
   }
-
   private async Task HandleClipboardTextReceived(ClipboardTextDto dto)
   {
     try
@@ -325,7 +295,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error while handling remote clipboard change.");
     }
   }
-
   private async Task HandleCursorChanged(CursorChangedDto dto)
   {
     try
@@ -369,12 +338,10 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error while handling cursor change.");
     }
   }
-
   private async Task HandleDisconnectClicked()
   {
     await OnDisconnectRequested.InvokeAsync();
   }
-
   private async Task HandleDisplayDataReceived(DisplayDataDto dto)
   {
     RemoteControlState.DisplayData = dto.Displays;
@@ -397,12 +364,10 @@ public partial class RemoteDisplay : JsInteropableComponent
 
     await InvokeAsync(StateHasChanged);
   }
-
   private async Task HandleFullscreenClicked()
   {
     await JsInterop.ToggleFullscreen();
   }
-
   private async Task HandleKeyboardToggled()
   {
     RemoteControlState.IsVirtualKeyboardToggled = !RemoteControlState.IsVirtualKeyboardToggled;
@@ -415,12 +380,10 @@ public partial class RemoteDisplay : JsInteropableComponent
       await _virtualKeyboard.MudBlurAsync();
     }
   }
-
   private void HandleMetricsToggled()
   {
     RemoteControlState.IsMetricsEnabled = !RemoteControlState.IsMetricsEnabled;
   }
-
   private async Task HandleReceiveClipboardClicked()
   {
     try
@@ -438,12 +401,10 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
   }
-
   private void HandleScrollModeToggled(bool isEnabled)
   {
     RemoteControlState.IsScrollModeToggled = isEnabled;
   }
-
   private async Task HandleSendClipboardClicked()
   {
     try
@@ -470,7 +431,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
   }
-
   private async Task HandleStreamerMessageReceived(DtoWrapper message)
   {
     try
@@ -530,7 +490,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", message.DtoType);
     }
   }
-
   private async Task HandleTypeClipboardClicked()
   {
     try
@@ -551,7 +510,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
   }
-
   private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
   {
     if (RemoteControlState.IsVirtualKeyboardToggled)
@@ -559,7 +517,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       await _virtualKeyboard.FocusAsync();
     }
   }
-
   private async Task InvokeCtrlAltDel()
   {
     try
@@ -573,7 +530,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while sending Ctrl+Alt+Del.", Severity.Error);
     }
   }
-
   private async Task OnCanvasWheel(WheelEventArgs e)
   {
     try
@@ -641,7 +597,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error handling wheel event.");
     }
   }
-
   private void OnTouchCancel(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
@@ -650,7 +605,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     _lastTouch1X = -1;
     _lastTouch1Y = -1;
   }
-
   private void OnTouchEnd(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
@@ -659,7 +613,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     _lastTouch1X = -1;
     _lastTouch1Y = -1;
   }
-
   private async void OnTouchMove(TouchEventArgs ev)
   {
     try
@@ -742,7 +695,6 @@ public partial class RemoteDisplay : JsInteropableComponent
       Logger.LogError(ex, "Error while handling touchmove event.");
     }
   }
-
   private void OnTouchStart(TouchEventArgs ev)
   {
     _lastPinchDistance = -1;
@@ -751,7 +703,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     _lastTouch1X = -1;
     _lastTouch1Y = -1;
   }
-
   private async Task OnVkKeyDown(KeyboardEventArgs args)
   {
     await JsModuleReady.Wait(_componentClosing.Token);

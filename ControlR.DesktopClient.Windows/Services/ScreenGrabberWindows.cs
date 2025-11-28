@@ -38,7 +38,6 @@ internal sealed class ScreenGrabberWindows(
     SwitchToInputDesktop();
     return GetBitBltCapture(_displayManager.GetVirtualScreenBounds(), captureCursor);
   }
-
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -63,15 +62,13 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(ex);
     }
   }
-
-  public Task Initialize(CancellationToken cancellationToken)
-  {
-    return Task.CompletedTask;
-  }
-
   public Task Deinitialize(CancellationToken cancellationToken)
   {
     _dxOutputGenerator.Deinitialize();
+    return Task.CompletedTask;
+  }
+  public Task Initialize(CancellationToken cancellationToken)
+  {
     return Task.CompletedTask;
   }
 
@@ -115,7 +112,6 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(exception: ex);
     }
   }
-
   private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.DuplicateOutput(display.DeviceName);
@@ -231,7 +227,6 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(ex);
     }
   }
-
   private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
   {
     var rectSize = (uint)sizeof(RECT);
@@ -271,7 +266,6 @@ internal sealed class ScreenGrabberWindows(
 
     return dirtyRects;
   }
-
   private void SwitchToInputDesktop()
   {
     var inputDesktopSwitchResult = _win32Interop.SwitchToInputDesktop();
@@ -281,7 +275,6 @@ internal sealed class ScreenGrabberWindows(
     }
     _inputDesktopSwitchResult = inputDesktopSwitchResult;
   }
-
   private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
   {
     try

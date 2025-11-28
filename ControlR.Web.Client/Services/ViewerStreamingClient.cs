@@ -38,8 +38,8 @@ public class ViewerStreamingClient(
   ILogger<ViewerStreamingClient> logger)
   : StreamingClient(timeProvider, messenger, memoryProvider, waiter, logger), IViewerStreamingClient
 {
-  private readonly IWaiter _waiter = waiter;
   private readonly ILogger<ViewerStreamingClient> _logger = logger;
+  private readonly IWaiter _waiter = waiter;
 
   public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
   {
@@ -51,7 +51,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task RequestKeyFrame(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -62,7 +61,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -73,7 +71,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -84,7 +81,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendCloseStreamingSession(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -95,7 +91,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendKeyEvent(string key, string? code, bool isPressed, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -106,7 +101,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendKeyboardStateReset(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -117,7 +111,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendMouseButtonEvent(
     int button,
     bool isPressed,
@@ -133,7 +126,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
     CancellationToken cancellationToken)
   {
@@ -145,7 +137,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -156,7 +147,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendTypeText(string text, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -167,7 +157,6 @@ public class ViewerStreamingClient(
         await Send(wrapper, cancellationToken);
       });
   }
-
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
     CancellationToken cancellationToken)
   {
@@ -193,7 +182,6 @@ public class ViewerStreamingClient(
       _logger.LogError(ex, "Error while sending message via websocket stream..");
     }
   }
-
   private async Task WaitForConnection()
   {
     if (State == WebSocketState.Open)

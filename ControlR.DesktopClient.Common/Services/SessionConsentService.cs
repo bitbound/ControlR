@@ -13,8 +13,8 @@ public class SessionConsentService(
   IUserInteractionService userInteractionService,
   ILogger<SessionConsentService> logger) : ISessionConsentService
 {
-  private readonly IUserInteractionService _userInteractionService = userInteractionService;
   private readonly ILogger<SessionConsentService> _logger = logger;
+  private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
   public async Task<bool> RequestConsentAsync(string requesterName, CancellationToken cancellationToken)
   {

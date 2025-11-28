@@ -7,19 +7,23 @@ namespace ControlR.Web.Client.Components;
 
 public class JsInteropableComponent : ViewportAwareComponent
 {
+  private string _componentName = string.Empty;
   private IJSObjectReference? _jsModule;
   private string _jsPath = string.Empty;
-  private string _componentName = string.Empty;
 
   [Inject]
   public required IAppEnvironment AppEnvironment { get; init; }
-
   [Inject]
   public required IJSRuntime JsRuntime { get; init; }
 
   protected IJSObjectReference JsModule => _jsModule ?? throw new InvalidOperationException("JS module is not initialized");
   protected ManualResetEventAsync JsModuleReady { get; } = new();
 
+  [SupportedOSPlatform("browser")]
+  protected async Task ImportJsHost()
+  {
+    await JSHost.ImportAsync(_componentName, _jsPath);
+  }
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
@@ -38,12 +42,6 @@ public class JsInteropableComponent : ViewportAwareComponent
       
       JsModuleReady.Set();
     }
-  }
-
-  [SupportedOSPlatform("browser")]
-  protected async Task ImportJsHost()
-  {
-    await JSHost.ImportAsync(_componentName, _jsPath);
   }
 
   private string GetCacheBuster()

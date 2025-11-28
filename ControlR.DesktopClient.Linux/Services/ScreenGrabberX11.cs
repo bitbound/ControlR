@@ -26,7 +26,6 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -42,13 +41,11 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-
-  public Task Initialize(CancellationToken cancellationToken)
+  public Task Deinitialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
   }
-
-  public Task Deinitialize(CancellationToken cancellationToken)
+  public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
   }
@@ -121,7 +118,6 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-
   private CaptureResult CaptureDisplayImpl(DisplayInfo display, bool captureCursor)
   {
     try
@@ -162,7 +158,6 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-
   private SKBitmap? CaptureWindow(nint display, nint window, int width, int height, int x = 0, int y = 0)
   {
     try

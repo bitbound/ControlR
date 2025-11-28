@@ -9,15 +9,63 @@ namespace ControlR.DesktopClient.Common.Services.Encoders;
 
 public class H264Encoder : IStreamEncoder
 {
+    private readonly Channel<byte[]> _packetChannel = Channel.CreateUnbounded<byte[]>();
+
+    private CancellationTokenSource? _cts;
+    private bool _disposed;
     private Process? _ffmpegProcess;
     private Stream? _inputStream;
-    private readonly Channel<byte[]> _packetChannel = Channel.CreateUnbounded<byte[]>();
-    private bool _disposed;
     private Task? _readTask;
-    private CancellationTokenSource? _cts;
 
     public CaptureEncoderType Type => CaptureEncoderType.H264;
 
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _cts?.Cancel();
+        
+        try
+        {
+            if (_ffmpegProcess != null && !_ffmpegProcess.HasExited)
+            {
+                _ffmpegProcess.Kill();
+            }
+        }
+        catch { }
+        
+        _ffmpegProcess?.Dispose();
+        _cts?.Dispose();
+    }
+    public void EncodeFrame(SKBitmap frame, bool forceKeyFrame = false)
+    {
+        if (_inputStream == null || _disposed) return;
+
+        try
+        {
+            var pixels = frame.GetPixels();
+            var length = frame.RowBytes * frame.Height;
+            
+            unsafe
+            {
+                using var unmanagedStream = new UnmanagedMemoryStream((byte*)pixels, length);
+                unmanagedStream.CopyTo(_inputStream);
+            }
+            _inputStream.Flush();
+        }
+        catch
+        {
+            // Ignore write errors (process might have died)
+        }
+    }
+    public byte[]? GetNextPacket()
+    {
+        if (_packetChannel.Reader.TryRead(out var packet))
+        {
+            return packet;
+        }
+        return null;
+    }
     public void Start(int width, int height, int quality)
     {
         if (_ffmpegProcess != null)
@@ -90,55 +138,5 @@ public class H264Encoder : IStreamEncoder
                 _packetChannel.Writer.TryComplete();
             }
         });
-    }
-
-    public void EncodeFrame(SKBitmap frame, bool forceKeyFrame = false)
-    {
-        if (_inputStream == null || _disposed) return;
-
-        try
-        {
-            var pixels = frame.GetPixels();
-            var length = frame.RowBytes * frame.Height;
-            
-            unsafe
-            {
-                using var unmanagedStream = new UnmanagedMemoryStream((byte*)pixels, length);
-                unmanagedStream.CopyTo(_inputStream);
-            }
-            _inputStream.Flush();
-        }
-        catch
-        {
-            // Ignore write errors (process might have died)
-        }
-    }
-
-    public byte[]? GetNextPacket()
-    {
-        if (_packetChannel.Reader.TryRead(out var packet))
-        {
-            return packet;
-        }
-        return null;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _cts?.Cancel();
-        
-        try
-        {
-            if (_ffmpegProcess != null && !_ffmpegProcess.HasExited)
-            {
-                _ffmpegProcess.Kill();
-            }
-        }
-        catch { }
-        
-        _ffmpegProcess?.Dispose();
-        _cts?.Dispose();
     }
 }

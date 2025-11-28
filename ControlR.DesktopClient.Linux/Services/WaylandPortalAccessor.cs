@@ -29,7 +29,6 @@ internal class WaylandPortalAccessor(
   private readonly ILogger<WaylandPortalAccessor> _logger = logger;
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
 
-
   private bool _disposed;
   private bool _initialized;
   private SafeFileHandle? _pipewireFd;
@@ -39,41 +38,6 @@ internal class WaylandPortalAccessor(
 
   private XdgDesktopPortal Portal => _portal ?? throw new InvalidOperationException("XDG Desktop Portal is not initialized.");
 
-  public void Dispose()
-  {
-    if (_disposed) return;
-    _pipewireFd?.Dispose();
-    _portal?.Dispose();
-    _initLock?.Dispose();
-    _disposed = true;
-  }
-
-  public async Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
-  {
-    await EnsureInitializedAsync();
-    return _pipewireFd != null && _sessionHandle != null
-    ? (_pipewireFd, _sessionHandle)
-    : throw new InvalidOperationException("PipeWire connection is not initialized.");
-  }
-
-  public async Task<(XdgDesktopPortal Portal, string SessionHandle)?> GetRemoteDesktopSession()
-  {
-    await EnsureInitializedAsync();
-    return _portal != null && _sessionHandle != null
-      ? (_portal, _sessionHandle)
-      : throw new InvalidOperationException("RemoteDesktop session is not initialized.");
-  }
-
-  public async Task<List<PipeWireStreamInfo>> GetScreenCastStreams()
-  {
-    await EnsureInitializedAsync();
-    return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
-  }
-
-  public async Task Initialize()
-  {
-    await EnsureInitializedAsync();
-  }
   public async Task Deinitialize()
   {
     try
@@ -97,6 +61,37 @@ internal class WaylandPortalAccessor(
     {
       _logger.LogError(ex, "Error during WaylandPortalAccessor uninitialization");
     }
+  }
+  public void Dispose()
+  {
+    if (_disposed) return;
+    _pipewireFd?.Dispose();
+    _portal?.Dispose();
+    _initLock?.Dispose();
+    _disposed = true;
+  }
+  public async Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
+  {
+    await EnsureInitializedAsync();
+    return _pipewireFd != null && _sessionHandle != null
+    ? (_pipewireFd, _sessionHandle)
+    : throw new InvalidOperationException("PipeWire connection is not initialized.");
+  }
+  public async Task<(XdgDesktopPortal Portal, string SessionHandle)?> GetRemoteDesktopSession()
+  {
+    await EnsureInitializedAsync();
+    return _portal != null && _sessionHandle != null
+      ? (_portal, _sessionHandle)
+      : throw new InvalidOperationException("RemoteDesktop session is not initialized.");
+  }
+  public async Task<List<PipeWireStreamInfo>> GetScreenCastStreams()
+  {
+    await EnsureInitializedAsync();
+    return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
+  }
+  public async Task Initialize()
+  {
+    await EnsureInitializedAsync();
   }
 
   private async Task EnsureInitializedAsync()
@@ -186,12 +181,10 @@ internal class WaylandPortalAccessor(
       _initLock.Release();
     }
   }
-
   private async Task EnsurePortalConnectedAsync()
   {
     _portal ??= await XdgDesktopPortal.CreateAsync(_logger);
   }
-
   private string? LoadRestoreToken()
   {
     try
@@ -209,7 +202,6 @@ internal class WaylandPortalAccessor(
     }
     return null;
   }
-
   private void SaveRestoreToken(string token)
   {
     try

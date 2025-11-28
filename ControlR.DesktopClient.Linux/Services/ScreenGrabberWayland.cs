@@ -50,12 +50,10 @@ internal class ScreenGrabberWayland(
   private bool _disposed;
   private bool _isInitialized;
 
-
   /// <summary>
   /// Gets the PipeWire streams mapped by display device name
   /// </summary>
   public IReadOnlyDictionary<string, PipeWireStream> Streams => _streams;
-
 
   public CaptureResult CaptureAllDisplays(bool captureCursor = true)
   {
@@ -120,7 +118,6 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
-
   public CaptureResult CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -152,7 +149,13 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
-
+  public async Task Deinitialize(CancellationToken cancellationToken)
+  {
+    using var acquiredLock = await _initLock.AcquireLockAsync(cancellationToken);
+    Disposer.DisposeAll(_streams.Values);
+    _streams.Clear();
+    _isInitialized = false;
+  }
   public void Dispose()
   {
     if (_disposed)
@@ -167,7 +170,6 @@ internal class ScreenGrabberWayland(
 
     _disposed = true;
   }
-
   public async Task Initialize(CancellationToken cancellationToken)
   {
     if (_isInitialized)
@@ -247,15 +249,6 @@ internal class ScreenGrabberWayland(
       _initLock.Release();
     }
   }
-
-  public async Task Deinitialize(CancellationToken cancellationToken)
-  {
-    using var acquiredLock = await _initLock.AcquireLockAsync(cancellationToken);
-    Disposer.DisposeAll(_streams.Values);
-    _streams.Clear();
-    _isInitialized = false;
-  }
-
 
   private CaptureResult CaptureStream(PipeWireStream stream)
   {
