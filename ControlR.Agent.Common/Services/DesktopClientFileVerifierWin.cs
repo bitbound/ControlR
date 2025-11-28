@@ -1,16 +1,18 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Shared.Helpers;
+using Microsoft.Security.Extensions;
 
 namespace ControlR.Agent.Common.Services;
 
 public class DesktopClientFileVerifierWin(
   ISystemEnvironment systemEnvironment,
+  IFileSystem fileSystem,
   ILogger<DesktopClientFileVerifierWin> logger) : IDesktopClientFileVerifier
 {
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+  private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<DesktopClientFileVerifierWin> _logger = logger;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   public Result VerifyFile(string executablePath)
   {
@@ -71,11 +73,9 @@ public class DesktopClientFileVerifierWin(
       if (X509Certificate2.GetCertContentType(executablePath) == X509ContentType.Authenticode)
       {
         _logger.LogInformation("Code signing certificate found.");
-        // https://github.com/dotnet/runtime/discussions/108740
-        // It appears they removed it without having a replacement because it "looked crufty" or something.
-  #pragma warning disable SYSLIB0057 // Type or member is obsolete
-        return new X509Certificate2(executablePath);
-  #pragma warning restore SYSLIB0057 // Type or member is obsolete
+        using var fs = _fileSystem.OpenFileStream(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var signatureInfo = FileSignatureInfo.GetFromFileStream(fs);
+        return signatureInfo.SigningCertificate;
       }
       _logger.LogInformation("No code signing certificate found.");
       return null;
