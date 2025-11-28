@@ -89,12 +89,12 @@ jobs:
         shell: bash
         run: |
           cat > ./server-publish/Dockerfile << 'EOF'
-          FROM mcr.microsoft.com/dotnet/aspnet:9.0
+          FROM mcr.microsoft.com/dotnet/aspnet:10.0
           RUN apt update
           RUN apt -y install curl
           RUN mkdir -p /app/AppData
           RUN chown app:app -R /app/AppData
-          USER app
+          USER $APP_UID
           WORKDIR /app
           EXPOSE 8080
           EXPOSE 8081
