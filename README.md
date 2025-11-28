@@ -1,6 +1,6 @@
-# ControlR
-
-Open-source, self-hostable remote control and remote access.
+<p style="text-align:center;">
+  <img src=".github/media/github-logo.png" alt="ControlR Logo" style="max-width:800px; width:100%; height:auto;" />
+</p>
 
 [![Tests](https://github.com/bitbound/ControlR/actions/workflows/test.yml/badge.svg)](https://github.com/bitbound/ControlR/actions/workflows/test.yml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
