@@ -3,11 +3,13 @@
 @attribute [Authorize]
 
 @inject ISnackbar Snackbar
-@inject IUserSettingsProvider SettingsStore
-@inject ITenantSettingsProvider TenantSettingsProvider
+@inject IUserSettingsProvider UserSettings
+@inject ITenantSettingsProvider TenantSettings
 @inject IClipboardManager ClipboardManager
 @inject AuthenticationStateProvider AuthState
 @inject IMessenger Messenger
+@inject IJsInterop JsInterop
+@inject ILogger<Settings> Logger
 
 <PageTitle>Settings</PageTitle>
 
@@ -149,11 +151,11 @@
     }
 
     // Check if tenant has enforced the notify user setting
-    _tenantNotifySetting = await TenantSettingsProvider.GetNotifyUserOnSessionStart();
+    _tenantNotifySetting = await TenantSettings.GetNotifyUserOnSessionStart();
 
-    _notifyUser = await SettingsStore.GetNotifyUserOnSessionStart();
-    _userDisplayName = await SettingsStore.GetUserDisplayName();
-    _themeMode = await SettingsStore.GetThemeMode();
+    _notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
+    _userDisplayName = await UserSettings.GetUserDisplayName();
+    _themeMode = await UserSettings.GetThemeMode();
 
     // If tenant setting is enforced, override the user setting display
     if (_tenantNotifySetting.HasValue)
@@ -185,13 +187,13 @@
     }
     
     _notifyUser = value;
-    await SettingsStore.SetNotifyUserOnSessionStart(value);
+    await UserSettings.SetNotifyUserOnSessionStart(value);
   }
 
   private async Task SetThemeMode(ThemeMode value)
   {
     _themeMode = value;
-    await SettingsStore.SetThemeMode(value);
+    await UserSettings.SetThemeMode(value);
     await Messenger.Send(new ThemeChangedMessage(value));
     Snackbar.Add("Theme updated", Severity.Success);
   }
@@ -199,7 +201,7 @@
   private async Task SetUserDisplayName(string value)
   {
     _userDisplayName = value;
-    await SettingsStore.SetUserDisplayName(value);
+    await UserSettings.SetUserDisplayName(value);
     Snackbar.Add("Display name updated", Severity.Success);
   }
 
@@ -219,5 +221,4 @@
       ? "Username can only contain letters, numbers, underscores, and hyphens."
       : null;
   }
-
 }

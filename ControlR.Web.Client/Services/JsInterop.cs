@@ -11,8 +11,6 @@ public interface IJsInterop
 
   ValueTask Alert(string message);
 
-  ValueTask<bool> ClearWasmCache();
-
   ValueTask<bool> Confirm(string message);
   ValueTask<string?> CreateBlobUrl(byte[] imageData, string mimeType);
   ValueTask<string> GetClipboardText();
@@ -20,8 +18,6 @@ public interface IJsInterop
   ValueTask<int> GetCursorIndex(ElementReference inputElement);
   ValueTask<int> GetCursorIndexById(string inputElementId);
   ValueTask<bool> GetSystemDarkMode();
-  ValueTask<WasmCacheStatus?> GetWasmCacheStatus();
-
   ValueTask InvokeClick(string elementId);
   ValueTask<bool> IsTouchScreen();
 
@@ -65,11 +61,6 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
     return jsRuntime.InvokeVoidAsync("invokeAlert", message);
   }
 
-  public ValueTask<bool> ClearWasmCache()
-  {
-    return jsRuntime.InvokeAsync<bool>("clearWasmCache");
-  }
-
   public ValueTask<bool> Confirm(string message)
   {
     return jsRuntime.InvokeAsync<bool>("invokeConfirm", message);
@@ -98,11 +89,6 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   public ValueTask<bool> GetSystemDarkMode()
   {
     return jsRuntime.InvokeAsync<bool>("getSystemDarkMode");
-  }
-
-  public ValueTask<WasmCacheStatus?> GetWasmCacheStatus()
-  {
-    return jsRuntime.InvokeAsync<WasmCacheStatus?>("getWasmCacheStatus");
   }
 
   public ValueTask InvokeClick(string elementId)
@@ -184,13 +170,4 @@ public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
   {
     return jsRuntime.InvokeVoidAsync("toggleFullscreen", element);
   }
-}
-
-/// <summary>
-/// Represents the status of the WASM cache service worker.
-/// </summary>
-public sealed class WasmCacheStatus
-{
-  public string CacheName { get; set; } = string.Empty;
-  public int EntryCount { get; set; }
 }

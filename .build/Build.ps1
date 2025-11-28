@@ -15,7 +15,9 @@ param (
 
   [switch]$BuildAgent,
 
-  [switch]$BuildDesktop
+  [switch]$BuildDesktop,
+
+  [switch]$BuildServer
 )
 
 #$InstallerDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
@@ -153,4 +155,9 @@ if ($BuildDesktop -or $BuildAgent) {
   }
 }
 
-dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
+if ($BuildServer) {
+  Write-Host "`n========================================" -ForegroundColor Cyan
+  Write-Host "Building Server Publish" -ForegroundColor Cyan
+  Write-Host "========================================" -ForegroundColor Cyan
+  dotnet publish -p:ExcludeApp_Data=true --runtime linux-x64 --configuration $Configuration -p:Version=$CurrentVersion -p:FileVersion=$CurrentVersion --output $OutputPath --self-contained true "$Root\ControlR.Web.Server\"
+}
