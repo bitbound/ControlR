@@ -19,13 +19,13 @@ on:
       retention_days_artifacts:
         description: 'Retention Days for Artifacts'
         required: false
-        default: "1"
-        type: string
+        default: 1
+        type: number
 
 env:
   MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
   MINOR_VERSION: ${{vars.MINOR_VERSION}}
-  RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || '1' }}
+  RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
 
 jobs:
   set-version:
