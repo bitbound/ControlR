@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: DockerCompose
-          path: ./docker-compose-download
+          path: ./docker-compose.yml
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
@@ -59,16 +59,17 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Create Release Archives
+      - name: Copy OpenAPI Spec
+        shell: bash
+        run: |
+          cp ./server-publish/ControlR.Web.Server.json ./ControlR.Web.Server.json
+
+      - name: Create Release Archive
         shell: bash
         run: |
           # Create server zip
           cd server-publish
-          zip -r ../ControlR.Server.${{ steps.get-version.outputs.VERSION }}.zip .
-          cd ..
-
-          # Copy docker-compose.yml to root
-          cp docker-compose-download/docker-compose.yml ./docker-compose.yml
+          zip -r ../server-linux-amd64.zip .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -79,7 +80,8 @@ jobs:
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: true
           files: |
-            ControlR.Server.${{ steps.get-version.outputs.VERSION }}.zip
+            server-linux-amd64.zip
+            ControlR.Web.Server.json
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
