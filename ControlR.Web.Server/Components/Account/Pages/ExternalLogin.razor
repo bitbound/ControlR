@@ -104,7 +104,9 @@
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login providers.", HttpContext);
+            return;
         }
+        
         // Sign in the user with this external login provider if the user already has a login.
         var result = await SignInManager.ExternalLoginSignInAsync(
         _externalLoginInfo.LoginProvider,
@@ -142,6 +144,7 @@
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login information during confirmation.", HttpContext);
+            return;
         }
 
         var createUserResult = await UserCreator.CreateUser(Input.Email, _externalLoginInfo, ReturnUrl);

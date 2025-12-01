@@ -132,6 +132,14 @@ public class RemoteControlHostManager(
       return session;
     });
   }
+  
+  private class OptionsMonitorWrapper<T>(T currentValue) : IOptionsMonitor<T>
+  {
+    public T CurrentValue => currentValue;
+
+    public T Get(string? name) => currentValue;
+    public IDisposable? OnChange(Action<T, string?> listener) => null;
+  }
 
   private class RemoteControlSession : IAsyncDisposable
   {
@@ -149,13 +157,5 @@ public class RemoteControlHostManager(
         // Ignore.
       }
     }
-  }
-
-  private class OptionsMonitorWrapper<T>(T currentValue) : IOptionsMonitor<T>
-  {
-    public T CurrentValue => currentValue;
-
-    public T Get(string? name) => currentValue;
-    public IDisposable? OnChange(Action<T, string?> listener) => null;
   }
 }

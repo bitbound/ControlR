@@ -11,9 +11,9 @@ namespace ControlR.Web.Server.Components.Account;
 // This is a server-side AuthenticationStateProvider that revalidates the security stamp for the connected user
 // every 30 minutes an interactive circuit is connected. It also uses PersistentComponentState to flow the
 // authentication state to the client which is then fixed for the lifetime of the WebAssembly application.
-internal sealed class PersistingRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
+internal sealed class IdentityRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
-  private readonly ILogger<PersistingRevalidatingAuthenticationStateProvider> _logger;
+  private readonly ILogger<IdentityRevalidatingAuthenticationStateProvider> _logger;
   private readonly IdentityOptions _options;
   private readonly IServiceScopeFactory _scopeFactory;
   private readonly PersistentComponentState _state;
@@ -21,12 +21,12 @@ internal sealed class PersistingRevalidatingAuthenticationStateProvider : Revali
 
   private Task<AuthenticationState>? _authenticationStateTask;
 
-  public PersistingRevalidatingAuthenticationStateProvider(
+  public IdentityRevalidatingAuthenticationStateProvider(
     PersistentComponentState persistentComponentState,
     ILoggerFactory loggerFactory,
     IServiceScopeFactory serviceScopeFactory,
     IOptions<IdentityOptions> optionsAccessor,
-    ILogger<PersistingRevalidatingAuthenticationStateProvider> logger)
+    ILogger<IdentityRevalidatingAuthenticationStateProvider> logger)
     : base(loggerFactory)
   {
     _scopeFactory = serviceScopeFactory;

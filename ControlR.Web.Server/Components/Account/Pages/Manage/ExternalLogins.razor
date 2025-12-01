@@ -149,6 +149,7 @@
     if (info is null)
     {
       RedirectManager.RedirectToCurrentPageWithStatus("Error: Could not load external login info.", HttpContext);
+      return;
     }
 
     var result = await UserManager.AddLoginAsync(_user, info);
