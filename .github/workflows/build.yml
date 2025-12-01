@@ -16,13 +16,12 @@ on:
         type: number
 
 env:
-  MAJOR_VERSION: ${{vars.MAJOR_VERSION}}
-  MINOR_VERSION: ${{vars.MINOR_VERSION}}
+  VERSION: ${{vars.CURRENT_VERSION}}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
 
 jobs:
   set-version:
-    name: Set Current Version
+    name: Increment Version
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,14 +37,12 @@ jobs:
           clean: true
           fetch-depth: 0
 
-      - name: Compute Build Version
+      - name: Set Next Version
         id: setver
         shell: pwsh
         run: |
           $CurrentVersion = [System.Version]::Parse("${{ vars.CURRENT_VERSION }}")
-          echo "version=$CurrentVersion" >> $GITHUB_OUTPUT
-          echo "Resolved version: $CurrentVersion"
-
+          echo "Resolved current version: $CurrentVersion"
           $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1)"
           echo "Next version will be: $NextVersion"
           gh variable set CURRENT_VERSION --body $NextVersion
@@ -54,8 +51,6 @@ jobs:
     name: Apple Build
     runs-on: macos-latest
     needs: set-version
-    env:
-      VERSION: ${{ needs.set-version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -126,8 +121,6 @@ jobs:
     runs-on: windows-latest
     environment: secure-signing
     needs: [set-version, mac-build]
-    env:
-      VERSION: ${{ needs.set-version.outputs.version }}
     permissions:
       id-token: write
       contents: read
