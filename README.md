@@ -6,12 +6,12 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
-Website: https://contorlr.app  
+Website: https://controlr.app  
 Demo Server: https://demo.controlr.app  
 Docker: https://hub.docker.com/r/translucency/controlr  
 DeepWiki: https://deepwiki.com/bitbound/ControlR  
 Discussions: https://github.com/bitbound/ControlR/discussions  
-Project Board: https://github.com/users/bitbound/projects/1
+Project Board: https://github.com/users/bitbound/projects/1  
 
 ## Quick Start: 
 
