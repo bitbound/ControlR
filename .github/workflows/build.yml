@@ -29,6 +29,8 @@ jobs:
       actions: write
     outputs:
       version: ${{ steps.setver.outputs.version }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Compute Build Version
         id: setver
