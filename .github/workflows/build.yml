@@ -43,7 +43,7 @@ jobs:
         run: |
           $CurrentVersion = [System.Version]::Parse("${{ vars.CURRENT_VERSION }}")
           echo "Resolved current version: $CurrentVersion"
-          $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1)"
+          $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
           echo "Next version will be: $NextVersion"
           gh variable set CURRENT_VERSION --body $NextVersion
 
