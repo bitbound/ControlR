@@ -386,10 +386,10 @@ jobs:
           name: Agent-macOS-x64
           path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
-      - name: Create AgentVersion.txt
+      - name: Create Version.txt
         shell: pwsh
         run: |
-          Set-Content -Path "ControlR.Web.Server\wwwroot\downloads\AgentVersion.txt" -Value $env:VERSION -Force -Encoding UTF8
+          Set-Content -Path "ControlR.Web.Server\wwwroot\downloads\Version.txt" -Value $env:VERSION -Force -Encoding UTF8
 
       - name: Build Web Server
         shell: pwsh
@@ -401,7 +401,7 @@ jobs:
         shell: pwsh
         run: |
           $TestPaths = @(
-            "ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
+            "ControlR.Server\bin\publish\wwwroot\downloads\Version.txt",
             "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
             "ControlR.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Agent.exe",
             "ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",

@@ -52,11 +52,11 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
-      - name: Get Version from AgentVersion.txt
+      - name: Get Version from Version.txt
         id: get-version
         shell: bash
         run: |
-          VERSION=$(cat ./server-publish/wwwroot/downloads/AgentVersion.txt)
+          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 

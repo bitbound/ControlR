@@ -124,7 +124,7 @@ public static class HostRunner
       {
         try
         {
-          var version = await client.GetStringAsync(new Uri(serverUri, "/downloads/AgentVersion.txt"));
+          var version = await client.GetStringAsync(new Uri(serverUri, "/downloads/Version.txt"));
           return Version.Parse(version.Trim());
         }
         catch (Exception ex)

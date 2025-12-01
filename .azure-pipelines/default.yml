@@ -184,7 +184,7 @@ jobs:
           targetType: inline
           script: |
             $TestPaths = @(
-              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\AgentVersion.txt",
+              "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\Version.txt",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Agent.exe",
               "$(Build.SourcesDirectory)\ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",

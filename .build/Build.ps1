@@ -151,7 +151,7 @@ if ($BuildDesktop -or $BuildAgent) {
   # Build-DesktopAndAgent -RuntimeId "osx-arm64" -DesktopExeName "ControlR.DesktopClient" -AgentExeName "ControlR.Agent" -ZipFileName "ControlR.app.zip" -SignExecutables $false
   
   if ($BuildAgent) {
-    Set-Content -Path "$DownloadsFolder\AgentVersion.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
+    Set-Content -Path "$DownloadsFolder\Version.txt" -Value $CurrentVersion.ToString() -Force -Encoding UTF8
   }
 }
 

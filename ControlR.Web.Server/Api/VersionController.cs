@@ -13,7 +13,7 @@ public class VersionController(IFileProvider phyiscalFileProvider) : ControllerB
   [OutputCache]
   public async Task<ActionResult<Version>> GetCurrentAgentVersion()
   {
-    var fileInfo = phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/AgentVersion.txt");
+    var fileInfo = phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/Version.txt");
 
     if (!fileInfo.Exists || string.IsNullOrWhiteSpace(fileInfo.PhysicalPath))
     {
