@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: DockerCompose
-          path: ./docker-compose.yml
+          path: ./docker-compose-download
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
@@ -64,12 +64,15 @@ jobs:
         run: |
           cp ./server-publish/ControlR.Web.Server.json ./ControlR.Web.Server.json
 
-      - name: Create Release Archive
+      - name: Prepare Release Artifacts
         shell: bash
         run: |
           # Create server zip
           cd server-publish
           zip -r ../server-linux-amd64.zip .
+          cd ..
+
+          cp docker-compose-download/docker-compose.yml .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
