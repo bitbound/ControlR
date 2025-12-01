@@ -8,7 +8,7 @@
 
 Website: https://controlr.app  
 Demo Server: https://demo.controlr.app  (West US)  
-Docker: https://hub.docker.com/r/translucency/controlr  
+Docker: https://hub.docker.com/r/bitbound/controlr  
 DeepWiki: https://deepwiki.com/bitbound/ControlR  
 Discussions: https://github.com/bitbound/ControlR/discussions  
 Project Board: https://github.com/users/bitbound/projects/1  

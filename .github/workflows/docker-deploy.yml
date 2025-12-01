@@ -124,8 +124,8 @@ jobs:
           file: ./server-publish/Dockerfile
           push: true
           tags: |
-            translucency/controlr:${{ inputs.docker_tag }}
-            translucency/controlr:${{ steps.get-version.outputs.VERSION }}
+            bitbound/controlr:${{ inputs.docker_tag }}
+            bitbound/controlr:${{ steps.get-version.outputs.VERSION }}
           build-args: |
             CURRENT_VERSION=${{ steps.get-version.outputs.VERSION }}
 
@@ -134,5 +134,5 @@ jobs:
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo "- translucency/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- translucency/controlr:${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- bitbound/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- bitbound/controlr:${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY

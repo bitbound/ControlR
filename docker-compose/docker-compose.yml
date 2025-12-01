@@ -8,7 +8,8 @@ x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
 
 services:
   controlr:
-    image: translucency/controlr:latest
+    # It's recommended to change 'latest' to a specific version tag and update manually.
+    image: bitbound/controlr:latest
     container_name: controlr
     restart: unless-stopped
     depends_on:

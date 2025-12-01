@@ -75,9 +75,9 @@ When creating a GitHub Release, the following assets are included:
 
 Docker images are published to Docker Hub:
 
-- `translucency/controlr:preview` - Preview/development version
-- `translucency/controlr:latest` - Production version
-- `translucency/controlr:[version]` - Specific version
-- `translucency/controlr-relay:preview` - Preview relay server
-- `translucency/controlr-relay:latest` - Production relay server
-- `translucency/controlr-relay:[version]` - Specific version of relay server
+- `bitbound/controlr:preview` - Preview/development version
+- `bitbound/controlr:latest` - Production version
+- `bitbound/controlr:[version]` - Specific version
+- `bitbound/controlr-relay:preview` - Preview relay server
+- `bitbound/controlr-relay:latest` - Production relay server
+- `bitbound/controlr-relay:[version]` - Specific version of relay server
