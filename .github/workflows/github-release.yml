@@ -1,4 +1,5 @@
 name: Create GitHub Release
+run-name: "GitHub Release (Run ID: ${{ inputs.run_id || 'latest build' }})"
 
 on:
   workflow_dispatch:

@@ -1,4 +1,5 @@
 name: Build
+run-name: Build v${{ vars.CURRENT_VERSION }}
 
 on:
   #push:
@@ -25,19 +26,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write
     outputs:
       version: ${{ steps.setver.outputs.version }}
     steps:
-      - name: Compute Build Version (run number only)
+      - name: Compute Build Version
         id: setver
+        shell: pwsh
         run: |
-          MAJOR=${{ env.MAJOR_VERSION }}
-          MINOR=${{ env.MINOR_VERSION }}
-          BUILD=${{ github.run_number }}
-          VERSION="${MAJOR}.${MINOR}.${BUILD}.0"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Computed version (run number): $VERSION"
-    
+          $CurrentVersion = [System.Version]::Parse("${{ vars.CURRENT_VERSION }}")
+          echo "version=$CurrentVersion" >> $GITHUB_OUTPUT
+          echo "Resolved version: $CurrentVersion"
+
+          $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1)"
+          echo "Next version will be: $NextVersion"
+          gh variable set CURRENT_VERSION --body $NextVersion
+
   mac-build:
     name: Apple Build
     runs-on: macos-latest
