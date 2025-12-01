@@ -92,6 +92,9 @@ jobs:
 
       - name: Release Created
         run: |
-          echo "GitHub Release created successfully!"
-          echo "Version: v${{ steps.get-version.outputs.VERSION }}"
-          echo "Release is in DRAFT mode - review and publish when ready"
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Draft" >> $GITHUB_STEP_SUMMARY
+          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Release is in DRAFT mode - review and publish when ready" >> $GITHUB_STEP_SUMMARY

@@ -47,7 +47,7 @@ jobs:
           echo "Next version will be: $NextVersion"
           gh variable set CURRENT_VERSION --body $NextVersion
 
-  mac-build:
+  build-mac-binaries:
     name: Apple Build
     runs-on: macos-latest
     needs: set-version
@@ -116,11 +116,11 @@ jobs:
           path: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
-  windows-build:
+  build-windows-binaries:
     name: Windows Build
     runs-on: windows-latest
     environment: secure-signing
-    needs: [set-version, mac-build]
+    needs: [set-version, build-mac-binaries]
     permissions:
       id-token: write
       contents: read
@@ -140,18 +140,6 @@ jobs:
 
       - name: Run Tests
         run: dotnet test -c Release
-
-      - name: Download macOS ARM64 Agent
-        uses: actions/download-artifact@v6
-        with:
-          name: Agent-macOS-ARM64
-          path: ControlR.Web.Server\wwwroot\downloads\osx-arm64\
-
-      - name: Download macOS x64 Agent
-        uses: actions/download-artifact@v6
-        with:
-          name: Agent-macOS-x64
-          path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
 
       - name: Pack ControlR.ApiClient (Release)
         run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ env.VERSION }}
@@ -329,13 +317,80 @@ jobs:
           New-Item -Path "ControlR.Web.Server\wwwroot\downloads\linux-x64" -ItemType Directory -Force | Out-Null
           dotnet publish ControlR.Agent\ -c Release -r linux-x64 -o ControlR.Web.Server\wwwroot\downloads\linux-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
-      # ===== Create AgentVersion.txt =====
+      - name: Upload Agent (win-x86)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Agent-win-x86
+          path: ControlR.Web.Server\wwwroot\downloads\win-x86\ControlR.Agent.exe
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+      - name: Upload Agent (win-x64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Agent-win-x64
+          path: ControlR.Web.Server\wwwroot\downloads\win-x64\ControlR.Agent.exe
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+      - name: Upload Agent (linux-x64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Agent-linux-x64
+          path: ControlR.Web.Server\wwwroot\downloads\linux-x64\ControlR.Agent
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+  build-web-server:
+    name: Build Web Server
+    runs-on: windows-latest
+    needs: build-windows-binaries
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
+
+      - name: Download Agent (win-x86)
+        uses: actions/download-artifact@v6
+        with:
+          name: Agent-win-x86
+          path: ControlR.Web.Server\wwwroot\downloads\win-x86\
+
+      - name: Download Agent (win-x64)
+        uses: actions/download-artifact@v6
+        with:
+          name: Agent-win-x64
+          path: ControlR.Web.Server\wwwroot\downloads\win-x64\
+
+      - name: Download Agent (linux-x64)
+        uses: actions/download-artifact@v6
+        with:
+          name: Agent-linux-x64
+          path: ControlR.Web.Server\wwwroot\downloads\linux-x64\
+
+      - name: Download Agent (macOS ARM64)
+        uses: actions/download-artifact@v6
+        with:
+          name: Agent-macOS-ARM64
+          path: ControlR.Web.Server\wwwroot\downloads\osx-arm64\
+
+      - name: Download Agent (macOS x64)
+        uses: actions/download-artifact@v6
+        with:
+          name: Agent-macOS-x64
+          path: ControlR.Web.Server\wwwroot\downloads\osx-x64\
+
       - name: Create AgentVersion.txt
         shell: pwsh
         run: |
           Set-Content -Path "ControlR.Web.Server\wwwroot\downloads\AgentVersion.txt" -Value $env:VERSION -Force -Encoding UTF8
 
-      # ===== Build Web Server =====
       - name: Build Web Server
         shell: pwsh
         run: |

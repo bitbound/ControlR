@@ -7,7 +7,7 @@
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
 Website: https://controlr.app  
-Demo Server: https://demo.controlr.app  
+Demo Server: https://demo.controlr.app  (West US)  
 Docker: https://hub.docker.com/r/translucency/controlr  
 DeepWiki: https://deepwiki.com/bitbound/ControlR  
 Discussions: https://github.com/bitbound/ControlR/discussions  
@@ -30,7 +30,7 @@ Afterward, ControlR should be available on port 5120 (by default). Running `curl
 
 ## Deploy on Railway:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/vwiDkP?referralCode=yr3zmo&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/controlr?referralCode=yr3zmo&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
 You can deploy ControlR on Railway using the above button.  I've been testing out their service, and so far, I really like it.  The link includes my referral code, `yr3zmo`, which gives me a referral credits on Railway.
 

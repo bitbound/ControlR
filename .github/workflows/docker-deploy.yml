@@ -131,7 +131,8 @@ jobs:
 
       - name: Image Published
         run: |
-          echo "Docker image published successfully!"
-          echo "Tags:"
-          echo "  - translucency/controlr:${{ inputs.docker_tag }}"
-          echo "  - translucency/controlr:${{ steps.get-version.outputs.VERSION }}"
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "- translucency/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- translucency/controlr:${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
