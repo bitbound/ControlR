@@ -32,6 +32,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+          
       - name: Compute Build Version
         id: setver
         shell: pwsh
