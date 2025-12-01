@@ -2,7 +2,6 @@
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
@@ -37,7 +36,7 @@
 
 @code {
   private string? _message;
-  private AppUser _user = default!;
+  private AppUser? _user;
   private bool _requirePassword;
 
   [CascadingParameter]
@@ -49,12 +48,22 @@
   protected override async Task OnInitializedAsync()
   {
     Input ??= new InputModel();
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _requirePassword = await UserManager.HasPasswordAsync(_user);
   }
 
   private async Task OnValidSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     if (_requirePassword && !await UserManager.CheckPasswordAsync(_user, Input.Password))
     {
       _message = "Error: Incorrect password.";

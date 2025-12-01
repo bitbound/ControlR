@@ -1,6 +1,7 @@
 ﻿@page "/Account/Manage/PersonalData"
 
-@inject IdentityUserAccessor UserAccessor
+@inject UserManager<AppUser> UserManager
+@inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Personal Data</PageTitle>
 
@@ -11,7 +12,8 @@
 <MudGrid>
     <MudItem xs="12">
         <MudText Typo="Typo.body1">
-            Your account contains personal data that you have given us. This page allows you to download or delete that data.
+            Your account contains personal data that you have given us. This page allows you to download or delete that
+            data.
         </MudText>
     </MudItem>
     <MudItem xs="12">
@@ -22,7 +24,8 @@
     <MudItem xs="12">
         <form action="Account/Manage/DownloadPersonalData" method="post">
             <AntiforgeryToken />
-            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Download</MudStaticButton>
+            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                FormAction="FormAction.Submit">Download</MudStaticButton>
         </form>
     </MudItem>
     <MudItem xs="12">
@@ -36,6 +39,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _ = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        var user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
     }
 }

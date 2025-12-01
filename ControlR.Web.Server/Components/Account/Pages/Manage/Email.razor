@@ -3,52 +3,56 @@
 @inject UserManager<AppUser> UserManager
 @inject IEmailSender<AppUser> EmailSender
 @inject IOptionsMonitor<AppOptions> AppOptions
-@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
 @inject NavigationManager NavigationManager
 
 <PageTitle>Manage email</PageTitle>
 
 <MudText Typo="Typo.h6" GutterBottom="true">Manage email</MudText>
 
-<StatusMessage Message="@_message"/>
+<StatusMessage Message="@_message" />
 
 <form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
   <AntiforgeryToken />
 </form>
 <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
-  <DataAnnotationsValidator/>
+  <DataAnnotationsValidator />
 
   <MudGrid>
 
     @if (_isEmailConfirmed)
     {
       <MudItem xs="12">
-        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true" AdornmentIcon="Icons.Material.Filled.Check" AdornmentColor="Color.Success"/>
+        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true"
+          AdornmentIcon="Icons.Material.Filled.Check" AdornmentColor="Color.Success" />
       </MudItem>
     }
     else
     {
       <MudItem xs="12">
-        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true"/>
+        <MudStaticTextField Value="@_email" Label="Email" Placeholder="Please enter your email." Disabled="true" />
       </MudItem>
       <MudItem xs="12">
-        <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Send verification email</MudStaticButton>
+        <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+          Send verification email</MudStaticButton>
       </MudItem>
     }
 
     <MudItem xs="12">
-      <MudStaticTextField @bind-Value="@Input.NewEmail" For="@(() => Input.NewEmail)" Label="New Email" HelperText="Please enter new email."/>
+      <MudStaticTextField @bind-Value="@Input.NewEmail" For="@(() => Input.NewEmail)" Label="New Email"
+        HelperText="Please enter new email." />
     </MudItem>
 
     <MudItem xs="12">
-      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Change email</MudStaticButton>
+      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+        Change email</MudStaticButton>
     </MudItem>
   </MudGrid>
 </EditForm>
 
 @code {
   private string? _message;
-  private AppUser _user = default!;
+  private AppUser? _user;
   private string? _email;
   private bool _isEmailConfirmed;
 
@@ -61,7 +65,12 @@
   protected override async Task OnInitializedAsync()
   {
     Input ??= new InputModel();
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _email = await UserManager.GetEmailAsync(_user);
     _isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(_user);
 
@@ -70,6 +79,12 @@
 
   private async Task OnValidSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+
     if (Input.NewEmail is null || Input.NewEmail == _email)
     {
       _message = "Your email is unchanged.";
@@ -80,8 +95,8 @@
     var code = await UserManager.GenerateChangeEmailTokenAsync(_user, Input.NewEmail);
     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
     var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-      NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
-      new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
+    NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
+    new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
 
     await EmailSender.SendConfirmationLinkAsync(_user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
 
@@ -90,6 +105,12 @@
 
   private async Task OnSendEmailVerificationAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+    
     if (_email is null)
     {
       return;
@@ -99,8 +120,8 @@
     var code = await UserManager.GenerateEmailConfirmationTokenAsync(_user);
     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
     var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-      NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-      new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+    NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
 
     await EmailSender.SendConfirmationLinkAsync(_user, _email, HtmlEncoder.Default.Encode(callbackUrl));
 

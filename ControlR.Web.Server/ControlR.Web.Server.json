@@ -5,61 +5,6 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/Account/Manage/LinkExternalLogin": {
-      "post": {
-        "tags": [
-          "ControlR.Web.Server"
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "required": [
-                  "provider"
-                ],
-                "type": "object",
-                "properties": {
-                  "provider": {
-                    "type": "string"
-                  }
-                }
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "required": [
-                  "provider"
-                ],
-                "type": "object",
-                "properties": {
-                  "provider": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/Account/Manage/DownloadPersonalData": {
-      "post": {
-        "tags": [
-          "ControlR.Web.Server"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/Account/PerformExternalLogin": {
       "post": {
         "tags": [
@@ -199,6 +144,61 @@
               "type": "string"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/Account/Manage/LinkExternalLogin": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "provider"
+                ],
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "provider"
+                ],
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/Account/Manage/DownloadPersonalData": {
+      "post": {
+        "tags": [
+          "ControlR.Web.Server"
         ],
         "responses": {
           "200": {

@@ -2,38 +2,39 @@
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Profile</PageTitle>
 
 <MudText Typo="Typo.h6" GutterBottom="true">Profile</MudText>
 
-<StatusMessage/>
+<StatusMessage />
 
 <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-  <DataAnnotationsValidator/>
+  <DataAnnotationsValidator />
 
   <MudGrid>
     <MudItem xs="12">
-      <MudStaticTextField Value="@_username" Label="Username" Disabled="true" Placeholder="Please choose your username."/>
+      <MudStaticTextField Value="@_username" Label="Username" Disabled="true"
+        Placeholder="Please choose your username." />
     </MudItem>
     <MudItem xs="12">
-      <MudStaticTextField Value="@_userId" Label="User ID" ReadOnly HelperText="This is your unique user identifier."/>
+      <MudStaticTextField Value="@_userId" Label="User ID" ReadOnly HelperText="This is your unique user identifier." />
     </MudItem>
     <MudItem xs="12">
-      <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
-                          Label="Phone Number" HelperText="Please enter your phone number."
-                          UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "tel-national" } })"/>
+      <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber" Label="Phone Number"
+        HelperText="Please enter your phone number."
+        UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "tel-national" } })" />
     </MudItem>
     <MudItem xs="12">
-      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Save</MudStaticButton>
+      <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+        Save</MudStaticButton>
     </MudItem>
   </MudGrid>
 </EditForm>
 
 @code {
-  private AppUser _user = default!;
+  private AppUser? _user;
   private string? _username;
   private Guid _userId;
   private string? _phoneNumber;
@@ -47,8 +48,13 @@
   protected override async Task OnInitializedAsync()
   {
     Input ??= new InputModel();
-    
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _userId = _user.Id;
     _username = await UserManager.GetUserNameAsync(_user);
     _phoneNumber = await UserManager.GetPhoneNumberAsync(_user);
@@ -58,6 +64,12 @@
 
   private async Task OnValidSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+    
     if (Input.PhoneNumber != _phoneNumber)
     {
       var setPhoneResult = await UserManager.SetPhoneNumberAsync(_user, Input.PhoneNumber);

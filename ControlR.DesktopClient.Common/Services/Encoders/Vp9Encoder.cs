@@ -1,14 +1,14 @@
-using System.Buffers;
 using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Helpers;
 using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.Services.Encoders;
 
-public class H264Encoder : IStreamEncoder
+// TODO: Implementation stub.
+public class Vp9Encoder : IStreamEncoder
 {
+    private const uint DefaultFrameRate = 30;
     private readonly Channel<byte[]> _packetChannel = Channel.CreateUnbounded<byte[]>();
 
     private CancellationTokenSource? _cts;
@@ -17,7 +17,7 @@ public class H264Encoder : IStreamEncoder
     private Stream? _inputStream;
     private Task? _readTask;
 
-    public CaptureEncoderType Type => CaptureEncoderType.H264;
+    public CaptureEncoderType Type => CaptureEncoderType.Vpx;
 
     public void Dispose()
     {
@@ -75,16 +75,15 @@ public class H264Encoder : IStreamEncoder
 
         _cts = new CancellationTokenSource();
 
-        // Adjust CRF (quality) - lower is better. 0-51.
-        // Map 0-100 quality to 51-0 CRF roughly.
-        // quality 100 -> crf 0 (lossless)
-        // quality 0 -> crf 51
-        var crf = (int)((100 - quality) * 0.51);
+        var ffmpegArgs = $"-y -f rawvideo -pixel_format bgra -video_size {width}x{height} " +
+             $"-framerate {DefaultFrameRate} -i pipe:0 -g {DefaultFrameRate * 2} " +
+             $"-vf \"format=yuv420p\" -c:v libvpx-vp9 -deadline realtime -row-mt 1 " +
+             $"-f webm pipe:1";
 
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-f rawvideo -pix_fmt bgra -s {width}x{height} -r 30 -i pipe:0 -c:v libx264 -preset ultrafast -tune zerolatency -crf {crf} -f h264 pipe:1",
+            Arguments = ffmpegArgs,
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,

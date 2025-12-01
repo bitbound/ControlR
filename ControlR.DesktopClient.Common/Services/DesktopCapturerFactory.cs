@@ -22,17 +22,14 @@ public class DesktopCapturerFactory(IServiceProvider serviceProvider, IOptions<S
         return _options.Value.EncoderType switch
         {
             CaptureEncoderType.Jpeg => ActivatorUtilities.CreateInstance<FrameBasedCapturer>(_serviceProvider),
-            CaptureEncoderType.H264 => CreateStreamBasedCapturer(),
+            CaptureEncoderType.Vpx => CreateStreamBasedCapturer(),
             _ => throw new NotSupportedException($"Encoder type {_options.Value.EncoderType} is not supported.")
         };
     }
 
     private IDesktopCapturer CreateStreamBasedCapturer()
     {
-        // We need to provide IStreamEncoder.
-        // We can create H264Encoder here or resolve it if registered.
-        // Since H264Encoder is stateful and disposable, creating it here is fine.
-        var encoder = ActivatorUtilities.CreateInstance<H264Encoder>(_serviceProvider);
+        var encoder = ActivatorUtilities.CreateInstance<Vp9Encoder>(_serviceProvider);
         return ActivatorUtilities.CreateInstance<StreamBasedCapturer>(_serviceProvider, encoder);
     }
 }

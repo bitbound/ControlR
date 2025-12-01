@@ -1,7 +1,6 @@
 @page "/Account/Manage/RenamePasskey"
 
 @inject UserManager<AppUser> UserManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Rename passkey</PageTitle>
@@ -52,7 +51,7 @@ else
 }
 
 @code {
-  private AppUser _user = default!;
+  private AppUser? _user;
   private UserPasskeyInfo? _passkey;
   private byte[]? _credentialId;
 
@@ -86,7 +85,12 @@ else
       return;
     }
 
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _passkey = await UserManager.GetPasskeyAsync(_user, _credentialId);
 
     if (_passkey is not null && string.IsNullOrEmpty(Input.Name))
@@ -97,6 +101,12 @@ else
 
   private async Task RenamePasskeySubmit()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+    
     if (_passkey is null || _credentialId is null)
     {
       return;

@@ -1,13 +1,12 @@
 ﻿@page "/Account/Manage/Disable2fa"
 
 @inject UserManager<AppUser> UserManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<Disable2fa> Logger
 
 <PageTitle>Disable two-factor authentication (2FA)</PageTitle>
 
-<StatusMessage/>
+<StatusMessage />
 
 <MudText Typo="Typo.h6" GutterBottom>
   Disable two-factor authentication (2FA)
@@ -19,13 +18,14 @@
   </MudText>
   <MudText>
     Disabling 2FA does not change the keys used in authenticator apps. If you wish to change the key
-    used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
+    used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator
+      keys.</a>
   </MudText>
 </MudAlert>
 
 <div>
   <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
-    <AntiforgeryToken/>
+    <AntiforgeryToken />
     <MudStaticButton Color="Color.Error" Variant="Variant.Outlined">
       Disable 2FA
     </MudStaticButton>
@@ -33,13 +33,19 @@
 </div>
 
 @code {
-  private AppUser _user = default!;
+  private AppUser? _user;
 
   [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
 
     if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(_user))
     {
@@ -49,6 +55,12 @@
 
   private async Task OnSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+
     var disable2FaResult = await UserManager.SetTwoFactorEnabledAsync(_user, false);
     if (!disable2FaResult.Succeeded)
     {

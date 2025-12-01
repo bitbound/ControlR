@@ -2,7 +2,6 @@
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Manage passkeys</PageTitle>
@@ -34,15 +33,15 @@ else
         <div class="d-flex gap-2">
           <form action="Account/Manage/RenamePasskey" method="get" style="display: inline;">
             <input type="hidden" name="id" value="@Convert.ToBase64String(context.CredentialId)" />
-            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Primary" Variant="Variant.Text">Rename</MudStaticButton>
+            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Primary" Variant="Variant.Text">Rename
+            </MudStaticButton>
           </form>
           <form @formname="@($"delete-passkey-{Convert.ToBase64String(context.CredentialId)}")"
-                @onsubmit="() => DeletePasskey(context.CredentialId)"
-                method="post"
-                style="display: inline;">
+            @onsubmit="() => DeletePasskey(context.CredentialId)" method="post" style="display: inline;">
             <AntiforgeryToken />
             <input type="hidden" name="credentialId" value="@Convert.ToBase64String(context.CredentialId)" />
-            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Error" Variant="Variant.Text">Delete</MudStaticButton>
+            <MudStaticButton FormAction="FormAction.Submit" Color="Color.Error" Variant="Variant.Text">Delete
+            </MudStaticButton>
           </form>
         </div>
       </MudTd>
@@ -62,17 +61,15 @@ else
       </MudAlert>
     }
 
-    <PasskeySubmit Operation="PasskeyOperation.Create"
-                   Name="Input.Passkey"
-                   Variant="Variant.Filled"
-                   Color="Color.Primary">
+    <PasskeySubmit Operation="PasskeyOperation.Create" Name="Input.Passkey" Variant="Variant.Filled"
+      Color="Color.Primary">
       Add a passkey
     </PasskeySubmit>
   </EditForm>
 }
 
 @code {
-  private AppUser _user = default!;
+  private AppUser? _user;
   private IList<UserPasskeyInfo>? _passkeys;
 
   [CascadingParameter]
@@ -87,12 +84,22 @@ else
   protected override async Task OnInitializedAsync()
   {
     Input ??= new();
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _passkeys = await UserManager.GetPasskeysAsync(_user);
   }
 
   private async Task AddPasskey()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     if (string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
     {
       return;
@@ -123,6 +130,11 @@ else
 
   private async Task DeletePasskey(byte[] credentialId)
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     var result = await UserManager.RemovePasskeyAsync(_user, credentialId);
     if (result.Succeeded)
     {

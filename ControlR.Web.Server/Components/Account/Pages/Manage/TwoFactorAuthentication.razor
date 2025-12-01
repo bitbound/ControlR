@@ -3,7 +3,6 @@
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Two-factor authentication (2FA)</PageTitle>
@@ -96,7 +95,12 @@ else
 
   protected override async Task OnInitializedAsync()
   {
-    var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    var user = await UserManager.GetUserAsync(HttpContext.User);
+    if (user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     _canTrack = HttpContext.Features.Get<ITrackingConsentFeature>()?.CanTrack ?? true;
     _hasAuthenticator = await UserManager.GetAuthenticatorKeyAsync(user) is not null;
     _is2FaEnabled = await UserManager.GetTwoFactorEnabledAsync(user);

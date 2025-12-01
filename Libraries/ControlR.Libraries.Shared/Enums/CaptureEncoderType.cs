@@ -3,6 +3,6 @@ namespace ControlR.Libraries.Shared.Enums;
 public enum CaptureEncoderType
 {
     Jpeg,
-    H264,
+    Vpx,
     // Future: Vp8, Av1
 }

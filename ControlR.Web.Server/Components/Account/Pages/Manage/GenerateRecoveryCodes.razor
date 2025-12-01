@@ -1,7 +1,6 @@
 ﻿@page "/Account/Manage/GenerateRecoveryCodes"
 
 @inject UserManager<AppUser> UserManager
-@inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<GenerateRecoveryCodes> Logger
 
@@ -28,7 +27,8 @@ else
 
     <MudText GutterBottom>
       Generating new recovery codes does not change the keys used in authenticator apps. If you wish to change the key
-      used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
+      used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator
+        keys.</a>
     </MudText>
   </MudAlert>
 
@@ -44,14 +44,20 @@ else
 
 @code {
   private string? _message;
-  private AppUser _user = default!;
+  private AppUser? _user;
   private IEnumerable<string>? _recoveryCodes;
 
   [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
   protected override async Task OnInitializedAsync()
   {
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
 
     var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(_user);
     if (!isTwoFactorEnabled)
@@ -62,6 +68,11 @@ else
 
   private async Task OnSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     var userId = await UserManager.GetUserIdAsync(_user);
     _recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10);
     _message = "You have generated new recovery codes.";

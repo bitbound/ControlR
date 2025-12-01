@@ -3,80 +3,76 @@
 
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
-@inject IdentityUserAccessor UserAccessor
 @inject IUserStore<AppUser> UserStore
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Manage your external logins</PageTitle>
 
-<StatusMessage/>
+<StatusMessage />
 @if (_currentLogins?.Count > 0)
 {
   <h3>Registered Logins</h3>
   <table class="table">
     <tbody>
-    @foreach (var login in _currentLogins)
-    {
-      <tr>
-        <td>
-          <MudText Typo="Typo.body1" Color="Color.Primary">
-            @login.LoginProvider
-          </MudText>
-        </td>
-        <td>
-          @if (_showRemoveButton)
-          {
-            <form @formname="@($"remove-login-{login.LoginProvider}")" @onsubmit="OnSubmitAsync" method="post">
-              <AntiforgeryToken/>
-              <div>
-                <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider"/>
-                <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey"/>
-                <MudStaticButton ButtonType="@ButtonType.Submit" Variant="Variant.Text" Color="Color.Error" Size="Size.Small" Class="ms-3">
-                  Remove
-                </MudStaticButton>
-              </div>
-            </form>
-          }
-          else
-          {
-            @: &nbsp;
-          }
-        </td>
-      </tr>
-    }
+      @foreach (var login in _currentLogins)
+      {
+        <tr>
+          <td>
+            <MudText Typo="Typo.body1" Color="Color.Primary">
+              @login.LoginProvider
+            </MudText>
+          </td>
+          <td>
+            @if (_showRemoveButton)
+            {
+              <form @formname="@($"remove-login-{login.LoginProvider}")" @onsubmit="OnSubmitAsync" method="post">
+                <AntiforgeryToken />
+                <div>
+                  <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider" />
+                  <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey" />
+                  <MudStaticButton ButtonType="@ButtonType.Submit" Variant="Variant.Text" Color="Color.Error"
+                    Size="Size.Small" Class="ms-3">
+                    Remove
+                  </MudStaticButton>
+                </div>
+              </form>
+            }
+            else
+            {
+              @: &nbsp;
+            }
+          </td>
+        </tr>
+      }
     </tbody>
   </table>
 }
 @if (_otherLogins?.Count > 0)
 {
   <h4>Add another service to log in.</h4>
-  <MudDivider Class="my-2"/>
+  <MudDivider Class="my-2" />
   @foreach (var provider in _otherLogins)
   {
     <form class="form-horizontal" action="Account/Manage/LinkExternalLogin" method="post">
-      <AntiforgeryToken/>
+      <AntiforgeryToken />
       <div class="mt-3">
         <p>
-          <input type="hidden" name="Provider" value="@provider.Name"/>
+          <input type="hidden" name="Provider" value="@provider.Name" />
           @switch (provider.Name)
           {
             case "Microsoft":
               <button type="submit">
-                <img src="images/sign-in-microsoft.svg" alt="Sign in with Microsoft"/>
+                <img src="images/sign-in-microsoft.svg" alt="Sign in with Microsoft" />
               </button>
               break;
             case "GitHub":
-              <MudButton ButtonType="ButtonType.Submit"
-                         Color="Color.Info"
-                         StartIcon="@(Icons.Custom.Brands.GitHub)"
-                         Variant="Variant.Outlined">
+              <MudButton ButtonType="ButtonType.Submit" Color="Color.Info" StartIcon="@(Icons.Custom.Brands.GitHub)"
+                Variant="Variant.Outlined">
                 Sign in with GitHub
               </MudButton>
               break;
             default:
-              <MudStaticButton Variant="Variant.Outlined"
-                               Color="Color.Info"
-                               ButtonType="@ButtonType.Submit">
+              <MudStaticButton Variant="Variant.Outlined" Color="Color.Info" ButtonType="@ButtonType.Submit">
                 @provider.DisplayName
               </MudStaticButton>
               break;
@@ -90,7 +86,7 @@
 @code {
   public const string LinkLoginCallbackAction = "LinkLoginCallback";
 
-  private AppUser _user = default!;
+  private AppUser? _user;
   private IList<UserLoginInfo>? _currentLogins;
   private IList<AuthenticationScheme>? _otherLogins;
   private bool _showRemoveButton;
@@ -109,12 +105,19 @@
 
   protected override async Task OnInitializedAsync()
   {
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+
     _currentLogins = await UserManager.GetLoginsAsync(_user);
     _otherLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
-      .Where(auth => _currentLogins.All(ul => auth.Name != ul.LoginProvider))
-      .Where(x => x.Name != CustomSchemes.Dynamic)
-      .ToList();
+    .Where(auth => _currentLogins.All(ul => auth.Name != ul.LoginProvider))
+    .Where(x => x.Name != CustomSchemes.Dynamic)
+    .ToList();
 
     string? passwordHash = null;
     if (UserStore is IUserPasswordStore<AppUser> userPasswordStore)
@@ -132,6 +135,12 @@
 
   private async Task OnSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+
     var result = await UserManager.RemoveLoginAsync(_user, LoginProvider!, ProviderKey!);
     if (!result.Succeeded)
     {
@@ -144,6 +153,12 @@
 
   private async Task OnGetLinkLoginCallbackAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
+    
     var userId = await UserManager.GetUserIdAsync(_user);
     var info = await SignInManager.GetExternalLoginInfoAsync(userId);
     if (info is null)

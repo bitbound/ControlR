@@ -31,7 +31,7 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<IImageUtility, ImageUtility>()
       .AddSingleton<IFrameEncoder, JpegEncoder>()
-      .AddSingleton<IStreamEncoder, H264Encoder>()
+      .AddSingleton<IStreamEncoder, Vp9Encoder>()
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<IDesktopStreamingClient, DesktopStreamingClient>()

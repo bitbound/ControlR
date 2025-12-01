@@ -1,7 +1,6 @@
 ﻿@page "/Account/Manage/EnableAuthenticator"
 
 @inject UserManager<AppUser> UserManager
-@inject IdentityUserAccessor UserAccessor
 @inject UrlEncoder UrlEncoder
 @inject IdentityRedirectManager RedirectManager
 @inject IOptionsMonitor<AppOptions> AppOptions
@@ -78,7 +77,7 @@ else
 
   private string? _message;
   private string? _qrCodeDataUri;
-  private AppUser _user = null!;
+  private AppUser? _user;
   private string? _sharedKey;
   private string? _authenticatorUri;
   private IEnumerable<string>? _recoveryCodes;
@@ -92,13 +91,23 @@ else
   protected override async Task OnInitializedAsync()
   {
     Input ??= new InputModel();
-    _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    _user = await UserManager.GetUserAsync(HttpContext.User);
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
 
     await LoadSharedKeyAndQrCodeUriAsync(_user);
   }
 
   private async Task OnValidSubmitAsync()
   {
+    if (_user is null)
+    {
+      RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+      return;
+    }
     // Strip spaces and hyphens
     var verificationCode = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
 
