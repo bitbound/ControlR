@@ -3,6 +3,7 @@
 @using ControlR.Web.Server.Components.Account.Shared
 
 @inject SignInManager<AppUser> SignInManager
+@inject PasskeySignInManager PasskeySignInManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -38,13 +39,10 @@
                     </MudStaticCheckBox>
                 </MudItem>
                 <MudItem xs="12" Class="d-flex gap-4">
-                    <MudStaticButton Variant="Variant.Outlined" Color="Color.Primary"
-                        FormAction="FormAction.Submit">Log in</MudStaticButton>
-                    <PasskeySubmit Operation="PasskeyOperation.Request"
-                                   Name="Input.Passkey"
-                                   EmailName="Input.Email"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Secondary">
+                    <MudStaticButton Variant="Variant.Outlined" Color="Color.Primary" FormAction="FormAction.Submit">Log
+                        in</MudStaticButton>
+                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email"
+                        Variant="Variant.Outlined" Color="Color.Secondary">
                         Sign in with a passkey
                     </PasskeySubmit>
                 </MudItem>
@@ -115,11 +113,17 @@
 
     public async Task LoginUser()
     {
-        Microsoft.AspNetCore.Identity.SignInResult result;
+        if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+        {
+            _errorMessage = $"Error: {Input.Passkey.Error}";
+            return;
+        }
+
+        SignInResult result;
 
         if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
         {
-            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            result = await PasskeySignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
         }
         else
         {

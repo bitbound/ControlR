@@ -143,7 +143,6 @@ public static class WebApplicationBuilderExtensions
 
     authBuilder.AddIdentityCookies();
 
-    // Add this to your WebApplicationBuilderExtensions.cs
     builder.Services.ConfigureApplicationCookie(options =>
     {
       options.Events.OnRedirectToLogin = context =>
@@ -212,7 +211,9 @@ public static class WebApplicationBuilderExtensions
       .AddSignInManager()
       .AddDefaultTokenProviders();
 
-    builder.Services.AddScoped<IUserCreator, UserCreator>();
+    builder.Services
+      .AddScoped<PasskeySignInManager>()
+      .AddScoped<IUserCreator, UserCreator>();
 
     // Configure DataProtection.
     builder.Services

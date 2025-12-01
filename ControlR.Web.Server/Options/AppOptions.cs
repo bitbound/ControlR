@@ -18,6 +18,7 @@ public class AppOptions
   public long MaxFileTransferSize { get; init; } = 100 * 1024 * 1024; // 100 MB default
   public string? MicrosoftClientId { get; init; }
   public string? MicrosoftClientSecret { get; init; }
+  public bool PersistPasskeyLogin { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }
   public bool SmtpCheckCertificateRevocation { get; init; } = true;
   public string? SmtpDisplayName { get; init; }

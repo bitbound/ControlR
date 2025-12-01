@@ -37,6 +37,9 @@ services:
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 
+      # If enabled, signing in with a passkey will effectively add the "remember me" option.
+      ControlR_AppOptions__PersistPasskeyLogin: false
+
       # Automatically obtain Cloudflare IPs from https://www.cloudflare.com/ips-v4
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
