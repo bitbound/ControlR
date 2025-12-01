@@ -30,14 +30,14 @@ jobs:
     outputs:
       version: ${{ steps.setver.outputs.version }}
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.GH_VARIABLES_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           clean: true
           fetch-depth: 0
-          
+
       - name: Compute Build Version
         id: setver
         shell: pwsh
