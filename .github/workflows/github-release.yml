@@ -83,6 +83,12 @@ jobs:
           draft: true
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: true
+          body: |
+            ## Breaking Changes:
+              - 
+
+            ## Changes:
+              - 
           files: |
             server-linux-amd64.zip
             ControlR.Web.Server.json
