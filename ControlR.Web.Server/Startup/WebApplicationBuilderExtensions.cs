@@ -232,7 +232,14 @@ public static class WebApplicationBuilderExtensions
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
 
     // Add forwarded headers.
-    await builder.ConfigureForwardedHeaders(appOptions);
+    if (appOptions.EnableNetworkTrust)
+    {
+      await builder.ConfigureForwardedHeadersWithFullTrust();
+    }
+    else
+    {
+      await builder.ConfigureForwardedHeaders(appOptions);
+    }
 
     // Add client services for pre-rendering.
     builder.Services.AddControlrWebClient();
@@ -405,7 +412,7 @@ public static class WebApplicationBuilderExtensions
           }
           else
           {
-            Console.WriteLine("Invalid KnownNetwork: {network}");
+            Console.WriteLine($"Invalid KnownNetwork: {network}");
           }
         }
       }
@@ -417,6 +424,17 @@ public static class WebApplicationBuilderExtensions
           options.KnownIPNetworks.Add(cloudflareIp);
         }
       }
+    });
+  }
+  private static async Task ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
+  {
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+      options.ForwardedHeaders = ForwardedHeaders.All;
+      options.ForwardLimit = null;
+      options.KnownIPNetworks.Clear();
+      options.KnownProxies.Clear();
+      options.KnownIPNetworks.Clear();
     });
   }
 }

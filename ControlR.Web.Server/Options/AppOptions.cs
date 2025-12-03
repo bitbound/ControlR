@@ -9,6 +9,7 @@ public class AppOptions
   public bool DisableEmailSending { get; init; }
   public string? DockerGatewayIp { get; init; }
   public bool EnableCloudflareProxySupport { get; init; }
+  public bool EnableNetworkTrust { get; init; }
   public bool EnablePublicRegistration { get; init; }
   public string? GitHubClientId { get; init; }
   public string? GitHubClientSecret { get; init; }

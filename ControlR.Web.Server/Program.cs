@@ -20,7 +20,9 @@ var appOptions = builder.Configuration
   .Get<AppOptions>() ?? new AppOptions();
 
 var app = builder.Build();
+
 app.UseForwardedHeaders();
+
 if (appOptions.UseHttpLogging)
 {
   app.UseWhen(

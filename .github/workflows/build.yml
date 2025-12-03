@@ -9,6 +9,14 @@ on:
   #    - 'README.md'
   workflow_dispatch:
     inputs:
+      windows_runner:
+        description: 'Windows Runner'
+        required: true
+        default: 'windows-latest'
+        type: choice
+        options:
+          - windows-latest
+          - self-hosted
       retention_days_artifacts:
         description: 'Retention Days for Artifacts'
         required: false
@@ -118,9 +126,9 @@ jobs:
 
   build-windows-binaries:
     name: Windows Build
-    runs-on: windows-latest
+    runs-on: ${{ inputs.windows_runner || 'windows-latest' }}
     environment: secure-signing
-    needs: [set-version, build-mac-binaries]
+    needs: [set-version]
     permissions:
       id-token: write
       contents: read

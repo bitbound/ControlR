@@ -44,6 +44,11 @@ services:
       # and add them to the KnownNetworks list for forwarded headers.
       ControlR_AppOptions__EnableCloudflareProxySupport: false
 
+      # When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
+      # from the reverse proxy.  Only enable this in secure environments where the reverse proxy
+      # is guaranteed to be the only source of incoming traffic.
+      ControlR_AppOptions__EnableNetworkTrust: false
+
       # Add an Azure Monitor connection string to enable exporting of OpenTelemetry data to Azure.
       #ControlR_AzureMonitor__ConnectionString:
 
@@ -53,7 +58,14 @@ services:
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
       ControlR_Logging__LogLevel__Default: Information
 
-      # Whether to add HTTP logging services.
+      # The log level to use for HttpLogging middleware (when it's enabled).
+      ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpLogging: Information
+
+      # The log level for ForwardedHeadersMiddleware, among others. When set to debug,
+      # this will log when a reverse proxy isn't trusted, which can help troubleshoot misconfigurations.
+      ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides: Debug
+
+      # For debugging.  When enabled, extra logs will be written for all HTTP requests and responses.
       # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
       ControlR_AppOptions__UseHttpLogging: false
 
