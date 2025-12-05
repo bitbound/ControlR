@@ -89,7 +89,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
     return keys.Select(x => x.ToDto()).ToList();
   }
 
-  [HttpGet("{keyId:guid}/usages")]
+  [HttpGet("usages/{keyId:guid}")]
   public async Task<ActionResult<IEnumerable<AgentInstallerKeyUsageDto>>> GetUsages(
       [FromRoute] Guid keyId,
       [FromServices] AppDb db,
@@ -124,7 +124,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
         .ToList();
   }
 
-  [HttpPost("{keyId:guid}/increment-usage")]
+  [HttpPost("increment-usage/{keyId:guid}")]
   public async Task<IActionResult> IncrementUsage(
       [FromRoute] Guid keyId,
       [FromQuery] Guid? deviceId,

@@ -54,10 +54,10 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok().AsTaskResult();
   }
 
-  public Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto)
+  public Task<Result> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");
-    return Result.Ok().AsTaskResult<Result?>();
+    return Result.Ok().AsTaskResult();
   }
 
   public Task<DesktopSession[]> GetActiveDesktopSessions()

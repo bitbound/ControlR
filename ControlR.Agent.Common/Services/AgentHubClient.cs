@@ -259,7 +259,7 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto)
+  public async Task<Result> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     try
     {
@@ -283,6 +283,10 @@ internal class AgentHubClient(
         await fs.WriteAsync(chunk);
       }
 
+      _logger.LogInformation(
+        "Successfully downloaded file from viewer: {FileName} to {Directory}",
+        dto.FileName, 
+        dto.TargetDirectoryPath);
       return Result.Ok();
     }
     catch (UnauthorizedAccessException ex)
@@ -393,7 +397,7 @@ internal class AgentHubClient(
         _logger.LogInformation(
           "Sending Ctrl+Alt+Del invocation to RDP desktop session with process ID {ProcessId}.",
           dto.TargetDesktopProcessId);
-          
+
         if (_ipcServerStore.TryGetServer(dto.TargetDesktopProcessId, out var ipcServer))
         {
           await ipcServer.Server.Send(dto);
@@ -412,7 +416,7 @@ internal class AgentHubClient(
       await _messenger
         .SendEvent(EventKinds.CtrlAltDelInvoked)
         .ConfigureAwait(false);
-        
+
       return Result.Ok();
     }
     catch (Exception ex)

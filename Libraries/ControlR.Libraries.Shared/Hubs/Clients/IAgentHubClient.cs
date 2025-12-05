@@ -16,7 +16,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId);
   Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<Result> DeleteFile(FileDeleteHubDto dto);
-  Task<Result?> DownloadFileFromViewer(FileUploadHubDto dto);
+  Task<Result> DownloadFileFromViewer(FileUploadHubDto dto);
   Task<DesktopSession[]> GetActiveDesktopSessions();
   Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);

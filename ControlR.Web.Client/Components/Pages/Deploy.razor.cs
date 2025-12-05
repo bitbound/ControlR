@@ -8,8 +8,8 @@ public partial class Deploy
 {
   private bool _addTags;
   private string? _deviceId;
-  private IEnumerable<AgentInstallerKeyDto> _existingKeys = [];
   private string? _existingKeySecretInput;
+  private IEnumerable<AgentInstallerKeyDto> _existingKeys = [];
   private string? _friendlyName;
   private DateTime? _inputExpirationDate;
   private TimeSpan? _inputExpirationTime;

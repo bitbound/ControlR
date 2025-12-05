@@ -376,15 +376,56 @@
             "schema": {
               "type": "string"
             }
-          },
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-operations/upload/{deviceId}": {
+      "post": {
+        "tags": [
+          "DeviceFileOperations"
+        ],
+        "parameters": [
           {
-            "name": "fileName",
-            "in": "query",
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file",
+                  "targetSaveDirectory"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "targetSaveDirectory": {
+                    "type": "string"
+                  },
+                  "overwrite": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -947,7 +988,7 @@
         }
       }
     },
-    "/api/installer-keys/{keyId}/usages": {
+    "/api/installer-keys/usages/{keyId}": {
       "get": {
         "tags": [
           "InstallerKeys"
@@ -996,7 +1037,7 @@
         }
       }
     },
-    "/api/installer-keys/{keyId}/increment-usage": {
+    "/api/installer-keys/increment-usage/{keyId}": {
       "post": {
         "tags": [
           "InstallerKeys"

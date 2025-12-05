@@ -17,17 +17,21 @@ public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null
   private int _disposedValue; 
 
   public object? Metadata { get; set; }
-
   public ChannelReader<T> Reader => _channel.Reader;
-
   public Guid StreamId { get; } = streamId;
-
   public CancellationToken WriteCompleted => _writeCompletedSource.Token;
+  public ChannelWriter<T> Writer => _channel.Writer;
 
   public void Dispose()
   {
     Dispose(true);
     GC.SuppressFinalize(this);
+  }
+
+  public void SetWriteCompleted(Exception? exception = null)
+  {
+     _channel.Writer.TryComplete(exception);
+    _writeCompletedSource.Cancel();
   }
 
   public async Task WriteFromChannelReader(ChannelReader<T> reader, CancellationToken cancellationToken)
@@ -51,6 +55,7 @@ public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null
       await _writeCompletedSource.CancelAsync();
     }
   }
+
 
   private void Dispose(bool disposing)
   {

@@ -361,7 +361,7 @@ public class ControlrApi(
   public async Task<Result<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId)
   {
     return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<AgentInstallerKeyUsageDto[]>($"{HttpConstants.InstallerKeysEndpoint}/{keyId}/Usages"));
+      await _client.GetFromJsonAsync<AgentInstallerKeyUsageDto[]>($"{HttpConstants.InstallerKeysEndpoint}/usages/{keyId}"));
   }
   public async Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath)
   {
@@ -492,7 +492,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.PutAsJsonAsync($"{HttpConstants.InstallerKeysEndpoint}/Rename", dto);
+      using var response = await _client.PutAsJsonAsync($"{HttpConstants.InstallerKeysEndpoint}/rename", dto);
       response.EnsureSuccessStatusCode();
     });
   }

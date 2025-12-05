@@ -18,6 +18,7 @@ using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
+using ControlR.Web.Server.Middleware;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -84,7 +85,10 @@ public static class WebApplicationBuilderExtensions
 
     // Add API services.
     builder.Services.AddControllers();
-    builder.Services.AddOpenApi();
+    builder.Services.AddOpenApi(options =>
+    {
+      options.AddDocumentTransformer<FileUploadTransformer>();
+    });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();
 
