@@ -69,6 +69,24 @@ services:
       # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
       ControlR_AppOptions__UseHttpLogging: false
 
+      # ===============================
+      # Key Protection Options
+      # ===============================
+      # Configure X.509 certificate-based encryption for Data Protection keys at rest.
+      # Without configuration, keys are not encrypted (not recommended for production).
+
+      # When true, Data Protection keys will be encrypted using the certificate specified below.
+      # An exception will be thrown at startup if the certificate is not configured or doesn't exist.
+      ControlR_KeyProtectionOptions__EncryptKeys: false
+
+      # The file path to a PFX (.pfx) certificate file for key encryption.
+      # Mount the certificate file into the container and provide the container path here.
+      #ControlR_KeyProtectionOptions__CertificatePath:
+
+      # The password for the PFX certificate file (if password-protected).
+      # Leave empty if the PFX file has no password.
+      #ControlR_KeyProtectionOptions__CertificatePassword:
+
       # The Gateway IP here must match the IP address used by the Docker gateway.
       ControlR_AppOptions__DockerGatewayIp: "::ffff:172.29.0.1"
 

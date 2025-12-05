@@ -19,6 +19,7 @@ using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
 using ControlR.Web.Server.Middleware;
+using System.Security.Cryptography.X509Certificates;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -220,9 +221,7 @@ public static class WebApplicationBuilderExtensions
       .AddScoped<IUserCreator, UserCreator>();
 
     // Configure DataProtection.
-    builder.Services
-      .AddDataProtection()
-      .PersistKeysToDbContext<AppDb>();
+    builder.ConfigureDataProtection();
 
     // Add SignalR.
     builder.Services
@@ -336,6 +335,48 @@ public static class WebApplicationBuilderExtensions
     }, lifetime: ServiceLifetime.Transient);
   }
 
+  private static void ConfigureDataProtection(this IHostApplicationBuilder builder)
+  {
+    builder.Services.Configure<KeyProtectionOptions>(
+      builder.Configuration.GetSection(KeyProtectionOptions.SectionKey));
+
+    var keyProtectionOptions = builder.Configuration
+      .GetSection(KeyProtectionOptions.SectionKey)
+      .Get<KeyProtectionOptions>() ?? new KeyProtectionOptions();
+
+    var dataProtectionBuilder = builder.Services
+      .AddDataProtection()
+      .PersistKeysToDbContext<AppDb>();
+
+    if (!keyProtectionOptions.EncryptKeys)
+    {
+      Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
+        "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
+      return;
+    }
+
+    if (string.IsNullOrWhiteSpace(keyProtectionOptions.CertificatePath))
+    {
+      throw new InvalidOperationException(
+        "KeyProtectionOptions:EncryptKeys is true, but KeyProtectionOptions:CertificatePath is not configured. " +
+        "Provide a valid path to a PFX certificate file.");
+    }
+
+    if (!File.Exists(keyProtectionOptions.CertificatePath))
+    {
+      throw new InvalidOperationException(
+        $"KeyProtectionOptions:EncryptKeys is true, but the certificate file does not exist: " +
+        $"{keyProtectionOptions.CertificatePath}");
+    }
+
+    var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+      keyProtectionOptions.CertificatePath,
+      keyProtectionOptions.CertificatePassword);
+
+    dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+    Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
+  }
+
   private static async Task ConfigureForwardedHeaders(
     this IHostApplicationBuilder builder,
     AppOptions appOptions)
@@ -430,6 +471,7 @@ public static class WebApplicationBuilderExtensions
       }
     });
   }
+
   private static async Task ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
   {
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
