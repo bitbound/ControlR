@@ -14,22 +14,20 @@ internal abstract class AgentInstallerBase(
   IDeviceDataGenerator deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IProcessManager processManager,
-  ISystemEnvironment systemEnvironment,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerBase> logger)
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
   protected IProcessManager ProcessManager { get; } = processManager;
 
-  protected async Task<Result> CreateDeviceOnServer(string? installerKey, Guid[]? tagIds)
+  protected async Task<Result> CreateDeviceOnServer(string? installerKeySecret, Guid? installerKeyId, Guid[]? tagIds)
   {
-    if (installerKey is null)
+    if (installerKeySecret is null)
     {
       return Result.Ok();
     }
@@ -43,7 +41,7 @@ internal abstract class AgentInstallerBase(
     var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
 
     Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKey);
+    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeySecret, installerKeyId);
     if (createResult.IsSuccess)
     {
       Logger.LogInformation("Device created successfully.");

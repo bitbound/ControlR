@@ -85,6 +85,17 @@
                     <div>
                       @(session.Name)
                     </div>
+                    @if (DeviceAccessState.CurrentDevice.Platform == SystemPlatform.Windows)
+                    {
+                      <div>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                          Session Type:
+                        </MudText>
+                      </div>
+                      <div>
+                        @(session.Type)
+                      </div>
+                    }
                     <div>
                       <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
                         User:

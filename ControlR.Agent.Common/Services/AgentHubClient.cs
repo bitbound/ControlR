@@ -146,9 +146,9 @@ internal class AgentHubClient(
       if (!_settings.DisableAutoUpdate)
       {
         var versionResult = await _desktopClientUpdater.EnsureLatestVersion(
-          acquireGlobalLock: true, 
+          acquireGlobalLock: true,
           _appLifetime.ApplicationStopping);
-        
+
         if (!versionResult)
         {
           return Result.Fail("Failed to ensure latest desktop client version is installed.");
@@ -373,15 +373,53 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task InvokeCtrlAltDel()
+  public async Task<Result> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
   {
-    if (!OperatingSystem.IsWindows())
+    try
     {
-      _logger.LogWarning("Ctrl+Alt+Del invocation is only supported on Windows.");
-      return;
-    }
+      _logger.LogInformation(
+        "Invoke Ctrl+Alt+Del request received for target desktop process ID {TargetDesktopProcessId} from invoker {InvokerName}.",
+        dto.TargetDesktopProcessId,
+        dto.InvokerUserName);
 
-    await _messenger.SendEvent(EventKinds.CtrlAltDelInvoked);
+      if (!OperatingSystem.IsWindows())
+      {
+        _logger.LogWarning("Ctrl+Alt+Del invocation is only supported on Windows.");
+        return Result.Fail("Ctrl+Alt+Del invocation is only supported on Windows.");
+      }
+
+      if (dto.DesktopSessionType == DesktopSessionType.Rdp)
+      {
+        _logger.LogInformation(
+          "Sending Ctrl+Alt+Del invocation to RDP desktop session with process ID {ProcessId}.",
+          dto.TargetDesktopProcessId);
+          
+        if (_ipcServerStore.TryGetServer(dto.TargetDesktopProcessId, out var ipcServer))
+        {
+          await ipcServer.Server.Send(dto);
+          return Result.Ok();
+        }
+        else
+        {
+          _logger.LogWarning(
+            "No IPC server found for process ID {ProcessId}. Cannot send Ctrl+Alt+Del invocation to desktop.",
+            dto.TargetDesktopProcessId);
+
+          return Result.Fail("IPC server not found for target desktop process.");
+        }
+      }
+
+      await _messenger
+        .SendEvent(EventKinds.CtrlAltDelInvoked)
+        .ConfigureAwait(false);
+        
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking Ctrl+Alt+Del.");
+      return Result.Fail("An error occurred while invoking Ctrl+Alt+Del.");
+    }
   }
 
   public async Task InvokeWakeDevice(WakeDeviceDto dto)

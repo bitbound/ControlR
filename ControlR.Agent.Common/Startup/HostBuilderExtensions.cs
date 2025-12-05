@@ -95,9 +95,15 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IRetryer, Retryer>();
     services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();
     services.AddSingleton<IEmbeddedDesktopClientProvider, EmbeddedDesktopClientProvider>();
-    services.AddHostedService<HostLifetimeEventResponder>();
+    services.AddSingleton<IAgentUpdater, AgentUpdater>();
+    services.AddSingleton<ITerminalSessionFactory, TerminalSessionFactory>();
+    services.AddSingleton<ITerminalStore, TerminalStore>();
+    services.AddSingleton<IIpcServerStore, IpcServerStore>();
+    services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
+    services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
+    services.AddSingleton<IAgentHeartbeatTimer, AgentHeartbeatTimer>();
     services.AddControlrIpc();
-    services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
+    services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
 
     if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
     {
@@ -149,20 +155,14 @@ internal static class HostApplicationBuilderExtensions
     // Add services only needed when running.
     if (startupMode == StartupMode.Run)
     {
-      services.AddSingleton<IAgentUpdater, AgentUpdater>();
-      services.AddSingleton<ITerminalSessionFactory, TerminalSessionFactory>();
-      services.AddSingleton<ITerminalStore, TerminalStore>();
-      services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
-      services.AddSingleton<IIpcServerStore, IpcServerStore>();
-      services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
-      services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
-      services.AddSingleton<IAgentHeartbeatTimer, AgentHeartbeatTimer>();
       services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
       services.AddHostedService<IpcServerWatcher>();
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService(x => x.GetRequiredService<IAgentHeartbeatTimer>());
       services.AddHostedService(s => s.GetRequiredService<IDesktopClientUpdater>());
       services.AddHostedService<MessageHandler>();
+      services.AddHostedService<HostLifetimeEventResponder>();
+      services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {

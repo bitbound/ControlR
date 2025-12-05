@@ -24,7 +24,7 @@ internal class AgentInstallerMac(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
@@ -39,7 +39,8 @@ internal class AgentInstallerMac(
   public async Task Install(
     Uri? serverUri = null,
     Guid? tenantId = null,
-    string? installerKey = null,
+    string? installerKeySecret = null,
+    Guid? installerKeyId = null,
     Guid? deviceId = null,
     Guid[]? tags = null)
   {
@@ -99,7 +100,7 @@ internal class AgentInstallerMac(
       await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
       await UpdateAppSettings(serverUri, tenantId, deviceId);
 
-      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      var createResult = await CreateDeviceOnServer(installerKeySecret, installerKeyId, tags);
       if (!createResult.IsSuccess)
       {
         return;
@@ -115,7 +116,6 @@ internal class AgentInstallerMac(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }
@@ -168,7 +168,6 @@ internal class AgentInstallerMac(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }

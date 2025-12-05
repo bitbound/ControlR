@@ -2,6 +2,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Ipc;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -58,6 +59,7 @@ public class IpcClientManager(
         client.On<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(HandleDesktopPreviewRequest);
         client.On<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(HandleCheckOsPermissions);
         client.On<ShutdownCommandDto>(HandleShutdownCommand);
+        client.On<InvokeCtrlAltDelRequestDto>(HandleInvokeCtrlAltDel);
 
         if (!await client.Connect(stoppingToken))
         {
@@ -114,6 +116,7 @@ public class IpcClientManager(
       }
     }
   }
+
   private async void HandleChatMessage(ChatMessageIpcDto dto)
   {
     try
@@ -227,6 +230,21 @@ public class IpcClientManager(
       return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
     }
   }
+  private void HandleInvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
+  {
+    if (!OperatingSystem.IsWindows())
+    {
+      _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
+      return;
+    }
+
+#if WINDOWS_BUILD
+     _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
+     var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
+     win32Interop.InvokeCtrlAltDel();
+#endif
+  }
+
   private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)
   {
     _remoteControlHostManager.StartHost(dto).Forget();

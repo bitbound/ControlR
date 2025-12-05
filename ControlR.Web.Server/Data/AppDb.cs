@@ -17,8 +17,9 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     _userId = extension?.Options.UserId;
   }
 
+  public DbSet<AgentInstallerKeyUsage> AgentInstallerKeyUsages { get; init; }
+  public DbSet<AgentInstallerKey> AgentInstallerKeys { get; init; }
   public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
-
   public DbSet<Device> Devices { get; init; }
   public DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
   public DbSet<ServerAlert> ServerAlerts { get; init; }
@@ -34,7 +35,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     configurationBuilder.Conventions.Add(_ => new DateTimeOffsetConvention());
     configurationBuilder.Conventions.Add(_ => new EntityBaseConvention());
   }
-
   protected override void OnModelCreating(ModelBuilder builder)
   {
     base.OnModelCreating(builder);
@@ -51,6 +51,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
     ConfigureTenantInvites(builder);
+    ConfigureAgentInstallerKeys(builder);
+    ConfigureAgentInstallerKeyUsages(builder);
   }
 
   private static void ConfigureRoles(ModelBuilder builder)
@@ -61,14 +63,12 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .WithOne()
       .HasForeignKey(x => x.RoleId);
   }
-
   private static void ConfigureServerAlert(ModelBuilder builder)
   {
     builder
       .Entity<ServerAlert>()
       .HasKey(x => x.Id);
   }
-
   private static void SeedDatabase(ModelBuilder builder)
   {
     var builtInRoles = RoleFactory.GetBuiltInRoles();
@@ -90,6 +90,35 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         });
   }
 
+  private void ConfigureAgentInstallerKeyUsages(ModelBuilder builder)
+  {
+    builder
+      .Entity<AgentInstallerKeyUsage>()
+      .HasKey(x => x.Id);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<AgentInstallerKeyUsage>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+  private void ConfigureAgentInstallerKeys(ModelBuilder builder)
+  {
+    builder
+      .Entity<AgentInstallerKey>()
+      .HasMany(x => x.Usages)
+      .WithOne(x => x.AgentInstallerKey)
+      .HasForeignKey(x => x.AgentInstallerKeyId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<AgentInstallerKey>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
   private void ConfigureDevices(ModelBuilder builder)
   {
     builder
@@ -104,7 +133,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigurePersonalAccessTokens(ModelBuilder builder)
   {
     builder
@@ -131,7 +159,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureTags(ModelBuilder builder)
   {
     builder
@@ -146,7 +173,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureTenant(ModelBuilder builder)
   {
     // Configure cascade delete for all related entities
@@ -180,7 +206,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasForeignKey(invite => invite.TenantId)
       .OnDelete(DeleteBehavior.Cascade);
   }
-
   private void ConfigureTenantInvites(ModelBuilder builder)
   {
     builder
@@ -194,7 +219,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureTenantSettings(ModelBuilder builder)
   {
     builder
@@ -209,7 +233,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
   }
-
   private void ConfigureUserPreferences(ModelBuilder builder)
   {
     builder
@@ -224,7 +247,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .HasQueryFilter(x => x.UserId == _userId);
     }
   }
-
   private void ConfigureUsers(ModelBuilder builder)
   {
     builder

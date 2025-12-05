@@ -5,6 +5,38 @@ namespace ControlR.Web.Server.Extensions;
 
 public static class DeviceQueryExtensions
 {
+  public static IQueryable<Device> ApplySorting(
+    this IQueryable<Device> query,
+    List<DeviceColumnSort>? sortDefinitions,
+    ILogger logger)
+  {
+    if (sortDefinitions is not { Count: > 0 })
+    {
+      return query;
+    }
+
+    IOrderedQueryable<Device>? orderedQuery = null;
+
+    foreach (var sortDef in sortDefinitions.OrderBy(s => s.SortOrder))
+    {
+      if (string.IsNullOrWhiteSpace(sortDef.PropertyName))
+      {
+        continue;
+      }
+
+      orderedQuery = sortDef.PropertyName switch
+      {
+        nameof(Device.Name) => ApplySort(orderedQuery, query, d => d.Name, sortDef.Descending),
+        nameof(Device.IsOnline) => ApplySort(orderedQuery, query, d => d.IsOnline, sortDef.Descending),
+        nameof(Device.CpuUtilization) => ApplySort(orderedQuery, query, d => d.CpuUtilization, sortDef.Descending),
+        nameof(Device.UsedMemoryPercent) => ApplySort(orderedQuery, query, d => d.UsedMemory / d.TotalMemory, sortDef.Descending),
+        nameof(Device.UsedStoragePercent) => ApplySort(orderedQuery, query, d => d.UsedStorage / d.TotalStorage, sortDef.Descending),
+        _ => orderedQuery
+      };
+    }
+
+    return orderedQuery ?? query;
+  }
 
   public static IQueryable<Device> FilterByColumnFilters(
     this IQueryable<Device> query,
@@ -128,8 +160,21 @@ public static class DeviceQueryExtensions
     return null;
   }
 
+  private static IOrderedQueryable<Device> ApplySort<TKey>(
+    IOrderedQueryable<Device>? orderedQuery,
+    IQueryable<Device> query,
+    Expression<Func<Device, TKey>> keySelector,
+    bool descending)
+  {
+    if (orderedQuery is null)
+    {
+      return descending ? query.OrderByDescending(keySelector) : query.OrderBy(keySelector);
+    }
+    return descending ? orderedQuery.ThenByDescending(keySelector) : orderedQuery.ThenBy(keySelector);
+  }
+
   private static Expression<Func<Device, bool>> BuildBooleanExpression(
-    Expression<Func<Device, bool>> propertySelector,
+      Expression<Func<Device, bool>> propertySelector,
     bool expectedValue)
   {
     var parameter = propertySelector.Parameters[0];
@@ -137,8 +182,8 @@ public static class DeviceQueryExtensions
 
     // Create the comparison expression
     var comparisonExpression = expectedValue
-      ? propertyExpression 
-      : Expression.Not(propertyExpression); 
+      ? propertyExpression
+      : Expression.Not(propertyExpression);
 
     return Expression.Lambda<Func<Device, bool>>(comparisonExpression, parameter);
   }
@@ -185,7 +230,8 @@ public static class DeviceQueryExtensions
     {
       // If not a valid boolean, return query unchanged
       return query;
-    }    switch (filterOperator)
+    }
+    switch (filterOperator)
     {
       // Handle MudBlazor boolean filter operators
       case FilterOperator.Boolean.Is:
@@ -301,7 +347,6 @@ public static class DeviceQueryExtensions
       }
     }
   }
-
   private class ParameterReplacerVisitor(ParameterExpression oldParameter, Expression newExpression) : ExpressionVisitor
   {
     private readonly Expression _newExpression = newExpression;

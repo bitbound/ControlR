@@ -14,7 +14,7 @@ internal class AgentInstallerLinux(
   IHostApplicationLifetime lifetime,
   IFileSystem fileSystem,
   IProcessManager processManager,
-  ISystemEnvironment environmentHelper,
+  ISystemEnvironment systemEnvironment,
   IControlrApi controlrApi,
   IDeviceDataGenerator deviceDataGenerator,
   IRetryer retryer,
@@ -25,13 +25,13 @@ internal class AgentInstallerLinux(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, environmentHelper, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processManager, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
-  private readonly ISystemEnvironment _environment = environmentHelper;
+  private readonly ISystemEnvironment _environment = systemEnvironment;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
@@ -40,7 +40,8 @@ internal class AgentInstallerLinux(
   public async Task Install(
     Uri? serverUri = null,
     Guid? tenantId = null,
-    string? installerKey = null,
+    string? installerKeySecret = null,
+    Guid? installerKeyId = null,
     Guid? deviceId = null,
     Guid[]? tags = null)
   {
@@ -101,7 +102,7 @@ internal class AgentInstallerLinux(
       await WriteFileIfChanged(GetDesktopServiceFilePath(), desktopServiceFile);
       await UpdateAppSettings(serverUri, tenantId, deviceId);
 
-      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      var createResult = await CreateDeviceOnServer(installerKeySecret, installerKeyId, tags);
       if (!createResult.IsSuccess)
       {
         return;
@@ -141,7 +142,6 @@ internal class AgentInstallerLinux(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }
@@ -201,7 +201,6 @@ internal class AgentInstallerLinux(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }

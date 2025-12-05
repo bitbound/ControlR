@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Client.Authz;
 
 namespace ControlR.Web.Server.Authz.Roles;
 
@@ -35,6 +36,13 @@ public static class RoleFactory
         Name = RoleNames.AgentInstaller,
         NormalizedName = RoleNames.AgentInstaller.ToUpper(),
         ConcurrencyStamp = "ccfd2843-8a06-43d4-9bf3-6110b4e65900",
+      },
+      new AppRole
+      {
+        Id = DeterministicGuid.Create(5),
+        Name = RoleNames.InstallerKeyManager,
+        NormalizedName = RoleNames.InstallerKeyManager.ToUpper(),
+        ConcurrencyStamp = "a7e1a339-19c3-4d44-97e3-239636906a45",
       }
     ];
   }

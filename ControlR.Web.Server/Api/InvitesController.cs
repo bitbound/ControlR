@@ -15,20 +15,25 @@ public class InvitesController : ControllerBase
   public async Task<ActionResult<AcceptInvitationResponseDto>> AcceptInvite(
     [FromBody] AcceptInvitationRequestDto dto,
     [FromServices] AppDb appDb,
-    [FromServices] UserManager<AppUser> userManager)
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] ILogger<InvitesController> logger)
   {
+    logger.LogInformation("Accepting invitation for email: {Email}", dto.Email);
+
     var invite = await appDb.TenantInvites
       .IgnoreQueryFilters()
       .FirstOrDefaultAsync(x => x.ActivationCode == dto.ActivationCode);
 
     if (invite is null)
     {
+      logger.LogWarning("Invitation not found for activation code: {ActivationCode}", dto.ActivationCode);
       return new AcceptInvitationResponseDto(false, "Invitation not found.");
     }
 
     var invitee = await userManager.FindByEmailAsync(dto.Email);
     if (invitee is null)
     {
+      logger.LogWarning("Invitee user account not found for email: {Email}", dto.Email);
       return new AcceptInvitationResponseDto(false, "Invitee user account not found.");
     }
 
@@ -36,6 +41,10 @@ public class InvitesController : ControllerBase
     var idResult = await userManager.ResetPasswordAsync(invitee, resetCode, dto.Password);
     if (!idResult.Succeeded)
     {
+      foreach (var error in idResult.Errors)
+      {
+        logger.LogWarning("Password reset error: {Code} - {Description}", error.Code, error.Description);
+      }
       return new AcceptInvitationResponseDto(false, "Failed to set new password");
     }
     appDb.Update(invitee);

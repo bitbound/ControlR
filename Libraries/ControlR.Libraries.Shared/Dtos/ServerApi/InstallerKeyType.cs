@@ -10,5 +10,7 @@ public enum InstallerKeyType
   [EnumMember]
   UsageBased = 1,
   [EnumMember]
-  TimeBased = 2
+  TimeBased = 2,
+  [EnumMember]
+  Persistent = 3
 }

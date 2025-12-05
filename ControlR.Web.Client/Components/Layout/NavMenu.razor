@@ -15,6 +15,11 @@
   <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.Deploy)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
+  <AuthorizeView Roles="@($"{RoleNames.TenantAdministrator}, {RoleNames.InstallerKeyManager}")">
+    <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.InstallerKeys)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.InstallDesktop">
+      Installer Keys
+    </MudNavLink>
+  </AuthorizeView>
   <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.PersonalAccessTokens)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Key">
     Access Tokens
   </MudNavLink>

@@ -137,22 +137,47 @@ public class ViewerHub(
     }
   }
 
-  public async Task InvokeCtrlAltDel(Guid deviceId)
+  public async Task<Result> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
   {
     try
     {
+      _logger.LogInformation(
+        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}", 
+        deviceId,
+        targetDesktopProcessId,
+        Context.UserIdentifier);
+
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return;
+        return Result.Fail("Unauthorized.");
       }
 
-      await _agentHub.Clients
+      if (!TryGetUserId(out var userId))
+      {
+        _logger.LogError("Failed to get user ID for CtrlAltDel invocation.");
+        return Result.Fail("Failed to get user ID.");
+      }
+
+      var displayNameResult = await GetDisplayName(userId);
+      if (!displayNameResult.IsSuccess)
+      {
+        return displayNameResult.ToResult();
+      }
+
+      var dto = new InvokeCtrlAltDelRequestDto(
+        targetDesktopProcessId, 
+        Context.User?.Identity?.Name ?? "Unknown",
+        desktopSessionType);
+
+      return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .InvokeCtrlAltDel();
+        .InvokeCtrlAltDel(dto);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while invoking CtrlAltDel.");
+      return Result
+        .Fail(ex, "An error occurred while invoking CtrlAltDel.")
+        .Log(_logger);
     }
   }
 
@@ -283,26 +308,15 @@ public class ViewerHub(
         return Result.Fail("Failed to get user ID.");
       }
 
-      var user = await _userManager.Users
-        .AsNoTracking()
-        .Include(x => x.UserPreferences)
-        .FirstOrDefaultAsync(x => x.Id == userId);
-
-      if (user is null)
-      {
-        return Result.Fail("User not found.");
-      }
-
-      var displayName = user.UserPreferences
-        ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
-        ?.Value;
-
-      if (string.IsNullOrWhiteSpace(displayName))
-      {
-        displayName = user.UserName ?? "";
-      }
-
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+
+      var displayNameResult = await GetDisplayName(userId);
+      if (!displayNameResult.IsSuccess)
+      {
+        return displayNameResult.ToResult();
+      }
+
+      var displayName = displayNameResult.Value;
 
       _logger.LogInformation(
         "Starting streaming session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.",
@@ -700,6 +714,31 @@ public class ViewerHub(
     }
 
     return displayName.AsTaskResult();
+  }
+
+  private async Task<Result<string>> GetDisplayName(Guid userId)
+  {
+    var user = await _userManager.Users
+      .AsNoTracking()
+      .Include(x => x.UserPreferences)
+      .FirstOrDefaultAsync(x => x.Id == userId);
+
+    if (user is null)
+    {
+      return Result
+        .Fail<string>("User not found.")
+        .Log(_logger);
+    }
+
+    var displayName = user.UserPreferences
+      ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
+      ?.Value;
+
+    if (string.IsNullOrWhiteSpace(displayName))
+    {
+      displayName = user.UserName ?? "";
+    }
+    return Result.Ok(displayName);
   }
 
   private async Task<AppUser> GetRequiredUser(Func<IQueryable<AppUser>, IQueryable<AppUser>>? includeBuilder = null)

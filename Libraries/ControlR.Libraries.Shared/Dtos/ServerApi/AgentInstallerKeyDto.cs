@@ -1,11 +1,14 @@
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
-public record CreateInstallerKeyResponseDto(
+public record AgentInstallerKeyDto(
     Guid Id,
     Guid CreatorId,
     InstallerKeyType KeyType,
-    string KeySecret,
     DateTimeOffset CreatedAt,
     uint? AllowedUses = null,
     DateTimeOffset? Expiration = null,
-    string? FriendlyName = null);
+    string? FriendlyName = null,
+    List<AgentInstallerKeyUsageDto>? Usages = null)
+{
+  public List<AgentInstallerKeyUsageDto> Usages { get; init; } = Usages ?? [];
+};

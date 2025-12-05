@@ -1,0 +1,56 @@
+@attribute [Route(ClientRoutes.InstallerKeys)]
+@attribute [Authorize(Roles = $"{RoleNames.TenantAdministrator}, {RoleNames.InstallerKeyManager}")]
+
+@using ControlR.Libraries.Shared.Dtos.ServerApi
+@using ControlR.Web.Client.Authz
+@using MudBlazor
+
+<PageTitle>Installer Keys</PageTitle>
+
+<PrimaryTitle>Installer Keys</PrimaryTitle>
+
+<MudDataGrid T="AgentInstallerKeyDto"
+             Items="@_keys"
+             Hover="true"
+             Breakpoint="Breakpoint.Sm"
+             Loading="@_loading"
+             QuickFilter="@_quickFilter">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString"
+                      Placeholder="Search"
+                      DebounceInterval="500"
+                      Immediate
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      IconSize="Size.Medium"
+                      Class="mt-0" />
+
+        <MudTooltip Text="Refresh">
+            <MudIconButton Variant="Variant.Outlined" Color="Color.Info" Class="ml-2"
+              Icon="@(Icons.Material.Filled.Refresh)" OnClick="RefreshKeysClicked" />
+        </MudTooltip>
+        
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="@(x => x.Id)" Title="Key Id" />
+        <PropertyColumn Property="@(x => x.FriendlyName)" Title="Friendly Name" />
+        <PropertyColumn Property="@(x => x.KeyType)" Title="Key Type" />
+        <PropertyColumn Property="@(x => x.AllowedUses)" Title="Allowed Uses" />
+        <PropertyColumn Property="@(x => x.Usages.Count)" Title="Times Used" />
+        <PropertyColumn Property="@(x => x.Expiration)" Title="Expiration" />
+        <PropertyColumn Property="@(x => x.CreatedAt)" Title="Created" />
+        <TemplateColumn Sortable="false">
+            <CellTemplate>
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Info" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopRight">
+                    <MudMenuItem Icon="@Icons.Material.Filled.Edit" IconColor="Color.Info" OnClick="@(() => RenameKey(context.Item))">Rename</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Visibility" IconColor="Color.Info" OnClick="@(() => ShowUsages(context.Item))">Show Usages</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteKey(context.Item))">Delete</MudMenuItem>
+                </MudMenu>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="AgentInstallerKeyDto" />
+    </PagerContent>
+</MudDataGrid>

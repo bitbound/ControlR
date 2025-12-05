@@ -76,8 +76,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private const uint CF_UNICODETEXT = 13u;
   private const uint GenericAllRights = 0x10000000u;
   private const uint MaximumAllowedRights = 0x2000000u;
+  private const int WM_SAS_INTERNAL = 0x0208;
   private const uint Xbutton1 = 0x0001u;
   private const uint Xbutton2 = 0x0002u;
+  
 
   private static readonly string[] _invalidWindowClassNames =
   [
@@ -558,12 +560,35 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   {
     return GlobalMemoryStatusEx(ref lpBuffer);
   }
-
+  
   [SupportedOSPlatform("windows6.1")]
   public void InvokeCtrlAltDel()
   {
-    var isService = Process.GetCurrentProcess().SessionId == 0;
-    PInvoke.SendSAS(!isService);
+    try
+    {
+      var currentSessionId = Process.GetCurrentProcess().SessionId;
+
+      if (currentSessionId == 0)
+      {
+        PInvoke.SendSAS(false);
+      }
+      else
+      {
+        var ptrParam = Marshal.AllocHGlobal(1);
+        Marshal.WriteByte(ptrParam, 0);
+        var result = Wmsgapi.WmsgSendMessage(currentSessionId, WM_SAS_INTERNAL, 0, ptrParam);
+        if (result != 0)
+        {
+          _logger.LogWarning("Failed to send Ctrl+Alt+Del message to session {SessionId}. Result: {Result}",
+            currentSessionId,
+            result);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking Ctrl+Alt+Del.");
+    }
   }
 
   public void InvokeKeyEvent(string key, string? code, bool isPressed)

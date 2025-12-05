@@ -61,7 +61,7 @@ public class ScreenCaptureTests
     var frameWidth = (uint)initialCapture.Bitmap.Width;
     var frameHeight = (uint)initialCapture.Bitmap.Height;
     uint frameRate = 60;
-    var captureDuration = TimeSpan.FromSeconds(10);
+    var captureDuration = TimeSpan.FromSeconds(1);
     
     // Setup output file on desktop
     string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -135,7 +135,7 @@ public class ScreenCaptureTests
     var frameWidth = initialCapture.Bitmap.Width;
     var frameHeight = initialCapture.Bitmap.Height;
     var frameRate = 20;
-    var captureDuration = TimeSpan.FromSeconds(10);
+    var captureDuration = TimeSpan.FromSeconds(1);
 
     // Calculate frame interval
     var frameIntervalMs = 1000 / frameRate;

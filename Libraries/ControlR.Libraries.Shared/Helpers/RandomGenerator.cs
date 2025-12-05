@@ -4,8 +4,6 @@ namespace ControlR.Libraries.Shared.Helpers;
 
 public class RandomGenerator
 {
-  private const string AllowableCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ0123456789";
-
   public static string CreateAccessToken()
   {
     return GenerateString(64);
@@ -20,9 +18,13 @@ public class RandomGenerator
   {
     return GenerateString(128);
   }
-  public static string GenerateString(int length)
+
+  public static string GenerateString(int byteLength = 48)
   {
-    var bytes = RandomNumberGenerator.GetBytes(length);
-    return new string([.. bytes.Select(x => AllowableCharacters[x % AllowableCharacters.Length])]);
+      var bytes = RandomNumberGenerator.GetBytes(byteLength);
+      var base64 = Convert.ToBase64String(bytes);
+      return base64.Replace('+', '-')
+                  .Replace('/', '_')
+                  .TrimEnd('=');
   }
 }

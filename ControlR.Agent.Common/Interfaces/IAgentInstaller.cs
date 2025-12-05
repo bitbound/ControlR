@@ -5,7 +5,8 @@ public interface IAgentInstaller
   Task Install(
     Uri? serverUri = null, 
     Guid? tenantId = null, 
-    string? installerKey = null, 
+    string? installerKeySecret = null, 
+    Guid? installerKeyId = null,
     Guid? deviceId = null,
     Guid[]? tags = null);
 

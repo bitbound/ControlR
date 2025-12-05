@@ -1,0 +1,39 @@
+@using ControlR.Libraries.Shared.Dtos.ServerApi
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Installer Key Usages</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudDataGrid T="AgentInstallerKeyUsageDto"
+                     Items="@Usages"
+                     Hover="true"
+                     Breakpoint="Breakpoint.Sm">
+            <Columns>
+                <PropertyColumn Property="@(x => x.DeviceId)" Title="Device ID" />
+                <PropertyColumn Property="@(x => x.RemoteIpAddress)" Title="Remote IP" />
+                <PropertyColumn Property="@(x => x.Timestamp)" Title="Timestamp" />
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="AgentInstallerKeyUsageDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public IEnumerable<AgentInstallerKeyUsageDto> Usages { get; set; } = new List<AgentInstallerKeyUsageDto>();
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

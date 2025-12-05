@@ -15,6 +15,10 @@ public class HostLifetimeEventResponder(
       var exeVersion = Assembly.GetExecutingAssembly().GetName().Version;
       logger.LogInformation("Host initialized.  Assembly version: {AsmVersion}.", exeVersion);
     });
+    appLifetime.ApplicationStopping.Register(() =>
+    {
+      logger.LogInformation("Host is stopping.");
+    });
     return Task.CompletedTask;
   }
 

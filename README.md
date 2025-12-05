@@ -1,5 +1,5 @@
 <p style="text-align:center;">
-  <img src=".github/media/github-logo.png" alt="ControlR Logo" style="max-width:800px; width:100%; height:auto;" />
+  <img src=".github/media/controlr-logo-flat.png" alt="ControlR Logo" style="max-width:800px; width:100%; height:auto;" />
 </p>
 
 [![Tests](https://github.com/bitbound/ControlR/actions/workflows/test.yml/badge.svg)](https://github.com/bitbound/ControlR/actions/workflows/test.yml)
@@ -20,7 +20,7 @@ wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/doc
 sudo docker compose up -d
 ```
 
-**IMPORTANT:** Read the below section regarding reverse proxy configuration.
+**IMPORTANT:** Read the below section regarding [reverse proxy configuration](#reverse-proxy-configuration).
 
 At minimum, you will need to supply environment variables (e.g. `ControlR_POSTGRES_USER`) for the anchors (e.g. `$pgUser`) at the top of the docker-compose file. Alternatively, you could also use Docker secrets, an environment file, or hard-code them in the docker-compose file.  Whatever works for your setup and security requirements.
 
@@ -48,7 +48,9 @@ If you have another reverse proxy in front of Docker (e.g., Nginx, Caddy, etc.),
 
 Additional proxy IPs can be added to the `KnownProxies` list in the docker-compose file.
 
-If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.
+If your service is guaranteed to only receive traffic from a trusted reverse proxy, you can set the environment variable `ControlR_AppOptions__EnableNetworkTrust` to `true`.  This will trust all IPs in the forwarded headers.  Only enable this if you are sure that untrusted clients cannot connect directly to your service.
+
+If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.  If `ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides` is set to `Debug`, you will see internal logs from Microsoft's `ForwardedHeadersMiddleware` showing the IP that isn't being trusted.
 
 ## Server Configuration:
 

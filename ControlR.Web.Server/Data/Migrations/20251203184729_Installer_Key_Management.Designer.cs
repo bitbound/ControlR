@@ -3,6 +3,7 @@ using System;
 using ControlR.Web.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20251203184729_Installer_Key_Management")]
+    partial class Installer_Key_Management
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -96,9 +99,6 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("RemoteIpAddress")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");

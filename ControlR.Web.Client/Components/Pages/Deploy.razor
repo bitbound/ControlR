@@ -7,56 +7,90 @@
   Deploy Agent
 </PrimaryTitle>
 
-@if (_installerKey is null)
+@if (_installerKeySecret is null)
 {
   <MudText Typo="Typo.subtitle1" GutterBottom>
-    You must first generate an installer access key.
+    You must first generate an installer access key or use an existing one.
   </MudText>
 
-  <MudGrid Class="mt-2">
-    <MudItem xs="12" sm="6">
+  <MudTabs PanelClass="pa-4">
+    <MudTabPanel Text="Create New Key" OnClick="@(() => ToggleKeyMode(false))">
+      <MudGrid Class="mt-2">
+        <MudItem xs="12" sm="6">
 
-      <MudText Color="Color.Info">
-        Key Type
-      </MudText>
-      <MudRadioGroup T="@InstallerKeyType" @bind-Value="@_installerKeyType">
-        <MudRadio Value="@InstallerKeyType.UsageBased">
-          Usage-Based
-        </MudRadio>
-        <MudRadio Value="@InstallerKeyType.TimeBased">
-          Time-Based
-        </MudRadio>
-      </MudRadioGroup>
+          <MudText Color="Color.Info">
+            Key Type
+          </MudText>
+          <MudRadioGroup T="@InstallerKeyType" @bind-Value="@_installerKeyType">
+            <MudRadio Value="@InstallerKeyType.Persistent">
+              Persistent
+            </MudRadio>
+            <MudRadio Value="@InstallerKeyType.UsageBased">
+              Usage-Based
+            </MudRadio>
+            <MudRadio Value="@InstallerKeyType.TimeBased">
+              Time-Based
+            </MudRadio>
+          </MudRadioGroup>
 
-      @if (_installerKeyType == InstallerKeyType.UsageBased)
-      {
-        <div class="mt-2">
-          <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
-        </div>
+          <MudTextField T="string" @bind-Value="@_friendlyName" Label="Friendly Name (Optional)" Class="my-4" />
 
-        <div class="mt-2">
-          <MudAlert Severity="Severity.Info">
-            The key will expire after the chosen number of uses or after 24 hours, whichever comes first.
-          </MudAlert>
-        </div>
-      }
+          @if (_installerKeyType == InstallerKeyType.UsageBased)
+          {
+            <div class="mt-2">
+              <MudNumericField T="uint" @bind-Value="@_totalUsesAllowed" Min="1" Label="Total uses allowed" Required />
+            </div>
 
-      @if (_installerKeyType == InstallerKeyType.TimeBased)
-      {
-        <div class="mt-2">
-          <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date" Required />
-        </div>
-        <div class="mt-2">
-          <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required />
-        </div>
-      }
-      <div class="mt-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GenerateKey">
-          Generate Key
-        </MudButton>
-      </div>
-    </MudItem>
-  </MudGrid>
+            <div class="mt-2">
+              <MudAlert Severity="Severity.Info">
+                The key will expire after the chosen number of uses or after 24 hours, whichever comes first.
+              </MudAlert>
+            </div>
+          }
+
+          @if (_installerKeyType == InstallerKeyType.TimeBased)
+          {
+            <div class="mt-2">
+              <MudDatePicker @bind-Date="@_inputExpirationDate" Label="Expiration Date" MinDate="@DateTime.Now.Date"
+                Required />
+            </div>
+            <div class="mt-2">
+              <MudTimePicker @bind-Time="@_inputExpirationTime" Label="Expiration Time" AmPm="true" Required />
+            </div>
+          }
+          <div class="mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GenerateKey">
+              Generate Key
+            </MudButton>
+          </div>
+        </MudItem>
+      </MudGrid>
+    </MudTabPanel>
+    <MudTabPanel Text="Use Existing Key" OnClick="@(() => ToggleKeyMode(true))">
+      <MudGrid>
+        <MudItem xs="12" sm="6">
+          <MudText Class="my-2">
+            Key secrets are not persisted to the database in a reversible way.
+            You must provide the key secret in order to re-use it.
+          </MudText>
+          <MudSelect T="AgentInstallerKeyDto" Label="Select Key" @bind-Value="_selectedExistingKey"
+            ToStringFunc="@(GetInstallerKeyDisplay)">
+            @foreach (var key in _existingKeys)
+            {
+              <MudSelectItem Value="@key" />
+            }
+          </MudSelect>
+          <MudTextField Label="Key Secret" @bind-Value="_existingKeySecretInput" InputType="InputType.Password"
+            Class="mt-4" />
+          <div class="mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@UseExistingKey">
+              Use Key
+            </MudButton>
+          </div>
+        </MudItem>
+      </MudGrid>
+    </MudTabPanel>
+  </MudTabs>
 }
 else
 {
@@ -123,6 +157,16 @@ else
       </MudTabPanel>
     </MudTabs>
 
+    <MudAlert Severity="Severity.Warning" Class="my-4">
+      <strong>Important:</strong> Save your installer key now if you intend to use it long-term.
+        It is not stored in the database in a reversible way and cannot be retrieved later.
+    </MudAlert>
+
+    <MudTextField T="string" Label="Installer Key Secret" Value="@_installerKeySecret" InputType="InputType.Password"
+      Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="CopyInstallerKey"
+      Adornment="Adornment.End" Class="mt-2 mb-4" />
+
+
     <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
       Options
     </MudText>
@@ -164,7 +208,7 @@ else
         Optionally, you can specify a predetermined ID here that will be assigned to the device.
         The device ID must be a valid GUID (e.g. <code>New-Guid</code> in pwsh).
       </MudText>
-      <MudAlert Severity="Severity.Warning" Class="my-2">
+      <MudAlert Severity="Severity.Info" Class="my-2">
         If you specify a device ID, it must be unique for each device/install.
       </MudAlert>
       <MudTextField @bind-Value="_deviceId" Class="mt-2" Label="Device ID (GUID)" Validation="@DeviceIdValidator" />

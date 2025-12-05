@@ -105,10 +105,10 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
   }
 
-  public Task InvokeCtrlAltDel()
+  public Task<Result> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto)
   {
     Console.WriteLine("Received Ctrl+Alt+Del request.");
-    return Task.CompletedTask;
+    return Task.FromResult(Result.Ok());
   }
 
   public Task InvokeWakeDevice(WakeDeviceDto dto)

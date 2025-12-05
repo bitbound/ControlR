@@ -55,6 +55,27 @@ jobs:
           echo "Next version will be: $NextVersion"
           gh variable set CURRENT_VERSION --body $NextVersion
 
+  run-tests:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: set-version
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
+
+      - name: Run Tests
+        run: |
+          dotnet test -c Release
+
   build-mac-binaries:
     name: Apple Build
     runs-on: macos-latest
@@ -125,13 +146,16 @@ jobs:
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
   build-windows-binaries:
-    name: Windows Build
+    name: Windows Build (${{ matrix.arch }})
     runs-on: ${{ inputs.windows_runner || 'windows-latest' }}
     environment: secure-signing
     needs: [set-version]
     permissions:
       id-token: write
       contents: read
+    strategy:
+      matrix:
+        arch: [win-x86, win-x64]
 
     steps:
       - name: Checkout
@@ -146,8 +170,6 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      - name: Run Tests
-        run: dotnet test -c Release
 
       - name: Pack ControlR.ApiClient (Release)
         run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ env.VERSION }}
@@ -171,6 +193,7 @@ jobs:
           echo "APICLIENT_NUPKG=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: Upload ApiClient NuGet
+        if: matrix.arch == 'win-x64'
         uses: actions/upload-artifact@v4
         with:
           name: ApiClientNuGet
@@ -191,17 +214,17 @@ jobs:
         run: |
           dotnet tool install --global AzureSignTool
 
-      # ===== Build Windows x86 =====
-      - name: Build DesktopClient (win-x86)
+      # ===== Build Windows =====
+      - name: Build DesktopClient (${{ matrix.arch }})
         shell: pwsh
         run: |
           # Clean Resources folder
           Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
 
           # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r win-x86 --self-contained -o ControlR.DesktopClient\bin\publish\win-x86\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
+          dotnet publish ControlR.DesktopClient\ -c Release -r ${{ matrix.arch }} --self-contained -o ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
 
-      - name: Sign DesktopClient (win-x86)
+      - name: Sign DesktopClient (${{ matrix.arch }})
         shell: pwsh
         run: |
           AzureSignTool sign `
@@ -212,28 +235,28 @@ jobs:
             --kvm `
             --tr=http://timestamp.digicert.com `
             --td=sha256 `
-            "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\win-x86\ControlR.DesktopClient.exe"
+            "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\ControlR.DesktopClient.exe"
 
-      - name: Package and Prepare DesktopClient (win-x86)
+      - name: Package and Prepare DesktopClient (${{ matrix.arch }})
         shell: pwsh
         run: |
           # Create staging directory
-          New-Item -Path ".build\staging-desktop\win-x86" -ItemType Directory -Force | Out-Null
+          New-Item -Path ".build\staging-desktop\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
 
           # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\win-x86\*" -DestinationPath ".build\staging-desktop\win-x86\ControlR.DesktopClient.zip" -Force
+          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath ".build\staging-desktop\${{ matrix.arch }}\ControlR.DesktopClient.zip" -Force
 
           # Copy to Agent Resources
           New-Item -Path "ControlR.Agent.Common\Resources" -ItemType Directory -Force | Out-Null
-          Copy-Item ".build\staging-desktop\win-x86\ControlR.DesktopClient.zip" "ControlR.Agent.Common\Resources\ControlR.DesktopClient.zip" -Force
+          Copy-Item ".build\staging-desktop\${{ matrix.arch }}\ControlR.DesktopClient.zip" "ControlR.Agent.Common\Resources\ControlR.DesktopClient.zip" -Force
 
-      - name: Build Agent (win-x86)
+      - name: Build Agent (${{ matrix.arch }})
         shell: pwsh
         run: |
-          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\win-x86" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r win-x86 -o ControlR.Web.Server\wwwroot\downloads\win-x86\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
+          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
+          dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
-      - name: Sign Agent (win-x86)
+      - name: Sign Agent (${{ matrix.arch }})
         shell: pwsh
         run: |
           AzureSignTool sign `
@@ -244,112 +267,69 @@ jobs:
             --kvm `
             --tr=http://timestamp.digicert.com `
             --td=sha256 `
-            "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\win-x86\ControlR.Agent.exe"
+            "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe"
 
-      # ===== Build Windows x64 =====
-      - name: Build DesktopClient (win-x64)
-        shell: pwsh
-        run: |
-          # Clean Resources folder
-          Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
-
-          # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r win-x64 --self-contained -o ControlR.DesktopClient\bin\publish\win-x64\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
-
-      - name: Sign DesktopClient (win-x64)
-        shell: pwsh
-        run: |
-          AzureSignTool sign `
-            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            --fd=sha256 `
-            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            --kvm `
-            --tr=http://timestamp.digicert.com `
-            --td=sha256 `
-            "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\win-x64\ControlR.DesktopClient.exe"
-
-      - name: Package and Prepare DesktopClient (win-x64)
-        shell: pwsh
-        run: |
-          # Create staging directory
-          New-Item -Path ".build\staging-desktop\win-x64" -ItemType Directory -Force | Out-Null
-
-          # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\win-x64\*" -DestinationPath ".build\staging-desktop\win-x64\ControlR.DesktopClient.zip" -Force
-
-          # Copy to Agent Resources
-          New-Item -Path "ControlR.Agent.Common\Resources" -ItemType Directory -Force | Out-Null
-          Copy-Item ".build\staging-desktop\win-x64\ControlR.DesktopClient.zip" "ControlR.Agent.Common\Resources\ControlR.DesktopClient.zip" -Force
-
-      - name: Build Agent (win-x64)
-        shell: pwsh
-        run: |
-          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\win-x64" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r win-x64 -o ControlR.Web.Server\wwwroot\downloads\win-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-
-      - name: Sign Agent (win-x64)
-        shell: pwsh
-        run: |
-          AzureSignTool sign `
-            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            --fd=sha256 `
-            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            --kvm `
-            --tr=http://timestamp.digicert.com `
-            --td=sha256 `
-            "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\win-x64\ControlR.Agent.exe"
-
-      # ===== Build Linux x64 =====
-      - name: Build DesktopClient + Agent (linux-x64)
-        shell: pwsh
-        run: |
-          # Clean Resources folder
-          Remove-Item -Path "ControlR.Agent.Common\Resources\*.zip" -Force -ErrorAction SilentlyContinue
-
-          # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -r linux-x64 --self-contained -o ControlR.DesktopClient\bin\publish\linux-x64\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
-
-          # Create staging directory
-          New-Item -Path ".build\staging-desktop\linux-x64" -ItemType Directory -Force | Out-Null
-
-          # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\linux-x64\*" -DestinationPath ".build\staging-desktop\linux-x64\ControlR.DesktopClient.zip" -Force
-
-          # Copy to Agent Resources
-          New-Item -Path "ControlR.Agent.Common\Resources" -ItemType Directory -Force | Out-Null
-          Copy-Item ".build\staging-desktop\linux-x64\ControlR.DesktopClient.zip" "ControlR.Agent.Common\Resources\ControlR.DesktopClient.zip" -Force
-
-          # Build Agent
-          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\linux-x64" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r linux-x64 -o ControlR.Web.Server\wwwroot\downloads\linux-x64\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-
-      - name: Upload Agent (win-x86)
+      - name: Upload Agent (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
-          name: Agent-win-x86
-          path: ControlR.Web.Server\wwwroot\downloads\win-x86\ControlR.Agent.exe
+          name: Agent-${{ matrix.arch }}
+          path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
-      - name: Upload Agent (win-x64)
-        uses: actions/upload-artifact@v4
+  build-linux-binaries:
+    name: Linux Build
+    runs-on: ubuntu-latest
+    needs: [set-version]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
-          name: Agent-win-x64
-          path: ControlR.Web.Server\wwwroot\downloads\win-x64\ControlR.Agent.exe
-          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
+
+      - name: Build DesktopClient (linux-x64)
+        run: |
+          # Clean Resources folder
+          rm -f "./ControlR.Agent.Common/Resources/*.zip"
+
+          # Build DesktopClient
+          dotnet publish ./ControlR.DesktopClient/ -c Release -r linux-x64 --self-contained -o ./ControlR.DesktopClient/bin/publish/linux-x64/ -p:Version=$VERSION -p:FileVersion=$VERSION
+
+          # Create staging directory
+          mkdir -p ".build/staging-desktop/linux-x64"
+
+          # Create ZIP
+          cd ./ControlR.DesktopClient/bin/publish/linux-x64/
+          zip -r ../../../../.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip .
+          cd ../../../..
+
+          # Copy to Agent Resources
+          mkdir -p "./ControlR.Agent.Common/Resources"
+          cp ".build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" "./ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip"
+
+      - name: Build Agent (linux-x64)
+        run: |
+          mkdir -p "./ControlR.Web.Server/wwwroot/downloads/linux-x64"
+          dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Upload Agent (linux-x64)
         uses: actions/upload-artifact@v4
         with:
           name: Agent-linux-x64
-          path: ControlR.Web.Server\wwwroot\downloads\linux-x64\ControlR.Agent
+          path: ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
   build-web-server:
     name: Build Web Server
     runs-on: windows-latest
-    needs: build-windows-binaries
+    needs: [build-windows-binaries, build-linux-binaries, build-mac-binaries, run-tests]
 
     steps:
       - name: Checkout

@@ -886,6 +886,177 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installer-keys/{id}": {
+      "delete": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/installer-keys/{keyId}/usages": {
+      "get": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyUsageDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyUsageDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInstallerKeyUsageDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installer-keys/{keyId}/increment-usage": {
+      "post": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/installer-keys/rename": {
+      "put": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     },
     "/api/Invites/accept": {
@@ -2475,6 +2646,92 @@
           }
         }
       },
+      "AgentInstallerKeyDto": {
+        "required": [
+          "id",
+          "creatorId",
+          "keyType",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creatorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keyType": {
+            "$ref": "#/components/schemas/InstallerKeyType"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allowedUses": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint32"
+          },
+          "expiration": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usages": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AgentInstallerKeyUsageDto"
+            }
+          }
+        }
+      },
+      "AgentInstallerKeyUsageDto": {
+        "required": [
+          "id",
+          "deviceId",
+          "timestamp",
+          "remoteIpAddress"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "remoteIpAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Architecture": {
         "type": "integer"
       },
@@ -2490,6 +2747,13 @@
           },
           "installerKey": {
             "type": "string"
+          },
+          "installerKeyId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -2522,13 +2786,6 @@
           "keyType": {
             "$ref": "#/components/schemas/InstallerKeyType"
           },
-          "expiration": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
           "allowedUses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -2537,21 +2794,49 @@
               "string"
             ],
             "format": "uint32"
+          },
+          "expiration": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
       "CreateInstallerKeyResponseDto": {
         "required": [
-          "tokenType",
-          "accessKey"
+          "id",
+          "creatorId",
+          "keyType",
+          "keySecret",
+          "createdAt"
         ],
         "type": "object",
         "properties": {
-          "tokenType": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creatorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keyType": {
             "$ref": "#/components/schemas/InstallerKeyType"
           },
-          "accessKey": {
+          "keySecret": {
             "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "allowedUses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -2568,6 +2853,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3176,6 +3467,22 @@
         "properties": {
           "isPublicRegistrationEnabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "RenameInstallerKeyRequestDto": {
+        "required": [
+          "id",
+          "friendlyName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "friendlyName": {
+            "type": "string"
           }
         }
       },

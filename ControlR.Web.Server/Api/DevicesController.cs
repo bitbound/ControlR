@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,11 +27,20 @@ public class DevicesController : ControllerBase
       return BadRequest();
     }
 
-    if (!keyManager.TryGetKey(requestDto.InstallerKey, out var installerKey))
+    if (!await keyManager.ValidateKey(requestDto.InstallerKey, requestDto.InstallerKeyId, deviceDto.Id, HttpContext.Connection.RemoteIpAddress?.ToString()))
     {
-      logger.LogWarning("Installer key not found.");
+      logger.LogWarning("Invalid installer key.");
       return BadRequest();
     }
+
+    var getKeyResult = await keyManager.TryGetKey(requestDto.InstallerKey, requestDto.InstallerKeyId);
+    if (!getKeyResult.IsSuccess)
+    {
+      logger.LogWarning("Error retrieving installer key: {Reason}", getKeyResult.Reason);
+      return BadRequest();
+    }
+    
+    var installerKey = getKeyResult.Value;
 
     var existingDevice = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceDto.Id);
     if (existingDevice is not null)
@@ -55,11 +63,6 @@ public class DevicesController : ControllerBase
       }
     }
 
-    if (!await keyManager.ValidateKey(requestDto.InstallerKey))
-    {
-      logger.LogWarning("Invalid installer key.");
-      return BadRequest();
-    }
     // Device shouldn't be considered online until it connects to the AgentHub.
     deviceDto = deviceDto with { IsOnline = false };
     var entity = await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
@@ -168,44 +171,7 @@ public class DevicesController : ControllerBase
     }
 
     // Apply sorting
-    var sortExpressions = new Dictionary<string, Expression<Func<Device, object>>>
-    {
-      [nameof(DeviceDto.Name)] = d => d.Name,
-      [nameof(DeviceDto.IsOnline)] = d => d.IsOnline,
-      [nameof(DeviceDto.CpuUtilization)] = d => d.CpuUtilization,
-      [nameof(DeviceDto.UsedMemoryPercent)] = d => d.UsedMemoryPercent,
-      [nameof(DeviceDto.UsedStoragePercent)] = d => d.UsedStoragePercent
-    };
-
-    if (requestDto.SortDefinitions is { Count: > 0 } sortDefs)
-    {
-      IOrderedQueryable<Device>? orderedQuery = null;
-
-      foreach (var sortDef in sortDefs.OrderBy(s => s.SortOrder))
-      {
-        if (string.IsNullOrWhiteSpace(sortDef.PropertyName) ||
-            !sortExpressions.TryGetValue(sortDef.PropertyName, out var expr))
-        {
-
-          continue;
-        }
-
-        if (orderedQuery == null)
-        {
-          orderedQuery = sortDef.Descending
-              ? query.OrderByDescending(expr)
-              : query.OrderBy(expr);
-        }
-        else
-        {
-          orderedQuery = sortDef.Descending
-              ? orderedQuery.ThenByDescending(expr)
-              : orderedQuery.ThenBy(expr);
-        }
-      }
-
-      query = orderedQuery ?? query;
-    }
+    query = query.ApplySorting(requestDto.SortDefinitions, logger);
 
     // Get the total count of matching items (before pagination)
     var totalCount = await query.CountAsync();

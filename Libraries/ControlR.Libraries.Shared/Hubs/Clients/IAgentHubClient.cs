@@ -21,7 +21,7 @@ public interface IAgentHubClient : IHubClient
   Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
-  Task InvokeCtrlAltDel();
+  Task<Result> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto);
   Task InvokeWakeDevice(WakeDeviceDto dto);
   Task ReceiveAgentUpdateTrigger();
   Task ReceivePowerStateChange(PowerStateChangeType changeType);

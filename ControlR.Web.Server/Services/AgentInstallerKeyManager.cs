@@ -1,70 +1,129 @@
-﻿using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Helpers;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Services;
 
 public interface IAgentInstallerKeyManager
 {
-  Task<AgentInstallerKey> CreateKey(Guid tenantId, Guid creatorId, InstallerKeyType keyType, uint? allowedUses,
-    DateTimeOffset? expiration);
+  Task<CreateInstallerKeyResponseDto> CreateKey(
+      Guid tenantId,
+      Guid creatorId,
+      InstallerKeyType keyType,
+      uint? allowedUses,
+      DateTimeOffset? expiration,
+      string? friendlyName);
 
-  bool TryGetKey(string key, [NotNullWhen(true)] out AgentInstallerKey? installerKey);
-  Task<bool> ValidateKey(string key);
+  Task<Result> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
+  Task<Result<AgentInstallerKey>> TryGetKey(string key, Guid? keyId = null);
+  Task<bool> ValidateKey(string key, Guid? keyId = null, Guid? deviceId = null, string? remoteIpAddress = null);
 }
 
 public class AgentInstallerKeyManager(
-  TimeProvider timeProvider,
-  ILogger<AgentInstallerKeyManager> logger) : IAgentInstallerKeyManager
+    TimeProvider timeProvider,
+    IDbContextFactory<AppDb> dbContextFactory,
+    IPasswordHasher<string> passwordHasher,
+    ILogger<AgentInstallerKeyManager> logger) : IAgentInstallerKeyManager
 {
-  // We can use a HybridCache here later, if we keep this.  Installer
-  // keys will probably go into the database, though, with a management
-  // UI for them.
-  private readonly MemoryCache _keyCache = new(new MemoryCacheOptions());
+  private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly ILogger<AgentInstallerKeyManager> _logger = logger;
+  private readonly IPasswordHasher<string> _passwordHasher = passwordHasher;
   private readonly TimeProvider _timeProvider = timeProvider;
 
-  public Task<AgentInstallerKey> CreateKey(
-    Guid tenantId,
-    Guid creatorId,
-    InstallerKeyType keyType,
-    uint? allowedUses,
-    DateTimeOffset? expiration)
+  public async Task<CreateInstallerKeyResponseDto> CreateKey(
+      Guid tenantId,
+      Guid creatorId,
+      InstallerKeyType keyType,
+      uint? allowedUses,
+      DateTimeOffset? expiration,
+      string? friendlyName)
   {
-    var keySecret = RandomGenerator.CreateAccessToken();
-    var installerKey = new AgentInstallerKey(tenantId, creatorId, keySecret, keyType, allowedUses, expiration);
+    var plaintextKey = RandomGenerator.CreateAccessToken();
+    var hashedKey = _passwordHasher.HashPassword(string.Empty, plaintextKey);
 
-    switch (keyType)
+    var installerKey = new AgentInstallerKey
     {
-      case InstallerKeyType.UsageBased:
-        {
-          _keyCache.Set(keySecret, installerKey, TimeSpan.FromHours(24));
-          break;
-        }
-      case InstallerKeyType.TimeBased:
-        {
-          if (!expiration.HasValue)
-          {
-            throw new ArgumentNullException(nameof(expiration));
-          }
+      TenantId = tenantId,
+      CreatorId = creatorId,
+      HashedKey = hashedKey,
+      KeyType = keyType,
+      AllowedUses = allowedUses,
+      Expiration = expiration,
+      FriendlyName = friendlyName
+    };
 
-          _keyCache.Set(keySecret, installerKey, expiration.Value);
-          break;
-        }
-      case InstallerKeyType.Unknown:
-      default:
-        throw new ArgumentOutOfRangeException(nameof(keyType), "Unknown installer key type.");
-    }
+    await using var db = await _dbContextFactory.CreateDbContextAsync();
+    db.AgentInstallerKeys.Add(installerKey);
+    await db.SaveChangesAsync();
 
-    return installerKey.AsTaskResult();
+    return installerKey.ToCreateResponseDto(plaintextKey);
   }
 
-  public bool TryGetKey(string key, [NotNullWhen(true)] out AgentInstallerKey? installerKey) =>
-    _keyCache.TryGetValue(key, out installerKey);
-
-  public async Task<bool> ValidateKey(string keySecret)
+  public async Task<Result> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null)
   {
-    var isValid = await ValidateKeyImpl(keySecret);
+    await using var db = await _dbContextFactory.CreateDbContextAsync();
+    var installerKey = await db.AgentInstallerKeys
+        .Include(x => x.Usages)
+        .FirstOrDefaultAsync(x => x.Id == keyId);
+
+    if (installerKey is null)
+    {
+      return Result.Fail("Installer key not found");
+    }
+
+    if (installerKey.KeyType == InstallerKeyType.TimeBased)
+    {
+      var isExpired = !installerKey.Expiration.HasValue || installerKey.Expiration.Value < _timeProvider.GetUtcNow();
+      if (isExpired)
+      {
+        db.AgentInstallerKeys.Remove(installerKey);
+        await db.SaveChangesAsync();
+        return Result.Fail("Key has expired");
+      }
+    }
+
+    if (installerKey.KeyType == InstallerKeyType.UsageBased && installerKey.Usages.Count >= installerKey.AllowedUses)
+    {
+      return Result.Fail("Key usage limit reached");
+    }
+
+    await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+    return Result.Ok();
+  }
+
+  public async Task<Result<AgentInstallerKey>> TryGetKey(string key, Guid? keyId = null)
+  {
+    await using var db = await _dbContextFactory.CreateDbContextAsync();
+
+    if (keyId.HasValue)
+    {
+      var storedKey = await db.AgentInstallerKeys.FindAsync(keyId.Value);
+      if (storedKey is not null)
+      {
+        var result = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, key);
+        if (result == PasswordVerificationResult.Success)
+        {
+          return Result.Ok(storedKey);
+        }
+      }
+      return Result.Fail<AgentInstallerKey>("Key not found or invalid");
+    }
+
+    var keys = await db.AgentInstallerKeys.ToListAsync();
+
+    foreach (var storedKey in keys)
+    {
+      var result = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, key);
+      if (result == PasswordVerificationResult.Success)
+      {
+        return Result.Ok(storedKey);
+      }
+    }
+
+    return Result.Fail<AgentInstallerKey>("Key not found");
+  }
+
+  public async Task<bool> ValidateKey(string keySecret, Guid? keyId = null, Guid? deviceId = null, string? remoteIpAddress = null)
+  {
+    var isValid = await ValidateKeyImpl(keySecret, keyId, deviceId, remoteIpAddress);
     if (!isValid)
     {
       _logger.LogError("Installer key validation failed.  Key Secret: {KeySecret}", keySecret);
@@ -73,57 +132,68 @@ public class AgentInstallerKeyManager(
     return isValid;
   }
 
-  private Task<bool> ValidateKeyImpl(string key)
+  private async Task AddUsageAndUpdateKey(
+    AppDb db,
+    AgentInstallerKey installerKey,
+    Guid? deviceId,
+    string? remoteIpAddress)
   {
-    if (!_keyCache.TryGetValue(key, out var cachedObject))
+    installerKey.Usages.Add(new AgentInstallerKeyUsage()
     {
-      return false.AsTaskResult();
+      TenantId = installerKey.TenantId,
+      DeviceId = deviceId ?? Guid.Empty,
+      RemoteIpAddress = remoteIpAddress
+    });
+
+    if (installerKey.KeyType == InstallerKeyType.UsageBased && installerKey.Usages.Count >= installerKey.AllowedUses)
+    {
+      db.AgentInstallerKeys.Remove(installerKey);
+    }
+    else
+    {
+      db.AgentInstallerKeys.Update(installerKey);
     }
 
-    if (cachedObject is not AgentInstallerKey installerKey)
+    await db.SaveChangesAsync();
+  }
+
+  private async Task<bool> ValidateKeyImpl(string key, Guid? keyId, Guid? deviceId, string? remoteIpAddress)
+  {
+    var result = await TryGetKey(key, keyId);
+    if (!result.IsSuccess)
     {
-      return false.AsTaskResult();
+      return false;
     }
 
-    switch (installerKey.KeyType)
+    await using var db = await _dbContextFactory.CreateDbContextAsync();
+    var installerKey = await db.AgentInstallerKeys
+        .Include(x => x.Usages)
+        .FirstOrDefaultAsync(x => x.Id == result.Value.Id);
+
+    if (installerKey is null)
     {
-      case InstallerKeyType.Unknown:
-        break;
-      case InstallerKeyType.UsageBased:
-        {
-          // This operation has a race condition if multiple validations are being
-          // performed on the same key concurrently.  But the risk/impact is so
-          // small that it's not worth locking the resource.
-
-          var isValid = installerKey.CurrentUses < installerKey.AllowedUses;
-          installerKey = installerKey with { CurrentUses = installerKey.CurrentUses + 1 };
-
-          if (installerKey.CurrentUses >= installerKey.AllowedUses)
-          {
-            _keyCache.Remove(key);
-          }
-          else
-          {
-            _keyCache.Set(key, installerKey);
-          }
-
-          return isValid.AsTaskResult();
-        }
-      case InstallerKeyType.TimeBased:
-        {
-          var isValid = installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow();
-          if (!isValid)
-          {
-            _keyCache.Remove(key);
-          }
-
-          return isValid.AsTaskResult();
-        }
-      default:
-        _logger.LogError("Unknown installer key type: {KeyType}", installerKey.KeyType);
-        break;
+      return false;
     }
 
-    return false.AsTaskResult();
+    var isValid = installerKey.KeyType switch
+    {
+      InstallerKeyType.Persistent => true,
+      InstallerKeyType.UsageBased => installerKey.Usages.Count < installerKey.AllowedUses,
+      InstallerKeyType.TimeBased => installerKey.Expiration.HasValue && installerKey.Expiration.Value >= _timeProvider.GetUtcNow(),
+      _ => false
+    };
+
+    if (!isValid)
+    {
+      if (installerKey.KeyType == InstallerKeyType.TimeBased)
+      {
+        db.AgentInstallerKeys.Remove(installerKey);
+        await db.SaveChangesAsync();
+      }
+      return false;
+    }
+
+    await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+    return true;
   }
 }

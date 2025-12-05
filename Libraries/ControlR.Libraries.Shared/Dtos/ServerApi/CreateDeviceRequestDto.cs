@@ -3,4 +3,5 @@
 [MessagePackObject]
 public record CreateDeviceRequestDto(
   [property: Key(0)] DeviceDto Device,
-  [property: Key(1)] string InstallerKey);
+  [property: Key(1)] string InstallerKey,
+  [property: Key(2)] Guid? InstallerKeyId = null);

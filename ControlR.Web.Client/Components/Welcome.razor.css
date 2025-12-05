@@ -3,7 +3,6 @@
   align-items: center;
   justify-content: center;
   min-height: 70vh;
-  padding: 2rem;
 }
 
 .welcome-card {
@@ -109,6 +108,7 @@
 @media (max-width: 600px) {
   .welcome-card {
     padding: 2rem 1.5rem;
+    max-width: 100%;
   }
 
   .app-icon {

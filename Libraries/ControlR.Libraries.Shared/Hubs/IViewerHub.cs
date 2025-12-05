@@ -18,7 +18,7 @@ public interface IViewerHub
 
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
-  Task InvokeCtrlAltDel(Guid deviceId);
+  Task<Result> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task RefreshDeviceInfo(Guid deviceId);
 
   Task<Result> RequestStreamingSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);

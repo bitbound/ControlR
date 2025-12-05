@@ -23,5 +23,30 @@
         "DebugTarget": "Run"
       }
     ]
+  },
+  {
+    "Name": "Full Stack (install)",
+    "Projects": [
+      {
+        "Path": "docker-compose\\docker-compose.dcproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "postgres"
+      },
+      {
+        "Path": "ControlR.Web.Server\\ControlR.Web.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "ControlR.Agent\\ControlR.Agent.csproj",
+        "Action": "Start",
+        "DebugTarget": "Install"
+      },
+      {
+        "Path": "ControlR.DesktopClient\\ControlR.DesktopClient.csproj",
+        "Action": "Start",
+        "DebugTarget": "Run"
+      }
+    ]
   }
 ]

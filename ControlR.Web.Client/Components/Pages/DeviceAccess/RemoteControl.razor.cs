@@ -302,11 +302,12 @@ public partial class RemoteControl : ViewportAwareComponent
       }
 
       _systemSessions = null;
-
+      
       var session = new RemoteControlSession(
         DeviceAccessState.CurrentDevice,
         desktopSession.SystemSessionId,
-        desktopSession.ProcessId);
+        desktopSession.ProcessId,
+        desktopSession.Type);
 
       var accessToken = RandomGenerator.CreateAccessToken();
 

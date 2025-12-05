@@ -19,7 +19,7 @@
     },
     "Install": {
       "commandName": "Project",
-      "commandLineArgs": "install -s http://localhost:5120 -i localhost_5120 -t 3a20b5ac-a2ff-48a3-a4c5-b44d1574a938 -g 509935ea-1387-466f-a74e-34312f34284a,4cc68f13-ad35-495b-9b45-d21a19dbabed",
+      "commandLineArgs": "install -s http://localhost:5120 -i localhost_5120 -t 3afa4ee1-6a41-4407-9b10-a5184ed53839 -ks iL6Zp2Y1amlfffIoNhVjFuRZmyJgpSfiTQ4g_6ygZAxXkN42_rJXEqG1BLpCkrFZk8rEuu-7v4qiT_CkY7MvYw -ki 4c4f0425-510d-435f-b522-cce6ef643677 -g d8fcb487-368e-4a71-91ec-5c4c716febed",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

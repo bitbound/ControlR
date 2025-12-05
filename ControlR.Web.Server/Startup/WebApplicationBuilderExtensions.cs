@@ -285,8 +285,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddSingleton<IHubStreamStore, HubStreamStore>();
     builder.Services.AddWebSocketRelay();
-    builder.Services.AddSingleton<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
+    builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();

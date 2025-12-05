@@ -1,4 +1,9 @@
-﻿namespace ControlR.Libraries.Shared.Dtos.HubDtos;
+﻿using ControlR.Libraries.Shared.Models;
 
-[MessagePackObject]
-public record InvokeCtrlAltDelRequestDto;
+namespace ControlR.Libraries.Shared.Dtos.HubDtos;
+
+[MessagePackObject(keyAsPropertyName: true)]
+public record InvokeCtrlAltDelRequestDto(
+  int TargetDesktopProcessId, 
+  string InvokerUserName, 
+  DesktopSessionType DesktopSessionType);

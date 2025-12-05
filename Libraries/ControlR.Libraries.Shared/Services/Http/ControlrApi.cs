@@ -17,7 +17,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result> CreateDevice(DeviceDto device, string installerKey);
+  Task<Result> CreateDevice(DeviceDto device, string installerKeySecret, Guid? installerKeyId = null);
   Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
@@ -25,6 +25,7 @@ public interface IControlrApi
   Task<Result<TenantInviteResponseDto>> CreateTenantInvite(string inviteeEmail);
   Task<Result> DeleteDevice(Guid deviceId);
   Task<Result> DeleteFile(Guid deviceId, string filePath, bool isDirectory);
+  Task<Result> DeleteInstallerKey(Guid keyId);
   Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId);
   Task<Result> DeleteTag(Guid tagId);
   Task<Result> DeleteTenantInvite(Guid inviteId);
@@ -32,6 +33,7 @@ public interface IControlrApi
   Task<Result> DeleteUser(Guid userId);
   Task<Result<Stream>> DownloadFile(Guid deviceId, string filePath);
   IAsyncEnumerable<DeviceDto> GetAllDevices();
+  Task<Result<AgentInstallerKeyDto[]>> GetAllInstallerKeys();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
   Task<Result<UserResponseDto[]>> GetAllUsers();
@@ -43,6 +45,7 @@ public interface IControlrApi
   Task<Result<DeviceDto>> GetDevice(Guid deviceId);
   Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
   Task<Result<long>> GetFileUploadMaxSize();
+  Task<Result<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId);
   Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath);
   Task<Result<TenantInviteResponseDto[]>> GetPendingTenantInvites();
   Task<Result<PersonalAccessTokenDto[]>> GetPersonalAccessTokens();
@@ -58,6 +61,7 @@ public interface IControlrApi
   Task<Result> RemoveDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> RemoveUserRole(Guid userId, Guid roleId);
   Task<Result> RemoveUserTag(Guid userId, Guid tagId);
+  Task<Result> RenameInstallerKey(RenameInstallerKeyRequestDto dto);
   Task<Result<TagResponseDto>> RenameTag(Guid tagId, string newTagName);
   Task<Result<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request);
   Task<Result> SendTestEmail();
@@ -115,11 +119,11 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
-  public async Task<Result> CreateDevice(DeviceDto device, string installerKey)
+  public async Task<Result> CreateDevice(DeviceDto device, string installerKeySecret, Guid? installerKeyId = null)
   {
     return await TryCallApi(async () =>
     {
-      var requestDto = new CreateDeviceRequestDto(device, installerKey);
+      var requestDto = new CreateDeviceRequestDto(device, installerKeySecret, installerKeyId);
       using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
       response.EnsureSuccessStatusCode();
     });
@@ -205,6 +209,14 @@ public class ControlrApi(
       response.EnsureSuccessStatusCode();
     });
   }
+  public async Task<Result> DeleteInstallerKey(Guid keyId)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.DeleteAsync($"{HttpConstants.InstallerKeysEndpoint}/{keyId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
   public async Task<Result> DeletePersonalAccessToken(Guid personalAccessTokenId)
   {
     return await TryCallApi(async () =>
@@ -267,6 +279,11 @@ public class ControlrApi(
 
       yield return device;
     }
+  }
+  public async Task<Result<AgentInstallerKeyDto[]>> GetAllInstallerKeys()
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<AgentInstallerKeyDto[]>(HttpConstants.InstallerKeysEndpoint));
   }
   public async Task<Result<RoleResponseDto[]>> GetAllRoles()
   {
@@ -340,6 +357,11 @@ public class ControlrApi(
         ?? throw new HttpRequestException("The server response was empty.");
       return dto.MaxFileSize;
     });
+  }
+  public async Task<Result<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId)
+  {
+    return await TryCallApi(async () =>
+      await _client.GetFromJsonAsync<AgentInstallerKeyUsageDto[]>($"{HttpConstants.InstallerKeysEndpoint}/{keyId}/Usages"));
   }
   public async Task<Result<PathSegmentsResponseDto>> GetPathSegments(Guid deviceId, string targetPath)
   {
@@ -463,6 +485,14 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}");
+      response.EnsureSuccessStatusCode();
+    });
+  }
+  public async Task<Result> RenameInstallerKey(RenameInstallerKeyRequestDto dto)
+  {
+    return await TryCallApi(async () =>
+    {
+      using var response = await _client.PutAsJsonAsync($"{HttpConstants.InstallerKeysEndpoint}/Rename", dto);
       response.EnsureSuccessStatusCode();
     });
   }

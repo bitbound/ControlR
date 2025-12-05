@@ -521,8 +521,24 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await ViewerHub.Server.InvokeCtrlAltDel(DeviceState.CurrentDevice.Id);
-      Snackbar.Add("Ctrl+Alt+Del sent to remote device", Severity.Info);
+      if (RemoteControlState.CurrentSession is not {} currentSession)
+      {
+        Snackbar.Add("No active remote session", Severity.Error);
+        return;
+      }
+
+      var invokeResult = await ViewerHub.Server.InvokeCtrlAltDel(
+        DeviceState.CurrentDevice.Id,
+        currentSession.TargetProcessId,
+        currentSession.DesktopSessionType);
+
+      if (!invokeResult.IsSuccess)
+      {
+        Snackbar.Add($"Failed to send Ctrl+Alt+Del: {invokeResult.Reason}", Severity.Error);
+        return;
+      }
+
+      Snackbar.Add("Ctrl+Alt+Del sent successfully", Severity.Success);
     }
     catch (Exception ex)
     {

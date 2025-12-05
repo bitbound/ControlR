@@ -1,52 +1,174 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Libraries.Shared.Constants;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/installer-keys")]
+[Route(HttpConstants.InstallerKeysEndpoint)]
 [ApiController]
-[Authorize(Roles = RoleNames.AgentInstaller)]
-public class InstallerKeysController : ControllerBase
+[Authorize(Roles = $"{RoleNames.TenantAdministrator},{RoleNames.InstallerKeyManager}")]
+public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
+  private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
+
   [HttpPost]
   public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
-    [FromBody] CreateInstallerKeyRequestDto requestDto,
-    [FromServices] TimeProvider timeProvider,
-    [FromServices] IAgentInstallerKeyManager keyManager,
-    [FromServices] ILogger<InstallerKeysController> logger)
+      [FromBody] CreateInstallerKeyRequestDto request)
+  {
+    if (!User.TryGetTenantId(out var tenantId) ||
+        !User.TryGetUserId(out var creatorId))
+    {
+      return BadRequest("User tenant or id not found.");
+    }
+
+    var dto = await _installerKeyManager.CreateKey(
+        tenantId,
+        creatorId,
+        request.KeyType,
+        request.AllowedUses,
+        request.Expiration,
+        request.FriendlyName);
+
+    return Ok(dto);
+  }
+  [HttpDelete("{id:guid}")]
+  public async Task<IActionResult> Delete(
+      [FromRoute] Guid id,
+      [FromServices] AppDb db,
+      [FromServices] ILogger<InstallerKeysController> logger)
+  {
+    if (!User.TryGetUserId(out var userId))
+    {
+      return BadRequest("User id not found.");
+    }
+
+    var key = await db.AgentInstallerKeys.FindAsync(id);
+
+    if (key is null)
+    {
+      return NotFound();
+    }
+
+    if (!User.IsInRole(RoleNames.TenantAdministrator) && key.CreatorId != userId)
+    {
+      logger.LogWarning("User {UserId} attempted to delete installer key {KeyId} without permission.", userId, id);
+      return Forbid();
+    }
+
+    db.AgentInstallerKeys.Remove(key);
+    await db.SaveChangesAsync();
+
+    return NoContent();
+  }
+
+  [HttpGet]
+  public async Task<ActionResult<IEnumerable<AgentInstallerKeyDto>>> GetAll(
+      [FromServices] AppDb db,
+      [FromServices] ILogger<InstallerKeysController> logger)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      logger.LogWarning("Failed to get tenant ID.  Request DTO: {@Dto}", requestDto);
-      return Unauthorized();
+      return BadRequest("User tenant not found.");
     }
 
     if (!User.TryGetUserId(out var userId))
     {
-      logger.LogWarning("Failed to get user ID.  Request DTO: {@Dto}", requestDto);
-      return Unauthorized();
+      logger.LogWarning("User id not found when attempting to get all installer keys.");
+      return BadRequest("User id not found.");
     }
 
-    if (requestDto.KeyType == InstallerKeyType.Unknown)
+    var query = db
+      .AgentInstallerKeys
+      .Where(x => x.TenantId == tenantId);
+
+    if (!User.IsInRole(RoleNames.TenantAdministrator))
     {
-      logger.LogWarning("Invalid key type.  Request DTO: {@Dto}", requestDto);
-      return BadRequest("Invalid key type.");
+      query = query.Where(x => x.CreatorId == userId);
     }
 
-    if (requestDto.KeyType == InstallerKeyType.TimeBased &&
-       (!requestDto.Expiration.HasValue || requestDto.Expiration.Value < timeProvider.GetLocalNow()))
+    var keys = await query.Include(x => x.Usages).ToListAsync();
+    return keys.Select(x => x.ToDto()).ToList();
+  }
+
+  [HttpGet("{keyId:guid}/usages")]
+  public async Task<ActionResult<IEnumerable<AgentInstallerKeyUsageDto>>> GetUsages(
+      [FromRoute] Guid keyId,
+      [FromServices] AppDb db,
+      [FromServices] ILogger<InstallerKeysController> logger)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      logger.LogWarning("Invalid expiration date.  Request DTO: {@Dto}", requestDto);
-      return BadRequest("Expiration date must be in the future.");
+      return BadRequest("User tenant not found.");
     }
-
-    if (requestDto.KeyType == InstallerKeyType.UsageBased && requestDto.AllowedUses < 1)
+    if (!User.TryGetUserId(out var userId))
     {
-      logger.LogWarning("No more uses allowed on the key.  Request DTO: {@Dto}", requestDto);
-      return BadRequest("Allowed uses must be more than 0.");
+      return BadRequest("User id not found.");
     }
 
-    logger.LogInformation("Installer key created.  Request DTO: {@Dto}", requestDto);
-    var key = await keyManager.CreateKey(tenantId, userId, requestDto.KeyType, requestDto.AllowedUses, requestDto.Expiration);
-    return new CreateInstallerKeyResponseDto(requestDto.KeyType, key.KeySecret, requestDto.AllowedUses, requestDto.Expiration);
+    var key = await db.AgentInstallerKeys
+        .Include(x => x.Usages)
+        .FirstOrDefaultAsync(x => x.Id == keyId);
+
+    if (key is null)
+    {
+      return NotFound();
+    }
+
+    if (!User.IsInRole(RoleNames.TenantAdministrator) && userId != key.CreatorId)
+    {
+      logger.LogWarning("User {UserId} attempted to access usages of installer key {KeyId} without permission.", userId, keyId);
+      return Forbid();
+    }
+
+    return key.Usages
+        .Select(x => new AgentInstallerKeyUsageDto(x.Id, x.DeviceId, x.CreatedAt, x.RemoteIpAddress))
+        .ToList();
+  }
+
+  [HttpPost("{keyId:guid}/increment-usage")]
+  public async Task<IActionResult> IncrementUsage(
+      [FromRoute] Guid keyId,
+      [FromQuery] Guid? deviceId,
+      [FromServices] ILogger<InstallerKeysController> logger)
+  {
+    var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+    var result = await _installerKeyManager.IncrementUsage(keyId, deviceId, remoteIp);
+
+    if (!result.IsSuccess)
+    {
+      logger.LogWarning("Failed to increment usage for key {KeyId}: {Reason}", keyId, result.Reason);
+      return BadRequest(result.Reason);
+    }
+
+    return Ok();
+  }
+
+  [HttpPut("rename")]
+  public async Task<IActionResult> Rename(
+      [FromBody] RenameInstallerKeyRequestDto request,
+      [FromServices] AppDb db,
+      [FromServices] ILogger<InstallerKeysController> logger)
+  {
+    if (!User.TryGetUserId(out var userId))
+    {
+      return BadRequest("User id not found.");
+    }
+
+    var key = await db.AgentInstallerKeys.FindAsync(request.Id);
+
+    if (key is null)
+    {
+      return NotFound();
+    }
+
+    if (!User.IsInRole(RoleNames.TenantAdministrator) && userId != key.CreatorId)
+    {
+      logger.LogWarning("User {UserId} attempted to rename installer key {KeyId} without permission.", userId, request.Id);
+      return Forbid();
+    }
+
+    key.FriendlyName = request.FriendlyName;
+    await db.SaveChangesAsync();
+
+    return Ok();
   }
 }

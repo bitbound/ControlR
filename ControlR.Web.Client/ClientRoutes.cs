@@ -10,6 +10,7 @@ public static class ClientRoutes
   public const string DeviceAccessRemoteControl = $"{DeviceAccess}/remote-control";
   public const string DeviceAccessTerminal = $"{DeviceAccess}/terminal";
   public const string Home = "/";
+  public const string InstallerKeys = "/installer-keys";
   public const string Invite = "/invite";
   public const string InviteConfirmation = InviteConfirmationBase + "/{activationCode?}";
   public const string InviteConfirmationBase = "/invite-confirmation";

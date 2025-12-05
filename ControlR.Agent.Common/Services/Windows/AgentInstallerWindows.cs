@@ -16,7 +16,7 @@ namespace ControlR.Agent.Common.Services.Windows;
 internal class AgentInstallerWindows(
   IHostApplicationLifetime lifetime,
   IProcessManager processes,
-  ISystemEnvironment environmentHelper,
+  ISystemEnvironment systemEnvironment,
   IElevationChecker elevationChecker,
   IRetryer retryer,
   IControlrApi controlrApi,
@@ -28,21 +28,22 @@ internal class AgentInstallerWindows(
   ISettingsProvider settingsProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, environmentHelper, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, controlrApi, deviceDataGenerator, settingsProvider, processes, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
-  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processes = processes;
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   public async Task Install(
     Uri? serverUri = null,
     Guid? tenantId = null,
-    string? installerKey = null,
+    string? installerKeySecret = null,
+    Guid? installerKeyId = null,
     Guid? deviceId = null,
     Guid[]? tags = null)
   {
@@ -65,7 +66,7 @@ internal class AgentInstallerWindows(
 
       Logger.LogInformation("Install started.");
 
-      if (!_environmentHelper.IsDebug && !_elevationChecker.IsElevated())
+      if (!_systemEnvironment.IsDebug && !_elevationChecker.IsElevated())
       {
         Logger.LogError("Install command must be run as administrator.");
         return;
@@ -90,8 +91,8 @@ internal class AgentInstallerWindows(
       }
 
       var installDir = GetInstallDirectory();
-      var exePath = _environmentHelper.StartupExePath;
-      var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
+      var exePath = _systemEnvironment.StartupExePath;
+      var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
       FileSystem.CreateDirectory(installDir);
 
       try
@@ -114,7 +115,7 @@ internal class AgentInstallerWindows(
 
       await UpdateAppSettings(serverUri, tenantId, deviceId);
 
-      var createResult = await CreateDeviceOnServer(installerKey, tags);
+      var createResult = await CreateDeviceOnServer(installerKeySecret, installerKeyId, tags);
       if (!createResult.IsSuccess)
       {
         return;
@@ -153,7 +154,6 @@ internal class AgentInstallerWindows(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }
@@ -228,7 +228,6 @@ internal class AgentInstallerWindows(
     }
     finally
     {
-      _lifetime.StopApplication();
       _installLock.Release();
     }
   }
@@ -247,7 +246,7 @@ internal class AgentInstallerWindows(
     var installDir = GetInstallDirectory();
 
     var displayName = "ControlR Agent";
-    var exePath = Path.Combine(installDir, AppConstants.GetAgentFileName(_environmentHelper.Platform));
+    var exePath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
     var fileName = Path.GetFileName(exePath);
     var version = FileVersionInfo.GetVersionInfo(exePath);
     var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");
@@ -274,6 +273,11 @@ internal class AgentInstallerWindows(
 
   private string GetInstallDirectory()
   {
+    if (_systemEnvironment.IsDebug)
+    {
+      return Path.Combine(Path.GetTempPath(), "ControlR", "Install");
+    }
+
     var dir = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
     if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
@@ -305,8 +309,8 @@ internal class AgentInstallerWindows(
 
   private bool IsRunningFromAppDir()
   {
-    var exePath = _environmentHelper.StartupExePath;
-    var appDir = _environmentHelper.StartupDirectory;
+    var exePath = _systemEnvironment.StartupExePath;
+    var appDir = _systemEnvironment.StartupDirectory;
 
     if (!string.Equals(appDir.TrimEnd('\\'), GetInstallDirectory().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
     {
