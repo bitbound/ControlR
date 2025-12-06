@@ -28,7 +28,7 @@ public class DevicesController : ControllerBase
     }
 
     // Validate key without consuming usage - we'll consume at the end if all checks pass
-    if (!await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKey))
+    if (!await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKeySecret))
     {
       logger.LogWarning("Invalid installer key.");
       return BadRequest();
@@ -67,7 +67,7 @@ public class DevicesController : ControllerBase
     // All checks passed - now consume the key usage
     if (!await keyManager.ValidateAndConsumeKey(
       requestDto.InstallerKeyId,
-      requestDto.InstallerKey,
+      requestDto.InstallerKeySecret,
       deviceDto.Id,
       HttpContext.Connection.RemoteIpAddress?.ToString()))
     {

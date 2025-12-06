@@ -4,4 +4,4 @@
 public record CreateDeviceRequestDto(
   DeviceDto Device,
   Guid InstallerKeyId,
-  string InstallerKey);
+  string InstallerKeySecret);

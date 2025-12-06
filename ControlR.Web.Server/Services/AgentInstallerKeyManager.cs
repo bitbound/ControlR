@@ -11,21 +11,18 @@ public interface IAgentInstallerKeyManager
       uint? allowedUses,
       DateTimeOffset? expiration,
       string? friendlyName);
-
   Task<Result> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
   Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId);
-
-  /// <summary>
-  /// Validates the key without consuming a usage. Use this when you need to check key validity
-  /// before performing other operations.
-  /// </summary>
-  Task<bool> ValidateKey(Guid keyId, string keySecret);
-
   /// <summary>
   /// Validates the key and consumes a usage if valid. Use this as the final step when
   /// creating/updating a device.
   /// </summary>
   Task<bool> ValidateAndConsumeKey(Guid keyId, string keySecret, Guid deviceId, string? remoteIpAddress = null);
+  /// <summary>
+  /// Validates the key without consuming a usage. Use this when you need to check key validity
+  /// before performing other operations.
+  /// </summary>
+  Task<bool> ValidateKey(Guid keyId, string keySecret);
 }
 
 public class AgentInstallerKeyManager(
@@ -67,7 +64,6 @@ public class AgentInstallerKeyManager(
 
     return installerKey.ToCreateResponseDto(plaintextKey);
   }
-
   public async Task<Result> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null)
   {
     await using var db = await _dbContextFactory.CreateDbContextAsync();
@@ -99,7 +95,6 @@ public class AgentInstallerKeyManager(
     await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
     return Result.Ok();
   }
-
   public async Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId)
   {
     if (keyId == Guid.Empty)
@@ -117,18 +112,6 @@ public class AgentInstallerKeyManager(
 
     return Result.Ok(storedKey);
   }
-
-  public async Task<bool> ValidateKey(Guid keyId, string keySecret)
-  {
-    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: false, deviceId: null, remoteIpAddress: null);
-    if (!isValid)
-    {
-      _logger.LogError("Installer key validation failed.  Key ID: {KeyId}", keyId);
-    }
-
-    return isValid;
-  }
-
   public async Task<bool> ValidateAndConsumeKey(
     Guid keyId,
     string keySecret,
@@ -139,6 +122,16 @@ public class AgentInstallerKeyManager(
     if (!isValid)
     {
       _logger.LogError("Installer key validation and consume failed.  Key ID: {KeyId}", keyId);
+    }
+
+    return isValid;
+  }
+  public async Task<bool> ValidateKey(Guid keyId, string keySecret)
+  {
+    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: false, deviceId: null, remoteIpAddress: null);
+    if (!isValid)
+    {
+      _logger.LogError("Installer key validation failed.  Key ID: {KeyId}", keyId);
     }
 
     return isValid;
@@ -168,7 +161,6 @@ public class AgentInstallerKeyManager(
 
     await db.SaveChangesAsync();
   }
-
   private async Task<bool> ValidateKeyImpl(
     Guid keyId,
     string keySecret,
