@@ -13,8 +13,19 @@ public interface IAgentInstallerKeyManager
       string? friendlyName);
 
   Task<Result> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
-  Task<Result<AgentInstallerKey>> TryGetKey(string key, Guid? keyId = null);
-  Task<bool> ValidateKey(string key, Guid? keyId = null, Guid? deviceId = null, string? remoteIpAddress = null);
+  Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId);
+
+  /// <summary>
+  /// Validates the key without consuming a usage. Use this when you need to check key validity
+  /// before performing other operations.
+  /// </summary>
+  Task<bool> ValidateKey(Guid keyId, string keySecret);
+
+  /// <summary>
+  /// Validates the key and consumes a usage if valid. Use this as the final step when
+  /// creating/updating a device.
+  /// </summary>
+  Task<bool> ValidateAndConsumeKey(Guid keyId, string keySecret, Guid deviceId, string? remoteIpAddress = null);
 }
 
 public class AgentInstallerKeyManager(
@@ -89,44 +100,45 @@ public class AgentInstallerKeyManager(
     return Result.Ok();
   }
 
-  public async Task<Result<AgentInstallerKey>> TryGetKey(string key, Guid? keyId = null)
+  public async Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId)
   {
+    if (keyId == Guid.Empty)
+    {
+      return Result.Fail<AgentInstallerKey>("Key ID is empty");
+    }
+
     await using var db = await _dbContextFactory.CreateDbContextAsync();
+    var storedKey = await db.AgentInstallerKeys.FindAsync(keyId);
 
-    if (keyId.HasValue)
+    if (storedKey is null)
     {
-      var storedKey = await db.AgentInstallerKeys.FindAsync(keyId.Value);
-      if (storedKey is not null)
-      {
-        var result = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, key);
-        if (result == PasswordVerificationResult.Success)
-        {
-          return Result.Ok(storedKey);
-        }
-      }
-      return Result.Fail<AgentInstallerKey>("Key not found or invalid");
+      return Result.Fail<AgentInstallerKey>("Key not found");
     }
 
-    var keys = await db.AgentInstallerKeys.ToListAsync();
-
-    foreach (var storedKey in keys)
-    {
-      var result = _passwordHasher.VerifyHashedPassword(string.Empty, storedKey.HashedKey, key);
-      if (result == PasswordVerificationResult.Success)
-      {
-        return Result.Ok(storedKey);
-      }
-    }
-
-    return Result.Fail<AgentInstallerKey>("Key not found");
+    return Result.Ok(storedKey);
   }
 
-  public async Task<bool> ValidateKey(string keySecret, Guid? keyId = null, Guid? deviceId = null, string? remoteIpAddress = null)
+  public async Task<bool> ValidateKey(Guid keyId, string keySecret)
   {
-    var isValid = await ValidateKeyImpl(keySecret, keyId, deviceId, remoteIpAddress);
+    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: false, deviceId: null, remoteIpAddress: null);
     if (!isValid)
     {
-      _logger.LogError("Installer key validation failed.  Key Secret: {KeySecret}", keySecret);
+      _logger.LogError("Installer key validation failed.  Key ID: {KeyId}", keyId);
+    }
+
+    return isValid;
+  }
+
+  public async Task<bool> ValidateAndConsumeKey(
+    Guid keyId,
+    string keySecret,
+    Guid deviceId,
+    string? remoteIpAddress = null)
+  {
+    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: true, deviceId, remoteIpAddress);
+    if (!isValid)
+    {
+      _logger.LogError("Installer key validation and consume failed.  Key ID: {KeyId}", keyId);
     }
 
     return isValid;
@@ -157,20 +169,30 @@ public class AgentInstallerKeyManager(
     await db.SaveChangesAsync();
   }
 
-  private async Task<bool> ValidateKeyImpl(string key, Guid? keyId, Guid? deviceId, string? remoteIpAddress)
+  private async Task<bool> ValidateKeyImpl(
+    Guid keyId,
+    string keySecret,
+    bool consumeUsage,
+    Guid? deviceId,
+    string? remoteIpAddress)
   {
-    var result = await TryGetKey(key, keyId);
-    if (!result.IsSuccess)
+    if (keyId == Guid.Empty)
     {
       return false;
     }
 
     await using var db = await _dbContextFactory.CreateDbContextAsync();
     var installerKey = await db.AgentInstallerKeys
-        .Include(x => x.Usages)
-        .FirstOrDefaultAsync(x => x.Id == result.Value.Id);
+      .Include(x => x.Usages)
+      .FirstOrDefaultAsync(x => x.Id == keyId);
 
     if (installerKey is null)
+    {
+      return false;
+    }
+
+    var hashResult = _passwordHasher.VerifyHashedPassword(string.Empty, installerKey.HashedKey, keySecret);
+    if (hashResult != PasswordVerificationResult.Success)
     {
       return false;
     }
@@ -193,7 +215,11 @@ public class AgentInstallerKeyManager(
       return false;
     }
 
-    await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+    if (consumeUsage)
+    {
+      await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+    }
+
     return true;
   }
 }

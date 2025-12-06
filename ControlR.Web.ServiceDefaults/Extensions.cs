@@ -36,16 +36,17 @@ public static class Extensions
 
     builder.AddDefaultHealthChecks();
 
-    builder.Services.AddServiceDiscovery();
+    // We're not using Aspire or K8s, so these aren't necessary right now.
+    //builder.Services.AddServiceDiscovery();
 
-    builder.Services.ConfigureHttpClientDefaults(http =>
-    {
-      // Turn on resilience by default
-      http.AddStandardResilienceHandler();
+    // builder.Services.ConfigureHttpClientDefaults(http =>
+    // {
+    //   // Turn on resilience by default
+    //   http.AddStandardResilienceHandler();
 
-      // Turn on service discovery by default
-      http.AddServiceDiscovery();
-    });
+    //   // Turn on service discovery by default
+    //   http.AddServiceDiscovery();
+    // });
 
     return builder;
   }

@@ -1,7 +1,7 @@
 ﻿namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
-[MessagePackObject]
+[MessagePackObject(keyAsPropertyName: true)]
 public record CreateDeviceRequestDto(
-  [property: Key(0)] DeviceDto Device,
-  [property: Key(1)] string InstallerKey,
-  [property: Key(2)] Guid? InstallerKeyId = null);
+  DeviceDto Device,
+  Guid InstallerKeyId,
+  string InstallerKey);

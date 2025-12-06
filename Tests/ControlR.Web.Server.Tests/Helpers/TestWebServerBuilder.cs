@@ -20,6 +20,7 @@ internal static class TestWebServerBuilder
     [CallerMemberName] string testDatabaseName = "")
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
+    var uniqueDatabaseName = $"{testDatabaseName}-{Guid.NewGuid()}";
 
     // Get the TestServer for integration/functional tests
     var factory = new WebApplicationFactory<Program>()
@@ -27,7 +28,7 @@ internal static class TestWebServerBuilder
       {
         builder.UseEnvironment("Testing");
         builder.UseSetting("AppOptions:UseInMemoryDatabase", "true");
-        builder.UseSetting("AppOptions:InMemoryDatabaseName", $"{testDatabaseName}-server");
+        builder.UseSetting("AppOptions:InMemoryDatabaseName", $"{uniqueDatabaseName}-server");
 
         builder.ConfigureServices(services =>
         {

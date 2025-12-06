@@ -27,19 +27,20 @@ public class DevicesController : ControllerBase
       return BadRequest();
     }
 
-    if (!await keyManager.ValidateKey(requestDto.InstallerKey, requestDto.InstallerKeyId, deviceDto.Id, HttpContext.Connection.RemoteIpAddress?.ToString()))
+    // Validate key without consuming usage - we'll consume at the end if all checks pass
+    if (!await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKey))
     {
       logger.LogWarning("Invalid installer key.");
       return BadRequest();
     }
 
-    var getKeyResult = await keyManager.TryGetKey(requestDto.InstallerKey, requestDto.InstallerKeyId);
+    var getKeyResult = await keyManager.TryGetKey(requestDto.InstallerKeyId);
     if (!getKeyResult.IsSuccess)
     {
       logger.LogWarning("Error retrieving installer key: {Reason}", getKeyResult.Reason);
       return BadRequest();
     }
-    
+
     var installerKey = getKeyResult.Value;
 
     var existingDevice = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceDto.Id);
@@ -61,6 +62,17 @@ public class DevicesController : ControllerBase
         logger.LogCritical("User is not authorized to install an agent on this device.");
         return Unauthorized();
       }
+    }
+
+    // All checks passed - now consume the key usage
+    if (!await keyManager.ValidateAndConsumeKey(
+      requestDto.InstallerKeyId,
+      requestDto.InstallerKey,
+      deviceDto.Id,
+      HttpContext.Connection.RemoteIpAddress?.ToString()))
+    {
+      logger.LogWarning("Failed to consume installer key usage.");
+      return BadRequest();
     }
 
     // Device shouldn't be considered online until it connects to the AgentHub.

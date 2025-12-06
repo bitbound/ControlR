@@ -25,11 +25,16 @@ internal abstract class AgentInstallerBase(
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
   protected IProcessManager ProcessManager { get; } = processManager;
 
-  protected async Task<Result> CreateDeviceOnServer(string? installerKeySecret, Guid? installerKeyId, Guid[]? tagIds)
+  protected async Task<Result> CreateDeviceOnServer(Guid? installerKeyId, string? installerKeySecret, Guid[]? tagIds)
   {
-    if (installerKeySecret is null)
+    if (installerKeyId is null)
     {
       return Result.Ok();
+    }
+
+    if (string.IsNullOrWhiteSpace(installerKeySecret))
+    {
+      return Result.Fail("Installer key secret is required when installer key ID is provided.");
     }
 
     var currentOptions = AppOptions.CurrentValue;
@@ -41,7 +46,7 @@ internal abstract class AgentInstallerBase(
     var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
 
     Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeySecret, installerKeyId);
+    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeyId.Value, installerKeySecret);
     if (createResult.IsSuccess)
     {
       Logger.LogInformation("Device created successfully.");
