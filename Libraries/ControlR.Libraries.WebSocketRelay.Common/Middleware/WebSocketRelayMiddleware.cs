@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Net.WebSockets;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Middleware;
@@ -12,6 +13,8 @@ internal class WebSocketRelayMiddleware(
     ISessionStore _streamStore,
     ILogger<WebSocketRelayMiddleware> _logger)
 {
+  private const int BufferSize = 256 * 1024;
+
   public async Task InvokeAsync(HttpContext context)
   {
     if (!context.WebSockets.IsWebSocketRequest)
@@ -111,6 +114,7 @@ internal class WebSocketRelayMiddleware(
 
   private async Task StreamToPartner(SessionSignaler signaler, Guid callerRequestId)
   {
+    var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
     try
     {
       ArgumentNullException.ThrowIfNull(signaler.Websocket1);
@@ -121,15 +125,9 @@ internal class WebSocketRelayMiddleware(
       var partnerWebsocket = signaler.GetPartnerWebsocket(callerRequestId);
       var callerWebsocket = signaler.GetCallerWebsocket(callerRequestId);
 
-      var buffer = new byte[ushort.MaxValue];
-      var bufferMemory = buffer.AsMemory();
-
-      while (
-          partnerWebsocket.State == WebSocketState.Open &&
-          callerWebsocket.State == WebSocketState.Open &&
-           !_appLifetime.ApplicationStopping.IsCancellationRequested)
+      while (!_appLifetime.ApplicationStopping.IsCancellationRequested)
       {
-        var result = await callerWebsocket.ReceiveAsync(bufferMemory, _appLifetime.ApplicationStopping);
+        var result = await callerWebsocket.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
 
         if (result.MessageType == WebSocketMessageType.Close)
         {
@@ -137,14 +135,8 @@ internal class WebSocketRelayMiddleware(
           break;
         }
 
-        if (result.Count == 0)
-        {
-          continue;
-        }
-
-        // Pass through the EndOfMessage flag exactly as received
         await partnerWebsocket.SendAsync(
-            bufferMemory[..result.Count],
+            buffer.AsMemory(0, result.Count),
             result.MessageType,
             result.EndOfMessage,
             _appLifetime.ApplicationStopping);
@@ -161,6 +153,10 @@ internal class WebSocketRelayMiddleware(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while proxying viewer websocket.");
+    }
+    finally
+    {
+      ArrayPool<byte>.Shared.Return(buffer);
     }
   }
 }
