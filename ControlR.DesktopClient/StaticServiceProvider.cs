@@ -137,7 +137,8 @@ internal static class StaticServiceProvider
 #endif
 
 #if MAC_BUILD
-    services.AddHostedService<PermissionsInitializerMac>()
+    services
+      .AddHostedService<RemoteControlPermissionMonitor>()
       .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
       .AddSingleton<IMacInterop, MacInterop>()
       .AddSingleton<IDisplayManager, DisplayManagerMac>();
