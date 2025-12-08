@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 
@@ -10,8 +11,8 @@ public interface IDisplayManager
 {
   Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY);
   Task<ImmutableList<DisplayInfo>> GetDisplays();
-  DisplayInfo? GetPrimaryDisplay();
-  Rectangle GetVirtualScreenBounds();
+  Task<DisplayInfo?> GetPrimaryDisplay();
+  Task<Rectangle> GetVirtualScreenBounds();
   Task ReloadDisplays();
-  bool TryFindDisplay(string deviceName, [NotNullWhen(true)] out DisplayInfo? display);
+  Task<Result<DisplayInfo>> TryFindDisplay(string deviceName);
 }

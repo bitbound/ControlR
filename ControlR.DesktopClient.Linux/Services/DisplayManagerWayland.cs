@@ -2,9 +2,11 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Threading.Tasks;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -29,60 +31,56 @@ internal class DisplayManagerWayland(
   private readonly ILogger<DisplayManagerWayland> _logger = logger;
   private readonly IWaylandPortalAccessor _portalService = portalService;
 
-  public Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {
-    if (!TryFindDisplay(displayName, out var display))
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
     {
-      return Task.FromResult(Point.Empty);
+      return Point.Empty;
     }
-
+    
+    var display = findResult.Value;
     var bounds = display.MonitorArea;
     var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
     var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
 
-    return Task.FromResult(new Point(absoluteX, absoluteY));
+    return new Point(absoluteX, absoluteY);
   }
-  public Task<ImmutableList<DisplayInfo>> GetDisplays()
+  public async Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
-    lock (_displayLock)
-    {
-      EnsureDisplaysLoaded();
+    using var locker = _displayLock.EnterScope();
+    await EnsureDisplaysLoaded();
 
-      var displayDtos = _displays
-        .Values
-        .ToImmutableList();
+    var displayDtos = _displays
+      .Values
+      .ToImmutableList();
 
-      return Task.FromResult(displayDtos);
-    }
+    return displayDtos;
   }
-  public DisplayInfo? GetPrimaryDisplay()
+  public async Task<DisplayInfo?> GetPrimaryDisplay()
   {
-    lock (_displayLock)
-    {
-      EnsureDisplaysLoaded();
-      return _displays.Values.FirstOrDefault(x => x.IsPrimary)
-        ?? _displays.Values.FirstOrDefault();
-    }
+    using var locker = _displayLock.EnterScope();
+    await EnsureDisplaysLoaded();
+    return _displays.Values.FirstOrDefault(x => x.IsPrimary)
+      ?? _displays.Values.FirstOrDefault();
   }
-  public Rectangle GetVirtualScreenBounds()
+  public async Task<Rectangle> GetVirtualScreenBounds()
   {
     try
     {
-      lock (_displayLock)
+      using var locker = _displayLock.EnterScope();
+      await EnsureDisplaysLoaded();
+      if (_displays.IsEmpty)
       {
-        EnsureDisplaysLoaded();
-        if (_displays.Count == 0)
-        {
-          return Rectangle.Empty;
-        }
-
-        var minX = _displays.Values.Min(d => d.MonitorArea.Left);
-        var minY = _displays.Values.Min(d => d.MonitorArea.Top);
-        var maxX = _displays.Values.Max(d => d.MonitorArea.Right);
-        var maxY = _displays.Values.Max(d => d.MonitorArea.Bottom);
-
-        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        return Rectangle.Empty;
       }
+
+      var minX = _displays.Values.Min(d => d.MonitorArea.Left);
+      var minY = _displays.Values.Min(d => d.MonitorArea.Top);
+      var maxX = _displays.Values.Max(d => d.MonitorArea.Right);
+      var maxY = _displays.Values.Max(d => d.MonitorArea.Bottom);
+
+      return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
     catch (Exception ex)
     {
@@ -90,50 +88,53 @@ internal class DisplayManagerWayland(
       return new Rectangle(0, 0, 1920, 1080);
     }
   }
-  public Task ReloadDisplays()
+  public async Task ReloadDisplays()
   {
-    lock (_displayLock)
-    {
-      ReloadDisplaysImpl();
-    }
-    return Task.CompletedTask;
+    using var locker = _displayLock.EnterScope();
+    await ReloadDisplaysImpl();
   }
-  public bool TryFindDisplay(string deviceName, [NotNullWhen(true)] out DisplayInfo? display)
+  public async Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
-    lock (_displayLock)
+    using var locker = _displayLock.EnterScope();
+    await EnsureDisplaysLoaded();
+    if (_displays.TryGetValue(deviceName, out var display))
     {
-      EnsureDisplaysLoaded();
-      return _displays.TryGetValue(deviceName, out display);
+      return Result.Ok(display);
     }
+
+    return Result.Fail<DisplayInfo>("Display not found.");
   }
   /// <summary>
   /// Gets the PipeWire NodeId for a given display device name.
   /// This is useful for mapping displays to their corresponding PipeWire streams.
   /// </summary>
-  public bool TryGetNodeId(string deviceName, out uint nodeId)
+  public async Task<Result<uint>> TryGetNodeId(string deviceName)
   {
-    lock (_displayLock)
+    using var locker = _displayLock.EnterScope();
+    await EnsureDisplaysLoaded();
+    if (_displayNodeIds.TryGetValue(deviceName, out var nodeId))
     {
-      EnsureDisplaysLoaded();
-      return _displayNodeIds.TryGetValue(deviceName, out nodeId);
+      return Result.Ok(nodeId);
     }
+
+    return Result.Fail<uint>("Display not found.");
   }
 
-  private void EnsureDisplaysLoaded()
+  private async Task EnsureDisplaysLoaded()
   {
-    if (_displays.Count == 0)
+    if (_displays.IsEmpty)
     {
-      ReloadDisplaysImpl();
+      await ReloadDisplaysImpl();
     }
   }
-  private void ReloadDisplaysImpl()
+  private async Task ReloadDisplaysImpl()
   {
     try
     {
       _displays.Clear();
       _displayNodeIds.Clear();
 
-      var streams = _portalService.GetScreenCastStreams().GetAwaiter().GetResult();
+      var streams = await _portalService.GetScreenCastStreams();
 
       if (streams.Count > 0)
       {

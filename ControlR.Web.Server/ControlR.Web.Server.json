@@ -2780,7 +2780,7 @@
         "required": [
           "device",
           "installerKeyId",
-          "installerKey"
+          "installerKeySecret"
         ],
         "type": "object",
         "properties": {
@@ -2791,7 +2791,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "installerKey": {
+          "installerKeySecret": {
             "type": "string"
           }
         }

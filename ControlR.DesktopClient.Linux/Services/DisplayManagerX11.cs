@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;

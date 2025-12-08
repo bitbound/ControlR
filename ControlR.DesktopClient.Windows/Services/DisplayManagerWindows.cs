@@ -5,7 +5,6 @@ using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Windows.Helpers;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.Extensions.Logging;
 using Windows.Win32;
 using Windows.Win32.UI.WindowsAndMessaging;
