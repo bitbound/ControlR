@@ -15,8 +15,6 @@
 			<string>LoginWindow</string>
 			<string>Aqua</string>
 		</array>
-		<key>StandardErrorPath</key>
-		<string>/var/log/ControlR/plist-desktop-err.log</string>
 		<key>ProgramArguments</key>
 		<array>
 			<string>{{INSTALL_DIRECTORY}}/DesktopClient/ControlR.app/Contents/MacOS/ControlR.DesktopClient</string>

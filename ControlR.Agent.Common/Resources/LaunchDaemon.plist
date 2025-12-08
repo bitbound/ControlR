@@ -6,8 +6,6 @@
     <string>{{SERVICE_NAME}}</string>
     <key>KeepAlive</key>
     <true/>
-    <key>StandardErrorPath</key>
-    <string>/var/log/ControlR/plist-err.log</string>
     <key>ProgramArguments</key>
     <array>
         <string>{{INSTALL_DIRECTORY}}/ControlR.Agent</string>

@@ -3,7 +3,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<Title>WebSocket Relay</Title>
-		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+    <Authors>Jared Goodwin</Authors>
+		<Copyright>©️ $([System.DateTime]::Now.Year) Bitbound</Copyright>
 		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
 		<Description>An ASP.NET Core Native AOT library for bridging client websocket connections.</Description>
 		<PackageIcon>appicon.png</PackageIcon>

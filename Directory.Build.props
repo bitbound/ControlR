@@ -7,7 +7,7 @@
     </NuGetAudit>
 
 		<Authors>Jared Goodwin</Authors>
-		<Copyright>©️ $([System.DateTime]::Now.Year) Jared Goodwin</Copyright>
+		<Copyright>©️ $([System.DateTime]::Now.Year) Bitbound</Copyright>
 		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
 		<Company>Bitbound</Company>
