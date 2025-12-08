@@ -1,5 +1,6 @@
 ﻿using ControlR.DesktopClient.Common.Models;
 using ControlR.Libraries.Shared.Dtos;
+using ControlR.Libraries.Shared.Primitives;
 using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
@@ -36,9 +37,10 @@ public interface IDesktopCapturer : IAsyncDisposable
   Task StartCapturingChanges(CancellationToken cancellationToken);
 
   /// <summary>
-  /// Tries to get the display that is currently selected for capture.
+  ///   Attempts to get the display that is currently selected for capture.
   /// </summary>
-  /// <param name="display">When this method returns, contains the selected display, if found; otherwise, null.</param>
-  /// <returns>true if a display is selected; otherwise, false.</returns>
-  bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display);
+  /// <returns>
+  ///   A <see cref="Task"/> representing the asynchronous operation, containing a <see cref="Result{DisplayInfo}"/> with the selected display if successful.
+  /// </returns>
+  Task<Result<DisplayInfo>> TryGetSelectedDisplay();
 }

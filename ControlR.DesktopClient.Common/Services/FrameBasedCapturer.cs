@@ -12,6 +12,8 @@ using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using ControlR.DesktopClient.Common.Services.Encoders;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.DesktopClient.Common.Services;
 
@@ -29,7 +31,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
       FullMode = BoundedChannelFullMode.Wait,
     });
   private readonly ICaptureMetrics _captureMetrics;
-  private readonly Lock _displayLock = new();
+  private readonly SemaphoreSlim _displayLock = new(1, 1);
+  private readonly TimeSpan _displayLockTimeout = TimeSpan.FromSeconds(5);
   private readonly IDisplayManager _displayManager;
   private readonly IFrameEncoder _frameEncoder;
   private readonly IImageUtility _imageUtility;
@@ -135,18 +138,13 @@ internal class FrameBasedCapturer : IDesktopCapturer
     return Task.CompletedTask;
   }
 
-  public bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display)
+  public async Task<Result<DisplayInfo>> TryGetSelectedDisplay()
   {
-    lock (_displayLock)
-    {
-      if (_selectedDisplay is { } selected)
-      {
-        display = selected;
-        return true;
-      }
-      display = null;
-      return false;
+    using var locker = await _displayLock.AcquireLockAsync(_displayLockTimeout);
+    if (_selectedDisplay is {} selected){
+      return Result.Ok(selected);
     }
+    return Result.Fail<DisplayInfo>("No display selected.");
   }
 
   private async Task EncodeCaptureResult(
@@ -235,6 +233,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
   private DisplayInfo? GetSelectedDisplay()
   {
+    using var locker = _displayLock.AcquireLock(_displayLockTimeout);
     lock (_displayLock)
     {
       return _selectedDisplay;
@@ -248,26 +247,19 @@ internal class FrameBasedCapturer : IDesktopCapturer
       _logger.LogInformation("Display settings changed. Refreshing display list.");
       await _displayManager.ReloadDisplays();
 
-      // Capture the current selected display safely outside lock
-      DisplayInfo? currentSelected;
-      lock (_displayLock)
-      {
-        currentSelected = _selectedDisplay;
-      }
+      using var locker = await _displayLock.AcquireLockAsync(_displayLockTimeout);
 
-      if (currentSelected is not null)
+      if (_selectedDisplay is not null)
       {
-        var findResult = await _displayManager.TryFindDisplay(currentSelected.DeviceName);
+        var findResult = await _displayManager.TryFindDisplay(_selectedDisplay.DeviceName);
         if (findResult.IsSuccess)
         {
-          SetSelectedDisplay(findResult.Value);
+          _selectedDisplay = findResult.Value;
           return;
         }
       }
 
-      // Fallback to primary if nothing found
-      var primary = await _displayManager.GetPrimaryDisplay();
-      SetSelectedDisplay(primary);
+      _selectedDisplay = await _displayManager.GetPrimaryDisplay();
     }
     catch (Exception ex)
     {
@@ -277,10 +269,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
   private void SetSelectedDisplay(DisplayInfo? display)
   {
-    lock (_displayLock)
-    {
-      _selectedDisplay = display;
-    }
+    using var locker = _displayLock.AcquireLock(_displayLockTimeout);
+    _selectedDisplay = display;
   }
 
   private bool ShouldSendKeyFrame()

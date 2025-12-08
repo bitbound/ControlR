@@ -32,6 +32,36 @@ public static class LockExtensions
     });
   }
 
+/// <summary>
+///   Attempts to acquire a lock on the semaphore within the specified timeout.
+/// </summary>
+/// <param name="semaphore">
+///   The semaphore on which to acquire the lock.
+/// </param>
+/// <param name="timeout">
+///   The maximum time to wait for the lock.
+/// </param>
+/// <returns>
+///   An <see cref="IDisposable"/> that releases the lock when disposed.
+/// </returns>
+/// <exception cref="TimeoutException">
+///   Thrown if the lock could not be acquired within the specified timeout.
+/// </exception>
+  public static IDisposable AcquireLock(
+    this SemaphoreSlim semaphore,
+    TimeSpan timeout)
+  {
+    var acquired = semaphore.Wait(timeout);
+    if (!acquired)
+    {
+      throw new TimeoutException("Failed to acquire the semaphore within the specified timeout.");
+    }
+    return new CallbackDisposable(() =>
+    {
+      semaphore.Release();
+    });
+  }
+
   /// <summary>
   ///   Attempts to acquire a lock on the semaphore asynchronously.
   /// </summary>
@@ -55,6 +85,34 @@ public static class LockExtensions
     CancellationToken cancellationToken)
   {
     await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+    return new CallbackDisposable(() =>
+    {
+      semaphore.Release();
+    });
+  }
+
+  /// <summary>
+  ///   Attempts to acquire a lock on the semaphore asynchronously within the specified timeout.
+  /// </summary>
+  /// <param name="semaphore">
+  ///   The semaphore on which to acquire the lock.
+  /// </param>
+  /// <param name="timeout">
+  ///   The maximum time to wait for the lock.
+  /// </param>
+  /// <returns>
+  ///   An <see cref="IDisposable"/> that releases the lock when disposed.
+  /// </returns>
+  /// <exception cref="TimeoutException">
+  ///   Thrown if the lock could not be acquired within the specified timeout.
+  /// </exception>
+  public static async Task<IDisposable> AcquireLockAsync(this SemaphoreSlim semaphore, TimeSpan timeout)
+  {
+    var acquired = await semaphore.WaitAsync(timeout).ConfigureAwait(false);
+    if (!acquired)
+    {
+      throw new TimeoutException("Failed to acquire the semaphore within the specified timeout.");
+    }
     return new CallbackDisposable(() =>
     {
       semaphore.Release();

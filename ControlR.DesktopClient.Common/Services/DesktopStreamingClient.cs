@@ -381,12 +381,14 @@ internal sealed class DesktopStreamingClient(
   }
   private async Task<PointerCoordinates?> TryGetPointerCoordinates(double percentX, double percentY)
   {
-    if (!_desktopCapturer.TryGetSelectedDisplay(out var selectedDisplay))
+    var selectResult = await _desktopCapturer.TryGetSelectedDisplay();
+    if (!selectResult.IsSuccess)
     {
       _logger.LogWarning("Selected display is invalid. Unable to process viewer request.");
       return null;
     }
 
+    var selectedDisplay = selectResult.Value;
     var point = await _displayManager.ConvertPercentageLocationToAbsolute(
         selectedDisplay.DeviceName,
         percentX,
