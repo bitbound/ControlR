@@ -1,4 +1,5 @@
 ﻿using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Web.Client.StateManagement.DeviceAccess;
@@ -105,7 +106,8 @@ public partial class RemoteDisplay : JsInteropableComponent
     float y,
     float width,
     float height,
-    byte[] encodedImage);
+    [JSMarshalAs<JSType.MemoryView>()]
+    ArraySegment<byte> encodedImage);
 
   public override async ValueTask DisposeAsync()
   {
@@ -265,7 +267,8 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       if (OperatingSystem.IsBrowser())
       {
-        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage.ToArray());
+        var segment = new ArraySegment<byte>(dto.EncodedImage);
+        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, segment);
       }
       else
       {

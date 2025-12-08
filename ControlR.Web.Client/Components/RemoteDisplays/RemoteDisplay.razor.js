@@ -65,6 +65,16 @@ class State {
   }
 }
 
+/**
+ * @typedef {Object} MemoryView
+ * @property {number} length
+ * @property {number} byteLength
+ * @property {function(TypedArray, number=): void} set - Copies elements from provided source to the wasm memory
+ * @property {function(TypedArray, number=): void} copyTo - Copies elements from wasm memory to provided target
+ * @property {function(number=, number=): TypedArray} slice - Same as TypedArray.slice()
+ * @property {function(): void} dispose
+ */
+
 class WindowEventHandler {
   /** @type {keyof WindowEventMap} */
   type;
@@ -140,14 +150,20 @@ export async function applyPinchZoom(contentDiv, canvasRef, canvasCssWidth, canv
  * @param {Number} y
  * @param {Number} width
  * @param {Number} height
- * @param {Uint8Array} encodedRegion
+ * @param {MemoryView} encodedRegion
  */
 export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
-  const state = getState(canvasId);
-  const imageBlob = new Blob([encodedRegion]);
-  const bitmap = await createImageBitmap(imageBlob);
-  state.canvas2dContext.drawImage(bitmap, x, y, width, height);
-  bitmap.close();
+  try {
+    const state = getState(canvasId);
+    const byteArray = new Uint8Array(encodedRegion.slice());
+    const imageBlob = new Blob([byteArray], { type: "image/jpeg" });
+    const bitmap = await createImageBitmap(imageBlob);
+    state.canvas2dContext.drawImage(bitmap, x, y, width, height);
+    bitmap.close();
+  }
+  finally {
+    encodedRegion.dispose()
+  }
 }
 
 /**
