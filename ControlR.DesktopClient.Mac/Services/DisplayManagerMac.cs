@@ -6,6 +6,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;
@@ -16,18 +17,20 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerMac> _logger = logger;
 
-  public Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {
-    if (!TryFindDisplay(displayName, out var display))
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
     {
-      return Task.FromResult(Point.Empty);
+      return Point.Empty;
     }
 
+    var display = findResult.Value;
     var bounds = display.MonitorArea;
     var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
     var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
 
-    return Task.FromResult(new Point(absoluteX, absoluteY));
+    return new Point(absoluteX, absoluteY);
   }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
@@ -44,7 +47,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     }
   }
 
-  public DisplayInfo? GetPrimaryDisplay()
+  public async Task<DisplayInfo?> GetPrimaryDisplay()
   {
     lock (_displayLock)
     {
@@ -54,7 +57,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     }
   }
 
-  public Rectangle GetVirtualScreenBounds()
+  public async Task<Rectangle> GetVirtualScreenBounds()
   {
     lock (_displayLock)
     {
@@ -94,12 +97,16 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     return Task.CompletedTask;
   }
 
-  public bool TryFindDisplay(string deviceName, [NotNullWhen(true)] out DisplayInfo? display)
+  public Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
     lock (_displayLock)
     {
       EnsureDisplaysLoaded();
-      return _displays.TryGetValue(deviceName, out display);
+      if (_displays.TryGetValue(deviceName, out var display))
+      {
+        return Task.FromResult(Result.Ok(display));
+      }
+      return Task.FromResult(Result.Fail<DisplayInfo>("Display not found."));
     }
   }
 

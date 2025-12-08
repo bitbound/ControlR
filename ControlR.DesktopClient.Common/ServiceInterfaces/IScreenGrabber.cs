@@ -14,7 +14,7 @@ public interface IScreenGrabber
   ///   A result object indicating whether the capture was successful.
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
-  CaptureResult CaptureAllDisplays(bool captureCursor = true);
+  Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true);
 
   /// <summary>
   ///   Gets a capture of a specific display.
@@ -26,7 +26,7 @@ public interface IScreenGrabber
   ///   A result object indicating whether the capture was successful.
   ///   If successful, the result will contain the <see cref="SKBitmap" /> of the capture.
   /// </returns>
-  CaptureResult CaptureDisplay(
+  Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false);

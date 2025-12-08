@@ -9,9 +9,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Text;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace ControlR.DesktopClient.Windows.Tests;
 
@@ -41,9 +39,9 @@ public class ScreenCaptureTests
   }
 
   [InteractiveWindowsFact]
-  public void ScreenGrabber_CaptureAllDisplays_Ok()
+  public async Task ScreenGrabber_CaptureAllDisplays_Ok()
   {
-    var captureResult = _screenGrabber.CaptureAllDisplays();
+    using var captureResult = await _screenGrabber.CaptureAllDisplays();
     Assert.True(captureResult.IsSuccess, "Capture failed.");
     Assert.NotNull(captureResult.Bitmap);
     Assert.True(captureResult.Bitmap.Width > 0, "Bitmap is width is 0.");
@@ -54,7 +52,7 @@ public class ScreenCaptureTests
   public async Task ScreenGrabber_EncodeViaCadeau()
   {
     // Get initial capture to determine frame dimensions
-    var initialCapture = _screenGrabber.CaptureAllDisplays();
+    using var initialCapture = await _screenGrabber.CaptureAllDisplays();
     Assert.True(initialCapture.IsSuccess, "Initial capture failed.");
     Assert.NotNull(initialCapture.Bitmap);
 
@@ -83,7 +81,7 @@ public class ScreenCaptureTests
       while (DateTimeOffset.UtcNow < endTime)
       {
         // Capture the current frame
-        using var captureResult = _screenGrabber.CaptureAllDisplays();
+        using var captureResult = await _screenGrabber.CaptureAllDisplays();
         
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {
@@ -128,7 +126,7 @@ public class ScreenCaptureTests
   public async Task ScreenGrabber_EncodeViaFfmpeg()
   {
     // Get initial capture to determine frame dimensions
-    var initialCapture = _screenGrabber.CaptureAllDisplays();
+    using var initialCapture = await _screenGrabber.CaptureAllDisplays();
     Assert.True(initialCapture.IsSuccess, "Initial capture failed.");
     Assert.NotNull(initialCapture.Bitmap);
 
@@ -221,7 +219,7 @@ public class ScreenCaptureTests
         }
 
         // Capture the current frame
-        using var captureResult = _screenGrabber.CaptureAllDisplays();
+        using var captureResult = await _screenGrabber.CaptureAllDisplays();
 
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {

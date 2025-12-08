@@ -55,7 +55,7 @@ internal class ScreenGrabberWayland(
   /// </summary>
   public IReadOnlyDictionary<string, PipeWireStream> Streams => _streams;
 
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     try
     {
@@ -78,8 +78,8 @@ internal class ScreenGrabberWayland(
 
       // For multiple displays, we need to composite them together
       // This requires knowing the virtual screen bounds and each display's position
-      var virtualBounds = _displayManager.GetVirtualScreenBounds();
-      var displays = _displayManager.GetDisplays().Result;
+      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
+      var displays = await _displayManager.GetDisplays();
 
       var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
       using var canvas = new SKCanvas(compositeBitmap);
@@ -118,7 +118,7 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
-  public CaptureResult CaptureDisplay(
+  public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false)

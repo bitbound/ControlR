@@ -9,7 +9,6 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Shared.Dtos;
 using ControlR.Libraries.Shared.Dtos.StreamerDtos;
-using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using ControlR.DesktopClient.Common.Services.Encoders;
@@ -67,25 +66,34 @@ internal class FrameBasedCapturer : IDesktopCapturer
     messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged);
   }
 
-  public Task ChangeDisplays(string displayId)
+  public async Task ChangeDisplays(string displayId)
   {
-    if (!_displayManager.TryFindDisplay(displayId, out var newDisplay))
+    var findResult = await _displayManager.TryFindDisplay(displayId);
+    if (!findResult.IsSuccess)
     {
       _logger.LogWarning("Could not find display with ID {DisplayId} when changing displays.", displayId);
-      return Task.CompletedTask;
+      return;
     }
 
-    SetSelectedDisplay(newDisplay);
+    SetSelectedDisplay(findResult.Value);
     _forceKeyFrame = true;
-    return Task.CompletedTask;
   }
 
-  public Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
+  public async Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
   {
     var selectedDisplay = GetSelectedDisplay();
-    return selectedDisplay is null
-      ? Point.Empty.AsTaskResult()
-      : _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
+    if (selectedDisplay is null)
+    {
+      var primary = await _displayManager.GetPrimaryDisplay();
+      if (primary is null)
+      {
+        return Point.Empty;
+      }
+      SetSelectedDisplay(primary);
+      selectedDisplay = primary;
+    }
+
+    return await _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
   }
 
   public async ValueTask DisposeAsync()
@@ -129,13 +137,16 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
   public bool TryGetSelectedDisplay([NotNullWhen(true)] out DisplayInfo? display)
   {
-    if (GetSelectedDisplay() is { } selectedDisplay)
+    lock (_displayLock)
     {
-      display = selectedDisplay;
-      return true;
+      if (_selectedDisplay is { } selected)
+      {
+        display = selected;
+        return true;
+      }
+      display = null;
+      return false;
     }
-    display = null;
-    return false;
   }
 
   private async Task EncodeCaptureResult(
@@ -226,7 +237,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
   {
     lock (_displayLock)
     {
-      _selectedDisplay ??= _displayManager.GetPrimaryDisplay();
       return _selectedDisplay;
     }
   }
@@ -237,20 +247,27 @@ internal class FrameBasedCapturer : IDesktopCapturer
     {
       _logger.LogInformation("Display settings changed. Refreshing display list.");
       await _displayManager.ReloadDisplays();
+
+      // Capture the current selected display safely outside lock
+      DisplayInfo? currentSelected;
       lock (_displayLock)
       {
-        // If we had a display selected, and it exists still, refresh it.
-        if (_selectedDisplay is not null &&
-            _displayManager.TryFindDisplay(_selectedDisplay.DeviceName, out var selectedDisplay))
+        currentSelected = _selectedDisplay;
+      }
+
+      if (currentSelected is not null)
+      {
+        var findResult = await _displayManager.TryFindDisplay(currentSelected.DeviceName);
+        if (findResult.IsSuccess)
         {
-          _selectedDisplay = selectedDisplay;
-        }
-        else
-        {
-          // Else switch to the primary.
-          _selectedDisplay = _displayManager.GetPrimaryDisplay();
+          SetSelectedDisplay(findResult.Value);
+          return;
         }
       }
+
+      // Fallback to primary if nothing found
+      var primary = await _displayManager.GetPrimaryDisplay();
+      SetSelectedDisplay(primary);
     }
     catch (Exception ex)
     {
@@ -311,14 +328,22 @@ internal class FrameBasedCapturer : IDesktopCapturer
           break;
         }
 
-        if (GetSelectedDisplay() is not { } selectedDisplay)
+        var selectedDisplay = GetSelectedDisplay();
+        if (selectedDisplay is null)
         {
-          _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
-          await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
-          continue;
+          var primaryDisplay = await _displayManager.GetPrimaryDisplay();
+          if (primaryDisplay is null)
+          {
+            _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
+            await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
+            continue;
+          }
+
+          SetSelectedDisplay(primaryDisplay);
+          selectedDisplay = primaryDisplay;
         }
 
-        using var currentCapture = _screenGrabber.CaptureDisplay(
+          using var currentCapture = await _screenGrabber.CaptureDisplay(
               targetDisplay: selectedDisplay,
               captureCursor: false,
               forceKeyFrame: _forceKeyFrame);

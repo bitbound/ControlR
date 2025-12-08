@@ -32,7 +32,7 @@ public class DesktopPreviewProvider(
       // Ensure screen grabber is initialized (idempotent)
       await _screenGrabber.Initialize(cts.Token);
 
-      var result = _screenGrabber.CaptureAllDisplays(captureCursor: false);
+      var result = await _screenGrabber.CaptureAllDisplays(captureCursor: false);
       if (!result.IsSuccess || result.Bitmap is null)
       {
         return Result.Fail<byte[]>(result.FailureReason ?? "Failed to capture screen for preview");
@@ -64,7 +64,7 @@ public class DesktopPreviewProvider(
 
       await _screenGrabber.Initialize(cts.Token);
 
-      var result = _screenGrabber.CaptureAllDisplays(captureCursor: false);
+      var result = await _screenGrabber.CaptureAllDisplays(captureCursor: false);
       if (!result.IsSuccess || result.Bitmap is null)
       {
         return Result.Fail<byte[]>(result.FailureReason ?? "Failed to capture screen for preview");

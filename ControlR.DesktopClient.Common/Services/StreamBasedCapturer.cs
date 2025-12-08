@@ -31,16 +31,17 @@ internal class StreamBasedCapturer(
     private DisplayInfo? _selectedDisplay;
 
 
-  public Task ChangeDisplays(string displayId)
+  public async Task ChangeDisplays(string displayId)
     {
-        if (_displayManager.TryFindDisplay(displayId, out var display))
+        var findResult = await _displayManager.TryFindDisplay(displayId);
+        if (findResult.IsSuccess)
         {
             lock (_displayLock)
             {
-                _selectedDisplay = display;
+                _selectedDisplay = findResult.Value;
             }
         }
-        return Task.CompletedTask;
+        return;
     }
 
     public async ValueTask DisposeAsync()
@@ -82,7 +83,7 @@ internal class StreamBasedCapturer(
     {
         lock (_displayLock)
         {
-            display = _selectedDisplay ?? _displayManager.GetPrimaryDisplay();
+            display = _selectedDisplay;
             return display != null;
         }
     }
@@ -91,7 +92,13 @@ internal class StreamBasedCapturer(
     {
         if (!TryGetSelectedDisplay(out var display))
         {
-            return;
+            var primary = await _displayManager.GetPrimaryDisplay();
+            if (primary is null) return;
+            lock (_displayLock)
+            {
+                _selectedDisplay = primary;
+            }
+            display = primary;
         }
 
         _encoder.Start(display.MonitorArea.Width, display.MonitorArea.Height, 75);
@@ -103,7 +110,7 @@ internal class StreamBasedCapturer(
             {
                 try
                 {
-                    using var capture = _screenGrabber.CaptureDisplay(display, captureCursor: true);
+                    using var capture = await _screenGrabber.CaptureDisplay(display, captureCursor: true);
                     if (capture.IsSuccess)
                     {
                         _encoder.EncodeFrame(capture.Bitmap, _forceKeyFrame);

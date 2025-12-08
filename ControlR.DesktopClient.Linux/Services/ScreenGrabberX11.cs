@@ -14,11 +14,11 @@ internal class ScreenGrabberX11(
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberX11> _logger = logger;
 
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     try
     {
-      return CaptureAllDisplaysImpl(captureCursor);
+      return await CaptureAllDisplaysImpl(captureCursor);
     }
     catch (Exception ex)
     {
@@ -26,7 +26,7 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-  public CaptureResult CaptureDisplay(
+  public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false)
@@ -71,11 +71,11 @@ internal class ScreenGrabberX11(
     }
   }
 
-  private CaptureResult CaptureAllDisplaysImpl(bool captureCursor)
+  private async Task<CaptureResult> CaptureAllDisplaysImpl(bool captureCursor)
   {
     try
     {
-      var virtualBounds = _displayManager.GetVirtualScreenBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
 
       if (virtualBounds.IsEmpty)
       {

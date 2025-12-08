@@ -48,19 +48,17 @@ internal class DisplayManagerWayland(
   }
   public async Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
-    using var locker = _displayLock.EnterScope();
     await EnsureDisplaysLoaded();
-
+    using var locker = _displayLock.EnterScope();
     var displayDtos = _displays
       .Values
       .ToImmutableList();
-
     return displayDtos;
   }
   public async Task<DisplayInfo?> GetPrimaryDisplay()
   {
-    using var locker = _displayLock.EnterScope();
     await EnsureDisplaysLoaded();
+    using var locker = _displayLock.EnterScope();
     return _displays.Values.FirstOrDefault(x => x.IsPrimary)
       ?? _displays.Values.FirstOrDefault();
   }
@@ -68,8 +66,8 @@ internal class DisplayManagerWayland(
   {
     try
     {
-      using var locker = _displayLock.EnterScope();
       await EnsureDisplaysLoaded();
+      using var locker = _displayLock.EnterScope();
       if (_displays.IsEmpty)
       {
         return Rectangle.Empty;
@@ -90,13 +88,12 @@ internal class DisplayManagerWayland(
   }
   public async Task ReloadDisplays()
   {
-    using var locker = _displayLock.EnterScope();
     await ReloadDisplaysImpl();
   }
   public async Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
-    using var locker = _displayLock.EnterScope();
     await EnsureDisplaysLoaded();
+    using var locker = _displayLock.EnterScope();
     if (_displays.TryGetValue(deviceName, out var display))
     {
       return Result.Ok(display);
@@ -110,8 +107,8 @@ internal class DisplayManagerWayland(
   /// </summary>
   public async Task<Result<uint>> TryGetNodeId(string deviceName)
   {
-    using var locker = _displayLock.EnterScope();
     await EnsureDisplaysLoaded();
+    using var locker = _displayLock.EnterScope();
     if (_displayNodeIds.TryGetValue(deviceName, out var nodeId))
     {
       return Result.Ok(nodeId);

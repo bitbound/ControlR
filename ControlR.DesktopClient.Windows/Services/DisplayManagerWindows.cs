@@ -6,6 +6,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Windows.Helpers;
 using Microsoft.Extensions.Logging;
+using ControlR.Libraries.Shared.Primitives;
 using Windows.Win32;
 using Windows.Win32.UI.WindowsAndMessaging;
 
@@ -14,21 +15,22 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : IDisplayManager
 {
   private readonly Lock _displayLock = new();
-  private readonly ConcurrentDictionary<string, DisplayInfo> _displays = [];
+  private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerWindows> _logger = logger;
 
-  public Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {
-    if (!TryFindDisplay(displayName, out var display))
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
     {
-      return Task.FromResult(Point.Empty);
+      return Point.Empty;
     }
 
-    var bounds = display.MonitorArea;
+    var bounds = findResult.Value.MonitorArea;
     var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
     var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
 
-    return Task.FromResult(new Point(absoluteX, absoluteY));
+    return new Point(absoluteX, absoluteY);
   }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
@@ -45,7 +47,7 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     }
   }
 
-  public DisplayInfo? GetPrimaryDisplay()
+  public async Task<DisplayInfo?> GetPrimaryDisplay()
   {
     lock (_displayLock)
     {
@@ -55,13 +57,13 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     }
   }
 
-  public Rectangle GetVirtualScreenBounds()
+  public Task<Rectangle> GetVirtualScreenBounds()
   {
     var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
     var height = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
     var left = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
     var top = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
-    return new Rectangle(left, top, width, height);
+    return Task.FromResult(new Rectangle(left, top, width, height));
   }
 
   public Task ReloadDisplays()
@@ -73,12 +75,16 @@ internal class DisplayManagerWindows(ILogger<DisplayManagerWindows> logger) : ID
     return Task.CompletedTask;
   }
 
-  public bool TryFindDisplay(string deviceName, [NotNullWhen(true)] out DisplayInfo? display)
+  public Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
     lock (_displayLock)
     {
       EnsureDisplaysLoaded();
-      return _displays.TryGetValue(deviceName, out display);
+      if (_displays.TryGetValue(deviceName, out var display))
+      {
+        return Task.FromResult(Result.Ok(display));
+      }
+      return Task.FromResult(Result.Fail<DisplayInfo>("Display not found."));
     }
   }
 

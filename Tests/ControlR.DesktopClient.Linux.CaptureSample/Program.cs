@@ -46,7 +46,7 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 var screenGrabber = app.Services.GetRequiredService<IScreenGrabber>();
-var captureResult = screenGrabber.CaptureAllDisplays();
+var captureResult = await screenGrabber.CaptureAllDisplays();
 if (!captureResult.IsSuccess)
 {
   logger.LogError("Screen capture failed: {ErrorMessage}", captureResult.FailureReason);

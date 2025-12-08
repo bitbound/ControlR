@@ -33,12 +33,13 @@ internal sealed class ScreenGrabberWindows(
 
   private bool _inputDesktopSwitchResult = true;
 
-  public CaptureResult CaptureAllDisplays(bool captureCursor = true)
+  public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     SwitchToInputDesktop();
-    return GetBitBltCapture(_displayManager.GetVirtualScreenBounds(), captureCursor);
+    var bounds = await _displayManager.GetVirtualScreenBounds();
+    return GetBitBltCapture(bounds, captureCursor, bounds);
   }
-  public CaptureResult CaptureDisplay(
+  public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false)
@@ -47,14 +48,15 @@ internal sealed class ScreenGrabberWindows(
     {
       SwitchToInputDesktop();
 
-      var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
+      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
+      var dxResult = GetDirectXCapture(targetDisplay, captureCursor, virtualBounds);
 
       if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
       {
         return dxResult;
       }
 
-      return GetBitBltCapture(targetDisplay.MonitorArea, captureCursor);
+      return GetBitBltCapture(targetDisplay.MonitorArea, captureCursor, virtualBounds);
     }
     catch (Exception ex)
     {
@@ -74,7 +76,8 @@ internal sealed class ScreenGrabberWindows(
 
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
-    bool captureCursor)
+    bool captureCursor,
+    Rectangle? virtualBounds = null)
   {
     try
     {
@@ -97,7 +100,7 @@ internal sealed class ScreenGrabberWindows(
 
       if (captureCursor)
       {
-        _ = TryDrawCursor(graphics, captureArea);
+        _ = TryDrawCursor(graphics, captureArea, virtualBounds ?? new Rectangle(0, 0, 0, 0));
       }
 
       var skBitmap = bitmap.ToSkBitmap();
@@ -112,7 +115,7 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(exception: ex);
     }
   }
-  private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
+  private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor, Rectangle virtualBounds)
   {
     var dxOutput = _dxOutputGenerator.DuplicateOutput(display.DeviceName);
 
@@ -197,7 +200,7 @@ internal sealed class ScreenGrabberWindows(
 
       using var graphics = Graphics.FromImage(bitmap);
 
-      var iconArea = TryDrawCursor(graphics, display.MonitorArea);
+      var iconArea = TryDrawCursor(graphics, display.MonitorArea, virtualBounds);
       if (!iconArea.IsEmpty)
       {
         dirtyRects = [.. dirtyRects, iconArea];
@@ -275,7 +278,7 @@ internal sealed class ScreenGrabberWindows(
     }
     _inputDesktopSwitchResult = inputDesktopSwitchResult;
   }
-  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea, Rectangle virtualBounds)
   {
     try
     {
@@ -301,7 +304,7 @@ internal sealed class ScreenGrabberWindows(
         hotspotY = iconInfoPtr->yHotspot;
       }
 
-      var virtualScreen = _displayManager.GetVirtualScreenBounds();
+      var virtualScreen = virtualBounds;
       var x = (int)(ci.ptScreenPos.X - virtualScreen.Left - captureArea.Left - hotspotX);
       var y = (int)(ci.ptScreenPos.Y - virtualScreen.Top - captureArea.Top - hotspotY);
 
