@@ -56,8 +56,8 @@ public class IpcClientManager(
         client.On<RemoteControlRequestIpcDto>(HandleRemoteControlRequest);
         client.On<ChatMessageIpcDto>(HandleChatMessage);
         client.On<CloseChatSessionIpcDto>(HandleCloseChatSession);
-        client.On<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(HandleDesktopPreviewRequest);
-        client.On<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(HandleCheckOsPermissions);
+        client.On<DesktopPreviewRequestIpcDto, Task<DesktopPreviewResponseIpcDto>>(HandleDesktopPreviewRequest);
+        client.On<CheckOsPermissionsIpcDto, Task<CheckOsPermissionsResponseIpcDto>>(HandleCheckOsPermissions);
         client.On<ShutdownCommandDto>(HandleShutdownCommand);
         client.On<InvokeCtrlAltDelRequestDto>(HandleInvokeCtrlAltDel);
 
@@ -135,7 +135,7 @@ public class IpcClientManager(
       _logger.LogError(ex, "Error while handling chat message.");
     }
   }
-  private CheckOsPermissionsResponseIpcDto HandleCheckOsPermissions(CheckOsPermissionsIpcDto dto)
+  private async Task<CheckOsPermissionsResponseIpcDto> HandleCheckOsPermissions(CheckOsPermissionsIpcDto dto)
   {
     try
     {
@@ -158,7 +158,7 @@ public class IpcClientManager(
       if (detector.IsWayland())
       {
         var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-        arePermissionsGranted = waylandPermissions.IsRemoteControlPermissionGranted().GetAwaiter().GetResult();
+        arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
 
         _logger.LogInformation("Wayland permissions check: RemoteControl={RemoteControl}", arePermissionsGranted);
       }
@@ -199,7 +199,7 @@ public class IpcClientManager(
       _logger.LogError(ex, "Error while handling close chat session request.");
     }
   }
-  private DesktopPreviewResponseIpcDto HandleDesktopPreviewRequest(DesktopPreviewRequestIpcDto dto)
+  private async Task<DesktopPreviewResponseIpcDto> HandleDesktopPreviewRequest(DesktopPreviewRequestIpcDto dto)
   {
     try
     {
@@ -210,7 +210,7 @@ public class IpcClientManager(
         dto.TargetProcessId);
 
       // Capture preview (synchronous wait for async task)
-      var result = _desktopPreviewService.CapturePreview().GetAwaiter().GetResult();
+      var result = await _desktopPreviewService.CapturePreview();
 
       if (!result.IsSuccess)
       {
