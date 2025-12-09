@@ -28,7 +28,7 @@ env:
 jobs:
   set-version:
     name: Increment Version
-    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     permissions:
       contents: read
       actions: write
@@ -55,7 +55,7 @@ jobs:
 
   run-tests:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: set-version
 
     steps:
@@ -76,7 +76,7 @@ jobs:
 
   build-mac-binaries:
     name: Apple Build
-    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted-mac' || 'macos-latest' }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
     needs: set-version
 
     steps:
@@ -145,9 +145,10 @@ jobs:
 
   build-windows-binaries:
     name: Windows Build (${{ matrix.arch }})
-    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted' || 'windows-latest' }}
+    # When using self-hosted Windows runners, require both the self-hosted label and OS label.
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     environment: secure-signing
-    needs: [set-version]
+    needs: set-version
     permissions:
       id-token: write
       contents: read
@@ -276,7 +277,7 @@ jobs:
 
   build-linux-binaries:
     name: Linux Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: [set-version]
 
     steps:
@@ -326,7 +327,7 @@ jobs:
 
   build-web-server:
     name: Build Web Server
-    runs-on: windows-latest
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
     needs: [build-windows-binaries, build-linux-binaries, build-mac-binaries, run-tests]
 
     steps:
