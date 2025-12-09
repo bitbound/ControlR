@@ -1,6 +1,7 @@
 ﻿global using Microsoft.Extensions.DependencyInjection;
 global using ControlR.DesktopClient.Common.ServiceInterfaces;
 global using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
+global using Avalonia.Threading;
 
 #if WINDOWS_BUILD
 global using ControlR.DesktopClient.Windows;
