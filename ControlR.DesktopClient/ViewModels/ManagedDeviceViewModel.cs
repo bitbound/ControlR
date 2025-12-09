@@ -1,9 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Services;
 
 namespace ControlR.DesktopClient.ViewModels;

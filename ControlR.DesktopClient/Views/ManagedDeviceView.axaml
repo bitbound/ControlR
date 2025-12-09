@@ -125,7 +125,6 @@
                 </StackPanel>
                 <Button Content="{x:Static common:Localization.GrantPermission}"
                         Command="{Binding GrantWaylandPermissionCommand}"
-                        IsEnabled="{Binding IsWaylandPermissionGranted, Converter={StaticResource InverseBooleanConverter}}"
                         Margin="16,0,0,0" />
               </StackPanel>
               <TextBlock Text="{x:Static common:Localization.RemoteControlPermissionDescription}"
