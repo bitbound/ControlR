@@ -98,7 +98,7 @@ jobs:
 
           # Build DesktopClient
           dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-arm64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-arm64/" -p:Version=$VERSION -p:FileVersion=$VERSION
-          sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.DesktopClient"
+          codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.DesktopClient"
           pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-arm64/"
           ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-arm64/" "./ControlR.DesktopClient/bin/publish/osx-arm64/ControlR.app.zip"
 
@@ -108,7 +108,7 @@ jobs:
 
           # Build Agent
           dotnet publish "./ControlR.Agent/" -c Release -r osx-arm64 --self-contained -o "./ControlR.Agent/bin/publish/osx-arm64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-          sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
+          codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent"
 
       - name: Publish DesktopClient + Agent (x64)
         run: |
@@ -117,7 +117,7 @@ jobs:
 
           # Build DesktopClient
           dotnet publish "./ControlR.DesktopClient/" -c Release -r osx-x64 --self-contained -o "./ControlR.DesktopClient/bin/publish/osx-x64/" -p:Version=$VERSION -p:FileVersion=$VERSION
-          sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.DesktopClient"
+          codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.DesktopClient"
           pwsh "./.build/Mac/CreateMacApp.ps1" -OutputDir "./ControlR.DesktopClient/bin/publish/osx-x64/"
           ditto -c -k --sequesterRsrc "./ControlR.DesktopClient/bin/publish/osx-x64/" "./ControlR.DesktopClient/bin/publish/osx-x64/ControlR.app.zip"
 
@@ -127,7 +127,7 @@ jobs:
 
           # Build Agent
           dotnet publish "./ControlR.Agent/" -c Release -r osx-x64 --self-contained -o "./ControlR.Agent/bin/publish/osx-x64/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
-          sudo codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
+          codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
 
       - name: Upload Agent (macOS ARM64)
         uses: actions/upload-artifact@v4
