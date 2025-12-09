@@ -9,14 +9,12 @@ on:
   #    - 'README.md'
   workflow_dispatch:
     inputs:
-      windows_runner:
-        description: 'Windows Runner'
+      use_self_hosted_runners:
+        description: 'Use Self-Hosted Runners'
         required: true
-        default: 'windows-latest'
-        type: choice
-        options:
-          - windows-latest
-          - self-hosted
+        default: false
+        type: boolean
+
       retention_days_artifacts:
         description: 'Retention Days for Artifacts'
         required: false
@@ -30,7 +28,7 @@ env:
 jobs:
   set-version:
     name: Increment Version
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted' || 'ubuntu-latest' }}
     permissions:
       contents: read
       actions: write
@@ -78,7 +76,7 @@ jobs:
 
   build-mac-binaries:
     name: Apple Build
-    runs-on: macos-latest
+    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted-mac' || 'macos-latest' }}
     needs: set-version
 
     steps:
@@ -147,7 +145,7 @@ jobs:
 
   build-windows-binaries:
     name: Windows Build (${{ matrix.arch }})
-    runs-on: ${{ inputs.windows_runner || 'windows-latest' }}
+    runs-on: ${{ inputs.use_self_hosted_runners && 'self-hosted' || 'windows-latest' }}
     environment: secure-signing
     needs: [set-version]
     permissions:
