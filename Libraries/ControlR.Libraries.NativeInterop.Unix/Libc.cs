@@ -1,10 +1,10 @@
 ﻿using System.Runtime.InteropServices;
 
-  #pragma warning disable IDE0079 // Remove unnecessary suppression
-  #pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-  #pragma warning disable CA1401 // P/Invokes should not be visible
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
+#pragma warning disable CA1401 // P/Invokes should not be visible
 
-  namespace ControlR.Libraries.NativeInterop.Unix;
+namespace ControlR.Libraries.NativeInterop.Unix;
 
 public static class Libc
 {
@@ -16,7 +16,7 @@ public static class Libc
 
   [DllImport("libc", EntryPoint = "umask", SetLastError = true)]
   public static extern int Umask(int mask);
-  
+
   [DllImport("libc", EntryPoint = "chown", SetLastError = true, CharSet = CharSet.Ansi)]
   public static extern int chown([MarshalAs(UnmanagedType.LPStr)] string path, int owner, int group);
 

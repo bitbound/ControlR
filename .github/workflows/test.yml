@@ -24,7 +24,7 @@ env:
 jobs:
   test:
     name: test
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: pwsh

@@ -9,6 +9,8 @@ namespace ControlR.DesktopClient.ViewModels;
 public interface IManagedDeviceViewModel : IViewModelBase
 {
   string? AppVersion { get; }
+  IAsyncRelayCommand GrantAccessibilityPermissionCommand { get; }
+  IAsyncRelayCommand GrantScreenCapturePermissionCommand { get; }
   IAsyncRelayCommand GrantWaylandPermissionCommand { get; }
   bool IsAccessibilityPermissionGranted { get; }
   bool IsLinuxWayland { get; }
@@ -81,13 +83,33 @@ public partial class ManagedDeviceViewModel(
 #endif
   }
   [RelayCommand]
+  private async Task GrantAccessibilityPermission()
+  {
+#if MAC_BUILD
+    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+    macInterop.RequestAccessibilityPermission();
+    await SetPermissionValues();
+#endif
+  }
+
+  [RelayCommand]
+  private async Task GrantScreenCapturePermission()
+  {
+#if MAC_BUILD
+    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+    macInterop.RequestScreenCapturePermission();
+    await SetPermissionValues();
+#endif
+  }
+
+  [RelayCommand]
   private async Task GrantWaylandPermission()
   {
 #if LINUX_BUILD
     if (IsLinuxWayland)
     {
       var accessor = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-      await accessor.RequestRemoteControlPermission();
+      await accessor.RequestRemoteControlPermission(force: true);
       await SetPermissionValues();
     }
 #endif

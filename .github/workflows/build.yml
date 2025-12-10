@@ -381,20 +381,20 @@ jobs:
       - name: Build Web Server
         shell: pwsh
         run: |
-          New-Item -Path "ControlR.Server\bin\publish" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Web.Server\ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Server\bin\publish --self-contained true
+          New-Item -Path "ControlR.Web.Server\bin\publish" -ItemType Directory -Force | Out-Null
+          dotnet publish ControlR.Web.Server\ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Web.Server\bin\publish --self-contained true
 
       - name: Verify Agent Binaries
         shell: pwsh
         run: |
           $TestPaths = @(
-            "ControlR.Server\bin\publish\wwwroot\downloads\Version.txt",
-            "ControlR.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
-            "ControlR.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Agent.exe",
-            "ControlR.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
-            "ControlR.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
-            "ControlR.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
-            "ControlR.Server\bin\publish\novnc\vnc.html"
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\Version.txt",
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\win-x86\ControlR.Agent.exe",
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\win-x64\ControlR.Agent.exe",
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\linux-x64\ControlR.Agent",
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\osx-arm64\ControlR.Agent",
+            "ControlR.Web.Server\bin\publish\wwwroot\downloads\osx-x64\ControlR.Agent",
+            "ControlR.Web.Server\bin\publish\novnc\vnc.html"
           )
           foreach ($TestPath in $TestPaths) {
             if (!(Test-Path $TestPath)) {
@@ -407,7 +407,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Server
-          path: ControlR.Server\bin\publish
+          path: ControlR.Web.Server\bin\publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload docker-compose

@@ -82,11 +82,12 @@
       return;
     }
 
-    if (UserManager.Options.SignIn.RequireConfirmedAccount)
+    if (UserManager.Options.SignIn.RequireConfirmedEmail)
     {
       RedirectManager.RedirectTo(
         "Account/RegisterConfirmation",
         new Dictionary<string, object?> { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+      return;
     }
 
     await SignInManager.SignInAsync(createResult.User, false);

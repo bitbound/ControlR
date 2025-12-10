@@ -7,6 +7,8 @@ internal class ManagedDeviceViewModelFake : ViewModelBaseFake, IManagedDeviceVie
 {
   public string? AppVersion { get; set; } = "1.0.0";
 
+  public IAsyncRelayCommand GrantAccessibilityPermissionCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
+  public IAsyncRelayCommand GrantScreenCapturePermissionCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public IAsyncRelayCommand GrantWaylandPermissionCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public bool IsAccessibilityPermissionGranted { get; set; } = false;
 

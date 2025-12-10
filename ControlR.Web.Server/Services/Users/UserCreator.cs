@@ -234,6 +234,9 @@ public class UserCreator(
 
         await _userManager.AddToRoleAsync(user, RoleNames.AgentInstaller);
         _logger.LogInformation("Assigned user role AgentInstaller for newly-created tenant.");
+
+        await _userManager.AddToRoleAsync(user, RoleNames.InstallerKeyManager);
+        _logger.LogInformation("Assigned user role InstallerKeyManager for newly-created tenant.");
       }
 
       if (externalLoginInfo is not null)

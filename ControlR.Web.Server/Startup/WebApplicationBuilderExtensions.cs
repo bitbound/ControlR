@@ -237,7 +237,7 @@ public static class WebApplicationBuilderExtensions
     // Add forwarded headers.
     if (appOptions.EnableNetworkTrust)
     {
-      await builder.ConfigureForwardedHeadersWithFullTrust();
+      builder.ConfigureForwardedHeadersWithFullTrust();
     }
     else
     {
@@ -471,8 +471,7 @@ public static class WebApplicationBuilderExtensions
       }
     });
   }
-
-  private static async Task ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
+  private static void ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
   {
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {

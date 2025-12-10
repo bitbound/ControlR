@@ -8,6 +8,7 @@ public class DeveloperOptions
   
 public enum GlobalRenderMode
 {
+  Unknown,
   Auto,
   Server,
   WebAssembly,

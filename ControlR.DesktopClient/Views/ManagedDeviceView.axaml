@@ -60,9 +60,9 @@
           <!-- Accessibility -->
           <Border Classes="Card" Margin="0,20,0,0">
             <StackPanel>
-            <TextBlock Text="{x:Static common:Localization.Accessibility}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+              <TextBlock Text="{x:Static common:Localization.Accessibility}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" Margin="0,0,0,8">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
                   <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsAccessibilityPermissionGranted}">
                     <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessContrastText}" FontWeight="Bold" />
@@ -71,10 +71,15 @@
                     <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorContrastText}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
-                <Button Content="{x:Static common:Localization.OpenSettings}"
+                <Button Grid.Column="1"
+                        Content="{x:Static common:Localization.GrantPermission}"
+                        Command="{Binding GrantAccessibilityPermissionCommand}"
+                        IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
+                <Button Grid.Column="1"
+                        Content="{x:Static common:Localization.OpenSettings}"
                         Command="{Binding OpenAccessibilitySettingsCommand}"
-                        Margin="16,0,0,0" />
-              </StackPanel>
+                        IsVisible="{Binding IsAccessibilityPermissionGranted}" />
+              </Grid>
               <TextBlock Text="{x:Static common:Localization.AccessibilityPermissionDescription}"
                          Classes="Small"
                          TextWrapping="Wrap" />
@@ -85,8 +90,8 @@
           <Border Classes="Card" Margin="0,20,0,0">
             <StackPanel>
               <TextBlock Text="{x:Static common:Localization.ScreenRecording}" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20" Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" Margin="0,0,0,8">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
                   <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsScreenCapturePermissionGranted}">
                     <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessContrastText}" FontWeight="Bold" />
@@ -95,10 +100,15 @@
                     <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorContrastText}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
-                <Button Content="{x:Static common:Localization.OpenSettings}"
+                <Button Grid.Column="1"
+                        Content="{x:Static common:Localization.GrantPermission}"
+                        Command="{Binding GrantScreenCapturePermissionCommand}"
+                        IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
+                <Button Grid.Column="1"
+                        Content="{x:Static common:Localization.OpenSettings}"
                         Command="{Binding OpenScreenCaptureSettingsCommand}"
-                        Margin="16,0,0,0" />
-              </StackPanel>
+                        IsVisible="{Binding IsScreenCapturePermissionGranted}" />
+              </Grid>
               <TextBlock Text="{x:Static common:Localization.ScreenCapturePermissionDescription}"
                          Classes="Small"
                          TextWrapping="Wrap" />

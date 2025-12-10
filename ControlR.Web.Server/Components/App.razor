@@ -20,6 +20,7 @@
 
 <body>
   <Routes @rendermode="PageRenderMode" />
+  <script src="wasm-progress.js"></script>
   <script src="@Assets["_framework/blazor.web.js"]"></script>
   <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
   <script src="_content/MudBlazor/MudBlazor.min.js"></script>
@@ -49,6 +50,8 @@
 
       switch (DeveloperOptions.Value.RenderMode)
       {
+        case GlobalRenderMode.Unknown:
+          return InteractiveWebAssembly;
         case GlobalRenderMode.Auto:
           return InteractiveAuto;
         case GlobalRenderMode.Server:
@@ -56,10 +59,8 @@
         case GlobalRenderMode.WebAssembly:
           return InteractiveWebAssembly;
         default:
-          return InteractiveAuto;
+          return InteractiveWebAssembly;
       }
     }
   }
-
-
 }

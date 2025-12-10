@@ -8,7 +8,7 @@ namespace ControlR.DesktopClient.Linux.Services;
 public interface IWaylandPermissionProvider
 {
   Task<bool> IsRemoteControlPermissionGranted();
-  Task<bool> RequestRemoteControlPermission();
+  Task<bool> RequestRemoteControlPermission(bool force = false);
 }
 
 internal class WaylandPermissionProvider(
@@ -35,11 +35,11 @@ internal class WaylandPermissionProvider(
       return false;
     }
   }
-  public async Task<bool> RequestRemoteControlPermission()
+  public async Task<bool> RequestRemoteControlPermission(bool force = false)
   {
     try
     {
-      await _portalAccessor.Initialize();
+      await _portalAccessor.Initialize(force);
       _logger.LogInformation("RemoteDesktop permission granted via XDG portal");
       return await IsRemoteControlPermissionGranted();
     }

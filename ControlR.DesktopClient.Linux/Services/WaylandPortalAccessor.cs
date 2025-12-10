@@ -16,7 +16,7 @@ public interface IWaylandPortalAccessor
   Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection();
   Task<(XdgDesktopPortal Portal, string SessionHandle)?> GetRemoteDesktopSession();
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
-  Task Initialize();
+  Task Initialize(bool force = false);
 }
 
 internal class WaylandPortalAccessor(
@@ -89,12 +89,12 @@ internal class WaylandPortalAccessor(
     await EnsureInitializedAsync();
     return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
   }
-  public async Task Initialize()
+  public async Task Initialize(bool force = false)
   {
-    await EnsureInitializedAsync();
+    await EnsureInitializedAsync(force);
   }
 
-  private async Task EnsureInitializedAsync()
+  private async Task EnsureInitializedAsync(bool force = false)
   {
     if (_initialized) return;
 
@@ -121,12 +121,15 @@ internal class WaylandPortalAccessor(
       _sessionHandle = sessionResult.Value;
       _logger.LogInformation("Created RemoteDesktop session: {Session}", _sessionHandle);
 
-      var restoreToken = LoadRestoreToken();
       var remoteDesktopOptions = new Dictionary<string, object> { ["persist_mode"] = 2u };
-      if (!string.IsNullOrEmpty(restoreToken))
+      if (!force)
       {
-        remoteDesktopOptions["restore_token"] = restoreToken;
-        _logger.LogInformation("Using saved restore token");
+        var restoreToken = LoadRestoreToken();
+        if (!string.IsNullOrEmpty(restoreToken))
+        {
+          remoteDesktopOptions["restore_token"] = restoreToken;
+          _logger.LogInformation("Using saved restore token");
+        }
       }
 
       var selectResult = await Portal.SelectRemoteDesktopDevicesAsync(
