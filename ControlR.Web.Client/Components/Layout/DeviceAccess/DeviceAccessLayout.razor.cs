@@ -18,7 +18,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private bool _isAuthenticated;
   private bool _isDarkMode = true;
-  private string? _loadingText = "Loading";
   private PersistingComponentStateSubscription _persistingSubscription;
   private ThemeMode _themeMode = ThemeMode.Auto;
 
@@ -106,7 +105,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     try
     {
       await base.OnInitializedAsync();
-      _loadingText = "Loading";
 
       _isAuthenticated = await AuthState.IsAuthenticated();
 
@@ -155,13 +153,15 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         var query = HttpUtility.ParseQueryString(uri.Query);
         query.Remove("logonToken");
         // Rebuild the remaining query string (retain deviceId and any future params).
-        var remaining = query.HasKeys() ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) : string.Empty;
+        var remaining = query.HasKeys() 
+          ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) 
+          : string.Empty;
+
         NavManager.NavigateTo(basePath + remaining, replace: true);
         return;
       }
 
-      _loadingText = "Connecting";
-      await InvokeAsync(StateHasChanged);
+      await GetDeviceInfo();
 
       Messenger.Register<ToastMessage>(this, HandleToastMessage);
       Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
@@ -170,7 +170,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
       await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
-      await GetDeviceInfo();
     }
     catch (Exception ex)
     {
@@ -179,7 +178,6 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     }
     finally
     {
-      _loadingText = null;
       await InvokeAsync(StateHasChanged);
     }
   }

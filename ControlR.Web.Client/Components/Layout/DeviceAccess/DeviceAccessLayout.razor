@@ -57,9 +57,18 @@
       </MudDrawer>
       <MudMainContent Class="h-100">
         <ServerAlertDisplay Class="mb-4" />
-        @if (!RendererInfo.IsInteractive || !string.IsNullOrWhiteSpace(_loadingText))
+        @if (!RendererInfo.IsInteractive)
         {
-          <LoadingIndicator IsVisible Message="@(_loadingText ?? "Loading")" Class="mt-8" />
+          <div class="w-100 text-center mt-8">
+            <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+             Loading <span id="blazor-load-progress"></span>
+            </MudText>
+            <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+          </div>
+        }
+        else if (_hubConnectionState != HubConnectionState.Connected)
+        {
+            <LoadingIndicator IsVisible Message="Connecting" Class="mt-8" />
         }
         else if (!string.IsNullOrWhiteSpace(_errorText))
         {
