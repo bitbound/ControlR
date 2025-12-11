@@ -54,12 +54,10 @@
       _mudSeverity = _alert.Severity.ToMudSeverity();
 
       // Check if the user previously dismissed this alert (only if not sticky)
-      if (!_alert.IsSticky)
+      if (!_alert.IsSticky && 
+          await HasAlertBeenDismissed(_alert.Message, _alert.Severity))
       {
-        if (await HasAlertBeenDismissed(_alert.Message, _alert.Severity))
-        {
-          return;
-        }
+        return;
       }
 
       _isVisible = true;
@@ -72,28 +70,27 @@
 
   private async Task HandleDismiss()
   {
-    if (_alert is null)
+    try
     {
-      return;
-    }
+      if (_alert is null)
+      {
+        return;
+      }
 
-    _isVisible = false;
+      _isVisible = false;
 
-    // If not sticky, save dismiss state to localStorage
-    if (!_alert.IsSticky)
-    {
-      try
+      // If not sticky, save dismiss state to localStorage
+      if (!_alert.IsSticky)
       {
         await LocalStorage.SetItem(LocalStorageKey, $"{_alert.Message}-{_alert.Severity}");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Error saving dismiss state");
+
       }
     }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error saving dismiss state");
+    }
   }
-
-  private const string LocalStorageKey = "controlr-server-alert-dismissed";
 
   private async Task<bool> HasAlertBeenDismissed(string message, MessageSeverity severity)
   {
@@ -101,5 +98,5 @@
     var newMessage = $"{message}-{severity}";
     return existing == newMessage;
   }
-
+  private const string LocalStorageKey = "controlr-server-alert-dismissed";
 }
