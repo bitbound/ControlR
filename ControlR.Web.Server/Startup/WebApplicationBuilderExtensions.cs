@@ -20,6 +20,7 @@ using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Http.Features;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -85,6 +86,17 @@ public static class WebApplicationBuilderExtensions
         .AddAuthenticationStateSerialization();
 
     // Add API services.
+    builder.Services.Configure<FormOptions>(options =>
+    {
+      if (appOptions.MaxFileTransferSize <= 0)
+      {
+        options.MultipartBodyLengthLimit = long.MaxValue;
+      }
+      else
+      {
+        options.MultipartBodyLengthLimit = appOptions.MaxFileTransferSize;
+      }
+    });
     builder.Services.AddControllers();
     builder.Services.AddOpenApi(options =>
     {
