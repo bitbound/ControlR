@@ -12,7 +12,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private string? _alertMessage;
   private Severity _alertSeverity;
   private bool _isReconnecting;
-  private string? _loadingMessage = "Loading";
+  private string? _loadingMessage = "Connecting";
   private DesktopSession[]? _systemSessions;
   
   [Inject]
