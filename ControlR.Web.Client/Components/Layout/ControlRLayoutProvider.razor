@@ -1,0 +1,17 @@
+@using MudBlazor
+
+<CascadingValue Value="CurrentPalette">
+    <MudThemeProvider @bind-IsDarkMode="@IsDarkMode" Theme="CustomTheme" />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public MudTheme? CustomTheme { get; set; }
+    [Parameter] public Palette? CurrentPalette { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public EventCallback<bool> IsDarkModeChanged { get; set; }
+}

@@ -1,5 +1,5 @@
 name: Build
-run-name: Build v${{ vars.CURRENT_VERSION }}
+run-name: Build v${{ inputs.version || vars.CURRENT_VERSION }}
 
 on:
   #push:
@@ -21,8 +21,14 @@ on:
         default: 1
         type: number
 
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        default: ""
+        type: string
+
 env:
-  VERSION: ${{vars.CURRENT_VERSION}}
+  VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
 
 jobs:
@@ -47,11 +53,16 @@ jobs:
         id: setver
         shell: pwsh
         run: |
-          $CurrentVersion = [System.Version]::Parse("${{ vars.CURRENT_VERSION }}")
-          echo "Resolved current version: $CurrentVersion"
+          # Use supplied version if provided, otherwise fall back to the repo variable
+          Write-Host "Using source version: $env:VERSION"
+          $CurrentVersion = [System.Version]::Parse("$env:VERSION")
+          Write-Host "Resolved current version: $CurrentVersion"
           $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
-          echo "Next version will be: $NextVersion"
+          Write-Host "Next version will be: $NextVersion"
+          # Persist next version to GH Variables for future runs
           gh variable set CURRENT_VERSION --body $NextVersion
+          # Expose the next version as a step output for the job
+          echo "version=$NextVersion" >> $GITHUB_OUTPUT
 
   run-tests:
     name: Run Tests

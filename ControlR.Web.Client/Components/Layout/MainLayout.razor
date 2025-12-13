@@ -1,23 +1,12 @@
 ﻿@using ControlR.Libraries.Shared.Enums
 @using ControlR.Web.Client.StateManagement
-@inherits LayoutComponentBase
-@inject AuthenticationStateProvider AuthState
-@inject NavigationManager NavManager
-@inject IMessenger Messenger
-@inject IHubConnector HubConnector
-@inject ISnackbar Snackbar
+@using ControlR.Web.Client.Components.Layout
+@inherits BaseLayout
+@inject ILazyInjector<IHubConnector> HubConnector
 @inject ILogger<MainLayout> Logger
-@inject IUserSettingsProvider UserSettings
-@inject IJsInterop JsInterop
-@inject PersistentComponentState ApplicationState
-@implements IDisposable
 
 <div class="@ThemeClass">
-  <CascadingValue Value="CurrentPalette">
-    <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="CustomTheme" />
-    <MudPopoverProvider />
-    <MudDialogProvider />
-    <MudSnackbarProvider />
+  <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
 
     <MudLayout>
       <MudAppBar Elevation="1">
@@ -40,22 +29,18 @@
 
         <MudSpacer />
 
-        <ConnectionIndicator THub="@IViewerHub" />
-
-        <ThemeToggle OnThemeChanged="HandleThemeChanged" />
-
-        <MudTooltip Text="GitHub">
-          <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-            Href="https://github.com/bitbound/controlr/" Target="_blank" />
-
-        </MudTooltip>
+        <LayoutHeaderButtons OnThemeChanged="HandleThemeChanged" />
       </MudAppBar>
-      <MudDrawer @bind-Open="_drawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+      <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
 
         <NavMenu />
       </MudDrawer>
       <MudMainContent Class="mt-16 pa-4">
-        <ServerAlertDisplay Class="mb-4" />
+        @if (RendererInfo.IsInteractive)
+        {
+          <ServerAlertDisplay Class="mb-4" />
+        }
+
         @if (!RendererInfo.IsInteractive && !_isIdentityPage)
         {
           <div class="w-100 text-center mt-8">
@@ -71,9 +56,12 @@
         }
       </MudMainContent>
     </MudLayout>
-
-    <DeviceContentHarness />
-  </CascadingValue>
+    
+    @if (RendererInfo.IsInteractive)
+    {
+      <DeviceContentHarness />
+    }
+  </ControlRLayoutProvider>
 </div>
 
 <div id="blazor-error-ui">
@@ -83,64 +71,11 @@
 </div>
 
 @code {
-  private bool _drawerOpen = true;
-  private bool _isAuthenticated;
   private bool _isIdentityPage;
-  private bool _isDarkMode = true;
-  private ThemeMode _themeMode = ThemeMode.Auto;
-  private PersistingComponentStateSubscription _persistingSubscription;
-
-  private MudTheme? _customTheme;
-
-  private Palette CurrentPalette => _isDarkMode
-  ? CustomTheme.PaletteDark
-  : CustomTheme.PaletteLight;
-
-  private MudTheme CustomTheme
-  {
-    get
-    {
-      return _customTheme ??= new MudTheme
-      {
-        PaletteDark = Theme.DarkPalette,
-        PaletteLight = Theme.LightPalette
-      };
-    }
-  }
-
-  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
 
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
-
-    // Try to restore persisted state from SSR
-    if (!ApplicationState.TryTakeFromJson<bool>(PersistentStateKeys.IsDarkMode, out var persistedIsDarkMode))
-    {
-      // No persisted state, this is SSR or first load
-      _isAuthenticated = await AuthState.IsAuthenticated();
-
-      if (_isAuthenticated)
-      {
-        _themeMode = await UserSettings.GetThemeMode();
-        await UpdateIsDarkMode();
-      }
-
-      // Register a callback to persist state before SSR completes
-      _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
-    }
-    else
-    {
-      // Restored from persisted state (this is WASM after SSR)
-      _isDarkMode = persistedIsDarkMode;
-
-      // Still need to load authenticated state and set up theme mode
-      _isAuthenticated = await AuthState.IsAuthenticated();
-      if (_isAuthenticated)
-      {
-        _themeMode = await UserSettings.GetThemeMode();
-      }
-    }
 
     _isIdentityPage =
       Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
@@ -148,14 +83,11 @@
 
     if (RendererInfo.IsInteractive)
     {
-      Messenger.Register<ToastMessage>(this, HandleToastMessage);
-      Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
-
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
-      if (_isAuthenticated)
+      if (IsAuthenticated)
       {
-        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+        await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
     }
   }
@@ -164,82 +96,31 @@
   {
     try
     {
+      if (!RendererInfo.IsInteractive)
+      {
+        return;
+      }
+
       var state = await taskState;
-      _isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+      IsAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
       await InvokeAsync(StateHasChanged);
 
-      if (_isAuthenticated)
+      if (IsAuthenticated)
       {
-        await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+        await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while handling authentication state change.");
-      Snackbar.Add("Authentication state change error", Severity.Error);
+      Snackbar.Value.Add("Authentication state change error", Severity.Error);
     }
   }
 
-  private Task HandleToastMessage(object subscriber, ToastMessage toast)
+  public override async ValueTask DisposeAsync()
   {
-    Snackbar.Add(toast.Message, toast.Severity);
-    return Task.CompletedTask;
-  }
-
-  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
-  {
-    await HandleThemeChanged(message.ThemeMode);
-  }
-
-  private void ToggleNavDrawer()
-  {
-    _drawerOpen = !_drawerOpen;
-  }
-
-  private async Task UpdateIsDarkMode()
-  {
-    _isDarkMode = _themeMode switch
-    {
-      ThemeMode.Light => false,
-      ThemeMode.Dark => true,
-      ThemeMode.Auto => await GetSystemDarkMode(),
-      _ => true
-    };
-  }
-
-  private async Task<bool> GetSystemDarkMode()
-  {
-    try
-    {
-      if (RendererInfo.IsInteractive)
-      {
-        return await JsInterop.GetSystemDarkMode();
-      }
-      return true; // Default to dark during prerendering
-    }
-    catch (Exception ex)
-    {
-      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
-      return true;
-    }
-  }
-
-  private async Task HandleThemeChanged(ThemeMode mode)
-  {
-    _themeMode = mode;
-    await UpdateIsDarkMode();
-    StateHasChanged();
-  }
-
-  private Task PersistThemeState()
-  {
-    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
-    return Task.CompletedTask;
-  }
-
-  public void Dispose()
-  {
-    _persistingSubscription.Dispose();
+    AuthState.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
+    await base.DisposeAsync();
   }
 
 }

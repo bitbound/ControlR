@@ -254,7 +254,6 @@ public class AgentHub(
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == deviceDto.TenantId))
       {
-        await Clients.Caller.UninstallAgent("Invalid tenant ID.");
         return Result.Fail<DeviceDto>("Invalid tenant ID.");
       }
 
@@ -409,12 +408,6 @@ public class AgentHub(
       return Result.Ok(device);
     }
 
-    var updateResult = await _deviceManager.UpdateDevice(dto);
-    if (!updateResult.IsSuccess)
-    {
-      await Clients.Caller.UninstallAgent(updateResult.Reason);
-    }
-
-    return updateResult;
+    return await _deviceManager.UpdateDevice(dto);
   }
 }

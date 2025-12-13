@@ -1,1 +1,1 @@
-Refer to [AGENTS.md](AGENTS.md) for instructions.
+See [copilot-instructions.md](.github/instructions/copilot-instructions.md) for instructions.

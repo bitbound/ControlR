@@ -1,15 +1,12 @@
 ﻿@using ControlR.Libraries.Shared.Enums
-@inherits LayoutComponentBase
+@using ControlR.Web.Client.Components.Layout
+@inherits BaseLayout
 @attribute [Authorize]
 
 
 <div class="h-100 @(ThemeClass)">
   <link rel="stylesheet" href="/device-access.css" />
-  <CascadingValue Value="CurrentPalette">
-    <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="CustomTheme" />
-    <MudPopoverProvider />
-    <MudDialogProvider />
-    <MudSnackbarProvider />
+  <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
     <MudLayout>
       <MudAppBar Elevation="1">
 
@@ -36,17 +33,9 @@
 
         <MudSpacer />
 
-        <ConnectionIndicator THub="@IViewerHub" />
-
-        <ThemeToggle OnThemeChanged="HandleThemeChanged" />
-
-        <MudTooltip Text="GitHub">
-          <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-            Href="https://github.com/bitbound/controlr/" Target="_blank" />
-
-        </MudTooltip>
+        <LayoutHeaderButtons OnThemeChanged="HandleThemeChanged" />
       </MudAppBar>
-      <MudDrawer @bind-Open="_drawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+      <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudDrawerHeader Class="pa-4">
           <MudImage Src=@Assets["appicon-192.png"] Height="30" Class="me-2" />
           <MudText Typo="Typo.h6" Color="Color.Primary">
@@ -56,19 +45,23 @@
         <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" />
       </MudDrawer>
       <MudMainContent Class="h-100">
-        <ServerAlertDisplay Class="mb-4" />
+        @if (RendererInfo.IsInteractive)
+        {
+          <ServerAlertDisplay Class="mb-4" />
+        }
+
         @if (!RendererInfo.IsInteractive)
         {
           <div class="w-100 text-center mt-8">
             <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
-             Loading <span id="blazor-load-progress"></span>
+              Loading <span id="blazor-load-progress"></span>
             </MudText>
             <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
           </div>
         }
         else if (_hubConnectionState != HubConnectionState.Connected)
         {
-            <LoadingIndicator IsVisible Message="Connecting" Class="mt-8" />
+          <LoadingIndicator IsVisible Message="Connecting" Class="mt-8" />
         }
         else if (!string.IsNullOrWhiteSpace(_errorText))
         {
@@ -88,5 +81,5 @@
         }
       </MudMainContent>
     </MudLayout>
-  </CascadingValue>
+  </ControlRLayoutProvider>
 </div>

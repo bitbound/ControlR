@@ -39,7 +39,4 @@
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="Extensions\" />
-	</ItemGroup>
 </Project>

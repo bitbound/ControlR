@@ -23,6 +23,9 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
+builder.Services.AddScoped<IUserSettingsProvider, UserSettingsProviderClient>();
+builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
+
 builder.Services.AddControlrWebClient();
 
 builder.Services.AddHttpClient<IControlrApi, ControlrApi>((services, client) =>

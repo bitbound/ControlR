@@ -8,57 +8,28 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
 
-public partial class DeviceAccessLayout : IAsyncDisposable
+public partial class DeviceAccessLayout
 {
-  private MudTheme? _customTheme;
   private Guid _deviceId;
   private string? _deviceName;
-  private bool _drawerOpen = true;
   private string? _errorText;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
-  private bool _isAuthenticated;
-  private bool _isDarkMode = true;
-  private PersistingComponentStateSubscription _persistingSubscription;
-  private ThemeMode _themeMode = ThemeMode.Auto;
 
   [Inject]
-  public required PersistentComponentState ApplicationState { get; init; }
+  public required ILazyInjector<IChatState> ChatState { get; init; }
   [Inject]
-  public required AuthenticationStateProvider AuthState { get; init; }
+  public required ILazyInjector<IControlrApi> ControlrApi { get; init; }
   [Inject]
-  public required IChatState ChatState { get; init; }
+  public required ILazyInjector<IDeviceState> DeviceAccessState { get; init; }
   [Inject]
-  public required IControlrApi ControlrApi { get; init; }
-  [Inject]
-  public required IDeviceState DeviceAccessState { get; init; }
-  [Inject]
-  public required IHubConnector HubConnector { get; init; }
-  [Inject]
-  public required IJsInterop JsInterop { get; init; }
+  public required ILazyInjector<IHubConnector> HubConnector { get; init; }
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
   [Inject]
-  public required IMessenger Messenger { get; init; }
+  public required ILazyInjector<ITerminalState> TerminalState { get; init; }
   [Inject]
-  public required NavigationManager NavManager { get; init; }
-  [Inject]
-  public required ISnackbar Snackbar { get; init; }
-  [Inject]
-  public required ITerminalState TerminalState { get; init; }
-  [Inject]
-  public required IUserSettingsProvider UserSettings { get; init; }
-  [Inject]
-  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+  public required ILazyInjector<IHubConnection<IViewerHub>> ViewerHub { get; init; }
 
-  private Palette CurrentPalette => _isDarkMode
-    ? CustomTheme.PaletteDark
-    : CustomTheme.PaletteLight;
-  private MudTheme CustomTheme =>
-    _customTheme ??= new MudTheme
-    {
-      PaletteDark = Theme.DarkPalette,
-      PaletteLight = Theme.LightPalette
-    };
   private bool IsNavMenuDisabled
   {
     get
@@ -73,25 +44,26 @@ public partial class DeviceAccessLayout : IAsyncDisposable
         return true;
       }
 
-      if (!DeviceAccessState.IsDeviceLoaded)
+      if (!DeviceAccessState.Value.IsDeviceLoaded)
       {
         return true;
       }
 
-      return !DeviceAccessState.CurrentDevice.IsOnline;
+      return !DeviceAccessState.Value.CurrentDevice.IsOnline;
     }
   }
-  private string ThemeClass => _isDarkMode ? "dark-mode" : "light-mode";
 
-  public async ValueTask DisposeAsync()
+  public override async ValueTask DisposeAsync()
   {
     try
     {
-      await TryDisposeChat();
-      await TryDisposeTerminal();
-      ChatState.Clear();
-      Messenger.UnregisterAll(this);
-      _persistingSubscription.Dispose();
+      if (RendererInfo.IsInteractive)
+      {
+        await TryDisposeChat();
+        await TryDisposeTerminal();
+        ChatState.Value.Clear();
+      }
+      await base.DisposeAsync();
     }
     catch (Exception ex)
     {
@@ -106,34 +78,7 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     {
       await base.OnInitializedAsync();
 
-      _isAuthenticated = await AuthState.IsAuthenticated();
-
-      // Try to restore persisted state from SSR
-      if (!ApplicationState.TryTakeFromJson<bool>(PersistentStateKeys.IsDarkMode, out var persistedIsDarkMode))
-      {
-        // No persisted state, this is SSR or first load
-        if (_isAuthenticated)
-        {
-          _themeMode = await UserSettings.GetThemeMode();
-        }
-        await UpdateIsDarkMode();
-
-        // Register a callback to persist state before SSR completes
-        _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
-      }
-      else
-      {
-        // Restored from persisted state (this is WASM after SSR)
-        _isDarkMode = persistedIsDarkMode;
-
-        // Still need to load theme mode
-        if (_isAuthenticated)
-        {
-          _themeMode = await UserSettings.GetThemeMode();
-        }
-      }
-
-      if (!_isAuthenticated)
+      if (!IsAuthenticated)
       {
         _errorText = "Authorization is required.";
         return;
@@ -163,27 +108,26 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
       await GetDeviceInfo();
 
-      Messenger.Register<ToastMessage>(this, HandleToastMessage);
-      Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
-      Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
-      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
-      Messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
+      Messenger.Value.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
+      Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
+      Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
-      await HubConnector.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
     }
     catch (Exception ex)
     {
       _errorText = "An error occurred during initialization.";
       Logger.LogError(ex, "Error initializing DeviceAccessLayout");
     }
-    finally
-    {
-      await InvokeAsync(StateHasChanged);
-    }
   }
 
   private async Task GetDeviceInfo()
   {
+    if (!RendererInfo.IsInteractive)
+    {
+      return;
+    }
+    
     var currentUri = new Uri(NavManager.Uri);
     var query = HttpUtility.ParseQueryString(currentUri.Query);
     var deviceIdString = query.Get("deviceId");
@@ -202,14 +146,14 @@ public partial class DeviceAccessLayout : IAsyncDisposable
 
     try
     {
-      var result = await ControlrApi.GetDevice(_deviceId);
+      var result = await ControlrApi.Value.GetDevice(_deviceId);
       if (!result.IsSuccess || result.Value is null)
       {
         _errorText = "Device not found.";
         return;
       }
 
-      DeviceAccessState.CurrentDevice = result.Value;
+      DeviceAccessState.Value.CurrentDevice = result.Value;
       _deviceName = result.Value.Name;
       _errorText = null;
       if (!result.Value.IsOnline)
@@ -223,28 +167,13 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       Logger.LogError(ex, "Error fetching device details for {DeviceId}", _deviceId);
     }
   }
-  private async Task<bool> GetSystemDarkMode()
-  {
-    try
-    {
-      if (RendererInfo.IsInteractive)
-      {
-        return await JsInterop.GetSystemDarkMode();
-      }
-      return true; // Default to dark during prerendering
-    }
-    catch (Exception ex)
-    {
-      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
-      return true;
-    }
-  }
+
   private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
   {
     var response = message.Dto;
 
     // Only handle responses for the current chat session
-    if (response.SessionId != ChatState.SessionId)
+    if (response.SessionId != ChatState.Value.SessionId)
     {
       return;
     }
@@ -258,28 +187,28 @@ public partial class DeviceAccessLayout : IAsyncDisposable
       IsFromViewer = false
     };
 
-    ChatState.ChatMessages.Add(chatMessage);
-    await InvokeAsync(ChatState.NotifyStateChanged);
+    ChatState.Value.ChatMessages.Add(chatMessage);
+    await InvokeAsync(ChatState.Value.NotifyStateChanged);
 
     if (!NavManager.Uri.Contains("/chat"))
     {
-      Snackbar.Add("New chat message received", Severity.Info);
+      Snackbar.Value.Add("New chat message received", Severity.Info);
     }
   }
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
-    if (DeviceAccessState.CurrentDeviceMaybe is null)
+    if (DeviceAccessState.Value.CurrentDeviceMaybe is null)
     {
       return;
     }
 
-    if (message.Dto.Id == DeviceAccessState.CurrentDevice.Id)
+    if (message.Dto.Id == DeviceAccessState.Value.CurrentDevice.Id)
     {
-      DeviceAccessState.CurrentDevice = message.Dto;
+      DeviceAccessState.Value.CurrentDevice = message.Dto;
       _deviceName = message.Dto.Name;
       if (!message.Dto.IsOnline)
       {
-        Snackbar.Add("Agent went offline", Severity.Warning);
+        Snackbar.Value.Add("Agent went offline", Severity.Warning);
         NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
       }
 
@@ -291,43 +220,20 @@ public partial class DeviceAccessLayout : IAsyncDisposable
     _hubConnectionState = message.NewState;
     await InvokeAsync(StateHasChanged);
   }
-  private async Task HandleThemeChanged(ThemeMode mode)
-  {
-    _themeMode = mode;
-    await UpdateIsDarkMode();
-    StateHasChanged();
-  }
-  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
-  {
-    await HandleThemeChanged(message.ThemeMode);
-  }
-  private Task HandleToastMessage(object subscriber, ToastMessage toast)
-  {
-    Snackbar.Add(toast.Message, toast.Severity);
-    return Task.CompletedTask;
-  }
-  private Task PersistThemeState()
-  {
-    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, _isDarkMode);
-    return Task.CompletedTask;
-  }
-  private void ToggleNavDrawer()
-  {
-    _drawerOpen = !_drawerOpen;
-  }
+
   private async Task TryDisposeChat()
   {
     try
     {
-      if (!ViewerHub.IsConnected || ChatState.CurrentSession is null)
+      if (!ViewerHub.Value.IsConnected || ChatState.Value.CurrentSession is null)
       {
         return;
       }
 
-      await ViewerHub.Server.CloseChatSession(
-        DeviceAccessState.CurrentDevice.Id,
-        ChatState.SessionId,
-        ChatState.CurrentSession.ProcessId);
+      await ViewerHub.Value.Server.CloseChatSession(
+        DeviceAccessState.Value.CurrentDevice.Id,
+        ChatState.Value.SessionId,
+        ChatState.Value.CurrentSession.ProcessId);
 
     }
     catch (Exception ex)
@@ -339,27 +245,18 @@ public partial class DeviceAccessLayout : IAsyncDisposable
   {
     try
     {
-      if (!ViewerHub.IsConnected || TerminalState.Id == Guid.Empty)
+      if (!ViewerHub.Value.IsConnected || TerminalState.Value.Id == Guid.Empty)
       {
         return;
       }
-      await ViewerHub.Server.CloseTerminalSession(
-        DeviceAccessState.CurrentDevice.Id,
-        TerminalState.Id);
+      await ViewerHub.Value.Server.CloseTerminalSession(
+        DeviceAccessState.Value.CurrentDevice.Id,
+        TerminalState.Value.Id);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error disposing terminal session.");
     }
   }
-  private async Task UpdateIsDarkMode()
-  {
-    _isDarkMode = _themeMode switch
-    {
-      ThemeMode.Light => false,
-      ThemeMode.Dark => true,
-      ThemeMode.Auto => await GetSystemDarkMode(),
-      _ => true
-    };
-  }
+
 }

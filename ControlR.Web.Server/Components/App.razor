@@ -36,31 +36,13 @@
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
 
-  [Inject]
-  private IOptions<DeveloperOptions> DeveloperOptions { get; set; } = default!;
-
   private IComponentRenderMode? PageRenderMode
   {
     get
     {
-      if (!HttpContext.AcceptsInteractiveRouting())
-      {
-        return null;
-      }
-
-      switch (DeveloperOptions.Value.RenderMode)
-      {
-        case GlobalRenderMode.Unknown:
-          return InteractiveWebAssembly;
-        case GlobalRenderMode.Auto:
-          return InteractiveAuto;
-        case GlobalRenderMode.Server:
-          return InteractiveServer;
-        case GlobalRenderMode.WebAssembly:
-          return InteractiveWebAssembly;
-        default:
-          return InteractiveWebAssembly;
-      }
+      return HttpContext.AcceptsInteractiveRouting() 
+        ? InteractiveWebAssembly 
+        : null;
     }
   }
 }

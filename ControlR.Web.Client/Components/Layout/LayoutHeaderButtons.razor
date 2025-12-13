@@ -1,0 +1,19 @@
+@using ControlR.Libraries.Shared.Enums
+@using ControlR.Libraries.Shared.Hubs
+@using ControlR.Web.Client.Components.Layout
+
+@if (RendererInfo.IsInteractive)
+{
+    <ConnectionIndicator THub="@IViewerHub" />
+}
+
+<ThemeToggle OnThemeChanged="OnThemeChanged" />
+
+<MudTooltip Text="GitHub">
+    <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+        Href="https://github.com/bitbound/controlr/" Target="_blank" />
+</MudTooltip>
+
+@code {
+    [Parameter] public EventCallback<ThemeMode> OnThemeChanged { get; set; }
+}

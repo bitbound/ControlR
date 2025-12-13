@@ -10,7 +10,7 @@ namespace ControlR.Web.Client.Startup;
 
 public static class ServiceCollectionExtensions
 {
-  public static IServiceCollection AddControlrWebClient(this IServiceCollection services)
+  internal static IServiceCollection AddControlrWebClient(this IServiceCollection services)
   {
     services.AddMudServices(config =>
     {
@@ -30,8 +30,8 @@ public static class ServiceCollectionExtensions
     }
 
     services.AddSingleton(TimeProvider.System);
+    services.AddLazyInjection();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
-    services.AddScoped<IUserSettingsProvider, UserSettingsProvider>();
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();
     services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();

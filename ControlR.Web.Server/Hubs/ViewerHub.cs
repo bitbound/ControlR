@@ -440,16 +440,17 @@ public class ViewerHub(
         return Result.Fail("Unauthorized.");
       }
 
+      var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
+      var displayName = await GetDisplayName(user);
+
       // Log the chat message being sent
       _logger.LogInformation(
         "Chat message sent by user {SenderName} ({SenderEmail}) to device {DeviceId} for session {SessionId}",
-        dto.SenderName,
-        dto.SenderEmail,
+        displayName,
+        user.Email,
         deviceId,
         dto.SessionId);
 
-      var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
-      var displayName = await GetDisplayName(user);
       dto = dto with
       {
         ViewerConnectionId = Context.ConnectionId,

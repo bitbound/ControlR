@@ -149,26 +149,30 @@ internal class CallbackStore(IContentTypeResolver contentTypeResolver, ILogger<C
           await task;
 
           var rt = result.GetType();
-          if (rt.IsGenericType && rt.GetGenericTypeDefinition() == typeof(Task<>))
+          
+          // Check if this is a Task<T> by looking for the Result property.
+          // This works for both Task<T> and internal AsyncStateMachineBox<TResult, TStateMachine> types
+          // that are created by the C# compiler for async methods.
+          var resultProperty = rt.GetProperty("Result");
+          
+          if (resultProperty != null && resultProperty.PropertyType != typeof(void))
           {
-            // Read Task<T>.Result via reflection
-            var value = rt.GetProperty("Result")!.GetValue(result);
+            // This is a Task<T> with a result value
+            var value = resultProperty.GetValue(result);
             if (value is null)
             {
-              _logger.LogError("Handler result is null.");
+              _logger.LogError("Handler Task<T> result value is null.");
               return;
             }
 
             result = value;
             returnType = value.GetType();
-
-            // do something with the extracted value
           }
           else
           {
-            // non-generic Task (Task with no result)
-            returnType = typeof(void);
-            // handle as needed
+            // non-generic Task (Task with no result) - don't send a response
+            _logger.LogDebug("Handler returned a non-generic Task. No response will be sent.");
+            return;
           }
         }
 

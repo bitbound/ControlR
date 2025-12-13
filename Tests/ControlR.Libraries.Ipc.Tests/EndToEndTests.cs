@@ -10,6 +10,7 @@ namespace ControlR.Libraries.Ipc.Tests;
 public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 {
   private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
+
   private IIpcClient _client;
   private IIpcConnectionFactory _connectionFactory;
   private CancellationTokenSource _cts;
@@ -26,7 +27,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     _services?.Dispose();
     await Task.CompletedTask;
   }
-
   public async Task InitializeAsync()
   {
     var serviceCollection = new ServiceCollection();
@@ -40,7 +40,41 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     _server = await _connectionFactory.CreateServer(_pipeName);
     _client = await _connectionFactory.CreateClient(".", _pipeName);
   }
+  [Fact]
+  public async Task Invoke_GivenAsyncLambda_ReturnsValue()
+  {
+    // This test reproduces the issue where async lambdas return AsyncStateMachineBox
+    // instead of Task<T>, causing the CallbackStore to fail to extract the result
+    _ = _server.WaitForConnection(_cts.Token);
+    var result = await _client.Connect(_cts.Token);
 
+    Assert.True(result);
+
+    // Register with async lambda - this returns Task<Pong>
+    _client.On<Ping, Task<Pong>>(async pong =>
+    {
+      await Task.Delay(1); // Make it truly async
+      return new Pong($"Pong from Client: {pong.Message}");
+    });
+
+    // Register with async lambda - this returns Task<Pong>
+    _server.On<Ping, Task<Pong>>(async pong =>
+    {
+      await Task.Delay(1); // Make it truly async
+      return new Pong($"Pong from Server: {pong.Message}");
+    });
+
+    _client.BeginRead(_cts.Token);
+    _server.BeginRead(_cts.Token);
+
+    var serverResponse = await _client.Invoke<Ping, Pong>(new Ping("Client Ping"), 5000);
+    var clientResponse = await _server.Invoke<Ping, Pong>(new Ping("Server Ping"), 5000);
+
+    Assert.True(serverResponse.IsSuccess, $"Server response failed: {serverResponse.Reason}");
+    Assert.True(clientResponse.IsSuccess, $"Client response failed: {clientResponse.Reason}");
+    Assert.Equal("Pong from Client: Server Ping", clientResponse.Value.Message);
+    Assert.Equal("Pong from Server: Client Ping", serverResponse.Value.Message);
+  }
   [Fact]
   public async Task Invoke_GivenIdealScenario_ReturnsValue()
   {
@@ -62,7 +96,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     Assert.Equal("Pong from Client: Server Ping", clientResponse.Value.Message);
     Assert.Equal("Pong from Server: Client Ping", serverResponse.Value.Message);
   }
-
   [Fact]
   public async Task RemoveAll_GivenInvalidType_RemovesNone()
   {
@@ -95,7 +128,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 
     Assert.Equal(2, count);
   }
-
   [Fact]
   public async Task RemoveAll_GivenValidToken_RemovesOne()
   {
@@ -129,7 +161,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 
     Assert.Equal(3, count);
   }
-
   [Fact]
   public async Task RemoveAll_GivenValidType_RemovesAll()
   {
@@ -160,7 +191,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 
     Assert.Equal(1, count);
   }
-
   [Fact(Skip = "Can hang. Move to benchmark project.")]
   public async Task Send_GivenIdealScenario_OkThroughput()
   {
@@ -199,7 +229,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     _testOutputHelper.WriteLine($"Mbps: {mbps:N}");
     Assert.True(mbps > 500);
   }
-
   [Fact]
   public async Task Send_GivenIdealScenario_ReceivesMessages()
   {
@@ -237,7 +266,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     Assert.Equal("Ping from server", pingFromServer);
     Assert.Equal("Pong from client", pongFromClient);
   }
-
   [Fact]
   public async Task WaitForConnection_GivenTokenIsCancelled_ReturnsFalse()
   {
@@ -266,7 +294,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     [DataMember]
     public string Message { get; set; }
   }
-
   [DataContract]
   public class Pong
   {
@@ -282,7 +309,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     [DataMember]
     public string Message { get; set; }
   }
-
   [DataContract]
   public class TestImage
   {

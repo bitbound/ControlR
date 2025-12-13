@@ -127,7 +127,10 @@ public class ChatWindowViewModel(
     else
     {
       _logger.LogWarning("Failed to send message for session {SessionId}", Session.SessionId);
-      await _toaster.ShowToast("Send Failure", "Failed to send message", ToastIcon.Error);
+      await _toaster.ShowToast(
+        Localization.ChatMessageSendFailureTitle, 
+        Localization.ChatMessageSendFailureMessage, 
+        ToastIcon.Error);
     }
   }
 

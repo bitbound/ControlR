@@ -16,13 +16,13 @@ public interface IUserSettingsProvider
   Task SetUserDisplayName(string value);
 }
 
-internal class UserSettingsProvider(
+internal class UserSettingsProviderClient(
   IControlrApi controlrApi,
   ISnackbar snackbar,
-  ILogger<UserSettingsProvider> logger) : IUserSettingsProvider
+  ILogger<UserSettingsProviderClient> logger) : IUserSettingsProvider
 {
   private readonly IControlrApi _controlrApi = controlrApi;
-  private readonly ILogger<UserSettingsProvider> _logger = logger;
+  private readonly ILogger<UserSettingsProviderClient> _logger = logger;
 
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
   private readonly ISnackbar _snackbar = snackbar;

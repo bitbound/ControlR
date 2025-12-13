@@ -1,12 +1,11 @@
 ﻿@implements IDisposable
 
-@inject NavigationManager NavMan
 @inject AuthenticationStateProvider AuthState
-@inject NavigationManager NavManager
+@inject NavigationManager NavMan
 @inject ILogger<NavMenu> Logger
-@inject IControlrApi ControlrApi
+@inject IPublicRegistrationSettingsProvider PublicRegistingsProvider
 @inject ISnackbar Snackbar
-@inject ISystemEnvironment SystemEnvironment
+@inject ILazyInjector<IControlrApi> ControlrApi
 
 <MudNavMenu>
   <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
@@ -70,7 +69,7 @@
       <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
         Account
       </MudNavLink>
-      @if (RendererInfo.IsInteractive && SystemEnvironment.Platform == SystemPlatform.Browser)
+      @if (RendererInfo.IsInteractive && OperatingSystem.IsBrowser())
       {
         <button type="button" class="mud-nav-link mud-ripple" @onclick="HandleLogoutClicked">
           <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
@@ -117,11 +116,7 @@
   {
     await base.OnInitializedAsync();
 
-    var settingsResult = await ControlrApi.GetPublicRegistrationSettings();
-    if (settingsResult.IsSuccess)
-    {
-      _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
-    }
+    _isPublicRegistrationEnabled = await PublicRegistingsProvider.GetIsPublicRegistrationEnabled();
     
     var state = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = state.User.IsAuthenticated();
@@ -147,7 +142,12 @@
 
   private async Task HandleLogoutClicked()
   {
-    var result = await ControlrApi.LogOut();
+    if (!RendererInfo.IsInteractive)
+    {
+      return;
+    }
+    
+    var result = await ControlrApi.Value.LogOut();
     if (!result.IsSuccess) {
       Snackbar.Add("Logout failed", Severity.Error);
       return;
@@ -161,5 +161,4 @@
     _currentUrl = NavMan.ToBaseRelativePath(e.Location);
     StateHasChanged();
   }
-
 }

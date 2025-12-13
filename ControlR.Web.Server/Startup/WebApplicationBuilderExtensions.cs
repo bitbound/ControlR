@@ -18,6 +18,7 @@ using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Startup;
+using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
@@ -44,9 +45,6 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services.Configure<AppOptions>(
       builder.Configuration.GetSection(AppOptions.SectionKey));
-
-    builder.Services.Configure<DeveloperOptions>(
-      builder.Configuration.GetSection(DeveloperOptions.SectionKey));
 
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
@@ -80,10 +78,10 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddMudServices();
 
     // Add components.
-    builder.Services.AddRazorComponents()
-        .AddInteractiveServerComponents()
-        .AddInteractiveWebAssemblyComponents()
-        .AddAuthenticationStateSerialization();
+    builder.Services
+      .AddRazorComponents()
+      .AddInteractiveWebAssemblyComponents()
+      .AddAuthenticationStateSerialization();
 
     // Add API services.
     builder.Services.Configure<FormOptions>(options =>
@@ -256,15 +254,6 @@ public static class WebApplicationBuilderExtensions
       await builder.ConfigureForwardedHeaders(appOptions);
     }
 
-    // Add client services for pre-rendering.
-    builder.Services.AddControlrWebClient();
-
-    // Add HTTP clients.
-    builder.Services.AddTransient<IdentityForwardingHandler>();
-    builder.Services
-      .AddHttpClient<IControlrApi, ControlrApi>(HttpClientConfigurer.ConfigureHttpClient)
-      .AddHttpMessageHandler<IdentityForwardingHandler>();
-
     if (appOptions.UseHttpLogging)
     {
       builder.Services.AddHttpLogging(options =>
@@ -289,6 +278,7 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services.AddOutputCache();
     builder.Services.AddMemoryCache();
+    builder.Services.AddLazyInjection();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
@@ -305,6 +295,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
+    builder.Services.AddScoped<IUserSettingsProvider, UserSettingsProviderServer>();
+    builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();
 
     return builder;
   }

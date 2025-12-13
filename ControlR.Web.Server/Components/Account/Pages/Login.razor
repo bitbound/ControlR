@@ -1,5 +1,5 @@
 ﻿@page "/Account/Login"
-
+@using ControlR.Web.Client.Services
 @using ControlR.Web.Server.Components.Account.Shared
 
 @inject SignInManager<AppUser> SignInManager
@@ -7,7 +7,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject IControlrApi ServerSettingsApi
+@inject IPublicRegistrationSettingsProvider RegistrationSettings
 
 <PageTitle>Log in</PageTitle>
 
@@ -104,11 +104,7 @@
       await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
     }
 
-    var settingsResult = await ServerSettingsApi.GetPublicRegistrationSettings();
-    if (settingsResult.IsSuccess)
-    {
-      _isPublicRegistrationEnabled = settingsResult.Value.IsPublicRegistrationEnabled;
-    }
+   _isPublicRegistrationEnabled = await RegistrationSettings.GetIsPublicRegistrationEnabled();
   }
 
   public async Task LoginUser()
