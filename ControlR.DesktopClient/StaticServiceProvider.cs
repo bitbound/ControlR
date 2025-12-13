@@ -99,51 +99,50 @@ internal static class StaticServiceProvider
       .AddSingleton<IToaster, Toaster>();
 
 
-#if WINDOWS_BUILD
-    services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
-      .AddSingleton<IWin32Interop, Win32Interop>()
-      .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
-      .AddSingleton<IDisplayManager, DisplayManagerWindows>();
-#endif
-
-#if UNIX_BUILD
-    services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-#endif
-
-#if LINUX_BUILD
-    services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
-
-    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
-
-    switch (desktopEnvironment)
+    if (OperatingSystem.IsWindowsVersionAtLeast(8))
     {
-      case DesktopEnvironmentType.Wayland:
-        services
-          .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
-          .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
-          .AddSingleton<IDisplayManager, DisplayManagerWayland>()
-          .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
-          .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
-          .AddHostedService<RemoteControlPermissionMonitor>();
-        break;
-      case DesktopEnvironmentType.X11:
-        services
-          .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
-          .AddSingleton<IDisplayManager, DisplayManagerX11>();
-        break;
-      default:
-        throw new NotSupportedException("Unsupported desktop environment detected.");
+      services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
+        .AddSingleton<IWin32Interop, Win32Interop>()
+        .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
+        .AddSingleton<IDisplayManager, DisplayManagerWindows>();
+
     }
-#endif
+    else if (OperatingSystem.IsMacOS())
+    {
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+      services
+        .AddHostedService<RemoteControlPermissionMonitor>()
+        .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
+        .AddSingleton<IMacInterop, MacInterop>()
+        .AddSingleton<IDisplayManager, DisplayManagerMac>();
+    }
+    else if (OperatingSystem.IsLinux())
+    {
+      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
+      services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
 
-#if MAC_BUILD
-    services
-      .AddHostedService<RemoteControlPermissionMonitor>()
-      .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
-      .AddSingleton<IMacInterop, MacInterop>()
-      .AddSingleton<IDisplayManager, DisplayManagerMac>();
-#endif
+      var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
 
+      switch (desktopEnvironment)
+      {
+        case DesktopEnvironmentType.Wayland:
+          services
+            .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
+            .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
+            .AddSingleton<IDisplayManager, DisplayManagerWayland>()
+            .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
+            .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
+            .AddHostedService<RemoteControlPermissionMonitor>();
+          break;
+        case DesktopEnvironmentType.X11:
+          services
+            .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
+            .AddSingleton<IDisplayManager, DisplayManagerX11>();
+          break;
+        default:
+          throw new NotSupportedException("Unsupported desktop environment detected.");
+      }
+    }
     return services;
   }
 
@@ -157,15 +156,14 @@ internal static class StaticServiceProvider
       return services;
     }
 
-#if WINDOWS_BUILD
-    var logsPath = PathConstants.GetLogsPath(instanceId);
-#elif MAC_BUILD
-    var logsPath = Mac.PathConstants.GetLogsPath(instanceId);
-#elif LINUX_BUILD
-    var logsPath = Linux.PathConstants.GetLogsPath(instanceId);
-#else
-    throw new PlatformNotSupportedException("Unsupported operating system.");
-#endif
+    var logsPath = OperatingSystem.IsWindowsVersionAtLeast(8)
+      ? Windows.PathConstants.GetLogsPath(instanceId)
+      : OperatingSystem.IsMacOS()
+        ? Mac.PathConstants.GetLogsPath(instanceId)
+        : OperatingSystem.IsLinux()
+          ? Linux.PathConstants.GetLogsPath(instanceId)
+          : throw new PlatformNotSupportedException("Unsupported operating system.");
+
     services.BootstrapSerilog(
       configuration,
       logsPath,

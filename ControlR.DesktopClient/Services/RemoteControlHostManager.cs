@@ -59,16 +59,23 @@ public class RemoteControlHostManager(
       builder.Services.AddSingleton<IToaster, Toaster>();
       builder.Services.AddSingleton(_userInteractionService);
       builder.Services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
-#if WINDOWS_BUILD
-      builder.AddWindowsDesktopServices(requestDto.DataFolder);
-#elif MAC_BUILD
-      builder.AddMacDesktopServices(requestDto.DataFolder);
-#elif LINUX_BUILD
-      builder.AddLinuxDesktopServices(requestDto.DataFolder);
-      builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
-#else
-      throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
-#endif
+      if (OperatingSystem.IsWindowsVersionAtLeast(8))
+      {
+        builder.AddWindowsDesktopServices(requestDto.DataFolder);
+      }
+      else if (OperatingSystem.IsMacOS())
+      {
+        builder.AddMacDesktopServices(requestDto.DataFolder);
+      }
+      else if (OperatingSystem.IsLinux())
+      {
+        builder.AddLinuxDesktopServices(requestDto.DataFolder);
+        builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
+      }
+      else
+      {
+        throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
+      }
 
       using var app = builder.Build();
       await using var session = CreateRemoteControlSession(requestDto);

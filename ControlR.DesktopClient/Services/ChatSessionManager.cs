@@ -110,14 +110,16 @@ internal class ChatSessionManager(
     {
       // Get the current username
       var currentUser = Environment.UserName;
-#if WINDOWS_BUILD
-      // On Windows, we're running as SYSTEM to allow input to UAC/WinLogon.
-      var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
-      if (win32Interop.GetUsernameFromSessionId((uint)session.TargetSystemSession) is { Length: > 0 } sessionUsername)
+      if (OperatingSystem.IsWindows())
       {
-        currentUser = sessionUsername;
+        // On Windows, we're running as SYSTEM to allow input to UAC/WinLogon.
+        var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
+        if (win32Interop.GetUsernameFromSessionId((uint)session.TargetSystemSession) is { Length: > 0 } sessionUsername)
+        {
+          currentUser = sessionUsername;
+        }
       }
-#endif
+
       var response = new ChatResponseIpcDto(
         sessionId,
         _systemEnvironment.ProcessId,

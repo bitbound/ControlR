@@ -61,58 +61,59 @@ public partial class ManagedDeviceViewModel(
   }
   public async Task SetPermissionValues()
   {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    IsAccessibilityPermissionGranted = macInterop.IsAccessibilityPermissionGranted();
-    IsScreenCapturePermissionGranted = macInterop.IsScreenCapturePermissionGranted();
-#elif LINUX_BUILD
-    if (IsLinuxWayland)
+    if (OperatingSystem.IsMacOS())
+    {
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      IsAccessibilityPermissionGranted = macInterop.IsAccessibilityPermissionGranted();
+      IsScreenCapturePermissionGranted = macInterop.IsScreenCapturePermissionGranted();
+    }
+    else if (OperatingSystem.IsLinux())
     {
       var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
       var isGranted = await waylandPermissions.IsRemoteControlPermissionGranted().ConfigureAwait(false);
       await Dispatcher.UIThread.InvokeAsync(() => IsWaylandPermissionGranted = isGranted);
     }
-#endif
   }
 
   private void CheckPlatform()
   {
-#if LINUX_BUILD
-    var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-    IsLinuxWayland = detector.IsWayland();
-#endif
+    if (OperatingSystem.IsLinux())
+    {
+      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+      IsLinuxWayland = detector.IsWayland();
+    }
   }
   [RelayCommand]
   private async Task GrantAccessibilityPermission()
   {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.RequestAccessibilityPermission();
-    await SetPermissionValues();
-#endif
+    if (OperatingSystem.IsMacOS())
+    {
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      macInterop.RequestAccessibilityPermission();
+      await SetPermissionValues();
+    }
   }
 
   [RelayCommand]
   private async Task GrantScreenCapturePermission()
   {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.RequestScreenCapturePermission();
-    await SetPermissionValues();
-#endif
+    if (OperatingSystem.IsMacOS())
+    {
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      macInterop.RequestScreenCapturePermission();
+      await SetPermissionValues();
+    }
   }
 
   [RelayCommand]
   private async Task GrantWaylandPermission()
   {
-#if LINUX_BUILD
-    if (IsLinuxWayland)
+    if (OperatingSystem.IsLinux() && IsLinuxWayland)
     {
       var accessor = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
       await accessor.RequestRemoteControlPermission(force: true);
       await SetPermissionValues();
     }
-#endif
   }
   private void OnThemeChanged(object? sender, EventArgs e)
   {
@@ -121,24 +122,29 @@ public partial class ManagedDeviceViewModel(
   [RelayCommand]
   private void OpenAccessibilitySettings()
   {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenAccessibilityPreferences();
-#endif
+    if (OperatingSystem.IsMacOS())
+    {
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      macInterop.OpenAccessibilityPreferences();
+    }
   }
+
   [RelayCommand]
   private void OpenScreenCaptureSettings()
   {
-#if MAC_BUILD
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenScreenRecordingPreferences();
-#endif
+    if (OperatingSystem.IsMacOS())
+    {
+      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+      macInterop.OpenScreenRecordingPreferences();
+    }
   }
+
   [RelayCommand]
   private void ToggleTheme()
   {
     _themeProvider.ToggleTheme();
   }
+  
   private void UpdateThemeModeText()
   {
     (ThemeModeText, ThemeIconKey) = _themeProvider.CurrentThemeMode switch

@@ -12,29 +12,8 @@ internal class ManagedDeviceViewModelFake : ViewModelBaseFake, IManagedDeviceVie
   public IAsyncRelayCommand GrantWaylandPermissionCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public bool IsAccessibilityPermissionGranted { get; set; } = false;
 
-  public bool IsLinuxWayland
-  {
-    get
-    {
-#if LINUX_BUILD
-      return true;
-#else
-      return false;
-#endif
-    }
-  }
-
-  public bool IsMacOs
-  {
-    get
-    {
-#if MAC_BUILD
-      return true;
-#else
-      return false;
-#endif
-    }
-  }
+  public bool IsLinuxWayland => OperatingSystem.IsLinux();
+  public bool IsMacOs => OperatingSystem.IsMacOS();
 
   public bool IsScreenCapturePermissionGranted { get; set; } = true;
   public bool IsWaylandPermissionGranted { get; set; } = false;

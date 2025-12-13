@@ -143,36 +143,41 @@ public class IpcClientManager(
 
       var arePermissionsGranted = false;
 
-#if MAC_BUILD
-      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-      var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
-      var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
-      arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
-
-      _logger.LogInformation(
-        "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-        isAccessibilityGranted,
-        isScreenCaptureGranted);
-#elif LINUX_BUILD
-      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-      if (detector.IsWayland())
+      if (OperatingSystem.IsMacOS())
       {
-        var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-        arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+        var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+        var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
+        var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
+        arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-        _logger.LogInformation("Wayland permissions check: RemoteControl={RemoteControl}", arePermissionsGranted);
+        _logger.LogInformation(
+          "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
+          isAccessibilityGranted,
+          isScreenCaptureGranted);
+      }
+      else if (OperatingSystem.IsLinux())
+      {
+        var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+        if (detector.IsWayland())
+        {
+          var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
+          arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+
+          _logger.LogInformation("Wayland permissions check: RemoteControl={RemoteControl}", arePermissionsGranted);
+        }
+        else
+        {
+          // X11 doesn't require special permissions
+          arePermissionsGranted = true;
+          _logger.LogInformation("X11 detected, no special permissions required");
+        }
       }
       else
       {
-        // X11 doesn't require special permissions
+        // Windows doesn't require special OS-level permissions for remote control
         arePermissionsGranted = true;
-        _logger.LogInformation("X11 detected, no special permissions required");
+        _logger.LogInformation("Windows detected, no special permissions required");
       }
-#else
-      // Windows doesn't require special OS-level permissions for remote control
-      arePermissionsGranted = true;
-      _logger.LogInformation("Windows detected, no special permissions required");
-#endif
 
       return new CheckOsPermissionsResponseIpcDto(arePermissionsGranted);
     }
@@ -238,11 +243,10 @@ public class IpcClientManager(
       return;
     }
 
-#if WINDOWS_BUILD
-     _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
-     var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
-     win32Interop.InvokeCtrlAltDel();
-#endif
+
+    _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
+    var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
+    win32Interop.InvokeCtrlAltDel();
   }
 
   private void HandleRemoteControlRequest(RemoteControlRequestIpcDto dto)

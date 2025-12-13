@@ -31,15 +31,11 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-	<ItemGroup Condition="$(DefineConstants.Contains('WINDOWS_BUILD'))">
+	<ItemGroup>
 		<ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
-	</ItemGroup>
-	<ItemGroup Condition="$(DefineConstants.Contains('MAC_BUILD'))">
-		<ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
-	</ItemGroup>
-	<ItemGroup Condition="$(DefineConstants.Contains('LINUX_BUILD'))">
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux" />
-		<ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+    <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="Assets\appicon.png">

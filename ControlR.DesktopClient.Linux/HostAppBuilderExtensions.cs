@@ -17,11 +17,11 @@ public static class HostAppBuilderExtensions
     string appDataFolder)
   {
 
-    var desktopEnvironemnt = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
     var logger = new SerilogLogger<IHostApplicationBuilder>();
 
     // Register services based on detected desktop environment
-    switch (desktopEnvironemnt)
+    switch (desktopEnvironment)
     {
       case DesktopEnvironmentType.Wayland:
         logger.LogInformation("Detected Wayland desktop environment.");

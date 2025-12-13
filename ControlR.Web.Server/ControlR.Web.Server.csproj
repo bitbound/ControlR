@@ -43,7 +43,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-	<ItemGroup Condition="$(DefineConstants.Contains('WINDOWS_BUILD'))">
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

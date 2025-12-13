@@ -224,8 +224,8 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 ### Platform-Specific Development
 
 - Use `[SupportedOSPlatform]` attributes for platform-specific code
-- Conditional compilation symbols: `WINDOWS_BUILD`, `MAC_BUILD`, `LINUX_BUILD`, `UNIX_BUILD`
-- Platform detection via `ISystemEnvironment.Platform` and `RuntimeInformation`
+- Platform detection via `ISystemEnvironment.Platform`, `RuntimeInformation`, and `OperatingSystem` APIs
+- Isolate platform-specific implementations in designated projects, namespaces, and folders
 
 ### Web UI Guidelines
 

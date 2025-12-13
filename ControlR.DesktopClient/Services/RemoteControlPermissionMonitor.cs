@@ -51,33 +51,35 @@ public class RemoteControlPermissionMonitor(
       _logger.LogInformation("Checking OS remote control permissions");
 
       var arePermissionsGranted = false;
-
-#if MAC_BUILD
-      var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-      var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
-      var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
-      arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
-
-      _logger.LogInformation(
-        "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-        isAccessibilityGranted,
-        isScreenCaptureGranted);
-#elif LINUX_BUILD
-      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-      if (detector.IsWayland())
+      if (OperatingSystem.IsMacOS())
       {
-        var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-        arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+        var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+        var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
+        var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
+        arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-        _logger.LogInformation("Wayland permissions: RemoteControl={RemoteControl}", arePermissionsGranted);
+        _logger.LogInformation(
+          "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
+          isAccessibilityGranted,
+          isScreenCaptureGranted);
       }
-      else
+      else if (OperatingSystem.IsLinux())
       {
-        // X11 doesn't require special permissions
-        _logger.LogInformation("X11 detected, no permission monitoring required");
-        return;
+        var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+        if (detector.IsWayland())
+        {
+          var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
+          arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+
+          _logger.LogInformation("Wayland permissions: RemoteControl={RemoteControl}", arePermissionsGranted);
+        }
+        else
+        {
+          // X11 doesn't require special permissions
+          _logger.LogInformation("X11 detected, no permission monitoring required");
+          return;
+        }
       }
-#endif
 
       if (!arePermissionsGranted)
       {

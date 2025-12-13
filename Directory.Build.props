@@ -27,21 +27,6 @@
 		<WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001</WarningsNotAsErrors>
 	</PropertyGroup>
 
-	<PropertyGroup
-		Condition="$(RuntimeIdentifier.StartsWith('win')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsWindows()))">
-		<DefineConstants>$(DefineConstants);WINDOWS_BUILD</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup
-		Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
-		<DefineConstants>$(DefineConstants);LINUX_BUILD;UNIX_BUILD</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup
-		Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
-		<DefineConstants>$(DefineConstants);MAC_BUILD;UNIX_BUILD</DefineConstants>
-	</PropertyGroup>
-
 	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 		<PackageReference Include="Bitbound.Analyzers.MemberOrder" />
 	</ItemGroup>
