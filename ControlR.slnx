@@ -28,6 +28,7 @@
     <Project Path="Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.CaptureSample/ControlR.DesktopClient.Linux.CaptureSample.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
+    <Project Path="Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />

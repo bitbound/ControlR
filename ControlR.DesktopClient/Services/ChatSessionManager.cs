@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
@@ -100,7 +99,7 @@ internal class ChatSessionManager(
       return false;
     }
 
-    if (!_ipcClientAccessor.TryGetConnection(out var connection))
+    if (!_ipcClientAccessor.TryGetClient(out var connection))
     {
       _logger.LogWarning("No active IPC connection available to send chat response");
       return false;
@@ -129,8 +128,8 @@ internal class ChatSessionManager(
         DateTimeOffset.Now);
 
       // Send back to Agent via IPC
-      var invokeResult = await connection.Invoke<ChatResponseIpcDto, bool>(response);
-      if (!invokeResult.IsSuccess || !invokeResult.Value)
+      var success = await connection.Server.SendChatResponse(response);
+      if (!success)
       {
         _logger.LogWarning("IPC client reported failure sending chat response for session {SessionId}", sessionId);
         return false;

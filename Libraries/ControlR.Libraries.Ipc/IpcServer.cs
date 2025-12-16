@@ -1,110 +1,75 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.IO.Pipes;
+﻿using System.IO.Pipes;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
+using System.Diagnostics.CodeAnalysis;
+using StreamJsonRpc;
+using ControlR.Libraries.Ipc.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.Ipc;
 
-public interface IIpcServer : IConnectionBase
+public interface IIpcServer : IDisposable
 {
+  IDesktopClientRpcService Client { get; }
+  bool IsConnected { get; }
+  bool IsDisposed { get; }
+
+  void Start();
   bool TryGetServerHandle([NotNullWhen(true)] out SafeHandle? handle);
   Task<bool> WaitForConnection(CancellationToken cancellationToken);
+  Task WaitForDisconnect(CancellationToken cancellationToken);
 }
 
-internal class IpcServer : ConnectionBase, IIpcServer
+internal class IpcServer(
+  NamedPipeServerStream stream,
+  IAgentRpcService rpcService,
+  ILogger<IpcServer> logger) : IIpcServer
 {
-  public IpcServer(
-    string pipeName,
-    ICallbackStoreFactory callbackFactory,
-    IContentTypeResolver contentTypeResolver,
-    ILogger<IpcServer> logger)
-    : base(pipeName, callbackFactory, contentTypeResolver, logger)
-  {
-    _pipeStream = new NamedPipeServerStream(
-      pipeName,
-      PipeDirection.InOut,
-      NamedPipeServerStream.MaxAllowedServerInstances,
-      PipeTransmissionMode.Byte,
-      PipeOptions.Asynchronous);
-  }
+  private readonly ILogger<IpcServer> _logger = logger;
+  private readonly IAgentRpcService _rpcService = rpcService;
+  private readonly NamedPipeServerStream _stream = stream;
 
-  [SupportedOSPlatform("windows")]
-  public IpcServer(
-    string pipeName,
-    PipeSecurity pipeSecurity,
-    ICallbackStoreFactory callbackFactory,
-    IContentTypeResolver contentTypeResolver,
-    ILogger<IpcServer> logger)
-    : base(pipeName, callbackFactory, contentTypeResolver, logger)
-  {
-    _pipeStream = NamedPipeServerStreamAcl.Create(
-      pipeName,
-      PipeDirection.InOut,
-      NamedPipeServerStream.MaxAllowedServerInstances,
-      PipeTransmissionMode.Byte,
-      PipeOptions.Asynchronous,
-      0,
-      0,
-      pipeSecurity);
-  }
+  private IDesktopClientRpcService? _client;
+  private bool _isDisposed;
+  private JsonRpc? _jsonRpc;
 
+  public IDesktopClientRpcService Client => _client
+      ?? throw new InvalidOperationException("Client has not been initialized.  Call Start first.");
+  public bool IsConnected => _stream.IsConnected;
+  public bool IsDisposed => _isDisposed;
+
+  public void Dispose()
+  {
+    _isDisposed = true;
+    _jsonRpc?.Dispose();
+    _stream?.Dispose();
+  }
+  [MemberNotNull(nameof(_client))]
+  public void Start()
+  {
+    _logger.LogInformation("Starting JsonRpc IPC server.");
+    var formatter = new MessagePackFormatter();
+    var messageHandler = new LengthHeaderMessageHandler(_stream, _stream, formatter);
+    _jsonRpc = new JsonRpc(messageHandler, _rpcService);
+    _jsonRpc.StartListening();
+    _client = _jsonRpc.Attach<IDesktopClientRpcService>();
+    _logger.LogInformation("JsonRpc IPC server started.");
+  }
   public bool TryGetServerHandle([NotNullWhen(true)] out SafeHandle? handle)
   {
-    try
-    {
-      // PipeStream.SafePipeHandle is available cross-platform and wraps HANDLE (Windows) or fd (Unix)
-      handle = _pipeStream?.SafePipeHandle;
-      return handle is not null;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while retrieving server pipe handle.");
-      handle = null;
-      return false;
-    }
+    handle = _stream.SafePipeHandle;
+    return handle != null && !handle.IsInvalid;
   }
-
   public async Task<bool> WaitForConnection(CancellationToken cancellationToken)
   {
-    try
+    await _stream.WaitForConnectionAsync(cancellationToken);
+    _logger.LogInformation("Received IPC client connection.");
+    return true;
+  }
+  public async Task WaitForDisconnect(CancellationToken cancellationToken)
+  {
+    if (_jsonRpc != null)
     {
-      await _connectLock.WaitAsync(cancellationToken);
-
-      if (_pipeStream is null)
-      {
-        throw new InvalidOperationException("You must initialize the connection before calling this method.");
-      }
-
-      if (_pipeStream is NamedPipeServerStream serverStream)
-      {
-        await serverStream.WaitForConnectionAsync(cancellationToken);
-        _logger.LogDebug("Connection established for server pipe {id}.", PipeName);
-      }
-      else
-      {
-        throw new InvalidOperationException($"{nameof(_pipeStream)} is not of type NamedPipeServerStream.");
-      }
-
-      if (!_pipeStream.IsConnected)
-      {
-        _logger.LogWarning("Pipe disconnected after initial acceptance.");
-        return false;
-      }
-
-      return true;
-    }
-    catch (TaskCanceledException)
-    {
-      return false;
-    }
-    catch (OperationCanceledException)
-    {
-      return false;
-    }
-    finally
-    {
-      _connectLock.Release();
+      await _jsonRpc.Completion.WaitAsync(cancellationToken);
     }
   }
 }

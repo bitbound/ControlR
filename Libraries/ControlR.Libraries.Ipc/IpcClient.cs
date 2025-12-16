@@ -1,57 +1,60 @@
-﻿using Microsoft.Extensions.Logging;
-using System.IO.Pipes;
-using System.Security.Principal;
+﻿using System.IO.Pipes;
+using StreamJsonRpc;
+using Microsoft.Extensions.Logging;
+using ControlR.Libraries.Ipc.Interfaces;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Libraries.Ipc;
 
-public interface IIpcClient : IConnectionBase
+public interface IIpcClient : IDisposable
 {
-  Task<bool> Connect(CancellationToken cancellationToken);
+    IAgentRpcService Server { get; }
+
+    Task Connect(CancellationToken cancellationToken);
+    void Start();
+    Task WaitForDisconnect(CancellationToken cancellationToken);
 }
 
-internal class IpcClient : ConnectionBase, IIpcClient
+internal class IpcClient(
+  NamedPipeClientStream stream, 
+  IDesktopClientRpcService rpcService, 
+  ILogger<IpcClient> logger) : IIpcClient
 {
-  public IpcClient(
-      string serverName,
-      string pipeName,
-      ICallbackStoreFactory callbackFactory,
-      IContentTypeResolver contentTypeResolver,
-      ILogger<IpcClient> logger)
-      : base(pipeName, callbackFactory, contentTypeResolver, logger)
-  {
-    _pipeStream = new NamedPipeClientStream(
-        serverName,
-        pipeName,
-        PipeDirection.InOut,
-        PipeOptions.Asynchronous,
-        TokenImpersonationLevel.Impersonation);
-  }
+    private readonly ILogger<IpcClient> _logger = logger;
+    private readonly IDesktopClientRpcService _rpcService = rpcService;
+    private readonly NamedPipeClientStream _stream = stream;
 
-  public async Task<bool> Connect(CancellationToken cancellationToken)
-  {
-    try
-    {
-      await _connectLock.WaitAsync(cancellationToken);
+    private JsonRpc? _jsonRpc;
+    private IAgentRpcService? _server;
 
-      if (_pipeStream is NamedPipeClientStream clientPipe)
-      {
-        await clientPipe.ConnectAsync(cancellationToken);
-        _logger.LogDebug("Connection established for client pipe {id}.", PipeName);
-      }
-      else
-      {
-        throw new InvalidOperationException("PipeStream is not of type NamedPipeClientStream.");
-      }
-    }
-    catch (Exception ex)
+  public IAgentRpcService Server => _server ?? throw new InvalidOperationException("Server has not been initialized. Call Start first.");
+
+    public async Task Connect(CancellationToken cancellationToken)
     {
-      _logger.LogWarning(ex, "Failed to connect to IPC server.");
-    }
-    finally
-    {
-      _connectLock.Release();
+        await _stream.ConnectAsync(cancellationToken);
     }
 
-    return _pipeStream?.IsConnected == true;
-  }
+    public void Dispose()
+    {
+      Disposer.DisposeAll(_jsonRpc, _stream);
+    }
+
+    public void Start()
+    {
+      _logger.LogInformation("Starting JsonRpc IPC client.");
+      var formatter = new MessagePackFormatter();
+      var messageHandler = new LengthHeaderMessageHandler(_stream, _stream, formatter);
+      _jsonRpc = new JsonRpc(messageHandler, _rpcService);
+      _jsonRpc.StartListening();
+      _server = _jsonRpc.Attach<IAgentRpcService>();
+      _logger.LogInformation("JsonRpc IPC client started.");
+    }
+
+    public async Task WaitForDisconnect(CancellationToken cancellationToken)
+    {
+        if (_jsonRpc != null)
+        {
+            await _jsonRpc.Completion;
+        }
+    }
 }

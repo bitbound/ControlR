@@ -17,6 +17,7 @@ using ControlR.Web.ServiceDefaults;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Ipc;
+using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
@@ -102,7 +103,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
     services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
     services.AddSingleton<IAgentHeartbeatTimer, AgentHeartbeatTimer>();
-    services.AddControlrIpc();
+    services.AddControlrIpcServer<AgentRpcService>();
     services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
 
     if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))

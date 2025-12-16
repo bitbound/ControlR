@@ -2,7 +2,6 @@
 using ControlR.DesktopClient.Windows.Services;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Tests.TestingUtilities;
-using Devolutions.Cadeau;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,6 +9,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Xunit.Abstractions;
+#if IsWindows
+using Devolutions.Cadeau;
+#endif
 
 namespace ControlR.DesktopClient.Windows.Tests;
 
@@ -48,6 +50,7 @@ public class ScreenCaptureTests
     Assert.True(captureResult.Bitmap.Height > 0, "Bitmap height is 0.");
   }
 
+#if IsWindows
   [InteractiveWindowsFact]
   public async Task ScreenGrabber_EncodeViaCadeau()
   {
@@ -121,6 +124,7 @@ public class ScreenCaptureTests
       initialCapture.Dispose();
     }
   }
+  #endif
 
   [InteractiveWindowsFact]
   public async Task ScreenGrabber_EncodeViaFfmpeg()

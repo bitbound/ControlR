@@ -9,6 +9,9 @@
         "kind": "build",
         "isDefault": true
       },
+      "presentation": {
+        "showReuseMessage": false
+      },
       "problemMatcher": [],
       "options": {
         "cwd": "${workspaceFolder}"

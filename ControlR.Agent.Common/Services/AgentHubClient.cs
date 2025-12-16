@@ -80,7 +80,7 @@ internal class AgentHubClient(
       }
 
       var ipcDto = new CloseChatSessionIpcDto(sessionId, targetProcessId);
-      await ipcServer.Server.Send(ipcDto);
+      await ipcServer.Server.Client.CloseChatSession(ipcDto);
 
       _logger.LogInformation(
         "Chat session close request sent to IPC server for process ID {ProcessId}.",
@@ -187,7 +187,7 @@ internal class AgentHubClient(
         dataFolder,
         dto.ViewerName);
 
-      await ipcServer.Server.Send(ipcDto);
+      await ipcServer.Server.Client.ReceiveRemoteControlRequest(ipcDto);
       _logger.LogInformation(
         "Remote control session created successfully for process ID {ProcessId}.",
         dto.TargetProcessId);
@@ -400,7 +400,7 @@ internal class AgentHubClient(
 
         if (_ipcServerStore.TryGetServer(dto.TargetDesktopProcessId, out var ipcServer))
         {
-          await ipcServer.Server.Send(dto);
+          await ipcServer.Server.Client.InvokeCtrlAltDel(dto);
           return Result.Ok();
         }
         else
@@ -504,19 +504,8 @@ internal class AgentHubClient(
       }
 
       var ipcDto = new DesktopPreviewRequestIpcDto(dto.RequesterId, dto.StreamId, dto.TargetProcessId);
-      var ipcResult =
-        await ipcServer.Server.Invoke<DesktopPreviewRequestIpcDto, DesktopPreviewResponseIpcDto>(ipcDto, 10_000);
+      var response = await ipcServer.Server.Client.GetDesktopPreview(ipcDto);
 
-      if (!ipcResult.IsSuccess)
-      {
-        _logger.LogWarning(
-          "Failed to get desktop preview from process ID {ProcessId}. Error: {Error}",
-          dto.TargetProcessId,
-          ipcResult.Reason);
-        return Result.Fail($"Failed to get desktop preview: {ipcResult.Reason}");
-      }
-
-      var response = ipcResult.Value;
       if (!response.IsSuccess || response.JpegData.Length == 0)
       {
         _logger.LogWarning(
@@ -582,7 +571,7 @@ internal class AgentHubClient(
         dto.ViewerConnectionId,
         dto.Timestamp);
 
-      await ipcServer.Server.Send(ipcDto);
+      await ipcServer.Server.Client.ReceiveChatMessage(ipcDto);
       _logger.LogInformation(
         "Chat message sent to IPC server for process ID {ProcessId}.",
         dto.TargetProcessId);

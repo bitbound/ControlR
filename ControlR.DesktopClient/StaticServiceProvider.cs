@@ -10,6 +10,7 @@ using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
+using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -67,7 +68,8 @@ internal static class StaticServiceProvider
     });
 
     // Services
-    services.AddControlrIpc()
+    services
+      .AddControlrIpcClient<DesktopClientRpcService>()
       .AddSingleton(TimeProvider.System)
       .AddSingleton(WeakReferenceMessenger.Default)
       .AddSingleton<IProcessManager, ProcessManager>()
@@ -83,7 +85,8 @@ internal static class StaticServiceProvider
       .AddSingleton<IUserInteractionService, UserInteractionService>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
-      .AddSingleton<IIpcClientAccessor, IpcClientAccessor>()
+      .AddSingleton<IpcClientManager>()
+      .AddSingleton<IIpcClientAccessor>(sp => sp.GetRequiredService<IpcClientManager>())
       .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IImageUtility, ImageUtility>()
@@ -94,9 +97,9 @@ internal static class StaticServiceProvider
       .AddTransient<IChatWindowViewModel, ChatWindowViewModel>()
       .AddTransient<ToastWindow>()
       .AddTransient<IToastWindowViewModel, ToastWindowViewModel>()
-      .AddHostedService<IpcClientManager>()
       // Cross-platform Avalonia-based toaster
-      .AddSingleton<IToaster, Toaster>();
+      .AddSingleton<IToaster, Toaster>()
+      .AddHostedService(sp => sp.GetRequiredService<IpcClientManager>());
 
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))

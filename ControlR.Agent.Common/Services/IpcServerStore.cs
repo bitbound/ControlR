@@ -70,7 +70,7 @@ internal class IpcServerStore(ILogger<IpcServerStore> logger) : IIpcServerStore
       try
       {
         var dto = new ShutdownCommandDto(reason);
-        await server.Server.Send(dto);
+        await server.Server.Client.ShutdownDesktopClient(dto);
       }
       catch (Exception ex)
       {

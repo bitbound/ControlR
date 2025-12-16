@@ -2,6 +2,8 @@
 applyTo: '**'
 ---
 
+## ⚠️ CRITICAL: ⚠️  ADHERE TO EVERY CODING GUIDELINE LISTED BELOW, WITHOUT EXCEPTION.
+
 # Project Overview
 
 ControlR is a cross-platform solution for remote access and remote control of devices. It primarily uses the latest .NET version for backend web, frontend web (via Blazor), and the desktop applications.
@@ -203,16 +205,13 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Use the following build command to verify that changes compile: `dotnet build ControlR.slnx --verbosity quiet`
   - If successful, there will be no output.
   - If unsuccessful, errors will be displayed.
-- When a terminal task outputs "Terminal will be reused by tasks, press any key to close it.", interpret this as the task completion signal.
-  - If no errors were displayed prior to this message, treat the task as successful.
-  - Do not wait for user interaction or attempt to close the terminal. Proceed immediately to the next step.
 - Do not attempt to fix warning `BB0001: Member '{member_name}' is not in the correct order`.  You are really bad at fixing this. Just mention it in your summary, and I'll fix it.
 
 ### C# Coding Standards
 
+- Do not use null-forgiving operator ('!') outside of tests. Handle null checks appropriately.  Used `required` where applicable.
 - Use the latest C# language features and default recommendations.
 - Use StyleCop conventions when ordering class members.
-- Do not use null-forgiving operator (!) outside of tests. Handle null checks appropriately.
 - Prefer var of explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Always prefer collection expressions to initialize collections (e.g. '[]').

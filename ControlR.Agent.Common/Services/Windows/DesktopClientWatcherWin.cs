@@ -42,6 +42,11 @@ internal class DesktopClientWatcherWin(
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
+    if (_environment.IsDebug) 
+    {
+      _logger.LogInformation("Skipping DesktopClientWatcher in Debug mode.");
+      return;
+    }
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
 
     while (await timer.WaitForNextTick(false, stoppingToken))
@@ -226,7 +231,7 @@ internal class DesktopClientWatcherWin(
               duplicate.Process.Id);
 
             var shutdownDto = new ShutdownCommandDto("Duplicate client detected");
-            await duplicate.Server.Send(shutdownDto);
+            await duplicate.Server.Client.ShutdownDesktopClient(shutdownDto);
 
             // Remove from store
             _ipcServerStore.TryRemove(duplicate.Process.Id, out _);

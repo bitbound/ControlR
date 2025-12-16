@@ -284,15 +284,8 @@ internal class DesktopSessionProviderLinux(
     try
     {
       var ipcDto = new CheckOsPermissionsIpcDto(serverInfo.Process.Id);
-      var ipcResult = await serverInfo.Server.Invoke<CheckOsPermissionsIpcDto, CheckOsPermissionsResponseIpcDto>(ipcDto, timeoutMs: 3000);
-
-      if (ipcResult.IsSuccess && ipcResult.Value is not null)
-      {
-        return ipcResult.Value.ArePermissionsGranted;
-      }
-
-      _logger.LogWarning("Failed to get permissions via IPC for process {ProcessId}", serverInfo.Process.Id);
-      return false;
+      var ipcResult = await serverInfo.Server.Client.CheckOsPermissions(ipcDto);
+      return ipcResult.ArePermissionsGranted;
     }
     catch (Exception ex)
     {

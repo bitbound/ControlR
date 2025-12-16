@@ -100,33 +100,7 @@ internal abstract class IpcServerInitializerBase(
       var process = ProcessManager.GetProcessById(credentials.ProcessId);
       IpcStore.AddServer(process, server);
 
-      server.On<ChatResponseIpcDto, Task<bool>>(async dto =>
-      {
-        try
-        {
-          var responseDto = new ChatResponseHubDto(
-            dto.SessionId,
-            dto.DesktopUiProcessId,
-            dto.Message,
-            dto.SenderUsername,
-            dto.ViewerConnectionId,
-            dto.Timestamp);
-
-          Logger.LogInformation(
-            "Sending chat response for session {SessionId} from {Username}",
-            responseDto.SessionId,
-            responseDto.SenderUsername);
-
-          return await HubConnection.Server.SendChatResponse(responseDto);
-        }
-        catch (Exception ex)
-        {
-          Logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
-          return false;
-        }
-      });
-
-      server.BeginRead(cancellationToken);
+      server.Start();
     }
     catch (Exception ex)
     {
