@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Download Server Artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Server
           path: ./server-publish
@@ -50,7 +50,7 @@ jobs:
           run-id: ${{ inputs.run_id || steps.get-run-id.outputs.run_id }}
 
       - name: Download docker-compose file
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: DockerCompose
           path: ./docker-compose-download

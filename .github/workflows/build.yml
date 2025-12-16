@@ -141,14 +141,14 @@ jobs:
           codesign --force --deep --entitlements "./.build/Mac/ControlR.entitlements" --sign - "./ControlR.Agent/bin/publish/osx-x64/ControlR.Agent"
 
       - name: Upload Agent (macOS ARM64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Agent/bin/publish/osx-arm64/ControlR.Agent
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload Agent (macOS x64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Agent-macOS-x64
           path: ControlR.Agent/bin/publish/osx-x64/ControlR.Agent
@@ -203,7 +203,7 @@ jobs:
 
       - name: Upload ApiClient NuGet
         if: matrix.arch == 'win-x64'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ApiClientNuGet
           path: ${{ steps.find-nupkg.outputs.APICLIENT_NUPKG }}
@@ -279,7 +279,7 @@ jobs:
             "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe"
 
       - name: Upload Agent (${{ matrix.arch }})
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Agent-${{ matrix.arch }}
           path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe
@@ -329,7 +329,7 @@ jobs:
           dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Upload Agent (linux-x64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Agent-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent
@@ -360,31 +360,31 @@ jobs:
           dotnet-version: "10.x"
 
       - name: Download Agent (win-x86)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Agent-win-x86
           path: ControlR.Web.Server/wwwroot/downloads/win-x86/
 
       - name: Download Agent (win-x64)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Agent-win-x64
           path: ControlR.Web.Server/wwwroot/downloads/win-x64/
 
       - name: Download Agent (linux-x64)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Agent-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
 
       - name: Download Agent (macOS ARM64)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Web.Server/wwwroot/downloads/osx-arm64/
 
       - name: Download Agent (macOS x64)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: Agent-macOS-x64
           path: ControlR.Web.Server/wwwroot/downloads/osx-x64/
@@ -420,14 +420,14 @@ jobs:
           }
 
       - name: Upload Server
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Server
           path: ControlR.Web.Server/bin/publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload docker-compose
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DockerCompose
           path: docker-compose/docker-compose.yml
