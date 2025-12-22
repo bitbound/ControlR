@@ -1,5 +1,5 @@
 ﻿using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.LoadTester;

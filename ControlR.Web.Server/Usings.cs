@@ -4,7 +4,7 @@ global using ControlR.Libraries.Shared.Models;
 global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.Libraries.Shared.Services;
 global using ControlR.Libraries.Shared.Hubs;
-global using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+global using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 global using ControlR.Libraries.Shared.Services.Http;
 global using ControlR.Web.Server.Extensions;
 global using ControlR.Web.Server.Options;

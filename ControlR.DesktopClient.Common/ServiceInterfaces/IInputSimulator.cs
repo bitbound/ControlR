@@ -1,5 +1,5 @@
 ﻿using ControlR.DesktopClient.Common.Models;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 public interface IInputSimulator

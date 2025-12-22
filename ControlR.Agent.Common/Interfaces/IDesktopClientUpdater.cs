@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+﻿using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Interfaces;

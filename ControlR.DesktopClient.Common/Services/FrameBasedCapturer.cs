@@ -7,13 +7,12 @@ using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.Shared.Dtos;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 namespace ControlR.DesktopClient.Common.Services;
 

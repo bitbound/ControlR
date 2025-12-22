@@ -60,12 +60,13 @@ app.UseStaticFiles(new StaticFileOptions
   ServeUnknownFileTypes = true,
 });
 
-app.MapWebSocketRelay();
 app.MapHub<AgentHub>(AppConstants.AgentHubPath);
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapWebSocketRelay();
 
 // Configure output cache - must be before any middleware that generates response
 app.UseOutputCache();

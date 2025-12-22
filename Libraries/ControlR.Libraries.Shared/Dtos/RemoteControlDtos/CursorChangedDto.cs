@@ -1,6 +1,6 @@
 ﻿using ControlR.Libraries.Shared.Enums;
 
-namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
+namespace ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record CursorChangedDto(

@@ -5,10 +5,10 @@ using ControlR.Libraries.Shared.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.SignalR.Client;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
 var startCount = ArgsParser.GetArgValue("--start-count", 0);

@@ -27,4 +27,7 @@
 			<Link>appicon.png</Link>
 		</Content>
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
+	</ItemGroup>
 </Project>

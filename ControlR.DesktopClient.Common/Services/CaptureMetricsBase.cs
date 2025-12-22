@@ -2,7 +2,7 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
@@ -6,41 +6,39 @@ namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
 internal class SessionSignaler : IAsyncDisposable
 {
   private readonly string _accessToken;
-  private readonly Guid _creatorRequestId;
-  private readonly ConcurrentQueue<TaskCompletionSource> _signalQueue = new();
+  private readonly TaskCompletionSource _requesterSignaled = new();
+  private readonly TaskCompletionSource _requesterWebsocketSet = new();
+  private readonly TaskCompletionSource _responderSignaled = new();
+  private readonly TaskCompletionSource _responderWebsocketSet = new();
+  private readonly ConcurrentDictionary<RelayRole, Guid> _roleMap = new();
   private readonly Task[] _signalTasks;
-  private readonly TaskCompletionSource _websocket1ValueSet = new();
-  private readonly TaskCompletionSource _websocket2ValueSet = new();
-  private bool _disposedValue;
-  private WebSocket? _websocket1;
-  private WebSocket? _websocket2;
 
-  public SessionSignaler(Guid requestId, string accessToken)
+  private bool _disposedValue;
+  private WebSocket? _requesterWebsocket;
+  private WebSocket? _responderWebsocket;
+
+  public SessionSignaler(string accessToken)
   {
-    _creatorRequestId = requestId;
     _accessToken = accessToken;
-    _signalQueue.Enqueue(new TaskCompletionSource());
-    _signalQueue.Enqueue(new TaskCompletionSource());
-    _signalTasks = [.. _signalQueue.Select(x => x.Task)];
+    _signalTasks = [_requesterSignaled.Task, _responderSignaled.Task];
   }
 
-  public WebSocket? Websocket1
+  public WebSocket? RequesterWebsocket
   {
-    get => _websocket1;
+    get => _requesterWebsocket;
     internal set
     {
-      _websocket1 = value;
-      _websocket1ValueSet.TrySetResult();
+      _requesterWebsocket = value;
+      _requesterWebsocketSet.TrySetResult();
     }
   }
-
-  public WebSocket? Websocket2
+  public WebSocket? ResponderWebsocket
   {
-    get => _websocket2;
+    get => _responderWebsocket;
     internal set
     {
-      _websocket2 = value;
-      _websocket2ValueSet.TrySetResult();
+      _responderWebsocket = value;
+      _responderWebsocketSet.TrySetResult();
     }
   }
 
@@ -53,18 +51,16 @@ internal class SessionSignaler : IAsyncDisposable
 
     _disposedValue = true;
 
-    while (_signalQueue.TryDequeue(out var signaler))
-    {
-      _ = signaler.TrySetResult();
-    }
+    _ = _requesterSignaled.TrySetResult();
+    _ = _responderSignaled.TrySetResult();
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
     try
     {
-      if (Websocket2?.State == WebSocketState.Open)
+      if (ResponderWebsocket?.State == WebSocketState.Open)
       {
-        await Websocket2.CloseAsync(
+        await ResponderWebsocket.CloseAsync(
             WebSocketCloseStatus.NormalClosure,
             "Session ended.",
             cts.Token);
@@ -74,9 +70,9 @@ internal class SessionSignaler : IAsyncDisposable
 
     try
     {
-      if (Websocket1?.State == WebSocketState.Open)
+      if (RequesterWebsocket?.State == WebSocketState.Open)
       {
-        await Websocket1.CloseAsync(
+        await RequesterWebsocket.CloseAsync(
             WebSocketCloseStatus.NormalClosure,
             "Session ended.",
             cts.Token);
@@ -85,61 +81,77 @@ internal class SessionSignaler : IAsyncDisposable
     catch { }
 
     Disposer.DisposeAll(
-              Websocket1,
-              Websocket2);
+      RequesterWebsocket,
+      ResponderWebsocket);
 
     GC.SuppressFinalize(this);
   }
 
-  public WebSocket GetCallerWebsocket(Guid callerRequestId)
+  public WebSocket GetCallerWebsocket(Guid callerPeerId)
   {
-    if (callerRequestId == _creatorRequestId)
+    if (_roleMap.TryGetValue(RelayRole.Requester, out var requesterId) && callerPeerId == requesterId)
     {
-      return Websocket1 ?? throw new InvalidOperationException("Websocket1 not found.");
+      return RequesterWebsocket ?? throw new InvalidOperationException("Requester websocket not found.");
     }
-    else
+
+    if (_roleMap.TryGetValue(RelayRole.Responder, out var responderId) && callerPeerId == responderId)
     {
-      return Websocket2 ?? throw new InvalidOperationException("Websocket2 not found.");
+      return ResponderWebsocket ?? throw new InvalidOperationException("Responder websocket not found.");
     }
+
+    throw new InvalidOperationException("Caller peer ID not found in session.");
   }
 
-  public WebSocket GetPartnerWebsocket(Guid callerRequestId)
+  public WebSocket GetPartnerWebsocket(Guid callerPeerId)
   {
-    if (callerRequestId == _creatorRequestId)
+    if (_roleMap.TryGetValue(RelayRole.Requester, out var requesterId) && callerPeerId == requesterId)
     {
-      return Websocket2 ?? throw new InvalidOperationException("Websocket2 not found.");
+      return ResponderWebsocket ?? throw new InvalidOperationException("Responder websocket not found.");
     }
-    else
+
+    if (_roleMap.TryGetValue(RelayRole.Responder, out var responderId) && callerPeerId == responderId)
     {
-      return Websocket1 ?? throw new InvalidOperationException("Websocket1 not found.");
+      return RequesterWebsocket ?? throw new InvalidOperationException("Requester websocket not found.");
     }
+
+    throw new InvalidOperationException("Caller peer ID not found in session.");
   }
-  public async Task SetWebsocket(WebSocket websocket, Guid callerRequestId, CancellationToken cancellationToken)
+
+  public async Task SetWebsocket(WebSocket websocket, Guid callerPeerId, CancellationToken cancellationToken)
   {
-    if (callerRequestId == _creatorRequestId)
+    if (_roleMap.TryGetValue(RelayRole.Requester, out var requesterId) && callerPeerId == requesterId)
     {
-      Websocket1 = websocket;
+      RequesterWebsocket = websocket;
+    }
+    else if (_roleMap.TryGetValue(RelayRole.Responder, out var responderId) && callerPeerId == responderId)
+    {
+      ResponderWebsocket = websocket;
     }
     else
     {
-      Websocket2 = websocket;
+      throw new InvalidOperationException("Caller peer ID not found in session.");
     }
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
     await Task
-        .WhenAll(_websocket1ValueSet.Task, _websocket2ValueSet.Task)
+        .WhenAll(_requesterWebsocketSet.Task, _responderWebsocketSet.Task)
         .WaitAsync(linkedCts.Token);
   }
 
-  public bool SignalReady()
+  public bool SignalReady(RelayRole role)
   {
-    if (!_signalQueue.TryDequeue(out var tcs))
+    return role switch
     {
-      return false;
-    }
+      RelayRole.Requester => _requesterSignaled.TrySetResult(),
+      RelayRole.Responder => _responderSignaled.TrySetResult(),
+      _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown relay role."),
+    };
+  }
 
-    return tcs.TrySetResult();
+  public bool TryAssignRole(Guid peerId, RelayRole role)
+  {
+    return _roleMap.TryAdd(role, peerId);
   }
 
   public bool ValidateToken(string accessToken)
@@ -149,8 +161,6 @@ internal class SessionSignaler : IAsyncDisposable
 
   public async Task WaitForPartner(CancellationToken cancellationToken)
   {
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
-    await Task.WhenAll(_signalTasks).WaitAsync(linkedCts.Token);
+    await Task.WhenAll(_signalTasks).WaitAsync(cancellationToken);
   }
 }

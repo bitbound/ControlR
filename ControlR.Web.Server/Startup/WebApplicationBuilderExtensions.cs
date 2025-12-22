@@ -289,7 +289,10 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
     builder.Services.AddSingleton<IHubStreamStore, HubStreamStore>();
-    builder.Services.AddWebSocketRelay();
+    builder.Services.AddWebSocketRelay(options =>
+    {
+      options.RequireAuthenticationForRequester = true;
+    });
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();

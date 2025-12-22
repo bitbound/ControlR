@@ -2,7 +2,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Windows;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

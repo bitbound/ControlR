@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Hubs.Clients;
+﻿using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.StateManagement.Stores;
 

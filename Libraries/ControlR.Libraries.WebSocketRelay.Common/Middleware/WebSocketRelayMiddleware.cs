@@ -1,25 +1,32 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Net.WebSockets;
+using ControlR.Libraries.WebSocketRelay.Common.Options;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Middleware;
 
 internal class WebSocketRelayMiddleware(
-    RequestDelegate _next,
-    IHostApplicationLifetime _appLifetime,
-    IRelaySessionStore _streamStore,
-    ILogger<WebSocketRelayMiddleware> _logger)
+    RequestDelegate next,
+    IHostApplicationLifetime appLifetime,
+    IRelaySessionStore streamStore,
+    IServiceProvider serviceProvider,
+    IOptions<WebSocketRelayOptions> relayOptions,
+    ILogger<WebSocketRelayMiddleware> logger)
 {
   private const int BufferSize = 256 * 1024;
+  private readonly TimeSpan _defaultWaitForPartnerTimeout =  TimeSpan.FromSeconds(20);
 
   public async Task InvokeAsync(HttpContext context)
   {
     if (!context.WebSockets.IsWebSocketRequest)
     {
-      await _next(context);
+      await next(context);
       return;
     }
 
@@ -43,27 +50,80 @@ internal class WebSocketRelayMiddleware(
       return;
     }
 
-    var requestId = Guid.NewGuid();
+    if (!context.Request.Query.TryGetValue("role", out var roleValue) ||
+        !Enum.TryParse<RelayRole>(roleValue, true, out var role))
+    {
+      SetBadRequest(context, "Invalid or missing role.");
+      return;
+    }
 
-    await using var signaler = _streamStore
-      .GetOrAdd(sessionId, id => new SessionSignaler(requestId, accessToken));
+    using var scope = logger.BeginScope(new Dictionary<string, object>
+    {
+      ["TraceId"] = context.TraceIdentifier,
+      ["RequestPath"] = context.Request.Path,
+      ["RequestQueryString"] = context.Request.QueryString.ToString(),
+      ["RemoteIpAddress"] = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+      ["SessionId"] = sessionId,
+      ["Role"] = role.ToString()
+    });
+
+    using var serviceScope = serviceProvider.CreateScope();
+    var authService = serviceScope.ServiceProvider.GetRequiredService<IAuthorizationService>();
+
+    var options = relayOptions.Value;
+    var requireAuth = role == RelayRole.Requester 
+      ? options.RequireAuthenticationForRequester 
+      : options.RequireAuthenticationForResponder;
+
+    var policy = role == RelayRole.Requester 
+      ? options.AuthorizationPolicyForRequester 
+      : options.AuthorizationPolicyForResponder;
+
+    if (requireAuth && context.User.Identity?.IsAuthenticated != true)
+    {
+      context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+      return;
+    }
+
+    if (!string.IsNullOrEmpty(policy))
+    {
+      var result = await authService.AuthorizeAsync(context.User, policy);
+      if (!result.Succeeded)
+      {
+        logger.LogWarning("Authorization failed for policy '{Policy}'.", policy);
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+      }
+    }
+
+    var peerId = Guid.NewGuid();
+
+    await using var signaler = streamStore
+      .GetOrAdd(sessionId, id => new SessionSignaler(accessToken));
 
     if (!signaler.ValidateToken(accessToken))
     {
-      _logger.LogError("Invalid access token.  Session ID: {SessionId}", sessionId);
+      logger.LogError("Invalid access token.  Session ID: {SessionId}", sessionId);
       context.Response.StatusCode = StatusCodes.Status401Unauthorized;
       await context.Response.CompleteAsync();
       return;
     }
 
-    if (!signaler.SignalReady())
+    if (!signaler.TryAssignRole(peerId, role))
     {
-      _logger.LogError("Failed to signal ready.  Session ID: {SessionId}", sessionId);
+      logger.LogError("Role already assigned. Session ID: {SessionId}, Role: {Role}", sessionId, role);
+      SetBadRequest(context, $"Role '{role}' is already assigned for this session.");
+      return;
+    }
+
+    if (!signaler.SignalReady(role))
+    {
+      logger.LogError("Failed to signal ready.  Session ID: {SessionId}", sessionId);
       SetBadRequest(context, "Failed to signal ready.");
       return;
     }
 
-    var waitForPartnerTimeout = TimeSpan.FromSeconds(10);
+    var waitForPartnerTimeout = _defaultWaitForPartnerTimeout;
 
     if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
         int.TryParse(timeoutValue, out var timeoutSeconds))
@@ -84,18 +144,18 @@ internal class WebSocketRelayMiddleware(
     try
     {
       using var cts = new CancellationTokenSource(waitForPartnerTimeout);
-      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _appLifetime.ApplicationStopping);
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, appLifetime.ApplicationStopping);
 
       await signaler.WaitForPartner(linkedCts.Token);
-      _ = _streamStore.TryRemove(sessionId, out _);
+      _ = streamStore.TryRemove(sessionId, out _);
 
       var websocket = await context.WebSockets.AcceptWebSocketAsync();
-      await signaler.SetWebsocket(websocket, requestId, _appLifetime.ApplicationStopping);
-      await StreamToPartner(signaler, requestId);
+      await signaler.SetWebsocket(websocket, peerId, appLifetime.ApplicationStopping);
+      await StreamToPartner(signaler, peerId);
     }
     catch (OperationCanceledException ex)
     {
-      _logger.LogWarning(ex, "Timed out while waiting for partner to connect.");
+      logger.LogWarning(ex, "Timed out while waiting for partner to connect.");
       context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
       await context.Response.WriteAsync("Timed out while waiting for partner.");
       return;
@@ -104,34 +164,38 @@ internal class WebSocketRelayMiddleware(
 
   private void SetBadRequest(HttpContext context, string message)
   {
-    _logger.LogWarning("Bad request. Uri: {RequestUri}", context.Request.GetDisplayUrl());
+    logger.LogWarning(
+      "Bad request. Uri: {RequestUri}. Message: {Message}", 
+      context.Request.GetDisplayUrl(),
+      message);
+
     context.Response.StatusCode = StatusCodes.Status400BadRequest;
     var body = 
       $"{message}\n\nPath should be in the form of " +
-      $"'/relay?sessionId={{session-id (Guid)}}&accessToken={{accessToken}}'.";
-    context.Response.WriteAsync(body, _appLifetime.ApplicationStopping);
+      $"'/relay?sessionId={{session-id (Guid)}}&accessToken={{accessToken}}&role={{requester|responder}}'.";
+    context.Response.WriteAsync(body, appLifetime.ApplicationStopping);
   }
 
-  private async Task StreamToPartner(SessionSignaler signaler, Guid callerRequestId)
+  private async Task StreamToPartner(SessionSignaler signaler, Guid callerPeerId)
   {
     var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
     try
     {
-      ArgumentNullException.ThrowIfNull(signaler.Websocket1);
-      ArgumentNullException.ThrowIfNull(signaler.Websocket2);
+      ArgumentNullException.ThrowIfNull(signaler.RequesterWebsocket);
+      ArgumentNullException.ThrowIfNull(signaler.ResponderWebsocket);
 
-      _logger.LogInformation("Starting stream relay. Request ID: {RequestId}", callerRequestId);
+      logger.LogInformation("Starting stream relay. Peer ID: {PeerId}", callerPeerId);
 
-      var partnerWebsocket = signaler.GetPartnerWebsocket(callerRequestId);
-      var callerWebsocket = signaler.GetCallerWebsocket(callerRequestId);
+      var partnerWebsocket = signaler.GetPartnerWebsocket(callerPeerId);
+      var callerWebsocket = signaler.GetCallerWebsocket(callerPeerId);
 
-      while (!_appLifetime.ApplicationStopping.IsCancellationRequested)
+      while (!appLifetime.ApplicationStopping.IsCancellationRequested)
       {
-        var result = await callerWebsocket.ReceiveAsync(buffer, _appLifetime.ApplicationStopping);
+        var result = await callerWebsocket.ReceiveAsync(buffer, appLifetime.ApplicationStopping);
 
         if (result.MessageType == WebSocketMessageType.Close)
         {
-          _logger.LogInformation("Websocket close message received.");
+          logger.LogInformation("Websocket close message received.");
           break;
         }
 
@@ -139,20 +203,20 @@ internal class WebSocketRelayMiddleware(
             buffer.AsMemory(0, result.Count),
             result.MessageType,
             result.EndOfMessage,
-            _appLifetime.ApplicationStopping);
+            appLifetime.ApplicationStopping);
       }
     }
     catch (OperationCanceledException)
     {
-      _logger.LogInformation("Application shutting down. Streaming aborted.");
+      logger.LogInformation("Application shutting down. Streaming aborted.");
     }
     catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
     {
-      _logger.LogInformation("Streamer websocket closed. Ending stream.");
+      logger.LogInformation("Streamer websocket closed. Ending stream.");
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while proxying viewer websocket.");
+      logger.LogError(ex, "Error while proxying viewer websocket.");
     }
     finally
     {

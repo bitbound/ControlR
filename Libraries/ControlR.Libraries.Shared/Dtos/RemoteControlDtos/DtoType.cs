@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.Shared.Dtos;
+﻿namespace ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 public enum DtoType
 {

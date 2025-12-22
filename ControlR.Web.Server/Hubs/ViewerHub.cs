@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
@@ -292,7 +293,7 @@ public class ViewerHub(
   }
 
 
-  public async Task<Result> RequestStreamingSession(
+  public async Task<Result> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {

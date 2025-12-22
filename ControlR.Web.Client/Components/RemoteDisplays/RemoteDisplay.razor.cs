@@ -1,7 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
