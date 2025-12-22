@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using ControlR.DesktopClient.ViewModels;
-using Tmds.DBus.Protocol;
 
 namespace ControlR.DesktopClient.Controls.Dialogs;
 

@@ -54,7 +54,7 @@ internal class IpcClient(
     {
         if (_jsonRpc != null)
         {
-            await _jsonRpc.Completion;
+            await _jsonRpc.Completion.WaitAsync(cancellationToken);
         }
     }
 }

@@ -32,7 +32,7 @@ public class DesktopCapturerFactory(IServiceProvider serviceProvider, IOptions<R
   private readonly IOptions<RemoteControlSessionOptions> _options = options;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-  private IDesktopCapturer? _capturer;
+  private volatile IDesktopCapturer? _capturer;
 
   public IDesktopCapturer CreateNew()
   {
