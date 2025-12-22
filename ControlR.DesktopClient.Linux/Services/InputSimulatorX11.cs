@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;

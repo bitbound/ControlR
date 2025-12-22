@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ControlR.Libraries.Shared.Dtos;
+namespace ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
 public class DtoWrapper

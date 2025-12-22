@@ -12,6 +12,9 @@
     <Project Path="Libraries/ControlR.Libraries.NativeInterop.Windows/ControlR.Libraries.NativeInterop.Windows.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Client/ControlR.Libraries.WebSocketRelay.Client.csproj">
+      <BuildType Solution="Debug|*" Project="&#xD;&#xA;&#x9;&#x9;&#x9;Debug" />
+    </Project>
     <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Common/ControlR.Libraries.WebSocketRelay.Common.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

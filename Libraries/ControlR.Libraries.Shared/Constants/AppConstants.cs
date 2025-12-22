@@ -9,11 +9,11 @@ public static class AppConstants
   public const string AgentHubPath = "/hubs/agent";
   public const int DefaultVncPort = 5900;
   public const string ViewerHubPath = "/hubs/viewer";
-
   /// <summary>
   /// The environment variable indicating that the desktop client is running in a Wayland login screen.
   /// </summary>
   public const string WaylandLoginScreenVariable = "WAYLAND_LOGIN_SCREEN";
+  public const string WebSocketRelayPath = "/relay";
 
   public static string DesktopClientFileName =>
     SystemEnvironment.Instance.Platform switch
@@ -22,7 +22,6 @@ public static class AppConstants
       SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
       _ => throw new PlatformNotSupportedException()
     };
-
   public static string DesktopClientZipFileName =>
     SystemEnvironment.Instance.Platform switch
     {
@@ -31,7 +30,6 @@ public static class AppConstants
       SystemPlatform.Linux => "ControlR.DesktopClient.zip",
       _ => throw new PlatformNotSupportedException()
     };
-
   public static string FfmpegFileName =>
     SystemEnvironment.Instance.Platform switch
     {
@@ -39,8 +37,6 @@ public static class AppConstants
       SystemPlatform.Linux or SystemPlatform.MacOs => "ffmpeg",
       _ => throw new PlatformNotSupportedException()
     };
-
-
   public static Uri? ServerUri
   {
     get
@@ -53,7 +49,6 @@ public static class AppConstants
       return null;
     }
   }
-
   public static int SignalrMaxMessageSize => 30 * 1024; // 30KB.
 
   private static Uri DevServerUri { get; } = new("http://localhost:5120");

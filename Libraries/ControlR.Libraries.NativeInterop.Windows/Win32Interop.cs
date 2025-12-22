@@ -15,7 +15,6 @@ using Windows.Win32.System.Threading;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.Shell;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 using ControlR.Libraries.Shared.Primitives;
@@ -24,6 +23,7 @@ using Microsoft.Win32.SafeHandles;
 using WTS_CONNECTSTATE_CLASS = Windows.Win32.System.RemoteDesktop.WTS_CONNECTSTATE_CLASS;
 using WTS_INFO_CLASS = Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 

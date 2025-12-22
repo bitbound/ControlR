@@ -2,7 +2,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 

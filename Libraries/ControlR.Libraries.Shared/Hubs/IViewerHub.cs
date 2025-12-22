@@ -1,7 +1,7 @@
 ﻿using System.Threading.Channels;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
 
@@ -21,7 +21,7 @@ public interface IViewerHub
   Task<Result> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task RefreshDeviceInfo(Guid deviceId);
 
-  Task<Result> RequestStreamingSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
+  Task<Result> RequestRemoteControlSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
   Task<Result> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto);
   Task SendAgentUpdateTrigger(Guid deviceId);
   Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);

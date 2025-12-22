@@ -1,6 +1,6 @@
 using System.Collections.Frozen;
 using System.Diagnostics;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 

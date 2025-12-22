@@ -1,8 +1,8 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 
 namespace ControlR.DesktopClient.Mac.Services;
 

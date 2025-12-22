@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.WebSocketRelay.Client;
 using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 
@@ -8,7 +9,7 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 // ReSharper disable once ClassNeverInstantiated.Global
 public partial class RemoteControl : ViewportAwareComponent
 {
-  private readonly int _commandTimeoutSeconds = 30;
+  private readonly uint _commandTimeoutSeconds = 30;
   private string? _alertMessage;
   private Severity _alertSeverity;
   private bool _isReconnecting;
@@ -312,11 +313,13 @@ public partial class RemoteControl : ViewportAwareComponent
       var accessToken = RandomGenerator.CreateAccessToken();
 
       var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
-      var uriBuilder = new UriBuilder(serverUri)
-      {
-        Path = "/relay",
-        Query = $"?sessionId={session.SessionId}&accessToken={accessToken}&timeout={_commandTimeoutSeconds}"
-      };
+      var desktopRelayUri = RelayUriBuilder.Build(
+        serverUri,
+        AppConstants.WebSocketRelayPath,
+        session.SessionId,
+        accessToken,
+        RelayRole.Responder,
+        _commandTimeoutSeconds);
 
       if (!quiet)
       {
@@ -326,7 +329,7 @@ public partial class RemoteControl : ViewportAwareComponent
       var notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
       var requestDto = new RemoteControlSessionRequestDto(
         session.SessionId,
-        uriBuilder.Uri,
+        desktopRelayUri,
         session.TargetSystemSession,
         session.TargetProcessId,
         string.Empty, // ViewerConnectionId is set by hub.
@@ -334,23 +337,33 @@ public partial class RemoteControl : ViewportAwareComponent
         notifyUser,
         RequireConsent: false);
 
-      var streamingSessionResult = await ViewerHub.Server.RequestStreamingSession(session.Device.Id, requestDto);
+      var remoteControlSessionResult = await ViewerHub.Server.RequestRemoteControlSession(session.Device.Id, requestDto);
 
       _loadingMessage = null;
 
-      if (!streamingSessionResult.IsSuccess)
+      if (!remoteControlSessionResult.IsSuccess)
       {
-        _alertMessage = streamingSessionResult.Reason;
+        _alertMessage = remoteControlSessionResult.Reason;
         _alertSeverity = Severity.Error;
         await InvokeAsync(StateHasChanged);
         return false;
       }
 
+      var viewerRelayUri = RelayUriBuilder.Build(
+        serverUri,
+        AppConstants.WebSocketRelayPath,
+        session.SessionId,
+        accessToken,
+        RelayRole.Requester,
+        _commandTimeoutSeconds);
+
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_commandTimeoutSeconds));
-      await StreamingClient.Connect(uriBuilder.Uri, cts.Token);
+      await StreamingClient.Connect(viewerRelayUri, cts.Token);
+
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
+      
       _loadingMessage = null;
       await ScreenWake.SetScreenWakeLock(true);
       return true;

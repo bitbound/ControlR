@@ -1,7 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using ControlR.Libraries.Shared.Collections;
-using ControlR.Libraries.Shared.Dtos.StreamerDtos;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.Clients.Services;
