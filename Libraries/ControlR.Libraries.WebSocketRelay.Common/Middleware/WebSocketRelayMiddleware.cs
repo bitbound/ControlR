@@ -10,7 +10,7 @@ namespace ControlR.Libraries.WebSocketRelay.Common.Middleware;
 internal class WebSocketRelayMiddleware(
     RequestDelegate _next,
     IHostApplicationLifetime _appLifetime,
-    ISessionStore _streamStore,
+    IRelaySessionStore _streamStore,
     ILogger<WebSocketRelayMiddleware> _logger)
 {
   private const int BufferSize = 256 * 1024;

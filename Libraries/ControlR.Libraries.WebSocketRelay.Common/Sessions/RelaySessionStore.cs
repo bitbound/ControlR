@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
 
-internal interface ISessionStore
+internal interface IRelaySessionStore
 {
   int Count { get; }
 
@@ -18,7 +18,7 @@ internal interface ISessionStore
   bool TryRemove(Guid sessionId, [NotNullWhen(true)] out SessionSignaler? signaler);
 }
 
-internal class SessionStore : ISessionStore
+internal class RelaySessionStore : IRelaySessionStore
 {
   private readonly ConcurrentDictionary<Guid, SessionSignaler> _signalers = new();
 

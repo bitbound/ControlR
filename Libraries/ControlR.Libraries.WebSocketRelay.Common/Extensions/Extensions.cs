@@ -9,7 +9,7 @@ public static class Extensions
       this IServiceCollection services)
   {
     services.AddWebSockets(_ => { });
-    services.AddSingleton<ISessionStore, SessionStore>();
+    services.AddSingleton<IRelaySessionStore, RelaySessionStore>();
     return services;
   }
 
