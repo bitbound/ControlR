@@ -16,11 +16,11 @@ public interface IDesktopCapturer : IAsyncDisposable
   /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
   Task ChangeDisplays(string displayId);
 
-  /// <summary>
-  /// Gets an asynchronous stream of captured screen regions.
+ /// <summary>
+  /// Gets a stream of either JPEG frames or video, depending on the implementation.
   /// </summary>
-  /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation.</param>
-  /// <returns>An <see cref="IAsyncEnumerable{T}"/> of <see cref="DtoWrapper"/>.</returns>
+  /// <param name="cancellationToken"></param>
+  /// <returns></returns>
   IAsyncEnumerable<DtoWrapper> GetCaptureStream(CancellationToken cancellationToken);
 
   /// <summary>

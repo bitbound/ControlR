@@ -1,6 +1,6 @@
 using Avalonia.Controls;
-using Avalonia.Threading;
 using ControlR.DesktopClient.ViewModels;
+using Tmds.DBus.Protocol;
 
 namespace ControlR.DesktopClient.Controls.Dialogs;
 
@@ -11,7 +11,7 @@ public partial class MessageBox : Window
     InitializeComponent();
   }
 
-  public static async Task<MessageBoxResult> Show(string message, string caption, MessageBoxButtons type)
+  public static async Task<MessageBoxResult> Show(string title, string message, MessageBoxButtons type)
   {
     return await Dispatcher.UIThread.InvokeAsync(async () =>
     {
@@ -19,9 +19,9 @@ public partial class MessageBox : Window
       var messageBox = new MessageBox()
       {
         DataContext = viewModel,
-        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        WindowStartupLocation = WindowStartupLocation.CenterScreen,
       };
-      viewModel.Caption = caption;
+      viewModel.Title = title;
       viewModel.Message = message;
 
       switch (type)
@@ -35,7 +35,13 @@ public partial class MessageBox : Window
         default:
           break;
       }
-      return await messageBox.ShowDialog<MessageBoxResult>(App.MainWindow);
+
+      if (App.MainWindow.IsVisible)
+      {
+        return await messageBox.ShowDialog<MessageBoxResult>(App.MainWindow);
+      }
+ 
+      return await messageBox.ShowHeadlessDialog<MessageBox, IMessageBoxViewModel, MessageBoxResult>(vm => vm.Result);
     });
   }
 }

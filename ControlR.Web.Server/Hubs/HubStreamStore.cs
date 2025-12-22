@@ -5,18 +5,20 @@ namespace ControlR.Web.Server.Hubs;
 
 public interface IHubStreamStore
 {
-  HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration);
+  HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan? expiration = null);
   bool TryGet<T>(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler<T>? signaler);
   bool TryRemove<T>(Guid streamId, [NotNullWhen(true)] out HubStreamSignaler<T>? signaler);
 }
 
 public class HubStreamStore(ILogger<HubStreamStore> logger, IMemoryCache memoryCache) : IHubStreamStore
 {
+  private readonly TimeSpan _defaultExpiration = TimeSpan.FromMinutes(5);
   private readonly ILogger<HubStreamStore> _logger = logger;
   private readonly IMemoryCache _memoryCache = memoryCache;
 
-  public HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan expiration)
+  public HubStreamSignaler<T> GetOrCreate<T>(Guid streamId, TimeSpan? expiration = null)
   {
+    expiration ??= _defaultExpiration;
     if (_memoryCache.TryGetValue(streamId, out var existing))
     {
       if (existing is HubStreamSignaler<T> typedExisting)

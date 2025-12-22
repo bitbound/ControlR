@@ -50,7 +50,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId, TimeSpan.FromMinutes(5));
+    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId);
     try
     {
       var streamRequest = new DirectoryContentsStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
@@ -235,7 +235,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId, TimeSpan.FromMinutes(5));
+    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId);
     try
     {
       var streamRequest = new SubdirectoriesStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);

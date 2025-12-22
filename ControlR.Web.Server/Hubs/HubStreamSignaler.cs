@@ -14,7 +14,7 @@ public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null
   private readonly CancellationTokenSource _streamCancelledSource = new();
   private readonly CancellationTokenSource _writeCompletedSource = new();
 
-  private int _disposedValue; 
+  private int _disposedValue;
 
   public object? Metadata { get; set; }
   public ChannelReader<T> Reader => _channel.Reader;
@@ -30,8 +30,30 @@ public sealed class HubStreamSignaler<T>(Guid streamId, Action? onDispose = null
 
   public void SetWriteCompleted(Exception? exception = null)
   {
-     _channel.Writer.TryComplete(exception);
+    _channel.Writer.TryComplete(exception);
     _writeCompletedSource.Cancel();
+  }
+
+  public async Task WriteFromAsyncEnumerable(IAsyncEnumerable<T> items, CancellationToken cancellationToken)
+  {
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _streamCancelledSource.Token);
+    try
+    {
+      await foreach (var item in items)
+      {
+        await _channel.Writer.WriteAsync(item, linkedCts.Token);
+      }
+      _channel.Writer.TryComplete();
+    }
+    catch (Exception ex)
+    {
+      _channel.Writer.TryComplete(ex);
+      throw;
+    }
+    finally
+    {
+      await _writeCompletedSource.CancelAsync();
+    }
   }
 
   public async Task WriteFromChannelReader(ChannelReader<T> reader, CancellationToken cancellationToken)

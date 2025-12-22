@@ -54,7 +54,8 @@ public static class Localization
   public static string RemoteControlPermissionDescription => GetString();
   public static string RemoteControlRequestMessage => GetString();
   public static string RemoteControlRequestTitle => GetString();
-  public static string RemoteControlSessionToastMessage => GetString();
+  public static string RemoteControlSessionEndToastMessage => GetString();
+  public static string RemoteControlSessionStartToastMessage => GetString();
   public static string RemoteControlSessionToastTitle => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
   public static string ScreenCastPermission => GetString();

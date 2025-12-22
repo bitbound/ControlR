@@ -1,12 +1,14 @@
-﻿using System.Buffers;
-using MessagePack;
+﻿namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
-namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
-
-[MessagePackObject(keyAsPropertyName: true)]
+[MessagePackObject]
 public record ScreenRegionDto(
+  [property: Key(0)]
   float X,
+  [property: Key(1)]
   float Y,
+  [property: Key(2)]
   float Width,
+  [property: Key(3)]
   float Height,
+  [property: Key(4)]
   byte[] EncodedImage);

@@ -2,9 +2,8 @@
 global using ControlR.DesktopClient.Common.ServiceInterfaces;
 global using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 global using Avalonia.Threading;
-
-
 global using ControlR.DesktopClient.Windows;
+global using ControlR.DesktopClient.Extensions;
 global using ControlR.DesktopClient.Windows.Services;
 global using ControlR.Libraries.NativeInterop.Windows;
 global using ControlR.DesktopClient.Mac;

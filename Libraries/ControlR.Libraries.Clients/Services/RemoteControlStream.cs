@@ -6,7 +6,7 @@ using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.Clients.Services;
 
-public interface IStreamingClient
+public interface IRemoteControlStream
 {
   bool IsConnected { get; }
   WebSocketState State { get; }
@@ -19,19 +19,19 @@ public interface IStreamingClient
   Task WaitForClose(CancellationToken cancellationToken);
 }
 
-public abstract class StreamingClient(
+public abstract class RemoteControlStream(
   TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IWaiter waiter,
-  ILogger<StreamingClient> logger) : IStreamingClient
+  ILogger<RemoteControlStream> logger) : IRemoteControlStream
 {
   private const int MaxSendBufferLength = ushort.MaxValue * 2;
 
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
   
-  private readonly ILogger<StreamingClient> _logger = logger;
+  private readonly ILogger<RemoteControlStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
   private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];

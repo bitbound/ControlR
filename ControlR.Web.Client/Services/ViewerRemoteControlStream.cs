@@ -6,7 +6,7 @@ using ControlR.Libraries.Shared.Services.Buffers;
 
 namespace ControlR.Web.Client.Services;
 
-public interface IViewerStreamingClient : IStreamingClient
+public interface IViewerRemoteControlStream : IRemoteControlStream
 {
   Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task RequestKeyFrame(CancellationToken cancellationToken);
@@ -30,15 +30,15 @@ public interface IViewerStreamingClient : IStreamingClient
     CancellationToken cancellationToken);
 }
 
-public class ViewerStreamingClient(
+public class ViewerRemoteControlStream(
   TimeProvider timeProvider,
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IWaiter waiter,
-  ILogger<ViewerStreamingClient> logger)
-  : StreamingClient(timeProvider, messenger, memoryProvider, waiter, logger), IViewerStreamingClient
+  ILogger<ViewerRemoteControlStream> logger)
+  : RemoteControlStream(timeProvider, messenger, memoryProvider, waiter, logger), IViewerRemoteControlStream
 {
-  private readonly ILogger<ViewerStreamingClient> _logger = logger;
+  private readonly ILogger<ViewerRemoteControlStream> _logger = logger;
   private readonly IWaiter _waiter = waiter;
 
   public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)

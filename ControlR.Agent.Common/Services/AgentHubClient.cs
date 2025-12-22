@@ -187,12 +187,26 @@ internal class AgentHubClient(
         dataFolder,
         dto.ViewerName);
 
-      await ipcServer.Server.Client.ReceiveRemoteControlRequest(ipcDto);
+      var result = await ipcServer.Server.Client.ReceiveRemoteControlRequest(ipcDto);
       _logger.LogInformation(
         "Remote control session created successfully for process ID {ProcessId}.",
         dto.TargetProcessId);
 
-      return Result.Ok();
+      if (result.IsSuccess)
+      {
+        _logger.LogInformation(
+          "Remote control session established on target process {ProcessId}.",
+          dto.TargetProcessId);
+      }
+      else
+      {
+        _logger.LogError(
+          "Failed to create remote control session on target process {ProcessId}. Reason: {Error}",
+          dto.TargetProcessId,
+          result.Reason ?? "Unknown error");
+      }
+
+      return result;
     }
     catch (Exception ex)
     {

@@ -39,6 +39,11 @@ internal class DesktopClientWatcherMac(
         using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         await CheckAndStartDesktopClientServices(stoppingToken);
       }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("Desktop process watcher is stopping due to cancellation.");
+        break;
+      }
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error while checking for desktop processes.");
@@ -81,7 +86,7 @@ internal class DesktopClientWatcherMac(
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
 
       cancellationToken.ThrowIfCancellationRequested();
-      
+
       if (!isRunning)
       {
         _logger.LogIfChanged(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
@@ -130,9 +135,9 @@ internal class DesktopClientWatcherMac(
             var username = parts[0];
             // Get UID for the user
             var uidResult = await _processManager.GetProcessOutput("id", $"-u {username}", 3000);
-            if (uidResult.IsSuccess && 
-                !string.IsNullOrWhiteSpace(uidResult.Value) && 
-                int.TryParse(uidResult.Value.Trim(), out var uid) && 
+            if (uidResult.IsSuccess &&
+                !string.IsNullOrWhiteSpace(uidResult.Value) &&
+                int.TryParse(uidResult.Value.Trim(), out var uid) &&
                 uid >= 500) // Exclude system users (typically UID < 500)
             {
               users.Add(uidResult.Value.Trim());
@@ -156,7 +161,7 @@ internal class DesktopClientWatcherMac(
     {
       // Use launchctl to check if the service is running
       var result = await _processManager.GetProcessOutput("sudo", $"launchctl print gui/{uid}/{serviceName}", 5000);
-      
+
       if (!result.IsSuccess)
       {
         _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));

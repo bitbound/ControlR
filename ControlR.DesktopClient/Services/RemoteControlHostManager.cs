@@ -1,9 +1,12 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,22 +15,25 @@ namespace ControlR.DesktopClient.Services;
 
 public interface IRemoteControlHostManager
 {
-  Task StartHost(RemoteControlRequestIpcDto requestDto);
+  Task<Result> StartHost(RemoteControlRequestIpcDto requestDto);
   Task StopAllHosts(string reason);
   Task StopHost(Guid sessionId);
+  bool TryGetSession(Guid sessionId, [NotNullWhen(true)] out RemoteControlSession? session);
 }
 
 public class RemoteControlHostManager(
   IUserInteractionService userInteractionService,
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
+  IIpcClientAccessor ipcClientAccessor,
   ILogger<RemoteControlHostManager> logger) : IRemoteControlHostManager
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
+  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<RemoteControlHostManager> _logger = logger;
   private readonly ConcurrentDictionary<Guid, RemoteControlSession> _sessions = new();
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
-  public async Task StartHost(RemoteControlRequestIpcDto requestDto)
+  public async Task<Result> StartHost(RemoteControlRequestIpcDto requestDto)
   {
     try
     {
@@ -44,11 +50,12 @@ public class RemoteControlHostManager(
       builder.AddCommonDesktopServices(
         options =>
         {
-          options.WebSocketUri = requestDto.WebsocketUri;
           options.SessionId = requestDto.SessionId;
           options.NotifyUser = requestDto.NotifyUserOnSessionStart;
           options.RequireConsent = requestDto.RequireConsent;
           options.ViewerName = requestDto.ViewerName;
+          options.ViewerConnectionId = requestDto.ViewerConnectionId;
+          options.WebSocketUri = requestDto.WebsocketUri;
         });
 
       builder.Services.Configure<DesktopClientOptions>(options =>
@@ -56,9 +63,12 @@ public class RemoteControlHostManager(
         options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
       });
 
-      builder.Services.AddSingleton<IToaster, Toaster>();
-      builder.Services.AddSingleton(_userInteractionService);
-      builder.Services.AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
+      builder.Services
+        .AddSingleton<IToaster, Toaster>()
+        .AddSingleton(_userInteractionService)
+        .AddSingleton(_ipcClientAccessor)
+        .AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
+
       if (OperatingSystem.IsWindowsVersionAtLeast(8))
       {
         builder.AddWindowsDesktopServices(requestDto.DataFolder);
@@ -77,29 +87,20 @@ public class RemoteControlHostManager(
         throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
       }
 
-      using var app = builder.Build();
-      await using var session = CreateRemoteControlSession(requestDto);
-      await app.RunAsync(session.CancellationTokenSource.Token);
-
-      _logger.LogInformation(
-        "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
-        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
-        requestDto.SessionId,
-        requestDto.ViewerConnectionId,
-        requestDto.TargetSystemSession,
-        requestDto.TargetProcessId,
-        requestDto.ViewerName);
-
-      _ = _sessions.TryRemove(requestDto.SessionId, out _);
+      var app = builder.Build();
+      var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+      appLifetime.ApplicationStopping.Register(() =>
+      {
+        HandleApplicationStopping(requestDto);
+      });
+      var session = CreateRemoteControlSession(requestDto, app);
+      await app.StartAsync(session.CancellationTokenSource.Token);
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling remote control request.");
-    }
-    finally
-    {
-      GC.Collect();
-      GC.WaitForPendingFinalizers();
+      return Result.Fail(ex, "An error occurred while starting the remote control session.");
     }
   }
 
@@ -130,39 +131,40 @@ public class RemoteControlHostManager(
     await session.CancellationTokenSource.CancelAsync();
   }
 
-  private RemoteControlSession CreateRemoteControlSession(RemoteControlRequestIpcDto requestDto)
+  public bool TryGetSession(Guid sessionId, [NotNullWhen(true)] out RemoteControlSession? session)
   {
-    var session = new RemoteControlSession();
+    return _sessions.TryGetValue(sessionId, out session);
+  }
+
+  private RemoteControlSession CreateRemoteControlSession(
+    RemoteControlRequestIpcDto requestDto,
+    IHost host)
+  {
+    var session = new RemoteControlSession(requestDto, host);
     return _sessions.AddOrUpdate(requestDto.SessionId, session, (_, value) =>
     {
       value.DisposeAsync().Forget();
       return session;
     });
   }
-  
-  private class OptionsMonitorWrapper<T>(T currentValue) : IOptionsMonitor<T>
+
+  private void HandleApplicationStopping(RemoteControlRequestIpcDto requestDto)
   {
-    public T CurrentValue => currentValue;
-
-    public T Get(string? name) => currentValue;
-    public IDisposable? OnChange(Action<T, string?> listener) => null;
-  }
-
-  private class RemoteControlSession : IAsyncDisposable
-  {
-    public CancellationTokenSource CancellationTokenSource { get; } = new();
-
-    public async ValueTask DisposeAsync()
+    if (_sessions.TryRemove(requestDto.SessionId, out var session))
     {
-      try
-      {
-        await CancellationTokenSource.CancelAsync();
-        CancellationTokenSource.Dispose();
-      }
-      catch
-      {
-        // Ignore.
-      }
+      session.DisposeAsync().Forget();
     }
+
+    _logger.LogInformation(
+      "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
+      "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
+      requestDto.SessionId,
+      requestDto.ViewerConnectionId,
+      requestDto.TargetSystemSession,
+      requestDto.TargetProcessId,
+      requestDto.ViewerName);
+
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
   }
 }

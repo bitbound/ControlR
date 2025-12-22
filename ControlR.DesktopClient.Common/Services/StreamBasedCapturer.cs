@@ -20,7 +20,13 @@ internal class StreamBasedCapturer(
     IDisplayManager displayManager,
     ILogger<StreamBasedCapturer> logger) : IDesktopCapturer
 {
-  private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(new BoundedChannelOptions(100) { FullMode = BoundedChannelFullMode.DropOldest });
+  private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(
+    new BoundedChannelOptions(capacity: 10)
+    {
+      SingleReader = true,
+      SingleWriter = true,
+      FullMode = BoundedChannelFullMode.Wait,
+    });
   private readonly SemaphoreSlim _displayLock = new(1, 1);
   private readonly TimeSpan _displayLockTimeout = TimeSpan.FromSeconds(5);
   private readonly IDisplayManager _displayManager = displayManager;

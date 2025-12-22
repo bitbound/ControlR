@@ -45,7 +45,7 @@ public class DesktopPreviewController : ControllerBase
 
     var requesterId = Guid.NewGuid();
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(10));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId);
 
     var desktopPreviewRequestDto = new DesktopPreviewRequestDto(
       requesterId,

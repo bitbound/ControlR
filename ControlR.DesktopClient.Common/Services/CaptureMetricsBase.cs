@@ -107,7 +107,7 @@ public class CaptureMetricsBase(IServiceProvider serviceProvider) : BackgroundSe
           Mbps,
           Fps,
           IsUsingGpu,
-          TimeSpan.Zero,
+          _timeProvider.GetUtcNow(),
           extraData);
 
         var message = new CaptureMetricsChangedMessage(metricsDto);

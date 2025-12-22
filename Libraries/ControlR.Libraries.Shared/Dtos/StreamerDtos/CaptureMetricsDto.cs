@@ -5,5 +5,5 @@ public record CaptureMetricsDto(
   double Mbps,
   double Fps,
   bool IsUsingGpu,
-  TimeSpan Latency,
+  DateTimeOffset Timestamp,
   Dictionary<string, string> ExtraData);

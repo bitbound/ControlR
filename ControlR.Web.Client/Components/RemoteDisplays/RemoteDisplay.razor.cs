@@ -25,6 +25,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   private double _canvasScale = 1;
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
+  private TimeSpan _currentLatency;
   private double _lastPinchDistance = -1;
   private double _lastTouch0X = -1;
   private double _lastTouch0Y = -1;
@@ -53,9 +54,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
   [Inject]
+  public required IViewerRemoteControlStream RemoteControlStream { get; init; }
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
-  public required IViewerStreamingClient StreamingClient { get; init; }
+  public required TimeProvider TimeProvider { get; init; }
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
@@ -77,7 +80,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     get
     {
-      var display = StreamingClient.IsConnected
+      var display = RemoteControlStream.IsConnected
         ? "display: unset;"
         : "display: none;";
 
@@ -136,42 +139,42 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
-    if (StreamingClient.State != WebSocketState.Open)
+    if (RemoteControlStream.State != WebSocketState.Open)
     {
       return;
     }
 
-    await StreamingClient.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
+    await RemoteControlStream.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
   }
   [JSInvokable]
   public async Task SendKeyboardStateReset()
   {
-    if (StreamingClient.State != WebSocketState.Open)
+    if (RemoteControlStream.State != WebSocketState.Open)
     {
       return;
     }
 
-    await StreamingClient.SendKeyboardStateReset(_componentClosing.Token);
+    await RemoteControlStream.SendKeyboardStateReset(_componentClosing.Token);
   }
   [JSInvokable]
   public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
   {
-    await StreamingClient.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
+    await RemoteControlStream.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
   }
   [JSInvokable]
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
   {
-    await StreamingClient.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
+    await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
   }
   [JSInvokable]
   public async Task SendPointerMove(double percentX, double percentY)
   {
-    await StreamingClient.SendPointerMove(percentX, percentY, _componentClosing.Token);
+    await RemoteControlStream.SendPointerMove(percentX, percentY, _componentClosing.Token);
   }
   [JSInvokable]
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
   {
-    await StreamingClient.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
+    await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
   }
   [JSInvokable]
   public async Task SetCurrentDisplay(DisplayDto display)
@@ -201,9 +204,9 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       await JsModule.InvokeVoidAsync("initialize", _componentRef, _canvasId);
 
-      if (StreamingClient.IsConnected)
+      if (RemoteControlStream.IsConnected)
       {
-        await StreamingClient.RequestKeyFrame(_componentClosing.Token);
+        await RemoteControlStream.RequestKeyFrame(_componentClosing.Token);
       }
     }
   }
@@ -221,7 +224,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
     }
 
-    _messageHandlerRegistration = StreamingClient.RegisterMessageHandler(this, HandleStreamerMessageReceived);
+    _messageHandlerRegistration = RemoteControlStream.RegisterMessageHandler(this, HandleRemoteControlDtoReceived);
 
     // The remote control session is already active, and we're switching back to this tab.
     if (RemoteControlState.SelectedDisplay is { } selectedDisplay)
@@ -253,7 +256,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     try
     {
       RemoteControlState.SelectedDisplay = display;
-      await StreamingClient.SendChangeDisplaysRequest(display.DisplayId, _componentClosing.Token);
+      await RemoteControlStream.SendChangeDisplaysRequest(display.DisplayId, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -357,8 +360,8 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
 
     var selectedDisplay = RemoteControlState.DisplayData
-                            .FirstOrDefault(x => x.IsPrimary)
-                          ?? RemoteControlState.DisplayData[0];
+      .FirstOrDefault(x => x.IsPrimary)
+      ?? RemoteControlState.DisplayData[0];
 
     RemoteControlState.SelectedDisplay = selectedDisplay;
 
@@ -396,7 +399,7 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
-      await StreamingClient.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
+      await RemoteControlStream.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -404,37 +407,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
   }
-  private void HandleScrollModeToggled(bool isEnabled)
-  {
-    RemoteControlState.IsScrollModeToggled = isEnabled;
-  }
-  private async Task HandleSendClipboardClicked()
-  {
-    try
-    {
-      var text = await ClipboardManager.GetText();
-      if (string.IsNullOrWhiteSpace(text))
-      {
-        Snackbar.Add("Clipboard is empty", Severity.Warning);
-        return;
-      }
-
-      if (RemoteControlState.CurrentSession is null)
-      {
-        return;
-      }
-
-      Snackbar.Add("Sending clipboard", Severity.Info);
-      await StreamingClient.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId,
-        _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while sending clipboard.");
-      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
-    }
-  }
-  private async Task HandleStreamerMessageReceived(DtoWrapper message)
+  private async Task HandleRemoteControlDtoReceived(DtoWrapper message)
   {
     try
     {
@@ -479,6 +452,7 @@ public partial class RemoteDisplay : JsInteropableComponent
           {
             var dto = message.GetPayload<CaptureMetricsDto>();
             _latestCaptureMetrics = dto;
+            _currentLatency = TimeProvider.GetUtcNow() - dto.Timestamp;
             await InvokeAsync(StateHasChanged);
             break;
           }
@@ -490,7 +464,37 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling unsigned DTO. Type: {DtoType}", message.DtoType);
+      Logger.LogError(ex, "Error while handling remote control DTO. Type: {DtoType}", message.DtoType);
+    }
+  }
+  private void HandleScrollModeToggled(bool isEnabled)
+  {
+    RemoteControlState.IsScrollModeToggled = isEnabled;
+  }
+  private async Task HandleSendClipboardClicked()
+  {
+    try
+    {
+      var text = await ClipboardManager.GetText();
+      if (string.IsNullOrWhiteSpace(text))
+      {
+        Snackbar.Add("Clipboard is empty", Severity.Warning);
+        return;
+      }
+
+      if (RemoteControlState.CurrentSession is null)
+      {
+        return;
+      }
+
+      Snackbar.Add("Sending clipboard", Severity.Info);
+      await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId,
+        _componentClosing.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending clipboard.");
+      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
   }
   private async Task HandleTypeClipboardClicked()
@@ -505,7 +509,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
 
       Snackbar.Add("Sending clipboard to type", Severity.Info);
-      await StreamingClient.SendTypeText(text, _componentClosing.Token);
+      await RemoteControlStream.SendTypeText(text, _componentClosing.Token);
     }
     catch (Exception ex)
     {
@@ -524,7 +528,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      if (RemoteControlState.CurrentSession is not {} currentSession)
+      if (RemoteControlState.CurrentSession is not { } currentSession)
       {
         Snackbar.Add("No active remote session", Severity.Error);
         return;
@@ -555,7 +559,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       await JsModuleReady.Wait(_componentClosing.Token);
 
-      if (StreamingClient.State != WebSocketState.Open)
+      if (RemoteControlStream.State != WebSocketState.Open)
       {
         return;
       }
@@ -608,7 +612,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       {
         var percentX = e.OffsetX / _canvasCssWidth;
         var percentY = e.OffsetY / _canvasCssHeight;
-        await StreamingClient.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, _componentClosing.Token);
+        await RemoteControlStream.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, _componentClosing.Token);
       }
     }
     catch (Exception ex)
@@ -726,7 +730,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     await JsModuleReady.Wait(_componentClosing.Token);
 
-    if (StreamingClient.State != WebSocketState.Open)
+    if (RemoteControlStream.State != WebSocketState.Open)
     {
       return;
     }
@@ -745,7 +749,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     await _typeLock.WaitAsync();
     try
     {
-      await StreamingClient.SendTypeText(text, _componentClosing.Token);
+      await RemoteControlStream.SendTypeText(text, _componentClosing.Token);
     }
     catch (Exception ex)
     {

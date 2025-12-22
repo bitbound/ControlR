@@ -17,7 +17,7 @@ public static class HostAppBuilderExtensions
 {
   public static IHostApplicationBuilder AddCommonDesktopServices(
     this IHostApplicationBuilder builder,
-    Action<StreamingSessionOptions> configureStartup)
+    Action<RemoteControlSessionOptions> configureStartup)
   {
     builder.Configuration.AddEnvironmentVariables();
 
@@ -34,7 +34,7 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IStreamEncoder, Vp9Encoder>()
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
-      .AddSingleton<IDesktopStreamingClient, DesktopStreamingClient>()
+      .AddSingleton<IDesktopRemoteControlStream, DesktopRemoteControlStream>()
       .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
       .AddSingleton<ISessionConsentService, SessionConsentService>()
@@ -42,7 +42,7 @@ public static class HostAppBuilderExtensions
       .AddTransient<StreamBasedCapturer>()
       .AddSingleton<IWaiter, Waiter>()
       .AddHostedService<HostLifetimeEventResponder>()
-      .AddHostedService(x => x.GetRequiredService<IDesktopStreamingClient>())
+      .AddHostedService<RemoteControlSessionInitializer>()
       .Configure(configureStartup);
 
     return builder;

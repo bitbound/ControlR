@@ -19,12 +19,13 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Common.Services;
 
-public interface IDesktopStreamingClient : IHostedService
+public interface IDesktopRemoteControlStream : IAsyncDisposable
 {
   Task SendCurrentClipboardText();
+  Task StreamScreen(CancellationToken cancellationToken);
 }
 
-internal sealed class DesktopStreamingClient(
+internal sealed class DesktopRemoteControlStream(
   TimeProvider timeProvider,
   IMessenger messenger,
   IHostApplicationLifetime appLifetime,
@@ -36,23 +37,28 @@ internal sealed class DesktopStreamingClient(
   IInputSimulator inputSimulator,
   IDisplayManager displayManager,
   IWaiter waiter,
-  IOptions<StreamingSessionOptions> startupOptions,
-  ILogger<DesktopStreamingClient> logger)
-  : StreamingClient(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopStreamingClient
+  IOptions<RemoteControlSessionOptions> startupOptions,
+  ILogger<DesktopRemoteControlStream> logger)
+  : RemoteControlStream(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopRemoteControlStream
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
-  private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.Create();
+  private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
-  private readonly ILogger<DesktopStreamingClient> _logger = logger;
+  private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
-  private readonly IOptions<StreamingSessionOptions> _startupOptions = startupOptions;
+  private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
 
   private IDisposable? _messageHandlerRegistration;
-  private Task? _streamTask;
 
+  public async ValueTask DisposeAsync()
+  {
+    await Close();
+    _messageHandlerRegistration?.Dispose();
+    await _desktopCapturer.DisposeAsync();
+  }
   public async Task SendCurrentClipboardText()
   {
     try
@@ -67,13 +73,14 @@ internal sealed class DesktopStreamingClient(
       _logger.LogError(ex, "Error while sending clipboard text.");
     }
   }
-  public async Task StartAsync(CancellationToken cancellationToken)
+  public async Task StreamScreen(CancellationToken cancellationToken)
   {
+    var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
+        ? vn
+        : Localization.ADeviceAdministrator;
+
     try
     {
-      var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
-          ? vn
-          : Localization.ADeviceAdministrator;
 
       if (_startupOptions.Value.RequireConsent)
       {
@@ -98,11 +105,11 @@ internal sealed class DesktopStreamingClient(
 
       if (_startupOptions.Value.NotifyUser)
       {
-        var message = string.Format(Localization.RemoteControlSessionToastMessage, viewerName);
+        var message = string.Format(Localization.RemoteControlSessionStartToastMessage, viewerName);
         await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
       }
 
-      _streamTask = StreamScreenToViewer(_appLifetime.ApplicationStopping);
+      await StreamScreenToViewer(_appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {
@@ -110,26 +117,23 @@ internal sealed class DesktopStreamingClient(
         ex,
         "Error while initializing remote control session. " +
         "Remote control cannot start.  Shutting down.");
+    }
+    finally
+    {
+      if (_startupOptions.Value.NotifyUser)
+      {
+        var message = string.Format(Localization.RemoteControlSessionEndToastMessage, viewerName);
+        await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
+      }
       _appLifetime.StopApplication();
     }
-  }
-  public async Task StopAsync(CancellationToken cancellationToken)
-  {
-    await Close();
-    _messageHandlerRegistration?.Dispose();
-    if (_streamTask is not null)
-    {
-      await _streamTask.WaitAsync(cancellationToken);
-    }
-    await _desktopCapturer.DisposeAsync();
   }
 
   private async Task HandleCaptureMetricsChanged(object subscriber, CaptureMetricsChangedMessage message)
   {
     try
     {
-      var metricsDto = message.MetricsDto with { Latency = CurrentLatency };
-      var wrapper = DtoWrapper.Create(metricsDto, DtoType.CaptureMetricsChanged);
+      var wrapper = DtoWrapper.Create(message.MetricsDto, DtoType.CaptureMetricsChanged);
       await Send(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (OperationCanceledException ex)

@@ -40,7 +40,7 @@ public partial class RemoteControl : ViewportAwareComponent
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
-  public required IViewerStreamingClient StreamingClient { get; init; }
+  public required IViewerRemoteControlStream StreamingClient { get; init; }
 
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }

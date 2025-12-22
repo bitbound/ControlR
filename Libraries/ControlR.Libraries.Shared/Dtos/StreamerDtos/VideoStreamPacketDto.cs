@@ -1,7 +1,8 @@
-using System.Buffers;
-using MessagePack;
-
 namespace ControlR.Libraries.Shared.Dtos.StreamerDtos;
 
-[MessagePackObject(keyAsPropertyName: true)]
-public record VideoStreamPacketDto(byte[] PacketData, long Timestamp);
+[MessagePackObject]
+public record VideoStreamPacketDto(
+  [property: Key(0)]
+  byte[] PacketData,
+  [property: Key(1)]
+  long Timestamp);

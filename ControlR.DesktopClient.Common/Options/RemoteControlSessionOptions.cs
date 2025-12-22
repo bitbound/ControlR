@@ -2,7 +2,7 @@
 
 namespace ControlR.DesktopClient.Common.Options;
 
-public class StreamingSessionOptions
+public class RemoteControlSessionOptions
 {
   private Uri? _serverOrigin;
   private Uri? _webSocketUri;
@@ -17,6 +17,7 @@ public class StreamingSessionOptions
     set => _serverOrigin = value;
   }
   public Guid SessionId { get; set; }
+  public string? ViewerConnectionId { get; set; }
   public string? ViewerName { get; set; }
   public Uri WebSocketUri
   {

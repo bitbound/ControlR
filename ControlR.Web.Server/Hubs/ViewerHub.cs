@@ -340,7 +340,11 @@ public class ViewerHub(
         sessionRequestDto = sessionRequestDto with { NotifyUserOnSessionStart = notifyUser };
       }
 
-      sessionRequestDto = sessionRequestDto with { ViewerName = displayName };
+      sessionRequestDto = sessionRequestDto with
+      {
+        ViewerName = displayName,
+        ViewerConnectionId = Context.ConnectionId
+      };
 
       return await _agentHub.Clients
         .Client(device.ConnectionId)

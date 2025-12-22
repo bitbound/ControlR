@@ -4,6 +4,7 @@ using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
@@ -155,10 +156,9 @@ public class DesktopClientRpcService(
             _logger.LogError(ex, "Error while handling chat message.");
         }
     }
-    public Task ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
+    public Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
     {
-        _remoteControlHostManager.StartHost(dto).Forget();
-        return Task.CompletedTask;
+        return _remoteControlHostManager.StartHost(dto);
     }
     public async Task ShutdownDesktopClient(ShutdownCommandDto dto)
     {

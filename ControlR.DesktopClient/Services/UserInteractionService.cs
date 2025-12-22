@@ -15,8 +15,8 @@ public class UserInteractionService(IDialogProvider dialogProvider) : IUserInter
     return await Dispatcher.UIThread.InvokeAsync(async () =>
     {
       var result = await _dialogProvider.ShowMessageBox(
-        string.Format(Localization.RemoteControlRequestMessage, requesterName),
         Localization.RemoteControlRequestTitle,
+        string.Format(Localization.RemoteControlRequestMessage, requesterName),
         MessageBoxButtons.YesNo);
 
       return result == MessageBoxResult.Yes;

@@ -72,7 +72,6 @@ internal class ChatSessionManager(
 
         if (notifyUser)
         {
-          // Show toast notification
           await _toaster.ShowToast(
             title: Localization.ChatSessionClosedToastTitle,
             message: Localization.ChatSessionClosedToastMessage,

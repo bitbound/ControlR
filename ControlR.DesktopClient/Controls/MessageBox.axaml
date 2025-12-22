@@ -8,7 +8,7 @@
         xmlns:common="using:ControlR.DesktopClient.Common"
         x:DataType="vm:MessageBoxViewModel"
         Icon="/Assets/appicon.ico"
-        Title="{Binding Caption}"
+        Title="{Binding Title}"
         Topmost="True"
         ShowActivated="True"
         SizeToContent="WidthAndHeight" MinWidth="300" MinHeight="100"
