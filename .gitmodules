@@ -1,4 +1,4 @@
 [submodule "ControlR.Web.Server/novnc"]
 	path = ControlR.Web.Server/novnc
-	url = git@github.com:bitbound/noVNC.git
-	branch = touchpad-mode
+	url = https://github.com/novnc/noVNC.git
+	branch = master

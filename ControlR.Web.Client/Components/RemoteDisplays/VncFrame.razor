@@ -1,26 +1,32 @@
 ﻿@using ControlR.Libraries.Shared.Dtos.RemoteControlDtos
+@using ControlR.Libraries.WebSocketRelay.Client
 @if (_loading)
 {
   <div class="w-100 text-center mt-8">
     <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
       Loading
     </MudText>
-    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large"/>
+    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
   </div>
 }
 else if (_noVncUri is not null)
 {
-  <div class="w-100 h-100">
-    <iframe class="w-100 h-100" src=@(_noVncUri)></iframe>
+  <div class="main-grid">
+    <div>
+      <MudTooltip Text="Reload">
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Primary"
+                       OnClick="RequestStreamingSessionFromAgent" />
+      </MudTooltip>
+    </div>
+    <div>
+      <iframe class="w-100 h-100" src=@(_noVncUri)></iframe>
+    </div>
   </div>
 }
 
 @code {
-  private readonly Guid _sessionId = Guid.NewGuid();
-  private readonly string _accessToken = RandomGenerator.CreateAccessToken();
   private bool _loading = true;
-
-  private Uri? _websocketUri;
   private Uri? _noVncUri;
 
   [Parameter]
@@ -49,6 +55,9 @@ else if (_noVncUri is not null)
   public required ISnackbar Snackbar { get; init; }
 
   [Inject]
+  public required ITenantSettingsProvider TenantSettings { get; init; }
+
+  [Inject]
   public required ILogger<VncFrame> Logger { get; init; }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -70,31 +79,51 @@ else if (_noVncUri is not null)
   {
     try
     {
+      _loading = true;
       Snackbar.Add("Connecting", Severity.Info);
+      await InvokeAsync(StateHasChanged);
 
-      var serverUri = new Uri(NavManager.BaseUri);
-      _websocketUri = new Uri(
-          serverUri,
-          $"relay?sessionId={_sessionId}&accessToken={_accessToken}&timeout=30")
-        .ToWebsocketUri();
+      var sessionId = Guid.NewGuid();
+      var accessToken = RandomGenerator.CreateAccessToken();
 
-      var relayPath = $"relay?sessionId={_sessionId}&accessToken={_accessToken}&timeout=30";
-      var encodedPath = Uri.EscapeDataString(relayPath);
+      var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
+
+      var viewerRelayUri = RelayUriBuilder.Build(
+        baseUri: serverUri,
+        path: AppConstants.WebSocketRelayPath,
+        sessionId: sessionId,
+        accessToken: accessToken,
+        role: RelayRole.Requester,
+        timeoutSeconds: 30);
+
+      var encodedPath = Uri.EscapeDataString(viewerRelayUri.PathAndQuery);
+
       _noVncUri = new Uri(serverUri,
-        $"novnc/vnc.html?path={encodedPath}&show_dot=true&resize=scale&autoconnect=true");
+      $"novnc/vnc.html?path={encodedPath}&resize=scale&autoconnect=true");
 
+      Logger.LogInformation("Resolved NoVNC relay URI: {NoVncUri}", _noVncUri);
       Logger.LogInformation("Creating streaming session.");
 
-      Logger.LogInformation("Resolved WS relay origin: {RelayOrigin}", _websocketUri.Authority);
+      var tenantNotifyUser = await TenantSettings.GetNotifyUserOnSessionStart();
+      var notifyUser = tenantNotifyUser ?? await UserSettings.GetNotifyUserOnSessionStart();
 
-      var notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
+      var deviceRelayUri = RelayUriBuilder.Build(
+        baseUri: serverUri,
+        path: AppConstants.WebSocketRelayPath,
+        sessionId: sessionId,
+        accessToken: accessToken,
+        role: RelayRole.Responder,
+        timeoutSeconds: 30);
+
+      Logger.LogInformation("Resolved device relay URI: {DeviceRelayUri}", deviceRelayUri);
+
       var requestDto = new VncSessionRequestDto(
-        _sessionId,
-        _websocketUri,
-        MainHub.ConnectionId ?? string.Empty,
-        Device.Id,
-        notifyUser);
-      
+      sessionId,
+      deviceRelayUri,
+      MainHub.ConnectionId ?? string.Empty,
+      Device.Id,
+      notifyUser);
+
       var sessionResult = await MainHub.Server.RequestVncSession(Device.Id, requestDto);
 
       if (!sessionResult.IsSuccess)
@@ -115,5 +144,4 @@ else if (_noVncUri is not null)
       await InvokeAsync(StateHasChanged);
     }
   }
-
 }
