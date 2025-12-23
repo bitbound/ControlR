@@ -214,7 +214,7 @@ internal class ScreenGrabberWayland(
         var stream = _streamFactory.Create(streamInfo.NodeId, connection.Value.Fd, logicalWidth, logicalHeight);
 
         // Map this stream to the display device name (which matches the index)
-        var deviceName = i.ToString();
+        var deviceName = streamInfo.StreamIndex.ToString();
         _streams[deviceName] = stream;
 
         // Wait for the stream to start and have frames available

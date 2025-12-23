@@ -16,7 +16,6 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
   private Connection? _connection;
   private bool _disposed;
 
-
   private Connection Connection => _connection
     ?? throw new InvalidOperationException("DBus connection is not established.");
 
@@ -244,7 +243,11 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
     try
     {
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyPointerMotionAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), dx, dy).ConfigureAwait(false);
+      await proxy.NotifyPointerMotionAsync(
+        new ObjectPath(sessionHandle), 
+        new Dictionary<string, object>(), 
+        dx, 
+        dy).ConfigureAwait(false);
       return Result.Ok();
     }
     catch (Exception ex)
@@ -417,6 +420,7 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
                 var props = streamTuple.Item2;
                 streams.Add(new PipeWireStreamInfo
                 {
+                  StreamIndex = streams.Count,
                   NodeId = nodeId,
                   Properties = new Dictionary<string, object>(props)
                 });
@@ -428,6 +432,7 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
                 var props = dict[1] as IDictionary<string, object> ?? new Dictionary<string, object>();
                 streams.Add(new PipeWireStreamInfo
                 {
+                  StreamIndex = streams.Count,
                   NodeId = nodeId,
                   Properties = new Dictionary<string, object>(props)
                 });
@@ -436,7 +441,7 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
               else
               {
                 var entryType = entry?.GetType();
-                var fields = entryType?.GetFields() ?? Array.Empty<System.Reflection.FieldInfo>();
+                var fields = entryType?.GetFields() ?? [];
                 if (fields.Length >= 2)
                 {
                   var nodeId = Convert.ToUInt32(fields[0].GetValue(entry));
@@ -444,6 +449,7 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
                   var props = propsObj as IDictionary<string, object> ?? new Dictionary<string, object>();
                   streams.Add(new PipeWireStreamInfo
                   {
+                    StreamIndex = streams.Count,
                     NodeId = nodeId,
                     Properties = new Dictionary<string, object>(props)
                   });
@@ -469,125 +475,6 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
     {
       _logger.LogError(ex, "Error starting RemoteDesktop");
       return Result.Fail<RemoteDesktopStartResult>($"Exception starting RemoteDesktop: {ex.Message}");
-    }
-  }
-
-  public async Task<Result<ScreenCastStartResult>> StartScreenCastAsync(
-    string sessionHandle,
-    string parentWindow = "",
-    CancellationToken ct = default)
-  {
-    try
-    {
-      _logger.LogInformation("Starting ScreenCast session: {Session}", sessionHandle);
-      var requestToken = $"controlr_request_{Guid.NewGuid():N}";
-
-      var options = new Dictionary<string, object>
-      {
-        ["handle_token"] = requestToken
-      };
-
-      var proxy = Connection.CreateProxy<IScreenCast>(PortalBusName, PortalObjectPath);
-      var requestPath = await proxy.StartAsync(new ObjectPath(sessionHandle), parentWindow, options).ConfigureAwait(false);
-
-      var (response, results) = await WaitForResponseAsync(requestPath.ToString(), TimeSpan.FromSeconds(180), ct).ConfigureAwait(false);
-
-      _logger.LogInformation("Received ScreenCast Start response: {Response}", response);
-
-      if (response != 0)
-      {
-        return Result.Fail<ScreenCastStartResult>($"Start failed with response code {response}. User may have denied permission.");
-      }
-
-      var streams = new List<PipeWireStreamInfo>();
-      string? restoreToken = null;
-
-      if (results.TryGetValue("restore_token", out var tokenObj) && tokenObj is string token)
-      {
-        restoreToken = token;
-      }
-      if (results.TryGetValue("streams", out var streamsObj))
-      {
-        _logger.LogDebug("Parsing streams from response. Type: {Type}", streamsObj?.GetType().FullName ?? "null");
-
-        if (streamsObj is System.Collections.IEnumerable enumerable)
-        {
-          foreach (var entry in enumerable)
-          {
-            try
-            {
-              _logger.LogDebug("Stream entry type: {Type}", entry?.GetType().FullName ?? "null");
-
-              // Try different possible formats
-              if (entry is ValueTuple<uint, IDictionary<string, object>> streamTuple)
-              {
-                var nodeId = streamTuple.Item1;
-                var props = streamTuple.Item2;
-                streams.Add(new PipeWireStreamInfo
-                {
-                  NodeId = nodeId,
-                  Properties = new Dictionary<string, object>(props)
-                });
-                _logger.LogInformation("ScreenCast stream: NodeId={NodeId}", nodeId);
-              }
-              else if (entry is System.Collections.IDictionary dict)
-              {
-                // DBus might return it as a dictionary with index keys
-                if (dict.Contains(0) && dict.Contains(1))
-                {
-                  var nodeId = Convert.ToUInt32(dict[0]);
-                  var props = dict[1] as IDictionary<string, object> ?? new Dictionary<string, object>();
-                  streams.Add(new PipeWireStreamInfo
-                  {
-                    NodeId = nodeId,
-                    Properties = new Dictionary<string, object>(props)
-                  });
-                  _logger.LogInformation("ScreenCast stream: NodeId={NodeId}", nodeId);
-                }
-              }
-              else if (entry != null)
-              {
-                // Try to use reflection to get the fields
-                var entryType = entry.GetType();
-                var fields = entryType.GetFields();
-                if (fields.Length >= 2)
-                {
-                  var nodeId = Convert.ToUInt32(fields[0].GetValue(entry));
-                  var propsObj = fields[1].GetValue(entry);
-                  var props = propsObj as IDictionary<string, object> ?? new Dictionary<string, object>();
-                  streams.Add(new PipeWireStreamInfo
-                  {
-                    NodeId = nodeId,
-                    Properties = new Dictionary<string, object>(props)
-                  });
-                  _logger.LogInformation("ScreenCast stream: NodeId={NodeId}", nodeId);
-                }
-              }
-            }
-            catch (Exception parseEx)
-            {
-              _logger.LogWarning(parseEx, "Failed parsing a stream entry");
-            }
-          }
-        }
-      }
-      else
-      {
-        _logger.LogWarning("No 'streams' key found in results. Available keys: {Keys}", string.Join(", ", results.Keys));
-      }
-
-      if (streams.Count == 0)
-      {
-        return Result.Fail<ScreenCastStartResult>("Start succeeded but no streams returned");
-      }
-
-      _logger.LogInformation("Successfully started ScreenCast with {Count} streams", streams.Count);
-      return Result.Ok(new ScreenCastStartResult { Streams = streams, RestoreToken = restoreToken });
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error starting ScreenCast");
-      return Result.Fail<ScreenCastStartResult>($"Exception starting ScreenCast: {ex.Message}");
     }
   }
 
@@ -648,9 +535,6 @@ public class XdgDesktopPortal(ILogger logger) : IDisposable
       _connection = new Connection(Address.Session);
       await _connection.ConnectAsync().ConfigureAwait(false);
       _logger.LogDebug("Connected to DBus session bus");
-
-      // Note: We'll subscribe to signals on a per-request basis in CallPortalMethodAsync
-      // The high-level Tmds.DBus doesn't have a global WatchSignalAsync method
     }
     catch (Exception ex)
     {

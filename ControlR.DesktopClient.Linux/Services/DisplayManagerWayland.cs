@@ -41,8 +41,8 @@ internal class DisplayManagerWayland(
     
     var display = findResult.Value;
     var bounds = display.MonitorArea;
-    var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
-    var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
+    var absoluteX = (int)(bounds.Width * percentX);
+    var absoluteY = (int)(bounds.Height * percentY);
 
     return new Point(absoluteX, absoluteY);
   }
@@ -161,7 +161,7 @@ internal class DisplayManagerWayland(
             MonitorArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
             WorkArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
             IsPrimary = i == 0,
-            ScaleFactor = 1.0 // Will be updated by ScreenGrabber when stream is created
+            ScaleFactor = 1.0
           };
 
           _displays[display.DeviceName] = display;

@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
@@ -23,17 +25,21 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// </summary>
 public class InputSimulatorWayland(
   IWaylandPortalAccessor portalAccessor,
+  IDesktopCapturerFactory desktopCapturerFactory,
   ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
+  private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
   private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
 
+
   private bool _disposed;
   private bool _isInitialized;
   private XdgDesktopPortal? _portal;
+  private ConcurrentDictionary<int, PipeWireStreamInfo> _screenCastStreams = new();
   private string? _sessionHandle;
-  private uint _streamNodeId;
+
 
   public void Dispose()
   {
@@ -45,6 +51,8 @@ public class InputSimulatorWayland(
     _initLock?.Dispose();
     _disposed = true;
   }
+
+
   public async Task InvokeKeyEvent(string key, string? code, bool isPressed)
   {
     if (!await EnsureInitializedAsync())
@@ -64,7 +72,7 @@ public class InputSimulatorWayland(
         }
         return;
       }
-      
+
       var keycode = LinuxKeycodeMapper.BrowserCodeToLinuxKeycode(code);
       if (keycode < 0)
       {
@@ -82,6 +90,8 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating key event on Wayland: {Code}", code);
     }
   }
+
+
   public async Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
     if (!await EnsureInitializedAsync())
@@ -103,6 +113,8 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating mouse button event on Wayland");
     }
   }
+
+
   public async Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
     if (!await EnsureInitializedAsync())
@@ -119,9 +131,26 @@ public class InputSimulatorWayland(
       {
         case MovePointerType.Absolute:
           {
+            var selectedDisplayResult = await _desktopCapturer.TryGetSelectedDisplay();
+            if (!selectedDisplayResult.IsSuccess)
+            {
+              _logger.LogWarning("Cannot move pointer absolutely: no display selected");
+              return;
+            }
+
+            if (!int.TryParse(selectedDisplayResult.Value.DeviceName, out var deviceIndex))
+            {
+              _logger.LogWarning("Cannot move pointer absolutely: invalid display device name {DeviceName}", selectedDisplayResult.Value.DeviceName);
+              return;
+            }
+            if (!_screenCastStreams.TryGetValue(deviceIndex, out var streamInfo))
+            {
+              _logger.LogWarning("Cannot move pointer absolutely: no stream info for display index {DeviceIndex}", deviceIndex);
+              return;
+            }
             await _portal.NotifyPointerMotionAbsoluteAsync(
               _sessionHandle,
-              _streamNodeId,
+              streamInfo.NodeId,
               coordinates.AbsolutePoint.X,
               coordinates.AbsolutePoint.Y);
             break;
@@ -140,12 +169,16 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating pointer motion on Wayland");
     }
   }
+
+
   public Task ResetKeyboardState()
   {
     // Not applicable for Wayland RemoteDesktop portal
     _logger.LogDebug("Keyboard state reset not applicable on Wayland");
     return Task.CompletedTask;
   }
+
+
   public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
     if (!await EnsureInitializedAsync())
@@ -178,10 +211,14 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error simulating scroll wheel on Wayland");
     }
   }
+
+
   public Task SetBlockInput(bool isBlocked)
   {
     throw new NotImplementedException("Input blocking is not supported on Wayland");
   }
+
+
   public async Task TypeText(string text)
   {
     if (!await EnsureInitializedAsync())
@@ -225,6 +262,7 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error typing text on Wayland");
     }
   }
+
 
   private static (int Keycode, bool NeedsShift) CharacterToKeycode(char ch)
   {
@@ -272,6 +310,7 @@ public class InputSimulatorWayland(
     };
   }
 
+
   private async Task<bool> EnsureInitializedAsync()
   {
     if (_isInitialized && _portal is not null && _sessionHandle is not null)
@@ -298,13 +337,14 @@ public class InputSimulatorWayland(
       _sessionHandle = remoteDesktopSession.Value.SessionHandle;
 
       var screenCastStreams = await _portalAccessor.GetScreenCastStreams();
-      if (screenCastStreams.Count > 0)
+      foreach (var stream in screenCastStreams)
       {
-        _streamNodeId = screenCastStreams[0].NodeId;
+        _screenCastStreams[stream.StreamIndex] = stream;
       }
-      else
+
+      if (_screenCastStreams.IsEmpty)
       {
-        _logger.LogWarning("No ScreenCast streams available. Absolute positioning may not work.");
+        _logger.LogError("No ScreenCast streams available. Absolute positioning will not work.");
       }
 
       _isInitialized = true;

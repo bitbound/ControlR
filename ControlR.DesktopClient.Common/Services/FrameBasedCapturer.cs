@@ -123,7 +123,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
       yield return DtoWrapper.Create(region, DtoType.ScreenRegion);
     }
   }
-  
+
   public Task RequestKeyFrame()
   {
     _forceKeyFrame = true;
@@ -140,7 +140,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
   public async Task<Result<DisplayInfo>> TryGetSelectedDisplay()
   {
     using var locker = await _displayLock.AcquireLockAsync(_displayLockTimeout);
-    if (_selectedDisplay is {} selected){
+    if (_selectedDisplay is { } selected)
+    {
       return Result.Ok(selected);
     }
     return Result.Fail<DisplayInfo>("No display selected.");
@@ -233,10 +234,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   private DisplayInfo? GetSelectedDisplay()
   {
     using var locker = _displayLock.AcquireLock(_displayLockTimeout);
-    lock (_displayLock)
-    {
-      return _selectedDisplay;
-    }
+    return _selectedDisplay;
   }
 
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
@@ -332,10 +330,10 @@ internal class FrameBasedCapturer : IDesktopCapturer
           selectedDisplay = primaryDisplay;
         }
 
-          using var currentCapture = await _screenGrabber.CaptureDisplay(
-              targetDisplay: selectedDisplay,
-              captureCursor: false,
-              forceKeyFrame: _forceKeyFrame);
+        using var currentCapture = await _screenGrabber.CaptureDisplay(
+            targetDisplay: selectedDisplay,
+            captureCursor: false,
+            forceKeyFrame: _forceKeyFrame);
 
         if (currentCapture.HadNoChanges && !_forceKeyFrame)
         {
