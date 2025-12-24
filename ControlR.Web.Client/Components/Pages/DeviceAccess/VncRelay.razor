@@ -1,0 +1,51 @@
+@attribute [Route(ClientRoutes.DeviceAccessVncRelay)]
+@layout DeviceAccessLayout
+@using ControlR.Libraries.Shared.Dtos.RemoteControlDtos
+@using ControlR.Libraries.WebSocketRelay.Client
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+@attribute [Authorize]
+
+<div class="h-100 w-100 d-flex flex-column">
+  @if (_loading)
+  {
+  <div class="w-100 text-center mt-8">
+    <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+      Connecting
+    </MudText>
+    <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+  </div>
+  }
+  else if (_noVncUri is not null)
+  {
+  <div class="d-flex flex-column h-100">
+    <div class="d-flex gap-4 pa-2 flex-row-reverse">
+      <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="Disconnect">
+        Disconnect
+      </MudButton>
+    </div>
+    <div class="flex-grow-1">
+      <iframe class="w-100 h-100" src=@(_noVncUri) frameborder="0"></iframe>
+    </div>
+  </div>
+  }
+  else
+  {
+  <div class="d-flex flex-column align-center justify-center h-100 gap-4">
+    <MudText Typo="Typo.h4">VNC Relay</MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Info">
+      A VNC server must be running on the remote device and accept connections from loopback/localhost.
+    </MudText>
+    <MudPaper Class="pa-8 d-flex flex-column gap-4" Elevation="4" Width="400px">
+      <MudNumericField @bind-Value="_port" Label="VNC Port" Variant="Variant.Outlined" Min="1" Max="65535" />
+      <div class="d-flex gap-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="RequestStreamingSessionFromAgent">
+          Connect
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true" OnClick="TestConnection">
+          Test
+        </MudButton>
+      </div>
+    </MudPaper>
+  </div>
+  }
+</div>

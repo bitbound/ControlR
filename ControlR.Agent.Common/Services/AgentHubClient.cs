@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Threading.Channels;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models.Messages;
@@ -607,14 +608,13 @@ internal class AgentHubClient(
         dto.DirectoryPath);
 
       var result = await _fileManager.GetDirectoryContents(dto.DirectoryPath);
-      var chunkSize = _settings.HubDtoChunkSize > 0 ? _settings.HubDtoChunkSize : 400;
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
       await _hubConnection.StreamData(
         nameof(IAgentHub.SendDirectoryContentsStream),
         [dto.StreamId, result.DirectoryExists],
         result.Entries,
-        chunkSize,
+        AppConstants.DefaultHubDtoChunkSize,
         100,
         cts.Token);
 
@@ -635,14 +635,13 @@ internal class AgentHubClient(
       _logger.LogInformation("Streaming subdirectories for {DeviceId}: {DirectoryPath}", dto.DeviceId,
         dto.DirectoryPath);
       var subdirs = await _fileManager.GetSubdirectories(dto.DirectoryPath);
-      var chunkSize = _settings.HubDtoChunkSize > 0 ? _settings.HubDtoChunkSize : 400;
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
       await _hubConnection.StreamData(
         nameof(IAgentHub.SendSubdirectoriesStream),
         [dto.StreamId],
         subdirs,
-        chunkSize,
+        AppConstants.DefaultHubDtoChunkSize,
         100,
         cts.Token);
 
@@ -652,6 +651,20 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error streaming subdirectories for {DirectoryPath}", dto.DirectoryPath);
       return Result.Fail("An error occurred while streaming subdirectories.");
+    }
+  }
+
+  public async Task<Result> TestVncConnection(int port)
+  {
+    try
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      return await _localProxy.TestConnection(port, cts.Token);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while testing VNC connection on port {Port}", port);
+      return Result.Fail("An error occurred while testing VNC connection.");
     }
   }
 

@@ -9,6 +9,7 @@ public static class ClientRoutes
   public const string DeviceAccessFileSystem = $"{DeviceAccess}/file-system";
   public const string DeviceAccessRemoteControl = $"{DeviceAccess}/remote-control";
   public const string DeviceAccessTerminal = $"{DeviceAccess}/terminal";
+  public const string DeviceAccessVncRelay = $"{DeviceAccess}/vnc-relay";
   public const string Home = "/";
   public const string InstallerKeys = "/installer-keys";
   public const string Invite = "/invite";

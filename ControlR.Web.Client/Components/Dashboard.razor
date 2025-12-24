@@ -47,7 +47,7 @@
 
               <MudMenuItem Icon="@(Icons.Material.Filled.Computer)" IconColor="Color.Info"
                            OnClick="@(() => LaunchDeviceAccess(context.Item))">
-                Remote Access
+                Device Access
               </MudMenuItem>
 
               @if (context.Item.IsOnline)
@@ -56,22 +56,6 @@
                   OnClick="@(() => LaunchRemoteControl(context.Item))">
                   Remote Control
                 </MudMenuItem>
-
-                @if (context.Item.Platform == SystemPlatform.Linux)
-                {
-                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
-                    OnClick="@(() => VncConnectClicked(context.Item))">
-                    VNC Proxy
-                  </MudMenuItem>
-                }
-
-                @if (context.Item.Platform == SystemPlatform.MacOs)
-                {
-                  <MudMenuItem Icon="@(Icons.Material.Filled.ConnectedTv)" IconColor="Color.Info"
-                    OnClick="@(() => VncConnectClicked(context.Item))">
-                    Apple ScreenShare
-                  </MudMenuItem>
-                }
 
                 <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)" IconColor="Color.Success"
                   OnClick="@(() => RefreshDeviceInfo(context.Item))">

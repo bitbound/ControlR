@@ -10,11 +10,9 @@ public interface ISettingsProvider
 {
   Guid DeviceId { get; }
   bool DisableAutoUpdate { get; }
-  int HubDtoChunkSize { get; }
   string InstanceId { get; }
   Uri ServerUri { get; }
   Guid TenantId { get; }
-  int VncPort { get; }
   string GetAppSettingsPath();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
@@ -34,11 +32,6 @@ internal class SettingsProvider(
   private readonly SemaphoreSlim _updateLock = new(1, 1);
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
   public bool DisableAutoUpdate => _developerOptions.CurrentValue.DisableAutoUpdate;
-
-  public int HubDtoChunkSize => _appOptions.CurrentValue.HubDtoChunkSize is > 0
-    ? _appOptions.CurrentValue.HubDtoChunkSize.Value
-    : 100;
-
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
 
   public Uri ServerUri =>
@@ -49,8 +42,6 @@ internal class SettingsProvider(
   public Guid TenantId => _appOptions.CurrentValue.TenantId == default
     ? throw new InvalidOperationException("Tenant ID is not configured correctly.")
     : _appOptions.CurrentValue.TenantId;
-
-  public int VncPort => _appOptions.CurrentValue.VncPort ?? AppConstants.DefaultVncPort;
 
   public string GetAppSettingsPath()
   {

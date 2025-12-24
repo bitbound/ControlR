@@ -371,18 +371,6 @@ public partial class Dashboard
     }
   }
 
-  private Task VncConnectClicked(DeviceViewModel device)
-  {
-    WindowStore.AddContentInstance<VncFrame>(
-      device,
-      DeviceContentInstanceType.VncFrame,
-      new Dictionary<string, object?>
-      {
-        [nameof(VncFrame.Device)] = device
-      });
-    return Task.CompletedTask;
-  }
-
   private async Task WakeDevice(DeviceViewModel device)
   {
     try

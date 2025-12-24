@@ -89,9 +89,9 @@ public class RemoteControlHostManager(
 
       var app = builder.Build();
       var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-      appLifetime.ApplicationStopping.Register(() =>
+      appLifetime.ApplicationStopping.Register(async () =>
       {
-        HandleApplicationStopping(requestDto);
+        await HandleApplicationStopping(requestDto);
       });
       var session = CreateRemoteControlSession(requestDto, app);
       await app.StartAsync(session.CancellationTokenSource.Token);
@@ -148,23 +148,30 @@ public class RemoteControlHostManager(
     });
   }
 
-  private void HandleApplicationStopping(RemoteControlRequestIpcDto requestDto)
+  private async Task HandleApplicationStopping(RemoteControlRequestIpcDto requestDto)
   {
-    if (_sessions.TryRemove(requestDto.SessionId, out var session))
+    try
     {
-      session.DisposeAsync().Forget();
+      if (_sessions.TryRemove(requestDto.SessionId, out var session))
+      {
+        await session.DisposeAsync();
+      }
+
+      _logger.LogInformation(
+        "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
+        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
+        requestDto.SessionId,
+        requestDto.ViewerConnectionId,
+        requestDto.TargetSystemSession,
+        requestDto.TargetProcessId,
+        requestDto.ViewerName);
+
+      GC.Collect();
+      GC.WaitForPendingFinalizers();
     }
-
-    _logger.LogInformation(
-      "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
-      "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
-      requestDto.SessionId,
-      requestDto.ViewerConnectionId,
-      requestDto.TargetSystemSession,
-      requestDto.TargetProcessId,
-      requestDto.ViewerName);
-
-    GC.Collect();
-    GC.WaitForPendingFinalizers();
+    catch (Exception ex) 
+    {
+      _logger.LogError(ex, "Error during remote control session shutdown.");
+    }
   }
 }

@@ -15,8 +15,6 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
 
   public Guid TenantId => default;
 
-  public int VncPort => AppConstants.DefaultVncPort;
-
   public string GetAppSettingsPath()
   {
     return string.Empty;

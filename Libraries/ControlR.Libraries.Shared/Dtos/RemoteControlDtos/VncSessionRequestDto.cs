@@ -11,4 +11,7 @@ public record VncSessionRequestDto(
   string ViewerConnectionId,
   Guid DeviceId,
   bool NotifyUserOnSessionStart,
-  string ViewerName = "");
+  int Port)
+{
+  public string? ViewerName { get; set; }
+}

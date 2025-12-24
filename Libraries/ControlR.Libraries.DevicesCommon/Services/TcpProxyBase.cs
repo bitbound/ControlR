@@ -11,12 +11,10 @@ namespace ControlR.Libraries.DevicesCommon.Services;
 
 public abstract class TcpWebsocketProxyBase(
     IMemoryProvider memoryProvider,
-    IRetryer retryer,
     ILogger<TcpWebsocketProxyBase> logger)
 {
   protected readonly ILogger<TcpWebsocketProxyBase> _logger = logger;
   protected readonly IMemoryProvider _memoryProvider = memoryProvider;
-  protected readonly IRetryer _retryer = retryer;
   private readonly ConcurrentDictionary<int, TcpListener> _listeners = [];
 
   protected Task<Result<Task>> ListenForLocalConnections(
@@ -99,23 +97,10 @@ public abstract class TcpWebsocketProxyBase(
           localServicePort);
 
       var tcpClient = new TcpClient();
-      await _retryer.Retry(
-          async () =>
-          {
-            await tcpClient.ConnectAsync("127.0.0.1", localServicePort);
-          },
-          tryCount: 3,
-          retryDelay: TimeSpan.FromSeconds(3));
+      await tcpClient.ConnectAsync(IPAddress.Loopback, localServicePort, cancellationToken);
+      await ws.ConnectAsync(websocketUri, cancellationToken);
 
-      ws
-        .ConnectAsync(websocketUri, cancellationToken)
-        .ContinueWith(
-          async t =>
-          {
-            await ProxyConnections(sessionId, ws, tcpClient, cancellationToken);
-          }, 
-          cancellationToken)
-        .Forget();
+      ProxyConnections(sessionId, ws, tcpClient, cancellationToken).Forget();
 
       return Result.Ok();
     }

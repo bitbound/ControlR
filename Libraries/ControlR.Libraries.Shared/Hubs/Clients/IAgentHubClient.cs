@@ -31,6 +31,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result> SendChatMessage(ChatMessageHubDto dto);
   Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
   Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);
+  Task<Result> TestVncConnection(int port);
   Task UninstallAgent(string reason);
   Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto);
   Task<ValidateFilePathResponseDto> ValidateFilePath(ValidateFilePathHubDto dto);

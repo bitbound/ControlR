@@ -177,10 +177,6 @@ This is an experimental feature that allows you to control Mac and Linux devices
 
 Since the connection to the VNC server is over localhost, you can configure the VNC server to bind to the loopback interface, so it's not exposed to the local network.
 
-You can configure the VNC port in the agent's appsettings.json file, under `AppOptions:VncPort`. If it is omitted, it will use the default VNC port of 5900.
-
-If the project gains support, I intend to add full remote control support for Mac.
-
 ## Screenshots
 
 ![Login Screen](.assets/screenshots/login-screen.png)

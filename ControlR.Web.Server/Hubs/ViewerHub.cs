@@ -3,7 +3,6 @@ using System.Threading.Channels;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
@@ -292,7 +291,6 @@ public class ViewerHub(
     }
   }
 
-
   public async Task<Result> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
@@ -405,7 +403,11 @@ public class ViewerHub(
         displayName = user.UserName ?? "";
       }
 
-      sessionRequestDto = sessionRequestDto with { ViewerName = displayName };
+      sessionRequestDto = sessionRequestDto with 
+      { 
+        ViewerConnectionId = Context.ConnectionId,
+        ViewerName = displayName,
+      };
 
       return await _agentHub.Clients
         .Client(device.ConnectionId)
@@ -597,6 +599,26 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending wake device command.");
+    }
+  }
+
+  public async Task<Result> TestVncConnection(Guid guid, int port)
+  {
+    try
+    {
+      if (await TryAuthorizeAgainstDevice(guid) is not { IsSuccess: true } authResult)
+      {
+        return Result.Fail("Unauthorized.");
+      }
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .TestVncConnection(port);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while testing VNC connection.");
+      return Result.Fail("An error occurred while testing the VNC connection.");
     }
   }
 

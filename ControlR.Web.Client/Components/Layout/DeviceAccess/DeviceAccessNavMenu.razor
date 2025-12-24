@@ -22,6 +22,10 @@
     File System
   </MudNavLink>
 
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/vnc-relay?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Cast">
+    VNC Relay
+  </MudNavLink>
+
   @*
   <MudNavLink Disabled="IsDisabled" Href="/device-access/processes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MonitorHeart">
     Processes
