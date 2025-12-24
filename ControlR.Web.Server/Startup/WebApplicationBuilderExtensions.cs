@@ -99,7 +99,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddOpenApi(options =>
     {
       options.AddDocumentTransformer<FileUploadTransformer>();
-      options.AddSchemaTransformer<OpenApiStrictSchemaTypeTransformer>();
+      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();

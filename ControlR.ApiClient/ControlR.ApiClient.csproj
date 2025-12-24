@@ -29,6 +29,6 @@
 	<Target Name="GenerateKiotaClient" BeforeTargets="BeforeBuild">
 		<Exec Command="dotnet tool restore" />
 		<Message Importance="high" Text="Kiota: Generating client from $(OpenApiSpecPath)..." />
-		<Exec Command="dotnet kiota generate -d $(OpenApiSpecPath) -l CSharp -o ./Output -n ControlR.ApiClient -c ControlrApiClient --clean-output" />
+		<Exec Command="dotnet kiota generate -d $(OpenApiSpecPath) -l CSharp -o ./Output -n ControlR.ApiClient -c ControlrApiClient --clean-output --dvr NoServerEntry" />
 	</Target>
 </Project>

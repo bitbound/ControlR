@@ -1,5 +1,5 @@
 {
-  "descriptionHash": "7A7601F6FE87182092D489DAEA06288C8C9B008E8250F756506AF0426FB32313A23E554325737C618C4905FFAEEAA75F805580258F9429A86F6E69CA218EC82B",
+  "descriptionHash": "E85BD34CD822C0757BEB343F05EE338DCAB374C56FE2562DC804B1346E1C57D055EAAF9A3BA5D81C3F674BF22DAE1AE31F2D238620994F6606DD333D26B92670",
   "descriptionLocation": "../../ControlR.Web.Server/ControlR.Web.Server.json",
   "lockFileVersion": "1.0.0",
   "kiotaVersion": "1.29.0",
@@ -30,5 +30,7 @@
   ],
   "includePatterns": [],
   "excludePatterns": [],
-  "disabledValidationRules": []
+  "disabledValidationRules": [
+    "NoServerEntry"
+  ]
 }

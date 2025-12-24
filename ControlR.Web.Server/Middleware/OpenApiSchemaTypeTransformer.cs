@@ -3,7 +3,7 @@ using Microsoft.OpenApi;
 
 namespace ControlR.Web.Server.Middleware;
 
-public class OpenApiStrictSchemaTypeTransformer : IOpenApiSchemaTransformer
+public class OpenApiSchemaTypeTransformer : IOpenApiSchemaTransformer
 {
   public Task TransformAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken cancellationToken)
   {
@@ -20,6 +20,10 @@ public class OpenApiStrictSchemaTypeTransformer : IOpenApiSchemaTransformer
     if (schema.Format == "uint32")
     {
       schema.Format = "int32";
+    }
+    if (schema.Format == "uri")
+    {
+      schema.Format = null;
     }
     return Task.CompletedTask;
   }

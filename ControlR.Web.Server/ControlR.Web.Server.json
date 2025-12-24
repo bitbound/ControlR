@@ -3409,8 +3409,7 @@
         "type": "object",
         "properties": {
           "deviceAccessUrl": {
-            "type": "string",
-            "format": "uri"
+            "type": "string"
           },
           "expiresAt": {
             "type": "string",
@@ -3714,8 +3713,7 @@
             "type": "string"
           },
           "inviteUrl": {
-            "type": "string",
-            "format": "uri"
+            "type": "string"
           }
         }
       },
