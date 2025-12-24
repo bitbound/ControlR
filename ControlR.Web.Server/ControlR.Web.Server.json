@@ -3505,7 +3505,13 @@
         }
       },
       "RuntimeId": {
-        "type": "integer"
+        "enum": [
+          "WinX86",
+          "WinX64",
+          "MacOsArm64",
+          "MacOsX64",
+          "LinuxX64"
+        ]
       },
       "ServerAlertRequestDto": {
         "required": [

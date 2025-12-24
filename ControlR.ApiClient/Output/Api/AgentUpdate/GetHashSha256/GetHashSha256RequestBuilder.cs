@@ -18,25 +18,12 @@ namespace ControlR.ApiClient.Api.AgentUpdate.GetHashSha256
         /// <summary>Gets an item from the ControlR.ApiClient.api.agentUpdate.getHashSha256.item collection</summary>
         /// <param name="position">Unique identifier of the item</param>
         /// <returns>A <see cref="global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder"/></returns>
-        public global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder this[int position]
-        {
-            get
-            {
-                var urlTplParams = new Dictionary<string, object>(PathParameters);
-                urlTplParams.Add("runtime", position);
-                return new global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder(urlTplParams, RequestAdapter);
-            }
-        }
-        /// <summary>Gets an item from the ControlR.ApiClient.api.agentUpdate.getHashSha256.item collection</summary>
-        /// <param name="position">Unique identifier of the item</param>
-        /// <returns>A <see cref="global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder"/></returns>
-        [Obsolete("This indexer is deprecated and will be removed in the next major version. Use the one with the typed parameter instead.")]
         public global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder this[string position]
         {
             get
             {
                 var urlTplParams = new Dictionary<string, object>(PathParameters);
-                if (!string.IsNullOrWhiteSpace(position)) urlTplParams.Add("runtime", position);
+                urlTplParams.Add("runtime", position);
                 return new global::ControlR.ApiClient.Api.AgentUpdate.GetHashSha256.Item.WithRuntimeItemRequestBuilder(urlTplParams, RequestAdapter);
             }
         }
