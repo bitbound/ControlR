@@ -7,7 +7,7 @@ using SkiaSharp;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
-internal class ScreenGrabberX11(
+internal sealed class ScreenGrabberX11(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberX11> logger) : IScreenGrabber
 {
@@ -26,6 +26,7 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
+
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -41,10 +42,12 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
-  public Task Deinitialize(CancellationToken cancellationToken)
+
+  public ValueTask DisposeAsync()
   {
-    return Task.CompletedTask;
+    return ValueTask.CompletedTask;
   }
+
   public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
@@ -118,6 +121,7 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
+
   private CaptureResult CaptureDisplayImpl(DisplayInfo display, bool captureCursor)
   {
     try
@@ -158,6 +162,7 @@ internal class ScreenGrabberX11(
       return CaptureResult.Fail(ex);
     }
   }
+
   private SKBitmap? CaptureWindow(nint display, nint window, int width, int height, int x = 0, int y = 0)
   {
     try
@@ -218,4 +223,5 @@ internal class ScreenGrabberX11(
       return null;
     }
   }
+
 }

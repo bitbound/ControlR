@@ -6,6 +6,7 @@ using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Mac;
 
@@ -18,7 +19,8 @@ public static class HostAppBuilderExtensions
     builder.Services
       .AddSingleton<IMacInterop, MacInterop>()
       .AddSingleton<IDisplayManager, DisplayManagerMac>()
-      .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
+      .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberMac>>()
+      .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IClipboardManager, ClipboardManagerMac>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsMac>()
       .AddSingleton<IInputSimulator, InputSimulatorMac>()

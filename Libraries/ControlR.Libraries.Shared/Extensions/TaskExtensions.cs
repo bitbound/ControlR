@@ -2,6 +2,11 @@
 
 public static class TaskExtensions
 {
+  public static Task<T> AsTaskResult<T>(this T result)
+  {
+    return Task.FromResult(result);
+  }
+
   public static async void Forget(this Task task, Func<Exception, Task>? exceptionHandler = null)
   {
     try
@@ -22,6 +27,8 @@ public static class TaskExtensions
       catch { }
     }
   }
+
+
   public static async void Forget(this ValueTask task, Func<Exception, ValueTask>? exceptionHandler = null)
   {
     try
@@ -43,6 +50,7 @@ public static class TaskExtensions
     }
   }
 
+
   public static async void Forget<T>(this Task<T> task, Func<Exception, Task>? exceptionHandler = null)
   {
     try
@@ -63,6 +71,7 @@ public static class TaskExtensions
       catch { }
     }
   }
+
   public static async void Forget<T>(this ValueTask<T> task, Func<Exception, ValueTask>? exceptionHandler = null)
   {
     try

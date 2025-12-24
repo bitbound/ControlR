@@ -20,7 +20,6 @@ switch (desktopEnvironemnt)
 {
   case DesktopEnvironmentType.Wayland:
     builder.Services
-      .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
       .AddSingleton<IDisplayManager, DisplayManagerWayland>()
       .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
       .AddSingleton<IInputSimulator, InputSimulatorWayland>()

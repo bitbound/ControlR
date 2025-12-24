@@ -7,6 +7,8 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.Services;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.DesktopClient.Linux.XdgPortal;
+using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Linux;
 
@@ -26,9 +28,11 @@ public static class HostAppBuilderExtensions
       case DesktopEnvironmentType.Wayland:
         logger.LogInformation("Detected Wayland desktop environment.");
         builder.Services
-          .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
+          .AddSingleton<IXdgDesktopPortalFactory, XdgDesktopPortalFactory>()
+          .AddSingleton(services => services.GetRequiredService<IXdgDesktopPortalFactory>().GetOrCreateDefault())
           .AddSingleton<IDisplayManager, DisplayManagerWayland>()
-          .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
+          .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWayland>>()
+          .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
           .AddSingleton<IInputSimulator, InputSimulatorWayland>()
           .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
           .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
@@ -37,7 +41,8 @@ public static class HostAppBuilderExtensions
         logger.LogInformation("Detected X11 desktop environment.");
         builder.Services
           .AddSingleton<IDisplayManager, DisplayManagerX11>()
-          .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
+          .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberX11>>()
+          .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
           .AddSingleton<IInputSimulator, InputSimulatorX11>()
           .AddHostedService<CursorWatcherX11>();
         break;

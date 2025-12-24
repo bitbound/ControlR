@@ -40,7 +40,7 @@ internal class AgentHeartbeatTimer(
 
       var device = await _deviceDataGenerator.CreateDevice(_settingsProvider.DeviceId);
 
-      var dto = device.CloneAs<DeviceModel, DeviceDto>();
+      var dto = device.CloneAs<DeviceDto>();
 
       var updateResult = await _hubConnection.Server.UpdateDevice(dto);
 

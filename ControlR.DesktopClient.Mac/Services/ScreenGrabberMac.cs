@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
-public class ScreenGrabberMac(
+public sealed class ScreenGrabberMac(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberMac> logger) : IScreenGrabber
 {
@@ -40,10 +40,12 @@ public class ScreenGrabberMac(
       return CaptureResult.Fail(ex);
     }
   }
-  public Task Deinitialize(CancellationToken cancellationToken)
+
+  public ValueTask DisposeAsync()
   {
-    return Task.CompletedTask;
+    return ValueTask.CompletedTask;
   }
+
   public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;

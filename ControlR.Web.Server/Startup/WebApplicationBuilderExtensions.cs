@@ -17,11 +17,11 @@ using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.LogonTokens;
-using ControlR.Web.Client.Startup;
 using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.OpenApi;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -99,6 +99,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddOpenApi(options =>
     {
       options.AddDocumentTransformer<FileUploadTransformer>();
+      options.AddSchemaTransformer<OpenApiStrictSchemaTypeTransformer>();
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();

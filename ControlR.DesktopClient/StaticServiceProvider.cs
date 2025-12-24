@@ -6,6 +6,7 @@ using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
+using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -104,7 +105,9 @@ internal static class StaticServiceProvider
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))
     {
-      services.AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
+      services
+        .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
+        .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IWin32Interop, Win32Interop>()
         .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
         .AddSingleton<IDisplayManager, DisplayManagerWindows>();
@@ -115,7 +118,8 @@ internal static class StaticServiceProvider
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
       services
         .AddHostedService<RemoteControlPermissionMonitor>()
-        .AddSingleton<IScreenGrabber, ScreenGrabberMac>()
+        .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberMac>>()
+        .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IMacInterop, MacInterop>()
         .AddSingleton<IDisplayManager, DisplayManagerMac>();
     }
@@ -131,15 +135,18 @@ internal static class StaticServiceProvider
         case DesktopEnvironmentType.Wayland:
           services
             .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
-            .AddSingleton<IScreenGrabber, ScreenGrabberWayland>()
+            .AddSingleton<IXdgDesktopPortalFactory, XdgDesktopPortalFactory>()
+            .AddSingleton(services => services.GetRequiredService<IXdgDesktopPortalFactory>().GetOrCreateDefault())
+            .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWayland>>()
+            .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
             .AddSingleton<IDisplayManager, DisplayManagerWayland>()
-            .AddSingleton<IWaylandPortalAccessor, WaylandPortalAccessor>()
             .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
             .AddHostedService<RemoteControlPermissionMonitor>();
           break;
         case DesktopEnvironmentType.X11:
           services
-            .AddSingleton<IScreenGrabber, ScreenGrabberX11>()
+            .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberX11>>()
+            .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
             .AddSingleton<IDisplayManager, DisplayManagerX11>();
           break;
         default:

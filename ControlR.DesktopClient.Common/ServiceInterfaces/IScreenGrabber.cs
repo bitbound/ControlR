@@ -4,7 +4,7 @@ using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 
-public interface IScreenGrabber
+public interface IScreenGrabber : IAsyncDisposable
 {
   /// <summary>
   ///   Gets a capture of all displays.  This method is not GPU-accelerated.
@@ -30,14 +30,6 @@ public interface IScreenGrabber
     DisplayInfo targetDisplay,
     bool captureCursor = true,
     bool forceKeyFrame = false);
-
-  /// <summary>
-  ///   Deinitializes the screen grabber, releasing any resources.
-  /// </summary>
-  /// <param name="cancellationToken"></param>
-  /// <returns></returns>
-  // TODO: Replace with scoped services.
-  Task Deinitialize(CancellationToken cancellationToken);
 
   /// <summary>
   ///   Initializes the screen grabber, preparing any necessary resources.

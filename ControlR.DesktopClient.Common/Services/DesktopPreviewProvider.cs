@@ -14,25 +14,26 @@ public interface IDesktopPreviewProvider
 
 public class DesktopPreviewProvider(
   TimeProvider timeProvider,
-  IScreenGrabber screenGrabber,
+  IScreenGrabberFactory screenGrabberFactory,
   ILogger<DesktopPreviewProvider> logger) : IDesktopPreviewProvider
 {
   private readonly SemaphoreSlim _captureLock = new(1, 1);
   private readonly ILogger<DesktopPreviewProvider> _logger = logger;
-  private readonly IScreenGrabber _screenGrabber = screenGrabber;
+  private readonly IScreenGrabberFactory _screenGrabberFactory = screenGrabberFactory;
   private readonly TimeProvider _timeProvider = timeProvider;
 
   public async Task<Result<byte[]>> CapturePreview(int jpegQuality = 80)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15), _timeProvider);
+    await using var screenGrabber = _screenGrabberFactory.CreateNew();
     try
     {
       using var held = await _captureLock.AcquireLockAsync(cts.Token);
 
       // Ensure screen grabber is initialized (idempotent)
-      await _screenGrabber.Initialize(cts.Token);
+      await screenGrabber.Initialize(cts.Token);
 
-      var result = await _screenGrabber.CaptureAllDisplays(captureCursor: false);
+      var result = await screenGrabber.CaptureAllDisplays(captureCursor: false);
       if (!result.IsSuccess || result.Bitmap is null)
       {
         return Result.Fail<byte[]>(result.FailureReason ?? "Failed to capture screen for preview");
@@ -49,22 +50,19 @@ public class DesktopPreviewProvider(
       _logger.LogError(ex, "Error generating desktop preview");
       return Result.Fail<byte[]>(ex);
     }
-    finally
-    {
-      await _screenGrabber.Deinitialize(cts.Token);
-    }
   }
   public async Task<Result<byte[]>> CapturePreview(int width, int height, int jpegQuality = 80)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15), _timeProvider);
+    await using var screenGrabber = _screenGrabberFactory.CreateNew();
     try
     {
       // Ensure screen grabber is initialized (idempotent)
       using var held = await _captureLock.AcquireLockAsync(cts.Token);
 
-      await _screenGrabber.Initialize(cts.Token);
+      await screenGrabber.Initialize(cts.Token);
 
-      var result = await _screenGrabber.CaptureAllDisplays(captureCursor: false);
+      var result = await screenGrabber.CaptureAllDisplays(captureCursor: false);
       if (!result.IsSuccess || result.Bitmap is null)
       {
         return Result.Fail<byte[]>(result.FailureReason ?? "Failed to capture screen for preview");
@@ -94,10 +92,6 @@ public class DesktopPreviewProvider(
     {
       _logger.LogError(ex, "Error generating desktop preview");
       return Result.Fail<byte[]>(ex);
-    }
-    finally
-    {
-      await _screenGrabber.Deinitialize(cts.Token);
     }
   }
 }

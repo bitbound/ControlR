@@ -1,4 +1,5 @@
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.DevicesCommon.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,14 +14,14 @@ public interface IWaylandPermissionProvider
 
 internal class WaylandPermissionProvider(
   IFileSystem fileSystem,
-  IWaylandPortalAccessor portalAccessor,
+  IXdgDesktopPortalFactory xdgFactory,
   IOptionsMonitor<DesktopClientOptions> options,
   ILogger<WaylandPermissionProvider> logger) : IWaylandPermissionProvider
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<WaylandPermissionProvider> _logger = logger;
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
-  private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
+  private readonly IXdgDesktopPortalFactory _xdgFactory = xdgFactory;
 
   public async Task<bool> IsRemoteControlPermissionGranted()
   {
@@ -39,7 +40,7 @@ internal class WaylandPermissionProvider(
   {
     try
     {
-      await _portalAccessor.Initialize(force);
+      using var xdgPortal = _xdgFactory.CreateNew();
       _logger.LogInformation("RemoteDesktop permission granted via XDG portal");
       return await IsRemoteControlPermissionGranted();
     }
@@ -47,10 +48,6 @@ internal class WaylandPermissionProvider(
     {
       _logger.LogError(ex, "Error requesting RemoteDesktop permission");
       return false;
-    }
-    finally
-    {
-      await _portalAccessor.Deinitialize();
     }
   }
 }

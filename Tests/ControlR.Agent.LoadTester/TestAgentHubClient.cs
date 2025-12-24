@@ -170,6 +170,11 @@ public class TestAgentHubClient : IAgentHubClient
     return Result.Ok().AsTaskResult();
   }
 
+  public Task<Result> TestVncConnection(int port)
+  {
+    return Result.Ok().AsTaskResult();
+  }
+
   public Task UninstallAgent(string reason)
   {
     Console.WriteLine($"Uninstalling agent for reason: {reason}");

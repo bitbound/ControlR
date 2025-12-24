@@ -43,7 +43,7 @@ internal abstract class AgentInstallerBase(
     var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
     device.TenantId = currentOptions.TenantId;
     device.TagIds = tagIds;
-    var deviceDto = device.CloneAs<DeviceModel, DeviceDto>();
+    var deviceDto = device.CloneAs<DeviceDto>();
 
     Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
     var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeyId.Value, installerKeySecret);

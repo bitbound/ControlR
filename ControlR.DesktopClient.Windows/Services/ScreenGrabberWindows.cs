@@ -64,11 +64,14 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(ex);
     }
   }
-  public Task Deinitialize(CancellationToken cancellationToken)
+
+  public ValueTask DisposeAsync()
   {
-    _dxOutputGenerator.Deinitialize();
-    return Task.CompletedTask;
+    _dxOutputGenerator.Dispose();
+    return ValueTask.CompletedTask;
   }
+
+
   public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;

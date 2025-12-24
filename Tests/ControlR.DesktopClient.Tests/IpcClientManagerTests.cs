@@ -80,7 +80,7 @@ public class IpcClientManagerTests : IAsyncLifetime
     // Wait for the client to connect
     using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
     await Waiter.Default.WaitFor(
-      () => _clientManager.TryGetClient(out var _),
+      () => _clientManager.TryGetClient(out var client) && client.IsConnected,
       cancellationToken: waitCts.Token);
 
     // Send a chat response to verify the connection

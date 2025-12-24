@@ -14,30 +14,22 @@ namespace ControlR.DesktopClient.Windows.Services;
 
 internal interface IDxOutputDuplicator : IDisposable
 {
-  void Deinitialize();
   DxOutput? DuplicateOutput(string deviceName);
   void SetCurrentOutputFaulted();
 }
 
-internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutputDuplicator
+internal sealed class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutputDuplicator
 {
   private readonly MemoryCache _faultedDevices = new(new MemoryCacheOptions());
   private readonly ILogger<DxOutputDuplicator> _logger = logger;
 
   private DxOutput? _currentOutput;
-  private bool _disposedValue;
-
-  public void Deinitialize()
-  {
-    Disposer.DisposeAll(_currentOutput);
-    _currentOutput = null;
-  }
 
   public void Dispose()
   {
-    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    Dispose(disposing: true);
-    GC.SuppressFinalize(this);
+    Disposer.DisposeAll(_currentOutput);
+    _currentOutput = null;
+    _faultedDevices.Clear();
   }
 
   public DxOutput? DuplicateOutput(string deviceName)
@@ -163,21 +155,6 @@ internal class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : IDxOutpu
     Disposer.DisposeAll(_currentOutput);
     _currentOutput = null;
   }
-
-
-  
-  protected virtual void Dispose(bool disposing)
-  {
-    if (!_disposedValue)
-    {
-      if (disposing)
-      {
-        Disposer.DisposeAll([_currentOutput]);
-      }
-      _disposedValue = true;
-    }
-  }
-
 
   private static DxAdapterOutput? FindOutput(IDXGIFactory1 factory, string deviceName)
   {

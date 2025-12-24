@@ -6,7 +6,8 @@
 		<Description>The API client for ControlR, an open-source remote control and remote access solution.</Description>
 		<PackageIcon>appicon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<OpenApiSpecPath>../ControlR.Web.Server/ControlR.Web.Server.json</OpenApiSpecPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="..\.assets\appicon.png">
@@ -19,13 +20,15 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<OpenApiReference Include="..\ControlR.Web.Server\ControlR.Web.Server.json" ClassName="ControlrApiClient" Link="OpenAPIs\ControlR.Web.Server.json" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="Microsoft.Kiota.Bundle" />
 		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
+	<Target Name="GenerateKiotaClient" BeforeTargets="BeforeBuild">
+		<Exec Command="dotnet tool restore" />
+		<Message Importance="high" Text="Kiota: Generating client from $(OpenApiSpecPath)..." />
+		<Exec Command="dotnet kiota generate -d $(OpenApiSpecPath) -l CSharp -o ./Output -n ControlR.ApiClient -c ControlrApiClient --clean-output" />
+	</Target>
 </Project>

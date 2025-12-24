@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,19 +24,18 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// 3. Application can simulate input events via portal DBus calls
 /// </summary>
 public class InputSimulatorWayland(
-  IWaylandPortalAccessor portalAccessor,
+  IXdgDesktopPortal portalAccessor,
   IDesktopCapturerFactory desktopCapturerFactory,
   ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
-  private readonly IWaylandPortalAccessor _portalAccessor = portalAccessor;
+  private readonly IXdgDesktopPortal _portalAccessor = portalAccessor;
 
 
   private bool _disposed;
   private bool _isInitialized;
-  private XdgDesktopPortal? _portal;
   private ConcurrentDictionary<int, PipeWireStreamInfo> _screenCastStreams = new();
   private string? _sessionHandle;
 
@@ -80,10 +79,9 @@ public class InputSimulatorWayland(
         return;
       }
 
-      Guard.IsNotNull(_portal);
       Guard.IsNotNull(_sessionHandle);
 
-      await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
+      await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
     }
     catch (Exception ex)
     {
@@ -103,10 +101,9 @@ public class InputSimulatorWayland(
     {
       var linuxButton = LinuxKeycodeMapper.MouseButtonToLinuxCode(button);
 
-      Guard.IsNotNull(_portal);
       Guard.IsNotNull(_sessionHandle);
 
-      await _portal.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
+      await _portalAccessor.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
     }
     catch (Exception ex)
     {
@@ -124,7 +121,6 @@ public class InputSimulatorWayland(
 
     try
     {
-      Guard.IsNotNull(_portal);
       Guard.IsNotNull(_sessionHandle);
 
       switch (moveType)
@@ -148,7 +144,7 @@ public class InputSimulatorWayland(
               _logger.LogWarning("Cannot move pointer absolutely: no stream info for display index {DeviceIndex}", deviceIndex);
               return;
             }
-            await _portal.NotifyPointerMotionAbsoluteAsync(
+            await _portalAccessor.NotifyPointerMotionAbsoluteAsync(
               _sessionHandle,
               streamInfo.NodeId,
               coordinates.AbsolutePoint.X,
@@ -157,7 +153,7 @@ public class InputSimulatorWayland(
           }
 
         case MovePointerType.Relative:
-          await _portal.NotifyPointerMotionAsync(_sessionHandle, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
+          await _portalAccessor.NotifyPointerMotionAsync(_sessionHandle, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
           break;
         default:
           _logger.LogWarning("Unknown move type: {MoveType}", moveType);
@@ -188,7 +184,6 @@ public class InputSimulatorWayland(
 
     try
     {
-      Guard.IsNotNull(_portal);
       Guard.IsNotNull(_sessionHandle);
 
       const int scrollSteps = 3;
@@ -197,13 +192,13 @@ public class InputSimulatorWayland(
       if (scrollY != 0)
       {
         var steps = scrollY < 0 ? scrollSteps : -scrollSteps;
-        await _portal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
+        await _portalAccessor.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
       }
 
       if (scrollX != 0)
       {
         var steps = scrollX < 0 ? scrollSteps : -scrollSteps;
-        await _portal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
+        await _portalAccessor.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
       }
     }
     catch (Exception ex)
@@ -228,7 +223,6 @@ public class InputSimulatorWayland(
 
     try
     {
-      Guard.IsNotNull(_portal);
       Guard.IsNotNull(_sessionHandle);
 
       foreach (var ch in text)
@@ -242,16 +236,16 @@ public class InputSimulatorWayland(
 
         if (needsShift)
         {
-          await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
+          await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
         }
 
-        await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
+        await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
         await Task.Delay(10);
-        await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
+        await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
 
         if (needsShift)
         {
-          await _portal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
+          await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
         }
 
         await Task.Delay(10);
@@ -313,7 +307,7 @@ public class InputSimulatorWayland(
 
   private async Task<bool> EnsureInitializedAsync()
   {
-    if (_isInitialized && _portal is not null && _sessionHandle is not null)
+    if (_isInitialized && _sessionHandle is not null)
     {
       return true;
     }
@@ -321,20 +315,19 @@ public class InputSimulatorWayland(
     await _initLock.WaitAsync();
     try
     {
-      if (_isInitialized && _portal is not null && _sessionHandle is not null)
+      if (_isInitialized && _sessionHandle is not null)
       {
         return true;
       }
 
-      var remoteDesktopSession = await _portalAccessor.GetRemoteDesktopSession();
-      if (remoteDesktopSession == null)
+      await _portalAccessor.Initialize();
+      _sessionHandle = await _portalAccessor.GetRemoteDesktopSessionHandle();
+      
+      if (_sessionHandle == null)
       {
         _logger.LogError("Failed to get RemoteDesktop session from portal accessor");
         return false;
       }
-
-      _portal = remoteDesktopSession.Value.Portal;
-      _sessionHandle = remoteDesktopSession.Value.SessionHandle;
 
       var screenCastStreams = await _portalAccessor.GetScreenCastStreams();
       foreach (var stream in screenCastStreams)

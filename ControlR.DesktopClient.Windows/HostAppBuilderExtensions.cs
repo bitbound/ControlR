@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Windows;
 public static class HostAppBuilderExtensions
@@ -19,7 +20,8 @@ public static class HostAppBuilderExtensions
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<IDisplayManager, DisplayManagerWindows>()
-      .AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
+      .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
+      .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()

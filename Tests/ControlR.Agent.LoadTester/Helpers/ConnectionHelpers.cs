@@ -84,7 +84,7 @@ public static class ConnectionHelper
       LocalIpV6 = "fe80::1234:5678:9abc:def0",
     };
 
-    var result = device.TryCloneAs<DeviceModel, DeviceDto>();
+    var result = device.TryCloneAs<DeviceDto>();
     if (!result.IsSuccess)
     {
       throw new InvalidOperationException($"Failed to clone device model: {result.Reason}");

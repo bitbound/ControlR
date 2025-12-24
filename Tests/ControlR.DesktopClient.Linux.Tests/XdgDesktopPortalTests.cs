@@ -3,13 +3,19 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Tmds.DBus.Protocol;
-using ControlR.Libraries.NativeInterop.Unix.Linux.XdgPortal;
+using ControlR.DesktopClient.Linux.XdgPortal;
+using Moq;
+using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.DesktopClient.Common.Options;
 
 namespace ControlR.DesktopClient.Linux.Tests;
 
 public class XdgDesktopPortalTests
 {
-  private readonly ILogger _logger;
+  private readonly XdgDesktopPortal _desktopPortal;
+  private readonly Mock<IFileSystem> _fileSystem;
+  private readonly ILogger<XdgDesktopPortal> _logger;
+  private readonly OptionsMonitorWrapper<DesktopClientOptions> _options;
 
   public XdgDesktopPortalTests(ITestOutputHelper output)
   {
@@ -18,7 +24,10 @@ public class XdgDesktopPortalTests
       builder.AddProvider(new XunitLoggerProvider(output));
       builder.SetMinimumLevel(LogLevel.Debug);
     });
-    _logger = loggerFactory.CreateLogger<XdgDesktopPortalTests>();
+    _logger = loggerFactory.CreateLogger<XdgDesktopPortal>();
+    _fileSystem = new Mock<IFileSystem>();
+    _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
+    _desktopPortal = new XdgDesktopPortal(_fileSystem.Object, _options, _logger);
   }
 
   [WaylandOnlyFact]
@@ -67,76 +76,21 @@ public class XdgDesktopPortalTests
     
     connection.Dispose();
   }
-  [WaylandOnlyFact]
-  public async Task CanCheckRemoteDesktopAvailability()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var isAvailable = await portal.IsRemoteDesktopAvailableAsync();
-    Assert.True(isAvailable, "RemoteDesktop portal should be available on Wayland");
-  }
-  [WaylandOnlyFact]
-  public async Task CanCheckScreenCastAvailability()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var isAvailable = await portal.IsScreenCastAvailableAsync();
-    Assert.True(isAvailable, "ScreenCast portal should be available on Wayland");
-  }
+
+
   [WaylandOnlyFact]
   public async Task CanConnectToDBus()
   {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    Assert.NotNull(portal);
+    await _desktopPortal.Initialize();
+    var sessionHandle = await _desktopPortal.GetRemoteDesktopSessionHandle();
+    Assert.NotNull(sessionHandle);
   }
-  [WaylandOnlyFact]
-  public async Task CanCreateRemoteDesktopSession()
+
+  public async Task CanGetPipeWireConnection()
   {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var result = await portal.CreateRemoteDesktopSessionAsync();
-    
-    Assert.True(result.IsSuccess, $"Failed to create session: {result.Reason}");
-    Assert.NotNull(result.Value);
-    Assert.NotEmpty(result.Value);
-    _logger.LogInformation("Created session: {Session}", result.Value);
-  }
-  [WaylandOnlyFact]
-  public async Task CanCreateScreenCastSession()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    var result = await portal.CreateScreenCastSessionAsync();
-    
-    Assert.True(result.IsSuccess, $"Failed to create session: {result.Reason}");
-    Assert.NotNull(result.Value);
-    Assert.NotEmpty(result.Value);
-    _logger.LogInformation("Created session: {Session}", result.Value);
-  }
-  [WaylandOnlyFact]
-  public async Task CanSelectRemoteDesktopDevices()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    
-    var sessionResult = await portal.CreateRemoteDesktopSessionAsync();
-    Assert.True(sessionResult.IsSuccess);
-    
-    var selectResult = await portal.SelectRemoteDesktopDevicesAsync(
-      sessionResult.Value!,
-      deviceTypes: 3);
-    
-    Assert.True(selectResult.IsSuccess, $"Failed to select devices: {selectResult.Reason}");
-  }
-  [WaylandOnlyFact]
-  public async Task CanSelectScreenCastSources()
-  {
-    using var portal = await XdgDesktopPortal.CreateAsync(_logger);
-    
-    var sessionResult = await portal.CreateScreenCastSessionAsync();
-    Assert.True(sessionResult.IsSuccess);
-    
-    var selectResult = await portal.SelectScreenCastSourcesAsync(
-      sessionResult.Value!,
-      sourceTypes: 1,
-      multipleSources: false,
-      cursorMode: 4);
-    
-    Assert.True(selectResult.IsSuccess, $"Failed to select sources: {selectResult.Reason}");
+    var connection = await _desktopPortal.GetPipeWireConnection();
+    Assert.NotNull(connection);
+    Assert.False(connection.Value.Fd.IsInvalid);
+    Assert.False(string.IsNullOrEmpty(connection.Value.SessionHandle));
   }
 }

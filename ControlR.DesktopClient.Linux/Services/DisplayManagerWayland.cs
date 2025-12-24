@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -23,13 +24,13 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// </summary>
 internal class DisplayManagerWayland(
   ILogger<DisplayManagerWayland> logger,
-  IWaylandPortalAccessor portalService) : IDisplayManager
+  IXdgDesktopPortal portalService) : IDisplayManager
 {
   private readonly Lock _displayLock = new();
   private readonly Dictionary<string, uint> _displayNodeIds = new(); // Maps DeviceName to NodeId
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerWayland> _logger = logger;
-  private readonly IWaylandPortalAccessor _portalService = portalService;
+  private readonly IXdgDesktopPortal _portalService = portalService;
 
   public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
   {

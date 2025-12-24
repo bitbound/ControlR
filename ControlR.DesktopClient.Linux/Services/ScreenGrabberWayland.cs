@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
@@ -33,9 +34,9 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// </summary>
 internal class ScreenGrabberWayland(
   IDisplayManager displayManager,
-  IWaylandPortalAccessor portalService,
+  IXdgDesktopPortal portalService,
   IPipeWireStreamFactory streamFactory,
-  ILogger<ScreenGrabberWayland> logger) : IScreenGrabber, IDisposable
+  ILogger<ScreenGrabberWayland> logger) : IScreenGrabber
 {
   private const int StreamStartPollingIntervalMs = 100;
   private const int StreamStartTimeoutMs = 3_000;
@@ -43,7 +44,7 @@ internal class ScreenGrabberWayland(
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<ScreenGrabberWayland> _logger = logger;
-  private readonly IWaylandPortalAccessor _portalService = portalService;
+  private readonly IXdgDesktopPortal _portalService = portalService;
   private readonly IPipeWireStreamFactory _streamFactory = streamFactory;
   private readonly ConcurrentDictionary<string, PipeWireStream> _streams = [];
 
@@ -64,7 +65,7 @@ internal class ScreenGrabberWayland(
         return CaptureResult.Fail("Wayland screen capture not initialized. Call InitializeAsync first.");
       }
 
-      if (_streams.Count == 0)
+      if (_streams.IsEmpty)
       {
         return CaptureResult.Fail("No streams available.");
       }
@@ -149,14 +150,7 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
-  public async Task Deinitialize(CancellationToken cancellationToken)
-  {
-    using var acquiredLock = await _initLock.AcquireLockAsync(cancellationToken);
-    Disposer.DisposeAll(_streams.Values);
-    _streams.Clear();
-    _isInitialized = false;
-  }
-  public void Dispose()
+  public async ValueTask DisposeAsync()
   {
     if (_disposed)
     {
@@ -164,10 +158,8 @@ internal class ScreenGrabberWayland(
     }
 
     Disposer.DisposeAll(_streams.Values);
-
     _streams.Clear();
     _initLock?.Dispose();
-
     _disposed = true;
   }
   public async Task Initialize(CancellationToken cancellationToken)
