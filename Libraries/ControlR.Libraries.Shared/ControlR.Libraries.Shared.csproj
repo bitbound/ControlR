@@ -13,7 +13,4 @@
 	<ItemGroup>
 		<EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
 	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
-	</ItemGroup>
 </Project>

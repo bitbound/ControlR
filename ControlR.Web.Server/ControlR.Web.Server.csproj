@@ -56,4 +56,7 @@
 		<Content Remove="novnc\**\*" />
 		<None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
+	<Target Name="BuildApiClient" AfterTargets="Build">
+		<Exec Command="dotnet build $(MSBuildThisFileDirectory)..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
+	</Target>
 </Project>
