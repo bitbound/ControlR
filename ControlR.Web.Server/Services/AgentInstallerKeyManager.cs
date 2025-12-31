@@ -137,7 +137,7 @@ public class AgentInstallerKeyManager(
     return isValid;
   }
 
-  private async Task AddUsageAndUpdateKey(
+  private static async Task AddUsageAndUpdateKey(
     AppDb db,
     AgentInstallerKey installerKey,
     Guid? deviceId,

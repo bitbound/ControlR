@@ -110,7 +110,7 @@ jobs:
         uses: ./.github/actions/build-upload-nuget
         with:
           project-path: ControlR.ApiClient/ControlR.ApiClient.csproj
-          version: ${{ needs.set-version.outputs.version }}
+          version: ${{ env.VERSION }}
           artifact-name: ApiClientNuGet
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
@@ -118,7 +118,7 @@ jobs:
         uses: ./.github/actions/build-upload-nuget
         with:
           project-path: Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj
-          version: ${{ needs.set-version.outputs.version }}
+          version: ${{ env.VERSION }}
           artifact-name: DataRedactionNuGet
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
