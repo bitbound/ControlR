@@ -157,6 +157,16 @@ See the `/api/logon-tokens` endpoint in the API spec.  A successful response inc
 
 Remember that the token is single-use, so the URL can only be accessed once.
 
+## Remote Control Input
+
+### On Desktop
+- **Zoom**: Ctrl + Shift + Mouse Wheel
+
+### On Mobile/Touch Devices
+- **Zoom**: Pinch gesture
+- **Right-Click**: Tap and hold
+- **Click-and-Drag**: Tap and hold, then drag
+
 ## Metrics
 
 Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface is exposed on port 18888, and it's secured by the `aspireToken` value.

@@ -1,5 +1,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -36,6 +37,7 @@ internal class DesktopClientWatcherMac(
     {
       try
       {
+        using var dedupeScope = _logger.EnterDedupeScope();
         using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
         await CheckAndStartDesktopClientServices(stoppingToken);
       }
@@ -61,11 +63,11 @@ internal class DesktopClientWatcherMac(
       var loggedInUsers = await GetLoggedInUsersAsync();
       if (loggedInUsers.Count == 0)
       {
-        _logger.LogIfChanged(LogLevel.Information, "No logged-in users found.");
+        _logger.LogDeduped(LogLevel.Information, "No logged-in users found.");
         return;
       }
 
-      _logger.LogIfChanged(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
+      _logger.LogDeduped(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
 
       foreach (var uid in loggedInUsers)
       {
@@ -74,7 +76,7 @@ internal class DesktopClientWatcherMac(
     }
     catch (Exception ex)
     {
-      _logger.LogIfChanged(LogLevel.Error, "Error checking desktop client services.", exception: ex);
+      _logger.LogDeduped(LogLevel.Error, "Error checking desktop client services.", exception: ex);
     }
   }
 
@@ -89,17 +91,17 @@ internal class DesktopClientWatcherMac(
 
       if (!isRunning)
       {
-        _logger.LogIfChanged(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
+        _logger.LogDeduped(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
         await _serviceControl.StartDesktopClientService(throwOnFailure: true);
       }
       else
       {
-        _logger.LogIfChanged(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
+        _logger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogIfChanged(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
+      _logger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
     }
   }
 
@@ -150,7 +152,7 @@ internal class DesktopClientWatcherMac(
     }
     catch (Exception ex)
     {
-      _logger.LogIfChanged(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
+      _logger.LogDeduped(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
       return [];
     }
   }
@@ -164,7 +166,7 @@ internal class DesktopClientWatcherMac(
 
       if (!result.IsSuccess)
       {
-        _logger.LogIfChanged(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
+        _logger.LogDeduped(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
         return false;
       }
 
@@ -177,13 +179,13 @@ internal class DesktopClientWatcherMac(
 
       // Check if the output contains "pid = " which indicates a running process
       var isRunning = output.Contains("pid = ");
-      _logger.LogIfChanged(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
+      _logger.LogDeduped(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
 
       return isRunning;
     }
     catch (Exception ex)
     {
-      _logger.LogIfChanged(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
+      _logger.LogDeduped(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
       return false;
     }
   }

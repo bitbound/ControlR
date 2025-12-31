@@ -13,6 +13,7 @@ let _wakeEnabled = false;
 function addClassName(element, className) {
   element.classList.add(className);
 }
+
 /**
  * Create a blob URL from image data
  * @param {Uint8Array} imageData - The image data

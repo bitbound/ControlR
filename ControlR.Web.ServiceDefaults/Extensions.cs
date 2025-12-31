@@ -30,23 +30,33 @@ public static class Extensions
 
   public static IHostApplicationBuilder AddServiceDefaults(
     this IHostApplicationBuilder builder,
-    string serviceName)
+    string serviceName,
+    bool useServiceDiscovery = false,
+    bool useResilience = false)
   {
     builder.ConfigureOpenTelemetry(serviceName);
 
     builder.AddDefaultHealthChecks();
 
-    // We're not using Aspire or K8s, so these aren't necessary right now.
-    //builder.Services.AddServiceDiscovery();
+    if (useServiceDiscovery)
+    {
+      builder.Services.AddServiceDiscovery();
+    }
 
-    // builder.Services.ConfigureHttpClientDefaults(http =>
-    // {
-    //   // Turn on resilience by default
-    //   http.AddStandardResilienceHandler();
+    builder.Services.ConfigureHttpClientDefaults(http =>
+    {
+      if (useResilience)
+      {
+        // Turn on resilience by default
+        http.AddStandardResilienceHandler();
+      }
 
-    //   // Turn on service discovery by default
-    //   http.AddServiceDiscovery();
-    // });
+      if (useServiceDiscovery)
+      {
+        // Turn on service discovery by default
+        http.AddServiceDiscovery();
+      }
+    });
 
     return builder;
   }
@@ -66,7 +76,10 @@ public static class Extensions
     });
 
     builder.Services.AddOpenTelemetry()
-      .ConfigureResource(resourceBuilder => { resourceBuilder.AddService(serviceName, "controlr"); })
+      .ConfigureResource(resourceBuilder =>
+      {
+        resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
+      })
       .WithMetrics(metrics =>
       {
         metrics
@@ -79,7 +92,10 @@ public static class Extensions
         tracing
           .AddAspNetCoreInstrumentation(options =>
           {
-            options.Filter = httpContext => { return httpContext.Request.Path.Value?.StartsWith("/health") != true; };
+            options.Filter = httpContext =>
+            {
+              return httpContext.Request.Path.Value?.StartsWith("/health") != true;
+            };
           })
           .AddHttpClientInstrumentation(options =>
           {

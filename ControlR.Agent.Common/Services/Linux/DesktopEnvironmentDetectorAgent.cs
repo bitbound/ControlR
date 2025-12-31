@@ -40,7 +40,7 @@ internal class DesktopEnvironmentDetectorAgent(
 
       if (info.IsWayland)
       {
-        _logger.LogInformation("Detected Wayland session at login screen");
+        _logger.LogInformationDeduped("Detected Wayland session at login screen");
         return info;
       }
 
@@ -52,7 +52,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting display environment");
+      _logger.LogErrorDeduped("Error detecting display environment", exception: ex);
       return info;
     }
   }
@@ -104,7 +104,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting current display");
+      _logger.LogErrorDeduped("Error detecting current display", exception: ex);
       return Task.FromResult(":0");
     }
   }
@@ -163,8 +163,10 @@ internal class DesktopEnvironmentDetectorAgent(
           continue;
         }
 
-        _logger.LogInformation("Found Wayland greeter session: SessionId={SessionId}, UID={Uid}, RuntimeDir={RuntimeDir}",
-          sessionId, uid, runtimeDir);
+        _logger.LogInformationDeduped(
+          "Found Wayland greeter session: SessionId={SessionId}, UID={Uid}, RuntimeDir={RuntimeDir}",
+          args: [sessionId, uid, runtimeDir]);
+
         return ("wayland-0", runtimeDir);
       }
 
@@ -183,8 +185,8 @@ internal class DesktopEnvironmentDetectorAgent(
         }
 
         var runtimeDir = Path.GetDirectoryName(socketPath);
-        _logger.LogInformation("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
-          socketPath, runtimeDir);
+        _logger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
+          args: [socketPath, runtimeDir]);
         return ("wayland-0", runtimeDir);
       }
 
@@ -192,7 +194,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting Wayland display");
+      _logger.LogErrorDeduped("Error detecting Wayland display", exception: ex);
       return (null, null);
     }
   }
@@ -279,7 +281,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error detecting XAUTH path");
+      _logger.LogErrorDeduped("Error detecting XAUTH path", exception: ex);
       return null;
     }
   }
@@ -366,7 +368,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error checking for active user sessions");
+      _logger.LogErrorDeduped("Error checking for active user sessions", exception: ex);
       return false;
     }
   }

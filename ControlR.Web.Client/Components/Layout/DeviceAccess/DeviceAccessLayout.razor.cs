@@ -1,9 +1,6 @@
 ﻿using System.Web;
-using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.StateManagement;
 using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Layout.DeviceAccess;

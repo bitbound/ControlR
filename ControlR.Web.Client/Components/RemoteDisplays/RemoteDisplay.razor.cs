@@ -557,7 +557,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     try
     {
-      await JsModuleReady.Wait(_componentClosing.Token);
+      await WaitForJsModule(_componentClosing.Token);
 
       if (RemoteControlStream.State != WebSocketState.Open)
       {
@@ -728,7 +728,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
   private async Task OnVkKeyDown(KeyboardEventArgs args)
   {
-    await JsModuleReady.Wait(_componentClosing.Token);
+    await WaitForJsModule(_componentClosing.Token);
 
     if (RemoteControlStream.State != WebSocketState.Open)
     {

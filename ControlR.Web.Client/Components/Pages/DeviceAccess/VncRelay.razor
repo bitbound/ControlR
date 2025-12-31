@@ -4,6 +4,7 @@
 @using ControlR.Libraries.WebSocketRelay.Client
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 @attribute [Authorize]
+@inherits JsInteropableComponent
 
 <div class="h-100 w-100 d-flex flex-column">
   @if (_loading)

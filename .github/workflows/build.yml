@@ -34,7 +34,7 @@ env:
 jobs:
   set-version:
     name: Increment Version
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
     permissions:
       contents: read
       actions: write
@@ -60,13 +60,21 @@ jobs:
           $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
           Write-Host "Next version will be: $NextVersion"
           # Persist next version to GH Variables for future runs
-          gh variable set CURRENT_VERSION --body $NextVersion
+          if ($IsLinux) {
+            /usr/bin/gh variable set CURRENT_VERSION --body $NextVersion
+          }
+          elseif ($IsMacOS) {
+            /opt/homebrew/bin/gh variable set CURRENT_VERSION --body $NextVersion
+          }
+          else {
+            gh variable set CURRENT_VERSION --body $NextVersion
+          }
           # Expose the next version as a step output for the job
           echo "version=$NextVersion" >> $GITHUB_OUTPUT
 
   run-tests:
     name: Run Tests
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
     needs: set-version
 
     steps:
@@ -77,9 +85,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
+        uses: ./.github/actions/setup-dotnet
 
       - name: Run Tests
         run: |
@@ -98,9 +104,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
+        uses: ./.github/actions/setup-dotnet
 
       - name: Publish DesktopClient + Agent (ARM64)
         run: |
@@ -176,9 +180,7 @@ jobs:
           submodules: recursive
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
+        uses: ./.github/actions/setup-dotnet
 
       - name: Pack ControlR.ApiClient (Release)
         run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ env.VERSION }}
@@ -287,7 +289,7 @@ jobs:
 
   build-linux-binaries:
     name: Linux Build
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
     needs: [set-version]
 
     steps:
@@ -299,9 +301,7 @@ jobs:
           submodules: recursive
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
+        uses: ./.github/actions/setup-dotnet
 
       - name: Build DesktopClient (linux-x64)
         run: |
@@ -337,7 +337,7 @@ jobs:
 
   build-web-server:
     name: Build Web Server
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
         build-windows-binaries,
@@ -355,9 +355,7 @@ jobs:
           submodules: recursive
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
+        uses: ./.github/actions/setup-dotnet
 
       - name: Download Agent (win-x86)
         uses: actions/download-artifact@v7

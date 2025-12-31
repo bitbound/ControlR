@@ -7,6 +7,7 @@ namespace ControlR.Web.Client.Components;
 
 public class JsInteropableComponent : ViewportAwareComponent
 {
+  private readonly TaskCompletionSource _jsModuleReady = new();
   private string _componentName = string.Empty;
   private IJSObjectReference? _jsModule;
   private string _jsPath = string.Empty;
@@ -16,8 +17,8 @@ public class JsInteropableComponent : ViewportAwareComponent
   [Inject]
   public required IJSRuntime JsRuntime { get; init; }
 
+  protected bool IsJsModuleReady => _jsModuleReady.Task.IsCompleted;
   protected IJSObjectReference JsModule => _jsModule ?? throw new InvalidOperationException("JS module is not initialized");
-  protected ManualResetEventAsync JsModuleReady { get; } = new();
 
   [SupportedOSPlatform("browser")]
   protected async Task ImportJsHost()
@@ -39,9 +40,13 @@ public class JsInteropableComponent : ViewportAwareComponent
         + $".razor.js?v={GetCacheBuster()}";
 
       _jsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", _jsPath);
-      
-      JsModuleReady.Set();
+      _jsModuleReady.SetResult();
     }
+  }
+
+  protected async Task WaitForJsModule(CancellationToken cancellationToken = default)
+  {
+    await _jsModuleReady.Task.WaitAsync(cancellationToken);
   }
 
   private string GetCacheBuster()

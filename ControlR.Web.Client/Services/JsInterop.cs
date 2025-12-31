@@ -5,8 +5,6 @@ namespace ControlR.Web.Client.Services;
 
 public interface IJsInterop
 {
-  ValueTask AddBeforeUnloadHandler();
-
   ValueTask AddClassName(ElementReference element, string className);
 
   ValueTask Alert(string message);
@@ -46,11 +44,6 @@ public interface IJsInterop
 
 public class JsInterop(IJSRuntime jsRuntime) : IJsInterop
 {
-  public ValueTask AddBeforeUnloadHandler()
-  {
-    return jsRuntime.InvokeVoidAsync("addBeforeUnloadHandler");
-  }
-
   public ValueTask AddClassName(ElementReference element, string className)
   {
     return jsRuntime.InvokeVoidAsync("addClassName", element, className);

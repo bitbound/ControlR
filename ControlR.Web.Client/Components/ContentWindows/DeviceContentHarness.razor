@@ -38,10 +38,9 @@
 
   private async Task HandleEventMessage(object subscriber, Guid eventKind)
   {
-    await ScreenWake.SetScreenWakeLock(ContentInstances.Count > 0);
-    
     if (eventKind == EventKinds.DeviceContentWindowsChanged)
     {
+      await ScreenWake.SetScreenWakeLock(ContentInstances.Count > 0);
       await InvokeAsync(StateHasChanged);
     }
   }

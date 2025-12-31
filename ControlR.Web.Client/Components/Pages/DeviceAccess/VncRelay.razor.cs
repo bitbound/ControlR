@@ -2,6 +2,7 @@ using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.WebSocketRelay.Client;
 using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
@@ -25,6 +26,21 @@ public partial class VncRelay
   public required IUserSettingsProvider UserSettings { get; init; }
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+
+  [JSInvokable]
+  public async Task OnVncDisconnected(bool cleanDisconnect)
+  {
+    Logger.LogInformation("VNC connection disconnected. Clean: {Clean}", cleanDisconnect);
+    
+    var message = cleanDisconnect 
+      ? "VNC connection closed" 
+      : "VNC connection lost";
+    
+    Snackbar.Add(message, cleanDisconnect ? Severity.Info : Severity.Warning);
+    
+    Disconnect();
+    await InvokeAsync(StateHasChanged);
+  }
 
   private void Disconnect()
   {
@@ -62,7 +78,7 @@ public partial class VncRelay
       var encodedPath = Uri.EscapeDataString(viewerRelayUri.PathAndQuery);
 
       _noVncUri = new Uri(serverUri,
-          $"novnc/vnc.html?path={encodedPath}&resize=scale&autoconnect=true");
+          $"novnc/vnc.html?path={encodedPath}&resize=scale&autoconnect=true&show_dot=true");
 
       Logger.LogInformation("Resolved NoVNC relay URI: {NoVncUri}", _noVncUri);
       Logger.LogInformation("Creating streaming session.");

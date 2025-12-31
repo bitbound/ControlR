@@ -20,13 +20,13 @@
 
 <body>
   <Routes @rendermode="PageRenderMode" />
-  <script src="wasm-progress.js"></script>
+  <script src="@Assets["wasm-progress.js"]"></script>
   <script src="@Assets["_framework/blazor.web.js"]"></script>
   <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
-  <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-  <script src="_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"></script>
-  <script src="interop.js"></script>
-  <script src="customize.js"></script>
+  <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
+  <script src="@Assets["_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"]"></script>
+  <script src="@Assets["interop.js"]"></script>
+  <script src="@Assets["customize.js"]"></script>
 </body>
 
 </html>
@@ -40,9 +40,9 @@
   {
     get
     {
-      return HttpContext.AcceptsInteractiveRouting() 
-        ? InteractiveWebAssembly 
-        : null;
+      return HttpContext.AcceptsInteractiveRouting()
+      ? InteractiveWebAssembly
+      : null;
     }
   }
 }

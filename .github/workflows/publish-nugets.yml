@@ -1,0 +1,73 @@
+name: Publish NuGet Packages
+run-name: "Publish NuGet (Run ID: ${{ inputs.run_id || 'latest build' }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build workflow run ID (leave empty to use latest)"
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to NuGet.org
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Get Latest Build Run ID
+        id: get-run-id
+        uses: ./.github/actions/get-latest-build-run-id
+        with:
+          run_id: ${{ inputs.run_id }}
+          github_token: ${{ github.token }}
+
+      - name: Download ApiClient NuGet Package
+        uses: actions/download-artifact@v7
+        with:
+          name: ApiClientNuGet
+          path: ./nuget-packages
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
+
+      - name: Publish to NuGet.org
+        shell: bash
+        run: |
+          for package in ./nuget-packages/*.nupkg; do
+            echo "Publishing $package..."
+            dotnet nuget push "$package" \
+              --api-key ${{ secrets.NUGET_KEY }} \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+      - name: Get Package Version
+        id: get-version
+        shell: bash
+        run: |
+          PACKAGE_FILE=$(ls ./nuget-packages/*.nupkg | head -n 1)
+          PACKAGE_NAME=$(basename "$PACKAGE_FILE" .nupkg)
+          VERSION=$(echo "$PACKAGE_NAME" | grep -oP '\d+\.\d+\.\d+\.\d+')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Package version: $VERSION"
+
+      - name: Publish Complete
+        run: |
+          echo "## NuGet Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Packages Published:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ControlR.ApiClient" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully published to NuGet.org" >> $GITHUB_STEP_SUMMARY

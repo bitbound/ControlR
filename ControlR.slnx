@@ -4,17 +4,19 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Examples/">
+    <Project Path="Examples/ControlR.ApiClientExample/ControlR.ApiClientExample.csproj" Id="fa6b0650-0e67-4ee8-8924-e06eeea1a2d7" />
+  </Folder>
   <Folder Name="/Libraries/">
     <Project Path="Libraries/ControlR.Libraries.Clients/ControlR.Libraries.Clients.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj" Id="90e1359d-8bae-44a8-99aa-1398e95e9a7c" />
     <Project Path="Libraries/ControlR.Libraries.DevicesCommon/ControlR.Libraries.DevicesCommon.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
     <Project Path="Libraries/ControlR.Libraries.NativeInterop.Unix/ControlR.Libraries.NativeInterop.Unix.csproj" />
     <Project Path="Libraries/ControlR.Libraries.NativeInterop.Windows/ControlR.Libraries.NativeInterop.Windows.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj" />
-    <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Client/ControlR.Libraries.WebSocketRelay.Client.csproj">
-      <BuildType Solution="Debug|*" Project="&#xD;&#xA;&#x9;&#x9;&#x9;Debug" />
-    </Project>
+    <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Client/ControlR.Libraries.WebSocketRelay.Client.csproj" />
     <Project Path="Libraries/ControlR.Libraries.WebSocketRelay.Common/ControlR.Libraries.WebSocketRelay.Common.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

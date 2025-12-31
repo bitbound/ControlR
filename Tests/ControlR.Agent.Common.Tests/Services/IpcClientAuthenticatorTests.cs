@@ -149,7 +149,7 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var startupDir = "/expected/path";
-    var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
+    var expectedPath = GetExpectedPath(startupDir);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
@@ -207,7 +207,7 @@ public class IpcClientAuthenticatorTests
     // Note: SystemEnvironment.Instance.Platform (not the mock) is used in GetDesktopExecutablePath
     // So we need to construct the expected path based on the actual platform running the test
     // For testing purposes, let's test the non-macOS path since we can't easily mock the static Instance
-    var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
+    var expectedPath = GetExpectedPath(startupDir);
     var credentials = new ClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
@@ -225,11 +225,11 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var startupDir = "/expected/path";
-    var validPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
+    var expectedPath = GetExpectedPath(startupDir);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
-    var credentials = new ClientCredentials(12345, validPath);
+    var credentials = new ClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -242,7 +242,7 @@ public class IpcClientAuthenticatorTests
     }
 
     // Assert - rate limit should still allow more attempts
-    var rateLimitCheck = await _authenticator.CheckRateLimit(validPath);
+    var rateLimitCheck = await _authenticator.CheckRateLimit(expectedPath);
     Assert.True(rateLimitCheck.IsSuccess);
   }
 
@@ -295,7 +295,7 @@ public class IpcClientAuthenticatorTests
   {
     // Arrange
     var startupDir = "/expected/path";
-    var expectedPath = Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
+    var expectedPath = GetExpectedPath(startupDir);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
@@ -473,5 +473,14 @@ public class IpcClientAuthenticatorTests
     // Assert - check rate limit should still work
     var result = await _authenticator.CheckRateLimit(invalidPath!);
     Assert.True(result.IsSuccess);
+  }
+
+  private static string GetExpectedPath(string startupDir)
+  {
+    if (OperatingSystem.IsMacOS())
+    {
+      return Path.Combine(startupDir, "DesktopClient/ControlR.app/Contents/MacOS/", AppConstants.DesktopClientFileName);
+    }
+    return Path.Combine(startupDir, "DesktopClient", AppConstants.DesktopClientFileName);
   }
 }

@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.WebSockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Extensions;
-public static class Extensions
+public static class ServiceCollectionExtensions
 {
   public static IServiceCollection AddWebSocketRelay(
     this IServiceCollection services)

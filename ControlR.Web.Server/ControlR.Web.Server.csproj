@@ -10,15 +10,17 @@
 		<OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
 	</PropertyGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
+		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="AspNet.Security.OAuth.GitHub" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
 		<PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Scalar.AspNetCore" />
-		<ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
-		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
 		<PackageReference Include="MailKit" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
@@ -57,6 +59,8 @@
 		<None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 	<Target Name="BuildApiClient" AfterTargets="Build">
-		<Exec Command="dotnet build $(MSBuildThisFileDirectory)..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
+		<Exec Command="dotnet tool restore" />
+		<Message Importance="high" Text="Kiota: Generating client from ControlR.Web.Server.json..." />
+		<Exec Command="dotnet kiota generate -d ControlR.Web.Server.json -l CSharp -o ../ControlR.ApiClient/Output -n ControlR.ApiClient -c ControlrApiClient --clean-output --dvr NoServerEntry" />
 	</Target>
 </Project>

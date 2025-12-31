@@ -66,7 +66,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-      if (JsModuleReady.IsSet)
+      if (IsJsModuleReady)
       {
         await JsModule.InvokeVoidAsync("dispose");
       }
@@ -87,7 +87,7 @@ public partial class FileSystem : JsInteropableComponent
 
     if (firstRender)
     {
-      await JsModuleReady.Wait(CancellationToken.None);
+      await WaitForJsModule(CancellationToken.None);
       await JsModule.InvokeVoidAsync("initializeGridSplitter", _containerRef, _splitterRef, _treePanelRef,
         _contentPanelRef);
     }

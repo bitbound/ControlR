@@ -17,7 +17,6 @@ using ControlR.Web.ServiceDefaults;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;

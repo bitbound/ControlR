@@ -38,17 +38,21 @@ internal class LocalSocketProxy(
     catch (OperationCanceledException ex)
     {
       _logger.LogWarning(ex, "VNC connection test canceled on port {Port}", port);
-      return Result.Fail("VNC connection test timed out or was cancelled.");
+      return Result.Fail("VNC connection test timed out or was cancelled on the remote device.");
     }
     catch (SocketException ex)
     {
       _logger.LogError(ex, "Error while testing VNC connection on port {Port}.", port);
-      return Result.Fail($"A socket exception occurred with error code '{ex.SocketErrorCode}'.");
+      if (ex.SocketErrorCode == SocketError.ConnectionRefused)
+      {
+        return Result.Fail("The VNC service is not running or not reachable on the remote device.");
+      }
+      return Result.Fail($"A socket exception occurred on the remote device with error code '{ex.SocketErrorCode}'.");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while testing VNC connection on port {Port}", port);
-      return Result.Fail("An error occurred while testing VNC connection.");
+      return Result.Fail("An error occurred while testing VNC connection on the remote device.");
     }
   }
 }
