@@ -339,7 +339,7 @@ jobs:
 
   build-web-server:
     name: Build Web Server
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","macOS"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
         build-windows-binaries,
