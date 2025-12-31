@@ -19,33 +19,10 @@ inputs:
     description: 'Whether the package is a prerelease version'
     required: false
     default: 'false'
-  registry-name:
-    description: 'NuGet registry name'
-    required: false
-    default: 'nuget.org'
-  registry-uri:
-    description: 'NuGet registry URI'
-    required: false
-    default: 'https://api.nuget.org/v3/index.json'
 
 runs:
   using: composite
   steps:
-    - name: Add or Update NuGet Source
-      shell: pwsh
-      env:
-        REGISTRY_NAME: ${{ inputs.registry-name }}
-        REGISTRY_URI: ${{ inputs.registry-uri }}
-      run: |
-        [string]$Sources = dotnet nuget list source
-        if (!($Sources -imatch "\d*\. $env:REGISTRY_NAME")) {
-          dotnet nuget add source --name "$env:REGISTRY_NAME" "$env:REGISTRY_URI"
-        }
-        else {
-          Write-Host "Source exists. Updating."
-          dotnet nuget update source "$env:REGISTRY_NAME" --source "$env:REGISTRY_URI"
-        }
-
     - name: Build NuGet Package (Prerelease)
       if: ${{ inputs.prerelease == 'true' }}
       shell: pwsh
