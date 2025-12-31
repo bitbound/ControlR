@@ -33,7 +33,7 @@ runs:
         if ("${{ inputs.prerelease }}" -eq "true") {
           $PackageVersion += "-dev"
         }
-        Write-Host "Building $env:PROJECT_PATH with version $env:VERSION (Prerelease)"
+        Write-Host "Building $env:PROJECT_PATH with version $env:PackageVersion"
         dotnet build $env:PROJECT_PATH -c Release -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION" -p:PackageVersion="$PackageVersion"
 
     - name: Find NuGet Package
