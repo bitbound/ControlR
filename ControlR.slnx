@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/Libraries/">
     <Project Path="Libraries/ControlR.Libraries.Clients/ControlR.Libraries.Clients.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.Configuration.InMemory/ControlR.Libraries.Configuration.InMemory.csproj" />
     <Project Path="Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj" Id="90e1359d-8bae-44a8-99aa-1398e95e9a7c" />
     <Project Path="Libraries/ControlR.Libraries.DevicesCommon/ControlR.Libraries.DevicesCommon.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
@@ -33,6 +34,7 @@
     <Project Path="Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.CaptureSample/ControlR.DesktopClient.Linux.CaptureSample.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.Configuration.InMemory.Tests/ControlR.Libraries.Configuration.InMemory.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
