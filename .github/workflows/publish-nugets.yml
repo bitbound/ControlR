@@ -61,15 +61,13 @@ jobs:
               --skip-duplicate
           done
 
-      - name: Get Package Version
+      - name: Get Version from Version.txt
         id: get-version
         shell: bash
         run: |
-          PACKAGE_FILE=$(ls ./nuget-packages/*.nupkg | head -n 1)
-          PACKAGE_NAME=$(basename "$PACKAGE_FILE" .nupkg)
-          VERSION=$(echo "$PACKAGE_NAME" | grep -oP '\d+\.\d+\.\d+\.\d+')
+          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Package version: $VERSION"
+          echo "Version: $VERSION"
 
       - name: Publish Complete
         run: |

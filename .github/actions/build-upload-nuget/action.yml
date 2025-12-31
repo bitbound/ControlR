@@ -23,25 +23,18 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Build NuGet Package (Prerelease)
-      if: ${{ inputs.prerelease == 'true' }}
+    - name: Build NuGet Package
       shell: pwsh
       env:
         PROJECT_PATH: ${{ inputs.project-path }}
         VERSION: ${{ inputs.version }}
       run: |
+        $PackageVersion = $env:VERSION
+        if ("${{ inputs.prerelease }}" -eq "true") {
+          $PackageVersion += "-dev"
+        }
         Write-Host "Building $env:PROJECT_PATH with version $env:VERSION (Prerelease)"
-        dotnet build $env:PROJECT_PATH -c Release -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION" -p:VersionPrefix="$env:VERSION" -p:VersionSuffix="dev"
-
-    - name: Build NuGet Package (Release)
-      if: ${{ inputs.prerelease != 'true' }}
-      shell: pwsh
-      env:
-        PROJECT_PATH: ${{ inputs.project-path }}
-        VERSION: ${{ inputs.version }}
-      run: |
-        Write-Host "Building $env:PROJECT_PATH with version $env:VERSION (Release)"
-        dotnet build $env:PROJECT_PATH -c Release -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION" -p:VersionPrefix="$env:VERSION"
+        dotnet build $env:PROJECT_PATH -c Release -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION" -p:PackageVersion="$PackageVersion"
 
     - name: Find NuGet Package
       id: find-nupkg
