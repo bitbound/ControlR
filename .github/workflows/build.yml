@@ -26,6 +26,12 @@ on:
         required: false
         default: ""
         type: string
+      
+      prerelease:
+        description: "Is this a prerelease version?"
+        required: false
+        default: false
+        type: boolean
 
 env:
   VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
@@ -113,6 +119,7 @@ jobs:
           version: ${{ env.VERSION }}
           artifact-name: ApiClientNuGet
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          prerelease: ${{ inputs.prerelease }}
 
       - name: Build and Upload ControlR.Libraries.DataRedaction
         uses: ./.github/actions/build-upload-nuget
@@ -121,7 +128,7 @@ jobs:
           version: ${{ env.VERSION }}
           artifact-name: DataRedactionNuGet
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-
+          prerelease: ${{ inputs.prerelease }}
   build-mac-binaries:
     name: Apple Build
     runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
