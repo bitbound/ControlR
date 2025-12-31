@@ -19,11 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ControlR.ApiClient" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
   </ItemGroup>
 
 </Project>
