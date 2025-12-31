@@ -61,24 +61,14 @@ jobs:
               --skip-duplicate
           done
 
-      - name: Get Version from Version.txt
-        id: get-version
+      - name: Publish Complete
         shell: pwsh
         run: |
-          $nugetPkg = Get-ChildItem -Path ./nuget-packages -Filter '*.nupkg' | Select-Object -First 1
-          if (-not $nugetPkg) {
-            Write-Error "No NuGet package found to extract version."
-            exit 1
-          }
-          $packageInfo = dotnet nuget list "$nugetPkg" --include-prerelease --verbosity quiet
-          $version = ($packageInfo -split ' ')[1]
-          Write-Host "Extracted version: $version"
-          echo "version=$version" >> $GITHUB_OUTPUT
-
-      - name: Publish Complete
-        run: |
           echo "## NuGet Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.get-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Files Published:**" >> $GITHUB_STEP_SUMMARY
+          foreach ($Item in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
+            echo "  - $($Item.Name)" >> $GITHUB_STEP_SUMMARY
+          }
           echo "**Packages Published:**" >> $GITHUB_STEP_SUMMARY
           echo "- ControlR.ApiClient" >> $GITHUB_STEP_SUMMARY
           echo "- ControlR.Libraries.DataRedaction" >> $GITHUB_STEP_SUMMARY
