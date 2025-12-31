@@ -21,15 +21,20 @@ runs:
   steps:
     - name: Build NuGet Package
       shell: pwsh
+      env:
+        PROJECT_PATH: ${{ inputs.project-path }}
+        VERSION: ${{ inputs.version }}
       run: |
-        Write-Host "Building ${{ inputs.project-path }} with version ${{ inputs.version }}"
-        dotnet build ${{ inputs.project-path }} -c Release -p:Version=${{ inputs.version }}
+        Write-Host "Building $env:PROJECT_PATH with version $env:VERSION"
+        dotnet build $env:PROJECT_PATH -c Release -p:Version=$env:VERSION
 
     - name: Find NuGet Package
       id: find-nupkg
       shell: pwsh
+      env:
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
-        $projectDir = Split-Path -Parent "${{ inputs.project-path }}"
+        $projectDir = Split-Path -Parent "$env:PROJECT_PATH"
         $searchDir = Join-Path $projectDir "bin\Release"
         Write-Host "Searching for nupkg in $searchDir"
         
