@@ -1,0 +1,56 @@
+name: Build and Upload NuGet Package
+description: Builds a NuGet package and uploads it as an artifact
+
+inputs:
+  project-path:
+    description: 'Path to the project file'
+    required: true
+  version:
+    description: 'Version number for the package'
+    required: true
+  artifact-name:
+    description: 'Name for the uploaded artifact'
+    required: true
+  retention-days:
+    description: 'Number of days to retain the artifact'
+    required: false
+    default: '1'
+
+runs:
+  using: composite
+  steps:
+    - name: Build NuGet Package
+      shell: pwsh
+      run: |
+        Write-Host "Building ${{ inputs.project-path }} with version ${{ inputs.version }}"
+        dotnet build ${{ inputs.project-path }} -c Release -p:Version=${{ inputs.version }}
+
+    - name: Find NuGet Package
+      id: find-nupkg
+      shell: pwsh
+      run: |
+        $projectDir = Split-Path -Parent "${{ inputs.project-path }}"
+        $searchDir = Join-Path $projectDir "bin\Release"
+        Write-Host "Searching for nupkg in $searchDir"
+        
+        if (!(Test-Path $searchDir)) {
+          Write-Error "Directory $searchDir not found"
+          exit 1
+        }
+        
+        $pkg = Get-ChildItem -Path $searchDir -Filter '*.nupkg' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        
+        if (-not $pkg) {
+          Write-Error "NuGet package not found in $searchDir"
+          exit 1
+        }
+        
+        Write-Host "Found package: $($pkg.FullName)"
+        echo "NUPKG_PATH=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
+
+    - name: Upload NuGet Package
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.find-nupkg.outputs.NUPKG_PATH }}
+        retention-days: ${{ inputs.retention-days }}

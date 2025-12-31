@@ -91,6 +91,37 @@ jobs:
         run: |
           dotnet test -c Release
 
+  build-nuget-packages:
+    name: Build NuGet Packages
+    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Unix"]') || fromJson('["ubuntu-latest"]') }}
+    needs: set-version
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Build and Upload ControlR.ApiClient
+        uses: ./.github/actions/build-upload-nuget
+        with:
+          project-path: ControlR.ApiClient/ControlR.ApiClient.csproj
+          version: ${{ needs.set-version.outputs.version }}
+          artifact-name: ApiClientNuGet
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+      - name: Build and Upload ControlR.Libraries.DataRedaction
+        uses: ./.github/actions/build-upload-nuget
+        with:
+          project-path: Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj
+          version: ${{ needs.set-version.outputs.version }}
+          artifact-name: DataRedactionNuGet
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
   build-mac-binaries:
     name: Apple Build
     runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
@@ -181,35 +212,6 @@ jobs:
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
-
-      - name: Pack ControlR.ApiClient (Release)
-        run: dotnet build ControlR.ApiClient/ControlR.ApiClient.csproj -c Release -p:Version=${{ env.VERSION }}
-
-      - name: Find ApiClient nupkg
-        id: find-nupkg
-        shell: pwsh
-        run: |
-          $searchDir = 'ControlR.ApiClient\bin\Release'
-          Write-Host "Searching for nupkg in $searchDir"
-          if (!(Test-Path $searchDir)) {
-            Write-Error "Directory $searchDir not found"
-            exit 1
-          }
-          $pkg = Get-ChildItem -Path $searchDir -Filter 'ControlR.ApiClient*.nupkg' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $pkg) {
-            Write-Error 'ApiClient nupkg not found in Release folder.'
-            exit 1
-          }
-          Write-Host "Found package: $($pkg.FullName)"
-          echo "APICLIENT_NUPKG=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
-
-      - name: Upload ApiClient NuGet
-        if: matrix.arch == 'win-x64'
-        uses: actions/upload-artifact@v6
-        with:
-          name: ApiClientNuGet
-          path: ${{ steps.find-nupkg.outputs.APICLIENT_NUPKG }}
-          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       # ===== Azure Login with OIDC =====
       - name: Azure Login

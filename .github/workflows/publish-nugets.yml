@@ -37,6 +37,14 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
+      - name: Download DataRedaction NuGet Package
+        uses: actions/download-artifact@v7
+        with:
+          name: DataRedactionNuGet
+          path: ./nuget-packages
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -69,5 +77,6 @@ jobs:
           echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Packages Published:**" >> $GITHUB_STEP_SUMMARY
           echo "- ControlR.ApiClient" >> $GITHUB_STEP_SUMMARY
+          echo "- ControlR.Libraries.DataRedaction" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Successfully published to NuGet.org" >> $GITHUB_STEP_SUMMARY
