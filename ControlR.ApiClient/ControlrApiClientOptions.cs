@@ -9,6 +9,11 @@ namespace ControlR.ApiClient;
 public class ControlrApiClientOptions
 {
   /// <summary>
+  /// The default configuration section key for ControlR API client options.
+  /// </summary>
+  public const string SectionKey = "ControlrApiClient";
+
+  /// <summary>
   /// Gets or sets the base URI where the ControlR API is hosted.
   /// </summary>
   /// <remarks>The base URI typically specifies the root endpoint for all API calls. Ensure that the URI is

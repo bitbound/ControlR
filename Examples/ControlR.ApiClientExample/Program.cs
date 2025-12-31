@@ -6,14 +6,9 @@ using Microsoft.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.Configure<ControlrApiClientOptions>(
-    builder.Configuration.GetSection(nameof(ControlrApiClientOptions)));
+    builder.Configuration.GetSection(ControlrApiClientOptions.SectionKey));
 
-var clientOptions = builder.Configuration
-  .GetSection(nameof(ControlrApiClientOptions))
-  .Get<ControlrApiClientOptions>()
-  ?? throw new InvalidOperationException("ControlrApiClientOptions must be configured.");
-
-builder.AddControlrApiClient(nameof(ControlrApiClientOptions));
+builder.AddControlrApiClient(ControlrApiClientOptions.SectionKey);
 
 builder.Services.AddHostedService<ExampleService>();
 

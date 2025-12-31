@@ -47,14 +47,14 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddControlrApiClient(
     builder.Configuration,
-    "ControlrApiClientOptions");
+    ControlrApiClientOptions.SectionKey);
 ```
 
 With the following configuration in `appsettings.json`:
 
 ```json
 {
-  "ControlrApiClientOptions": {
+  "ControlrApiClient": {
     "BaseUrl": "https://your-controlr-server.com",
     "PersonalAccessToken": "your-personal-access-token"
   }
