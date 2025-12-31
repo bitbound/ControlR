@@ -64,13 +64,13 @@ jobs:
       - name: Publish Complete
         shell: pwsh
         run: |
-          echo "## NuGet Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Files Published:**" >> $GITHUB_STEP_SUMMARY
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## NuGet Publish Summary"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Files Published:**"
           foreach ($Item in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
-            echo "  - $($Item.Name)" >> $GITHUB_STEP_SUMMARY
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "  - $($Item.Name)"
           }
-          echo "**Packages Published:**" >> $GITHUB_STEP_SUMMARY
-          echo "- ControlR.ApiClient" >> $GITHUB_STEP_SUMMARY
-          echo "- ControlR.Libraries.DataRedaction" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Successfully published to NuGet.org" >> $GITHUB_STEP_SUMMARY
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Packages Published:**"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- ControlR.ApiClient"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- ControlR.Libraries.DataRedaction"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "✅ Successfully published to NuGet.org"

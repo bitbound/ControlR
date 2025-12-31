@@ -13,7 +13,7 @@
     <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.26" />
     <PackageVersion Include="Bitbound.SimpleMessenger" Version="2.4.24" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageVersion Include="ControlR.ApiClient" Version="0.17.19-dev" />
+    <PackageVersion Include="ControlR.ApiClient" Version="0.17.20" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Devolutions.Cadeau" Version="2025.9.25" />
     <PackageVersion Include="Extensions.MudBlazor.StaticInput" Version="3.2.1" />
