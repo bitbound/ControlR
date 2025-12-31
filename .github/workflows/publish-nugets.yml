@@ -69,8 +69,5 @@ jobs:
           foreach ($Item in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "  - $($Item.Name)"
           }
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Packages Published:**"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- ControlR.ApiClient"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- ControlR.Libraries.DataRedaction"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "✅ Successfully published to NuGet.org"
