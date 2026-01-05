@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
@@ -38,6 +37,7 @@ internal class ScreenGrabberWayland(
   IPipeWireStreamFactory streamFactory,
   ILogger<ScreenGrabberWayland> logger) : IScreenGrabber
 {
+  private const string CaptureModePipeWire = "WaylandPipeWire";
   private const int StreamStartPollingIntervalMs = 100;
   private const int StreamStartTimeoutMs = 3_000;
 
@@ -111,7 +111,7 @@ internal class ScreenGrabberWayland(
         canvas.DrawBitmap(displayBitmap, destRect);
       }
 
-      return CaptureResult.Ok(compositeBitmap, isUsingGpu: false);
+      return CaptureResult.Ok(compositeBitmap, captureMode: CaptureModePipeWire);
     }
     catch (Exception ex)
     {
@@ -119,6 +119,7 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
+
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -150,6 +151,7 @@ internal class ScreenGrabberWayland(
       return CaptureResult.Fail(ex);
     }
   }
+
   public async ValueTask DisposeAsync()
   {
     if (_disposed)
@@ -162,6 +164,7 @@ internal class ScreenGrabberWayland(
     _initLock?.Dispose();
     _disposed = true;
   }
+
   public async Task Initialize(CancellationToken cancellationToken)
   {
     if (_isInitialized)
@@ -281,7 +284,7 @@ internal class ScreenGrabberWayland(
         throw;
       }
 
-      return CaptureResult.Ok(bitmap, isUsingGpu: false);
+      return CaptureResult.Ok(bitmap, captureMode: CaptureModePipeWire);
     }
     catch (Exception ex)
     {

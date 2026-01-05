@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
@@ -10,6 +11,7 @@ public sealed class ScreenGrabberMac(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberMac> logger) : IScreenGrabber
 {
+  private const string CoreGraphicsCaptureMode = "CoreGraphics";
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
 
@@ -62,37 +64,98 @@ public sealed class ScreenGrabberMac(
         return CaptureResult.Fail("No displays found.");
       }
 
-      // For multiple displays, we'll capture the main display only for now
-      // A proper implementation would need to composite all displays into a single image
-      var mainDisplayId = CoreGraphics.CGMainDisplayID();
-      var cgImageRef = CoreGraphics.CGDisplayCreateImage(mainDisplayId);
-
-      if (cgImageRef == nint.Zero)
+      var displays = await _displayManager.GetDisplays();
+      if (displays.Count == 0)
       {
-        return CaptureResult.Fail("Failed to create main display image.");
+        return CaptureResult.Fail("No displays found.");
       }
 
-      try
+      if (displays.Count == 1)
       {
-        var bitmap = CoreGraphicsHelper.CGImageToSKBitmap(cgImageRef);
-
-        if (bitmap is null)
+        var displayIdResult = uint.TryParse(displays[0].DeviceName, out var displayId);
+        if (!displayIdResult)
         {
-          return CaptureResult.Fail("Failed to convert CGImage to SKBitmap.");
+          return CaptureResult.Fail($"Invalid display ID: {displays[0].DeviceName}");
         }
 
-        // Note: captureCursor is ignored for now
-        if (captureCursor)
+        var cgImageRef = CoreGraphics.CGDisplayCreateImage(displayId);
+        if (cgImageRef == nint.Zero)
         {
-          _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
+          return CaptureResult.Fail("Failed to create display image.");
         }
 
-        return CaptureResult.Ok(bitmap, isUsingGpu: false);
+        try
+        {
+          var bitmap = CoreGraphicsHelper.CGImageToSKBitmap(cgImageRef);
+          if (bitmap is null)
+          {
+            return CaptureResult.Fail("Failed to convert CGImage to SKBitmap.");
+          }
+
+          if (captureCursor)
+          {
+            _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
+          }
+
+          return CaptureResult.Ok(bitmap, captureMode: CoreGraphicsCaptureMode);
+        }
+        finally
+        {
+          CoreGraphicsHelper.ReleaseCGImage(cgImageRef);
+        }
       }
-      finally
+
+      var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
+      using var canvas = new SKCanvas(compositeBitmap);
+      canvas.Clear(SKColors.Black);
+
+      foreach (var display in displays)
       {
-        CoreGraphicsHelper.ReleaseCGImage(cgImageRef);
+        if (!uint.TryParse(display.DeviceName, out var displayId))
+        {
+          _logger.LogWarning("Invalid display ID: {DisplayId}", display.DeviceName);
+          continue;
+        }
+
+        var cgImageRef = CoreGraphics.CGDisplayCreateImage(displayId);
+        if (cgImageRef == nint.Zero)
+        {
+          _logger.LogWarning("Failed to create display image for {DisplayId}", display.DeviceName);
+          continue;
+        }
+
+        try
+        {
+          var displayBitmap = CoreGraphicsHelper.CGImageToSKBitmap(cgImageRef);
+          if (displayBitmap is null)
+          {
+            _logger.LogWarning("Failed to convert CGImage to SKBitmap for {DisplayId}", display.DeviceName);
+            continue;
+          }
+
+          using (displayBitmap)
+          {
+            var destRect = SKRect.Create(
+              display.MonitorArea.X - virtualBounds.X,
+              display.MonitorArea.Y - virtualBounds.Y,
+              display.MonitorArea.Width,
+              display.MonitorArea.Height);
+
+            canvas.DrawBitmap(displayBitmap, destRect);
+          }
+        }
+        finally
+        {
+          CoreGraphicsHelper.ReleaseCGImage(cgImageRef);
+        }
       }
+
+      if (captureCursor)
+      {
+        _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
+      }
+
+      return CaptureResult.Ok(compositeBitmap, captureMode: CoreGraphicsCaptureMode);
     }
     catch (Exception ex)
     {
@@ -133,7 +196,7 @@ public sealed class ScreenGrabberMac(
         _logger.LogDebug("Cursor capture is not yet implemented on macOS.");
       }
 
-      return CaptureResult.Ok(bitmap, isUsingGpu: false);
+      return CaptureResult.Ok(bitmap, captureMode: CoreGraphicsCaptureMode);
     }
     catch (Exception ex)
     {

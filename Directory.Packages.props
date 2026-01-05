@@ -8,13 +8,19 @@
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.10" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.10" />
     <PackageVersion Include="Avalonia.LinuxFramebuffer" Version="11.3.10" />
+    <PackageVersion Include="Avalonia.Skia" Version="11.3.10" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.10" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0" />
     <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.26" />
     <PackageVersion Include="Bitbound.SimpleMessenger" Version="2.4.24" />
+    <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.4.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="ControlR.ApiClient" Version="0.17.20" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Devolutions.AvaloniaControls" Version="2025.12.17" />
+    <PackageVersion Include="Devolutions.AvaloniaTheme.DevExpress" Version="2025.12.16" />
+    <PackageVersion Include="Devolutions.AvaloniaTheme.Linux" Version="2025.12.17" />
+    <PackageVersion Include="Devolutions.AvaloniaTheme.MacOS" Version="2025.12.17" />
     <PackageVersion Include="Devolutions.Cadeau" Version="2025.9.25" />
     <PackageVersion Include="Extensions.MudBlazor.StaticInput" Version="3.2.1" />
     <PackageVersion Include="MailKit" Version="4.14.1" />

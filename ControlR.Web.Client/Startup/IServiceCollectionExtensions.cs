@@ -1,7 +1,7 @@
 using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
+using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Web.Client.StateManagement.Stores;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor.Services;

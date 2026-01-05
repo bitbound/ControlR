@@ -65,12 +65,22 @@ internal class StreamBasedCapturer(
     }
   }
 
+  public string GetCaptureMode()
+  {
+    throw new NotImplementedException();
+  }
+
   public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
     {
       yield return item;
     }
+  }
+
+  public double GetCurrentFps(TimeSpan window)
+  {
+    throw new NotImplementedException();
   }
 
   public Task RequestKeyFrame()

@@ -54,9 +54,7 @@ public static class HostAppBuilderExtensions
     // Common services
     builder.Services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
     builder.Services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-    builder.Services
-      .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>()
-      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>());
+    builder.Services.AddSingleton<ICaptureMetrics, CaptureMetricsLinux>();
 
     builder.BootstrapSerilog(
       logFilePath: PathConstants.GetLogsPath(appDataFolder),

@@ -1,5 +1,5 @@
 ﻿using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
+using ControlR.Libraries.Viewer.Common.State;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 

@@ -1,5 +1,4 @@
 ﻿using ControlR.Agent.Common.Models.Messages;
-using ControlR.Libraries.Clients.Extensions;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.DependencyInjection;

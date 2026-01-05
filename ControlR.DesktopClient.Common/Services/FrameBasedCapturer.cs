@@ -1,18 +1,18 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
-using Bitbound.SimpleMessenger;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using Microsoft.Extensions.Logging;
-using SkiaSharp;
 using ControlR.DesktopClient.Common.Services.Encoders;
+using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using Microsoft.Extensions.Logging;
+using SkiaSharp;
+using System.Collections.Concurrent;
+using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 
 namespace ControlR.DesktopClient.Common.Services;
 
@@ -22,6 +22,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   public const int DefaultImageQuality = 75;
 
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
+
   private readonly Channel<ScreenRegionDto> _captureChannel = Channel.CreateBounded<ScreenRegionDto>(
     new BoundedChannelOptions(capacity: 1)
     {
@@ -29,18 +30,19 @@ internal class FrameBasedCapturer : IDesktopCapturer
       SingleWriter = true,
       FullMode = BoundedChannelFullMode.Wait,
     });
-  private readonly ICaptureMetrics _captureMetrics;
+
   private readonly SemaphoreSlim _displayLock = new(1, 1);
   private readonly TimeSpan _displayLockTimeout = TimeSpan.FromSeconds(5);
   private readonly IDisplayManager _displayManager;
   private readonly IFrameEncoder _frameEncoder;
+  private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
   private readonly IImageUtility _imageUtility;
   private readonly ILogger<FrameBasedCapturer> _logger;
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly TimeProvider _timeProvider;
-
   private Task? _captureTask;
+  private string? _currentCaptureMode;
   private bool _disposedValue;
   private volatile bool _forceKeyFrame = true;
   private string? _lastDisplayId;
@@ -51,7 +53,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
     TimeProvider timeProvider,
     IScreenGrabber screenGrabber,
     IDisplayManager displayManager,
-    ICaptureMetrics captureMetrics,
     IImageUtility imageUtility,
     IFrameEncoder frameEncoder,
     IMessenger messenger,
@@ -60,7 +61,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
     _timeProvider = timeProvider;
     _screenGrabber = screenGrabber;
     _displayManager = displayManager;
-    _captureMetrics = captureMetrics;
     _imageUtility = imageUtility;
     _frameEncoder = frameEncoder;
     _logger = logger;
@@ -114,6 +114,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
     GC.SuppressFinalize(this);
   }
 
+  public string GetCaptureMode() => _currentCaptureMode ?? string.Empty;
+
   public async IAsyncEnumerable<DtoWrapper> GetCaptureStream(
     [EnumeratorCancellation] CancellationToken cancellationToken)
   {
@@ -122,6 +124,26 @@ internal class FrameBasedCapturer : IDesktopCapturer
     {
       yield return DtoWrapper.Create(region, DtoType.ScreenRegion);
     }
+  }
+
+  public double GetCurrentFps(TimeSpan window)
+  {
+    using var acquiredLock = _framesSent.Lock();
+    var now = _timeProvider.GetUtcNow();
+
+    while (
+      _framesSent.TryPeek(out var timestamp) &&
+      timestamp.Add(window) < _timeProvider.GetUtcNow())
+    {
+      _ = _framesSent.TryDequeue(out _);
+    }
+
+    return _framesSent.Count switch
+    {
+      >= 2 => _framesSent.Count / window.TotalSeconds,
+      1 => 1,
+      _ => 0
+    };
   }
 
   public Task RequestKeyFrame()
@@ -184,8 +206,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   private async Task EncodeRegion(
     SKBitmap bitmap,
     SKRect region,
-    int quality,
-    bool isKeyFrame = false)
+    int quality)
   {
     var encodedImage = _frameEncoder.EncodeRegion(bitmap, region, quality);
 
@@ -197,11 +218,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
       encodedImage);
 
     await _captureChannel.Writer.WriteAsync(dto);
-
-    if (!isKeyFrame)
-    {
-      _captureMetrics.MarkBytesSent(encodedImage.Length);
-    }
   }
 
   private SKRect GetDirtyRect(SKBitmap bitmap, SKBitmap? previousFrame)
@@ -358,21 +374,19 @@ internal class FrameBasedCapturer : IDesktopCapturer
           continue;
         }
 
-        if (currentCapture.IsUsingGpu != _captureMetrics.IsUsingGpu)
+        if (currentCapture.CaptureMode != _currentCaptureMode)
         {
-          // We've switched from GPU to CPU capture, so we need to force a keyframe.
+          // We've switched capture modes (e.g. GDI to DXGI), so we need to force a keyframe.
           _forceKeyFrame = true;
+          _currentCaptureMode = currentCapture.CaptureMode;
         }
-
-        _captureMetrics.SetIsUsingGpu(currentCapture.IsUsingGpu);
 
         if (ShouldSendKeyFrame())
         {
           await EncodeRegion(
             currentCapture.Bitmap,
             currentCapture.Bitmap.ToSkRect(),
-            DefaultImageQuality,
-            isKeyFrame: true);
+            DefaultImageQuality);
 
           _forceKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
@@ -402,7 +416,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
       }
       finally
       {
-        _captureMetrics.MarkFrameSent();
+        using var guard = _framesSent.Lock();
+        _framesSent.Enqueue(_timeProvider.GetUtcNow());
       }
     }
   }

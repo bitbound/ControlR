@@ -32,9 +32,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Unix\ControlR.Libraries.NativeInterop.Unix.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />

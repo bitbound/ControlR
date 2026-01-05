@@ -1,10 +1,11 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
-public class CaptureMetricsLinux(IServiceProvider serviceProvider) 
-  : CaptureMetricsBase(serviceProvider), ICaptureMetrics
+public class CaptureMetricsLinux : ICaptureMetrics
 {
-  
+  public Dictionary<string, string> GetExtraMetricsData()
+  {
+    return [];
+  }
 }

@@ -8,6 +8,7 @@ public sealed class CaptureResult : IDisposable
 {
   public SKBitmap? Bitmap { get; init; }
 
+  public string? CaptureMode { get; set; }
   public Rectangle[]? DirtyRects { get; init; }
   public Exception? Exception { get; init; }
   public string FailureReason { get; init; } = string.Empty;
@@ -18,8 +19,6 @@ public sealed class CaptureResult : IDisposable
 
   [MemberNotNullWhen(true, nameof(Bitmap))]
   public bool IsSuccess { get; init; }
-  public bool IsUsingGpu { get; init; }
-
   public static CaptureResult Fail(string failureReason)
   {
     return new CaptureResult()
@@ -39,26 +38,26 @@ public sealed class CaptureResult : IDisposable
     };
   }
 
-  public static CaptureResult NoChanges(bool isUsingGpu)
+  public static CaptureResult NoChanges(string captureMode)
   {
     return new CaptureResult()
     {
       FailureReason = "No changes detected.",
       HadNoChanges = true,
-      IsUsingGpu = isUsingGpu,
+      CaptureMode = captureMode
     };
   }
 
   public static CaptureResult Ok(
     SKBitmap bitmap,
-    bool isUsingGpu,
+    string captureMode,
     Rectangle[]? dirtyRects = null)
   {
     return new CaptureResult()
     {
       Bitmap = bitmap,
       IsSuccess = true,
-      IsUsingGpu = isUsingGpu,
+      CaptureMode = captureMode,
       DirtyRects = dirtyRects,
     };
   }

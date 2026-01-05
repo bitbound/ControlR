@@ -17,9 +17,10 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Viewer.Common\ControlR.Libraries.Viewer.Common.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
 	</ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" />
 		<PackageReference Include="SkiaSharp" />
 		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
@@ -12,9 +13,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="../Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.Clients\ControlR.Libraries.Clients.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\Strings\en-US.json" />

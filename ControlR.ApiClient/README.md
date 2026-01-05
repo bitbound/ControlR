@@ -6,7 +6,7 @@ A .NET client library for interacting with the ControlR API. Built with [Kiota](
 
 - Strongly-typed API client generated from OpenAPI specification
 - Built-in support for dependency injection
-- Static builder pattern for quick setup
+- Static builder pattern for scenarios where dependency injection is not available
 - Efficient HTTP connection management via `IHttpClientFactory`
 - Automatic request/response serialization
 
@@ -20,7 +20,7 @@ dotnet add package ControlR.ApiClient
 
 The library supports two usage patterns: dependency injection (recommended for most applications) and a static builder pattern (useful for scripts or simple scenarios).
 
-### Option 1: Dependency Injection (Recommended)
+### Option 1: Dependency Injection
 
 #### Service Registration
 

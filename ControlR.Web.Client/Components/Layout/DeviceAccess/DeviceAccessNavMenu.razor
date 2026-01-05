@@ -1,5 +1,4 @@
-﻿@using ControlR.Web.Client.StateManagement.DeviceAccess
-@inject ILazyInjector<IDeviceState> DeviceAccessState
+﻿@inject ILazyInjector<IDeviceState> DeviceAccessState
 
 <MudNavMenu>
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
@@ -54,7 +53,7 @@
 
   private string GetDeviceId()
   {
-    if (DeviceAccessState.Maybe?.CurrentDeviceMaybe is {} device)
+    if (DeviceAccessState.Maybe?.TryGetCurrentDevice() is {} device)
     {
       return device.Id.ToString();
     }

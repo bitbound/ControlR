@@ -11,6 +11,7 @@ internal sealed class ScreenGrabberX11(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberX11> logger) : IScreenGrabber
 {
+  private const string X11CaptureMode = "LibX11";
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberX11> _logger = logger;
 
@@ -108,7 +109,7 @@ internal sealed class ScreenGrabberX11(
           _logger.LogDebug("Cursor capture is not yet implemented on Linux/X11.");
         }
 
-        return CaptureResult.Ok(bitmap, isUsingGpu: false);
+        return CaptureResult.Ok(bitmap, captureMode: X11CaptureMode);
       }
       finally
       {
@@ -149,7 +150,7 @@ internal sealed class ScreenGrabberX11(
           _logger.LogDebug("Cursor capture is not yet implemented on Linux/X11.");
         }
 
-        return CaptureResult.Ok(bitmap, isUsingGpu: false);
+        return CaptureResult.Ok(bitmap, captureMode: X11CaptureMode);
       }
       finally
       {

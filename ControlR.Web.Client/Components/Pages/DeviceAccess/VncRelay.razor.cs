@@ -1,6 +1,6 @@
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Libraries.WebSocketRelay.Client;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -50,7 +50,7 @@ public partial class VncRelay
 
   private async Task RequestStreamingSessionFromAgent()
   {
-    if (DeviceAccessState.CurrentDeviceMaybe is not { } device)
+    if (DeviceAccessState.TryGetCurrentDevice() is not { } device)
     {
       Snackbar.Add("No device selected", Severity.Error);
       return;
@@ -130,7 +130,7 @@ public partial class VncRelay
   {
     try
     {
-      if (DeviceAccessState.CurrentDeviceMaybe is not { } device)
+      if (DeviceAccessState.TryGetCurrentDevice() is not { } device)
       {
         Snackbar.Add("No device selected", Severity.Error);
         return;

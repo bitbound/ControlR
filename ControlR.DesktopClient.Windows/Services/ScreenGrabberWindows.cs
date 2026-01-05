@@ -26,6 +26,9 @@ internal sealed class ScreenGrabberWindows(
   IDisplayManager displayManager,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
+  private const string DirectXCaptureMode = "DirectX";
+  private const string GdiCaptureMode = "GDI";
+
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
@@ -107,7 +110,7 @@ internal sealed class ScreenGrabberWindows(
       }
 
       var skBitmap = bitmap.ToSkBitmap();
-      return CaptureResult.Ok(skBitmap, isUsingGpu: false);
+      return CaptureResult.Ok(skBitmap, captureMode: GdiCaptureMode);
     }
     catch (Exception ex)
     {
@@ -138,7 +141,7 @@ internal sealed class ScreenGrabberWindows(
       outputDuplication.AcquireNextFrame(0, out var duplicateFrameInfo, out var screenResource);
       if (duplicateFrameInfo.AccumulatedFrames == 0)
       {
-        return CaptureResult.NoChanges(isUsingGpu: true);
+        return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
       }
 
       using var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
@@ -193,7 +196,7 @@ internal sealed class ScreenGrabberWindows(
 
       if (!captureCursor)
       {
-        return CaptureResult.Ok(bitmap.ToSkBitmap(), true, dirtyRects);
+        return CaptureResult.Ok(bitmap.ToSkBitmap(), DirectXCaptureMode, dirtyRects);
       }
 
       if (!dxOutput.LastCursorArea.IsEmpty)
@@ -214,11 +217,11 @@ internal sealed class ScreenGrabberWindows(
         dxOutput.LastCursorArea = Rectangle.Empty;
       }
 
-      return CaptureResult.Ok(bitmap.ToSkBitmap(), true, dirtyRects);
+      return CaptureResult.Ok(bitmap.ToSkBitmap(), captureMode: DirectXCaptureMode, dirtyRects);
     }
     catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
     {
-      return CaptureResult.NoChanges(isUsingGpu: true);
+      return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
     }
     catch (COMException ex)
     {

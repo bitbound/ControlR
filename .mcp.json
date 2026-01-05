@@ -1,0 +1,10 @@
+{
+  "inputs": [],
+  "servers": {
+    "DeepWiki": {
+      "type": "sse",
+      "url": "https://mcp.deepwiki.com/sse",
+      "headers": {}
+    }
+  }
+}

@@ -25,7 +25,6 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()
-      .AddHostedService(x => x.GetRequiredService<ICaptureMetrics>())
       .AddHostedService(x => x.GetRequiredService<InputSimulatorWindows>())
       .AddHostedService<CursorWatcherWindows>();
 

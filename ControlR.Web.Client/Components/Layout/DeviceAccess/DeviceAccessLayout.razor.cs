@@ -1,5 +1,4 @@
 ﻿using System.Web;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -194,7 +193,7 @@ public partial class DeviceAccessLayout
   }
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
-    if (DeviceAccessState.Value.CurrentDeviceMaybe is null)
+    if (DeviceAccessState.Value.TryGetCurrentDevice() is null)
     {
       return;
     }

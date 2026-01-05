@@ -1,8 +1,8 @@
 using System.Threading.Channels;
 using ControlR.Libraries.Shared.IO;
+using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Web.Client.Components.FileSystem;
 using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;

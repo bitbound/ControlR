@@ -30,11 +30,11 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
     <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
 	</ItemGroup>
 	<ItemGroup>

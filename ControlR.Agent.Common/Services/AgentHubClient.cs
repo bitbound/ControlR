@@ -1,11 +1,9 @@
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Threading.Channels;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models.Messages;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
-using ControlR.Libraries.Clients.Extensions;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;

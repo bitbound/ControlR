@@ -1,8 +1,4 @@
 ﻿using System.Net.WebSockets;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.WebSocketRelay.Client;
-using ControlR.Web.Client.StateManagement.DeviceAccess;
-using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 

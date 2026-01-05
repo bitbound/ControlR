@@ -1,4 +1,4 @@
-﻿using ControlR.Web.Client.StateManagement.DeviceAccess;
+﻿using ControlR.Libraries.Viewer.Common.State;
 using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;

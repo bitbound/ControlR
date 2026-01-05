@@ -6,12 +6,12 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.Libraries.Clients.Services;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
+using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -27,6 +27,7 @@ public interface IDesktopRemoteControlStream : IAsyncDisposable
 internal sealed class DesktopRemoteControlStream(
   TimeProvider timeProvider,
   IMessenger messenger,
+  ICaptureMetrics captureMetrics,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
   ISessionConsentService sessionConsentService,
@@ -38,18 +39,19 @@ internal sealed class DesktopRemoteControlStream(
   IWaiter waiter,
   IOptions<RemoteControlSessionOptions> startupOptions,
   ILogger<DesktopRemoteControlStream> logger)
-  : RemoteControlStream(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopRemoteControlStream
+  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopRemoteControlStream
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
+  private readonly ICaptureMetrics _captureMetrics = captureMetrics;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
+  private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
-
   private IDisposable? _messageHandlerRegistration;
 
   public async ValueTask DisposeAsync()
@@ -58,6 +60,7 @@ internal sealed class DesktopRemoteControlStream(
     _messageHandlerRegistration?.Dispose();
     await _desktopCapturer.DisposeAsync();
   }
+
   public async Task SendCurrentClipboardText()
   {
     try
@@ -72,6 +75,7 @@ internal sealed class DesktopRemoteControlStream(
       _logger.LogError(ex, "Error while sending clipboard text.");
     }
   }
+
   public async Task StreamScreen(CancellationToken cancellationToken)
   {
     var viewerName = _startupOptions.Value.ViewerName is { Length: > 0 } vn
@@ -97,7 +101,6 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<WindowsSessionEndingMessage>(this, HandleWindowsSessionEndingMessage);
       Messenger.Register<WindowsSessionSwitchedMessage>(this, HandleWindowsSessionSwitchedMessage);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
-      Messenger.Register<CaptureMetricsChangedMessage>(this, HandleCaptureMetricsChanged);
       _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
 
       await SendDisplayData();
@@ -108,6 +111,7 @@ internal sealed class DesktopRemoteControlStream(
         await _toaster.ShowToast(Localization.RemoteControlSessionToastTitle, message, ToastIcon.Info);
       }
 
+      using var metricsTimer = StartMetricsTimer(_appLifetime.ApplicationStopping);
       await StreamScreenToViewer(_appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
@@ -128,22 +132,6 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
-  private async Task HandleCaptureMetricsChanged(object subscriber, CaptureMetricsChangedMessage message)
-  {
-    try
-    {
-      var wrapper = DtoWrapper.Create(message.MetricsDto, DtoType.CaptureMetricsChanged);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
-    }
-    catch (OperationCanceledException ex)
-    {
-      _logger.LogInformation(ex, "Application shutting down.");
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while handling capture metrics change.");
-    }
-  }
   private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
   {
     try
@@ -167,11 +155,13 @@ internal sealed class DesktopRemoteControlStream(
       _logger.LogError(ex, "Error while handling cursor change.");
     }
   }
+
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
   {
     await _displayManager.ReloadDisplays();
     await SendDisplayData();
   }
+
   private async Task HandleMessageReceived(DtoWrapper wrapper)
   {
     try
@@ -291,6 +281,7 @@ internal sealed class DesktopRemoteControlStream(
       _logger.LogError(ex, "Error while handling DTO.");
     }
   }
+
   private async Task HandleWindowsSessionEndingMessage(object subscriber, WindowsSessionEndingMessage message)
   {
     try
@@ -304,6 +295,7 @@ internal sealed class DesktopRemoteControlStream(
       _logger.LogError(ex, "Error while handling Windows session ending.");
     }
   }
+
   private async Task HandleWindowsSessionSwitchedMessage(object subscriber, WindowsSessionSwitchedMessage message)
   {
     try
@@ -317,6 +309,7 @@ internal sealed class DesktopRemoteControlStream(
       _logger.LogError(ex, "Error while handling Windows session switch.");
     }
   }
+
   private async Task SendDisplayData()
   {
     try
@@ -351,6 +344,36 @@ internal sealed class DesktopRemoteControlStream(
       _appLifetime.StopApplication();
     }
   }
+
+  private Timer StartMetricsTimer(CancellationToken cancellationToken)
+  {
+    return new Timer(
+      callback: async (state) =>
+      {
+        try
+        {
+          var captureMetrics = new CaptureMetricsDto(
+            Fps: _desktopCapturer.GetCurrentFps(_metricsWindow),
+            CaptureMode: _desktopCapturer.GetCaptureMode(),
+            ExtraData: _captureMetrics.GetExtraMetricsData());
+
+          var wrapper = DtoWrapper.Create(captureMetrics, DtoType.CaptureMetricsChanged);
+          await Send(wrapper, cancellationToken);
+        }
+        catch (OperationCanceledException ex)
+        {
+          _logger.LogInformation(ex, "Application shutting down.");
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error while handling capture metrics change.");
+        }
+      },
+      state: null,
+      dueTime: TimeSpan.FromSeconds(1),
+      period: _metricsWindow);
+  }
+
   private async Task StreamScreenToViewer(CancellationToken cancellationToken)
   {
     await _desktopCapturer.StartCapturingChanges(cancellationToken);
@@ -382,6 +405,7 @@ internal sealed class DesktopRemoteControlStream(
     _logger.LogInformation("Remote control session ended.  Shutting down.");
     _appLifetime.StopApplication();
   }
+
   private async Task<PointerCoordinates?> TryGetPointerCoordinates(double percentX, double percentY)
   {
     var selectResult = await _desktopCapturer.TryGetSelectedDisplay();

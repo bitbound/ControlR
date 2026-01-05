@@ -15,7 +15,7 @@
       <ClipboardMenu OnReceiveClipboardClicked="HandleReceiveClipboardClicked"
         OnSendClipboardClicked="HandleSendClipboardClicked" OnTypeClipboardClicked="HandleTypeClipboardClicked" />
 
-      @if (DeviceState.CurrentDeviceMaybe?.Platform == SystemPlatform.Windows)
+      @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
       {
         <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
           @if (CurrentBreakpoint < Breakpoint.Sm)
@@ -90,10 +90,17 @@
       else
       {
         <div>
-          Mbps:
+          Mbps In:
         </div>
         <div>
-          @($"{_latestCaptureMetrics.Mbps:N2}")
+          @($"{_mbpsIn:N2}")
+        </div>
+
+        <div>
+          Mbps Out:
+        </div>
+        <div>
+          @($"{_mbpsOut:N2}")
         </div>
 
         <div>
@@ -104,10 +111,10 @@
         </div>
 
         <div>
-          GPU:
+          Mode:
         </div>
         <div>
-          @(_latestCaptureMetrics.IsUsingGpu)
+          @(_latestCaptureMetrics.CaptureMode)
         </div>
 
         <div>

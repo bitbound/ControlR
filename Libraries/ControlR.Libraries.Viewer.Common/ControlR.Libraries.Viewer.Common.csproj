@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
+    <ProjectReference Include="..\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
+    <ProjectReference Include="..\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
+  </ItemGroup>
+</Project>
