@@ -9,6 +9,7 @@ public interface IFileManager
   Task<FileReferenceResult> CreateDirectory(string directoryPath);
   Task<FileReferenceResult> DeleteFileSystemEntry(string targetPath);
   Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath);
+  Task<List<LogFileGroupDto>> GetLogFiles();
   Task<PathSegmentsResponseDto> GetPathSegments(string targetPath);
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
@@ -19,11 +20,13 @@ public interface IFileManager
 
 internal class FileManager(
   IFileSystem fileSystem,
+  IFileSystemPathProvider fileSystemPathProvider,
   ILogger<FileManager> logger) : IFileManager
 {
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly ILogger<FileManager> _logger = logger;
-  
+
   public Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName)
   {
     try
@@ -202,6 +205,34 @@ internal class FileManager(
     }
   }
 
+  public async Task<List<LogFileGroupDto>> GetLogFiles()
+  {
+    var logGroups = new List<LogFileGroupDto>();
+
+    try
+    {
+      var agentLogs = GetAgentLogs();
+      logGroups.Add(agentLogs);
+
+      if (OperatingSystem.IsWindows())
+      {
+        var desktopLogs = GetWindowsDesktopClientLogs();
+        logGroups.Add(desktopLogs);
+      }
+      else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+      {
+        var desktopLogGroups = GetUnixDesktopClientLogs();
+        logGroups.AddRange(desktopLogGroups);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error gathering log files");
+    }
+
+    return logGroups;
+  }
+
   public Task<PathSegmentsResponseDto> GetPathSegments(string targetPath)
   {
     try
@@ -357,7 +388,7 @@ internal class FileManager(
         return FileReferenceResult.Ok(
           fileSystemPath: tempZipPath,
           displayName: $"{directoryName}.zip",
-          onDispose: () => _fileSystem.DeleteFile(tempZipPath));
+          isTempFile: true);
       }
       else if (_fileSystem.FileExists(filePath))
       {
@@ -497,6 +528,129 @@ internal class FileManager(
     }
   }
 
+  private LogFileGroupDto GetAgentLogs()
+  {
+    var logFiles = new List<LogFileEntryDto>();
+
+    try
+    {
+      var logsDir = _fileSystemPathProvider.GetAgentLogsDirectoryPath();
+      if (_fileSystem.DirectoryExists(logsDir))
+      {
+        logFiles.AddRange(GetLogFilesFromDirectory(logsDir));
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting Windows agent logs");
+    }
+
+    return new LogFileGroupDto("Agent Logs", logFiles);
+  }
+
+  private List<LogFileEntryDto> GetLogFilesFromDirectory(string directoryPath)
+  {
+    var logFiles = new List<LogFileEntryDto>();
+
+    try
+    {
+      var files = _fileSystem.GetFiles(directoryPath, "LogFile*.log");
+
+      foreach (var filePath in files)
+      {
+        try
+        {
+          var fileInfo = _fileSystem.GetFileInfo(filePath);
+          logFiles.Add(new LogFileEntryDto(
+            Path.GetFileName(filePath),
+            filePath,
+            fileInfo.Length,
+            fileInfo.LastWriteTime));
+        }
+        catch (Exception ex)
+        {
+          _logger.LogDebug(ex, "Error getting info for log file: {FilePath}", filePath);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Error reading log files from directory: {DirectoryPath}", directoryPath);
+    }
+
+    return logFiles.OrderByDescending(x => x.LastModified).ToList();
+  }
+
+  private List<LogFileGroupDto> GetUnixDesktopClientLogs()
+  {
+    var logGroups = new List<LogFileGroupDto>();
+
+    try
+    {
+      var rootLogsDir = _fileSystemPathProvider.GetUnixDesktopClientLogsDirectoryForRoot();
+      if (_fileSystem.DirectoryExists(rootLogsDir))
+      {
+        var rootLogs = GetLogFilesFromDirectory(rootLogsDir);
+        logGroups.Add(new LogFileGroupDto("DesktopClient Logs (root)", rootLogs));
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting Unix desktop client logs for root user.");
+    }
+
+    try
+    {
+      var homeRoot = OperatingSystem.IsMacOS() ? "/Users" : "/home";
+      var homeDirectories = _fileSystem.GetDirectories(homeRoot);
+      foreach (var homeDir in homeDirectories)
+      {
+        try
+        {
+          var dirInfo = _fileSystem.GetDirectoryInfo(homeDir);
+          var username = dirInfo.Name;
+          var userLogsPath = _fileSystemPathProvider.GetUnixDesktopClientLogsDirectory(username);
+
+          if (_fileSystem.DirectoryExists(userLogsPath))
+          {
+            var userLogs = GetLogFilesFromDirectory(userLogsPath);
+            logGroups.Add(new LogFileGroupDto($"DesktopClient Logs ({username})", userLogs));
+          }
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error getting desktop logs for user home directory: {HomeDir}", homeDir);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting Unix desktop client logs");
+    }
+
+    return logGroups;
+  }
+
+  private LogFileGroupDto GetWindowsDesktopClientLogs()
+  {
+    var logFiles = new List<LogFileEntryDto>();
+
+    try
+    {
+      var logsDir = _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory();
+      if (_fileSystem.DirectoryExists(logsDir))
+      {
+        logFiles.AddRange(GetLogFilesFromDirectory(logsDir));
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting Windows desktop client logs");
+    }
+
+    return new LogFileGroupDto("DesktopClient Logs", logFiles);
+  }
+
   private bool HasSubdirectories(string directoryPath)
   {
     try
@@ -518,3 +672,4 @@ internal class FileManager(
     }
   }
 }
+

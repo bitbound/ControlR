@@ -46,6 +46,9 @@ public static class WebApplicationBuilderExtensions
     builder.Services.Configure<AppOptions>(
       builder.Configuration.GetSection(AppOptions.SectionKey));
 
+    builder.Services.Configure<AspireDashboardOptions>(
+      builder.Configuration.GetSection(AspireDashboardOptions.SectionKey));
+
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
       .Get<AppOptions>() ?? new AppOptions();
@@ -56,7 +59,7 @@ public static class WebApplicationBuilderExtensions
     if (!builder.Environment.IsEnvironment("Testing"))
     {
       // Add telemetry.
-      builder.AddServiceDefaults(ServiceNames.Controlr);
+      builder.AddServiceDefaults(ServiceNames.Controlr, useServiceDiscovery: true);
     }
 
     if (appOptions.UseInMemoryDatabase)

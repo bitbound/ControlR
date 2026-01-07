@@ -245,6 +245,166 @@ public class DeviceFileOperationsController : ControllerBase
     }
   }
 
+  [HttpGet("logs/{deviceId:guid}/contents")]
+  [DisableRequestTimeout]
+  public async Task<IActionResult> GetLogFileContents(
+    [FromRoute] Guid deviceId,
+    [FromQuery] string filePath,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
+    CancellationToken cancellationToken)
+  {
+    if (string.IsNullOrWhiteSpace(filePath))
+    {
+      return BadRequest("File path is required.");
+    }
+
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
+      return BadRequest("Device is not currently connected.");
+    }
+
+    var streamId = Guid.NewGuid();
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+
+    var streamRequest = new StreamFileContentsRequestHubDto(streamId, filePath);
+
+    try
+    {
+      var streamResult = await agentHub
+        .Clients
+        .Client(device.ConnectionId)
+        .StreamFileContents(streamRequest);
+
+      if (!streamResult.IsSuccess)
+      {
+        logger.LogWarning("Log file contents stream request failed for {FilePath} on device {DeviceId}.",
+          filePath, deviceId);
+        return Problem(
+          detail: streamResult.Reason,
+          statusCode: StatusCodes.Status500InternalServerError,
+          title: "A failure occurred on the remote device.");
+      }
+
+      var fileName = Path.GetFileName(filePath);
+
+      var contentDisposition = new ContentDispositionHeaderValue("inline")
+      {
+        FileName = fileName
+      };
+      
+      Response.Headers.ContentDisposition = contentDisposition.ToString();
+      Response.ContentType = "text/plain";
+
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
+      {
+        if (chunk.Length > 0)
+        {
+          await Response.Body.WriteAsync(chunk, cancellationToken);
+        }
+      }
+
+      return new EmptyResult();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error streaming log file {FilePath} from device {DeviceId}", filePath, deviceId);
+      return StatusCode(500, "An error occurred while streaming the log file.");
+    }
+  }
+
+  [HttpGet("logs/{deviceId:guid}")]
+  public async Task<IActionResult> GetLogFiles(
+    [FromRoute] Guid deviceId,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] ILogger<DeviceFileOperationsController> logger,
+    CancellationToken cancellationToken)
+  {
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
+      return BadRequest("Device is not currently connected.");
+    }
+
+    try
+    {
+      var result = await agentHub
+        .Clients
+        .Client(device.ConnectionId)
+        .GetLogFiles();
+
+      if (!result.IsSuccess)
+      {
+        logger.LogError("Get log files request failed for device {DeviceId}: {Reason}",
+          deviceId, result.Reason);
+        return Problem(
+          detail: result.Reason,
+          statusCode: StatusCodes.Status500InternalServerError,
+          title: "A failure occurred on the remote device.");
+      }
+
+      return Ok(result.Value);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error getting log files from device {DeviceId}", deviceId);
+      return Problem(
+        detail: "An error occurred while retrieving log files.",
+        statusCode: StatusCodes.Status500InternalServerError,
+        title: "Error retrieving log files.");
+    }
+  }
+
   // Note: [FromForm] parameters are intentionally omitted, so large files aren't
   // buffered into memory by model binding before auth and size checks are run. 
   // The form  fields are added to OpenAPI metadata in FileUploadTransformer, and 

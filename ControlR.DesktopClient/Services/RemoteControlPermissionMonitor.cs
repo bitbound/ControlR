@@ -1,6 +1,8 @@
 using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.ViewModels;
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +15,7 @@ namespace ControlR.DesktopClient.Services;
 public class RemoteControlPermissionMonitor(
   TimeProvider timeProvider,
   IServiceProvider serviceProvider,
+  ISystemEnvironment systemEnvironment,
   IToaster toaster,
   INavigationProvider navigationProvider,
   ILogger<RemoteControlPermissionMonitor> logger) : BackgroundService
@@ -20,50 +23,55 @@ public class RemoteControlPermissionMonitor(
   private readonly ILogger<RemoteControlPermissionMonitor> _logger = logger;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IToaster _toaster = toaster;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     // Only run on macOS or Linux Wayland
-    if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux())
+    if (!_systemEnvironment.IsMacOS() && !_systemEnvironment.IsLinux())
     {
       _logger.LogInformation("Permission monitoring is not required on this platform");
       return;
     }
 
     _logger.LogInformation("Starting permission monitoring service");
+    await CheckPermissions();
 
-    using var timer = _timeProvider.CreateTimer(
-      CheckPermissions,
-      state: null,
-      dueTime: TimeSpan.Zero, // Check immediately on startup
-      period: TimeSpan.FromMinutes(10)); // Then check every 10 minutes
-
-    // Keep the service running until cancellation is requested
-    await Task.Delay(Timeout.Infinite, stoppingToken);
+    using var timer = new PeriodicTimer(TimeSpan.FromMinutes(10), _timeProvider);
+    try
+    {
+      while (await timer.WaitForNextTickAsync(stoppingToken))
+      {
+        await CheckPermissions();
+      }
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogInformation(ex, "Application is shutting down. Stopping permission monitoring service.");
+    }
   }
 
-  private async void CheckPermissions(object? state)
+  private async Task CheckPermissions()
   {
     try
     {
-      _logger.LogInformation("Checking OS remote control permissions");
+      _logger.LogInformationDeduped("Checking OS remote control permissions");
 
       var arePermissionsGranted = false;
-      if (OperatingSystem.IsMacOS())
+      if (_systemEnvironment.IsMacOS())
       {
         var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
         var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
         var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
         arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-        _logger.LogInformation(
+        _logger.LogInformationDeduped(
           "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-          isAccessibilityGranted,
-          isScreenCaptureGranted);
+          args: (isAccessibilityGranted, isScreenCaptureGranted));
       }
-      else if (OperatingSystem.IsLinux())
+      else if (_systemEnvironment.IsLinux())
       {
         var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
         if (detector.IsWayland())
@@ -71,29 +79,29 @@ public class RemoteControlPermissionMonitor(
           var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
           arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
 
-          _logger.LogInformation("Wayland permissions: RemoteControl={RemoteControl}", arePermissionsGranted);
+          _logger.LogInformationDeduped("Wayland permissions: RemoteControl={RemoteControl}", args: arePermissionsGranted);
         }
         else
         {
           // X11 doesn't require special permissions
-          _logger.LogInformation("X11 detected, no permission monitoring required");
+          _logger.LogInformationDeduped("X11 detected, no permission monitoring required");
           return;
         }
       }
 
       if (!arePermissionsGranted)
       {
-        _logger.LogWarning("Required permissions are missing");
+        _logger.LogWarningDeduped("Required permissions are missing");
         await ShowPermissionsMissingToast();
       }
       else
       {
-        _logger.LogInformation("All required permissions are granted");
+        _logger.LogInformationDeduped("All required permissions are granted");
       }
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while checking permissions");
+      _logger.LogErrorDeduped("Error while checking permissions", exception: ex);
     }
   }
 
@@ -116,7 +124,7 @@ public class RemoteControlPermissionMonitor(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while showing permissions missing toast");
+      _logger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
     }
   }
 }

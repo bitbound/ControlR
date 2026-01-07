@@ -8,6 +8,7 @@ public static class ClientRoutes
   public const string DeviceAccessChat = $"{DeviceAccess}/chat";
   public const string DeviceAccessFileSystem = $"{DeviceAccess}/file-system";
   public const string DeviceAccessRemoteControl = $"{DeviceAccess}/remote-control";
+  public const string DeviceAccessRemoteLogs = $"{DeviceAccess}/remote-logs";
   public const string DeviceAccessTerminal = $"{DeviceAccess}/terminal";
   public const string DeviceAccessVncRelay = $"{DeviceAccess}/vnc-relay";
   public const string Home = "/";
@@ -18,6 +19,7 @@ public static class ClientRoutes
   public const string NotFound = "/not-found";
   public const string Permissions = "/permissions";
   public const string PersonalAccessTokens = "/personal-access-tokens";
+  public const string ServerLogs = "/server-logs";
   public const string ServerSettings = "/server-settings";
   public const string ServerStats = "/server-stats";
   public const string Settings = "/settings";

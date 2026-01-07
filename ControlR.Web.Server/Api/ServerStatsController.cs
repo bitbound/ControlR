@@ -1,5 +1,4 @@
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;

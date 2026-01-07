@@ -47,13 +47,13 @@ public static class Extensions
     {
       if (useResilience)
       {
-        // Turn on resilience by default
+        // Turn on resilience
         http.AddStandardResilienceHandler();
       }
 
       if (useServiceDiscovery)
       {
-        // Turn on service discovery by default
+        // Turn on service discovery
         http.AddServiceDiscovery();
       }
     });

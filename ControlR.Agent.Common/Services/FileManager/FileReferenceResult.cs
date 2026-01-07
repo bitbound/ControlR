@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.Agent.Common.Services.FileManager;
 
-public class FileReferenceResult : IDisposable
+public class FileReferenceResult
 {
 
   private FileReferenceResult(
@@ -10,54 +10,37 @@ public class FileReferenceResult : IDisposable
     string? errorMessage = null,
     string? fileSystemPath = null,
     string? fileDisplayName = null,
-    Action? onDispose = null)
+    bool isTempFile = false)
   {
     IsSuccess = isSuccess;
     ErrorMessage = errorMessage;
     FileSystemPath = fileSystemPath;
     FileDisplayName = fileDisplayName;
-    OnDispose = onDispose;
+    IsTempFile = isTempFile;
   }
 
   public string? ErrorMessage { get; init; }
-
   public string? FileDisplayName { get; init; }
-
   public string? FileSystemPath { get; init; }
 
   [MemberNotNullWhen(true, nameof(FileSystemPath))]
   [MemberNotNullWhen(true, nameof(FileDisplayName))]
   [MemberNotNullWhen(false, nameof(ErrorMessage))]
   public bool IsSuccess { get; init; }
+  public bool IsTempFile { get; }
 
-  public Action? OnDispose { get; }
-
-  public static FileReferenceResult Fail(string errorMessage, Action? onDispose = null)
+  public static FileReferenceResult Fail(string errorMessage)
   {
     return new FileReferenceResult(
       isSuccess: false,
-      errorMessage: errorMessage,
-      onDispose: onDispose);
+      errorMessage: errorMessage);
   }
-  public static FileReferenceResult Ok(string fileSystemPath, string displayName, Action? onDispose = null)
+
+  public static FileReferenceResult Ok(string fileSystemPath, string displayName, bool isTempFile = false)
   {
     return new FileReferenceResult(
       isSuccess: true,
       fileSystemPath: fileSystemPath,
-      fileDisplayName: displayName,
-      onDispose: onDispose);
-  }
-
-  public void Dispose()
-  {
-    try
-    {
-      OnDispose?.Invoke();
-    }
-    catch
-    {
-      // Ignore
-    }
-    GC.SuppressFinalize(this);
+      fileDisplayName: displayName);
   }
 }

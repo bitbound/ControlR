@@ -8,13 +8,11 @@ assignees: bitbound
 
 ### Issue Checklist
 
-- [ ] Includes repro steps that result in the bug presenting
+- [ ] Includes repro steps that result in the bug occurring
 - [ ] Searched for existing issues
 - [ ] Filled out the below sections
-- [ ] Filled out the
 - [ ] Does not relate to hosting (server configuration, reverse proxy, Cloudflare, etc.)
-  - The public server is hosted behind Cloudflare, behind Caddy reverse proxy on the server, and using the same image as everyone else. (i.e. The app works.)
-  - Connection issues are likely due to something in between the browser and the ControlR backend app, not the app itself.
+  - Connection issues are likely due to something in between the browser/agent and the ControlR backend app, not the app itself.
   - Please go to the Discussions section for help with hosting setups.
 
 ### Describe the bug
@@ -30,6 +28,8 @@ Steps to reproduce the behavior:
 3. Scroll down to '....'
 4. See error
 
+Note: Provide as much detail as possible to help replicate the issue.  If I can't replicate it, it's unlikely I'll be able to fix it or write tests to prevent regressions.
+
 ### Client Info
 
 Browser:  
@@ -39,13 +39,22 @@ Agent Version:
 Agent OS:  
 Language/Locale of Agent OS:  
 
-### Host Info (if self-hosting)
+### Server Info (if self-hosting)
 
-Host OS:  
-Language/Locale of Host OS:  
+Server OS:  
+Language/Locale of Server OS:  
 Docker image tag:  
 
 Other relevant info:
+
+
+### Logs
+
+Please provide relevant logs from the Agent, DesktopClient, browser console, and server.
+
+### Log Timestamp(s)
+
+Please provide the timestamp(s) from the logs indicating when the issue occurred.
 
 ### Screenshots
 

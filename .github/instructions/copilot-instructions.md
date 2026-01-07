@@ -228,9 +228,13 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 
 ### Web UI Guidelines
 
+- When adding JavaScript interop and CSS, use component-scoped files so the code and styles are isolated to the component.
+  - Example: `MyComponen.razor` would have `MyComponent.razor.js` and `MyComponent.razor.css` alongside it.
+  - When using JavaScript interop, inherit the `JsInteropableComponent`base class.  It must be inherited in both the `.razor` file and the code-behind `.cs` file (if present).
 - Use MudBlazor components where appropriate for the UI.
 - When making changes to `.razor` files, check if there's a code-behind `.cs` file associated with it. If so, add your C# code there, including service injections.
-- Prefer using code-behind CS files for Razor components instead of using the `@code {}` block in Razor files.
+  - If the C# logic becomes substantial, move the C# code to a code-behind `.razor.cs` file.
+- When creating new Razor components, prefer using code-behind `.razor.cs` files for the C# logic instead of placing it directly in the `.razor` file.
 
 ### Project Organization
 

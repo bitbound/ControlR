@@ -385,6 +385,59 @@
         }
       }
     },
+    "/api/device-file-operations/logs/{deviceId}/contents": {
+      "get": {
+        "tags": [
+          "DeviceFileOperations"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filePath",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-operations/logs/{deviceId}": {
+      "get": {
+        "tags": [
+          "DeviceFileOperations"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/device-file-operations/upload/{deviceId}": {
       "post": {
         "tags": [
@@ -1634,6 +1687,35 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerAlertResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/server-logs/get-aspire-url": {
+      "get": {
+        "tags": [
+          "ServerLogs"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAspireUrlResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAspireUrlResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAspireUrlResponseDto"
                 }
               }
             }
@@ -3321,6 +3403,24 @@
           }
         }
       },
+      "GetAspireUrlResponseDto": {
+        "required": [
+          "isConfigured",
+          "aspireUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "isConfigured": {
+            "type": "boolean"
+          },
+          "aspireUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "GetDirectoryContentsRequestDto": {
         "required": [
           "deviceId",
@@ -3505,11 +3605,11 @@
       },
       "RuntimeId": {
         "enum": [
-          "WinX86",
-          "WinX64",
-          "MacOsArm64",
-          "MacOsX64",
-          "LinuxX64"
+          "win-x86",
+          "win-x64",
+          "osx-arm64",
+          "osx-x64",
+          "linux-x64"
         ]
       },
       "ServerAlertRequestDto": {
@@ -3925,6 +4025,9 @@
     },
     {
       "name": "ServerAlert"
+    },
+    {
+      "name": "ServerLogs"
     },
     {
       "name": "ServerStats"

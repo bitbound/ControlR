@@ -60,7 +60,6 @@ internal class AgentHubClient(
   private readonly ITerminalStore _terminalStore = terminalStore;
   private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
 
-
   public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
   {
     try
@@ -100,7 +99,7 @@ internal class AgentHubClient(
     {
       _logger.LogInformation("Closing terminal session {TerminalSessionId}.", terminalSessionId);
 
-      // The underlying process is killed/disposed upon eviction from the MemoryCache.
+      // The pwsh resources are disposed upon eviction from the MemoryCache.
       _ = _terminalStore.TryRemove(terminalSessionId, out _);
     }
     catch (Exception ex)
@@ -298,7 +297,7 @@ internal class AgentHubClient(
 
       _logger.LogInformation(
         "Successfully downloaded file from viewer: {FileName} to {Directory}",
-        dto.FileName, 
+        dto.FileName,
         dto.TargetDirectoryPath);
       return Result.Ok();
     }
@@ -331,6 +330,25 @@ internal class AgentHubClient(
   public async Task<DesktopSession[]> GetActiveDesktopSessions()
   {
     return await _desktopSessionProvider.GetActiveDesktopClients();
+  }
+
+  public async Task<Result<GetLogFilesResponseDto>> GetLogFiles()
+  {
+    try
+    {
+      _logger.LogInformation("Getting log files");
+
+      var logFileGroups = await _fileManager.GetLogFiles();
+
+      var responseDto = new GetLogFilesResponseDto(logFileGroups);
+
+      return Result.Ok(responseDto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting log files");
+      return Result.Fail<GetLogFilesResponseDto>("An error occurred while getting log files.");
+    }
   }
 
   public async Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
@@ -625,7 +643,33 @@ internal class AgentHubClient(
     }
   }
 
-  // Removed legacy non-streaming GetSubdirectories/GetDirectoryContents hub methods in favor of streaming variants.
+  public async Task<Result> StreamFileContents(StreamFileContentsRequestHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Streaming file contents: {FilePath}, Stream ID: {StreamId}",
+        dto.FilePath, dto.StreamId);
+
+      if (!_fileSystem.FileExists(dto.FilePath))
+      {
+        _logger.LogWarning("File not found: {FilePath}", dto.FilePath);
+        return Result.Fail("File not found.");
+      }
+
+      Task
+        .Run(() => SendFileStream(dto.StreamId, dto.FilePath, isTempFile: false))
+        .Forget();
+
+      _logger.LogInformation("Successfully started file stream: {FilePath}", dto.FilePath);
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while streaming file: {FilePath}", dto.FilePath);
+      return Result.Fail("An error occurred while streaming file.");
+    }
+  }
+
   public async Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
   {
     try
@@ -694,19 +738,18 @@ internal class AgentHubClient(
       _logger.LogInformation("Sending file to viewer: {FilePath}, Stream ID: {StreamId}",
         dto.FilePath, dto.StreamId);
 
-      using var resolveResult = await _fileManager.ResolveTargetFilePath(dto.FilePath);
+      var resolveResult = await _fileManager.ResolveTargetFilePath(dto.FilePath);
       if (!resolveResult.IsSuccess || string.IsNullOrEmpty(resolveResult.FileSystemPath))
       {
         _logger.LogWarning("Failed to prepare file for download: {FilePath}, Error: {Error}", dto.FilePath,
           resolveResult.ErrorMessage);
-        return Result.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ??
-                                                       "Failed to prepare file for download");
+        return Result.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare file for download");
       }
 
       var fileInfo = _fileSystem.GetFileInfo(resolveResult.FileSystemPath);
 
       Task
-        .Run(() => SendFileStream(dto.StreamId, resolveResult.FileSystemPath))
+        .Run(() => SendFileStream(dto.StreamId, resolveResult.FileSystemPath, resolveResult.IsTempFile))
         .Forget();
 
       _logger.LogInformation("Successfully sent file download stream: {FilePath}", dto.FilePath);
@@ -740,14 +783,13 @@ internal class AgentHubClient(
     }
   }
 
-
-  private async Task SendFileStream(Guid streamId, string fileSystemPath)
+  private async Task SendFileStream(Guid streamId, string fileSystemPath, bool isTempFile)
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
     await using var fileStream = _fileSystem.OpenFileStream(fileSystemPath, FileMode.Open,
       FileAccess.Read, FileShare.ReadWrite);
 
-    var channel = Channel.CreateUnbounded<byte[]>();
+    var channel = Channel.CreateBounded<byte[]>(10);
 
     var writeTask = Task.Run(async () =>
     {
@@ -771,7 +813,7 @@ internal class AgentHubClient(
     try
     {
       await _hubConnection.Send(
-        nameof(IAgentHub.SendFileDownloadStream),
+        nameof(IAgentHub.SendFileContentStream),
         [streamId, channel.Reader],
         cts.Token);
       await writeTask;
@@ -781,6 +823,19 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while sending file stream for stream ID: {StreamId}", streamId);
       await cts.CancelAsync();
+    }
+    
+    if (isTempFile)
+    {
+      try
+      {
+        _logger.LogInformation("Deleting temporary file: {FilePath}", fileSystemPath);
+        _fileSystem.DeleteFile(fileSystemPath);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error deleting temporary file: {FilePath}", fileSystemPath);
+      }
     }
   }
 }

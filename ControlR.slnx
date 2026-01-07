@@ -1,17 +1,4 @@
 <Solution>
-  <Configurations>
-    <BuildType Name="Debug" />
-    <BuildType Name="Debug_Linux" />
-    <BuildType Name="Debug_Mac" />
-    <BuildType Name="Debug_Windows" />
-    <BuildType Name="Release" />
-    <BuildType Name="Release_Linux" />
-    <BuildType Name="Release_Mac" />
-    <BuildType Name="Release_Windows" />
-    <Platform Name="Any CPU" />
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
   <Folder Name="/Examples/">
     <Project Path="Examples/ControlR.ApiClientExample/ControlR.ApiClientExample.csproj" Id="fa6b0650-0e67-4ee8-8924-e06eeea1a2d7" />
     <Project Path="Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj" Id="d28213d2-1049-4fe0-9668-82c7da87c436" />
@@ -67,30 +54,7 @@
   <Project Path="ControlR.Web.ServiceDefaults/ControlR.Web.ServiceDefaults.csproj" />
   <Project Path="ControlR.Web.WebSocketRelay/ControlR.Web.WebSocketRelay.csproj" />
   <Project Path="docker-compose/docker-compose.dcproj">
-    <Platform Solution="Debug_Linux|x64" Project="Any CPU" />
-    <Platform Solution="Debug_Linux|x86" Project="Any CPU" />
-    <Platform Solution="Debug_Mac|x64" Project="Any CPU" />
-    <Platform Solution="Debug_Mac|x86" Project="Any CPU" />
-    <Platform Solution="Debug_Windows|x64" Project="Any CPU" />
-    <Platform Solution="Debug_Windows|x86" Project="Any CPU" />
-    <Platform Solution="Release_Linux|x64" Project="Any CPU" />
-    <Platform Solution="Release_Linux|x86" Project="Any CPU" />
-    <Platform Solution="Release_Mac|x64" Project="Any CPU" />
-    <Platform Solution="Release_Mac|x86" Project="Any CPU" />
-    <Platform Solution="Release_Windows|x64" Project="Any CPU" />
-    <Platform Solution="Release_Windows|x86" Project="Any CPU" />
-    <Build Solution="*|Any CPU" />
-    <Build Solution="Debug_Linux|x64" />
-    <Build Solution="Debug_Linux|x86" />
-    <Build Solution="Debug_Mac|x64" />
-    <Build Solution="Debug_Mac|x86" />
-    <Build Solution="Debug_Windows|x64" />
-    <Build Solution="Debug_Windows|x86" />
-    <Build Solution="Release_Linux|x64" />
-    <Build Solution="Release_Linux|x86" />
-    <Build Solution="Release_Mac|x64" />
-    <Build Solution="Release_Mac|x86" />
-    <Build Solution="Release_Windows|x64" />
-    <Build Solution="Release_Windows|x86" />
+    <BuildType Project="Debug" />
+    <Build />
   </Project>
 </Solution>

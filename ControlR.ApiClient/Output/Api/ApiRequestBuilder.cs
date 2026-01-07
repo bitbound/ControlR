@@ -14,6 +14,7 @@ using ControlR.ApiClient.Api.PersonalAccessTokens;
 using ControlR.ApiClient.Api.PublicRegistrationSettings;
 using ControlR.ApiClient.Api.Roles;
 using ControlR.ApiClient.Api.ServerAlert;
+using ControlR.ApiClient.Api.ServerLogs;
 using ControlR.ApiClient.Api.ServerStats;
 using ControlR.ApiClient.Api.Tags;
 using ControlR.ApiClient.Api.TenantSettings;
@@ -107,6 +108,11 @@ namespace ControlR.ApiClient.Api
         public global::ControlR.ApiClient.Api.ServerAlert.ServerAlertRequestBuilder ServerAlert
         {
             get => new global::ControlR.ApiClient.Api.ServerAlert.ServerAlertRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The serverLogs property</summary>
+        public global::ControlR.ApiClient.Api.ServerLogs.ServerLogsRequestBuilder ServerLogs
+        {
+            get => new global::ControlR.ApiClient.Api.ServerLogs.ServerLogsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The serverStats property</summary>
         public global::ControlR.ApiClient.Api.ServerStats.ServerStatsRequestBuilder ServerStats

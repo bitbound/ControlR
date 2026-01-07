@@ -1,12 +1,13 @@
 @using ControlR.Web.Client.Components.FileSystem
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
+@using ControlR.Web.Client.Components.Shared
 @using ControlR.Libraries.Shared.Helpers
 @layout DeviceAccessLayout
 @attribute [Route(ClientRoutes.DeviceAccessFileSystem)]
 @attribute [Authorize]
 @inherits JsInteropableComponent
 
-<div @ref="_containerRef" class="file-system-container h-100">
+<div class="file-system-container h-100">
   <div class="address-bar-container">
     <MudTextField @bind-Value="AddressBarValue" Label="Address" Variant="Variant.Outlined" Immediate
       Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
@@ -14,8 +15,8 @@
       @onkeypress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await NavigateToAddress(); })"
       FullWidth="true" Class="address-bar" />
   </div>
-  <div class="file-system-grid">
-    <div @ref="_treePanelRef" class="tree-panel">
+  <GridSplitter InitialLeftPanelWidth="300" MinLeftPanelWidth="200" MinRightPanelWidth="300" SplitterWidth="5">
+    <LeftPanel>
       <MudText Typo="Typo.h6" Class="mb-3">Folders</MudText>
       @if (InitialTreeItems.Count == 0 && IsLoading)
       {
@@ -38,11 +39,8 @@
           </ItemTemplate>
         </MudTreeView>
       }
-    </div>
-
-    <div @ref="_splitterRef" class="grid-splitter"></div>
-
-    <div @ref="_contentPanelRef" class="content-panel">
+    </LeftPanel>
+    <RightPanel>
       <div class="d-flex flex-wrap gap-2 justify-space-between align-center mb-3">
         <div class="d-flex align-center flex-grow-1 gap-2 search-bar-container" style="min-width: 250px;">
           <MudTooltip Text="Up One Level">
@@ -96,7 +94,7 @@
             </MudButton>
           }
           <MudTooltip Text="Refresh">
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Info" Size="Size.Small"
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Secondary" Size="Size.Small"
               OnClick="OnRefreshClick" Disabled="@IsLoadingContents" />
           </MudTooltip>
         </div>
@@ -135,8 +133,8 @@
           <MudAlert Severity="Severity.Info">Select a folder to view its contents.</MudAlert>
         }
       </div>
-    </div>
-  </div>
+    </RightPanel>
+  </GridSplitter>
 </div>
 
 <!-- Hidden file input for uploads -->

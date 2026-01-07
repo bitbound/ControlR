@@ -18,6 +18,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result> DeleteFile(FileDeleteHubDto dto);
   Task<Result> DownloadFileFromViewer(FileUploadHubDto dto);
   Task<DesktopSession[]> GetActiveDesktopSessions();
+  Task<Result<GetLogFilesResponseDto>> GetLogFiles();
   Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto);
   Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
@@ -30,6 +31,7 @@ public interface IAgentHubClient : IHubClient
   Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto);
   Task<Result> SendChatMessage(ChatMessageHubDto dto);
   Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
+  Task<Result> StreamFileContents(StreamFileContentsRequestHubDto dto);
   Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);
   Task<Result> TestVncConnection(int port);
   Task UninstallAgent(string reason);

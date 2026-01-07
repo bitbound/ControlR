@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Versioning;
+using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.DevicesCommon.Services;
@@ -25,12 +26,17 @@ public interface IFileSystem
   void ExtractZipArchive(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles);
 
   bool FileExists(string path);
+
   string[] GetDirectories(string path);
+
   DirectoryInfo GetDirectoryInfo(string directoryPath);
+
   DriveInfo[] GetDrives();
+
   FileInfo GetFileInfo(string filePath);
 
   FileVersionInfo GetFileVersionInfo(string filePath);
+
   string[] GetFiles(string path);
 
   public string[] GetFiles(string path, string searchPattern);
@@ -39,9 +45,12 @@ public interface IFileSystem
 
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions);
 
+  string JoinPaths(char separator, params string[] paths);
+
   void MoveFile(string sourceFile, string destinationFile, bool overwrite);
 
   FileStream OpenFileStream(string path, FileMode mode, FileAccess access);
+
   FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
 
   Task<byte[]> ReadAllBytesAsync(string path);
@@ -62,10 +71,10 @@ public interface IFileSystem
   /// found; otherwise, an error result.</returns>
   Task<Result<string>> ResolveFilePath(string fileName);
 
-
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   void SetUnixFileMode(string filePath, UnixFileMode fileMode);
+
   Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default);
 
   Task WriteAllLines(string path, List<string> lines);
@@ -78,7 +87,7 @@ public interface IFileSystem
 public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
 {
   private readonly ILogger<FileSystem> _logger = logger;
-  
+
   public Task AppendAllLinesAsync(string path, IEnumerable<string> lines)
   {
     return File.AppendAllLinesAsync(path, lines);
@@ -174,6 +183,35 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     return Directory.GetFiles(path, searchPattern, enumerationOptions);
   }
 
+  public string JoinPaths(char separator, params string[] paths)
+  {
+    var builder = new StringBuilder();
+
+    for (int i = 0; i < paths.Length; i++)
+    {
+      string? path = paths[i];
+      if (string.IsNullOrEmpty(path))
+      {
+        continue;
+      }
+
+      if (builder.Length == 0)
+      {
+        builder.Append(path);
+        continue;
+      }
+
+      if (builder[^1] != separator && path[0] != separator)
+      {
+        builder.Append(separator);
+      }
+
+      builder.Append(path);
+    }
+
+    return builder.ToString();
+  }
+
   public void MoveFile(string sourceFile, string destinationFile, bool overwrite)
   {
     File.Move(sourceFile, destinationFile, overwrite);
@@ -264,7 +302,7 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
       var firstItem = output
         .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
         .FirstOrDefault();
-      
+
       if (string.IsNullOrWhiteSpace(firstItem) || !FileExists(firstItem))
       {
         return Result
@@ -287,6 +325,7 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
         .Log(_logger);
     }
   }
+
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   public void SetUnixFileMode(string filePath, UnixFileMode fileMode)

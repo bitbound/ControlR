@@ -1,0 +1,29 @@
+﻿@inherits JsInteropableComponent
+
+<pre class="line-numbers ma-0">
+  @if (IsEditable)
+  {
+    <code @ref="_codeElementRef"
+          id="@CodeViewerId"
+          class="@LanguageString" 
+          contenteditable="true" 
+          @onchange="HandleCodeContentChanged"
+        @onblur="HandleCodeElementBlurred">
+      @CodeContent
+    </code>
+  }
+  else
+  {
+  <code @ref="_codeElementRef" id="@CodeViewerId" class="@LanguageString">@CodeContent</code>
+  }
+</pre>
+
+@if (!ShowLineBorders)
+{
+  <style>
+    [id="@CodeViewerId"][contenteditable="true"] {
+      outline: none !important;
+      border: none !important;
+    }
+  </style>
+}

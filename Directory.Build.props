@@ -15,9 +15,6 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<Configurations>
-			Debug;Release;Debug_Windows;Debug_Mac;Debug_Linux;Release_Windows;Release_Mac;Release_Linux
-		</Configurations>
 	</PropertyGroup>
 
 	<PropertyGroup>

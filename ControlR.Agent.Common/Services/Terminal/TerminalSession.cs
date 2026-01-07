@@ -215,7 +215,7 @@ internal class TerminalSession(
       // Set up event handlers
       _runspace.StateChanged += Runspace_StateChanged;
 
-      if (_environment.IsWindows)
+      if (_environment.IsWindows())
       {
         _powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process");
         await _powerShell.InvokeAsync();

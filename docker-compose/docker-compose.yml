@@ -28,6 +28,13 @@ services:
       ControlR_POSTGRES_PASSWORD: *pgPassword
       ControlR_POSTGRES_HOST: "postgres"
 
+      # The access token for the Aspire Dashboard, where server logs and telemetry can be viewed.
+      ControlR_AspireDashboard__Token: *aspireToken
+
+      # The public URL for the Aspire Dashboard.
+      # If you change this, you must also change `Dashboard__Frontend__PublicUrl` in the Aspire container below.
+      ControlR_AspireDashboard__WebBaseUrl: "http://localhost:18888"
+
       # Whether to make self-registration publicly available.
       ControlR_AppOptions__EnablePublicRegistration: false
 
@@ -150,7 +157,7 @@ services:
       POSTGRES_DB: controlr
 
   aspire:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.2
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.1
     container_name: aspire
     restart: unless-stopped
     ports:
@@ -160,8 +167,8 @@ services:
     networks:
       - controlr-network
     environment:
-      DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://aspire:18889"
       Dashboard__Frontend__BrowserToken: *aspireToken
+      Dashboard__Frontend__PublicUrl: "http://localhost:18888"
 
 volumes:
   postgres-data:

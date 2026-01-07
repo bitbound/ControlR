@@ -7,6 +7,7 @@ using ControlR.DesktopClient.Linux.XdgPortal;
 using Moq;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.DesktopClient.Linux.Tests;
 

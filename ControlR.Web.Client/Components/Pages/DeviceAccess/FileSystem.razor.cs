@@ -7,18 +7,13 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
-// ReSharper disable AccessToDisposedClosure
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
 public partial class FileSystem : JsInteropableComponent
 {
-  private ElementReference _containerRef;
-  private ElementReference _contentPanelRef;
   private InputFile _fileInputRef = null!;
   private string _searchText = string.Empty;
   private string? _selectedPath;
-  private ElementReference _splitterRef;
-  private ElementReference _treePanelRef;
 
   public string AddressBarValue { get; set; } = string.Empty;
   [Inject]
@@ -62,44 +57,15 @@ public partial class FileSystem : JsInteropableComponent
   private bool IsUpButtonDisabled => string.IsNullOrEmpty(SelectedPath)
                                      || InitialTreeItems.Any(item => item.Value == SelectedPath);
 
-  public override async ValueTask DisposeAsync()
-  {
-    try
-    {
-      if (IsJsModuleReady)
-      {
-        await JsModule.InvokeVoidAsync("dispose");
-      }
-
-      GC.SuppressFinalize(this);
-    }
-    catch (JSDisconnectedException)
-    {
-      // Ignore if the JS runtime is already disconnected
-    }
-
-    await base.DisposeAsync();
-  }
-
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    await base.OnAfterRenderAsync(firstRender);
-
-    if (firstRender)
-    {
-      await WaitForJsModule(CancellationToken.None);
-      await JsModule.InvokeVoidAsync("initializeGridSplitter", _containerRef, _splitterRef, _treePanelRef,
-        _contentPanelRef);
-    }
-  }
   protected override async Task OnInitializedAsync()
   {
-    await base.OnInitializedAsync();
     if (DeviceId == Guid.Empty)
     {
       Snackbar.Add("Device ID is required", Severity.Error);
       return;
     }
+
+    await base.OnInitializedAsync();
 
     await LoadRootDrives();
   }

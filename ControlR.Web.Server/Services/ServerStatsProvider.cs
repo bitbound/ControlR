@@ -1,5 +1,3 @@
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-
 namespace ControlR.Web.Server.Services;
 
 public interface IServerStatsProvider

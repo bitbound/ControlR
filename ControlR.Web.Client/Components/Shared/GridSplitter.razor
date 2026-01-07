@@ -1,0 +1,15 @@
+@inherits JsInteropableComponent
+
+<div @ref="_containerRef" class="grid-splitter-container">
+  <div class="grid-splitter-grid" style="grid-template-columns: @GetGridTemplateColumns();">
+    <div @ref="_leftPanelRef" class="grid-splitter-left-panel">
+      @LeftPanel
+    </div>
+
+    <div @ref="_splitterRef" class="grid-splitter-divider"></div>
+
+    <div @ref="_rightPanelRef" class="grid-splitter-right-panel">
+      @RightPanel
+    </div>
+  </div>
+</div>

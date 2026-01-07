@@ -1,0 +1,21 @@
+{
+  "version": "3.0",
+  "defaultProvider": "jsdelivr",
+  "libraries": [
+    {
+      "provider": "jsdelivr",
+      "library": "prismjs@1.30.0",
+      "files": [
+        "prism.min.js",
+        "components/prism-clike.min.js",
+        "themes/prism-tomorrow.min.css",
+        "components/prism-csharp.min.js",
+        "components/prism-powershell.min.js",
+        "components/prism-log.min.js",
+        "plugins/line-numbers/prism-line-numbers.min.css",
+        "plugins/line-numbers/prism-line-numbers.min.js"
+      ],
+      "destination": "wwwroot/lib/prismjs/"
+    }
+  ]
+}

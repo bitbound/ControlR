@@ -20,6 +20,7 @@ public interface ISettingsProvider
 
 internal class SettingsProvider(
   IFileSystem fileSystem,
+  IFileSystemPathProvider fileSystemPathProvider,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptionsMonitor<DeveloperOptions> developerOptions,
   IOptions<InstanceOptions> instanceOptions) : ISettingsProvider
@@ -27,25 +28,25 @@ internal class SettingsProvider(
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly IOptionsMonitor<DeveloperOptions> _developerOptions = developerOptions;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
   private readonly SemaphoreSlim _updateLock = new(1, 1);
+
   public Guid DeviceId => _appOptions.CurrentValue.DeviceId;
   public bool DisableAutoUpdate => _developerOptions.CurrentValue.DisableAutoUpdate;
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
-
   public Uri ServerUri =>
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
-
   public Guid TenantId => _appOptions.CurrentValue.TenantId == default
     ? throw new InvalidOperationException("Tenant ID is not configured correctly.")
     : _appOptions.CurrentValue.TenantId;
 
   public string GetAppSettingsPath()
   {
-    return PathConstants.GetAppSettingsPath(_instanceOptions.Value.InstanceId);
+    return _fileSystemPathProvider.GetAgentAppSettingsPath();
   }
 
   public async Task UpdateAppOptions(AgentAppOptions options)

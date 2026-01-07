@@ -71,6 +71,13 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(new[] { session });
   }
 
+  public Task<Result<GetLogFilesResponseDto>> GetLogFiles()
+  {
+    Console.WriteLine("Getting log files");
+    var responseDto = new GetLogFilesResponseDto(LogFileGroups: []);
+    return Result.Ok(responseDto).AsTaskResult();
+  }
+
   public Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
   {
     Console.WriteLine($"Received get path segments request for {dto.TargetPath}");
@@ -161,6 +168,12 @@ public class TestAgentHubClient : IAgentHubClient
   public Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
   {
     Console.WriteLine($"Streaming directory contents for {dto.DirectoryPath} (stream {dto.StreamId})");
+    return Result.Ok().AsTaskResult();
+  }
+
+  public Task<Result> StreamFileContents(StreamFileContentsRequestHubDto dto)
+  {
+    Console.WriteLine($"Streaming log file contents for {dto.FilePath} (stream {dto.StreamId})");
     return Result.Ok().AsTaskResult();
   }
 

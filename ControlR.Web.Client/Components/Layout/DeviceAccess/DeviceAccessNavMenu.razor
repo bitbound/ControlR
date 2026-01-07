@@ -21,6 +21,10 @@
     File System
   </MudNavLink>
 
+  <MudNavLink Disabled="IsDisabled"  Href='@($"/device-access/remote-logs?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.TextSnippet">
+    Remote Logs
+  </MudNavLink>
+
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/vnc-relay?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Cast">
     VNC Relay
   </MudNavLink>

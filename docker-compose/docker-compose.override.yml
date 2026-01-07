@@ -19,4 +19,4 @@ services:
     ports:
       - "18889:18889"
     environment:
-      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true

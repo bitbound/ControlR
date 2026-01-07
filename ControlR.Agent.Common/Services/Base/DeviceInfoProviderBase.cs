@@ -111,7 +111,7 @@ internal class DeviceInfoProviderBase(
 
       var allDrives = DriveInfo.GetDrives();
 
-      if (_environmentHelper.IsWindows)
+      if (_environmentHelper.IsWindows())
       {
         var rootDir = Path.GetPathRoot(Environment.SystemDirectory) ?? string.Empty;
 

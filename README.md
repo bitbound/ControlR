@@ -95,25 +95,27 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 
 ## Agent Log Locations
 
-Logs for the agent and desktop client are detailed below. On Windows, the path depends on whether the app is running in Debug or Release mode. On macOS and Linux, the path depends on whether the app is running as root.  This is only relevant for local debugging.
+Agent logs can be streamed in real-time from the Remote Logs page, which can be found at `https://{server-url}/device-access/remote-logs?deviceId={device-id}`.  Please be sure to include relevant log files when reporting issues.
+
+Logs for the agent and desktop client are detailed below. On Windows, the path depends on whether the app is running in Debug or Release mode. On macOS and Linux, the path depends on whether the app is running as root.
 
 Under normal user circumstances, the main agent will run in Release mode as SYSTEM/root. For Mac and Ubuntu, the desktop client will normally run as the user for the current GUI session.  For Windows, the desktop client runs as SYSTEM due to permissions required for capturing and controlling full-screen UAC prompts and the WinLogon desktop.
 
 **Main Agent**
 - **Windows**
-  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.Agent\LogFile.log`
-  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.Agent\LogFile.log`
+  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
+  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
 - **macOS / Linux**
-  - Running as root: `/var/log/controlr/{hostname}/ControlR.Agent/LogFile.log`
-  - Running as user: `~/.controlr/logs/{hostname}/ControlR.Agent/LogFile.log`
+  - Running as root: `/var/log/controlr/{hostname}/ControlR.Agent/LogFile{date}.log`
+  - Running as user: `~/.controlr/logs/{hostname}/ControlR.Agent/LogFile{date}.log`
 
 **Desktop Client**
 - **Windows**
-  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.DesktopClient\LogFile.log`
-  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.DesktopClient\LogFile.log`
+  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.DesktopClient\LogFile{date}.log`
+  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.DesktopClient\LogFile{date}.log`
 - **macOS / Linux**
-  - Running as root: `/var/log/controlr/{hostname}/ControlR.DesktopClient/LogFile.log`
-  - Running as user: `~/.controlr/logs/{hostname}/ControlR.DesktopClient/LogFile.log`
+  - Running as root: `/var/log/controlr/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
+  - Running as user: `~/.controlr/logs/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
 
 ## Permissions
 
@@ -127,6 +129,8 @@ Role Descriptions:
   - Able to deploy/install the agent on new devices
 - `DeviceSuperUser`
   - Able to access all devices
+- `InstallerKeyManager`
+  - Able to create and manage installer keys, which are used by the agent to register the device during installation
 - `TenantAdministrator`
   - Able to manage users and permissions for the tenant
 - `ServerAdministrator`
@@ -134,7 +138,10 @@ Role Descriptions:
   - This does not allow access to other tenants' devices or users
 
 ## API Spec
-An OpenAPI spec is created with each build of the server and committed to the repository.  It can be found [here](./ControlR.Web.Server/ControlR.Web.Server.json), or within the artifacts for each GitHub release.  You can use this file to generate API clients in any language.
+
+A .NET API client for ControlR is published with each release on NuGet: [ControlR.ApiClient](https://www.nuget.org/packages/ControlR.ApiClient/).
+
+Additionally, an OpenAPI spec is created with each build of the server and committed to the repository.  It can be found [here](./ControlR.Web.Server/ControlR.Web.Server.json), or within the artifacts for each GitHub release.  You can use this file to generate API clients in any language.
 
 While debugging, you can also browse the API at https://localhost:7033/scalar/ or https://localhost:7033/openapi/v1.json.
 

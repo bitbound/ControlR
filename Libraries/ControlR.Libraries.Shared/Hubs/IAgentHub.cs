@@ -10,7 +10,7 @@ public interface IAgentHub
   Task<bool> SendChatResponse(ChatResponseHubDto responseDto);
   Task SendDesktopPreviewStream(Guid streamId, ChannelReader<byte[]> jpegChunks);
   Task SendDirectoryContentsStream(Guid streamId, bool directoryExists, ChannelReader<FileSystemEntryDto[]> entryChunks);
-  Task<Result> SendFileDownloadStream(Guid streamId, ChannelReader<byte[]> fileChunks);
+  Task<Result> SendFileContentStream(Guid streamId, ChannelReader<byte[]> fileChunks);
   Task SendSubdirectoriesStream(Guid streamId, ChannelReader<FileSystemEntryDto[]> subdirectoryChunks);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
   Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto);

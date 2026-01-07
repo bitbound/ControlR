@@ -1,7 +1,6 @@
-﻿using ControlR.Libraries.Shared.Primitives;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
-namespace ControlR.Tests.TestingUtilities;
+namespace ControlR.Libraries.Shared.Helpers;
 
 public class OptionsMonitorWrapper<T>(T options) : IOptionsMonitor<T>
 {

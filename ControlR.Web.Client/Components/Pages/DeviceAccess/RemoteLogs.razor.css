@@ -1,0 +1,20 @@
+.remote-logs-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.log-content-area {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--mud-palette-surface);
+  border: 1px solid var(--mud-palette-divider);
+  border-radius: 4px;
+}
+
+@media (max-width: 960px) {
+  .remote-logs-container {
+    padding: 8px;
+  }
+}

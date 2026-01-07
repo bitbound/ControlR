@@ -17,6 +17,7 @@ public static class HttpConstants
   public const string PublicRegistrationSettingsEndpoint = "/api/public-registration-settings";
   public const string RolesEndpoint = "/api/roles";
   public const string ServerAlertEndpoint = "/api/server-alert";
+  public const string ServerLogsEndpoint = "/api/server-logs";
   public const string ServerStatsEndpoint = "/api/server-stats";
   public const string ServerVersionEndpoint = "/api/version/server";
   public const string TagsEndpoint = "/api/tags";

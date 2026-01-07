@@ -176,7 +176,7 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result> SendFileDownloadStream(Guid streamId, ChannelReader<byte[]> stream)
+  public async Task<Result> SendFileContentStream(Guid streamId, ChannelReader<byte[]> stream)
   {
     try
     {

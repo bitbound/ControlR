@@ -361,12 +361,17 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/ControlR.Website/public/downloads/**
+
+# ControlR-specific negations
+!ControlR.ApiClient/Output/**
+
+# ControlR-specific ignores
+.plans/*
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/appsettings.Development.json
 .DS_Store
 .idea/.idea.ControlR/.idea/copilot.data.migration.agent.xml
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
-.plans/*
 /.build/staging-desktop
 ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip
+ControlR.ApiClient/Output/.kiota.log

@@ -21,6 +21,7 @@ using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -58,11 +59,6 @@ internal static class HostApplicationBuilderExtensions
       })
       .AddEnvironmentVariables();
 
-    if (loadAppSettings)
-    {
-      builder.Configuration.AddJsonFile(PathConstants.GetAppSettingsPath(instanceId), true, true);
-    }
-
     services
       .AddOptions<AgentAppOptions>()
       .Bind(configuration.GetSection(AgentAppOptions.SectionKey));
@@ -74,6 +70,13 @@ internal static class HostApplicationBuilderExtensions
     services
       .AddOptions<InstanceOptions>()
       .Bind(configuration.GetSection(InstanceOptions.SectionKey));
+
+    var pathProvider = GetTempPathProvider(builder);
+
+    if (loadAppSettings)
+    {
+      builder.Configuration.AddJsonFile(pathProvider.GetAgentAppSettingsPath(), true, true);
+    }
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
     services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
@@ -102,6 +105,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IIpcClientAuthenticator, IpcClientAuthenticator>();
     services.AddSingleton<IDesktopClientUpdater, DesktopClientUpdater>();
     services.AddSingleton<IAgentHeartbeatTimer, AgentHeartbeatTimer>();
+    services.AddSingleton<IFileSystemPathProvider, FileSystemPathProvider>();
     services.AddControlrIpcServer<AgentRpcService>();
     services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
 
@@ -181,7 +185,7 @@ internal static class HostApplicationBuilderExtensions
       }
     }
 
-    builder.BootstrapSerilog(PathConstants.GetLogsPath(instanceId), TimeSpan.FromDays(7));
+    builder.BootstrapSerilog(pathProvider.GetAgentLogFilePath(), TimeSpan.FromDays(7));
 
     return builder;
   }
@@ -190,5 +194,27 @@ internal static class HostApplicationBuilderExtensions
   {
     var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
     client.BaseAddress = options.CurrentValue.ServerUri;
+  }
+
+  private static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder)
+  {
+    var instanceOptions = builder.Configuration
+      .GetSection(InstanceOptions.SectionKey)
+      .Get<InstanceOptions>() ?? new InstanceOptions();
+
+    IElevationChecker elevationChecker =
+      SystemEnvironment.Instance.IsWindows()
+        ? new ElevationCheckerWin()
+        : SystemEnvironment.Instance.IsMacOS()
+          ? new ElevationCheckerMac()
+          : SystemEnvironment.Instance.IsLinux()
+            ? new ElevationCheckerLinux()
+            : throw new PlatformNotSupportedException();
+
+    return new FileSystemPathProvider(
+      SystemEnvironment.Instance,
+      elevationChecker,
+      new FileSystem(new SerilogLogger<FileSystem>()),
+      new OptionsMonitorWrapper<InstanceOptions>(instanceOptions));
   }
 }

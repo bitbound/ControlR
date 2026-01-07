@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Enums;
 
 namespace ControlR.Libraries.Shared.Services;
@@ -8,13 +9,24 @@ public interface ISystemEnvironment
   int CurrentThreadId { get; }
   bool Is64Bit { get; }
   bool IsDebug { get; }
-  bool IsWindows { get; }
   SystemPlatform Platform { get; }
   int ProcessId { get; }
   RuntimeId Runtime { get; }
   string SelfExtractDir { get; }
   string StartupDirectory { get; }
   string StartupExePath { get; }
+
+  string GetCommonApplicationDataDirectory();
+  string GetProfileDirectory();
+  
+  [SupportedOSPlatformGuard("linux")]
+  bool IsLinux();
+
+  [SupportedOSPlatformGuard("macos")]
+  bool IsMacOS();
+
+  [SupportedOSPlatformGuard("windows")]
+  bool IsWindows();
 }
 
 public class SystemEnvironment : ISystemEnvironment
@@ -34,8 +46,6 @@ public class SystemEnvironment : ISystemEnvironment
 #endif
     }
   }
-
-  public bool IsWindows => OperatingSystem.IsWindows();
 
   public SystemPlatform Platform
   {
@@ -105,4 +115,23 @@ public class SystemEnvironment : ISystemEnvironment
     throw new DirectoryNotFoundException("Unable to determine startup directory.");
 
   public string StartupExePath { get; } = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();
+
+  public string GetCommonApplicationDataDirectory()
+  {
+    return Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+  }
+
+  public string GetProfileDirectory()
+  {
+    return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+  }
+
+  [SupportedOSPlatformGuard("linux")]
+  public bool IsLinux() => OperatingSystem.IsLinux();
+
+  [SupportedOSPlatformGuard("macos")]
+  public bool IsMacOS() => OperatingSystem.IsMacOS();
+
+  [SupportedOSPlatformGuard("windows")]
+  public bool IsWindows() => OperatingSystem.IsWindows();
 }

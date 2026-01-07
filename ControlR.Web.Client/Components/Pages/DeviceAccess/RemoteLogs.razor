@@ -1,0 +1,85 @@
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+@using ControlR.Web.Client.Components.Shared
+@layout DeviceAccessLayout
+@inherits JsInteropableComponent
+@attribute [Route(ClientRoutes.DeviceAccessRemoteLogs)]
+@attribute [Authorize]
+
+<div class="remote-logs-container h-100">
+  <GridSplitter InitialLeftPanelWidth="300" MinLeftPanelWidth="200" MinRightPanelWidth="300">
+    <LeftPanel>
+      <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">Log Files</MudText>
+        <MudTooltip Text="Refresh Files">
+          <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Secondary" Size="Size.Small"
+            OnClick="OnRefreshTreeClick" Disabled="@IsLoading" />
+        </MudTooltip>
+      </div>
+      @if (IsLoading)
+      {
+        <div class="d-flex justify-center align-center" style="height: 200px;">
+          <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+        </div>
+      }
+      else if (LogTreeItems.Count == 0)
+      {
+        <MudAlert Severity="Severity.Info">No log files found.</MudAlert>
+      }
+      else
+      {
+        <MudTreeView T="LogTreeNode" Items="@LogTreeItems" @bind-SelectedValue="SelectedNode"
+          @bind-SelectedValue:after="LoadLogContents" Dense="true">
+          <ItemTemplate>
+            <MudTreeViewItem Value="@context.Value" Text="@context.Text" Items="@context.Children" Icon="@context.Icon"
+              CanExpand="@context.Expandable" @bind-Expanded="@context.Expanded" />
+          </ItemTemplate>
+        </MudTreeView>
+      }
+    </LeftPanel>
+    <RightPanel>
+      <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">Log Contents</MudText>
+        <div>
+          <MudTooltip Text="Download Log File">
+            <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Color="Color.Secondary" Size="Size.Small"
+              Class="me-2" OnClick="HandleDownloadContentClicked" Disabled="@IsDownloadContentButtonDisabled" />
+          </MudTooltip>
+
+          <MudTooltip Text="Copy to Clipboard">
+            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Secondary" Size="Size.Small"
+              Class="me-2" OnClick="HandleCopyContentClicked" Disabled="@IsCopyContentsButtonDisabled" />
+          </MudTooltip>
+
+          <MudTooltip Text="Refresh Contents">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Secondary" Size="Size.Small"
+              OnClick="HandleRefreshContentClicked" Disabled="@IsRefreshContentsButtonDisabled" />
+          </MudTooltip>
+        </div>
+      </div>
+      <div class="log-content-area">
+        @if (IsLoadingContents)
+        {
+          <div class="d-flex justify-center align-center" style="height: 200px;">
+            <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+          </div>
+        }
+        else if (SelectedNode is null || SelectedNode.IsFolder)
+        {
+          <MudAlert Severity="Severity.Info" Class="mt-8 mx-8">
+            Select a log file to view its contents.
+          </MudAlert>
+        }
+        else if (!string.IsNullOrEmpty(LogContents))
+        {
+          <CodeView Language="CodeViewLanguage.Log" CodeContent="@LogContents" />
+        }
+        else
+        {
+          <MudAlert Severity="Severity.Warning" Class="mt-8 mx-8">
+            No content available for this log file.
+          </MudAlert>
+        }
+      </div>
+    </RightPanel>
+  </GridSplitter>
+</div>

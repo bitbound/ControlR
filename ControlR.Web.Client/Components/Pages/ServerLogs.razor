@@ -1,0 +1,65 @@
+﻿@using Microsoft.Extensions.Options
+@attribute [Route(ClientRoutes.ServerLogs)]
+@attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
+@inject IControlrApi ControlrApi
+@inject ILogger<ServerLogs> Logger
+
+<PageTitle>Server Logs</PageTitle>
+
+<PrimaryTitle>
+  Aspire Dashboard
+</PrimaryTitle>
+
+@if (!string.IsNullOrWhiteSpace(_alertMessage))
+{
+  <MudAlert Severity="Severity.Error">@_alertMessage</MudAlert>
+}
+else if (_isConfigured == false)
+{
+  <MudAlert Severity="Severity.Warning">
+    The Aspire Dashboard values are not properly configured in the ControlR server settings.
+  </MudAlert>
+}
+else if (_aspireUrl is not null)
+{
+  <MudText Class="mt-6">
+    The Aspire Dashboard is configured for this ControlR server. You can access it by clicking the link below:
+  </MudText>
+  <MudText Class="mt-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@_aspireUrl.ToString()" Target="_blank"
+      Rel="noopener noreferrer">
+      Open Aspire Dashboard
+    </MudButton>
+  </MudText>
+}
+else
+{
+  <LoadingIndicator />
+}
+
+@code {
+  private string? _alertMessage;
+  private Uri? _aspireUrl;
+  private bool? _isConfigured;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      await base.OnInitializedAsync();
+      var result = await ControlrApi.GetAspireUrl();
+      if (!result.IsSuccess)
+      {
+        _alertMessage = "Failed to retrieve Aspire Dashboard URL.";
+        return;
+      }
+      _isConfigured = result.Value.IsConfigured;
+      _aspireUrl = result.Value.AspireUrl;
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error initializing ServerLogs page.");
+      _alertMessage = "An error occurred during initialization";
+    }
+  }
+}

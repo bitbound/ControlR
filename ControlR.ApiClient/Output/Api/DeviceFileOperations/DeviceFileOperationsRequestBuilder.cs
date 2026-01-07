@@ -3,6 +3,7 @@
 using ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory;
 using ControlR.ApiClient.Api.DeviceFileOperations.Delete;
 using ControlR.ApiClient.Api.DeviceFileOperations.Download;
+using ControlR.ApiClient.Api.DeviceFileOperations.Logs;
 using ControlR.ApiClient.Api.DeviceFileOperations.Upload;
 using ControlR.ApiClient.Api.DeviceFileOperations.ValidatePath;
 using Microsoft.Kiota.Abstractions.Extensions;
@@ -33,6 +34,11 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations
         public global::ControlR.ApiClient.Api.DeviceFileOperations.Download.DownloadRequestBuilder Download
         {
             get => new global::ControlR.ApiClient.Api.DeviceFileOperations.Download.DownloadRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The logs property</summary>
+        public global::ControlR.ApiClient.Api.DeviceFileOperations.Logs.LogsRequestBuilder Logs
+        {
+            get => new global::ControlR.ApiClient.Api.DeviceFileOperations.Logs.LogsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The upload property</summary>
         public global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.UploadRequestBuilder Upload

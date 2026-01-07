@@ -57,7 +57,6 @@ internal class TerminalStore(
         cachedItem is TerminalSession typedItem)
     {
       terminalSession = typedItem;
-
       return true;
     }
 
