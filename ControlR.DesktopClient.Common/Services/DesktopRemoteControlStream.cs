@@ -37,6 +37,7 @@ internal sealed class DesktopRemoteControlStream(
   IInputSimulator inputSimulator,
   IDisplayManager displayManager,
   IWaiter waiter,
+  ISystemEnvironment systemEnvironment,
   IOptions<RemoteControlSessionOptions> startupOptions,
   ILogger<DesktopRemoteControlStream> logger)
   : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopRemoteControlStream
@@ -51,7 +52,9 @@ internal sealed class DesktopRemoteControlStream(
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
+
   private IDisposable? _messageHandlerRegistration;
 
   public async ValueTask DisposeAsync()
@@ -101,6 +104,8 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<WindowsSessionEndingMessage>(this, HandleWindowsSessionEndingMessage);
       Messenger.Register<WindowsSessionSwitchedMessage>(this, HandleWindowsSessionSwitchedMessage);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
+      Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
+      Messenger.Register<SendBlockInputResultMessage>(this, HandleSendBlockInputResultMessage);
       _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
 
       await SendDisplayData();
@@ -271,6 +276,19 @@ internal sealed class DesktopRemoteControlStream(
             await _desktopCapturer.RequestKeyFrame();
             break;
           }
+        case DtoType.ToggleBlockInput:
+          {
+            if (!_systemEnvironment.IsWindows())
+            {
+              _logger.LogWarning("ToggleBlockInput is only supported on Windows. Ignoring request.");
+              break;
+            }
+
+            var payload = wrapper.GetPayload<ToggleBlockInputDto>();
+            _logger.LogInformation("Toggling block input to {isEnabled}.", payload.IsEnabled);
+            await _inputSimulator.SetBlockInput(payload.IsEnabled);
+            break;
+          }
         default:
           _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
           break;
@@ -279,6 +297,35 @@ internal sealed class DesktopRemoteControlStream(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling DTO.");
+    }
+  }
+
+  private async Task HandleSendBlockInputResultMessage(object subscriber, SendBlockInputResultMessage message)
+  {
+    try
+    {
+      var dto = new BlockInputResultDto(message.IsSuccess, message.IsEnabled);
+      var wrapper = DtoWrapper.Create(dto, DtoType.BlockInputResult);
+      await Send(wrapper, _appLifetime.ApplicationStopping);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending block input result to viewer.");
+    }
+  }
+
+  private async Task HandleSendToastToViewerMessage(object subscriber, SendToastToViewerMessage message)
+  {
+    try
+    {
+      var dto = new ToastNotificationDto(message.Message, message.Severity);
+
+      var wrapper = DtoWrapper.Create(dto, DtoType.ToastNotification);
+      await Send(wrapper, _appLifetime.ApplicationStopping);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending toast notification to viewer.");
     }
   }
 

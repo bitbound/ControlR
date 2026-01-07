@@ -6,6 +6,17 @@
                ThumbIcon="@(Icons.Material.Filled.RemoveRedEye)" />
   </MudTooltip>
 
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
+  {
+    <MudTooltip Text="Block user input on the remote device">
+      <MudSwitch Value="RemoteControlState.IsBlockUserInputEnabled"
+                 ValueChanged="@((bool v) => HandleBlockInputToggled(v))"
+                 Color="Color.Warning"
+                 Label="Block User Input"
+                 ThumbIcon="@(Icons.Material.Filled.Block)" />
+    </MudTooltip>
+  }
+
   <MudText Typo="Typo.caption" Class="mt-2">Clipboard</MudText>
   <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Send)" Size="Size.Small"
     OnClick="OnSendClipboardClicked" FullWidth>
@@ -53,6 +64,29 @@
   public required ISnackbar Snackbar { get; init; }
   [Inject]
   public required ILogger<InputPopover> Logger { get; init; }
+  [Inject]
+  public required IViewerRemoteControlStream RemoteControlStream { get; init; }
+
+  private async Task HandleBlockInputToggled(bool value)
+  {
+    try
+    {
+      if (RemoteControlStream.State != System.Net.WebSockets.WebSocketState.Open)
+      {
+        Snackbar.Add("No active remote session", Severity.Error);
+        return;
+      }
+
+      Snackbar.Add("Sending block input request", Severity.Info);
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await RemoteControlStream.SendToggleBlockInput(value, cts.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while toggling block input.");
+      Snackbar.Add("An error occurred while toggling block input", Severity.Error);
+    }
+  }
 
   private async Task InvokeCtrlAltDel()
   {

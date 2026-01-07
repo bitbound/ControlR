@@ -1,4 +1,5 @@
 ﻿using System.Net.WebSockets;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 
@@ -6,46 +7,37 @@ namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
 public partial class RemoteControl : ViewportAwareComponent
 {
   private readonly uint _commandTimeoutSeconds = 30;
+
   private string? _alertMessage;
   private Severity _alertSeverity;
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
   private DesktopSession[]? _systemSessions;
-  
-  [Inject]
-  public required IDeviceState DeviceAccessState { get; init; }
 
   [SupplyParameterFromQuery]
   public required Guid DeviceId { get; init; }
-
+  [Inject]
+  public required IDeviceState DeviceState { get; init; }
   [Inject]
   public required IDialogService DialogService { get; init; }
-
   [Inject]
   public required ILogger<RemoteControl> Logger { get; init; }
-
   [Inject]
   public required NavigationManager NavManager { get; init; }
-
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
-
   [Inject]
   public required IScreenWake ScreenWake { get; init; }
-
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-
   [Inject]
   public required IViewerRemoteControlStream StreamingClient { get; init; }
-
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }
-
-
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
-
+  [Inject]
+  public required IWebAssemblyHostEnvironment WebAssemblyEnv { get; init; }
 
   private string AlertIcon =>
     _alertSeverity switch
@@ -56,7 +48,6 @@ public partial class RemoteControl : ViewportAwareComponent
       Severity.Error => Icons.Material.Outlined.Error,
       _ => Icons.Material.Outlined.Info
     };
-
   private SignalingState CurrentState
   {
     get
@@ -81,7 +72,7 @@ public partial class RemoteControl : ViewportAwareComponent
         return SignalingState.Alert;
       }
 
-      if (DeviceAccessState.CurrentDevice.Platform
+      if (DeviceState.CurrentDevice.Platform
           is not SystemPlatform.Windows
           and not SystemPlatform.MacOs
           and not SystemPlatform.Linux)
@@ -94,9 +85,7 @@ public partial class RemoteControl : ViewportAwareComponent
         : SignalingState.Unknown;
     }
   }
-
   private bool IsRemoteDisplayVisible => CurrentState == SignalingState.ConnectionActive;
-
   private string OuterDivClass
   {
     get
@@ -106,7 +95,6 @@ public partial class RemoteControl : ViewportAwareComponent
         : "h-100 ma-4";
     }
   }
-
 
   protected override async Task OnInitializedAsync()
   {
@@ -119,6 +107,12 @@ public partial class RemoteControl : ViewportAwareComponent
       }
 
       await GetDeviceDesktopSessions(false);
+
+      if (WebAssemblyEnv.IsDevelopment())
+      {
+        // Automatically enable view-only mode in development.
+        RemoteControlState.IsViewOnlyEnabled = true;
+      }
     }
     catch (Exception ex)
     {
@@ -133,12 +127,11 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
-
   private async Task GetDeviceDesktopSessions(bool quiet)
   {
     try
     {
-      _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceAccessState.CurrentDevice.Id);
+      _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceState.CurrentDevice.Id);
     }
     catch (Exception ex)
     {
@@ -211,7 +204,7 @@ public partial class RemoteControl : ViewportAwareComponent
     {
       var parameters = new DialogParameters
       {
-        { nameof(DesktopPreviewDialog.Device), DeviceAccessState.CurrentDevice },
+        { nameof(DesktopPreviewDialog.Device), DeviceState.CurrentDevice },
         { nameof(DesktopPreviewDialog.Session), desktopSession }
       };
 
@@ -301,7 +294,7 @@ public partial class RemoteControl : ViewportAwareComponent
       _systemSessions = null;
       
       var session = new RemoteControlSession(
-        DeviceAccessState.CurrentDevice,
+        DeviceState.CurrentDevice,
         desktopSession.SystemSessionId,
         desktopSession.ProcessId,
         desktopSession.Type);
@@ -359,6 +352,10 @@ public partial class RemoteControl : ViewportAwareComponent
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
       RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
+      if (RemoteControlState.IsBlockUserInputEnabled)
+      {
+        await StreamingClient.SendToggleBlockInput(true, CancellationToken.None);
+      }
       
       _loadingMessage = null;
       await ScreenWake.SetScreenWakeLock(true);

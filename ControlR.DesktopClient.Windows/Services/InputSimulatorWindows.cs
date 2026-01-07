@@ -1,8 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using Bitbound.SimpleMessenger;
+using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -10,12 +13,15 @@ namespace ControlR.DesktopClient.Windows.Services;
 
 internal class InputSimulatorWindows(
   IWin32Interop win32Interop,
+  IMessenger messenger,
   ILogger<InputSimulatorWindows> logger) : IInputSimulator, IHostedService
 {
   private readonly BlockingCollection<Action> _actionQueue = [];
   private readonly ILogger<InputSimulatorWindows> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
   private readonly CancellationTokenSource _processorCts = new();
   private readonly IWin32Interop _win32Interop = win32Interop;
+
   private Thread? _processorThread;
 
   public Task InvokeKeyEvent(string key, string? code, bool isPressed)
@@ -71,10 +77,16 @@ internal class InputSimulatorWindows(
     _actionQueue.Add(() => _win32Interop.InvokeWheelScroll(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, scrollY, scrollX));
     return Task.CompletedTask;
   }
-  
+
   public Task SetBlockInput(bool isBlocked)
   {
-    _actionQueue.Add(() => _win32Interop.SetBlockInput(isBlocked));
+    _actionQueue.Add(() =>
+    {
+      var success = _win32Interop.SetBlockInput(isBlocked);
+      _ = _messenger.Send(new SendBlockInputResultMessage(
+        IsSuccess: success,
+        IsEnabled: success ? isBlocked : !isBlocked));
+    });
     return Task.CompletedTask;
   }
 

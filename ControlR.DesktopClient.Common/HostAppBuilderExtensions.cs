@@ -26,7 +26,6 @@ public static class HostAppBuilderExtensions
       .AddTransient<IHubConnectionBuilder, HubConnectionBuilder>()
       .AddSingleton(WeakReferenceMessenger.Default)
       .AddSingleton(TimeProvider.System)
-      .AddSingleton(WeakReferenceMessenger.Default)
       .AddSingleton<IProcessManager, ProcessManager>()
       .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<IImageUtility, ImageUtility>()

@@ -37,7 +37,7 @@
     case SignalingState.SessionSelect:
       {
         <MudText Typo="Typo.h6" Color="Color.Info" GutterBottom>
-          Desktop Sessions on @(DeviceAccessState.CurrentDevice.Name)
+          Desktop Sessions on @(DeviceState.CurrentDevice.Name)
         </MudText>
 
         <div>
@@ -93,7 +93,7 @@
                       <div>
                         @(session.Name)
                       </div>
-                      @if (DeviceAccessState.CurrentDevice.Platform == SystemPlatform.Windows)
+                      @if (DeviceState.CurrentDevice.Platform == SystemPlatform.Windows)
                       {
                         <div>
                           <MudText Typo="Typo.subtitle1" Color="Color.Secondary">

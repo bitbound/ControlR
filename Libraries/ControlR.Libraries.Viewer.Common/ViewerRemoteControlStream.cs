@@ -1,12 +1,8 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using Bitbound.SimpleMessenger;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
-using Microsoft.Extensions.Logging;
 
 namespace ControlR.Libraries.Viewer.Common;
 
@@ -16,20 +12,16 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
   Task RequestKeyFrame(CancellationToken cancellationToken);
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
-
   Task SendCloseStreamingSession(CancellationToken cancellationToken);
   Task SendKeyEvent(string key, string? code, bool isPressed, CancellationToken cancellationToken);
   Task SendKeyboardStateReset(CancellationToken cancellationToken);
-
   Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY,
     CancellationToken cancellationToken);
-
   Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
     CancellationToken cancellationToken);
-
   Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken);
+  Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken);
   Task SendTypeText(string text, CancellationToken cancellationToken);
-
   Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
     CancellationToken cancellationToken);
 }
@@ -55,6 +47,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task RequestKeyFrame(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -65,6 +58,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -75,6 +69,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -85,6 +80,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendCloseStreamingSession(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -95,6 +91,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendKeyEvent(string key, string? code, bool isPressed, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -105,6 +102,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendKeyboardStateReset(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -115,6 +113,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendMouseButtonEvent(
     int button,
     bool isPressed,
@@ -130,6 +129,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
     CancellationToken cancellationToken)
   {
@@ -141,6 +141,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -151,6 +152,18 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
+  public async Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var dto = new ToggleBlockInputDto(isEnabled);
+        var wrapper = DtoWrapper.Create(dto, DtoType.ToggleBlockInput);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
   public async Task SendTypeText(string text, CancellationToken cancellationToken)
   {
     await TrySend(
@@ -161,6 +174,7 @@ public class ViewerRemoteControlStream(
         await Send(wrapper, cancellationToken);
       });
   }
+
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
     CancellationToken cancellationToken)
   {
@@ -186,6 +200,7 @@ public class ViewerRemoteControlStream(
       _logger.LogError(ex, "Error while sending message via websocket stream..");
     }
   }
+
   private async Task WaitForConnection()
   {
     if (State == WebSocketState.Open)

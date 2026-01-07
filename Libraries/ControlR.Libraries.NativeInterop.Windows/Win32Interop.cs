@@ -56,7 +56,7 @@ public interface IWin32Interop
   void MovePointer(int x, int y, MovePointerType moveType);
   nint OpenInputDesktop();
   void ResetKeyboardState();
-  void SetBlockInput(bool isBlocked);
+  bool SetBlockInput(bool isBlocked);
   void SetClipboardText(string? text);
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
@@ -807,13 +807,16 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  public void SetBlockInput(bool isBlocked)
+  public bool SetBlockInput(bool isBlocked)
   {
-    if (!PInvoke.BlockInput(isBlocked))
+    if (PInvoke.BlockInput(isBlocked))
     {
-      _logger.LogError("Failed to set input block state to {IsBlocked}.", isBlocked);
-      LogWin32Error();
+      return true;
     }
+
+    _logger.LogError("Failed to set input block state to {IsBlocked}.", isBlocked);
+    LogWin32Error();
+    return false;
   }
 
   public void SetClipboardText(string? text)

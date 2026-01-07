@@ -37,3 +37,4 @@ global using ControlR.Libraries.Viewer.Common.Enums;
 global using ControlR.Libraries.Viewer.Common.Models;
 global using ControlR.Libraries.WebSocketRelay.Client;
 global using Microsoft.AspNetCore.Components;
+global using ControlR.Web.Client.Extensions;

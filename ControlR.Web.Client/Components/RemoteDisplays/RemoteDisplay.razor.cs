@@ -474,6 +474,28 @@ public partial class RemoteDisplay : JsInteropableComponent
             // Metrics frame handles this one internally.
             break;
           }
+        case DtoType.ToastNotification:
+          {
+            var dto = wrapper.GetPayload<ToastNotificationDto>();
+            Snackbar.Add(dto.Message, dto.Severity.ToMudSeverity());
+            break;
+          }
+        case DtoType.BlockInputResult:
+          {
+            var dto = wrapper.GetPayload<BlockInputResultDto>();
+            RemoteControlState.IsBlockUserInputEnabled = dto.IsEnabled;
+            await RemoteControlState.NotifyStateChanged();
+            
+            if (dto.IsSuccess)
+            {
+              Snackbar.Add($"Input blocking {(dto.IsEnabled ? "enabled" : "disabled")}", Severity.Success);
+            }
+            else
+            {
+              Snackbar.Add($"Failed to {(dto.IsEnabled ? "disable" : "enable")} input blocking", Severity.Error);
+            }
+            break;
+          }
         default:
           Logger.LogWarning("Received unsupported DTO type: {DtoType}", wrapper.DtoType);
           Snackbar.Add($"Unsupported DTO type: {wrapper.DtoType}", Severity.Warning);

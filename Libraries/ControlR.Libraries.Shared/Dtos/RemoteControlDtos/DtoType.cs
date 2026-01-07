@@ -23,4 +23,7 @@ public enum DtoType
   CaptureMetricsChanged = 40,
   RequestKeyFrame = 41,
   VideoStreamPacket = 42,
+  ToggleBlockInput = 43,
+  ToastNotification = 44,
+  BlockInputResult = 45,
 }
