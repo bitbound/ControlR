@@ -50,7 +50,7 @@
                 Device Access
               </MudMenuItem>
 
-              @if (context.Item.IsOnline)
+              @if (context.Item.Dto.IsOnline)
               {
                 <MudMenuItem Icon="@(Icons.Material.Filled.ScreenShare)" IconColor="Color.Info"
                   OnClick="@(() => LaunchRemoteControl(context.Item))">
@@ -99,23 +99,23 @@
         </CellTemplate>
       </TemplateColumn>
 
-      <PropertyColumn Title="Name" Property="x => x.Name" Sortable="true" Filterable="true" StickyLeft="true">
+      <PropertyColumn Title="Name" Property="x => x.Dto.Name" Sortable="true" Filterable="true" StickyLeft="true">
         <CellTemplate>
-          @if (string.IsNullOrWhiteSpace(context.Item.Alias))
+          @if (string.IsNullOrWhiteSpace(context.Item.Dto.Alias))
           {
-            @(context.Item.Name)
+            @(context.Item.Dto.Name)
           }
           else
           {
-            @($"{context.Item.Name} ({context.Item.Alias})")
+            @($"{context.Item.Dto.Name} ({context.Item.Dto.Alias})")
           }
         </CellTemplate>
 
       </PropertyColumn>
 
-      <PropertyColumn Property="@(x => x.IsOnline)" Sortable="true" Filterable="true" Title="Online">
+      <PropertyColumn Property="@(x => x.Dto.IsOnline)" Sortable="true" Filterable="true" Title="Online">
         <CellTemplate>
-          @if (context.Item.IsOnline)
+          @if (context.Item.Dto.IsOnline)
           {
             if (context.Item.IsOutdated)
             {
@@ -138,9 +138,9 @@
           }
         </CellTemplate>
       </PropertyColumn>
-      <PropertyColumn Property="@(x => x.Platform)" Sortable="true" Filterable="true" Title="Platform">
+      <PropertyColumn Property="@(x => x.Dto.Platform)" Sortable="true" Filterable="true" Title="Platform">
         <CellTemplate>
-          @switch (context.Item.Platform)
+          @switch (context.Item.Dto.Platform)
           {
             case SystemPlatform.Windows:
               <MudTooltip Text="Windows">
@@ -170,27 +170,27 @@
         </CellTemplate>
       </PropertyColumn>
 
-      <PropertyColumn Property="x => x!.CurrentUsers" Title="Current Users" Sortable="false" Filterable="false">
+      <PropertyColumn Property="x => x.Dto.CurrentUsers" Title="Current Users" Sortable="false" Filterable="false">
         <CellTemplate>
-          @(string.Join(", ", context.Item.CurrentUsers))
+          @(string.Join(", ", context.Item.Dto.CurrentUsers))
         </CellTemplate>
       </PropertyColumn>
 
-      <PropertyColumn Property="@(x => x.CpuUtilization)" Title="CPU" Sortable="true" Filterable="true">
+      <PropertyColumn Property="@(x => x.Dto.CpuUtilization)" Title="CPU" Sortable="true" Filterable="true">
         <CellTemplate>
-          @($"{Math.Round(context.Item.CpuUtilization * 100, 2)}%")
+          @($"{Math.Round(context.Item.Dto.CpuUtilization * 100, 2)}%")
         </CellTemplate>
       </PropertyColumn>
 
-      <PropertyColumn Property="@(x => x.UsedMemoryPercent)" Title="Memory" Sortable="true" Filterable="true">
+      <PropertyColumn Property="@(x => x.Dto.UsedMemoryPercent)" Title="Memory" Sortable="true" Filterable="true">
         <CellTemplate>
-          @($"{Math.Round(context.Item.UsedMemoryPercent * 100, 2)}%")
+          @($"{Math.Round(context.Item.Dto.UsedMemoryPercent * 100, 2)}%")
         </CellTemplate>
       </PropertyColumn>
 
-      <PropertyColumn Property="@(x => x.UsedStoragePercent)" Title="Storage" Sortable="true" Filterable="true">
+      <PropertyColumn Property="@(x => x.Dto.UsedStoragePercent)" Title="Storage" Sortable="true" Filterable="true">
         <CellTemplate>
-          @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
+          @($"{Math.Round(context.Item.Dto.UsedStoragePercent * 100, 2)}%")
         </CellTemplate>
       </PropertyColumn>
 

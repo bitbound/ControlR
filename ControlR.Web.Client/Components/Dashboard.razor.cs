@@ -11,8 +11,8 @@ public partial class Dashboard
   private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
   private readonly Dictionary<string, SortDefinition<DeviceViewModel>> _sortDefinitions = new()
   {
-    ["IsOnline"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.IsOnline), true, 0, x => x.IsOnline),
-    ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Name), false, 1, x => x.Name)
+    ["IsOnline"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Dto.IsOnline), true, 0, x => x.Dto.IsOnline),
+    ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Dto.Name), false, 1, x => x.Dto.Name)
   };
 
   private Version? _agentReleaseVersion;
@@ -80,8 +80,8 @@ public partial class Dashboard
 
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
-    var viewModel = message.Dto.CloneAs<DeviceViewModel>();
-    viewModel.Dto = message.Dto;
+    var isOutdated = IsOutdated(message.Dto);
+    var viewModel = new DeviceViewModel(message.Dto, isOutdated);
     if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
     {
       await ReloadGridData();
@@ -109,7 +109,7 @@ public partial class Dashboard
     await ReloadGridData();
   }
 
-  private bool IsOutdated(DeviceViewModel device)
+  private bool IsOutdated(DeviceDto device)
   {
     return
       _agentReleaseVersion is not null &&
@@ -181,9 +181,8 @@ public partial class Dashboard
     var viewModels = result.Value.Items
         .Select(dto =>
         {
-          var viewModel = dto.CloneAs<DeviceViewModel>();
-          viewModel.IsOutdated = IsOutdated(viewModel);
-          viewModel.Dto = dto;
+          var isOutdated = IsOutdated(dto);
+          var viewModel = new DeviceViewModel(dto, isOutdated);
           return viewModel;
         })
         .ToArray();
@@ -286,7 +285,7 @@ public partial class Dashboard
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Restart",
-        $"Are you sure you want to restart {device.Name}?",
+        $"Are you sure you want to restart {device.Dto.Name}?",
         "Yes",
         "No");
 
@@ -318,7 +317,7 @@ public partial class Dashboard
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Shutdown",
-        $"Are you sure you want to shut down {device.Name}?",
+        $"Are you sure you want to shut down {device.Dto.Name}?",
         "Yes",
         "No");
 
@@ -341,7 +340,7 @@ public partial class Dashboard
     {
       var result = await DialogService.ShowMessageBox(
         "Confirm Uninstall",
-        $"Are you sure you want to uninstall the agent from {device.Name}?",
+        $"Are you sure you want to uninstall the agent from {device.Dto.Name}?",
         "Yes",
         "No");
 
@@ -376,13 +375,13 @@ public partial class Dashboard
   {
     try
     {
-      if (device.MacAddresses.Length == 0)
+      if (device.Dto.MacAddresses.Length == 0)
       {
         Snackbar.Add("No MAC addresses on device", Severity.Warning);
         return;
       }
 
-      await MainHub.Server.SendWakeDevice(device.Id, device.MacAddresses);
+      await MainHub.Server.SendWakeDevice(device.Id, device.Dto.MacAddresses);
       Snackbar.Add("Wake command sent", Severity.Success);
     }
     catch (Exception ex)
