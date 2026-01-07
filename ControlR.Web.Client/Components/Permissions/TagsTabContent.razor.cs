@@ -37,7 +37,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   [Inject]
   public required IUserStore UserStore { get; init; }
 
-  private IOrderedEnumerable<DeviceDto> FilteredDevices =>
+  private IOrderedEnumerable<DeviceResponseDto> FilteredDevices =>
     DeviceStore.Items
       .Where(x => x.Name.Contains(_deviceSearchPattern, StringComparison.OrdinalIgnoreCase))
       .OrderBy(x => x.Name);
@@ -120,7 +120,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     Snackbar.Add("Tag deleted", Severity.Success);
   }
 
-  private async Task HandleDeviceToggled((DeviceDto device, bool isToggled) args)
+  private async Task HandleDeviceToggled((DeviceResponseDto device, bool isToggled) args)
   {
     if (_selectedTag is null)
     {

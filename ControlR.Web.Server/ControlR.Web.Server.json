@@ -688,17 +688,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               }
             }
@@ -717,7 +717,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeviceDto"
+                    "$ref": "#/components/schemas/DeviceResponseDto"
                   }
                 }
               },
@@ -725,7 +725,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeviceDto"
+                    "$ref": "#/components/schemas/DeviceResponseDto"
                   }
                 }
               },
@@ -733,7 +733,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeviceDto"
+                    "$ref": "#/components/schemas/DeviceResponseDto"
                   }
                 }
               }
@@ -785,17 +785,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceDto"
+                  "$ref": "#/components/schemas/DeviceResponseDto"
                 }
               }
             }
@@ -2866,7 +2866,7 @@
         "type": "object",
         "properties": {
           "device": {
-            "$ref": "#/components/schemas/DeviceDto"
+            "$ref": "#/components/schemas/DeviceUpdateRequestDto"
           },
           "installerKeyId": {
             "type": "string",
@@ -2874,6 +2874,16 @@
           },
           "installerKeySecret": {
             "type": "string"
+          },
+          "tagIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -3095,7 +3105,7 @@
           }
         }
       },
-      "DeviceDto": {
+      "DeviceResponseDto": {
         "required": [
           "name",
           "agentVersion",
@@ -3120,7 +3130,8 @@
           "publicIpV6",
           "localIpV4",
           "localIpV6",
-          "drives"
+          "drives",
+          "isOutdated"
         ],
         "type": "object",
         "properties": {
@@ -3220,6 +3231,9 @@
               "$ref": "#/components/schemas/Drive"
             }
           },
+          "isOutdated": {
+            "type": "boolean"
+          },
           "tagIds": {
             "type": [
               "null",
@@ -3302,7 +3316,7 @@
               "array"
             ],
             "items": {
-              "$ref": "#/components/schemas/DeviceDto"
+              "$ref": "#/components/schemas/DeviceResponseDto"
             }
           },
           "totalItems": {
@@ -3326,6 +3340,112 @@
           "tagId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "DeviceUpdateRequestDto": {
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "agentVersion",
+          "is64Bit",
+          "osArchitecture",
+          "osDescription",
+          "platform",
+          "processorCount",
+          "cpuUtilization",
+          "totalMemory",
+          "totalStorage",
+          "usedMemory",
+          "usedStorage",
+          "currentUsers",
+          "macAddresses",
+          "localIpV4",
+          "localIpV6",
+          "drives"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "agentVersion": {
+            "type": "string"
+          },
+          "is64Bit": {
+            "type": "boolean"
+          },
+          "osArchitecture": {
+            "$ref": "#/components/schemas/Architecture"
+          },
+          "osDescription": {
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/SystemPlatform"
+          },
+          "processorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "cpuUtilization": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "totalMemory": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "totalStorage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "usedMemory": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "usedStorage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "currentUsers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "macAddresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "localIpV4": {
+            "type": "string"
+          },
+          "localIpV6": {
+            "type": "string"
+          },
+          "drives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Drive"
+            }
           }
         }
       },

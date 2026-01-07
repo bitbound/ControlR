@@ -124,7 +124,7 @@ internal class AgentUpdater(
 
       _logger.LogInformation("Launching installer.");
 
-      var tenantId = _settings.TenantId;
+      var tenantId = _settings.GetRequiredTenantId();
       var installCommand = $"install -t {tenantId}";
       if (_instanceOptions.Value.InstanceId is { } instanceId)
       {

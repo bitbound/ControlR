@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 namespace ControlR.Libraries.Shared.Dtos.ServerApi;
 
 [MessagePackObject(keyAsPropertyName: true)]
-public record DeviceDto(
+public record DeviceResponseDto(
   string Name,
   string AgentVersion,
   double CpuUtilization,
@@ -32,7 +32,8 @@ public record DeviceDto(
    string PublicIpV6,
    string LocalIpV4,
    string LocalIpV6,
-   IReadOnlyList<Drive> Drives) : IHasPrimaryKey
+   IReadOnlyList<Drive> Drives,
+   bool IsOutdated) : IHasPrimaryKey
 {
   public ImmutableArray<Guid>? TagIds { get; set; }
 

@@ -7,7 +7,7 @@ namespace ControlR.Web.Client.Components.Permissions;
 public partial class DevicesTabContent : ComponentBase, IDisposable
 {
   private ImmutableArray<IDisposable>? _changeHandlers;
-  private DeviceDto? _selectedDevice;
+  private DeviceResponseDto? _selectedDevice;
   private string _tagSearchPattern = string.Empty;
 
   [Inject]

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -15,11 +14,11 @@ public partial class Dashboard
     ["Name"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Dto.Name), false, 1, x => x.Dto.Name)
   };
 
-  private Version? _agentReleaseVersion;
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private bool _hideOfflineDevices;
   private bool _loading = true;
+  private int _rowsPerPage = 25;
   private string? _searchText;
   private HashSet<TagViewModel> _selectedTags = [];
 
@@ -69,20 +68,19 @@ public partial class Dashboard
     using var token = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
-    await SetLatestAgentVersion();
 
     Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
-    Messenger.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceived);
+    Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived);
 
     _loading = false;
     _componentLoadedSignal.Set();
   }
 
-  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
+  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
   {
-    var isOutdated = IsOutdated(message.Dto);
-    var viewModel = new DeviceViewModel(message.Dto, isOutdated);
-    if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
+    var viewModel = new DeviceViewModel(message.Dto);
+    if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true ||
+        _dataGrid?.FilteredItems.Count() < _rowsPerPage)
     {
       await ReloadGridData();
     }
@@ -107,14 +105,6 @@ public partial class Dashboard
     _hideOfflineDevices = isChecked;
     await Settings.SetHideOfflineDevices(isChecked);
     await ReloadGridData();
-  }
-
-  private bool IsOutdated(DeviceDto device)
-  {
-    return
-      _agentReleaseVersion is not null &&
-      Version.TryParse(device.AgentVersion, out var agentVersion) &&
-      !agentVersion.Equals(_agentReleaseVersion);
   }
 
   private async Task LaunchDeviceAccess(DeviceViewModel device)
@@ -181,8 +171,7 @@ public partial class Dashboard
     var viewModels = result.Value.Items
         .Select(dto =>
         {
-          var isOutdated = IsOutdated(dto);
-          var viewModel = new DeviceViewModel(dto, isOutdated);
+          var viewModel = new DeviceViewModel(dto);
           return viewModel;
         })
         .ToArray();
@@ -224,7 +213,6 @@ public partial class Dashboard
     {
       _loading = true;
       using var _ = BusyCounter.IncrementBusyCounter();
-      await SetLatestAgentVersion();
       await InvokeAsync(StateHasChanged);
       await ReloadGridData();
     }
@@ -300,14 +288,6 @@ public partial class Dashboard
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while restarting device.");
-    }
-  }
-  private async Task SetLatestAgentVersion()
-  {
-    var agentVerResult = await ControlrApi.GetCurrentAgentVersion();
-    if (agentVerResult.IsSuccess)
-    {
-      _agentReleaseVersion = agentVerResult.Value;
     }
   }
 

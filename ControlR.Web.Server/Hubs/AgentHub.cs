@@ -1,11 +1,10 @@
-﻿using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Shared.Dtos.HubDtos; // For FileUploadHubDto, ChatResponseHubDto, TerminalOutputDto
 using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
-using DeviceDto = ControlR.Libraries.Shared.Dtos.ServerApi.DeviceDto;
+using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -17,8 +16,10 @@ public class AgentHub(
   IOptions<AppOptions> appOptions,
   IOutputCacheStore outputCacheStore,
   IHubStreamStore hubStreamStore,
+  IAgentVersionProvider agentVersionProvider,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
+  private readonly IAgentVersionProvider _agentVersionProvider = agentVersionProvider;
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
@@ -28,9 +29,9 @@ public class AgentHub(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
-  private DeviceDto? Device
+  private DeviceResponseDto? Device
   {
-    get => GetItem<DeviceDto?>(null);
+    get => GetItem<DeviceResponseDto?>(null);
     set => SetItem(value);
   }
 
@@ -78,16 +79,15 @@ public class AgentHub(
         // Only mark offline if this was the current connection
         if (deviceConnectionId == Context.ConnectionId)
         {
-          var dto = cachedDeviceDto with
-          {
-            IsOnline = false,
-            LastSeen = _timeProvider.GetLocalNow()
-          };
-
-          var updateResult = await UpdateDeviceEntity(dto);
+          var updateResult = await _deviceManager.MarkDeviceOffline(cachedDeviceDto.Id, _timeProvider.GetLocalNow());
           if (updateResult.IsSuccess)
           {
-            await SendDeviceUpdate(updateResult.Value, dto);
+            var offlineDto = cachedDeviceDto with
+            {
+              IsOnline = false,
+              LastSeen = _timeProvider.GetLocalNow()
+            };
+            await SendDeviceUpdate(updateResult.Value, offlineDto);
           }
         }
         else
@@ -229,11 +229,12 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result<DeviceDto>> UpdateDevice(DeviceDto deviceDto)
+  public async Task<Result<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
   {
     try
     {
-      if (_appOptions.Value.AllowAgentsToSelfBootstrap && deviceDto.TenantId == Guid.Empty)
+      // Allow agents to self-bootstrap when enabled
+      if (_appOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
       {
         var lastTenant = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
@@ -241,35 +242,43 @@ public class AgentHub(
 
         if (lastTenant is null)
         {
-          return Result.Fail<DeviceDto>("No tenants found.");
+          return Result.Fail<DeviceResponseDto>("No tenants found.");
         }
 
-        deviceDto = deviceDto with { TenantId = lastTenant.Id };
+        // Update the DTO with the assigned TenantId
+        agentDto = agentDto with { TenantId = lastTenant.Id };
       }
 
-      if (deviceDto.TenantId == Guid.Empty)
+      if (agentDto.TenantId == Guid.Empty)
       {
-        return Result.Fail<DeviceDto>("Invalid tenant ID.");
+        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
       }
 
-      if (!await _appDb.Tenants.AnyAsync(x => x.Id == deviceDto.TenantId))
+      if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
       {
-        return Result.Fail<DeviceDto>("Invalid tenant ID.");
+        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
       }
 
-      deviceDto = UpdateDeviceDtoState(deviceDto);
+      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: Context.ConnectionId,
+        RemoteIpAddress: remoteIp,
+        LastSeen: _timeProvider.GetLocalNow(),
+        IsOnline: true
+      );
 
-      var updateResult = await UpdateDeviceEntity(deviceDto);
+      var updateResult = await UpdateDeviceEntity(agentDto, connectionContext);
 
       if (!updateResult.IsSuccess)
       {
-        return Result.Fail<DeviceDto>(updateResult.Reason);
+        return Result.Fail<DeviceResponseDto>(updateResult.Reason);
       }
 
       var deviceEntity = updateResult.Value;
       await AddToGroups(deviceEntity);
 
-      Device = deviceEntity.ToDto();
+      var isOutdated = await GetIsAgentOutdated(deviceEntity);
+      Device = deviceEntity.ToDto(isOutdated);
 
       await SendDeviceUpdate(deviceEntity, Device);
 
@@ -278,7 +287,7 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating device.");
-      return Result.Fail<DeviceDto>("An error occurred while updating the device.");
+      return Result.Fail<DeviceResponseDto>("An error occurred while updating the device.");
     }
   }
 
@@ -308,7 +317,7 @@ public class AgentHub(
     await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetTenantDevicesGroupName(deviceEntity.TenantId));
     await Groups.AddToGroupAsync(Context.ConnectionId,
       HubGroupNames.GetDeviceGroupName(deviceEntity.Id, deviceEntity.TenantId));
-    
+
     if (deviceEntity.Tags is { Count: > 0 } tags)
     {
       foreach (var tag in tags)
@@ -317,6 +326,23 @@ public class AgentHub(
           HubGroupNames.GetTagGroupName(tag.Id, deviceEntity.TenantId));
       }
     }
+  }
+
+  private async Task<bool> GetIsAgentOutdated(Device deviceEntity)
+  {
+    var agentVersionResult = await _agentVersionProvider.TryGetAgentVersion();
+    if (!agentVersionResult.IsSuccess)
+    {
+      return false;
+    }
+
+    if (!Version.TryParse(deviceEntity.AgentVersion, out var deviceVersion))
+    {
+      return false;
+    }
+
+    var currentAgentVersion = agentVersionResult.Value;
+    return deviceVersion != currentAgentVersion;
   }
 
   /// <summary>
@@ -355,7 +381,7 @@ public class AgentHub(
     }
   }
 
-  private async Task SendDeviceUpdate(Device device, DeviceDto dto)
+  private async Task SendDeviceUpdate(Device device, DeviceResponseDto dto)
   {
     await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
@@ -374,40 +400,17 @@ public class AgentHub(
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
-  private DeviceDto UpdateDeviceDtoState(DeviceDto deviceDto)
-  {
-    deviceDto = deviceDto with
-    {
-      IsOnline = true,
-      LastSeen = _timeProvider.GetLocalNow(),
-      ConnectionId = Context.ConnectionId
-    };
-
-    var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
-    if (remoteIp is not null)
-    {
-      if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6)
-      {
-        deviceDto = deviceDto with { PublicIpV6 = remoteIp.ToString() };
-      }
-      else
-      {
-        deviceDto = deviceDto with { PublicIpV4 = remoteIp.ToString() };
-      }
-    }
-
-    return deviceDto;
-  }
-
-  private async Task<Result<Device>> UpdateDeviceEntity(DeviceDto dto)
+  private async Task<Result<Device>> UpdateDeviceEntity(
+    DeviceUpdateRequestDto agentDto,
+    DeviceConnectionContext context)
   {
     // Allow agents to self-bootstrap when enabled
     if (_appOptions.Value.AllowAgentsToSelfBootstrap)
     {
-      var device = await _deviceManager.AddOrUpdate(dto);
+      var device = await _deviceManager.AddOrUpdate(agentDto, context);
       return Result.Ok(device);
     }
 
-    return await _deviceManager.UpdateDevice(dto);
+    return await _deviceManager.UpdateDevice(agentDto, context);
   }
 }

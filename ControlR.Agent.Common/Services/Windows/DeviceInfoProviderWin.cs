@@ -1,9 +1,7 @@
 ﻿using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.NativeInterop.Windows;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -12,13 +10,13 @@ internal class DeviceInfoProviderWin(
   IWin32Interop win32Interop,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
-  IOptionsMonitor<AgentAppOptions> appOptions,
+  ISettingsProvider settingsProvider,
   ILogger<DeviceInfoProviderWin> logger)
-  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
+  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
 {
   private readonly ILogger<DeviceInfoProviderWin> _logger = logger;
 
-  public async Task<DeviceModel> CreateDevice(Guid deviceId)
+  public async Task<DeviceUpdateRequestDto> CreateDevice()
   {
     try
     {
@@ -33,8 +31,7 @@ internal class DeviceInfoProviderWin(
       var drives = GetAllDrives();
       var agentVersion = GetAgentVersion();
 
-      return GetDeviceBase(
-        deviceId,
+      return CreateDeviceBase(
         currentUsers,
         drives,
         usedStorage,

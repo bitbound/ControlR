@@ -11,9 +11,18 @@
         <MudText Typo="Typo.body1">
           @if (Device.IsOnline)
           {
-            <MudTooltip Text="Online">
-              <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
-            </MudTooltip>
+            if (Device.IsOutdated)
+            {
+              <MudTooltip Text="Online (Outdated)">
+                <MudIcon Icon="@(Icons.Material.Filled.Warning)" Color="@(Color.Warning)" />
+              </MudTooltip>
+            }
+            else
+            {
+              <MudTooltip Text="Online">
+                <MudIcon Icon="@(Icons.Material.Filled.Check)" Color="@(Color.Success)" />
+              </MudTooltip>
+            }
           }
           else
           {
@@ -265,7 +274,7 @@
 @code {
   [Parameter]
   [EditorRequired]
-  public required DeviceDto Device { get; init; }
+  public required DeviceResponseDto Device { get; init; }
 
   [CascadingParameter]
   public required Palette Palette { get; init; }

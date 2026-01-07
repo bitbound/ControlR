@@ -17,7 +17,7 @@ internal class AgentInstallerMac(
   IRetryer retryer,
   IControlrApi controlrApi,
   IEmbeddedResourceAccessor embeddedResourceAccessor,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IProcessManager processManager,
   IControlrMutationLock mutationLock,

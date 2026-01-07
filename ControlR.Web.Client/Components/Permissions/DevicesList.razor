@@ -6,12 +6,12 @@
   Class="my-2" Clearable="true" />
 
 <MudPaper>
-  <MudList T="DeviceDto" SelectedValue="SelectedDevice" SelectedValueChanged="HandleSelectedDeviceChanged"
+  <MudList T="DeviceResponseDto" SelectedValue="SelectedDevice" SelectedValueChanged="HandleSelectedDeviceChanged"
     SelectionMode="SelectionMode.SingleSelection" Color="Color.Info">
 
     @foreach (var device in _devices)
     {
-      <MudListItem T="DeviceDto" Value="@device">
+      <MudListItem T="DeviceResponseDto" Value="@device">
         @device.Name
       </MudListItem>
     }
@@ -24,7 +24,7 @@
 @code {
   private readonly DeviceColumnSort _defaultSort = new()
   {
-    PropertyName = nameof(DeviceDto.Name),
+    PropertyName = nameof(DeviceResponseDto.Name),
     Descending = false,
     SortOrder = 0
   };
@@ -33,10 +33,10 @@
   private int _totalPages = 1;
 
   [Parameter]
-  public DeviceDto? SelectedDevice { get; set; }
+  public DeviceResponseDto? SelectedDevice { get; set; }
 
   [Parameter]
-  public EventCallback<DeviceDto?> SelectedDeviceChanged { get; set; }
+  public EventCallback<DeviceResponseDto?> SelectedDeviceChanged { get; set; }
 
   [Parameter]
   public Func<Task<bool>>? IsToggled { get; set; }
@@ -45,7 +45,7 @@
   public int PageSize { get; set; } = 10;
 
   private string _deviceSearchPattern = string.Empty;
-  private HashSet<DeviceDto> _devices = [];
+  private HashSet<DeviceResponseDto> _devices = [];
 
   protected override async Task OnInitializedAsync()
   {
@@ -66,7 +66,7 @@
     await LoadDevices();
   }
 
-  private async Task HandleSelectedDeviceChanged(DeviceDto? device)
+  private async Task HandleSelectedDeviceChanged(DeviceResponseDto? device)
   {
     SelectedDevice = device;
     await SelectedDeviceChanged.InvokeAsync(device);

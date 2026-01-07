@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Models;
@@ -14,22 +15,23 @@ internal class FakeDeviceDataGenerator(
   int deviceNumber,
   Guid tenantId,
   Version agentVersion)
-  : IDeviceDataGenerator
+  : IDeviceInfoProvider
 {
   private readonly Version _agentVersion = agentVersion;
+  private readonly Guid _deviceId = DeterministicGuid.Create(deviceNumber);
   private readonly int _deviceNumber = deviceNumber;
   private readonly Guid _tenantId = tenantId;
 
   private double? _cpuUtilization;
   private string? _currentUser;
-  private DeviceModel? _device;
+  private DeviceUpdateRequestDto? _device;
   private Drive? _osDrive;
   private double? _totalMemory;
   private double? _totalStorage;
   private double? _usedMemory;
   private double? _usedStorage;
 
-  public Task<DeviceModel> CreateDevice(Guid deviceId)
+  public Task<DeviceUpdateRequestDto> CreateDevice()
   {
     _totalMemory ??= Random.Shared.Next(4, 128);
     _usedMemory ??= Math.Clamp(_totalMemory.Value * Random.Shared.NextDouble(), 2, _totalMemory.Value - .25);
@@ -48,28 +50,28 @@ internal class FakeDeviceDataGenerator(
       VolumeLabel = "OS",
     };
 
-    _device ??= new DeviceModel
-    {
-      Id = deviceId,
-      Name = $"Test Device {_deviceNumber}",
-      AgentVersion = $"{_agentVersion}",
-      TenantId = _tenantId,
-      IsOnline = true,
-      Platform = SystemEnvironment.Instance.Platform,
-      ProcessorCount = Environment.ProcessorCount,
-      OsArchitecture = RuntimeInformation.OSArchitecture,
-      OsDescription = RuntimeInformation.OSDescription,
-      Is64Bit = Environment.Is64BitOperatingSystem,
-      TotalMemory = _totalMemory.Value,
-      UsedMemory = _usedMemory.Value,
-      TotalStorage = _totalStorage.Value,
-      UsedStorage = _usedStorage.Value,
-      CpuUtilization = _cpuUtilization.Value,
-      CurrentUsers = [_currentUser],
-      Drives = [_osDrive],
-      LocalIpV4 = "192.168.1.100",
-      LocalIpV6 = "fe80::1234:5678:9abc:def0",
-    };
+    _device ??= new DeviceUpdateRequestDto(
+      Id: _deviceId,
+      TenantId: _tenantId,
+      Name: $"Test Device {_deviceNumber}",
+      AgentVersion: $"{_agentVersion}",
+      Is64Bit: Environment.Is64BitOperatingSystem,
+      OsArchitecture: RuntimeInformation.OSArchitecture,
+      OsDescription: RuntimeInformation.OSDescription,
+      Platform: SystemEnvironment.Instance.Platform,
+      ProcessorCount: Environment.ProcessorCount,
+      CpuUtilization: _cpuUtilization.Value,
+      TotalMemory: _totalMemory.Value,
+      TotalStorage: _totalStorage.Value,
+      UsedMemory: _usedMemory.Value,
+      UsedStorage: _usedStorage.Value,
+      CurrentUsers: [_currentUser],
+      MacAddresses: [],
+      LocalIpV4: "192.168.1.100",
+      LocalIpV6: "fe80::1234:5678:9abc:def0",
+      Drives: [_osDrive]
+    );
+
     return _device.AsTaskResult();
   }
 }

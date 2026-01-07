@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using ControlR.Agent.Common.Models;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
@@ -17,8 +18,8 @@ public static class ConnectionHelper
 {
   private const int SO_REUSEPORT = 15;
 
-  private static int[] _lastOctets = [.. Enumerable.Range(200, 10)];
-  private static int[] _ports = [.. Enumerable.Range(32_768, 28_231)];
+  private static readonly int[] _lastOctets = [.. Enumerable.Range(200, 10)];
+  private static readonly int[] _ports = [.. Enumerable.Range(32_768, 28_231)];
 
   public static void ConfigureHubConnection(int agentNum, HttpConnectionOptions httpConnectionOptions)
   {
@@ -38,7 +39,7 @@ public static class ConnectionHelper
     };
   }
 
-  public static Task<DeviceDto> CreateDevice(
+  public static Task<DeviceUpdateRequestDto> CreateDevice(
     Guid deviceId,
     Guid tenantId,
     int deviceNumber,
@@ -61,35 +62,29 @@ public static class ConnectionHelper
       VolumeLabel = "OS",
     };
 
-    var device = new DeviceModel
-    {
-      Id = deviceId,
-      Name = $"Test Device {deviceNumber}",
-      AgentVersion = $"{agentVersion}",
-      TenantId = tenantId,
-      IsOnline = true,
-      Platform = SystemEnvironment.Instance.Platform,
-      ProcessorCount = Environment.ProcessorCount,
-      OsArchitecture = RuntimeInformation.OSArchitecture,
-      OsDescription = RuntimeInformation.OSDescription,
-      Is64Bit = Environment.Is64BitOperatingSystem,
-      TotalMemory = totalMemory,
-      UsedMemory = usedMemory,
-      TotalStorage = totalStorage,
-      UsedStorage = usedStorage,
-      CpuUtilization = cpuUtilization,
-      CurrentUsers = [currentUser],
-      Drives = [osDrive],
-      LocalIpV4 = "192.168.1.100",
-      LocalIpV6 = "fe80::1234:5678:9abc:def0",
-    };
+    var device = new DeviceUpdateRequestDto(
+      Id: deviceId,
+      TenantId: tenantId,
+      Name: $"Test Device {deviceNumber}",
+      AgentVersion: $"{agentVersion}",
+      Is64Bit: Environment.Is64BitOperatingSystem,
+      OsArchitecture: RuntimeInformation.OSArchitecture,
+      OsDescription: RuntimeInformation.OSDescription,
+      Platform: SystemEnvironment.Instance.Platform,
+      ProcessorCount: Environment.ProcessorCount,
+      CpuUtilization: cpuUtilization,
+      TotalMemory: totalMemory,
+      TotalStorage: totalStorage,
+      UsedMemory: usedMemory,
+      UsedStorage: usedStorage,
+      CurrentUsers: [currentUser],
+      MacAddresses: [],
+      LocalIpV4: IPAddress.Loopback.ToString(),
+      LocalIpV6: "",
+      Drives: [osDrive]
+    );
 
-    var result = device.TryCloneAs<DeviceDto>();
-    if (!result.IsSuccess)
-    {
-      throw new InvalidOperationException($"Failed to clone device model: {result.Reason}");
-    }
-    return result.Value.AsTaskResult();
+    return device.AsTaskResult();
   }
 
   public static HttpMessageInvoker GetMessageInvoker(int agentNum)

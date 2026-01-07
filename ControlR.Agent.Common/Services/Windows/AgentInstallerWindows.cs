@@ -20,7 +20,7 @@ internal class AgentInstallerWindows(
   IElevationChecker elevationChecker,
   IRetryer retryer,
   IControlrApi controlrApi,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   IRegistryAccessor registryAccessor,
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,

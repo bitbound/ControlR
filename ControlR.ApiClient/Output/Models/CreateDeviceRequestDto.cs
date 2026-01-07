@@ -17,10 +17,10 @@ namespace ControlR.ApiClient.Models
         /// <summary>The device property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public global::ControlR.ApiClient.Models.DeviceDto? Device { get; set; }
+        public global::ControlR.ApiClient.Models.DeviceUpdateRequestDto? Device { get; set; }
 #nullable restore
 #else
-        public global::ControlR.ApiClient.Models.DeviceDto Device { get; set; }
+        public global::ControlR.ApiClient.Models.DeviceUpdateRequestDto Device { get; set; }
 #endif
         /// <summary>The installerKeyId property</summary>
         public Guid? InstallerKeyId { get; set; }
@@ -31,6 +31,14 @@ namespace ControlR.ApiClient.Models
 #nullable restore
 #else
         public string InstallerKeySecret { get; set; }
+#endif
+        /// <summary>The tagIds property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<Guid?>? TagIds { get; set; }
+#nullable restore
+#else
+        public List<Guid?> TagIds { get; set; }
 #endif
         /// <summary>
         /// Instantiates a new <see cref="global::ControlR.ApiClient.Models.CreateDeviceRequestDto"/> and sets the default values.
@@ -57,9 +65,10 @@ namespace ControlR.ApiClient.Models
         {
             return new Dictionary<string, Action<IParseNode>>
             {
-                { "device", n => { Device = n.GetObjectValue<global::ControlR.ApiClient.Models.DeviceDto>(global::ControlR.ApiClient.Models.DeviceDto.CreateFromDiscriminatorValue); } },
+                { "device", n => { Device = n.GetObjectValue<global::ControlR.ApiClient.Models.DeviceUpdateRequestDto>(global::ControlR.ApiClient.Models.DeviceUpdateRequestDto.CreateFromDiscriminatorValue); } },
                 { "installerKeyId", n => { InstallerKeyId = n.GetGuidValue(); } },
                 { "installerKeySecret", n => { InstallerKeySecret = n.GetStringValue(); } },
+                { "tagIds", n => { TagIds = n.GetCollectionOfPrimitiveValues<Guid?>()?.AsList(); } },
             };
         }
         /// <summary>
@@ -69,9 +78,10 @@ namespace ControlR.ApiClient.Models
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
-            writer.WriteObjectValue<global::ControlR.ApiClient.Models.DeviceDto>("device", Device);
+            writer.WriteObjectValue<global::ControlR.ApiClient.Models.DeviceUpdateRequestDto>("device", Device);
             writer.WriteGuidValue("installerKeyId", InstallerKeyId);
             writer.WriteStringValue("installerKeySecret", InstallerKeySecret);
+            writer.WriteCollectionOfPrimitiveValues<Guid?>("tagIds", TagIds);
             writer.WriteAdditionalData(AdditionalData);
         }
     }

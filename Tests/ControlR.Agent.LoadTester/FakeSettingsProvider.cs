@@ -20,6 +20,11 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsPro
     return string.Empty;
   }
 
+  public Guid GetRequiredTenantId()
+  {
+    return Guid.NewGuid();
+  }
+
   public Task UpdateAppOptions(AgentAppOptions options)
   {
     return Task.CompletedTask;

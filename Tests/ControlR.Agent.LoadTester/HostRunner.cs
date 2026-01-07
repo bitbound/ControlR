@@ -68,7 +68,7 @@ public static class HostRunner
       builder.Services.RemoveImplementation<IpcServerWatcher>();
       builder.Services.RemoveImplementation<AgentHeartbeatTimer>();
 
-      builder.Services.ReplaceService<IDeviceDataGenerator, FakeDeviceDataGenerator>(
+      builder.Services.ReplaceService<IDeviceInfoProvider, FakeDeviceDataGenerator>(
         ServiceLifetime.Singleton,
         sp =>
         {

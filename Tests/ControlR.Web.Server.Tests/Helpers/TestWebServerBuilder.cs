@@ -2,6 +2,8 @@ using ControlR.Libraries.Shared.Extensions;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using System.Runtime.CompilerServices;

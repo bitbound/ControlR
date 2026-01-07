@@ -1,8 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Mac;
 
@@ -10,14 +8,14 @@ internal class DeviceInfoProviderMac(
   IProcessManager processInvoker,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
-  IOptionsMonitor<AgentAppOptions> appOptions,
+  ISettingsProvider settingsProvider,
   ILogger<DeviceInfoProviderMac> logger)
-  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, appOptions, logger), IDeviceDataGenerator
+  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
 {
   private readonly ILogger<DeviceInfoProviderMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
-  public async Task<DeviceModel> CreateDevice(Guid deviceId)
+  public async Task<DeviceUpdateRequestDto> CreateDevice()
   {
     try
     {
@@ -28,8 +26,7 @@ internal class DeviceInfoProviderMac(
       var drives = GetAllDrives();
       var agentVersion = GetAgentVersion();
 
-      return GetDeviceBase(
-        deviceId,
+      return CreateDeviceBase(
         currentUsers,
         drives,
         usedStorage,

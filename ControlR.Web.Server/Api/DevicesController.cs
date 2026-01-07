@@ -1,4 +1,5 @@
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
@@ -10,12 +11,13 @@ public class DevicesController : ControllerBase
 {
   [HttpPost]
   [AllowAnonymous]
-  public async Task<ActionResult<DeviceDto>> CreateDevice(
+  public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IAgentInstallerKeyManager keyManager,
     [FromServices] IDeviceManager deviceManager,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {
     using var logScope = logger.BeginScope(requestDto);
@@ -75,10 +77,15 @@ public class DevicesController : ControllerBase
       return BadRequest();
     }
 
-    // Device shouldn't be considered online until it connects to the AgentHub.
-    deviceDto = deviceDto with { IsOnline = false };
-    var entity = await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
-    return entity.ToDto();
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: string.Empty,
+      RemoteIpAddress: HttpContext.Connection.RemoteIpAddress,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: false);
+
+    var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds);
+    var isOutdated = await GetIsOutdated(entity, agentVersionProvider);
+    return entity.ToDto(isOutdated);
   }
 
   [HttpDelete("{deviceId:guid}")]
@@ -106,8 +113,9 @@ public class DevicesController : ControllerBase
   }
 
   [HttpGet]
-  public async IAsyncEnumerable<DeviceDto> Get(
+  public async IAsyncEnumerable<DeviceResponseDto> Get(
     [FromServices] AppDb appDb,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] IAuthorizationService authorizationService)
   {
     var deviceStream = appDb.Devices.AsAsyncEnumerable();
@@ -119,15 +127,17 @@ public class DevicesController : ControllerBase
 
       if (authResult.Succeeded)
       {
-        yield return device.ToDto();
+        var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+        yield return device.ToDto(isOutdated);
       }
     }
   }
 
   [HttpGet("{deviceId:guid}")]
-  public async Task<ActionResult<DeviceDto>> GetDevice(
+  public async Task<ActionResult<DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromRoute] Guid deviceId)
   {
     var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
@@ -144,7 +154,8 @@ public class DevicesController : ControllerBase
       return Forbid();
     }
 
-    return device.ToDto();
+    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    return device.ToDto(isOutdated);
   }
 
   [HttpPost("search")]
@@ -152,6 +163,7 @@ public class DevicesController : ControllerBase
     [FromBody] DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {
     var isRelationalDatabase = appDb.Database.IsRelational();
@@ -195,7 +207,7 @@ public class DevicesController : ControllerBase
       .ToListAsync();
 
     // Filter for authorized devices
-    var authorizedDevices = new List<DeviceDto>();
+    var authorizedDevices = new List<DeviceResponseDto>();
 
     foreach (var device in devices)
     {
@@ -206,7 +218,8 @@ public class DevicesController : ControllerBase
 
       if (authResult.Succeeded)
       {
-        authorizedDevices.Add(device.ToDto());
+        var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+        authorizedDevices.Add(device.ToDto(isOutdated));
       }
     }
 
@@ -218,5 +231,15 @@ public class DevicesController : ControllerBase
     };
 
     return response;
+  }
+
+  private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)
+  {
+    var agentVersionResult = await agentVersionProvider.TryGetAgentVersion();
+    if (!agentVersionResult.IsSuccess)
+    {
+      return false;
+    }
+    return entity.AgentVersion != agentVersionResult.Value.ToString();
   }
 }

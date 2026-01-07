@@ -13,7 +13,7 @@ public partial class DesktopPreviewDialog : ComponentBase
 
   [Parameter]
   [EditorRequired]
-  public required DeviceDto Device { get; set; }
+  public required DeviceResponseDto Device { get; set; }
 
   [Inject]
   public required IJsInterop JsInterop { get; init; }

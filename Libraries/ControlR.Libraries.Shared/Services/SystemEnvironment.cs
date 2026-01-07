@@ -9,16 +9,19 @@ public interface ISystemEnvironment
   int CurrentThreadId { get; }
   bool Is64Bit { get; }
   bool IsDebug { get; }
+  string MachineName { get; }
   SystemPlatform Platform { get; }
   int ProcessId { get; }
+  int ProcessorCount { get; }
   RuntimeId Runtime { get; }
   string SelfExtractDir { get; }
   string StartupDirectory { get; }
   string StartupExePath { get; }
 
   string GetCommonApplicationDataDirectory();
+
   string GetProfileDirectory();
-  
+
   [SupportedOSPlatformGuard("linux")]
   bool IsLinux();
 
@@ -32,8 +35,8 @@ public interface ISystemEnvironment
 public class SystemEnvironment : ISystemEnvironment
 {
   public static SystemEnvironment Instance { get; } = new();
-  public int CurrentThreadId => Environment.CurrentManagedThreadId;
 
+  public int CurrentThreadId => Environment.CurrentManagedThreadId;
   public bool Is64Bit => Environment.Is64BitOperatingSystem;
   public bool IsDebug
   {
@@ -46,7 +49,7 @@ public class SystemEnvironment : ISystemEnvironment
 #endif
     }
   }
-
+  public string MachineName => Environment.MachineName;
   public SystemPlatform Platform
   {
     get
@@ -89,9 +92,8 @@ public class SystemEnvironment : ISystemEnvironment
       return SystemPlatform.Unknown;
     }
   }
-
   public int ProcessId => Environment.ProcessId;
-
+  public int ProcessorCount => Environment.ProcessorCount;
   public RuntimeId Runtime
   {
     get
@@ -107,13 +109,10 @@ public class SystemEnvironment : ISystemEnvironment
       };
     }
   }
-
   public string SelfExtractDir => AppDomain.CurrentDomain.BaseDirectory;
-
   public string StartupDirectory =>
       Path.GetDirectoryName(StartupExePath) ??
     throw new DirectoryNotFoundException("Unable to determine startup directory.");
-
   public string StartupExePath { get; } = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();
 
   public string GetCommonApplicationDataDirectory()

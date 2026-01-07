@@ -16,7 +16,7 @@ public class DeviceFileSystemController : ControllerBase
     [FromBody] GetDirectoryContentsRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-  [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogger<DeviceFileSystemController> logger,
     CancellationToken cancellationToken)

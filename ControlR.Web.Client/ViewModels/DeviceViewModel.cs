@@ -1,12 +1,9 @@
 ﻿namespace ControlR.Web.Client.ViewModels;
 
-public class DeviceViewModel(
-  DeviceDto deviceDto,
-  bool isOutdated) : IEquatable<DeviceViewModel>
+public class DeviceViewModel(DeviceResponseDto deviceDto) : IEquatable<DeviceViewModel>
 {
-  public DeviceDto Dto => deviceDto;
+  public DeviceResponseDto Dto => deviceDto;
   public Guid Id => deviceDto.Id;
-  public bool IsOutdated => isOutdated;
   public bool IsVisible { get; set; }
 
   public bool Equals(DeviceViewModel? other)

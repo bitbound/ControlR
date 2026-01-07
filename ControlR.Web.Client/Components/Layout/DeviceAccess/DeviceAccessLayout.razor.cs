@@ -94,8 +94,8 @@ public partial class DeviceAccessLayout
         var query = HttpUtility.ParseQueryString(uri.Query);
         query.Remove("logonToken");
         // Rebuild the remaining query string (retain deviceId and any future params).
-        var remaining = query.HasKeys() 
-          ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}")) 
+        var remaining = query.HasKeys()
+          ? "?" + string.Join('&', query.AllKeys.Select(k => $"{k}={query[k]}"))
           : string.Empty;
 
         NavManager.NavigateTo(basePath + remaining, replace: true);
@@ -104,7 +104,7 @@ public partial class DeviceAccessLayout
 
       await GetDeviceInfo();
 
-      Messenger.Value.Register<DtoReceivedMessage<DeviceDto>>(this, HandleDeviceDtoReceivedMessage);
+      Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
       Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
@@ -123,7 +123,7 @@ public partial class DeviceAccessLayout
     {
       return;
     }
-    
+
     var currentUri = new Uri(NavManager.Uri);
     var query = HttpUtility.ParseQueryString(currentUri.Query);
     var deviceIdString = query.Get("deviceId");
@@ -191,24 +191,24 @@ public partial class DeviceAccessLayout
       Snackbar.Value.Add("New chat message received", Severity.Info);
     }
   }
-  private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceDto> message)
+  private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
   {
-    if (DeviceAccessState.Value.TryGetCurrentDevice() is null)
+    if (DeviceAccessState.Maybe?.IsDeviceLoaded != true)
     {
       return;
     }
 
-    if (message.Dto.Id == DeviceAccessState.Value.CurrentDevice.Id)
+    if (message.Dto.Id != DeviceAccessState.Value.CurrentDevice.Id)
     {
-      DeviceAccessState.Value.CurrentDevice = message.Dto;
-      _deviceName = message.Dto.Name;
-      if (!message.Dto.IsOnline)
-      {
-        Snackbar.Value.Add("Agent went offline", Severity.Warning);
-        NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
-      }
+      return;
+    }
 
-      await InvokeAsync(StateHasChanged);
+    DeviceAccessState.Value.CurrentDevice = message.Dto;
+    _deviceName = message.Dto.Name;
+    if (!message.Dto.IsOnline)
+    {
+      Snackbar.Value.Add("Agent went offline", Severity.Warning);
+      NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
     }
   }
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)

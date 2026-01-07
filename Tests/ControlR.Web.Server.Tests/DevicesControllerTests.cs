@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
+using System.Net;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
@@ -8,6 +10,7 @@ using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
+using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -47,18 +50,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     for (int i = 0; i < 10; i++)
     {
       var deviceId = Guid.NewGuid();
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
           Name: $"Test Device {i}",
           AgentVersion: "1.0.0",
           CpuUtilization: i * 10,
           Id: deviceId,
           Is64Bit: true,
-          IsOnline: i % 2 == 0, // Even indexed devices are online
-          LastSeen: DateTimeOffset.Now.AddMinutes(-i),
           OsArchitecture: Architecture.X64,
           Platform: SystemPlatform.Windows,
           ProcessorCount: 8,
-          ConnectionId: $"test-connection-id-{i}",
           OsDescription: $"Windows {10 + i}",
           TenantId: tenant.Id,
           TotalMemory: 16384,
@@ -67,16 +67,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           UsedStorage: 512000 + (i * 1000),
           CurrentUsers: [$"User{i}"],
           MacAddresses: [$"00:00:00:00:00:{i:D2}"],
-          PublicIpV4: $"192.168.1.{i}",
-          PublicIpV6: $"::1:{i}",
           LocalIpV4: $"192.168.0.{i}",
           LocalIpV6: $"fe80::{i}",
-          Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }])
-      {
-        TagIds = i < 5 ? new[] { tagId }.ToImmutableArray() : null // First 5 devices have the tag
-      };
+          Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
+      var connectionContext = new DeviceConnectionContext(
+          ConnectionId: $"test-connection-id-{i}",
+          RemoteIpAddress: IPAddress.Parse($"192.168.1.{i}"),
+          LastSeen: DateTimeOffset.Now.AddMinutes(-i),
+          IsOnline: i % 2 == 0);
+
+      var tagIds = i < 5 ? new[] { tagId } : null;
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds);
     }
 
     // Configure controller user context for authorization
@@ -96,6 +98,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request,
         db,
         services.GetRequiredService<IAuthorizationService>(),
+        services.GetRequiredService<IAgentVersionProvider>(),
         services.GetRequiredService<ILogger<DevicesController>>());
 
     var response = result.Value;
@@ -103,7 +106,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     // Assert
     Assert.NotNull(response);
     Assert.NotNull(response.Items);
-    Assert.Single(response.Items); // Should only match "Test Device 2" which is online and has the tag
+    Assert.Single(response.Items);
     var device = response.Items[0]; Assert.Equal("Test Device 2", device.Name);
     Assert.True(device.IsOnline);
     Assert.NotNull(device.TagIds);
@@ -129,18 +132,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     // Create devices with different online status
     for (var i = 0; i < 5; i++)
     {
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: $"Device {i}",
         AgentVersion: "1.0.0",
         CpuUtilization: 50,
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: i % 2 == 0, // Alternate online/offline
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
         TenantId: tenant.Id,
         TotalMemory: 16384,
@@ -149,16 +149,20 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"conn-{i}",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: i % 2 == 0);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
-    await controller.SetControllerUser(user, userManager);    // Test IsOnline = true filter
+    await controller.SetControllerUser(user, userManager);
     var onlineRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "true" }],
@@ -170,7 +174,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       onlineRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test IsOnline = false filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var offlineRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "false" }],
@@ -182,17 +187,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       offlineRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(onlineResult.Value);
     Assert.NotNull(onlineResult.Value.Items);
-    Assert.Equal(3, onlineResult.Value.Items.Count); // Devices 0, 2, 4
+    Assert.Equal(3, onlineResult.Value.Items.Count);
     Assert.All(onlineResult.Value.Items, device => Assert.True(device.IsOnline));
 
     Assert.NotNull(offlineResult.Value);
     Assert.NotNull(offlineResult.Value.Items);
-    Assert.Equal(2, offlineResult.Value.Items.Count); // Devices 1, 3
+    Assert.Equal(2, offlineResult.Value.Items.Count);
     Assert.All(offlineResult.Value.Items, device => Assert.False(device.IsOnline));
   }
 
@@ -225,18 +231,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     for (int i = 0; i < testData.Length; i++)
     {
       var data = testData[i];
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: data.Name,
         AgentVersion: "1.0.0",
         CpuUtilization: data.CpuUtilization,
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: data.IsOnline,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: $"conn-{i}",
         OsDescription: data.OsDescription,
         TenantId: tenant.Id,
         TotalMemory: 16384,
@@ -245,13 +248,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"conn-{i}",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: data.IsOnline);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
     await controller.SetControllerUser(user, userManager);
@@ -272,6 +279,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       multiFilterRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test OS + Online filters
@@ -289,12 +297,13 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       osOnlineRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(multiFilterResult.Value);
     Assert.NotNull(multiFilterResult.Value.Items);
-    Assert.Equal(2, multiFilterResult.Value.Items.Count); // Production-Web-01 and Production-DB-01
+    Assert.Equal(2, multiFilterResult.Value.Items.Count);
     Assert.All(multiFilterResult.Value.Items, device =>
     {
       Assert.True(device.IsOnline);
@@ -304,7 +313,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     Assert.NotNull(osOnlineResult.Value);
     Assert.NotNull(osOnlineResult.Value.Items);
-    Assert.Equal(3, osOnlineResult.Value.Items.Count); // All Windows Server devices that are online
+    Assert.Equal(3, osOnlineResult.Value.Items.Count);
     Assert.All(osOnlineResult.Value.Items, device =>
     {
       Assert.True(device.IsOnline);
@@ -329,39 +338,40 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create devices with varying numeric properties
-    var cpuValues = new[] { 0.1, 0.3, 0.5, 0.7, 0.9 }; // 10%, 30%, 50%, 70%, 90%
+    var cpuValues = new[] { 0.1, 0.3, 0.5, 0.7, 0.9 };
     for (int i = 0; i < cpuValues.Length; i++)
     {
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: $"Device {i}",
         AgentVersion: "1.0.0",
         CpuUtilization: cpuValues[i],
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: true,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
         TenantId: tenant.Id,
         TotalMemory: 16384,
         TotalStorage: 1024000,
-        UsedMemory: 8192 + (i * 1000), // Varying memory usage
-        UsedStorage: 512000 + (i * 100000), // Varying storage usage
+        UsedMemory: 8192 + (i * 1000),
+        UsedStorage: 512000 + (i * 100000),
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"conn-{i}",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
-    await controller.SetControllerUser(user, userManager);    // Test CpuUtilization GreaterThan filter
+    await controller.SetControllerUser(user, userManager);
     var cpuGtRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.GreaterThan, Value = "0.5" }],
@@ -373,7 +383,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       cpuGtRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization Equal filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var cpuEqRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Equal, Value = "0.3" }],
@@ -385,7 +396,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       cpuEqRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test CpuUtilization LessThanOrEqual filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var cpuLteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.LessThanOrEqual, Value = "0.5" }],
@@ -397,7 +409,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       cpuLteRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedMemoryPercent GreaterThanOrEqual filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var memGteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedMemoryPercent", Operator = FilterOperator.Number.GreaterThanOrEqual, Value = "0.6" }],
@@ -409,7 +422,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       memGteRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test UsedStoragePercent NotEqual filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var storageNeRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedStoragePercent", Operator = FilterOperator.Number.NotEqual, Value = "0.5" }],
@@ -421,10 +435,11 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       storageNeRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(cpuGtResult.Value);
     Assert.NotNull(cpuGtResult.Value.Items);
-    Assert.Equal(2, cpuGtResult.Value.Items.Count); // Devices with 0.7 and 0.9
+    Assert.Equal(2, cpuGtResult.Value.Items.Count);
     Assert.All(cpuGtResult.Value.Items, device => Assert.True(device.CpuUtilization > 0.5));
 
     Assert.NotNull(cpuEqResult.Value);
@@ -434,7 +449,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     Assert.NotNull(cpuLteResult.Value);
     Assert.NotNull(cpuLteResult.Value.Items);
-    Assert.Equal(3, cpuLteResult.Value.Items.Count); // Devices with 0.1, 0.3, 0.5
+    Assert.Equal(3, cpuLteResult.Value.Items.Count);
     Assert.All(cpuLteResult.Value.Items, device => Assert.True(device.CpuUtilization <= 0.5));
 
     Assert.NotNull(memGteResult.Value);
@@ -444,7 +459,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     Assert.NotNull(storageNeResult.Value);
     Assert.NotNull(storageNeResult.Value.Items);
-    // Should return devices that don't have exactly 0.5 storage utilization
     Assert.All(storageNeResult.Value.Items, device => Assert.NotEqual(0.5, device.UsedStoragePercent));
   }
 
@@ -476,18 +490,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     for (int i = 0; i < devices.Length; i++)
     {
       var device = devices[i];
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: device.Name,
         AgentVersion: "1.0.0",
         CpuUtilization: 50,
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: true,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: device.ConnectionId,
         OsDescription: device.OsDescription,
         TenantId: tenant.Id,
         TotalMemory: 16384,
@@ -496,19 +507,20 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
-        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }])
-      {
-        Alias = device.Alias
-      };
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: device.ConnectionId,
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
-    await controller.SetControllerUser(user, userManager);    // Test Name contains filter
+    await controller.SetControllerUser(user, userManager);
     var nameRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.Contains, Value = "Server" }],
@@ -520,7 +532,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       nameRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test OsDescription contains filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var osRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "OsDescription", Operator = FilterOperator.String.Contains, Value = "Ubuntu" }],
@@ -532,7 +545,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       osRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test ConnectionId equals filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var connRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "ConnectionId", Operator = FilterOperator.String.Equal, Value = "conn-003" }],
@@ -544,7 +558,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       connRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(nameResult.Value);
     Assert.NotNull(nameResult.Value.Items);
     Assert.Single(nameResult.Value.Items);
@@ -588,18 +603,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     for (int i = 0; i < testDevices.Length; i++)
     {
       var device = testDevices[i];
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: device.Name,
         AgentVersion: "1.0.0",
         CpuUtilization: 50,
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: true,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: $"conn-{i:D3}",
         OsDescription: device.OsDescription,
         TenantId: tenant.Id,
         TotalMemory: 16384,
@@ -608,16 +620,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
-        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }])
-      {
-        Alias = device.Alias
-      };
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"conn-{i:D3}",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
     // Manually set the Alias values since DeviceManager ignores DeviceDto.Alias
@@ -628,7 +641,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
     await db.SaveChangesAsync();
 
-    await controller.SetControllerUser(user, userManager);    // Test StartsWith filter
+    await controller.SetControllerUser(user, userManager);
     var startsWithRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.StartsWith, Value = "Device-Prod" }],
@@ -640,7 +653,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       startsWithRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test EndsWith filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var endsWithRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.EndsWith, Value = "-03" }],
@@ -652,7 +666,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       endsWithRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test NotContains filter
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var notContainsRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.NotContains, Value = "Prod" }],
@@ -664,7 +679,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       notContainsRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test Empty filter for Alias
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var emptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.Empty, Value = "" }],
@@ -676,7 +692,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       emptyRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test NotEmpty filter for Alias
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var notEmptyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.NotEmpty, Value = "" }],
@@ -688,7 +705,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       notEmptyRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Assert
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
     Assert.NotNull(startsWithResult.Value);
     Assert.NotNull(startsWithResult.Value.Items);
     Assert.Single(startsWithResult.Value.Items);
@@ -735,18 +754,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuValues = new[] { 0.0, 0.5, 0.0, 0.8 };
     for (int i = 0; i < cpuValues.Length; i++)
     {
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
         Name: $"Device {i}",
         AgentVersion: "1.0.0",
         CpuUtilization: cpuValues[i],
         Id: Guid.NewGuid(),
         Is64Bit: true,
-        IsOnline: true,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: Architecture.X64,
         Platform: SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: $"conn-{i}",
         OsDescription: "Windows 11",
         TenantId: tenant.Id,
         TotalMemory: 16384,
@@ -755,13 +771,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["User1"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1",
         LocalIpV4: $"192.168.0.{i}",
         LocalIpV6: $"fe80::{i}",
         Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"conn-{i}",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     }
 
     await controller.SetControllerUser(user, userManager);
@@ -778,6 +798,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       emptyRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test NotEmpty filter (CpuUtilization != 0)
@@ -792,17 +813,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       notEmptyRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Assert
     Assert.NotNull(emptyResult.Value);
     Assert.NotNull(emptyResult.Value.Items);
-    Assert.Equal(2, emptyResult.Value.Items.Count); // Devices 0 and 2
+    Assert.Equal(2, emptyResult.Value.Items.Count);
     Assert.All(emptyResult.Value.Items, device => Assert.Equal(0.0, device.CpuUtilization));
 
     Assert.NotNull(notEmptyResult.Value);
     Assert.NotNull(notEmptyResult.Value.Items);
-    Assert.Equal(2, notEmptyResult.Value.Items.Count); // Devices 1 and 3
+    Assert.Equal(2, notEmptyResult.Value.Items.Count);
     Assert.All(notEmptyResult.Value.Items, device => Assert.NotEqual(0.0, device.CpuUtilization));
   }
 
@@ -823,18 +845,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
 
     // Create a test device
-    var deviceDto = new DeviceDto(
+    var deviceDto = new DeviceUpdateRequestDto(
       Name: "Test Device",
       AgentVersion: "1.0.0",
       CpuUtilization: 0.5,
       Id: Guid.NewGuid(),
       Is64Bit: true,
-      IsOnline: true,
-      LastSeen: DateTimeOffset.Now,
       OsArchitecture: Architecture.X64,
       Platform: SystemPlatform.Windows,
       ProcessorCount: 8,
-      ConnectionId: "conn-001",
       OsDescription: "Windows 11",
       TenantId: tenant.Id,
       TotalMemory: 16384,
@@ -843,14 +862,18 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       UsedStorage: 512000,
       CurrentUsers: ["User1"],
       MacAddresses: ["00:00:00:00:00:01"],
-      PublicIpV4: "192.168.1.1",
-      PublicIpV6: "::1",
       LocalIpV4: "192.168.0.1",
       LocalIpV6: "fe80::1",
       Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-    await deviceManager.AddOrUpdate(deviceDto, addTagIds: false);
-    await controller.SetControllerUser(user, userManager);    // Test invalid numeric value - should return all devices (filter ignored)
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "conn-001",
+      RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+      LastSeen: DateTimeOffset.Now,
+      IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+    await controller.SetControllerUser(user, userManager);
     var invalidNumericRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Equal, Value = "invalid-number" }],
@@ -862,7 +885,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       invalidNumericRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid boolean value - should return all devices (filter ignored)
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var invalidBooleanRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "maybe" }],
@@ -874,7 +898,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       invalidBooleanRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Test invalid property name - should be ignored gracefully
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     var invalidPropertyRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "NonExistentProperty", Operator = FilterOperator.String.Equal, Value = "test" }],
@@ -886,7 +911,8 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       invalidPropertyRequest,
       db,
       services.GetRequiredService<IAuthorizationService>(),
-      services.GetRequiredService<ILogger<DevicesController>>());    // Assert - Invalid filters should be ignored and return all devices
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(invalidNumericResult.Value);
     Assert.NotNull(invalidNumericResult.Value.Items);
     Assert.Single(invalidNumericResult.Value.Items);
@@ -925,18 +951,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     {
       // Tenant 1 device
       var device1Id = Guid.NewGuid();
-      var device1Dto = new DeviceDto(
+      var device1Dto = new DeviceUpdateRequestDto(
           Name: $"Tenant1 Device {i}",
           AgentVersion: "1.0.0",
           CpuUtilization: i * 10,
           Id: device1Id,
           Is64Bit: true,
-          IsOnline: true,
-          LastSeen: DateTimeOffset.Now,
           OsArchitecture: Architecture.X64,
           Platform: SystemPlatform.Windows,
           ProcessorCount: 8,
-          ConnectionId: $"tenant1-connection-{i}",
           OsDescription: "Windows 10",
           TenantId: tenant1.Id,
           TotalMemory: 16384,
@@ -945,28 +968,29 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           UsedStorage: 512000,
           CurrentUsers: ["User1"],
           MacAddresses: ["00:00:00:00:00:01"],
-          PublicIpV4: "192.168.1.1",
-          PublicIpV6: "::1",
           LocalIpV4: $"192.168.0.{i}",
           LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(device1Dto, addTagIds: false);
+      var connectionContext1 = new DeviceConnectionContext(
+          ConnectionId: $"tenant1-connection-{i}",
+          RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+          LastSeen: DateTimeOffset.Now,
+          IsOnline: true);
+
+      await deviceManager.AddOrUpdate(device1Dto, connectionContext1);
 
       // Tenant 2 device
       var device2Id = Guid.NewGuid();
-      var device2Dto = new DeviceDto(
+      var device2Dto = new DeviceUpdateRequestDto(
           Name: $"Tenant2 Device {i}",
           AgentVersion: "1.0.0",
           CpuUtilization: i * 10,
           Id: device2Id,
           Is64Bit: true,
-          IsOnline: true,
-          LastSeen: DateTimeOffset.Now,
           OsArchitecture: Architecture.X64,
           Platform: SystemPlatform.Windows,
           ProcessorCount: 8,
-          ConnectionId: $"tenant2-connection-{i}",
           OsDescription: "Windows 10",
           TenantId: tenant2.Id,
           TotalMemory: 16384,
@@ -975,13 +999,17 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           UsedStorage: 512000,
           CurrentUsers: ["User2"],
           MacAddresses: ["00:00:00:00:00:02"],
-          PublicIpV4: "192.168.1.2",
-          PublicIpV6: "::2",
           LocalIpV4: $"192.168.0.{i}",
           LocalIpV6: $"fe80::{i}",
           Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
 
-      await deviceManager.AddOrUpdate(device2Dto, addTagIds: false);
+      var connectionContext2 = new DeviceConnectionContext(
+          ConnectionId: $"tenant2-connection-{i}",
+          RemoteIpAddress: IPAddress.Parse("192.168.1.2"),
+          LastSeen: DateTimeOffset.Now,
+          IsOnline: true);
+
+      await deviceManager.AddOrUpdate(device2Dto, connectionContext2);
     }
 
     // Configure controller user context for authorization
@@ -991,20 +1019,21 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var request = new DeviceSearchRequestDto
     {
       Page = 0,
-      PageSize = 20 // Request all devices
+      PageSize = 20
     };
 
     var result = await controller.SearchDevices(
         request,
         db,
         services.GetRequiredService<IAuthorizationService>(),
+        services.GetRequiredService<IAgentVersionProvider>(),
         services.GetRequiredService<ILogger<DevicesController>>());
     var response = result.Value;
 
     // Assert
     Assert.NotNull(response);
     Assert.NotNull(response.Items);
-    Assert.Equal(5, response.Items.Count); // Should only see tenant 1's devices
+    Assert.Equal(5, response.Items.Count);
     Assert.All(response.Items, device => Assert.Equal(tenant1.Id, device.TenantId));
     Assert.All(response.Items, device => Assert.StartsWith("Tenant1", device.Name));
   }
@@ -1023,6 +1052,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
     var logger = services.GetRequiredService<ILogger<DevicesController>>();
     var authorizationService = services.GetRequiredService<IAuthorizationService>();
+    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
     // Create test tenant and user
     var tenant = await services.CreateTestTenant();
@@ -1040,18 +1070,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     for (int i = 0; i < 10; i++)
     {
       var deviceId = Guid.NewGuid();
-      var deviceDto = new DeviceDto(
+      var deviceDto = new DeviceUpdateRequestDto(
           Name: $"Test Device {i}",
           AgentVersion: "1.0.0",
           CpuUtilization: i * 10,
           Id: deviceId,
           Is64Bit: true,
-          IsOnline: i % 2 == 0, // Even indexed devices are online
-          LastSeen: DateTimeOffset.Now.AddMinutes(-i),
           OsArchitecture: Architecture.X64,
           Platform: SystemPlatform.Windows,
           ProcessorCount: 8,
-          ConnectionId: $"test-connection-id-{i}",
           OsDescription: $"Windows {10 + i}",
           TenantId: tenant.Id,
           TotalMemory: 16384,
@@ -1060,17 +1087,19 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
           UsedStorage: 512000 + (i * 1000),
           CurrentUsers: [$"User{i}"],
           MacAddresses: [$"00:00:00:00:00:{i:D2}"],
-          PublicIpV4: $"192.168.1.{i}",
-          PublicIpV6: $"::1:{i}",
           LocalIpV4: $"192.168.0.{i}",
           LocalIpV6: $"fe80::{i}",
-          Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }])
-      {
-        TagIds = i % 3 == 0 ? tagIds : null // Assign tags to every third device
-      };
+          Drives: [new Drive { Name = $"C{i}", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 - (i * 1000) }]);
 
-      await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
-    }        // Configure controller user context for authorization
+      var connectionContext = new DeviceConnectionContext(
+          ConnectionId: $"test-connection-id-{i}",
+          RemoteIpAddress: IPAddress.Parse($"192.168.1.{i}"),
+          LastSeen: DateTimeOffset.Now.AddMinutes(-i),
+          IsOnline: i % 2 == 0);
+
+      Guid[]? devTagIds = i % 3 == 0 ? [.. tagIds] : null;
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext, devTagIds);
+    }
     await controller.SetControllerUser(user, userManager);
 
     // Act
@@ -1085,6 +1114,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request1,
         db,
         authorizationService,
+        agentVersionProvider,
         logger);
 
     var response1 = result1.Value;
@@ -1101,6 +1131,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request2,
         db,
         authorizationService,
+        agentVersionProvider,
         logger);
 
     var response2 = result2.Value;
@@ -1117,6 +1148,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request3,
         db,
         authorizationService,
+        agentVersionProvider,
         logger);
 
     var response3 = result3.Value;
@@ -1133,6 +1165,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request4,
         db,
         authorizationService,
+        agentVersionProvider,
         logger);
     var response4 = result4.Value;
 
@@ -1148,6 +1181,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         request5,
         db,
         authorizationService,
+        agentVersionProvider,
         logger);
 
     var response5 = result5.Value;
@@ -1163,7 +1197,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     Assert.NotNull(response2);
     Assert.NotNull(response2.Items);
     Assert.All(response2.Items, device => Assert.True(device.IsOnline));
-    Assert.Equal(5, response2.Items.Count); // Half of the devices are online        // Test case 3: Filter by tag
+    Assert.Equal(5, response2.Items.Count);
     Assert.NotNull(response3);
     Assert.NotNull(response3.Items);
     Assert.All(response3.Items, device => Assert.NotNull(device.TagIds));

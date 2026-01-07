@@ -16,9 +16,9 @@ public static class EntityToDtoExtensions
       key.Expiration,
       key.FriendlyName);
   }
-  public static DeviceDto ToDto(this Device device)
+  public static DeviceResponseDto ToDto(this Device device, bool isOutdated)
   {
-    return new DeviceDto(
+    return new DeviceResponseDto(
       device.Name,
       device.AgentVersion,
       device.CpuUtilization,
@@ -42,7 +42,8 @@ public static class EntityToDtoExtensions
       device.PublicIpV6,
       device.LocalIpV4,
       device.LocalIpV6,
-      device.Drives)
+      device.Drives,
+      isOutdated)
     {
       Alias = device.Alias,
       TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()

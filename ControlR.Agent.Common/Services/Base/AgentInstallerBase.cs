@@ -11,14 +11,14 @@ namespace ControlR.Agent.Common.Services.Base;
 internal abstract class AgentInstallerBase(
   IFileSystem fileSystem,
   IControlrApi controlrApi,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   ISettingsProvider settingsProvider,
   IProcessManager processManager,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerBase> logger)
 {
   private readonly IControlrApi _controlrApi = controlrApi;
-  private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
+  private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
@@ -37,16 +37,12 @@ internal abstract class AgentInstallerBase(
       return Result.Fail("Installer key secret is required when installer key ID is provided.");
     }
 
-    var currentOptions = AppOptions.CurrentValue;
     tagIds ??= [];
 
-    var device = await _deviceDataGenerator.CreateDevice(currentOptions.DeviceId);
-    device.TenantId = currentOptions.TenantId;
-    device.TagIds = tagIds;
-    var deviceDto = device.CloneAs<DeviceDto>();
+    var deviceDto = await _deviceDataGenerator.CreateDevice();
 
     Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeyId.Value, installerKeySecret);
+    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeyId.Value, installerKeySecret, tagIds);
     if (createResult.IsSuccess)
     {
       Logger.LogInformation("Device created successfully.");

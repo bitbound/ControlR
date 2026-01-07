@@ -113,7 +113,7 @@ internal static class HostApplicationBuilderExtensions
     {
       services.AddSingleton<IWin32Interop, Win32Interop>();
       services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderWindows>();
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderWin>();
+      services.AddSingleton<IDeviceInfoProvider, DeviceInfoProviderWin>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSamplerWin>();
       services.AddSingleton<IAgentInstaller, AgentInstallerWindows>();
       services.AddSingleton<IServiceControl, ServiceControlWindows>();
@@ -124,7 +124,7 @@ internal static class HostApplicationBuilderExtensions
     }
     else if (OperatingSystem.IsLinux())
     {
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderLinux>();
+      services.AddSingleton<IDeviceInfoProvider, DeviceInfoProviderLinux>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
       services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderLinux>();
       services.AddSingleton<IAgentInstaller, AgentInstallerLinux>();
@@ -140,7 +140,7 @@ internal static class HostApplicationBuilderExtensions
     }
     else if (OperatingSystem.IsMacOS())
     {
-      services.AddSingleton<IDeviceDataGenerator, DeviceInfoProviderMac>();
+      services.AddSingleton<IDeviceInfoProvider, DeviceInfoProviderMac>();
       services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
       services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderMac>();
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();

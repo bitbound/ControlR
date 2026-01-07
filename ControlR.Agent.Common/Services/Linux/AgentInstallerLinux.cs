@@ -16,7 +16,7 @@ internal class AgentInstallerLinux(
   IProcessManager processManager,
   ISystemEnvironment systemEnvironment,
   IControlrApi controlrApi,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   IRetryer retryer,
   ISettingsProvider settingsProvider,
   IElevationChecker elevationChecker,

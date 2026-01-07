@@ -1,24 +1,53 @@
-﻿using System.Collections.Immutable;
-using System.Net.NetworkInformation;
+﻿using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services.FileManager;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Base;
 
 internal class DeviceInfoProviderBase(
-  ISystemEnvironment environmentHelper,
+  ISystemEnvironment systemEnvironment,
   ICpuUtilizationSampler cpuSampler,
-  IOptionsMonitor<AgentAppOptions> appOptions,
+  ISettingsProvider settingsProvider,
   ILogger<DeviceInfoProviderBase> logger)
 {
  
-  private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
-  private readonly ISystemEnvironment _environmentHelper = environmentHelper;
   private readonly ILogger<DeviceInfoProviderBase> _logger = logger;
+  private readonly ISettingsProvider _settingsProvider = settingsProvider;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
+
+  protected DeviceUpdateRequestDto CreateDeviceBase(
+    string[] currentUsers,
+    IReadOnlyList<Drive> drives,
+    double usedStorage,
+    double totalStorage,
+    double usedMemory,
+    double totalMemory,
+    string agentVersion)
+  {
+    return new DeviceUpdateRequestDto(
+      Id: _settingsProvider.DeviceId,
+      TenantId: _settingsProvider.TenantId,
+      Name: _systemEnvironment.MachineName,
+      AgentVersion: agentVersion,
+      Is64Bit: _systemEnvironment.Is64Bit,
+      OsArchitecture: RuntimeInformation.OSArchitecture,
+      Platform: _systemEnvironment.Platform,
+      OsDescription: RuntimeInformation.OSDescription,
+      ProcessorCount: _systemEnvironment.ProcessorCount,
+      CpuUtilization: _cpuSampler.CurrentUtilization,
+      TotalMemory: totalMemory,
+      TotalStorage: totalStorage,
+      UsedMemory: usedMemory,
+      UsedStorage: usedStorage,
+      CurrentUsers: currentUsers,
+      MacAddresses: [.. GetMacAddresses()],
+      LocalIpV4: GetLocalIpV4(),
+      LocalIpV6: GetLocalIpV6(),
+      Drives: drives
+    );
+  }
 
   protected string GetAgentVersion()
   {
@@ -69,40 +98,6 @@ internal class DeviceInfoProviderBase(
     }
   }
 
-  protected DeviceModel GetDeviceBase(
-    Guid deviceId,
-    string[] currentUsers,
-    IReadOnlyList<Drive> drives,
-    double usedStorage,
-    double totalStorage,
-    double usedMemory,
-    double totalMemory,
-    string agentVersion)
-  {
-    return new DeviceModel
-    {
-      Id = deviceId,
-      TenantId = _appOptions.CurrentValue.TenantId,
-      CurrentUsers = currentUsers,
-      CpuUtilization = _cpuSampler.CurrentUtilization,
-      Drives = drives,
-      AgentVersion = agentVersion,
-      UsedStorage = usedStorage,
-      TotalStorage = totalStorage,
-      UsedMemory = usedMemory,
-      TotalMemory = totalMemory,
-      Name = Environment.MachineName,
-      Platform = _environmentHelper.Platform,
-      ProcessorCount = Environment.ProcessorCount,
-      OsArchitecture = RuntimeInformation.OSArchitecture,
-      OsDescription = RuntimeInformation.OSDescription,
-      Is64Bit = Environment.Is64BitOperatingSystem,
-      MacAddresses = [.. GetMacAddresses()],
-      LocalIpV4 = GetLocalIpV4(),
-      LocalIpV6 = GetLocalIpV6()
-    };
-  }
-
   protected (double usedStorage, double totalStorage) GetSystemDriveInfo()
   {
     try
@@ -111,7 +106,7 @@ internal class DeviceInfoProviderBase(
 
       var allDrives = DriveInfo.GetDrives();
 
-      if (_environmentHelper.IsWindows())
+      if (_systemEnvironment.IsWindows())
       {
         var rootDir = Path.GetPathRoot(Environment.SystemDirectory) ?? string.Empty;
 

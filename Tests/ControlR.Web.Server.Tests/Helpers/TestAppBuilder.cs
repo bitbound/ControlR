@@ -3,6 +3,8 @@ using ControlR.Tests.TestingUtilities;
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit.Abstractions;

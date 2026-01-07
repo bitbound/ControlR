@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Hubs.Clients;
+﻿using ControlR.Libraries.Shared.Hubs.Clients;
 using ControlR.Web.Client.Extensions;
 
 namespace ControlR.Web.Client.Services;
@@ -24,9 +23,9 @@ public class ViewerHubClient(IMessenger messenger)
     return exceptions.Count == 0;
   }
 
-  public async Task ReceiveDeviceUpdate(DeviceDto deviceDto)
+  public async Task ReceiveDeviceUpdate(DeviceResponseDto deviceDto)
   {
-    await _messenger.Send(new DtoReceivedMessage<DeviceDto>(deviceDto));
+    await _messenger.Send(new DtoReceivedMessage<DeviceResponseDto>(deviceDto));
   }
 
   public async Task ReceiveDto(DtoWrapper dto)

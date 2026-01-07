@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
 
@@ -16,7 +17,7 @@ public interface IControlrApi
   Task<Result> AddDeviceTag(Guid deviceId, Guid tagId);
   Task<Result> AddUserRole(Guid userId, Guid roleId);
   Task<Result> AddUserTag(Guid userId, Guid tagId);
-  Task<Result> CreateDevice(DeviceDto device, Guid installerKeyId, string installerKeySecret);
+  Task<Result> CreateDevice(DeviceUpdateRequestDto device, Guid installerKeyId, string installerKeySecret, Guid[]? tagIds);
   Task<Result> CreateDirectory(Guid deviceId, string parentPath, string directoryName);
   Task<Result<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto);
   Task<Result<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request);
@@ -31,7 +32,7 @@ public interface IControlrApi
   Task<Result> DeleteTenantSetting(string settingName);
   Task<Result> DeleteUser(Guid userId);
   Task<Result<Stream>> DownloadFile(Guid deviceId, string filePath);
-  IAsyncEnumerable<DeviceDto> GetAllDevices();
+  IAsyncEnumerable<DeviceResponseDto> GetAllDevices();
   Task<Result<AgentInstallerKeyDto[]>> GetAllInstallerKeys();
   Task<Result<RoleResponseDto[]>> GetAllRoles();
   Task<Result<TagResponseDto[]>> GetAllTags(bool includeLinkedIds = false);
@@ -42,7 +43,7 @@ public interface IControlrApi
   Task<Result<Version>> GetCurrentAgentVersion();
   Task<Result<Version>> GetCurrentServerVersion();
   Task<Result<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId);
-  Task<Result<DeviceDto>> GetDevice(Guid deviceId);
+  Task<Result<DeviceResponseDto>> GetDevice(Guid deviceId);
   Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath);
   Task<Result<long>> GetFileUploadMaxSize();
   Task<Result<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId);
@@ -125,11 +126,11 @@ public class ControlrApi(
     });
   }
 
-  public async Task<Result> CreateDevice(DeviceDto device, Guid installerKeyId, string installerKeySecret)
+  public async Task<Result> CreateDevice(DeviceUpdateRequestDto device, Guid installerKeyId, string installerKeySecret, Guid[]? tagIds)
   {
     return await TryCallApi(async () =>
     {
-      var requestDto = new CreateDeviceRequestDto(device, installerKeyId, installerKeySecret);
+      var requestDto = new CreateDeviceRequestDto(device, installerKeyId, installerKeySecret, tagIds);
       using var response = await _client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
       response.EnsureSuccessStatusCode();
     });
@@ -288,9 +289,9 @@ public class ControlrApi(
     });
   }
 
-  public async IAsyncEnumerable<DeviceDto> GetAllDevices()
+  public async IAsyncEnumerable<DeviceResponseDto> GetAllDevices()
   {
-    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceDto>(HttpConstants.DevicesEndpoint);
+    var stream = _client.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(HttpConstants.DevicesEndpoint);
     await foreach (var device in stream)
     {
       if (device is null)
@@ -371,10 +372,10 @@ public class ControlrApi(
       async response => await response.Content.ReadAsByteArrayAsync());
   }
 
-  public async Task<Result<DeviceDto>> GetDevice(Guid deviceId)
+  public async Task<Result<DeviceResponseDto>> GetDevice(Guid deviceId)
   {
     return await TryCallApi(async () =>
-      await _client.GetFromJsonAsync<DeviceDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}"));
+      await _client.GetFromJsonAsync<DeviceResponseDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}"));
   }
 
   public async Task<Result<GetDirectoryContentsResponseDto>> GetDirectoryContents(Guid deviceId, string directoryPath)

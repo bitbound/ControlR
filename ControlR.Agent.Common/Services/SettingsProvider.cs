@@ -14,6 +14,7 @@ public interface ISettingsProvider
   Uri ServerUri { get; }
   Guid TenantId { get; }
   string GetAppSettingsPath();
+  Guid GetRequiredTenantId();
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
 }
@@ -40,13 +41,19 @@ internal class SettingsProvider(
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");
-  public Guid TenantId => _appOptions.CurrentValue.TenantId == default
-    ? throw new InvalidOperationException("Tenant ID is not configured correctly.")
-    : _appOptions.CurrentValue.TenantId;
+    
+  public Guid TenantId => _appOptions.CurrentValue.TenantId;
 
   public string GetAppSettingsPath()
   {
     return _fileSystemPathProvider.GetAgentAppSettingsPath();
+  }
+
+  public Guid GetRequiredTenantId()
+  {
+    return _appOptions.CurrentValue.TenantId == default
+    ? throw new InvalidOperationException("Tenant ID is not configured correctly.")
+    : _appOptions.CurrentValue.TenantId;
   }
 
   public async Task UpdateAppOptions(AgentAppOptions options)

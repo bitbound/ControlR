@@ -1,8 +1,10 @@
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Services;
+using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Security.Claims;
 using Xunit.Abstractions;
 
@@ -41,18 +44,15 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
 
     // Create test device
     var deviceId = Guid.NewGuid();
-    var deviceDto = new DeviceDto(
+    var deviceDto = new DeviceUpdateRequestDto(
         Name: "Cache Test Device",
         AgentVersion: "1.0.0",
         CpuUtilization: 50,
         Id: deviceId,
         Is64Bit: true,
-        IsOnline: true,
-        LastSeen: DateTimeOffset.Now,
         OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
         Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
         ProcessorCount: 8,
-        ConnectionId: "test-connection-id",
         OsDescription: "Windows 11",
         TenantId: user.TenantId,
         TotalMemory: 16384,
@@ -61,13 +61,17 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         UsedStorage: 512000,
         CurrentUsers: ["TestUser"],
         MacAddresses: ["00:00:00:00:00:01"],
-        PublicIpV4: "192.168.1.1",
-        PublicIpV6: "::1:1",
         LocalIpV4: "192.168.0.1",
         LocalIpV6: "fe80::1",
         Drives: []);
 
-    await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
+    var connectionContext = new DeviceConnectionContext(
+        ConnectionId: "test-connection-id",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     await db.SaveChangesAsync(); // Ensure the device is saved to the database
 
     // Force a database refresh to ensure entity is tracked
@@ -92,12 +96,39 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         request,
         db,
         scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
+        scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
         scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
-    var newDeviceDto = deviceDto with { Id = newDeviceId, Name = "New Cache Test Device", Drives = [] };
-    await deviceManager.AddOrUpdate(newDeviceDto, addTagIds: true);
+    var newDeviceDto = new DeviceUpdateRequestDto(
+        Name: "New Cache Test Device",
+        AgentVersion: "1.0.0",
+        CpuUtilization: 50,
+        Id: newDeviceId,
+        Is64Bit: true,
+        OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
+        Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
+        ProcessorCount: 8,
+        OsDescription: "Windows 11",
+        TenantId: user.TenantId,
+        TotalMemory: 16384,
+        TotalStorage: 1024000,
+        UsedMemory: 8192,
+        UsedStorage: 512000,
+        CurrentUsers: ["TestUser"],
+        MacAddresses: ["00:00:00:00:00:01"],
+        LocalIpV4: "192.168.0.1",
+        LocalIpV6: "fe80::1",
+        Drives: []);
+
+    var newConnectionContext = new DeviceConnectionContext(
+        ConnectionId: "test-connection-id-2",
+        RemoteIpAddress: IPAddress.Parse("192.168.1.2"),
+        LastSeen: DateTimeOffset.Now,
+        IsOnline: true);
+
+    await deviceManager.AddOrUpdate(newDeviceDto, newConnectionContext);
 
     // Simulate cache invalidation
     await outputCacheStore.EvictByTagAsync("device-grid", CancellationToken.None);
@@ -107,6 +138,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
       request,
       db,
       scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
+      scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
       scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 
     // Assert

@@ -9,7 +9,7 @@ namespace ControlR.ApiClient.Models
 {
     [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
     #pragma warning disable CS1591
-    public partial class DeviceDto : IAdditionalDataHolder, IParsable
+    public partial class DeviceUpdateRequestDto : IAdditionalDataHolder, IParsable
     #pragma warning restore CS1591
     {
         /// <summary>Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.</summary>
@@ -21,22 +21,6 @@ namespace ControlR.ApiClient.Models
 #nullable restore
 #else
         public string AgentVersion { get; set; }
-#endif
-        /// <summary>The alias property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public string? Alias { get; set; }
-#nullable restore
-#else
-        public string Alias { get; set; }
-#endif
-        /// <summary>The connectionId property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public string? ConnectionId { get; set; }
-#nullable restore
-#else
-        public string ConnectionId { get; set; }
 #endif
         /// <summary>The cpuUtilization property</summary>
         public double? CpuUtilization { get; set; }
@@ -60,10 +44,6 @@ namespace ControlR.ApiClient.Models
         public Guid? Id { get; set; }
         /// <summary>The is64Bit property</summary>
         public bool? Is64Bit { get; set; }
-        /// <summary>The isOnline property</summary>
-        public bool? IsOnline { get; set; }
-        /// <summary>The lastSeen property</summary>
-        public DateTimeOffset? LastSeen { get; set; }
         /// <summary>The localIpV4 property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -110,30 +90,6 @@ namespace ControlR.ApiClient.Models
         public int? Platform { get; set; }
         /// <summary>The processorCount property</summary>
         public int? ProcessorCount { get; set; }
-        /// <summary>The publicIpV4 property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public string? PublicIpV4 { get; set; }
-#nullable restore
-#else
-        public string PublicIpV4 { get; set; }
-#endif
-        /// <summary>The publicIpV6 property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public string? PublicIpV6 { get; set; }
-#nullable restore
-#else
-        public string PublicIpV6 { get; set; }
-#endif
-        /// <summary>The tagIds property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public List<Guid?>? TagIds { get; set; }
-#nullable restore
-#else
-        public List<Guid?> TagIds { get; set; }
-#endif
         /// <summary>The tenantId property</summary>
         public Guid? TenantId { get; set; }
         /// <summary>The totalMemory property</summary>
@@ -145,21 +101,21 @@ namespace ControlR.ApiClient.Models
         /// <summary>The usedStorage property</summary>
         public double? UsedStorage { get; set; }
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Models.DeviceDto"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Models.DeviceUpdateRequestDto"/> and sets the default values.
         /// </summary>
-        public DeviceDto()
+        public DeviceUpdateRequestDto()
         {
             AdditionalData = new Dictionary<string, object>();
         }
         /// <summary>
         /// Creates a new instance of the appropriate class based on discriminator value
         /// </summary>
-        /// <returns>A <see cref="global::ControlR.ApiClient.Models.DeviceDto"/></returns>
+        /// <returns>A <see cref="global::ControlR.ApiClient.Models.DeviceUpdateRequestDto"/></returns>
         /// <param name="parseNode">The parse node to use to read the discriminator value and create the object</param>
-        public static global::ControlR.ApiClient.Models.DeviceDto CreateFromDiscriminatorValue(IParseNode parseNode)
+        public static global::ControlR.ApiClient.Models.DeviceUpdateRequestDto CreateFromDiscriminatorValue(IParseNode parseNode)
         {
             if(ReferenceEquals(parseNode, null)) throw new ArgumentNullException(nameof(parseNode));
-            return new global::ControlR.ApiClient.Models.DeviceDto();
+            return new global::ControlR.ApiClient.Models.DeviceUpdateRequestDto();
         }
         /// <summary>
         /// The deserialization information for the current model
@@ -170,15 +126,11 @@ namespace ControlR.ApiClient.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "agentVersion", n => { AgentVersion = n.GetStringValue(); } },
-                { "alias", n => { Alias = n.GetStringValue(); } },
-                { "connectionId", n => { ConnectionId = n.GetStringValue(); } },
                 { "cpuUtilization", n => { CpuUtilization = n.GetDoubleValue(); } },
                 { "currentUsers", n => { CurrentUsers = n.GetCollectionOfPrimitiveValues<string>()?.AsList(); } },
                 { "drives", n => { Drives = n.GetCollectionOfObjectValues<global::ControlR.ApiClient.Models.Drive>(global::ControlR.ApiClient.Models.Drive.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
                 { "is64Bit", n => { Is64Bit = n.GetBoolValue(); } },
-                { "isOnline", n => { IsOnline = n.GetBoolValue(); } },
-                { "lastSeen", n => { LastSeen = n.GetDateTimeOffsetValue(); } },
                 { "localIpV4", n => { LocalIpV4 = n.GetStringValue(); } },
                 { "localIpV6", n => { LocalIpV6 = n.GetStringValue(); } },
                 { "macAddresses", n => { MacAddresses = n.GetCollectionOfPrimitiveValues<string>()?.AsList(); } },
@@ -187,9 +139,6 @@ namespace ControlR.ApiClient.Models
                 { "osDescription", n => { OsDescription = n.GetStringValue(); } },
                 { "platform", n => { Platform = n.GetIntValue(); } },
                 { "processorCount", n => { ProcessorCount = n.GetIntValue(); } },
-                { "publicIpV4", n => { PublicIpV4 = n.GetStringValue(); } },
-                { "publicIpV6", n => { PublicIpV6 = n.GetStringValue(); } },
-                { "tagIds", n => { TagIds = n.GetCollectionOfPrimitiveValues<Guid?>()?.AsList(); } },
                 { "tenantId", n => { TenantId = n.GetGuidValue(); } },
                 { "totalMemory", n => { TotalMemory = n.GetDoubleValue(); } },
                 { "totalStorage", n => { TotalStorage = n.GetDoubleValue(); } },
@@ -205,15 +154,11 @@ namespace ControlR.ApiClient.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteStringValue("agentVersion", AgentVersion);
-            writer.WriteStringValue("alias", Alias);
-            writer.WriteStringValue("connectionId", ConnectionId);
             writer.WriteDoubleValue("cpuUtilization", CpuUtilization);
             writer.WriteCollectionOfPrimitiveValues<string>("currentUsers", CurrentUsers);
             writer.WriteCollectionOfObjectValues<global::ControlR.ApiClient.Models.Drive>("drives", Drives);
             writer.WriteGuidValue("id", Id);
             writer.WriteBoolValue("is64Bit", Is64Bit);
-            writer.WriteBoolValue("isOnline", IsOnline);
-            writer.WriteDateTimeOffsetValue("lastSeen", LastSeen);
             writer.WriteStringValue("localIpV4", LocalIpV4);
             writer.WriteStringValue("localIpV6", LocalIpV6);
             writer.WriteCollectionOfPrimitiveValues<string>("macAddresses", MacAddresses);
@@ -222,9 +167,6 @@ namespace ControlR.ApiClient.Models
             writer.WriteStringValue("osDescription", OsDescription);
             writer.WriteIntValue("platform", Platform);
             writer.WriteIntValue("processorCount", ProcessorCount);
-            writer.WriteStringValue("publicIpV4", PublicIpV4);
-            writer.WriteStringValue("publicIpV6", PublicIpV6);
-            writer.WriteCollectionOfPrimitiveValues<Guid?>("tagIds", TagIds);
             writer.WriteGuidValue("tenantId", TenantId);
             writer.WriteDoubleValue("totalMemory", TotalMemory);
             writer.WriteDoubleValue("totalStorage", TotalStorage);

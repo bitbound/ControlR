@@ -34,7 +34,7 @@ internal class AgentHubClient(
   ILocalSocketProxy localProxy,
   IFileManager fileManager,
   IFileSystem fileSystem,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   IAgentUpdater agentUpdater,
   IWakeOnLanService wakeOnLan,
   IAgentHeartbeatTimer heartbeatTimer,
@@ -44,7 +44,7 @@ internal class AgentHubClient(
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IDesktopClientUpdater _desktopClientUpdater = streamerUpdater;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
-  private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
+  private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
   private readonly IFileManager _fileManager = fileManager;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IAgentHeartbeatTimer _heartbeatTimer = heartbeatTimer;

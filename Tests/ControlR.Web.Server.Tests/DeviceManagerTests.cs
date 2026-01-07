@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
+using System.Net;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Enums;
 using ControlR.Libraries.Shared.Models;
@@ -7,6 +9,7 @@ using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
+using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +19,6 @@ namespace ControlR.Web.Server.Tests;
 
 public class DeviceManagerTests(ITestOutputHelper testOutput)
 {
-
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
   [Fact]
@@ -31,7 +33,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
 
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
-    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
+    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
 
     // Create test tags
     foreach (var tagId in tagIds)
@@ -40,18 +42,15 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     }
     await db.SaveChangesAsync();
 
-    var deviceDto = new DeviceDto(
+    var deviceDto = new DeviceUpdateRequestDto(
       Name: "Test Device",
       AgentVersion: "1.0.0",
       CpuUtilization: 50,
       Id: deviceId,
       Is64Bit: true,
-      IsOnline: true,
-      LastSeen: DateTimeOffset.Now,
       OsArchitecture: Architecture.X64,
       Platform: SystemPlatform.Windows,
       ProcessorCount: 8,
-      ConnectionId: "test-connection-id",
       OsDescription: "Windows 10",
       TenantId: tenantId,
       TotalMemory: 16384,
@@ -59,18 +58,19 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       UsedMemory: 8192,
       UsedStorage: 512000,
       CurrentUsers: ["User1", "User2"],
-      MacAddresses: ["00:00:00:00:00:01"], PublicIpV4: "127.0.0.1",
-      PublicIpV6: "::1",
+      MacAddresses: ["00:00:00:00:00:01"],
       LocalIpV4: "10.0.0.1",
       LocalIpV6: "fe80::1",
-      Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }])
-    {
-      TagIds = tagIds,
-      Alias = "Test Alias"
-    };
+      Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-connection-id",
+      RemoteIpAddress: IPAddress.Parse("127.0.0.1"),
+      LastSeen: DateTimeOffset.Now,
+      IsOnline: true);
 
     // Act
-    var result = await deviceManager.AddOrUpdate(deviceDto, addTagIds: true);
+    var result = await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds);
 
     // Assert
     Assert.NotNull(result);
@@ -93,7 +93,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal(new[] { "User1", "User2" }, result.CurrentUsers);
     Assert.Equal(new[] { "00:00:00:00:00:01" }, result.MacAddresses);
     Assert.Equal("127.0.0.1", result.PublicIpV4);
-    Assert.Equal("::1", result.PublicIpV6);
+    Assert.Equal(string.Empty, result.PublicIpV6);
     Assert.Single(result.Drives);
     Assert.Equal("C:", result.Drives[0].Name);
 
@@ -113,7 +113,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       OsDescription = "Windows 11"
     };
 
-    var updatedResult = await deviceManager.AddOrUpdate(updatedDto, addTagIds: false);
+    var updatedResult = await deviceManager.AddOrUpdate(updatedDto, connectionContext, tagIds: null);
 
     Assert.NotNull(updatedResult);
     Assert.Equal(deviceId, updatedResult.Id);
@@ -121,7 +121,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal("1.0.1", updatedResult.AgentVersion);
     Assert.Equal("Windows 11", updatedResult.OsDescription);
 
-    // Verify tags aren't updated since addTagIds is false
+    // Verify tags aren't updated since tagIds is null
     Assert.NotNull(updatedResult.Tags);
     Assert.Equal(2, updatedResult.Tags.Count);
   }
@@ -222,7 +222,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
 
     var deviceId = Guid.NewGuid();
     var tenantId = Guid.NewGuid();
-    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() }.ToImmutableArray();
+    var tagIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
 
     // Create test tags
     foreach (var tagId in tagIds)
@@ -242,18 +242,15 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     db.Devices.Add(device);
     await db.SaveChangesAsync();
 
-    var deviceDto = new DeviceDto(
+    var deviceDto = new DeviceUpdateRequestDto(
       Name: "Updated Device",
       AgentVersion: "2.0.0",
       CpuUtilization: 75,
       Id: deviceId,
       Is64Bit: true,
-      IsOnline: true,
-      LastSeen: DateTimeOffset.Now,
       OsArchitecture: Architecture.X64,
       Platform: SystemPlatform.Windows,
       ProcessorCount: 8,
-      ConnectionId: "test-connection-id",
       OsDescription: "Windows 11",
       TenantId: tenantId,
       TotalMemory: 32768,
@@ -262,18 +259,18 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       UsedStorage: 1024000,
       CurrentUsers: ["User1"],
       MacAddresses: ["00:00:00:00:00:02"],
-      PublicIpV4: "192.168.1.1",
-      PublicIpV6: "::2",
       LocalIpV4: "192.168.0.1",
       LocalIpV6: "fe80::1",
-      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 2048000, FreeSpace = 1024000 }])
-    {
-      TagIds = tagIds,
-      Alias = "New Alias" // Should be ignored based on the requirement
-    };
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 2048000, FreeSpace = 1024000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-connection-id",
+      RemoteIpAddress: IPAddress.Parse("192.168.1.1"),
+      LastSeen: DateTimeOffset.Now,
+      IsOnline: true);
 
     // Act
-    var result = await deviceManager.UpdateDevice(deviceDto, addTagIds: true);
+    var result = await deviceManager.UpdateDevice(deviceDto, connectionContext, tagIds);
 
     // Assert
     Assert.True(result.IsSuccess);
@@ -303,7 +300,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
 
     // Test update with non-existent device ID
     var nonExistentDto = deviceDto with { Id = Guid.NewGuid() };
-    var failResult = await deviceManager.UpdateDevice(nonExistentDto);
+    var failResult = await deviceManager.UpdateDevice(nonExistentDto, connectionContext);
     Assert.False(failResult.IsSuccess);
     Assert.Equal("Device does not exist in the database.", failResult.Reason);
   }

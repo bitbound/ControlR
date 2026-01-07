@@ -65,38 +65,38 @@ namespace ControlR.ApiClient.Api.Devices
         public DevicesRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/devices", rawUrl)
         {
         }
-        /// <returns>A List&lt;global::ControlR.ApiClient.Models.DeviceDto&gt;</returns>
+        /// <returns>A List&lt;global::ControlR.ApiClient.Models.DeviceResponseDto&gt;</returns>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<List<global::ControlR.ApiClient.Models.DeviceDto>?> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<List<global::ControlR.ApiClient.Models.DeviceResponseDto>?> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<List<global::ControlR.ApiClient.Models.DeviceDto>> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<List<global::ControlR.ApiClient.Models.DeviceResponseDto>> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             var requestInfo = ToGetRequestInformation(requestConfiguration);
-            var collectionResult = await RequestAdapter.SendCollectionAsync<global::ControlR.ApiClient.Models.DeviceDto>(requestInfo, global::ControlR.ApiClient.Models.DeviceDto.CreateFromDiscriminatorValue, default, cancellationToken).ConfigureAwait(false);
+            var collectionResult = await RequestAdapter.SendCollectionAsync<global::ControlR.ApiClient.Models.DeviceResponseDto>(requestInfo, global::ControlR.ApiClient.Models.DeviceResponseDto.CreateFromDiscriminatorValue, default, cancellationToken).ConfigureAwait(false);
             return collectionResult?.AsList();
         }
-        /// <returns>A <see cref="global::ControlR.ApiClient.Models.DeviceDto"/></returns>
+        /// <returns>A <see cref="global::ControlR.ApiClient.Models.DeviceResponseDto"/></returns>
         /// <param name="body">The request body</param>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<global::ControlR.ApiClient.Models.DeviceDto?> PostAsync(global::ControlR.ApiClient.Models.CreateDeviceRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::ControlR.ApiClient.Models.DeviceResponseDto?> PostAsync(global::ControlR.ApiClient.Models.CreateDeviceRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<global::ControlR.ApiClient.Models.DeviceDto> PostAsync(global::ControlR.ApiClient.Models.CreateDeviceRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::ControlR.ApiClient.Models.DeviceResponseDto> PostAsync(global::ControlR.ApiClient.Models.CreateDeviceRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             if(ReferenceEquals(body, null)) throw new ArgumentNullException(nameof(body));
             var requestInfo = ToPostRequestInformation(body, requestConfiguration);
-            return await RequestAdapter.SendAsync<global::ControlR.ApiClient.Models.DeviceDto>(requestInfo, global::ControlR.ApiClient.Models.DeviceDto.CreateFromDiscriminatorValue, default, cancellationToken).ConfigureAwait(false);
+            return await RequestAdapter.SendAsync<global::ControlR.ApiClient.Models.DeviceResponseDto>(requestInfo, global::ControlR.ApiClient.Models.DeviceResponseDto.CreateFromDiscriminatorValue, default, cancellationToken).ConfigureAwait(false);
         }
         /// <returns>A <see cref="RequestInformation"/></returns>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>

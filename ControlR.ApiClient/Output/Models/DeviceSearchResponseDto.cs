@@ -19,10 +19,10 @@ namespace ControlR.ApiClient.Models
         /// <summary>The items property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public List<global::ControlR.ApiClient.Models.DeviceDto>? Items { get; set; }
+        public List<global::ControlR.ApiClient.Models.DeviceResponseDto>? Items { get; set; }
 #nullable restore
 #else
-        public List<global::ControlR.ApiClient.Models.DeviceDto> Items { get; set; }
+        public List<global::ControlR.ApiClient.Models.DeviceResponseDto> Items { get; set; }
 #endif
         /// <summary>The totalItems property</summary>
         public int? TotalItems { get; set; }
@@ -52,7 +52,7 @@ namespace ControlR.ApiClient.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "anyDevicesForUser", n => { AnyDevicesForUser = n.GetBoolValue(); } },
-                { "items", n => { Items = n.GetCollectionOfObjectValues<global::ControlR.ApiClient.Models.DeviceDto>(global::ControlR.ApiClient.Models.DeviceDto.CreateFromDiscriminatorValue)?.AsList(); } },
+                { "items", n => { Items = n.GetCollectionOfObjectValues<global::ControlR.ApiClient.Models.DeviceResponseDto>(global::ControlR.ApiClient.Models.DeviceResponseDto.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "totalItems", n => { TotalItems = n.GetIntValue(); } },
             };
         }
@@ -64,7 +64,7 @@ namespace ControlR.ApiClient.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteBoolValue("anyDevicesForUser", AnyDevicesForUser);
-            writer.WriteCollectionOfObjectValues<global::ControlR.ApiClient.Models.DeviceDto>("items", Items);
+            writer.WriteCollectionOfObjectValues<global::ControlR.ApiClient.Models.DeviceResponseDto>("items", Items);
             writer.WriteIntValue("totalItems", TotalItems);
             writer.WriteAdditionalData(AdditionalData);
         }

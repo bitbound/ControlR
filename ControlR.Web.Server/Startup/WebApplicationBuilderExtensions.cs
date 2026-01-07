@@ -299,6 +299,7 @@ public static class WebApplicationBuilderExtensions
     });
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
+    builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();

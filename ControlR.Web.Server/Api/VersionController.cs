@@ -1,35 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.Extensions.FileProviders;
 
 namespace ControlR.Web.Server.Api;
 
 [Route("api/[controller]")]
 [ApiController]
 [OutputCache(Duration = 60)]
-public class VersionController(IFileProvider phyiscalFileProvider) : ControllerBase
+public class VersionController(IAgentVersionProvider agentVersionProvider) : ControllerBase
 {
   [HttpGet("agent")]
   [OutputCache]
   public async Task<ActionResult<Version>> GetCurrentAgentVersion()
   {
-    var fileInfo = phyiscalFileProvider.GetFileInfo("/wwwroot/downloads/Version.txt");
-
-    if (!fileInfo.Exists || string.IsNullOrWhiteSpace(fileInfo.PhysicalPath))
+    var result = await agentVersionProvider.TryGetAgentVersion();
+    if (!result.IsSuccess)
     {
       return NotFound();
     }
-
-    await using var fs = fileInfo.CreateReadStream();
-    using var sr = new StreamReader(fs);
-    var versionString = await sr.ReadToEndAsync();
-
-    if (!Version.TryParse(versionString?.Trim(), out var version))
-    {
-      return NotFound();
-    }
-
-    return Ok(version);
+    return Ok(result.Value);
   }
 
   [HttpGet("server")]

@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Web.Server.Services.DeviceManagement;
+using System.Net;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -118,18 +121,15 @@ internal static class ServiceExtensions
     var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
     var id = deviceId ?? Guid.NewGuid();
     var now = DateTimeOffset.UtcNow;
-    var deviceDto = new DeviceDto(
+    var deviceDto = new DeviceUpdateRequestDto(
       Name: "Test Device",
       AgentVersion: "1.0.0",
       CpuUtilization: 10,
       Id: id,
       Is64Bit: true,
-      IsOnline: true,
-      LastSeen: now,
       OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
       Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
       ProcessorCount: 4,
-      ConnectionId: "test-connection-id",
       OsDescription: "Windows 10",
       TenantId: tenantId,
       TotalMemory: 8192,
@@ -138,13 +138,19 @@ internal static class ServiceExtensions
       UsedStorage: 128000,
       CurrentUsers: ["TestUser"],
       MacAddresses: ["00:11:22:33:44:55"],
-      PublicIpV4: "127.0.0.1",
-      PublicIpV6: "::1",
       LocalIpV4: "10.0.0.2",
       LocalIpV6: "fe80::2",
       Drives: [new Libraries.Shared.Models.Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]
     );
-    var device = await deviceManager.AddOrUpdate(deviceDto);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-connection-id",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: now,
+      IsOnline: true
+    );
+
+    var device = await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds: null);
     return device;
   }
 

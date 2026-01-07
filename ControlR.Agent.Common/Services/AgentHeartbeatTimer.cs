@@ -1,6 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Dtos.HubDtos; // Added for AgentDeviceUpdateDto
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 
@@ -15,11 +15,11 @@ internal class AgentHeartbeatTimer(
   TimeProvider timeProvider,
   IHubConnection<IAgentHub> hubConnection,
   ISystemEnvironment systemEnvironment,
-  IDeviceDataGenerator deviceDataGenerator,
+  IDeviceInfoProvider deviceDataGenerator,
   ISettingsProvider settingsProvider,
   ILogger<AgentHeartbeatTimer> logger) : BackgroundService, IAgentHeartbeatTimer
 {
-  private readonly IDeviceDataGenerator _deviceDataGenerator = deviceDataGenerator;
+  private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<AgentHeartbeatTimer> _logger = logger;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
@@ -38,9 +38,9 @@ internal class AgentHeartbeatTimer(
         return;
       }
 
-      var device = await _deviceDataGenerator.CreateDevice(_settingsProvider.DeviceId);
+      var device = await _deviceDataGenerator.CreateDevice();
 
-      var dto = device.CloneAs<DeviceDto>();
+      var dto = device.CloneAs<DeviceUpdateRequestDto>(); // Changed from DeviceDto to AgentDeviceUpdateDto
 
       var updateResult = await _hubConnection.Server.UpdateDevice(dto);
 

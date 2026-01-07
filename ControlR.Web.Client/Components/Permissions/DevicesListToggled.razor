@@ -20,7 +20,7 @@
 @code {
   private readonly DeviceColumnSort _defaultSort = new()
   {
-    PropertyName = nameof(DeviceDto.Name),
+    PropertyName = nameof(DeviceResponseDto.Name),
     Descending = false,
     SortOrder = 0
   };
@@ -30,16 +30,16 @@
 
   [Parameter]
   [EditorRequired]
-  public required Func<DeviceDto, bool> IsDeviceToggled { get; set; }
+  public required Func<DeviceResponseDto, bool> IsDeviceToggled { get; set; }
 
   [Parameter]
-  public EventCallback<(DeviceDto, bool)> DeviceToggled { get; set; }
+  public EventCallback<(DeviceResponseDto, bool)> DeviceToggled { get; set; }
 
   [Parameter]
   public int PageSize { get; set; } = 10;
 
   private string _deviceSearchPattern = string.Empty;
-  private HashSet<DeviceDto> _devices = [];
+  private HashSet<DeviceResponseDto> _devices = [];
 
   protected override async Task OnInitializedAsync()
   {
