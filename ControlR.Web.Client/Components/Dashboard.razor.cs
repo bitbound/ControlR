@@ -81,6 +81,7 @@ public partial class Dashboard
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceDto> message)
   {
     var viewModel = message.Dto.CloneAs<DeviceViewModel>();
+    viewModel.Dto = message.Dto;
     if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true)
     {
       await ReloadGridData();
@@ -182,6 +183,7 @@ public partial class Dashboard
         {
           var viewModel = dto.CloneAs<DeviceViewModel>();
           viewModel.IsOutdated = IsOutdated(viewModel);
+          viewModel.Dto = dto;
           return viewModel;
         })
         .ToArray();

@@ -46,7 +46,7 @@
             <MudMenu Variant="Variant.Outlined" Color="Color.Primary" Icon="@(Icons.Material.Filled.MoreVert)">
 
               <MudMenuItem Icon="@(Icons.Material.Filled.Computer)" IconColor="Color.Info"
-                           OnClick="@(() => LaunchDeviceAccess(context.Item))">
+                OnClick="@(() => LaunchDeviceAccess(context.Item))">
                 Device Access
               </MudMenuItem>
 
@@ -193,7 +193,12 @@
           @($"{Math.Round(context.Item.UsedStoragePercent * 100, 2)}%")
         </CellTemplate>
       </PropertyColumn>
+
+      <HierarchyColumn T="DeviceViewModel" />
     </Columns>
+    <ChildRowContent>
+      <DeviceOverviewGrid Device="context.Item.Dto" />
+    </ChildRowContent>
 
     <PagerContent>
       <MudDataGridPager T="DeviceViewModel" />
