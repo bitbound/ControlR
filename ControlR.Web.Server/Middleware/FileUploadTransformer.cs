@@ -8,7 +8,7 @@ public class FileUploadTransformer : IOpenApiDocumentTransformer
 {
   public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
   {
-    var pathName = $"{HttpConstants.DeviceFileOperationsEndpoint}/upload/{{deviceId}}";
+    var pathName = $"{HttpConstants.DeviceFileSystemEndpoint}/upload/{{deviceId}}";
     if (!document.Paths.TryGetValue(pathName, out var uploadPath))
     {
       return Task.CompletedTask;

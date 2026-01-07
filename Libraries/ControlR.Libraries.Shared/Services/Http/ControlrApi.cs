@@ -141,7 +141,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var requestDto = new CreateDirectoryRequestDto(deviceId, parentPath, directoryName);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/create-directory/{deviceId}", requestDto);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/create-directory/{deviceId}", requestDto);
       response.EnsureSuccessStatusCode();
     });
   }
@@ -216,7 +216,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var dto = new { FilePath = filePath, IsDirectory = isDirectory };
-      using var response = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"{HttpConstants.DeviceFileOperationsEndpoint}/delete/{deviceId}")
+      using var response = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"{HttpConstants.DeviceFileSystemEndpoint}/delete/{deviceId}")
       {
         Content = JsonContent.Create(dto)
       });
@@ -283,7 +283,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      var response = await _client.GetAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/download/{deviceId}?filePath={Uri.EscapeDataString(filePath)}");
+      var response = await _client.GetAsync($"{HttpConstants.DeviceFileSystemEndpoint}/download/{deviceId}?filePath={Uri.EscapeDataString(filePath)}");
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadAsStreamAsync();
     });
@@ -412,7 +412,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var encodedPath = Uri.EscapeDataString(filePath);
-      using var response = await _client.GetAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/logs/{deviceId}/contents?filePath={encodedPath}");
+      using var response = await _client.GetAsync($"{HttpConstants.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?filePath={encodedPath}");
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadAsStringAsync();
     });
@@ -422,7 +422,7 @@ public class ControlrApi(
   {
     return await TryCallApi(async () =>
     {
-      using var response = await _client.GetAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/logs/{deviceId}");
+      using var response = await _client.GetAsync($"{HttpConstants.DeviceFileSystemEndpoint}/logs/{deviceId}");
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<GetLogFilesResponseDto>();
     });
@@ -650,7 +650,7 @@ public class ControlrApi(
     return await TryCallApi(async () =>
     {
       var requestDto = new ValidateFilePathRequestDto(deviceId, directoryPath, fileName);
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileOperationsEndpoint}/validate-path/{deviceId}", requestDto);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/validate-path/{deviceId}", requestDto);
       response.EnsureSuccessStatusCode();
       return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>() ??
         new ValidateFilePathResponseDto(false, "Failed to deserialize response");

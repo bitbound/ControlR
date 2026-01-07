@@ -8,28 +8,28 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-namespace ControlR.ApiClient.Api.DeviceFileOperations.Download.Item
+namespace ControlR.ApiClient.Api.DeviceFileSystem.Download.Item
 {
     /// <summary>
-    /// Builds and executes requests for operations under \api\device-file-operations\download\{deviceId}
+    /// Builds and executes requests for operations under \api\device-file-system\download\{deviceId}
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
     public partial class WithDeviceItemRequestBuilder : BaseRequestBuilder
     {
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/download/{deviceId}{?filePath*}", pathParameters)
+        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/download/{deviceId}{?filePath*}", pathParameters)
         {
         }
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/download/{deviceId}{?filePath*}", rawUrl)
+        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/download/{deviceId}{?filePath*}", rawUrl)
         {
         }
         /// <returns>A <see cref="Stream"/></returns>
@@ -37,11 +37,11 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.Download.Item
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<Stream?> GetAsync(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<Stream?> GetAsync(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<Stream> GetAsync(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<Stream> GetAsync(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             var requestInfo = ToGetRequestInformation(requestConfiguration);
@@ -51,11 +51,11 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.Download.Item
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>>? requestConfiguration = default)
+        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>>? requestConfiguration = default)
         {
 #nullable restore
 #else
-        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>> requestConfiguration = default)
+        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>> requestConfiguration = default)
         {
 #endif
             var requestInfo = new RequestInformation(Method.GET, UrlTemplate, PathParameters);
@@ -65,11 +65,11 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.Download.Item
         /// <summary>
         /// Returns a request builder with the provided arbitrary URL. Using this method means any other path or query parameters are ignored.
         /// </summary>
-        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder"/></returns>
+        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder"/></returns>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
-        public global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
+        public global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
         {
-            return new global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
+            return new global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
         }
         [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
         #pragma warning disable CS1591
@@ -91,7 +91,7 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.Download.Item
         /// </summary>
         [Obsolete("This class is deprecated. Please use the generic RequestConfiguration class generated by the generator.")]
         [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
-        public partial class WithDeviceItemRequestBuilderGetRequestConfiguration : RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileOperations.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>
+        public partial class WithDeviceItemRequestBuilderGetRequestConfiguration : RequestConfiguration<global::ControlR.ApiClient.Api.DeviceFileSystem.Download.Item.WithDeviceItemRequestBuilder.WithDeviceItemRequestBuilderGetQueryParameters>
         {
         }
     }

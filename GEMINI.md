@@ -1,1 +1,1 @@
-See [copilot-instructions.md](.github/instructions/copilot-instructions.md) for instructions.
+Read [copilot-instructions.md](.github/instructions/copilot-instructions.md) and use those instructions.

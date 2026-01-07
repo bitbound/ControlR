@@ -2,7 +2,6 @@
 #pragma warning disable CS0618
 using ControlR.ApiClient.Api.AgentUpdate;
 using ControlR.ApiClient.Api.DesktopPreview;
-using ControlR.ApiClient.Api.DeviceFileOperations;
 using ControlR.ApiClient.Api.DeviceFileSystem;
 using ControlR.ApiClient.Api.DeviceTags;
 using ControlR.ApiClient.Api.Devices;
@@ -48,11 +47,6 @@ namespace ControlR.ApiClient.Api
         public global::ControlR.ApiClient.Api.DesktopPreview.DesktopPreviewRequestBuilder DesktopPreview
         {
             get => new global::ControlR.ApiClient.Api.DesktopPreview.DesktopPreviewRequestBuilder(PathParameters, RequestAdapter);
-        }
-        /// <summary>The deviceFileOperations property</summary>
-        public global::ControlR.ApiClient.Api.DeviceFileOperations.DeviceFileOperationsRequestBuilder DeviceFileOperations
-        {
-            get => new global::ControlR.ApiClient.Api.DeviceFileOperations.DeviceFileOperationsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The deviceFileSystem property</summary>
         public global::ControlR.ApiClient.Api.DeviceFileSystem.DeviceFileSystemRequestBuilder DeviceFileSystem

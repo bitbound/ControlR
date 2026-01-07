@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Shared.Dtos.HubDtos; // For FileUploadHubDto, ChatResponseHubDto, TerminalOutputDto
+using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;

@@ -8,28 +8,28 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-namespace ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item
+namespace ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item
 {
     /// <summary>
-    /// Builds and executes requests for operations under \api\device-file-operations\upload\{deviceId}
+    /// Builds and executes requests for operations under \api\device-file-system\upload\{deviceId}
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
     public partial class WithDeviceItemRequestBuilder : BaseRequestBuilder
     {
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/upload/{deviceId}", pathParameters)
+        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/upload/{deviceId}", pathParameters)
         {
         }
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/upload/{deviceId}", rawUrl)
+        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/upload/{deviceId}", rawUrl)
         {
         }
         /// <returns>A <see cref="Stream"/></returns>
@@ -70,11 +70,11 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item
         /// <summary>
         /// Returns a request builder with the provided arbitrary URL. Using this method means any other path or query parameters are ignored.
         /// </summary>
-        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item.WithDeviceItemRequestBuilder"/></returns>
+        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item.WithDeviceItemRequestBuilder"/></returns>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
-        public global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
+        public global::ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
         {
-            return new global::ControlR.ApiClient.Api.DeviceFileOperations.Upload.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
+            return new global::ControlR.ApiClient.Api.DeviceFileSystem.Upload.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
         }
         /// <summary>
         /// Configuration for the request such as headers, query parameters, and middleware options.

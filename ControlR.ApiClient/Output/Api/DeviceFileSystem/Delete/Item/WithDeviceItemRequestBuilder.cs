@@ -9,28 +9,28 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-namespace ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item
+namespace ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item
 {
     /// <summary>
-    /// Builds and executes requests for operations under \api\device-file-operations\create-directory\{deviceId}
+    /// Builds and executes requests for operations under \api\device-file-system\delete\{deviceId}
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
     public partial class WithDeviceItemRequestBuilder : BaseRequestBuilder
     {
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/create-directory/{deviceId}", pathParameters)
+        public WithDeviceItemRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/delete/{deviceId}", pathParameters)
         {
         }
         /// <summary>
-        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
+        /// Instantiates a new <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item.WithDeviceItemRequestBuilder"/> and sets the default values.
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-operations/create-directory/{deviceId}", rawUrl)
+        public WithDeviceItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/device-file-system/delete/{deviceId}", rawUrl)
         {
         }
         /// <returns>A <see cref="Stream"/></returns>
@@ -39,15 +39,15 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<Stream?> PostAsync(global::ControlR.ApiClient.Models.CreateDirectoryRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<Stream?> DeleteAsync(global::ControlR.ApiClient.Models.FileDeleteRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<Stream> PostAsync(global::ControlR.ApiClient.Models.CreateDirectoryRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<Stream> DeleteAsync(global::ControlR.ApiClient.Models.FileDeleteRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             if(ReferenceEquals(body, null)) throw new ArgumentNullException(nameof(body));
-            var requestInfo = ToPostRequestInformation(body, requestConfiguration);
+            var requestInfo = ToDeleteRequestInformation(body, requestConfiguration);
             return await RequestAdapter.SendPrimitiveAsync<Stream>(requestInfo, default, cancellationToken).ConfigureAwait(false);
         }
         /// <returns>A <see cref="RequestInformation"/></returns>
@@ -55,15 +55,15 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public RequestInformation ToPostRequestInformation(global::ControlR.ApiClient.Models.CreateDirectoryRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default)
+        public RequestInformation ToDeleteRequestInformation(global::ControlR.ApiClient.Models.FileDeleteRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default)
         {
 #nullable restore
 #else
-        public RequestInformation ToPostRequestInformation(global::ControlR.ApiClient.Models.CreateDirectoryRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default)
+        public RequestInformation ToDeleteRequestInformation(global::ControlR.ApiClient.Models.FileDeleteRequestDto body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default)
         {
 #endif
             if(ReferenceEquals(body, null)) throw new ArgumentNullException(nameof(body));
-            var requestInfo = new RequestInformation(Method.POST, UrlTemplate, PathParameters);
+            var requestInfo = new RequestInformation(Method.DELETE, UrlTemplate, PathParameters);
             requestInfo.Configure(requestConfiguration);
             requestInfo.SetContentFromParsable(RequestAdapter, "application/json", body);
             return requestInfo;
@@ -71,18 +71,18 @@ namespace ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item
         /// <summary>
         /// Returns a request builder with the provided arbitrary URL. Using this method means any other path or query parameters are ignored.
         /// </summary>
-        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item.WithDeviceItemRequestBuilder"/></returns>
+        /// <returns>A <see cref="global::ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item.WithDeviceItemRequestBuilder"/></returns>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
-        public global::ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
+        public global::ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item.WithDeviceItemRequestBuilder WithUrl(string rawUrl)
         {
-            return new global::ControlR.ApiClient.Api.DeviceFileOperations.CreateDirectory.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
+            return new global::ControlR.ApiClient.Api.DeviceFileSystem.Delete.Item.WithDeviceItemRequestBuilder(rawUrl, RequestAdapter);
         }
         /// <summary>
         /// Configuration for the request such as headers, query parameters, and middleware options.
         /// </summary>
         [Obsolete("This class is deprecated. Please use the generic RequestConfiguration class generated by the generator.")]
         [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
-        public partial class WithDeviceItemRequestBuilderPostRequestConfiguration : RequestConfiguration<DefaultQueryParameters>
+        public partial class WithDeviceItemRequestBuilderDeleteRequestConfiguration : RequestConfiguration<DefaultQueryParameters>
         {
         }
     }

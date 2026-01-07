@@ -269,10 +269,10 @@
         }
       }
     },
-    "/api/device-file-operations/create-directory/{deviceId}": {
+    "/api/device-file-system/create-directory/{deviceId}": {
       "post": {
         "tags": [
-          "DeviceFileOperations"
+          "DeviceFileSystem"
         ],
         "parameters": [
           {
@@ -312,10 +312,10 @@
         }
       }
     },
-    "/api/device-file-operations/delete/{deviceId}": {
+    "/api/device-file-system/delete/{deviceId}": {
       "delete": {
         "tags": [
-          "DeviceFileOperations"
+          "DeviceFileSystem"
         ],
         "parameters": [
           {
@@ -355,10 +355,10 @@
         }
       }
     },
-    "/api/device-file-operations/download/{deviceId}": {
+    "/api/device-file-system/download/{deviceId}": {
       "get": {
         "tags": [
-          "DeviceFileOperations"
+          "DeviceFileSystem"
         ],
         "parameters": [
           {
@@ -378,150 +378,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/device-file-operations/logs/{deviceId}/contents": {
-      "get": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "filePath",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/device-file-operations/logs/{deviceId}": {
-      "get": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/device-file-operations/upload/{deviceId}": {
-      "post": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "required": [
-                  "file",
-                  "targetSaveDirectory"
-                ],
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  },
-                  "targetSaveDirectory": {
-                    "type": "string"
-                  },
-                  "overwrite": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/device-file-operations/validate-path/{deviceId}": {
-      "post": {
-        "tags": [
-          "DeviceFileOperations"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -554,6 +410,59 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/logs/{deviceId}/contents": {
+      "get": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filePath",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/logs/{deviceId}": {
+      "get": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -645,6 +554,97 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/GetSubdirectoriesRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/upload/{deviceId}": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file",
+                  "targetSaveDirectory"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "targetSaveDirectory": {
+                    "type": "string"
+                  },
+                  "overwrite": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/device-file-system/validate-path/{deviceId}": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFilePathRequestDto"
               }
             }
           },
@@ -4109,9 +4109,6 @@
     },
     {
       "name": "DesktopPreview"
-    },
-    {
-      "name": "DeviceFileOperations"
     },
     {
       "name": "DeviceFileSystem"

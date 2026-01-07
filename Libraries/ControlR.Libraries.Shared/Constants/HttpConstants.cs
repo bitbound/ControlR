@@ -5,7 +5,6 @@ public static class HttpConstants
   public const string AgentUpdateEndpoint = "/api/agent-update";
   public const string AgentVersionEndpoint = "/api/version/agent";
   public const string DesktopPreviewEndpoint = "/api/desktop-preview";
-  public const string DeviceFileOperationsEndpoint = "/api/device-file-operations";
   public const string DeviceFileSystemEndpoint = "/api/device-file-system";
   public const string DeviceTagsEndpoint = "/api/device-tags";
   public const string DevicesEndpoint = "/api/devices";

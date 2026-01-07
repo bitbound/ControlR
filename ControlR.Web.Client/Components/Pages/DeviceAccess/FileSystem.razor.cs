@@ -220,7 +220,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var downloadUrl =
-        $"{HttpConstants.DeviceFileOperationsEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
+        $"{HttpConstants.DeviceFileSystemEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
