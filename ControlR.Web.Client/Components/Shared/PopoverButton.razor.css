@@ -1,0 +1,10 @@
+.popover-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Ensure the internal popover doesn't affect layout when closed */
+.mud-popover {
+  margin: 0 !important;
+  padding: 0 !important;
+}

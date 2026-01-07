@@ -1,0 +1,73 @@
+@using System.ComponentModel
+@inject IRemoteControlState RemoteControlState
+@inject IViewerRemoteControlStream RemoteControlStream
+@inject ISnackbar Snackbar
+@inject ILogger<ViewPopover> Logger
+
+<div class="d-flex flex-column gap-4">
+  <div>
+    <MudText Typo="Typo.caption" Class="mb-2">View Mode</MudText>
+    <MudRadioGroup Value="RemoteControlState.ViewMode" ValueChanged="@((ViewMode v) => HandleViewModeChanged(v))">
+      <MudRadio Value="@(ViewMode.Fit)" Color="Color.Primary" Size="Size.Small">
+        <div class="d-flex align-center gap-2">
+          <MudIcon Icon="@(Icons.Material.Filled.FitScreen)" Size="Size.Small" />
+          <span>Fit</span>
+        </div>
+      </MudRadio>
+      <MudRadio Value="@(ViewMode.Stretch)" Color="Color.Primary" Size="Size.Small">
+        <div class="d-flex align-center gap-2">
+          <MudIcon Icon="@(Icons.Material.Filled.OpenInFull)" Size="Size.Small" />
+          <span>Stretch</span>
+        </div>
+      </MudRadio>
+      <MudRadio Value="@(ViewMode.Original)" Color="Color.Primary" Size="Size.Small">
+        <div class="d-flex align-center gap-2">
+          <MudIcon Icon="@(Icons.Material.Filled.Fullscreen)" Size="Size.Small" />
+          <span>Original</span>
+        </div>
+      </MudRadio>
+    </MudRadioGroup>
+  </div>
+
+  <div>
+    <MudText Typo="Typo.caption" Class="mb-2">Display</MudText>
+    <MudRadioGroup Value="RemoteControlState.SelectedDisplay" ValueChanged="@(async (DisplayDto d) => await HandleDisplayChanged(d))">
+      @foreach (var display in RemoteControlState.DisplayData ?? [])
+      {
+        <MudRadio Value="@display" Color="Color.Primary" Size="Size.Small">
+          <div class="d-flex flex-column">
+            <span>@(display.Name)</span>
+            @if (!string.IsNullOrWhiteSpace(display.DisplayId))
+            {
+              <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                (@(display.DisplayId))
+              </MudText>
+            }
+          </div>
+        </MudRadio>
+      }
+    </MudRadioGroup>
+  </div>
+</div>
+
+@code {
+  private void HandleViewModeChanged(ViewMode viewMode)
+  {
+    RemoteControlState.ViewMode = viewMode;
+    RemoteControlState.NotifyStateChanged();
+  }
+
+  private async Task HandleDisplayChanged(DisplayDto display)
+  {
+    try
+    {
+      RemoteControlState.SelectedDisplay = display;
+      await RemoteControlStream.SendChangeDisplaysRequest(display.DisplayId, CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while changing displays.");
+      Snackbar.Add("An error occurred while changing displays", Severity.Error);
+    }
+  }
+}

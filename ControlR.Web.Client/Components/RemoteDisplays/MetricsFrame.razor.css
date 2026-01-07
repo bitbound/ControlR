@@ -1,0 +1,33 @@
+
+.metrics-frame {
+    position: absolute;
+    display: grid;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    text-align: left;
+    font-size: 0.8em;
+    white-space: nowrap;
+    background-color: var(--mud-palette-overlay-dark);
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+    max-height: 50%;
+    max-width: 50%;
+    overflow-y: auto;
+}
+
+.metrics-frame div:nth-child(even) {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+/* typical phone screen resolution */
+@media only screen and (max-width: 667px) {
+    .metrics-frame {
+        max-width: unset;
+    }
+}

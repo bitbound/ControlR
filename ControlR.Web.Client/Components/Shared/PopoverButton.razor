@@ -1,0 +1,33 @@
+@inherits JsInteropableComponent
+
+<div id="@_elementId" class="popover-wrapper d-inline-flex align-center">
+  <MudTooltip Text="@TooltipText" Class="z9002">
+    @if (CurrentBreakpoint >= Breakpoint.Sm)
+    {
+      <MudButton Variant="Variant.Outlined"
+                 StartIcon="@Icon"
+                 IconSize="Size.Large"
+                 Size="Size.Small"
+                 OnClick="TogglePopover">
+        @Label
+      </MudButton>
+    }
+    else
+    {
+      <MudIconButton Icon="@Icon"
+                     Variant="Variant.Outlined"
+                     Size="Size.Small"
+                     OnClick="TogglePopover" />
+    }
+  </MudTooltip>
+
+  <MudPopover Open="@_isOpen"
+              AnchorOrigin="Origin.BottomLeft"
+              TransformOrigin="Origin.TopLeft"
+              Class="pa-4"
+              Style="max-height: 80vh; overflow-y: auto;">
+    <div @onclick:stopPropagation="true">
+      @ChildContent
+    </div>
+  </MudPopover>
+</div>

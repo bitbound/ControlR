@@ -1,0 +1,86 @@
+<div class="d-flex flex-column gap-2">
+  <MudTooltip Text="Enable view-only mode (disable keyboard and mouse input)">
+    <MudSwitch @bind-Value="RemoteControlState.IsViewOnlyEnabled"
+               Color="Color.Success"
+               Label="View Only"
+               ThumbIcon="@(Icons.Material.Filled.RemoveRedEye)" />
+  </MudTooltip>
+
+  <MudText Typo="Typo.caption" Class="mt-2">Clipboard</MudText>
+  <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Send)" Size="Size.Small"
+    OnClick="OnSendClipboardClicked" FullWidth>
+    Send Clipboard
+  </MudButton>
+
+  <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.CallReceived)" Size="Size.Small"
+    OnClick="OnReceiveClipboardClicked" FullWidth>
+    Receive Clipboard
+  </MudButton>
+
+  <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" Size="Size.Small"
+    OnClick="OnTypeClipboardClicked" FullWidth>
+    Type Clipboard
+  </MudButton>
+
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
+  {
+    <MudText Typo="Typo.caption" Class="mt-2">Security</MudText>
+    <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" Size="Size.Small"
+      OnClick="InvokeCtrlAltDel" FullWidth>
+      Ctrl+Alt+Del
+    </MudButton>
+  }
+
+</div>
+
+@code {
+  [Parameter]
+  public EventCallback OnSendClipboardClicked { get; set; }
+
+  [Parameter]
+  public EventCallback OnReceiveClipboardClicked { get; set; }
+
+  [Parameter]
+  public EventCallback OnTypeClipboardClicked { get; set; }
+
+  [Inject]
+  public required IDeviceState DeviceState { get; init; }
+  [Inject]
+  public required IRemoteControlState RemoteControlState { get; init; }
+  [Inject]
+  public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+  [Inject]
+  public required ISnackbar Snackbar { get; init; }
+  [Inject]
+  public required ILogger<InputPopover> Logger { get; init; }
+
+  private async Task InvokeCtrlAltDel()
+  {
+    try
+    {
+      if (RemoteControlState.CurrentSession is not { } currentSession)
+      {
+        Snackbar.Add("No active remote session", Severity.Error);
+        return;
+      }
+
+      var invokeResult = await ViewerHub.Server.InvokeCtrlAltDel(
+      DeviceState.CurrentDevice.Id,
+      currentSession.TargetProcessId,
+      currentSession.DesktopSessionType);
+
+      if (!invokeResult.IsSuccess)
+      {
+        Snackbar.Add($"Failed to send Ctrl+Alt+Del: {invokeResult.Reason}", Severity.Error);
+        return;
+      }
+
+      Snackbar.Add("Ctrl+Alt+Del sent successfully", Severity.Success);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while invoking Ctrl+Alt+Del.");
+      Snackbar.Add("An error occurred while sending Ctrl+Alt+Del", Severity.Error);
+    }
+  }
+}

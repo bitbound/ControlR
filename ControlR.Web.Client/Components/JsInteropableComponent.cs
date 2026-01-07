@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components;

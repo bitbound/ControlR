@@ -1,8 +1,5 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.InteropServices.JavaScript;
-using ControlR.Libraries.Viewer.Common.Enums;
-using ControlR.Libraries.Viewer.Common.State;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
@@ -24,15 +21,11 @@ public partial class RemoteDisplay : JsInteropableComponent
   private double _canvasScale = 1;
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
-  private TimeSpan _currentLatency;
   private double _lastPinchDistance = -1;
   private double _lastTouch0X = -1;
   private double _lastTouch0Y = -1;
   private double _lastTouch1X = -1;
   private double _lastTouch1Y = -1;
-  private CaptureMetricsDto? _latestCaptureMetrics;
-  private double _mbpsIn;
-  private double _mbpsOut;
   private IDisposable? _messageHandlerRegistration;
   private IDisposable? _remoteControlStateChangedToken;
   private ElementReference _screenArea;
@@ -143,7 +136,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
-    if (RemoteControlStream.State != WebSocketState.Open)
+    if (RemoteControlStream.State != WebSocketState.Open || RemoteControlState.IsViewOnlyEnabled)
     {
       return;
     }
@@ -165,24 +158,44 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
   {
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      return;
+    }
+
     await RemoteControlStream.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
   }
 
   [JSInvokable]
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
   {
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      return;
+    }
+
     await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
   }
 
   [JSInvokable]
   public async Task SendPointerMove(double percentX, double percentY)
   {
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      return;
+    }
+
     await RemoteControlStream.SendPointerMove(percentX, percentY, _componentClosing.Token);
   }
 
   [JSInvokable]
   public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
   {
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      return;
+    }
+
     await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
   }
 
@@ -263,20 +276,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     return Math.Sqrt(dx * dx + dy * dy);
   }
 
-  private async Task ChangeDisplays(DisplayDto display)
-  {
-    try
-    {
-      RemoteControlState.SelectedDisplay = display;
-      await RemoteControlStream.SendChangeDisplaysRequest(display.DisplayId, _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while changing displays.");
-      Snackbar.Add("An error occurred while changing displays", Severity.Error);
-    }
-  }
-
   private async Task DrawRegion(ScreenRegionDto dto)
   {
     try
@@ -306,13 +305,13 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
-      Snackbar.Add("Received clipboard text", Severity.Info);
       await ClipboardManager.SetText(dto.Text ?? string.Empty);
-      await InvokeAsync(StateHasChanged);
+      Snackbar.Add("Received clipboard text", Severity.Success);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while handling remote clipboard change.");
+      Snackbar.Add("Failed to set clipboard text", Severity.Error);
     }
   }
 
@@ -429,33 +428,33 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private async Task HandleRemoteControlDtoReceived(DtoWrapper message)
+  private async Task HandleRemoteControlDtoReceived(DtoWrapper wrapper)
   {
     try
     {
-      switch (message.DtoType)
+      switch (wrapper.DtoType)
       {
         case DtoType.DisplayData:
           {
-            var dto = message.GetPayload<DisplayDataDto>();
+            var dto = wrapper.GetPayload<DisplayDataDto>();
             await HandleDisplayDataReceived(dto);
             break;
           }
         case DtoType.ScreenRegion:
           {
-            var dto = message.GetPayload<ScreenRegionDto>();
+            var dto = wrapper.GetPayload<ScreenRegionDto>();
             await DrawRegion(dto);
             break;
           }
         case DtoType.ClipboardText:
           {
-            var dto = message.GetPayload<ClipboardTextDto>();
+            var dto = wrapper.GetPayload<ClipboardTextDto>();
             await HandleClipboardTextReceived(dto);
             break;
           }
         case DtoType.CursorChanged:
           {
-            var dto = message.GetPayload<CursorChangedDto>();
+            var dto = wrapper.GetPayload<CursorChangedDto>();
             await HandleCursorChanged(dto);
             break;
           }
@@ -472,23 +471,18 @@ public partial class RemoteDisplay : JsInteropableComponent
           }
         case DtoType.CaptureMetricsChanged:
           {
-            var dto = message.GetPayload<CaptureMetricsDto>();
-            _latestCaptureMetrics = dto;
-            _currentLatency = RemoteControlStream.CurrentLatency;
-            _mbpsIn = RemoteControlStream.GetMbpsIn();
-            _mbpsOut = RemoteControlStream.GetMbpsOut();
-            await InvokeAsync(StateHasChanged);
+            // Metrics frame handles this one internally.
             break;
           }
         default:
-          Logger.LogWarning("Received unsupported DTO type: {DtoType}", message.DtoType);
-          Snackbar.Add($"Unsupported DTO type: {message.DtoType}", Severity.Warning);
+          Logger.LogWarning("Received unsupported DTO type: {DtoType}", wrapper.DtoType);
+          Snackbar.Add($"Unsupported DTO type: {wrapper.DtoType}", Severity.Warning);
           break;
       }
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling remote control DTO. Type: {DtoType}", message.DtoType);
+      Logger.LogError(ex, "Error while handling remote control DTO. Type: {DtoType}", wrapper.DtoType);
     }
   }
 

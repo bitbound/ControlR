@@ -1,0 +1,24 @@
+@inject IRemoteControlState RemoteControlState
+@inject IDeviceState DeviceState
+@inject IViewerRemoteControlStream RemoteControlStream
+@inject IHubConnection<IViewerHub> ViewerHub
+@inject ISnackbar Snackbar
+@inject ILogger<ExtrasPopover> Logger
+
+<div class="d-flex flex-column gap-3">
+  <MudTooltip Text="Show metrics overlay">
+    <MudSwitch Value="RemoteControlState.IsMetricsEnabled"
+               ValueChanged="@((bool v) => HandleMetricsToggled(v))"
+               Color="Color.Success"
+               Label="Metrics"
+               ThumbIcon="@(Icons.Material.Filled.QueryStats)" />
+  </MudTooltip>
+</div>
+
+@code {
+  private void HandleMetricsToggled(bool value)
+  {
+    RemoteControlState.IsMetricsEnabled = value;
+    RemoteControlState.NotifyStateChanged();
+  }
+}

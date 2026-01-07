@@ -1,0 +1,55 @@
+<div class="metrics-frame">
+  @if (MetricsState.CurrentMetrics is null)
+  {
+    <MudText Typo="Typo.h5">
+      Loading
+    </MudText>
+  }
+  else
+  {
+    <div>
+      Mbps In:
+    </div>
+    <div>
+      @($"{MetricsState.MbpsIn:N2}")
+    </div>
+
+    <div>
+      Mbps Out:
+    </div>
+    <div>
+      @($"{MetricsState.MbpsOut:N2}")
+    </div>
+
+    <div>
+      FPS:
+    </div>
+    <div>
+      @($"{MetricsState.CurrentMetrics.Fps:N2}")
+    </div>
+
+    <div>
+      Mode:
+    </div>
+    <div>
+      @(MetricsState.CurrentMetrics.CaptureMode)
+    </div>
+
+    <div>
+      Latency:
+    </div>
+    <div>
+      @($"{MetricsState.CurrentLatency.TotalMilliseconds:N2} ms")
+    </div>
+
+    @foreach (var kvp in MetricsState.CurrentMetrics.ExtraData)
+    {
+      <div>
+        @(kvp.Key):
+      </div>
+      <div>
+        @(kvp.Value)
+      </div>
+    }
+  }
+</div>

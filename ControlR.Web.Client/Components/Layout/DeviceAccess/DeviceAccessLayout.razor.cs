@@ -152,6 +152,7 @@ public partial class DeviceAccessLayout
       DeviceAccessState.Value.CurrentDevice = result.Value;
       _deviceName = result.Value.Name;
       _errorText = null;
+      await InvokeAsync(StateHasChanged);
       if (!result.Value.IsOnline)
       {
         NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
@@ -205,6 +206,7 @@ public partial class DeviceAccessLayout
 
     DeviceAccessState.Value.CurrentDevice = message.Dto;
     _deviceName = message.Dto.Name;
+    await InvokeAsync(StateHasChanged);
     if (!message.Dto.IsOnline)
     {
       Snackbar.Value.Add("Agent went offline", Severity.Warning);

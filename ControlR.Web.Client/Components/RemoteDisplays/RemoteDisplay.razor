@@ -7,31 +7,19 @@
 
   <div class="display-grid">
     <div class="action-bar pa-2">
-      <ViewModeMenu />
 
-      <DisplaysMenu Displays="@RemoteControlState.DisplayData" SelectedDisplay="RemoteControlState.SelectedDisplay"
-        OnDisplaySelected="ChangeDisplays" />
+      <PopoverButton Icon="@(Icons.Material.Filled.ScreenshotMonitor)" Label="View" TooltipText="View">
+        <ViewPopover />
+      </PopoverButton>
 
-      <ClipboardMenu OnReceiveClipboardClicked="HandleReceiveClipboardClicked"
-        OnSendClipboardClicked="HandleSendClipboardClicked" OnTypeClipboardClicked="HandleTypeClipboardClicked" />
-
-      @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
-      {
-        <MudTooltip Text="Ctrl+Alt+Del" Placement="Placement.Right" Class="z9002">
-          @if (CurrentBreakpoint < Breakpoint.Sm)
-          {
-            <MudIconButton Icon="@(Icons.Material.Filled.Shield)" Variant="Variant.Outlined" Size="Size.Small"
-              OnClick="InvokeCtrlAltDel" />
-          }
-          else
-          {
-            <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" Size="Size.Small"
-              OnClick="InvokeCtrlAltDel">
-              Ctrl+Alt+Del
-            </MudButton>
-          }
-        </MudTooltip>
-      }
+      <PopoverButton Icon="@(Icons.Material.Filled.Keyboard)" Label="Input" TooltipText="Input">
+        <InputPopover OnReceiveClipboardClicked="HandleReceiveClipboardClicked"
+          OnSendClipboardClicked="HandleSendClipboardClicked" OnTypeClipboardClicked="HandleTypeClipboardClicked" />
+      </PopoverButton>
+      
+      <PopoverButton Icon="@(Icons.Material.Filled.MoreVert)" Label="Extras" TooltipText="Extras">
+        <ExtrasPopover />
+      </PopoverButton>
 
       @if (_controlMode == ControlMode.Touch)
       {
@@ -51,12 +39,6 @@
       }
 
       <MudFlexBreak />
-
-      <MudTooltip Text="Metrics" Placement="Placement.Left" Class="z9002">
-        <MudToggleIconButton Variant="Variant.Outlined" Icon="@(Icons.Material.Filled.QueryStats)" Size="Size.Small"
-          ToggledColor="Color.Success" ToggledIcon="@(Icons.Material.Filled.QueryStats)"
-          Toggled="RemoteControlState.IsMetricsEnabled" ToggledChanged="HandleMetricsToggled" />
-      </MudTooltip>
 
       <MudTooltip Text="Toggle Fullscreen" Placement="Placement.Left" Class="z9002">
         <MudIconButton Icon="@(Icons.Material.Filled.Fullscreen)" Variant="Variant.Outlined" Size="Size.Small"
@@ -80,61 +62,7 @@
 
   @if (RemoteControlState.IsMetricsEnabled)
   {
-    <div class="metrics-frame">
-      @if (_latestCaptureMetrics is null)
-      {
-        <MudText Typo="Typo.h5">
-          Loading
-        </MudText>
-      }
-      else
-      {
-        <div>
-          Mbps In:
-        </div>
-        <div>
-          @($"{_mbpsIn:N2}")
-        </div>
-
-        <div>
-          Mbps Out:
-        </div>
-        <div>
-          @($"{_mbpsOut:N2}")
-        </div>
-
-        <div>
-          FPS:
-        </div>
-        <div>
-          @($"{_latestCaptureMetrics.Fps:N2}")
-        </div>
-
-        <div>
-          Mode:
-        </div>
-        <div>
-          @(_latestCaptureMetrics.CaptureMode)
-        </div>
-
-        <div>
-          Latency:
-        </div>
-        <div>
-          @($"{_currentLatency.TotalMilliseconds:N2} ms")
-        </div>
-
-        @foreach (var kvp in _latestCaptureMetrics.ExtraData)
-        {
-          <div>
-            @(kvp.Key):
-          </div>
-          <div>
-            @(kvp.Value)
-          </div>
-        }
-      }
-    </div>
+    <MetricsFrame />
   }
 
 </div>
