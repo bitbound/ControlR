@@ -21,6 +21,7 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
     CancellationToken cancellationToken);
   Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken);
   Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken);
+  Task SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken);
   Task SendTypeText(string text, CancellationToken cancellationToken);
   Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
     CancellationToken cancellationToken);
@@ -160,6 +161,17 @@ public class ViewerRemoteControlStream(
       {
         var dto = new ToggleBlockInputDto(isEnabled);
         var wrapper = DtoWrapper.Create(dto, DtoType.ToggleBlockInput);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
+  public async Task SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var dto = new TogglePrivacyScreenDto(isEnabled);
+        var wrapper = DtoWrapper.Create(dto, DtoType.TogglePrivacyScreen);
         await Send(wrapper, cancellationToken);
       });
   }

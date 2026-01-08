@@ -289,6 +289,23 @@ internal sealed class DesktopRemoteControlStream(
             await _inputSimulator.SetBlockInput(payload.IsEnabled);
             break;
           }
+        case DtoType.TogglePrivacyScreen:
+          {
+            if (!_systemEnvironment.IsWindows())
+            {
+              _logger.LogWarning("TogglePrivacyScreen is only supported on Windows. Ignoring request.");
+              break;
+            }
+
+            var payload = wrapper.GetPayload<TogglePrivacyScreenDto>();
+            _logger.LogInformation("Toggling privacy screen to {isEnabled}.", payload.IsEnabled);
+            var result = await _displayManager.SetPrivacyScreen(payload.IsEnabled);
+            
+            var resultDto = new PrivacyScreenResultDto(result.IsSuccess, _displayManager.IsPrivacyScreenEnabled);
+            var resultWrapper = DtoWrapper.Create(resultDto, DtoType.PrivacyScreenResult);
+            await Send(resultWrapper, _appLifetime.ApplicationStopping);
+            break;
+          }
         default:
           _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
           break;

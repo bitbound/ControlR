@@ -7,6 +7,7 @@ public interface IRemoteControlState : IStateBase
   DisplayDto[]? DisplayData { get; set; }
   bool IsBlockUserInputEnabled { get; set; }
   bool IsMetricsEnabled { get; set; }
+  bool IsPrivacyScreenEnabled { get; set; }
   bool IsScrollModeToggled { get; set; }
   bool IsViewOnlyEnabled { get; set; }
   bool IsVirtualKeyboardToggled { get; set; }
@@ -16,14 +17,59 @@ public interface IRemoteControlState : IStateBase
 
 public class RemoteControlState(ILogger<StateBase> logger) : StateBase(logger), IRemoteControlState
 {
-  public IDisposable? ConnectionClosedRegistration { get; set; }
-  public RemoteControlSession? CurrentSession { get; set; }
-  public DisplayDto[]? DisplayData { get; set; }
-  public bool IsBlockUserInputEnabled { get; set; }
-  public bool IsMetricsEnabled { get; set; }
-  public bool IsScrollModeToggled { get; set; }
-  public bool IsViewOnlyEnabled { get; set; }
-  public bool IsVirtualKeyboardToggled { get; set; }
-  public DisplayDto? SelectedDisplay { get; set; }
-  public ViewMode ViewMode { get; set; } = ViewMode.Stretch;
+  public IDisposable? ConnectionClosedRegistration
+  {
+    get => Get<IDisposable?>();
+    set => Set(value);
+  }
+  public RemoteControlSession? CurrentSession
+  {
+    get => Get<RemoteControlSession?>();
+    set => Set(value);
+  }
+  public DisplayDto[]? DisplayData
+  {
+    get => Get<DisplayDto[]?>();
+    set => Set(value);
+  }
+  public bool IsBlockUserInputEnabled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public bool IsMetricsEnabled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public bool IsPrivacyScreenEnabled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public bool IsScrollModeToggled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public bool IsViewOnlyEnabled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public bool IsVirtualKeyboardToggled
+  {
+    get => Get<bool>();
+    set => Set(value);
+  }
+  public DisplayDto? SelectedDisplay
+  {
+    get => Get<DisplayDto?>();
+    set => Set(value);
+  }
+  public ViewMode ViewMode
+  {
+    get => Get(defaultValue: ViewMode.Stretch);
+    set => Set(value);
+  }
 }

@@ -24,16 +24,19 @@ public partial class GridSplitter : JsInteropableComponent
   [Parameter]
   public int SplitterWidth { get; set; } = 4;
 
-  public override async ValueTask DisposeAsync()
+  protected override async ValueTask DisposeAsync(bool disposing)
   {
     try
     {
-      if (IsJsModuleReady)
+      if (disposing)
       {
-        await JsModule.InvokeVoidAsync("dispose");
+        if (IsJsModuleReady)
+        {
+          await JsModule.InvokeVoidAsync("dispose");
+        }
       }
 
-      await base.DisposeAsync();
+      await base.DisposeAsync(disposing);
     }
     catch (JSDisconnectedException)
     {

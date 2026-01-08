@@ -26,4 +26,6 @@ public enum DtoType
   ToggleBlockInput = 43,
   ToastNotification = 44,
   BlockInputResult = 45,
+  TogglePrivacyScreen = 46,
+  PrivacyScreenResult = 47,
 }

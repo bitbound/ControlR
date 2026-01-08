@@ -93,3 +93,12 @@ WM_SETREDRAW
 BlockInput
 GetNamedPipeClientProcessId
 QueryFullProcessImageName
+SetWindowDisplayAffinity
+CreateWindowEx
+DestroyWindow
+CreateSolidBrush
+DeleteObject
+RegisterClassEx
+DefWindowProc
+PeekMessage
+SetLayeredWindowAttributes

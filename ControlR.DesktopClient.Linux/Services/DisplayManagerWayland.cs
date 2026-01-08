@@ -91,6 +91,12 @@ internal class DisplayManagerWayland(
   {
     await ReloadDisplaysImpl();
   }
+
+  public Task<Result> SetPrivacyScreen(bool isEnabled)
+  {
+    throw new PlatformNotSupportedException("Privacy screen is only supported on Windows.");
+  }
+
   public async Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
     await EnsureDisplaysLoaded();

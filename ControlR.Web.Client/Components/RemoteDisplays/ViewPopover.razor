@@ -3,35 +3,28 @@
 @inject IViewerRemoteControlStream RemoteControlStream
 @inject ISnackbar Snackbar
 @inject ILogger<ViewPopover> Logger
+@inject IDeviceState DeviceState
 
 <div class="d-flex flex-column gap-4">
   <div>
     <MudText Typo="Typo.caption" Class="mb-2">View Mode</MudText>
     <MudRadioGroup Value="RemoteControlState.ViewMode" ValueChanged="@((ViewMode v) => HandleViewModeChanged(v))">
       <MudRadio Value="@(ViewMode.Fit)" Color="Color.Primary" Size="Size.Small">
-        <div class="d-flex align-center gap-2">
-          <MudIcon Icon="@(Icons.Material.Filled.FitScreen)" Size="Size.Small" />
-          <span>Fit</span>
-        </div>
+        Fit
       </MudRadio>
       <MudRadio Value="@(ViewMode.Stretch)" Color="Color.Primary" Size="Size.Small">
-        <div class="d-flex align-center gap-2">
-          <MudIcon Icon="@(Icons.Material.Filled.OpenInFull)" Size="Size.Small" />
-          <span>Stretch</span>
-        </div>
+        Stretch
       </MudRadio>
-      <MudRadio Value="@(ViewMode.Original)" Color="Color.Primary" Size="Size.Small">
-        <div class="d-flex align-center gap-2">
-          <MudIcon Icon="@(Icons.Material.Filled.Fullscreen)" Size="Size.Small" />
-          <span>Original</span>
-        </div>
+      <MudRadio Value="@(ViewMode.Scale)" Color="Color.Primary" Size="Size.Small">
+        Scale
       </MudRadio>
     </MudRadioGroup>
   </div>
 
   <div>
     <MudText Typo="Typo.caption" Class="mb-2">Display</MudText>
-    <MudRadioGroup Value="RemoteControlState.SelectedDisplay" ValueChanged="@(async (DisplayDto d) => await HandleDisplayChanged(d))">
+    <MudRadioGroup Value="RemoteControlState.SelectedDisplay"
+      ValueChanged="@(async (DisplayDto d) => await HandleDisplayChanged(d))">
       @foreach (var display in RemoteControlState.DisplayData ?? [])
       {
         <MudRadio Value="@display" Color="Color.Primary" Size="Size.Small">
@@ -48,6 +41,21 @@
       }
     </MudRadioGroup>
   </div>
+
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
+  {
+    <div>
+      <MudText Typo="Typo.caption" Class="mb-2">Privacy</MudText>
+      <div>
+      <MudTooltip Text="Black out the physical display while remote control remains visible">
+        <MudSwitch Value="RemoteControlState.IsPrivacyScreenEnabled"
+          ValueChanged="@((bool v) => HandlePrivacyScreenToggled(v))" Color="Color.Secondary" Label="Privacy Screen"
+          ThumbIcon="@(Icons.Material.Filled.VisibilityOff)" />
+      </MudTooltip>
+      </div>
+    </div>
+  }
+
 </div>
 
 @code {
@@ -57,12 +65,34 @@
     RemoteControlState.NotifyStateChanged();
   }
 
+  private async Task HandlePrivacyScreenToggled(bool value)
+  {
+    try
+    {
+      if (RemoteControlStream.State != System.Net.WebSockets.WebSocketState.Open)
+      {
+        Snackbar.Add("No active remote session", Severity.Error);
+        return;
+      }
+
+      Snackbar.Add("Sending privacy screen toggle", Severity.Info);
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await RemoteControlStream.SendTogglePrivacyScreen(value, cts.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while toggling privacy screen.");
+      Snackbar.Add("An error occurred while toggling privacy screen", Severity.Error);
+    }
+  }
+
   private async Task HandleDisplayChanged(DisplayDto display)
   {
     try
     {
       RemoteControlState.SelectedDisplay = display;
-      await RemoteControlStream.SendChangeDisplaysRequest(display.DisplayId, CancellationToken.None);
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await RemoteControlStream.SendChangeDisplaysRequest(display.DisplayId, cts.Token);
     }
     catch (Exception ex)
     {

@@ -109,7 +109,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddControlrIpcServer<AgentRpcService>();
     services.AddStronglyTypedSignalrClient<IAgentHub, IAgentHubClient, AgentHubClient>(ServiceLifetime.Singleton);
 
-    if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
+    if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
     {
       services.AddSingleton<IWin32Interop, Win32Interop>();
       services.AddSingleton<IDesktopSessionProvider, DesktopSessionProviderWindows>();

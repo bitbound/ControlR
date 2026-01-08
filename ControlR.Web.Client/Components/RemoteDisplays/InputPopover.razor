@@ -77,7 +77,7 @@
         return;
       }
 
-      Snackbar.Add("Sending block input request", Severity.Info);
+      Snackbar.Add("Sending block input toggle", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.SendToggleBlockInput(value, cts.Token);
     }

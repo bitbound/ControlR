@@ -50,6 +50,7 @@ public static class LoggerExtensions
     [CallerFilePath] string callerFilePath = "",
     [CallerLineNumber] int callerLineNumber = 0,
     [CallerMemberName] string callerMemberName = "",
+    Exception? exception = null,
     TimeSpan? cacheDuration = null,
     params object?[] args)
   {
@@ -59,7 +60,7 @@ public static class LoggerExtensions
       callerFilePath,
       callerLineNumber,
       callerMemberName,
-      null,
+      exception,
       cacheDuration,
       args);
   }
@@ -134,6 +135,7 @@ public static class LoggerExtensions
     [CallerFilePath] string callerFilePath = "",
     [CallerLineNumber] int callerLineNumber = 0,
     [CallerMemberName] string callerMemberName = "",
+    Exception? exception = null,
     TimeSpan? cacheDuration = null,
     params object?[] args)
   {
@@ -143,7 +145,7 @@ public static class LoggerExtensions
       callerFilePath,
       callerLineNumber,
       callerMemberName,
-      null,
+      exception,
       cacheDuration,
       args);
   }
@@ -202,6 +204,7 @@ public static class LoggerExtensions
     [CallerFilePath] string callerFilePath = "",
     [CallerLineNumber] int callerLineNumber = 0,
     [CallerMemberName] string callerMemberName = "",
+    Exception? exception = null,
     TimeSpan? cacheDuration = null,
     params object?[] args)
   {
@@ -211,7 +214,7 @@ public static class LoggerExtensions
       callerFilePath,
       callerLineNumber,
       callerMemberName,
-      null,
+      exception,
       cacheDuration,
       args);
   }

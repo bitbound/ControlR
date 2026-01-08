@@ -31,15 +31,17 @@ public partial class PopoverButton : JsInteropableComponent
     }
   }
 
-  public override async ValueTask DisposeAsync()
+  protected override async ValueTask DisposeAsync(bool disposing)
   {
-    if (IsJsModuleReady)
+    if (disposing)
     {
-      await JsModule.InvokeVoidAsync("dispose");
+      if (IsJsModuleReady)
+      {
+        await JsModule.InvokeVoidAsync("dispose");
+      }
+      _componentRef?.Dispose();
     }
-    _componentRef?.Dispose();
-    await base.DisposeAsync();
-    GC.SuppressFinalize(this);
+    await base.DisposeAsync(disposing);
 }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)

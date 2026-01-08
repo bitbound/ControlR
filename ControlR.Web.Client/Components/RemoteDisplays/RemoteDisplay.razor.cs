@@ -26,8 +26,6 @@ public partial class RemoteDisplay : JsInteropableComponent
   private double _lastTouch0Y = -1;
   private double _lastTouch1X = -1;
   private double _lastTouch1Y = -1;
-  private IDisposable? _messageHandlerRegistration;
-  private IDisposable? _remoteControlStateChangedToken;
   private ElementReference _screenArea;
   private ElementReference _virtualKeyboard;
 
@@ -106,19 +104,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     [JSMarshalAs<JSType.MemoryView>()]
     ArraySegment<byte> encodedImage);
 
-  public override async ValueTask DisposeAsync()
-  {
-    await _componentClosing.CancelAsync();
-
-    Disposer.DisposeAll(
-      _messageHandlerRegistration,
-      _componentRef,
-      _remoteControlStateChangedToken);
-
-    await base.DisposeAsync();
-    GC.SuppressFinalize(this);
-  }
-
   [JSInvokable]
   public Task LogError(string message)
   {
@@ -136,7 +121,12 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
-    if (RemoteControlStream.State != WebSocketState.Open || RemoteControlState.IsViewOnlyEnabled)
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
+      return;
+    }
+    if (!RemoteControlStream.IsConnected)
     {
       return;
     }
@@ -160,6 +150,12 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     if (RemoteControlState.IsViewOnlyEnabled)
     {
+      Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
+      return;
+    }
+
+    if (!RemoteControlStream.IsConnected)
+    {
       return;
     }
 
@@ -171,6 +167,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   {
     if (RemoteControlState.IsViewOnlyEnabled)
     {
+      Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
       return;
     }
 
@@ -199,18 +196,14 @@ public partial class RemoteDisplay : JsInteropableComponent
     await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
   }
 
-  [JSInvokable]
-  public async Task SetCurrentDisplay(DisplayDto display)
+  protected override async ValueTask DisposeAsync(bool disposing)
   {
-    RemoteControlState.SelectedDisplay = display;
-    await InvokeAsync(StateHasChanged);
-  }
-
-  [JSInvokable]
-  public async Task SetDisplays(DisplayDto[] displays)
-  {
-    RemoteControlState.DisplayData = displays;
-    await InvokeAsync(StateHasChanged);
+    if (disposing)
+    {
+      await _componentClosing.CancelAsync();
+      Disposer.DisposeAll(_componentRef);
+    }
+    await base.DisposeAsync(disposing);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -249,7 +242,13 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
     }
 
-    _messageHandlerRegistration = RemoteControlStream.RegisterMessageHandler(this, HandleRemoteControlDtoReceived);
+    Disposables.AddRange(
+      RemoteControlStream.RegisterMessageHandler(this, HandleRemoteControlDtoReceived),
+      RemoteControlState.OnStateChanged(async () =>
+      {
+        await InvokeAsync(StateHasChanged);
+      })
+    );
 
     // The remote control session is already active, and we're switching back to this tab.
     if (RemoteControlState.SelectedDisplay is { } selectedDisplay)
@@ -262,11 +261,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       await _virtualKeyboard.FocusAsync();
     }
-
-    _remoteControlStateChangedToken = RemoteControlState.OnStateChanged(async () =>
-    {
-      await InvokeAsync(StateHasChanged);
-    });
   }
 
   private static double GetDistance(double x1, double y1, double x2, double y2)
@@ -405,11 +399,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private void HandleMetricsToggled()
-  {
-    RemoteControlState.IsMetricsEnabled = !RemoteControlState.IsMetricsEnabled;
-  }
-
   private async Task HandleReceiveClipboardClicked()
   {
     try
@@ -485,7 +474,7 @@ public partial class RemoteDisplay : JsInteropableComponent
             var dto = wrapper.GetPayload<BlockInputResultDto>();
             RemoteControlState.IsBlockUserInputEnabled = dto.IsEnabled;
             await RemoteControlState.NotifyStateChanged();
-            
+
             if (dto.IsSuccess)
             {
               Snackbar.Add($"Input blocking {(dto.IsEnabled ? "enabled" : "disabled")}", Severity.Success);
@@ -493,6 +482,22 @@ public partial class RemoteDisplay : JsInteropableComponent
             else
             {
               Snackbar.Add($"Failed to {(dto.IsEnabled ? "disable" : "enable")} input blocking", Severity.Error);
+            }
+            break;
+          }
+        case DtoType.PrivacyScreenResult:
+          {
+            var dto = wrapper.GetPayload<PrivacyScreenResultDto>();
+            RemoteControlState.IsPrivacyScreenEnabled = dto.FinalState;
+            await RemoteControlState.NotifyStateChanged();
+
+            if (dto.IsSuccess)
+            {
+              Snackbar.Add($"Privacy screen {(dto.FinalState ? "enabled" : "disabled")}", Severity.Success);
+            }
+            else
+            {
+              Snackbar.Add($"Failed to {(dto.FinalState ? "disable" : "enable")} privacy screen", Severity.Error);
             }
             break;
           }
@@ -636,7 +641,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
         if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
         {
-          RemoteControlState.ViewMode = ViewMode.Original;
+          RemoteControlState.ViewMode = ViewMode.Scale;
         }
 
         await JsModule.InvokeVoidAsync("applyMouseWheelZoom",
@@ -720,7 +725,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
       {
-        RemoteControlState.ViewMode = ViewMode.Original;
+        RemoteControlState.ViewMode = ViewMode.Scale;
         _canvasScale = MinCanvasScale;
       }
       else

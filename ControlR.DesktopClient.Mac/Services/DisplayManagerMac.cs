@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
@@ -95,6 +94,11 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger) : IDisplayMa
     }
 
     return Task.CompletedTask;
+  }
+
+  public Task<Result> SetPrivacyScreen(bool isEnabled)
+  {
+    throw new PlatformNotSupportedException("Privacy screen is only supported on Windows.");
   }
 
   public Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)

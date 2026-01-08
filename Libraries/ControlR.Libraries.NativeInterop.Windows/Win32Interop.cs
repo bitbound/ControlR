@@ -9,6 +9,7 @@ using System.Runtime.Versioning;
 using System.Security.Principal;
 using Windows.Win32;
 using Windows.Win32.Foundation;
+using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.Security;
 using Windows.Win32.System.StationsAndDesktops;
 using Windows.Win32.System.Threading;
@@ -35,6 +36,8 @@ public interface IWin32Interop
     bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess);
 
+  nint CreatePrivacyScreenWindow(int left, int top, int width, int height);
+  void DestroyPrivacyScreenWindow(nint windowHandle);
   bool EnumWindows(Func<nint, bool> windowFunc);
   List<DesktopSession> GetActiveSessions();
   List<DesktopSession> GetActiveSessionsCsWin32();
@@ -59,6 +62,7 @@ public interface IWin32Interop
   bool SetBlockInput(bool isBlocked);
   void SetClipboardText(string? text);
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
+  bool SetWindowDisplayAffinity(nint windowHandle, WindowDisplayAffinity affinity);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
 
   bool StartProcessInBackgroundSession(
@@ -70,16 +74,18 @@ public interface IWin32Interop
   void TypeText(string text);
 }
 
-[SupportedOSPlatform("windows6.0.6000")]
+[SupportedOSPlatform("windows6.1")]
 public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32Interop
 {
   private const uint CF_UNICODETEXT = 13u;
   private const uint GenericAllRights = 0x10000000u;
   private const uint MaximumAllowedRights = 0x2000000u;
+  private const string PrivacyWindowClassName = "ControlR_PrivacyScreen";
+  private const uint WM_MOUSEACTIVATE = 0x0021;
+  private const uint WM_NCHITTEST = 0x0084;
   private const int WM_SAS_INTERNAL = 0x0208;
   private const uint Xbutton1 = 0x0001u;
   private const uint Xbutton2 = 0x0002u;
-  
 
   private static readonly string[] _invalidWindowClassNames =
   [
@@ -94,9 +100,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   ];
 
   private readonly ILogger<Win32Interop> _logger = logger;
+  private readonly Lock _windowClassLock = new();
 
   private FrozenDictionary<HCURSOR, PointerCursor>? _cursorMap;
   private HDESK _lastInputDesktop;
+  private ushort _privacyWindowClassAtom;
+  private WNDPROC? _privacyWindowProc;
 
   public bool CreateInteractiveSystemProcess(
     string commandLine,
@@ -154,7 +163,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         winLogonToken.Close();
         return false;
       }
-      
+
       // Target the interactive windows station and desktop.
       var startupInfo = new STARTUPINFOW
       {
@@ -217,6 +226,60 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         lastWin32);
       return false;
     }
+  }
+
+  public nint CreatePrivacyScreenWindow(int left, int top, int width, int height)
+  {
+    EnsurePrivacyWindowClassRegistered();
+
+    var windowHandle = PInvoke.CreateWindowEx(
+      WINDOW_EX_STYLE.WS_EX_TRANSPARENT |
+      WINDOW_EX_STYLE.WS_EX_TOPMOST |
+      WINDOW_EX_STYLE.WS_EX_TOOLWINDOW |
+      WINDOW_EX_STYLE.WS_EX_NOACTIVATE |
+      WINDOW_EX_STYLE.WS_EX_LAYERED,
+      PrivacyWindowClassName,
+      "Privacy Screen",
+      WINDOW_STYLE.WS_POPUP | WINDOW_STYLE.WS_VISIBLE,
+      left,
+      top,
+      width,
+      height,
+      default,
+      default,
+      default,
+      null);
+
+    if (windowHandle.IsNull)
+    {
+      LogWin32Error();
+      _logger.LogError("Failed to create privacy screen window.");
+      return nint.Zero;
+    }
+
+    if (!PInvoke.SetLayeredWindowAttributes(windowHandle, new COLORREF(0), 255, LAYERED_WINDOW_ATTRIBUTES_FLAGS.LWA_ALPHA))
+    {
+      LogWin32Error();
+    }
+
+    if (!SetWindowDisplayAffinity(windowHandle, WindowDisplayAffinity.ExcludeFromCapture))
+    {
+      PInvoke.DestroyWindow(windowHandle);
+      return nint.Zero;
+    }
+
+    return windowHandle;
+  }
+
+  public void DestroyPrivacyScreenWindow(nint windowHandle)
+  {
+    if (windowHandle == nint.Zero)
+    {
+      return;
+    }
+
+    SetWindowDisplayAffinity(windowHandle, WindowDisplayAffinity.None);
+    PInvoke.DestroyWindow(new HWND(windowHandle));
   }
 
   public bool EnumWindows(Func<nint, bool> windowFunc)
@@ -560,7 +623,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   {
     return GlobalMemoryStatusEx(ref lpBuffer);
   }
-  
+
   [SupportedOSPlatform("windows6.1")]
   public void InvokeCtrlAltDel()
   {
@@ -750,9 +813,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
           case VIRTUAL_KEY.VK_SCROLL:
             continue;
         }
-        
+
         var state = PInvoke.GetAsyncKeyState((int)key);
-        
+
         if (state == 0)
         {
           continue;
@@ -870,6 +933,20 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   public nint SetParentWindow(nint windowHandle, nint parentWindowHandle)
   {
     return (nint)PInvoke.SetParent(new HWND(windowHandle), new HWND(parentWindowHandle)).Value;
+  }
+
+  [SupportedOSPlatform("windows6.1")]
+  public bool SetWindowDisplayAffinity(nint windowHandle, WindowDisplayAffinity affinity)
+  {
+    var hwnd = new HWND(windowHandle);
+    if (PInvoke.SetWindowDisplayAffinity(hwnd, (WINDOW_DISPLAY_AFFINITY)affinity))
+    {
+      return true;
+    }
+
+    _logger.LogError("Failed to set window display affinity to {Affinity} for window {WindowHandle}.", affinity, windowHandle);
+    LogWin32Error();
+    return false;
   }
 
   public bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height)
@@ -1567,6 +1644,51 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return false;
   }
 
+  private void EnsurePrivacyWindowClassRegistered()
+  {
+    using var lockScope = _windowClassLock.EnterScope();
+
+    if (_privacyWindowClassAtom != 0)
+    {
+      return;
+    }
+
+    var blackBrush = PInvoke.CreateSolidBrush(new COLORREF(0));
+
+    _privacyWindowProc = PrivacyWindowProc;
+
+    var wndClass = new WNDCLASSEXW
+    {
+      cbSize = (uint)Marshal.SizeOf<WNDCLASSEXW>(),
+      style = WNDCLASS_STYLES.CS_HREDRAW | WNDCLASS_STYLES.CS_VREDRAW,
+      lpfnWndProc = _privacyWindowProc,
+      cbClsExtra = 0,
+      cbWndExtra = 0,
+      hInstance = HINSTANCE.Null,
+      hIcon = HICON.Null,
+      hCursor = HCURSOR.Null,
+      hbrBackground = new HBRUSH((nint)blackBrush),
+      lpszMenuName = default
+    };
+
+    unsafe
+    {
+      fixed (char* pClassName = PrivacyWindowClassName)
+      {
+        wndClass.lpszClassName = pClassName;
+        wndClass.hIconSm = HICON.Null;
+
+        _privacyWindowClassAtom = PInvoke.RegisterClassEx(wndClass);
+      }
+    }
+
+    if (_privacyWindowClassAtom == 0)
+    {
+      _logger.LogError("Failed to register privacy window class.");
+      LogWin32Error();
+    }
+  }
+
   private FrozenDictionary<HCURSOR, PointerCursor> GetCursorMap()
   {
     return _cursorMap ??= new Dictionary<HCURSOR, PointerCursor>
@@ -1630,6 +1752,25 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       caller,
       lastErrCode,
       lastErrMessage);
+  }
+
+  private LRESULT PrivacyWindowProc(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam)
+  {
+    // Ensure the privacy screen window never intercepts pointer input.
+    // WM_NCHITTEST determines which window should receive mouse events; returning HTTRANSPARENT
+    // causes the system to continue hit-testing windows underneath.
+    if (uMsg == WM_NCHITTEST)
+    {
+      return new LRESULT(-1); // HTTRANSPARENT
+    }
+
+    // Extra guard: never activate the window if it is somehow targeted.
+    if (uMsg == WM_MOUSEACTIVATE)
+    {
+      return new LRESULT(3); // MA_NOACTIVATE
+    }
+
+    return PInvoke.DefWindowProc(hwnd, uMsg, wParam, lParam);
   }
 
   private uint ResolveWindowsSession(int targetSessionId)

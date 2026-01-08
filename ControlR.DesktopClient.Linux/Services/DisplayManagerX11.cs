@@ -112,6 +112,12 @@ internal class DisplayManagerX11 : IDisplayManager
     }
     return Task.CompletedTask;
   }
+
+  public Task<Result> SetPrivacyScreen(bool isEnabled)
+  {
+    throw new PlatformNotSupportedException("Privacy screen is only supported on Windows.");
+  }
+
   public Task<Result<DisplayInfo>> TryFindDisplay(string deviceName)
   {
     lock (_displayLock)

@@ -3,5 +3,5 @@ public enum ViewMode
 {
   Fit,
   Stretch,
-  Original
+  Scale
 }

@@ -1,5 +1,6 @@
 ﻿using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Windows.Services;
+using ControlR.DesktopClient.Windows.ServiceInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Extensions;
@@ -23,6 +24,8 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
       .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
+      .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
+      .AddHostedService(x => x.GetRequiredService<IWindowsMessagePump>())
       .AddHostedService<SystemEventHandler>()
       .AddHostedService<InputDesktopReporter>()
       .AddHostedService(x => x.GetRequiredService<InputSimulatorWindows>())
