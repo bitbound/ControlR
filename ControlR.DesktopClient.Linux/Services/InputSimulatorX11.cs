@@ -2,6 +2,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -249,9 +250,9 @@ public class InputSimulatorX11 : IInputSimulator
     return Task.CompletedTask;
   }
 
-  public Task SetBlockInput(bool isBlocked)
+  public Task<bool> SetBlockInput(bool isBlocked)
   {
-    throw new NotImplementedException();
+    return false.AsTaskResult();
   }
 
   public Task TypeText(string text)

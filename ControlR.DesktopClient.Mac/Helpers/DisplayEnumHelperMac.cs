@@ -105,7 +105,8 @@ internal static class DisplayEnumHelperMac
     return new DisplayInfo
     {
       DeviceName = displayId.ToString(),
-      DisplayName = isMain ? "Main Display" : $"Display {index + 1}",
+      DisplayName = $"Display {index}",
+      Index = index,
       IsPrimary = isMain,
       MonitorArea = monitorArea,
       WorkArea = monitorArea,

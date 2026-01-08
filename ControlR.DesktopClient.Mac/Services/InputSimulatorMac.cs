@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
@@ -122,9 +123,9 @@ public class InputSimulatorMac(
     return Task.CompletedTask;
   }
 
-  public Task SetBlockInput(bool isBlocked)
+  public Task<bool> SetBlockInput(bool isBlocked)
   {
-    throw new NotImplementedException();
+    return false.AsTaskResult();
   }
 
   public Task TypeText(string text)

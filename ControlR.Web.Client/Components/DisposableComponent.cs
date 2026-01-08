@@ -2,8 +2,11 @@ namespace ControlR.Web.Client.Components;
 
 public class DisposableComponent : ComponentBase, IDisposable, IAsyncDisposable
 {
+  private readonly CancellationTokenSource _componentClosingSource = new();
+
   private bool _disposedValue;
 
+  protected CancellationToken ComponentClosing => _componentClosingSource.Token;
   protected DisposableCollection Disposables { get; } = [];
 
   public void Dispose()
@@ -27,6 +30,8 @@ public class DisposableComponent : ComponentBase, IDisposable, IAsyncDisposable
       if (disposing)
       {
         Disposables.Dispose();
+        _componentClosingSource.Cancel();
+        _componentClosingSource.Dispose();
       }
 
       _disposedValue = true;

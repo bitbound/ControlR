@@ -1,6 +1,5 @@
 ﻿using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Windows.Services;
-using ControlR.DesktopClient.Windows.ServiceInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Extensions;

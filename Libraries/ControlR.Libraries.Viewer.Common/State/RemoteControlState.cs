@@ -2,6 +2,9 @@
 
 public interface IRemoteControlState : IStateBase
 {
+  double CanvasPixelHeight { get; }
+  double CanvasPixelWidth { get; }
+  double CanvasScale { get; set; }
   IDisposable? ConnectionClosedRegistration { get; set; }
   RemoteControlSession? CurrentSession { get; set; }
   DisplayDto[]? DisplayData { get; set; }
@@ -11,12 +14,21 @@ public interface IRemoteControlState : IStateBase
   bool IsScrollModeToggled { get; set; }
   bool IsViewOnlyEnabled { get; set; }
   bool IsVirtualKeyboardToggled { get; set; }
+  double MaxCanvasScale { get; }
+  double MinCanvasScale { get; }
   DisplayDto? SelectedDisplay { get; set; }
   ViewMode ViewMode { get; set; }
 }
 
 public class RemoteControlState(ILogger<StateBase> logger) : StateBase(logger), IRemoteControlState
 {
+  public double CanvasPixelHeight => (SelectedDisplay?.Height ?? 0) * CanvasScale;
+  public double CanvasPixelWidth => (SelectedDisplay?.Width ?? 0) * CanvasScale;
+  public double CanvasScale
+  {
+    get => Get(defaultValue: 1.0);
+    set => Set(Math.Round(value, 2));
+  }
   public IDisposable? ConnectionClosedRegistration
   {
     get => Get<IDisposable?>();
@@ -62,6 +74,8 @@ public class RemoteControlState(ILogger<StateBase> logger) : StateBase(logger), 
     get => Get<bool>();
     set => Set(value);
   }
+  public double MaxCanvasScale => 3;
+  public double MinCanvasScale => 0.25;
   public DisplayDto? SelectedDisplay
   {
     get => Get<DisplayDto?>();

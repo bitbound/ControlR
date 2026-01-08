@@ -5,6 +5,7 @@ using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -208,9 +209,9 @@ public class InputSimulatorWayland(
   }
 
 
-  public Task SetBlockInput(bool isBlocked)
+  public Task<bool> SetBlockInput(bool isBlocked)
   {
-    throw new NotImplementedException("Input blocking is not supported on Wayland");
+    return false.AsTaskResult();
   }
 
 

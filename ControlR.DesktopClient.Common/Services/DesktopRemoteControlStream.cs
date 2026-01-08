@@ -55,6 +55,7 @@ internal sealed class DesktopRemoteControlStream(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
 
+  private bool _isInputBlocked;
   private IDisposable? _messageHandlerRegistration;
 
   public async ValueTask DisposeAsync()
@@ -105,7 +106,6 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<WindowsSessionSwitchedMessage>(this, HandleWindowsSessionSwitchedMessage);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
-      Messenger.Register<SendBlockInputResultMessage>(this, HandleSendBlockInputResultMessage);
       _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
 
       await SendDisplayData();
@@ -286,7 +286,11 @@ internal sealed class DesktopRemoteControlStream(
 
             var payload = wrapper.GetPayload<ToggleBlockInputDto>();
             _logger.LogInformation("Toggling block input to {isEnabled}.", payload.IsEnabled);
-            await _inputSimulator.SetBlockInput(payload.IsEnabled);
+            var success = await _inputSimulator.SetBlockInput(payload.IsEnabled);
+            _isInputBlocked = success ? payload.IsEnabled : _isInputBlocked;
+            var resultDto = new BlockInputResultDto(success, _isInputBlocked);
+            var resultWrapper = DtoWrapper.Create(resultDto, DtoType.BlockInputResult);
+            await Send(resultWrapper, _appLifetime.ApplicationStopping);
             break;
           }
         case DtoType.TogglePrivacyScreen:
@@ -314,20 +318,6 @@ internal sealed class DesktopRemoteControlStream(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling DTO.");
-    }
-  }
-
-  private async Task HandleSendBlockInputResultMessage(object subscriber, SendBlockInputResultMessage message)
-  {
-    try
-    {
-      var dto = new BlockInputResultDto(message.IsSuccess, message.IsEnabled);
-      var wrapper = DtoWrapper.Create(dto, DtoType.BlockInputResult);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending block input result to viewer.");
     }
   }
 
@@ -389,6 +379,7 @@ internal sealed class DesktopRemoteControlStream(
         Top = x.MonitorArea.Top,
         Left = x.MonitorArea.Left,
         ScaleFactor = x.ScaleFactor,
+        Index = x.Index
       });
       var dto = new DisplayDataDto([.. displayDtos]);
 

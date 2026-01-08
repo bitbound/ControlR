@@ -7,18 +7,12 @@ namespace ControlR.Web.Client.Components.RemoteDisplays;
 
 public partial class RemoteDisplay : JsInteropableComponent
 {
-  private const double MaxCanvasScale = 3;
-  private const double MinCanvasScale = 0.25;
-
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
-  private readonly CancellationTokenSource _componentClosing = new();
+  
   private readonly SemaphoreSlim _typeLock = new(1, 1);
 
   private string _canvasCssCursor = "default";
-  private double _canvasCssHeight;
-  private double _canvasCssWidth;
   private ElementReference _canvasRef;
-  private double _canvasScale = 1;
   private DotNetObjectReference<RemoteDisplay>? _componentRef;
   private ControlMode _controlMode = ControlMode.Mouse;
   private double _lastPinchDistance = -1;
@@ -79,8 +73,8 @@ public partial class RemoteDisplay : JsInteropableComponent
       return
         $"{display} " +
         $"cursor: {_canvasCssCursor}; " +
-        $"width: {_canvasCssWidth}px; " +
-        $"height: {_canvasCssHeight}px;";
+        $"width: {RemoteControlState.CanvasPixelWidth}px; " +
+        $"height: {RemoteControlState.CanvasPixelHeight}px;";
     }
   }
   private double CanvasWidth => RemoteControlState.SelectedDisplay?.Width ?? 0;
@@ -121,7 +115,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   [JSInvokable]
   public async Task SendKeyEvent(string key, string? code, bool isPressed)
   {
-    if (RemoteControlState.IsViewOnlyEnabled)
+    if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
       Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
       return;
@@ -131,7 +125,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendKeyEvent(key, code, isPressed, _componentClosing.Token);
+    await RemoteControlStream.SendKeyEvent(key, code, isPressed, ComponentClosing);
   }
 
   [JSInvokable]
@@ -142,13 +136,13 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendKeyboardStateReset(_componentClosing.Token);
+    await RemoteControlStream.SendKeyboardStateReset(ComponentClosing);
   }
 
   [JSInvokable]
   public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
   {
-    if (RemoteControlState.IsViewOnlyEnabled)
+    if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
       Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
       return;
@@ -159,19 +153,19 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendMouseButtonEvent(button, isPressed, percentX, percentY, _componentClosing.Token);
+    await RemoteControlStream.SendMouseButtonEvent(button, isPressed, percentX, percentY, ComponentClosing);
   }
 
   [JSInvokable]
   public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
   {
-    if (RemoteControlState.IsViewOnlyEnabled)
+    if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
       Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
       return;
     }
 
-    await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, _componentClosing.Token);
+  await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, ComponentClosing);
   }
 
   [JSInvokable]
@@ -182,7 +176,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendPointerMove(percentX, percentY, _componentClosing.Token);
+    await RemoteControlStream.SendPointerMove(percentX, percentY, ComponentClosing);
   }
 
   [JSInvokable]
@@ -193,14 +187,13 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, _componentClosing.Token);
+    await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, ComponentClosing);
   }
 
   protected override async ValueTask DisposeAsync(bool disposing)
   {
     if (disposing)
     {
-      await _componentClosing.CancelAsync();
       Disposer.DisposeAll(_componentRef);
     }
     await base.DisposeAsync(disposing);
@@ -223,7 +216,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
       if (RemoteControlStream.IsConnected)
       {
-        await RemoteControlStream.RequestKeyFrame(_componentClosing.Token);
+        await RemoteControlStream.RequestKeyFrame(ComponentClosing);
       }
     }
   }
@@ -249,13 +242,6 @@ public partial class RemoteDisplay : JsInteropableComponent
         await InvokeAsync(StateHasChanged);
       })
     );
-
-    // The remote control session is already active, and we're switching back to this tab.
-    if (RemoteControlState.SelectedDisplay is { } selectedDisplay)
-    {
-      _canvasCssWidth = selectedDisplay.Width;
-      _canvasCssHeight = selectedDisplay.Height;
-    }
 
     if (RemoteControlState.IsVirtualKeyboardToggled)
     {
@@ -375,9 +361,6 @@ public partial class RemoteDisplay : JsInteropableComponent
 
     RemoteControlState.SelectedDisplay = selectedDisplay;
 
-    _canvasCssWidth = selectedDisplay.Width;
-    _canvasCssHeight = selectedDisplay.Height;
-
     await InvokeAsync(StateHasChanged);
   }
 
@@ -399,23 +382,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private async Task HandleReceiveClipboardClicked()
-  {
-    try
-    {
-      if (RemoteControlState.CurrentSession is null)
-      {
-        return;
-      }
-
-      await RemoteControlStream.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while handling clipboard change.");
-      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
-    }
-  }
 
   private async Task HandleRemoteControlDtoReceived(DtoWrapper wrapper)
   {
@@ -471,18 +437,7 @@ public partial class RemoteDisplay : JsInteropableComponent
           }
         case DtoType.BlockInputResult:
           {
-            var dto = wrapper.GetPayload<BlockInputResultDto>();
-            RemoteControlState.IsBlockUserInputEnabled = dto.IsEnabled;
-            await RemoteControlState.NotifyStateChanged();
-
-            if (dto.IsSuccess)
-            {
-              Snackbar.Add($"Input blocking {(dto.IsEnabled ? "enabled" : "disabled")}", Severity.Success);
-            }
-            else
-            {
-              Snackbar.Add($"Failed to {(dto.IsEnabled ? "disable" : "enable")} input blocking", Severity.Error);
-            }
+            // Handled in InputPopover.
             break;
           }
         case DtoType.PrivacyScreenResult:
@@ -518,54 +473,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     RemoteControlState.IsScrollModeToggled = isEnabled;
   }
 
-  private async Task HandleSendClipboardClicked()
-  {
-    try
-    {
-      var text = await ClipboardManager.GetText();
-      if (string.IsNullOrWhiteSpace(text))
-      {
-        Snackbar.Add("Clipboard is empty", Severity.Warning);
-        return;
-      }
-
-      if (RemoteControlState.CurrentSession is null)
-      {
-        return;
-      }
-
-      Snackbar.Add("Sending clipboard", Severity.Info);
-      await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId,
-        _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while sending clipboard.");
-      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
-    }
-  }
-
-  private async Task HandleTypeClipboardClicked()
-  {
-    try
-    {
-      var text = await ClipboardManager.GetText();
-      if (string.IsNullOrWhiteSpace(text))
-      {
-        Snackbar.Add("Clipboard is empty", Severity.Warning);
-        return;
-      }
-
-      Snackbar.Add("Sending clipboard to type", Severity.Info);
-      await RemoteControlStream.SendTypeText(text, _componentClosing.Token);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while sending clipboard.");
-      Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
-    }
-  }
-
   private async Task HandleVirtualKeyboardBlurred(FocusEventArgs args)
   {
     if (RemoteControlState.IsVirtualKeyboardToggled)
@@ -574,41 +481,11 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private async Task InvokeCtrlAltDel()
-  {
-    try
-    {
-      if (RemoteControlState.CurrentSession is not { } currentSession)
-      {
-        Snackbar.Add("No active remote session", Severity.Error);
-        return;
-      }
-
-      var invokeResult = await ViewerHub.Server.InvokeCtrlAltDel(
-        DeviceState.CurrentDevice.Id,
-        currentSession.TargetProcessId,
-        currentSession.DesktopSessionType);
-
-      if (!invokeResult.IsSuccess)
-      {
-        Snackbar.Add($"Failed to send Ctrl+Alt+Del: {invokeResult.Reason}", Severity.Error);
-        return;
-      }
-
-      Snackbar.Add("Ctrl+Alt+Del sent successfully", Severity.Success);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while sending Ctrl+Alt+Del.");
-      Snackbar.Add("An error occurred while sending Ctrl+Alt+Del.", Severity.Error);
-    }
-  }
-
   private async Task OnCanvasWheel(WheelEventArgs e)
   {
     try
     {
-      await WaitForJsModule(_componentClosing.Token);
+      await WaitForJsModule(ComponentClosing);
 
       if (RemoteControlStream.State != WebSocketState.Open)
       {
@@ -621,36 +498,31 @@ public partial class RemoteDisplay : JsInteropableComponent
         const double zoomStep = 0.1; // 10% zoom per scroll
         var zoomIn = e.DeltaY < 0;
 
-        var oldWidth = _canvasCssWidth;
-        var oldHeight = _canvasCssHeight;
+        var oldWidth = RemoteControlState.CanvasPixelWidth;
+        var oldHeight = RemoteControlState.CanvasPixelHeight;
 
         var newScale = Math.Clamp(
-          _canvasScale + (zoomIn ? zoomStep : -zoomStep),
-          MinCanvasScale,
-          MaxCanvasScale);
+          RemoteControlState.CanvasScale + (zoomIn ? zoomStep : -zoomStep),
+          RemoteControlState.MinCanvasScale,
+          RemoteControlState.MaxCanvasScale);
 
-        // Only proceed if scale actually changed
-        if (Math.Abs(newScale - _canvasScale) < 0.001)
-        {
-          return;
-        }
-
-        _canvasScale = newScale;
-        _canvasCssWidth = RemoteControlState.SelectedDisplay.Width * newScale;
-        _canvasCssHeight = RemoteControlState.SelectedDisplay.Height * newScale;
+        RemoteControlState.CanvasScale = newScale;
 
         if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
         {
           RemoteControlState.ViewMode = ViewMode.Scale;
         }
 
+        var newWidth = RemoteControlState.CanvasPixelWidth;
+        var newHeight = RemoteControlState.CanvasPixelHeight;
+
         await JsModule.InvokeVoidAsync("applyMouseWheelZoom",
           _screenArea,
           _canvasRef,
-          _canvasCssWidth,
-          _canvasCssHeight,
-          _canvasCssWidth - oldWidth,
-          _canvasCssHeight - oldHeight,
+          newWidth,
+          newHeight,
+          newWidth - oldWidth,
+          newHeight - oldHeight,
           e.OffsetX,
           e.OffsetY);
 
@@ -659,11 +531,11 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
 
       // Normal scroll - send to remote
-      if (_canvasCssWidth > 0 && _canvasCssHeight > 0)
+      if (RemoteControlState.CanvasPixelWidth > 0 && RemoteControlState.CanvasPixelHeight > 0)
       {
-        var percentX = e.OffsetX / _canvasCssWidth;
-        var percentY = e.OffsetY / _canvasCssHeight;
-        await RemoteControlStream.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, _componentClosing.Token);
+        var percentX = e.OffsetX / RemoteControlState.CanvasPixelWidth;
+        var percentY = e.OffsetY / RemoteControlState.CanvasPixelHeight;
+        await RemoteControlStream.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, ComponentClosing);
       }
     }
     catch (Exception ex)
@@ -723,25 +595,26 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
+      var oldWidth = RemoteControlState.CanvasPixelWidth;
+      var oldHeight = RemoteControlState.CanvasPixelHeight;
+
       if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
       {
         RemoteControlState.ViewMode = ViewMode.Scale;
-        _canvasScale = MinCanvasScale;
+        RemoteControlState.CanvasScale = RemoteControlState.MinCanvasScale;
       }
       else
       {
         var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
-        var newScale = _canvasScale + pinchChange / 100;
-        _canvasScale = Math.Clamp(newScale, MinCanvasScale, MaxCanvasScale);
+        var newScale = RemoteControlState.CanvasScale + pinchChange / 100;
+        RemoteControlState.CanvasScale = Math.Clamp(newScale, RemoteControlState.MinCanvasScale, RemoteControlState.MaxCanvasScale);
       }
 
-      var newWidth = RemoteControlState.SelectedDisplay.Width * _canvasScale;
-      var widthChange = newWidth - _canvasCssWidth;
-      _canvasCssWidth = newWidth;
+      var newWidth = RemoteControlState.CanvasPixelWidth;
+      var widthChange = newWidth - oldWidth;
 
-      var newHeight = RemoteControlState.SelectedDisplay.Height * _canvasScale;
-      var heightChange = newHeight - _canvasCssHeight;
-      _canvasCssHeight = newHeight;
+      var newHeight = RemoteControlState.CanvasPixelHeight;
+      var heightChange = newHeight - oldHeight;
 
       var touch0DeltaX = ev.Touches[0].ClientX - _lastTouch0X;
       var touch0DeltaY = ev.Touches[0].ClientY - _lastTouch0Y;
@@ -760,8 +633,8 @@ public partial class RemoteDisplay : JsInteropableComponent
       await JsModule.InvokeVoidAsync("applyPinchZoom",
         _screenArea,
         _canvasRef,
-        _canvasCssWidth,
-        _canvasCssHeight,
+        newWidth,
+        newHeight,
         widthChange,
         heightChange,
         scrollDeltaX,
@@ -784,7 +657,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private async Task OnVkKeyDown(KeyboardEventArgs args)
   {
-    await WaitForJsModule(_componentClosing.Token);
+    await WaitForJsModule(ComponentClosing);
 
     if (RemoteControlStream.State != WebSocketState.Open)
     {
@@ -806,7 +679,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     await _typeLock.WaitAsync();
     try
     {
-      await RemoteControlStream.SendTypeText(text, _componentClosing.Token);
+      await RemoteControlStream.SendTypeText(text, ComponentClosing);
     }
     catch (Exception ex)
     {

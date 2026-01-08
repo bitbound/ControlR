@@ -8,6 +8,8 @@ public class DisplayDto
 
   public double Height { get; init; }
 
+  public int Index { get; init; }
+
   public bool IsPrimary { get; init; }
 
   public double Left { get; init; }

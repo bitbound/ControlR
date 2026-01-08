@@ -171,7 +171,8 @@ internal class DisplayManagerX11 : IDisplayManager
             var displayInfo = new DisplayInfo
             {
               DeviceName = i.ToString(),
-              DisplayName = $"Monitor {i + 1}",
+              DisplayName = $"Display {i}",
+              Index = i,
               MonitorArea = new Rectangle(monitor.x, monitor.y, monitor.width, monitor.height),
               WorkArea = new Rectangle(monitor.x, monitor.y, monitor.width, monitor.height),
               IsPrimary = monitor.primary,
@@ -196,6 +197,7 @@ internal class DisplayManagerX11 : IDisplayManager
             {
               DeviceName = i.ToString(),
               DisplayName = $"Screen {i}",
+              Index = i,
               MonitorArea = new Rectangle(0, 0, width, height),
               WorkArea = new Rectangle(0, 0, width, height),
               IsPrimary = i == 0,

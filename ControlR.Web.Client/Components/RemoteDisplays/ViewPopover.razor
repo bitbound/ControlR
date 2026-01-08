@@ -1,4 +1,5 @@
 @using System.ComponentModel
+@inherits DisposableComponent
 @inject IRemoteControlState RemoteControlState
 @inject IViewerRemoteControlStream RemoteControlStream
 @inject ISnackbar Snackbar
@@ -19,10 +20,26 @@
         Scale
       </MudRadio>
     </MudRadioGroup>
+
+    @if (RemoteControlState.ViewMode == ViewMode.Scale)
+    {
+      <div class="mt-4">
+        <MudText Typo="Typo.caption" Class="mb-2">Scale Level</MudText>
+        <div class="d-flex align-center gap-2">
+          <MudSlider Value="RemoteControlState.CanvasScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
+            Min="RemoteControlState.MinCanvasScale" Max="RemoteControlState.MaxCanvasScale" Step="0.05"
+            Color="Color.Primary" Class="flex-grow-1" />
+          <MudNumericField Value="RemoteControlState.CanvasScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
+            Min="RemoteControlState.MinCanvasScale" Max="RemoteControlState.MaxCanvasScale" Step="0.1"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" HideSpinButtons="false" />
+        </div>
+      </div>
+    }
   </div>
 
   <div>
-    <MudText Typo="Typo.caption" Class="mb-2">Display</MudText>
+    <MudText Typo="Typo.caption" Class="mb-2">Display(s)</MudText>
+
     <MudRadioGroup Value="RemoteControlState.SelectedDisplay"
       ValueChanged="@(async (DisplayDto d) => await HandleDisplayChanged(d))">
       @foreach (var display in RemoteControlState.DisplayData ?? [])
@@ -40,6 +57,22 @@
         </MudRadio>
       }
     </MudRadioGroup>
+
+    @if ((RemoteControlState.DisplayData?.Length ?? 0) > 1)
+    {
+      <div class="display-layout-container mt-4">
+        @foreach (var display in RemoteControlState.DisplayData ?? [])
+        {
+          var isSelected = RemoteControlState.SelectedDisplay?.DisplayId == display.DisplayId;
+          var style = GetDisplayLayoutStyle(display);
+          <div class="display-layout-item @(isSelected ? "selected" : "")" style="@style"
+            @onclick="@(async () => await HandleDisplayChanged(display))">
+            <span class="display-index">@display.Index</span>
+          </div>
+        }
+      </div>
+    }
+
   </div>
 
   @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
@@ -47,11 +80,11 @@
     <div>
       <MudText Typo="Typo.caption" Class="mb-2">Privacy</MudText>
       <div>
-      <MudTooltip Text="Black out the physical display while remote control remains visible">
-        <MudSwitch Value="RemoteControlState.IsPrivacyScreenEnabled"
-          ValueChanged="@((bool v) => HandlePrivacyScreenToggled(v))" Color="Color.Secondary" Label="Privacy Screen"
-          ThumbIcon="@(Icons.Material.Filled.VisibilityOff)" />
-      </MudTooltip>
+        <MudTooltip Text="Black out the physical display while remote control remains visible">
+          <MudSwitch Value="RemoteControlState.IsPrivacyScreenEnabled"
+            ValueChanged="@((bool v) => HandlePrivacyScreenToggled(v))" Color="Color.Secondary" Label="Privacy Screen"
+            ThumbIcon="@(Icons.Material.Filled.VisibilityOff)" />
+        </MudTooltip>
       </div>
     </div>
   }
@@ -59,10 +92,61 @@
 </div>
 
 @code {
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    await base.OnAfterRenderAsync(firstRender);
+    if (firstRender)
+    {
+      Disposables.Add(
+      RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)));
+
+      var displayJson = JsonSerializer.Serialize(RemoteControlState.DisplayData, new JsonSerializerOptions()
+      {
+        WriteIndented = true
+      });
+      Logger.LogInformation("Initial display data: {DisplayJson}", displayJson);
+    }
+  }
+
+  private string GetDisplayLayoutStyle(DisplayDto display)
+  {
+    var displays = RemoteControlState.DisplayData ?? [];
+    if (displays.Length == 0)
+    {
+      return string.Empty;
+    }
+
+    var minLeft = displays.Min(d => d.Left);
+    var minTop = displays.Min(d => d.Top);
+    var maxRight = displays.Max(d => d.Left + d.Width);
+    var maxBottom = displays.Max(d => d.Top + d.Height);
+
+    var totalWidth = maxRight - minLeft;
+    var totalHeight = maxBottom - minTop;
+
+    const double containerWidth = 280;
+    const double containerHeight = 140;
+
+    var scaleX = totalWidth == 0 ? 1 : containerWidth / totalWidth;
+    var scaleY = totalHeight == 0 ? 1 : containerHeight / totalHeight;
+    var scale = Math.Min(scaleX, scaleY);
+
+    var normalizedLeft = (display.Left - minLeft) * scale;
+    var normalizedTop = (display.Top - minTop) * scale;
+    var scaledWidth = display.Width * scale;
+    var scaledHeight = display.Height * scale;
+
+    return $"left: {normalizedLeft:F1}px; top: {normalizedTop:F1}px; width: {scaledWidth:F1}px; height: {scaledHeight:F1}px;";
+  }
+
   private void HandleViewModeChanged(ViewMode viewMode)
   {
     RemoteControlState.ViewMode = viewMode;
-    RemoteControlState.NotifyStateChanged();
+  }
+
+  private void HandleScaleChanged(double scale)
+  {
+    RemoteControlState.CanvasScale = scale;
   }
 
   private async Task HandlePrivacyScreenToggled(bool value)

@@ -1,12 +1,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using System.Threading.Tasks;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.XdgPortal;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -164,7 +161,8 @@ internal class DisplayManagerWayland(
           var display = new DisplayInfo
           {
             DeviceName = deviceName,
-            DisplayName = $"Wayland Display {i + 1}",
+            DisplayName = $"Display {i + 1}",
+            Index = i,
             MonitorArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
             WorkArea = new Rectangle(offsetX, 0, logicalWidth, logicalHeight),
             IsPrimary = i == 0,
@@ -185,7 +183,8 @@ internal class DisplayManagerWayland(
         var defaultDisplay = new DisplayInfo
         {
           DeviceName = "0",
-          DisplayName = "Wayland Display",
+          DisplayName = "Display 0",
+          Index = 0,
           MonitorArea = new Rectangle(0, 0, 1920, 1080),
           WorkArea = new Rectangle(0, 0, 1920, 1080),
           IsPrimary = true,

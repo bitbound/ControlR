@@ -63,7 +63,8 @@ internal static class DisplaysEnumHelperWindows
               mi.WorkArea.Right - mi.WorkArea.Left,
               mi.WorkArea.Bottom - mi.WorkArea.Top),
             IsPrimary = mi.Flags > 0,
-            DeviceName = mi.DeviceName
+            DeviceName = mi.DeviceName,
+            Index = displays.Count
           };
           displays.Add(info);
         }
@@ -81,7 +82,7 @@ internal static class DisplaysEnumHelperWindows
       for (var i = 0; i < displays.Count; i++)
       {
         var display = displays[i];
-        display.DisplayName = $"Screen {i}";
+        display.DisplayName = $"Display {i}";
 
         if (PInvoke.EnumDisplaySettings(
             display.DeviceName,
