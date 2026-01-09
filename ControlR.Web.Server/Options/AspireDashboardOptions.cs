@@ -4,6 +4,6 @@ public class AspireDashboardOptions
 {
   public const string SectionKey = "AspireDashboard";
 
-  public string? Token { get; init; }
   public Uri? PublicWebUrl { get; init; }
+  public string? Token { get; init; }
 }

@@ -55,7 +55,8 @@
       @ontouchend="OnTouchEnd">
 
       <canvas id="@_canvasId" @ref="_canvasRef" width="@CanvasWidth" height="@CanvasHeight"
-        class='@($"remote-screen {CanvasClasses}")' style="@(CanvasStyle)" @onmousemove="HandleScreenAreaMouseMove"></canvas>
+        class='@($"remote-screen {CanvasClasses}")' style="@(CanvasStyle)" 
+        @onpointermove="HandleCanvasPointerMove" @onpointerdown="HandleCanvasPointerDown"></canvas>
     </div>
   </div>
 

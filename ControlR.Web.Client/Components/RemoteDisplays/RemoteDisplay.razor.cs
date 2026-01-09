@@ -268,6 +268,32 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
+  private async Task HandleCanvasPointerDown(PointerEventArgs e)
+  {
+    _controlMode = e.PointerType switch
+    {
+      "mouse" => ControlMode.Mouse,
+      "touch" => ControlMode.Touch,
+      _ => _controlMode
+    };
+  }
+
+  private async Task HandleCanvasPointerMove(PointerEventArgs e)
+  {
+    if (e.PointerType == "mouse" && _controlMode != ControlMode.Mouse)
+    {
+      _controlMode = ControlMode.Mouse;
+    }
+
+    if (
+        e.PointerType == "mouse" &&
+        RemoteControlState.IsAutoPanEnabled &&
+        RemoteControlState.ViewMode == ViewMode.Scale)
+    {
+      await JsModule.InvokeVoidAsync("applyAutoPan", _canvasId, _screenArea, e.PageX, e.PageY);
+    }
+  }
+
   private async Task HandleClipboardTextReceived(ClipboardTextDto dto)
   {
     try
@@ -459,22 +485,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private async Task HandleScreenAreaMouseMove(MouseEventArgs e)
-  {
-    if (_controlMode != ControlMode.Mouse)
-    {
-      _controlMode = ControlMode.Mouse;
-    }
-
-    if (
-        e.Type == "mousemove" &&
-        RemoteControlState.IsAutoPanEnabled &&
-        RemoteControlState.ViewMode == ViewMode.Scale)
-    {
-      await JsModule.InvokeVoidAsync("applyAutoPan", _canvasId, _screenArea, e.PageX, e.PageY);
-    }
-  }
-
   private void HandleScrollModeToggled(bool isEnabled)
   {
     RemoteControlState.IsScrollModeToggled = isEnabled;
@@ -654,6 +664,7 @@ public partial class RemoteDisplay : JsInteropableComponent
 
   private void OnTouchStart(TouchEventArgs ev)
   {
+    _controlMode = ControlMode.Touch;
     _lastPinchDistance = -1;
     _lastTouch0X = -1;
     _lastTouch0Y = -1;
