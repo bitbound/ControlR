@@ -25,6 +25,7 @@ public class ScreenCaptureTests
   {
     var builder = Host.CreateApplicationBuilder();
     builder.Services
+      .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
       .AddSingleton<IWin32Interop, Win32Interop>()
       .AddSingleton<InputSimulatorWindows>()
       .AddSingleton<IInputSimulator>(services => services.GetRequiredService<InputSimulatorWindows>())
