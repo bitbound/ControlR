@@ -6,6 +6,10 @@ x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
 
+# The public URL where the Aspire Dashboard will be accessible via browser.
+# This is not the internal service URL, but the URL that you will use to access Aspire.
+x-aspire-public-url: &aspirePublicUrl "http://localhost:18888"
+
 services:
   controlr:
     # It's recommended to change 'latest' to a specific version tag and update manually.
@@ -31,9 +35,8 @@ services:
       # The access token for the Aspire Dashboard, where server logs and telemetry can be viewed.
       ControlR_AspireDashboard__Token: *aspireToken
 
-      # The public URL for the Aspire Dashboard.
-      # If you change this, you must also change `Dashboard__Frontend__PublicUrl` in the Aspire container below.
-      ControlR_AspireDashboard__WebBaseUrl: "http://localhost:18888"
+      # The public URL for the Aspire Dashboard's web interface.
+      ControlR_AspireDashboard__PublicWebUrl: *aspirePublicUrl
 
       # Whether to make self-registration publicly available.
       ControlR_AppOptions__EnablePublicRegistration: false
@@ -168,7 +171,7 @@ services:
       - controlr-network
     environment:
       Dashboard__Frontend__BrowserToken: *aspireToken
-      Dashboard__Frontend__PublicUrl: "http://localhost:18888"
+      Dashboard__Frontend__PublicUrl: *aspirePublicUrl
 
 volumes:
   postgres-data:

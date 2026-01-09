@@ -17,7 +17,7 @@ public class ServerLogsController(
   public async Task<ActionResult<GetAspireUrlResponseDto>> GetAspireUrl()
   {
     var aspireToken = _aspireOptions.CurrentValue.Token;
-    var aspireUrl = _aspireOptions.CurrentValue.WebBaseUrl;
+    var aspireUrl = _aspireOptions.CurrentValue.PublicWebUrl;
 
     if (aspireUrl is null || string.IsNullOrWhiteSpace(aspireToken))
     {
