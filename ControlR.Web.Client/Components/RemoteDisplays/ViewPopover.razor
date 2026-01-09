@@ -109,13 +109,7 @@
     if (firstRender)
     {
       Disposables.Add(
-      RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)));
-
-      var displayJson = JsonSerializer.Serialize(RemoteControlState.DisplayData, new JsonSerializerOptions()
-      {
-        WriteIndented = true
-      });
-      Logger.LogInformation("Initial display data: {DisplayJson}", displayJson);
+        RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)));
     }
   }
 
