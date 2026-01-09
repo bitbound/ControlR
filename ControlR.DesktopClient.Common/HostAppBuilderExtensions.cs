@@ -1,6 +1,7 @@
 ﻿using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.Libraries.DevicesCommon.Services;
@@ -15,11 +16,18 @@ using Microsoft.Extensions.Hosting;
 namespace ControlR.DesktopClient.Common;
 public static class HostAppBuilderExtensions
 {
-  public static IHostApplicationBuilder AddCommonDesktopServices(
+  public static IHostApplicationBuilder AddCommonDesktopServices<TToasterImpl>(
     this IHostApplicationBuilder builder,
-    Action<RemoteControlSessionOptions> configureStartup)
+    IIpcClientAccessor ipcClientAccessor,
+    IUserInteractionService userInteractionService,
+    Action<IHostApplicationBuilder> configureDependencies,
+    Action<RemoteControlSessionOptions> configureSessionOptions,
+    Action<DesktopClientOptions> configureDesktopClientOptions)
+    where TToasterImpl : class, IToaster
   {
     builder.Configuration.AddEnvironmentVariables();
+
+    configureDependencies(builder);
 
     builder.Services
       .AddOptions()
@@ -37,12 +45,16 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
       .AddSingleton<ISessionConsentService, SessionConsentService>()
+      .AddSingleton<IWaiter, Waiter>()
+      .AddSingleton<IToaster, TToasterImpl>()
+      .AddSingleton(ipcClientAccessor)
+      .AddSingleton(userInteractionService)
       .AddTransient<FrameBasedCapturer>()
       .AddTransient<StreamBasedCapturer>()
-      .AddSingleton<IWaiter, Waiter>()
       .AddHostedService<HostLifetimeEventResponder>()
       .AddHostedService<RemoteControlSessionInitializer>()
-      .Configure(configureStartup);
+      .Configure(configureSessionOptions)
+      .Configure(configureDesktopClientOptions);
 
     return builder;
   }

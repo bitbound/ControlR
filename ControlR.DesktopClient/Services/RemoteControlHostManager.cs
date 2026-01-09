@@ -47,7 +47,16 @@ public class RemoteControlHostManager(
         requestDto.ViewerName);
 
       var builder = Host.CreateApplicationBuilder();
-      builder.AddCommonDesktopServices(
+      builder.AddCommonDesktopServices<Toaster>(
+        _ipcClientAccessor,
+        _userInteractionService,
+        appBuilder =>
+        {
+          appBuilder.Services
+            .AddSingleton<IToaster, Toaster>()
+            .AddSingleton(_userInteractionService)
+            .AddSingleton(_ipcClientAccessor);
+        },
         options =>
         {
           options.SessionId = requestDto.SessionId;
@@ -56,18 +65,11 @@ public class RemoteControlHostManager(
           options.ViewerName = requestDto.ViewerName;
           options.ViewerConnectionId = requestDto.ViewerConnectionId;
           options.WebSocketUri = requestDto.WebsocketUri;
+        },
+        options =>
+        {
+          options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
         });
-
-      builder.Services.Configure<DesktopClientOptions>(options =>
-      {
-        options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
-      });
-
-      builder.Services
-        .AddSingleton<IToaster, Toaster>()
-        .AddSingleton(_userInteractionService)
-        .AddSingleton(_ipcClientAccessor)
-        .AddTransient<IToastWindowViewModel, ToastWindowViewModel>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(8))
       {
