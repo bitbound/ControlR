@@ -32,5 +32,7 @@
     <string>ControlR uses notifications to inform you about remote control sessions and system events.</string>
     <key>UNUserNotificationCenterDelegate</key>
     <string>NSApplication</string>
+    <key>LSUIElement</key>
+    <true/>
 </dict>
 </plist>

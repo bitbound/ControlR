@@ -466,7 +466,9 @@ public partial class RemoteDisplay : JsInteropableComponent
       _controlMode = ControlMode.Mouse;
     }
 
-    if (RemoteControlState.IsAutoPanEnabled &&
+    if (
+        e.Type == "mousemove" &&
+        RemoteControlState.IsAutoPanEnabled &&
         RemoteControlState.ViewMode == ViewMode.Scale)
     {
       await JsModule.InvokeVoidAsync("applyAutoPan", _canvasId, _screenArea, e.PageX, e.PageY);

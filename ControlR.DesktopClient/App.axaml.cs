@@ -8,7 +8,6 @@ using Avalonia.Markup.Xaml;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
-using ControlR.DesktopClient.Views;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
