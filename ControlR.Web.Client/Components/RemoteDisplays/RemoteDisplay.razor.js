@@ -242,6 +242,8 @@ export async function initialize(componentRef, canvasId) {
   });
 
   canvas.addEventListener("pointermove", async ev => {
+    state.pointerDownEvent = ev;
+    
     if (canvas.classList.contains("minimized")) {
       return;
     }
@@ -508,6 +510,65 @@ export async function dispose(canvasId) {
     window.removeEventListener(x.type, x.handler);
   })
   delete window[`controlr-canvas-${canvasId}`];
+}
+
+/**
+ * Applies auto-pan based on cursor position relative to the screen-area div.
+ * @param {string} canvasId
+ * @param {HTMLDivElement} screenArea
+ * @param {number} pageX - Mouse page X coordinate
+ * @param {number} pageY - Mouse page Y coordinate
+ */
+export async function applyAutoPan(canvasId, screenArea, pageX, pageY) {
+  try {
+    if (!screenArea) {
+      return;
+    }
+
+    const rect = screenArea.getBoundingClientRect();
+    
+    // Calculate cursor position relative to screen-area div
+    const offsetX = pageX - rect.left;
+    const offsetY = pageY - rect.top;
+
+    const edgeZone = 0.15;
+    const activeStart = edgeZone;
+    const activeEnd = 1.0 - edgeZone;
+
+    const percentX = offsetX / rect.width;
+    const percentY = offsetY / rect.height;
+
+    let scrollLeft = null;
+    let scrollTop = null;
+
+    // X-axis: edges scroll to min/max, middle zone interpolates
+    if (percentX < activeStart) {
+      scrollLeft = 0.0; // Left edge - scroll all the way left
+    } else if (percentX > activeEnd) {
+      scrollLeft = 1.0; // Right edge - scroll all the way right
+    } else {
+      const normalizedX = (percentX - activeStart) / (activeEnd - activeStart);
+      scrollLeft = normalizedX;
+    }
+
+    // Y-axis: edges scroll to min/max, middle zone interpolates
+    if (percentY < activeStart) {
+      scrollTop = 0.0; // Top edge - scroll all the way up
+    } else if (percentY > activeEnd) {
+      scrollTop = 1.0; // Bottom edge - scroll all the way down
+    } else {
+      const normalizedY = (percentY - activeStart) / (activeEnd - activeStart);
+      scrollTop = normalizedY;
+    }
+
+    const maxScrollLeft = screenArea.scrollWidth - screenArea.clientWidth;
+    const maxScrollTop = screenArea.scrollHeight - screenArea.clientHeight;
+
+    screenArea.scrollLeft = maxScrollLeft * scrollLeft;
+    screenArea.scrollTop = maxScrollTop * scrollTop;
+  } catch (e) {
+    console.error("Error applying auto-pan:", e);
+  }
 }
 
 /**

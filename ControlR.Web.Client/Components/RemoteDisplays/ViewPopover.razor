@@ -34,6 +34,17 @@
             Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" HideSpinButtons="false" />
         </div>
       </div>
+
+      <div class="mt-4">
+        <MudText Typo="Typo.caption" Class="mb-2">Auto Pan</MudText>
+        <div>
+          <MudTooltip Text="Automatically pan the view based on cursor position">
+            <MudSwitch Value="RemoteControlState.IsAutoPanEnabled"
+              ValueChanged="@((bool v) => RemoteControlState.IsAutoPanEnabled = v)"
+              Color="Color.Primary" Label="Follow cursor" />
+          </MudTooltip>
+        </div>
+      </div>
     }
   </div>
 

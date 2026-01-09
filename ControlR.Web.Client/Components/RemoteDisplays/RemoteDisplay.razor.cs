@@ -8,7 +8,6 @@ namespace ControlR.Web.Client.Components.RemoteDisplays;
 public partial class RemoteDisplay : JsInteropableComponent
 {
   private readonly string _canvasId = $"canvas-{Guid.NewGuid()}";
-  
   private readonly SemaphoreSlim _typeLock = new(1, 1);
 
   private string _canvasCssCursor = "default";
@@ -165,7 +164,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-  await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, ComponentClosing);
+    await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, ComponentClosing);
   }
 
   [JSInvokable]
@@ -247,13 +246,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       await _virtualKeyboard.FocusAsync();
     }
-  }
-
-  private static double GetDistance(double x1, double y1, double x2, double y2)
-  {
-    var dx = x1 - x2;
-    var dy = y1 - y2;
-    return Math.Sqrt(dx * dx + dy * dy);
   }
 
   private async Task DrawRegion(ScreenRegionDto dto)
@@ -382,7 +374,6 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-
   private async Task HandleRemoteControlDtoReceived(DtoWrapper wrapper)
   {
     try
@@ -465,6 +456,20 @@ public partial class RemoteDisplay : JsInteropableComponent
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while handling remote control DTO. Type: {DtoType}", wrapper.DtoType);
+    }
+  }
+
+  private async Task HandleScreenAreaMouseMove(MouseEventArgs e)
+  {
+    if (_controlMode != ControlMode.Mouse)
+    {
+      _controlMode = ControlMode.Mouse;
+    }
+
+    if (RemoteControlState.IsAutoPanEnabled &&
+        RemoteControlState.ViewMode == ViewMode.Scale)
+    {
+      await JsModule.InvokeVoidAsync("applyAutoPan", _canvasId, _screenArea, e.PageX, e.PageY);
     }
   }
 
@@ -580,8 +585,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       {
         return;
       }
-
-      var pinchDistance = GetDistance(
+      var pinchDistance = MathHelper.GetDistanceBetween(
         ev.Touches[0].PageX, ev.Touches[0].PageY,
         ev.Touches[1].PageX, ev.Touches[1].PageY);
 

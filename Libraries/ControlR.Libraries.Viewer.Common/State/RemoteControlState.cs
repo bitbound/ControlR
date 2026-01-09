@@ -8,6 +8,7 @@ public interface IRemoteControlState : IStateBase
   IDisposable? ConnectionClosedRegistration { get; set; }
   RemoteControlSession? CurrentSession { get; set; }
   DisplayDto[]? DisplayData { get; set; }
+  bool IsAutoPanEnabled { get; set; }
   bool IsBlockUserInputEnabled { get; set; }
   bool IsMetricsEnabled { get; set; }
   bool IsPrivacyScreenEnabled { get; set; }
@@ -42,6 +43,11 @@ public class RemoteControlState(ILogger<StateBase> logger) : StateBase(logger), 
   public DisplayDto[]? DisplayData
   {
     get => Get<DisplayDto[]?>();
+    set => Set(value);
+  }
+  public bool IsAutoPanEnabled
+  {
+    get => Get(defaultValue: true);
     set => Set(value);
   }
   public bool IsBlockUserInputEnabled
