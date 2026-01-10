@@ -41,7 +41,7 @@ public class ScreenCaptureTests
     _screenGrabber = _host.Services.GetRequiredService<IScreenGrabber>();
   }
 
-  [InteractiveWindowsFact]
+  [InteractiveWindowsFactAttribute]
   public async Task ScreenGrabber_CaptureAllDisplays_Ok()
   {
     using var captureResult = await _screenGrabber.CaptureAllDisplays();
@@ -127,7 +127,7 @@ public class ScreenCaptureTests
   }
   #endif
 
-  [InteractiveWindowsFact]
+  [InteractiveWindowsFactAttribute]
   public async Task ScreenGrabber_EncodeViaFfmpeg()
   {
     // Get initial capture to determine frame dimensions

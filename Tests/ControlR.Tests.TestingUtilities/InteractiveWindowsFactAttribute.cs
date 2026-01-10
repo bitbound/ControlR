@@ -5,9 +5,9 @@ namespace ControlR.Tests.TestingUtilities;
 /// <summary>
 ///   Marks a test method to be run only on interactive Windows sessions.
 /// </summary>
-public class InteractiveWindowsFact : FactAttribute
+public class InteractiveWindowsFactAttribute : FactAttribute
 {
-  public InteractiveWindowsFact()
+  public InteractiveWindowsFactAttribute()
   {
     if (!OperatingSystem.IsWindows() || !Environment.UserInteractive || IsRunningOnCI())
     {

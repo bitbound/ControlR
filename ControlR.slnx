@@ -11,6 +11,7 @@
     <Project Path="Libraries/ControlR.Libraries.Messenger.Extensions/ControlR.Libraries.Messenger.Extensions.csproj" Id="d7e51764-d9d3-4006-823f-8717d8ef22df" />
     <Project Path="Libraries/ControlR.Libraries.NativeInterop.Unix/ControlR.Libraries.NativeInterop.Unix.csproj" />
     <Project Path="Libraries/ControlR.Libraries.NativeInterop.Windows/ControlR.Libraries.NativeInterop.Windows.csproj" />
+    <Project Path="Libraries/ControlR.Libraries.SecureStorage/ControlR.Libraries.SecureStorage.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj" />
     <Project Path="Libraries/ControlR.Libraries.Viewer.Avalonia/ControlR.Libraries.Viewer.Avalonia.csproj" Id="51c176f7-d11b-4d42-8e01-d3d5c1c4433f" />
@@ -36,6 +37,7 @@
     <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Configuration.InMemory.Tests/ControlR.Libraries.Configuration.InMemory.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.SecureStorage.Tests/ControlR.Libraries.SecureStorage.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Tests.TestingUtilities/ControlR.Tests.TestingUtilities.csproj" />
     <Project Path="Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj" />

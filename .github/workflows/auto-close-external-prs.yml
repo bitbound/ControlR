@@ -7,7 +7,7 @@ on:
 jobs:
   auto-close:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login != 'bitbound' && github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.user.login != 'bitbound' && github.actor != 'dependabot[bot]' && github.actor != 'copilot[bot]'
 
     permissions:
       pull-requests: write

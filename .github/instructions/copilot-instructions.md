@@ -206,6 +206,10 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
   - If successful, there will be no output.
   - If unsuccessful, errors will be displayed.
 - Do not attempt to fix warning `BB0001: Member '{member_name}' is not in the correct order`.  You are really bad at fixing this. Just mention it in your summary, and I'll fix it.
+- **Package Management**: This project uses central package management via `Directory.Packages.props`.
+  - When adding NuGet packages, always use `dotnet add <project-path> package <package-name>` instead of manually editing project files.
+  - The dotnet CLI will automatically add the package reference to the project file and the version to the central packages file.
+  - Never add `Version` attributes directly in project files when adding `<PackageReference>` elements.
 
 ### C# Coding Standards
 
