@@ -1,6 +1,5 @@
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Startup;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Tests.Startup;

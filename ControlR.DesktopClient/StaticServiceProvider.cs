@@ -40,7 +40,7 @@ internal static class StaticServiceProvider
     _provider = services.BuildServiceProvider();
   }
 
-  private static IServiceCollection AddControlrDesktop(
+  internal static IServiceCollection AddControlrDesktop(
     this IServiceCollection services,
     string? instanceId = null)
   {
@@ -91,6 +91,7 @@ internal static class StaticServiceProvider
       .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IImageUtility, ImageUtility>()
+      .AddSingleton<IToaster, Toaster>()
       .AddTransient<MainWindow>()
       .AddTransient<IMessageBoxViewModel, MessageBoxViewModel>()
       .AddTransient<ManagedDeviceView>()
@@ -98,8 +99,6 @@ internal static class StaticServiceProvider
       .AddTransient<IChatWindowViewModel, ChatWindowViewModel>()
       .AddTransient<ToastWindow>()
       .AddTransient<IToastWindowViewModel, ToastWindowViewModel>()
-      // Cross-platform Avalonia-based toaster
-      .AddSingleton<IToaster, Toaster>()
       .AddHostedService(sp => sp.GetRequiredService<IpcClientManager>());
 
 
@@ -110,7 +109,8 @@ internal static class StaticServiceProvider
         .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IWin32Interop, Win32Interop>()
         .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
-        .AddSingleton<IDisplayManager, DisplayManagerWindows>();
+        .AddSingleton<IDisplayManager, DisplayManagerWindows>()
+        .AddSingleton<IWindowsMessagePump, WindowsMessagePump>();
 
     }
     else if (OperatingSystem.IsMacOS())

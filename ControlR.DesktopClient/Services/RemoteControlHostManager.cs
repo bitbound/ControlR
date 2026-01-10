@@ -46,49 +46,7 @@ public class RemoteControlHostManager(
         requestDto.TargetProcessId,
         requestDto.ViewerName);
 
-      var builder = Host.CreateApplicationBuilder();
-      builder.AddCommonDesktopServices<Toaster>(
-        _ipcClientAccessor,
-        _userInteractionService,
-        appBuilder =>
-        {
-          appBuilder.Services
-            .AddSingleton<IToaster, Toaster>()
-            .AddSingleton(_userInteractionService)
-            .AddSingleton(_ipcClientAccessor);
-        },
-        options =>
-        {
-          options.SessionId = requestDto.SessionId;
-          options.NotifyUser = requestDto.NotifyUserOnSessionStart;
-          options.RequireConsent = requestDto.RequireConsent;
-          options.ViewerName = requestDto.ViewerName;
-          options.ViewerConnectionId = requestDto.ViewerConnectionId;
-          options.WebSocketUri = requestDto.WebsocketUri;
-        },
-        options =>
-        {
-          options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
-        });
-
-      if (OperatingSystem.IsWindowsVersionAtLeast(8))
-      {
-        builder.AddWindowsDesktopServices(requestDto.DataFolder);
-      }
-      else if (OperatingSystem.IsMacOS())
-      {
-        builder.AddMacDesktopServices(requestDto.DataFolder);
-      }
-      else if (OperatingSystem.IsLinux())
-      {
-        builder.AddLinuxDesktopServices(requestDto.DataFolder);
-        builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
-      }
-      else
-      {
-        throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
-      }
-
+      var builder = CreateRemoteControlHostBuilder(requestDto);
       var app = builder.Build();
       var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
       appLifetime.ApplicationStopping.Register(async () =>
@@ -138,6 +96,53 @@ public class RemoteControlHostManager(
     return _sessions.TryGetValue(sessionId, out session);
   }
 
+  internal HostApplicationBuilder CreateRemoteControlHostBuilder(RemoteControlRequestIpcDto requestDto)
+  {
+    var builder = Host.CreateApplicationBuilder();
+    builder.AddCommonDesktopServices<Toaster>(
+      _ipcClientAccessor,
+      _userInteractionService,
+      appBuilder =>
+      {
+        appBuilder.Services
+          .AddSingleton<IToaster, Toaster>()
+          .AddSingleton(_userInteractionService)
+          .AddSingleton(_ipcClientAccessor);
+      },
+      options =>
+      {
+        options.SessionId = requestDto.SessionId;
+        options.NotifyUser = requestDto.NotifyUserOnSessionStart;
+        options.RequireConsent = requestDto.RequireConsent;
+        options.ViewerName = requestDto.ViewerName;
+        options.ViewerConnectionId = requestDto.ViewerConnectionId;
+        options.WebSocketUri = requestDto.WebsocketUri;
+      },
+      options =>
+      {
+        options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
+      });
+
+    if (OperatingSystem.IsWindowsVersionAtLeast(8))
+    {
+      builder.AddWindowsDesktopServices(requestDto.DataFolder);
+    }
+    else if (OperatingSystem.IsMacOS())
+    {
+      builder.AddMacDesktopServices(requestDto.DataFolder);
+    }
+    else if (OperatingSystem.IsLinux())
+    {
+      builder.AddLinuxDesktopServices(requestDto.DataFolder);
+      builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
+    }
+    else
+    {
+      throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
+    }
+    return builder;
+  }
+
   private RemoteControlSession CreateRemoteControlSession(
     RemoteControlRequestIpcDto requestDto,
     IHost host)
@@ -171,7 +176,7 @@ public class RemoteControlHostManager(
       GC.Collect();
       GC.WaitForPendingFinalizers();
     }
-    catch (Exception ex) 
+    catch (Exception ex)
     {
       _logger.LogError(ex, "Error during remote control session shutdown.");
     }
