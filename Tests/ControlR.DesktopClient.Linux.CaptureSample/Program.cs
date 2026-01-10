@@ -1,10 +1,8 @@
 ﻿
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Linux;
 using ControlR.DesktopClient.Linux.Services;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.NativeInterop.Unix;
-using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
