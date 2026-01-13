@@ -362,6 +362,7 @@ public static class WebApplicationBuilderExtensions
 
     if (!keyProtectionOptions.EncryptKeys)
     {
+      dataProtectionBuilder.UnprotectKeysWithAnyCertificate();
       Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
         "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
       return;

@@ -9,19 +9,21 @@ namespace ControlR.DesktopClient.ViewModels;
 public interface IManagedDeviceViewModel : IViewModelBase
 {
   string? AppVersion { get; }
-  IAsyncRelayCommand GrantAccessibilityPermissionCommand { get; }
-  IAsyncRelayCommand GrantScreenCapturePermissionCommand { get; }
+  IAsyncRelayCommand GrantMacAccessibilityPermissionCommand { get; }
+  IAsyncRelayCommand GrantMacScreenCapturePermissionCommand { get; }
   IAsyncRelayCommand GrantWaylandPermissionCommand { get; }
-  bool IsAccessibilityPermissionGranted { get; }
   bool IsLinuxWayland { get; }
+  bool IsMacAccessibilityPermissionGranted { get; }
   bool IsMacOs { get; }
-  bool IsScreenCapturePermissionGranted { get; }
+  bool IsMacScreenCapturePermissionGranted { get; }
   bool IsWaylandPermissionGranted { get; }
   IRelayCommand OpenAccessibilitySettingsCommand { get; }
   IRelayCommand OpenScreenCaptureSettingsCommand { get; }
+  string? PermissionStatusMessage { get; }
   string ThemeIconKey { get; }
   string ThemeModeText { get; }
   IRelayCommand ToggleThemeCommand { get; }
+
   Task SetPermissionValues();
 }
 
@@ -38,11 +40,13 @@ public partial class ManagedDeviceViewModel(
   [ObservableProperty]
   private string? _appVersion;
   [ObservableProperty]
-  private bool _isAccessibilityPermissionGranted;
+  private bool _isMacAccessibilityPermissionGranted;
   [ObservableProperty]
-  private bool _isScreenCapturePermissionGranted;
+  private bool _isMacScreenCapturePermissionGranted;
   [ObservableProperty]
   private bool _isWaylandPermissionGranted;
+  [ObservableProperty]
+  private string? _permissionStatusMessage;
   [ObservableProperty]
   private string _themeIconKey = "arrow_sync_circle_regular";
   [ObservableProperty]
@@ -64,8 +68,17 @@ public partial class ManagedDeviceViewModel(
     if (OperatingSystem.IsMacOS())
     {
       var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-      IsAccessibilityPermissionGranted = macInterop.IsAccessibilityPermissionGranted();
-      IsScreenCapturePermissionGranted = macInterop.IsScreenCapturePermissionGranted();
+      IsMacAccessibilityPermissionGranted = macInterop.IsMacAccessibilityPermissionGranted();
+      IsMacScreenCapturePermissionGranted = macInterop.IsMacScreenCapturePermissionGranted();
+
+      if (!IsMacAccessibilityPermissionGranted || !IsMacScreenCapturePermissionGranted)
+      {
+        PermissionStatusMessage = Localization.MacPermissionStaleHint;
+      }
+      else
+      {
+        PermissionStatusMessage = null;
+      }
     }
     else if (OperatingSystem.IsLinux())
     {
@@ -84,7 +97,7 @@ public partial class ManagedDeviceViewModel(
     }
   }
   [RelayCommand]
-  private async Task GrantAccessibilityPermission()
+  private async Task GrantMacAccessibilityPermission()
   {
     if (OperatingSystem.IsMacOS())
     {
@@ -95,7 +108,7 @@ public partial class ManagedDeviceViewModel(
   }
 
   [RelayCommand]
-  private async Task GrantScreenCapturePermission()
+  private async Task GrantMacScreenCapturePermission()
   {
     if (OperatingSystem.IsMacOS())
     {

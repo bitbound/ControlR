@@ -1,8 +1,6 @@
 ﻿using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 
@@ -20,6 +18,7 @@ internal abstract class AgentInstallerBase(
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
+
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
@@ -95,6 +94,46 @@ internal abstract class AgentInstallerBase(
     {
       Logger.LogError(ex, "Error while stopping service and processes.");
       return Result.Fail(ex);
+    }
+  }
+
+  /// <summary>
+  /// Attempts to clear old .NET extraction directories to free up space.
+  /// </summary>
+  /// <param name="agentTempDirBase">
+  ///   The base directory where .NET extracts files for the agent (e.g. "C:\Windows\SystemTemp\.net\ControlR.Agent").
+  /// </param>
+  protected void TryClearDotnetExtractDir(string agentTempDirBase)
+  {
+    try
+    {
+      if (!FileSystem.DirectoryExists(agentTempDirBase))
+      {
+        return;
+      }
+
+      var subdirs = FileSystem
+        .GetDirectories(agentTempDirBase)
+        .Select(x => new DirectoryInfo(x))
+        .OrderByDescending(x => x.CreationTime)
+        .Skip(3)
+        .ToArray();
+
+      foreach (var subdir in subdirs)
+      {
+        try
+        {
+          subdir.Delete(true);
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Failed to delete directory {SubDir}.", subdir);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while cleaning up .net extraction directory.");
     }
   }
 

@@ -1,0 +1,50 @@
+name: Production Release
+run-name: "Production Release (Run ID: ${{ inputs.run_id || 'latest build' }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build workflow run ID (leave empty to use latest)"
+        required: false
+        type: string
+      prerelease:
+        description: "Mark GitHub release as pre-release"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  docker-deploy:
+    name: Deploy to Docker Hub
+    uses: ./.github/workflows/docker-deploy.yml
+    with:
+      docker_tag: latest
+      run_id: ${{ inputs.run_id }}
+    permissions:
+      actions: read
+      contents: read
+
+  github-release:
+    name: Create GitHub Release
+    needs: docker-deploy
+    uses: ./.github/workflows/github-release.yml
+    with:
+      prerelease: ${{ inputs.prerelease }}
+      run_id: ${{ inputs.run_id }}
+    permissions:
+      contents: write
+
+  publish-nugets:
+    name: Publish NuGet Packages
+    needs: docker-deploy
+    uses: ./.github/workflows/publish-nugets.yml
+    with:
+      run_id: ${{ inputs.run_id }}
+    permissions:
+      actions: read
+      contents: read

@@ -37,6 +37,7 @@ public static class Localization
   public static string Granted => GetString();
   public static string LearnMore => GetString();
   public static string MacOsPermissions => GetString();
+  public static string MacPermissionStaleHint => GetString();
   public static string ManagedDeviceMessage => GetString();
   public static string ManagedDeviceTitle => GetString();
   public static string NewChatMessageToastMessage => GetString();

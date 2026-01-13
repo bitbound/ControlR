@@ -16,6 +16,7 @@ public class IpcClientAuthenticatorTests
   private readonly Mock<IClientCredentialsProvider> _credentialProvider;
   private readonly Mock<IDesktopClientFileVerifier> _fileVerifier;
   private readonly Mock<ILogger<IpcClientAuthenticator>> _logger;
+  private readonly Mock<IFileSystemPathProvider> _pathProvider;
   private readonly Mock<IIpcServer> _server;
   private readonly Mock<ISystemEnvironment> _systemEnvironment;
   private readonly FakeTimeProvider _timeProvider;
@@ -24,6 +25,7 @@ public class IpcClientAuthenticatorTests
   {
     _credentialProvider = new Mock<IClientCredentialsProvider>();
     _systemEnvironment = new Mock<ISystemEnvironment>();
+    _pathProvider = new Mock<IFileSystemPathProvider>();
     _fileVerifier = new Mock<IDesktopClientFileVerifier>();
     _logger = new Mock<ILogger<IpcClientAuthenticator>>();
     _server = new Mock<IIpcServer>();
@@ -39,6 +41,7 @@ public class IpcClientAuthenticatorTests
       _credentialProvider.Object,
       _systemEnvironment.Object,
       _fileVerifier.Object,
+      _pathProvider.Object,
       _logger.Object);
   }
 
@@ -152,6 +155,7 @@ public class IpcClientAuthenticatorTests
     var expectedPath = GetExpectedPath(startupDir);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
+    _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
 
     var credentials = new ClientCredentials(12345, expectedPath);
     _credentialProvider
@@ -208,6 +212,7 @@ public class IpcClientAuthenticatorTests
     // So we need to construct the expected path based on the actual platform running the test
     // For testing purposes, let's test the non-macOS path since we can't easily mock the static Instance
     var expectedPath = GetExpectedPath(startupDir);
+    _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
     var credentials = new ClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
@@ -226,6 +231,7 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var startupDir = "/expected/path";
     var expectedPath = GetExpectedPath(startupDir);
+    _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
@@ -296,6 +302,7 @@ public class IpcClientAuthenticatorTests
     // Arrange
     var startupDir = "/expected/path";
     var expectedPath = GetExpectedPath(startupDir);
+    _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 

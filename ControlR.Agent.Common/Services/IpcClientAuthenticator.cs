@@ -18,19 +18,20 @@ public class IpcClientAuthenticator(
   IClientCredentialsProvider credentialsProvider,
   ISystemEnvironment systemEnvironment,
   IDesktopClientFileVerifier fileVerifier,
+  IFileSystemPathProvider pathProvider,
   ILogger<IpcClientAuthenticator> logger) : IIpcClientAuthenticator
 {
   private const int MaxFailuresPerMinute = 5;
-
 
   private readonly IClientCredentialsProvider _credentialsProvider = credentialsProvider;
   private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _failedAttempts = new();
   private readonly IDesktopClientFileVerifier _fileVerifier = fileVerifier;
   private readonly ILogger<IpcClientAuthenticator> _logger = logger;
+  private readonly IFileSystemPathProvider _pathProvider = pathProvider;
   private readonly SemaphoreSlim _rateLimitLock = new(1, 1);
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
-  
+
   public async Task<Result<ClientCredentials>> AuthenticateConnection(IIpcServer server)
   {
     try
@@ -169,7 +170,6 @@ public class IpcClientAuthenticator(
     }
   }
 
-
   private Result ValidateExecutablePath(string executablePath)
   {
     if (string.IsNullOrWhiteSpace(executablePath))
@@ -183,6 +183,7 @@ public class IpcClientAuthenticator(
       return ValidateExecutablePathDebug(executablePath);
     }
 
+    // Release mode validation
     return ValidateExecutablePathRelease(executablePath);
   }
 
@@ -229,9 +230,7 @@ public class IpcClientAuthenticator(
 
   private Result ValidateExecutablePathRelease(string executablePath)
   {
-    // Production/Release mode: strict validation
-    var expectedPath = AppConstants.GetDesktopExecutablePath(_systemEnvironment.StartupDirectory);
-
+    var expectedPath = _pathProvider.GetDesktopExecutablePath();
     if (executablePath.Equals(expectedPath, StringComparison.OrdinalIgnoreCase))
     {
       return Result.Ok();

@@ -1,3 +1,5 @@
+using ControlR.Libraries.DataRedaction;
+
 namespace ControlR.Web.Server.Options;
 
 /// <summary>
@@ -13,6 +15,7 @@ public class KeyProtectionOptions
   /// The password for a password-protected PFX certificate file.
   /// Leave empty or null if the PFX file has no password.
   /// </summary>
+  [ProtectedDataClassification]
   public string? CertificatePassword { get; init; }
 
   /// <summary>

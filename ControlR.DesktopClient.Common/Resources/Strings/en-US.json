@@ -7,6 +7,7 @@
   "ManagedDeviceMessage": "This device is managed by your organization.",
   "ManagedDeviceTitle": "Managed Device",
   "MacOsPermissions": "macOS Permissions",
+  "MacPermissionStaleHint": "If toggling permissions doesn't work, remove the app using the '−' button in System Settings and re-add it.",
   "WaylandPermissions": "Wayland Permissions",
   "Accessibility": "Accessibility",
   "Status": "Status:",

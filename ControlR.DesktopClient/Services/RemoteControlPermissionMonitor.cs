@@ -63,8 +63,8 @@ public class RemoteControlPermissionMonitor(
       if (_systemEnvironment.IsMacOS())
       {
         var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-        var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
-        var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
+        var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
+        var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
         arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
         _logger.LogInformationDeduped(

@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              xmlns:vm="using:ControlR.DesktopClient.ViewModels"
              xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
              xmlns:common="using:ControlR.DesktopClient.Common"
@@ -14,7 +14,7 @@
     <fakes:ManagedDeviceViewModelFake />
   </Design.DataContext>
 
-  <Border Margin="10" HorizontalAlignment="Center">
+  <Border Margin="10">
     <Grid RowDefinitions="Auto,*,Auto">
       <!-- Header row with theme toggle button -->
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
@@ -64,21 +64,21 @@
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" Margin="0,0,0,8">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsAccessibilityPermissionGranted}">
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsMacAccessibilityPermissionGranted}">
                     <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessContrastText}" FontWeight="Bold" />
                   </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" IsVisible="{Binding IsMacAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
                     <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorContrastText}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Content="{x:Static common:Localization.GrantPermission}"
-                        Command="{Binding GrantAccessibilityPermissionCommand}"
-                        IsVisible="{Binding IsAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
+                        Command="{Binding GrantMacAccessibilityPermissionCommand}"
+                        IsVisible="{Binding IsMacAccessibilityPermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
                 <Button Grid.Column="1"
                         Content="{x:Static common:Localization.OpenSettings}"
                         Command="{Binding OpenAccessibilitySettingsCommand}"
-                        IsVisible="{Binding IsAccessibilityPermissionGranted}" />
+                        IsVisible="{Binding IsMacAccessibilityPermissionGranted}" />
               </Grid>
               <TextBlock Text="{x:Static common:Localization.AccessibilityPermissionDescription}"
                          Classes="Small"
@@ -93,26 +93,48 @@
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" Margin="0,0,0,8">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                   <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsScreenCapturePermissionGranted}">
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}" IsVisible="{Binding IsMacScreenCapturePermissionGranted}">
                     <TextBlock Text="{x:Static common:Localization.Granted}" Foreground="{DynamicResource SuccessContrastText}" FontWeight="Bold" />
                   </Border>
-                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
+                  <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}" IsVisible="{Binding IsMacScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}">
                     <TextBlock Text="{x:Static common:Localization.NotGranted}" Foreground="{DynamicResource ErrorContrastText}" FontWeight="Bold" />
                   </Border>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Content="{x:Static common:Localization.GrantPermission}"
-                        Command="{Binding GrantScreenCapturePermissionCommand}"
-                        IsVisible="{Binding IsScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
+                        Command="{Binding GrantMacScreenCapturePermissionCommand}"
+                        IsVisible="{Binding IsMacScreenCapturePermissionGranted, Converter={StaticResource InverseBooleanConverter}}" />
                 <Button Grid.Column="1"
                         Content="{x:Static common:Localization.OpenSettings}"
                         Command="{Binding OpenScreenCaptureSettingsCommand}"
-                        IsVisible="{Binding IsScreenCapturePermissionGranted}" />
+                        IsVisible="{Binding IsMacScreenCapturePermissionGranted}" />
               </Grid>
               <TextBlock Text="{x:Static common:Localization.ScreenCapturePermissionDescription}"
                          Classes="Small"
                          TextWrapping="Wrap" />
             </StackPanel>
+          </Border>
+
+          <!-- Permission Status Hint -->
+          <Border Classes="Card"
+                  Margin="0,20,0,0"
+                  Background="{DynamicResource InfoColor}"
+                  IsVisible="{Binding PermissionStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <Grid ColumnDefinitions="Auto, *">
+                <PathIcon Grid.Column="0" Data="{StaticResource info_regular}"
+                  Width="20"
+                  Height="20"
+                  Foreground="{DynamicResource InfoContrastText}"
+                  VerticalAlignment="Top"
+                  Margin="0,2,0,0" />
+
+                <TextBlock Grid.Column="1" Text="{Binding PermissionStatusMessage}"
+                           Foreground="{DynamicResource InfoContrastText}"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0" />
+            </Grid>
           </Border>
         </StackPanel>
 

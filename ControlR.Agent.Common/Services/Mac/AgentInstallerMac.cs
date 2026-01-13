@@ -69,6 +69,8 @@ internal class AgentInstallerMac(
         return;
       }
 
+      TryClearDotnetExtractDir("/var/root/.net/ControlR.Agent");
+      
       var installDir = GetInstallDirectory();
 
       var exePath = _environment.StartupExePath;

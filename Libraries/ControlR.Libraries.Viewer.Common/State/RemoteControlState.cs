@@ -81,7 +81,7 @@ public class RemoteControlState(ILogger<StateBase> logger) : StateBase(logger), 
     set => Set(value);
   }
   public double MaxCanvasScale => 3;
-  public double MinCanvasScale => 0.25;
+  public double MinCanvasScale => 0.2;
   public DisplayDto? SelectedDisplay
   {
     get => Get<DisplayDto?>();

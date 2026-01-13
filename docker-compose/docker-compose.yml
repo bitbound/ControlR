@@ -7,7 +7,8 @@ x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
 
 # The public URL where the Aspire Dashboard will be accessible via browser.
-# This is not the internal service URL, but the URL that you will use to access Aspire.
+# For example, if your reverse proxy is set up to route https://metrics.example.com
+# to Aspire, that is the URL you should use here.
 x-aspire-public-url: &aspirePublicUrl "http://localhost:18888"
 
 services:
@@ -24,7 +25,7 @@ services:
     networks:
       - controlr-network
     environment:
-      # ASPNETCORE variables should *not* be changed.
+      # ASPNETCORE variables should not be changed.
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
 
@@ -79,12 +80,8 @@ services:
       # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
       ControlR_AppOptions__UseHttpLogging: false
 
-      # ===============================
-      # Key Protection Options
-      # ===============================
       # Configure X.509 certificate-based encryption for Data Protection keys at rest.
-      # Without configuration, keys are not encrypted (not recommended for production).
-
+      # If false, keys are not encrypted (not recommended for production).
       # When true, Data Protection keys will be encrypted using the certificate specified below.
       # An exception will be thrown at startup if the certificate is not configured or doesn't exist.
       ControlR_KeyProtectionOptions__EncryptKeys: false

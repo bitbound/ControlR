@@ -13,6 +13,17 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+  workflow_call:
+    inputs:
+      prerelease:
+        description: "Mark as pre-release"
+        required: true
+        type: boolean
+        default: false
+      run_id:
+        description: "Build workflow run ID (leave empty to use latest)"
+        required: false
+        type: string
 
 permissions:
   contents: write

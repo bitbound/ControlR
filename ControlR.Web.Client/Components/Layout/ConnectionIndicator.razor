@@ -1,19 +1,12 @@
 @using ControlR.Web.Client.Models.Messages
 @typeparam THub where THub : class
 @inject IHubConnection<THub> HubConnection
-@inject IBusyCounter BusyCounter
 @inject IMessenger Messenger
 @inject AuthenticationStateProvider AuthState
 
 @if (!RendererInfo.IsInteractive || !_isAuthenticated)
 {
   <MudIcon Color="Color.Default" Icon="@(Icons.Material.Filled.OfflineBolt)" Class="mx-3 mt-1" Title="Disabled" />
-}
-else if (_isBusy && _hubConnectionState == HubConnectionState.Connected)
-{
-  <MudTooltip Text="@($"{_pendingOperations} operation(s) pending")">
-    <MudProgressCircular Indeterminate StrokeWidth="6" Size="Size.Small" Color="Color.Success" Class="mx-3 mt-1" />
-  </MudTooltip>
 }
 else
 {
@@ -47,8 +40,6 @@ else
 }
 
 @code {
-  private bool _isBusy;
-  private int _pendingOperations;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
   private bool _isAuthenticated;
 
@@ -57,7 +48,6 @@ else
     _isAuthenticated = await AuthState.IsAuthenticated();
     if (RendererInfo.IsInteractive)
     {
-      Messenger.RegisterEvent(this, HandleEvent);
       Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
     }
     await base.OnInitializedAsync();
@@ -67,23 +57,10 @@ else
   {
     if (RendererInfo.IsInteractive)
     {
-      _isBusy = BusyCounter.IsBusy;
-      _pendingOperations = BusyCounter.PendingOperations;
       _hubConnectionState = HubConnection.ConnectionState;
     }
 
     return base.ShouldRender();
-  }
-  private async Task HandleEvent(object subscriber, Guid eventKind)
-  {
-    switch (eventKind)
-    {
-      case var _ when eventKind == EventKinds.PendingOperationsChanged:
-        await InvokeAsync(StateHasChanged);
-        break;
-      default:
-        return;
-    }
   }
 
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)

@@ -375,3 +375,4 @@ FodyWeavers.xsd
 /.build/staging-desktop
 ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip
 ControlR.ApiClient/Output/.kiota.log
+ControlR.Agent.Common/Resources/ControlR.app.zip

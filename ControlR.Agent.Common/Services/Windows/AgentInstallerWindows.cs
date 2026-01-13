@@ -77,6 +77,8 @@ internal class AgentInstallerWindows(
         return;
       }
 
+      await using var callback = new CallbackDisposableAsync(StartService);
+
       var stopResult = StopAgentService();
       if (!stopResult.IsSuccess)
       {
@@ -90,6 +92,7 @@ internal class AgentInstallerWindows(
         return;
       }
 
+      TryClearDotnetExtractDir(@"C:\Windows\SystemTemp\.net\ControlR.Agent");
       var installDir = GetInstallDirectory();
       var exePath = _systemEnvironment.StartupExePath;
       var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
@@ -121,19 +124,17 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      var serviceName = GetServiceName();
-
       var subcommand = "run";
       if (instanceOptions.Value.InstanceId is { } instanceId)
       {
         subcommand += $" -i {instanceId}";
       }
 
+      var serviceName = GetServiceName();
       var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetPath}\\\" {subcommand}\" start= auto";
       var configString = $"sc.exe failure \"{serviceName}\" reset= 5 actions= restart/5000";
-      var startString = $"sc.exe start \"{serviceName}\"";
 
-      var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString} & {startString}");
+      var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString}");
 
       if (!result.IsSuccess)
       {
@@ -336,6 +337,16 @@ internal class AgentInstallerWindows(
     };
     _processes.Start(psi);
     return true;
+  }
+
+  private async Task StartService()
+  {
+    Logger.LogInformation("Starting service.");
+    var startResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe start \"{GetServiceName()}\"");
+    if (!startResult.IsSuccess)
+    {
+      Logger.LogError("Failed to start service after installation: {msg}", startResult.Reason);
+    }
   }
 
   private Result StopAgentService()

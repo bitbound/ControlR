@@ -6,10 +6,6 @@ namespace ControlR.Web.Client.Components.Pages;
 // ReSharper disable once ClassNeverInstantiated.Global
 public partial class Permissions : ComponentBase
 {
-
-  [Inject]
-  public required IBusyCounter BusyCounter { get; init; }
-
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
 
@@ -36,7 +32,6 @@ public partial class Permissions : ComponentBase
 
   private async Task Refresh()
   {
-    using var _ = BusyCounter.IncrementBusyCounter();
     await DeviceStore.Refresh();
     await TagStore.Refresh();
     await UserStore.Refresh();

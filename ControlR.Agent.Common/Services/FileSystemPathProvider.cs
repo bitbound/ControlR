@@ -1,6 +1,5 @@
 ﻿using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Startup;
-using ControlR.Libraries.DevicesCommon.Services;
+using ControlR.Libraries.Shared.Constants;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;
@@ -12,6 +11,10 @@ public interface IFileSystemPathProvider
   string GetAgentLogFilePath();
 
   string GetAgentLogsDirectoryPath();
+
+  string GetDesktopClientDirectory();
+
+  string GetDesktopExecutablePath();
 
   string GetUnixDesktopClientLogsDirectory(string username);
 
@@ -66,6 +69,23 @@ public class FileSystemPathProvider(
     }
 
     throw new PlatformNotSupportedException();
+  }
+
+  public string GetDesktopClientDirectory()
+  {
+    var startupDir = _systemEnvironment.StartupDirectory;
+    return Path.Combine(startupDir, "DesktopClient");
+  }
+
+  public string GetDesktopExecutablePath()
+  {
+    var desktopDir = GetDesktopClientDirectory();
+
+    return SystemEnvironment.Instance.Platform switch
+    {
+      SystemPlatform.MacOs => Path.Combine(desktopDir, "ControlR.app", "Contents", "MacOS", AppConstants.DesktopClientFileName),
+      _ => Path.Combine(desktopDir, AppConstants.DesktopClientFileName)
+    };
   }
 
   public string GetUnixDesktopClientLogsDirectory(string username)

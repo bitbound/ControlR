@@ -15,11 +15,9 @@ internal class HubConnector(
   NavigationManager navMan,
   IServiceProvider serviceProvider,
   IHubConnection<IViewerHub> viewerHub,
-  IBusyCounter busyCounter,
   IMessenger messenger,
   ILogger<HubConnector> logger) : IHubConnector
 {
-  private readonly IBusyCounter _busyCounter = busyCounter;
   private readonly HashSet<object> _configuredHubs = [];
   private readonly ConcurrentDictionary<Type, SemaphoreSlim> _connectLocks = [];
   private readonly ILogger<HubConnector> _logger = logger;
@@ -31,8 +29,6 @@ internal class HubConnector(
   public async Task Connect<THub>(string relativeHubEndpoint, CancellationToken cancellationToken = default)
     where THub : class
   {
-    using var _ = _busyCounter.IncrementBusyCounter();
-
     var hub = _serviceProvider.GetRequiredService<IHubConnection<THub>>();
 
     using var connectLock = await _connectLocks

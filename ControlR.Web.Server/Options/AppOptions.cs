@@ -1,4 +1,6 @@
-﻿namespace ControlR.Web.Server.Options;
+﻿using ControlR.Libraries.DataRedaction;
+
+namespace ControlR.Web.Server.Options;
 
 public class AppOptions
 {
@@ -12,12 +14,14 @@ public class AppOptions
   public bool EnableNetworkTrust { get; init; }
   public bool EnablePublicRegistration { get; init; }
   public string? GitHubClientId { get; init; }
+  [ProtectedDataClassification]
   public string? GitHubClientSecret { get; init; }
   public string? InMemoryDatabaseName { get; init; }
   public string[] KnownNetworks { get; init; } = [];
   public string[] KnownProxies { get; init; } = [];
   public long MaxFileTransferSize { get; init; } = 100 * 1024 * 1024; // 100 MB default
   public string? MicrosoftClientId { get; init; }
+  [ProtectedDataClassification]
   public string? MicrosoftClientSecret { get; init; }
   public bool PersistPasskeyLogin { get; init; }
   public bool RequireUserEmailConfirmation { get; init; }
@@ -26,6 +30,7 @@ public class AppOptions
   public string? SmtpEmail { get; init; }
   public string? SmtpHost { get; init; }
   public string? SmtpLocalDomain { get; init; }
+  [ProtectedDataClassification]
   public string? SmtpPassword { get; init; }
   public int SmtpPort { get; init; } = 587;
   public string? SmtpUserName { get; init; }

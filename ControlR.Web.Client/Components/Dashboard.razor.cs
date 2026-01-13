@@ -23,9 +23,6 @@ public partial class Dashboard
   private HashSet<TagViewModel> _selectedTags = [];
 
   [Inject]
-  public required IBusyCounter BusyCounter { get; init; }
-
-  [Inject]
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
@@ -64,8 +61,6 @@ public partial class Dashboard
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
-
-    using var token = BusyCounter.IncrementBusyCounter();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
 
@@ -212,7 +207,6 @@ public partial class Dashboard
     try
     {
       _loading = true;
-      using var _ = BusyCounter.IncrementBusyCounter();
       await InvokeAsync(StateHasChanged);
       await ReloadGridData();
     }

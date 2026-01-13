@@ -3,7 +3,6 @@ using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -35,8 +34,8 @@ public class DesktopClientRpcService(
             if (OperatingSystem.IsMacOS())
             {
                 var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-                var isAccessibilityGranted = macInterop.IsAccessibilityPermissionGranted();
-                var isScreenCaptureGranted = macInterop.IsScreenCapturePermissionGranted();
+                var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
+                var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
                 arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
                 _logger.LogInformation(

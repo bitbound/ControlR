@@ -78,28 +78,4 @@ public static class AppConstants
       _ => throw new PlatformNotSupportedException()
     };
   }
-
-  public static string GetDesktopClientDownloadPath(RuntimeId runtime)
-  {
-    return runtime switch
-    {
-      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.DesktopClient.zip",
-      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.DesktopClient.zip",
-      RuntimeId.LinuxX64 => "/downloads/linux-x64/ControlR.DesktopClient.zip",
-      RuntimeId.MacOsX64 => "/downloads/osx-x64/ControlR.app.zip",
-      RuntimeId.MacOsArm64 => "/downloads/osx-arm64/ControlR.app.zip",
-      _ => throw new PlatformNotSupportedException()
-    };
-  }
-
-  public static string GetDesktopExecutablePath(string startupDirectory)
-  {
-    var desktopDir = Path.Combine(startupDirectory, "DesktopClient");
-
-    return SystemEnvironment.Instance.Platform switch
-    {
-      SystemPlatform.MacOs => Path.Combine(desktopDir, "ControlR.app", "Contents", "MacOS", DesktopClientFileName),
-      _ => Path.Combine(desktopDir, DesktopClientFileName)
-    };
-  }
 }

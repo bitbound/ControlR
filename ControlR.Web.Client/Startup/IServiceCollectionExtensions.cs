@@ -32,7 +32,6 @@ public static class ServiceCollectionExtensions
     services.AddLazyInjection();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();
-    services.AddScoped<IBusyCounter, BusyCounter>();
     services.AddScoped<ISystemEnvironment, SystemEnvironment>();
     services.AddScoped<IHubConnector, HubConnector>();
     services.AddScoped<IDeviceContentWindowStore, DeviceContentWindowStore>();

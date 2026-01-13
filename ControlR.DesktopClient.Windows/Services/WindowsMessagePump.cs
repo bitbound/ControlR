@@ -113,10 +113,11 @@ internal class WindowsMessagePump(ILogger<WindowsMessagePump> logger)
     {
       _logger.LogInformation("Windows message pump thread started");
 
-      while (!stoppingToken.IsCancellationRequested && !_workQueue.IsCompleted)
+      while (!_workQueue.IsCompleted)
       {
+        stoppingToken.ThrowIfCancellationRequested();
         // Process any queued work items
-        while (_workQueue.TryTake(out var workItem, 10))
+        while (_workQueue.TryTake(out var workItem, 10, stoppingToken))
         {
           try
           {
@@ -149,6 +150,10 @@ internal class WindowsMessagePump(ILogger<WindowsMessagePump> logger)
       }
 
       _logger.LogInformation("Windows message pump thread exiting normally");
+    }
+    catch (OperationCanceledException)
+    {
+      _logger.LogInformation("Windows message pump thread canceled.  Host is shutting down.");
     }
     catch (Exception ex)
     {

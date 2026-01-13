@@ -11,8 +11,8 @@ public interface IMacInterop
   Result InvokeKeyEvent(string key, string? code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
-  bool IsAccessibilityPermissionGranted();
-  bool IsScreenCapturePermissionGranted();
+  bool IsMacAccessibilityPermissionGranted();
+  bool IsMacScreenCapturePermissionGranted();
   void MovePointer(int x, int y, MovePointerType moveType);
   void OpenAccessibilityPreferences();
   void OpenScreenRecordingPreferences();
@@ -69,9 +69,9 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         case "Shift": _shiftDown = isPressed; break;
         case "Control": _controlDown = isPressed; break;
         case "Alt":
-        case "Option": _optionDown = isPressed; break;
-        case "Meta":
         case "Command": _commandDown = isPressed; break;
+        case "Meta":
+        case "Option": _optionDown = isPressed; break;
       }
 
       // Send modifier key event
@@ -258,7 +258,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  public bool IsAccessibilityPermissionGranted()
+  public bool IsMacAccessibilityPermissionGranted()
   {
     try
     {
@@ -271,7 +271,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  public bool IsScreenCapturePermissionGranted()
+  public bool IsMacScreenCapturePermissionGranted()
   {
     try
     {
@@ -620,14 +620,15 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         "Insert" => MacInputSimulation.kVK_Help, // Mac doesn't have Insert, using Help
 
         // Modifier keys (left/right specific)
+        // Mapping: Alt → Command, Meta → Option (matches keyboards with Alt/Cmd and Win/Opt on same keys)
         "ShiftLeft" => MacInputSimulation.kVK_Shift,
         "ShiftRight" => MacInputSimulation.kVK_RightShift,
         "ControlLeft" => MacInputSimulation.kVK_Control,
         "ControlRight" => MacInputSimulation.kVK_RightControl,
-        "AltLeft" => MacInputSimulation.kVK_Option,
-        "AltRight" => MacInputSimulation.kVK_RightOption,
-        "MetaLeft" => MacInputSimulation.kVK_Command,
-        "MetaRight" => MacInputSimulation.kVK_RightCommand,
+        "AltLeft" => MacInputSimulation.kVK_Command,
+        "AltRight" => MacInputSimulation.kVK_RightCommand,
+        "MetaLeft" => MacInputSimulation.kVK_Option,
+        "MetaRight" => MacInputSimulation.kVK_RightOption,
 
         // Lock keys
         "CapsLock" => MacInputSimulation.kVK_CapsLock,
@@ -693,10 +694,11 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       ["PageDown"] = MacInputSimulation.kVK_PageDown,
 
       // Modifier keys
+      // Mapping: Alt → Command, Meta → Option (matches keyboards with Alt/Cmd and Win/Opt on same keys)
       ["Shift"] = MacInputSimulation.kVK_Shift,
       ["Control"] = MacInputSimulation.kVK_Control,
-      ["Alt"] = MacInputSimulation.kVK_Option,
-      ["Meta"] = MacInputSimulation.kVK_Command,
+      ["Alt"] = MacInputSimulation.kVK_Command,
+      ["Meta"] = MacInputSimulation.kVK_Option,
       ["Command"] = MacInputSimulation.kVK_Command,
       ["Option"] = MacInputSimulation.kVK_Option,
       ["CapsLock"] = MacInputSimulation.kVK_CapsLock,

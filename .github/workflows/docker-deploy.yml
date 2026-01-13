@@ -17,6 +17,16 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+  workflow_call:
+    inputs:
+      docker_tag:
+        description: "Docker tag to deploy"
+        required: true
+        type: string
+      run_id:
+        description: "Build workflow run ID (leave empty to use latest)"
+        required: false
+        type: string
 
 permissions:
   actions: read

@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls.ApplicationLifetimes;
+﻿using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views;
 
@@ -35,6 +36,12 @@ internal class NavigationProvider(
   }
   public void ShowMainWindow()
   {
+    if (_mainWindowProvider.MainWindow.IsVisible)
+    {
+      _mainWindowProvider.MainWindow.Activate();
+      _mainWindowProvider.MainWindow.ShowInTaskbar = true;
+      return;
+    }
     _mainWindowProvider.MainWindow.Show();
   }
   public async Task ShowMainWindowAndNavigateTo<TViewModel>() where TViewModel : IViewModelBase

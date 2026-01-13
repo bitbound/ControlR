@@ -17,6 +17,7 @@ internal class InputSimulatorWindows(
   private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly BlockingCollection<WorkItem> _workQueue = [];
 
+  private bool _isInputBlocked;
   private Thread? _processorThread;
 
   public Task InvokeKeyEvent(string key, string? code, bool isPressed)
@@ -69,7 +70,15 @@ internal class InputSimulatorWindows(
 
   public Task<bool> SetBlockInput(bool isBlocked)
   {
-    return InvokeOnInputThread(() => _win32Interop.SetBlockInput(isBlocked));
+    return InvokeOnInputThread(() =>
+    {
+      var result = _win32Interop.SetBlockInput(isBlocked);
+      if (result)
+      {
+        _isInputBlocked = isBlocked;
+      }
+      return result;
+    });
   }
 
   public Task StartAsync(CancellationToken cancellationToken)
@@ -153,7 +162,6 @@ internal class InputSimulatorWindows(
   private void ProcessActions()
   {
     var consumerStream = _workQueue.GetConsumingEnumerable(_processorCts.Token);
-
     try
     {
       foreach (var workItem in consumerStream)
@@ -172,6 +180,13 @@ internal class InputSimulatorWindows(
     catch (OperationCanceledException)
     {
       _logger.LogInformation("Stopping input simulator. Application is shutting down.");
+    }
+    finally
+    {
+      if (_isInputBlocked)
+      {
+        _ = _win32Interop.SetBlockInput(false);
+      }
     }
   }
 

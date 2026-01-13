@@ -15,12 +15,14 @@ internal class DesktopClientUpdater(
   IControlrMutationLock mutationLock,
   IProcessManager processManager,
   IDesktopSessionProvider desktopSessionProvider,
+  IFileSystemPathProvider fileSystemPathProvider,
   IEmbeddedDesktopClientProvider embeddedDesktopClientProvider,
   ILogger<DesktopClientUpdater> logger) : BackgroundService, IDesktopClientUpdater
 {
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly IEmbeddedDesktopClientProvider _embeddedDesktopClientProvider = embeddedDesktopClientProvider;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly ILogger<DesktopClientUpdater> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
@@ -28,7 +30,7 @@ internal class DesktopClientUpdater(
   private readonly ISettingsProvider _settings = settings;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly SemaphoreSlim _updateLock = new(1, 1);
-  
+
   public async Task<bool> EnsureLatestVersion(
     bool acquireGlobalLock,
     CancellationToken cancellationToken)
@@ -49,8 +51,8 @@ internal class DesktopClientUpdater(
       _logger.LogInformation("Ensuring latest version of desktop client.");
 
       var startupDir = _systemEnvironment.StartupDirectory;
-      var desktopDir = Path.Combine(startupDir, "DesktopClient");
-      var binaryPath = AppConstants.GetDesktopExecutablePath(startupDir);
+      var desktopDir = _fileSystemPathProvider.GetDesktopClientDirectory();
+      var binaryPath = _fileSystemPathProvider.GetDesktopExecutablePath();
       var extractedZipPath = Path.Combine(startupDir, AppConstants.DesktopClientZipFileName);
 
       // 1) Compute embedded zip hash
@@ -174,7 +176,7 @@ internal class DesktopClientUpdater(
 
       _fileSystem.ExtractZipArchive(targetPath, desktopDir, true);
 
-      await SetDesktopClientPermissions(desktopDir);
+      await SetDesktopClientFileAttributes(desktopDir);
 
       if (_systemEnvironment.Platform == SystemPlatform.MacOs || _systemEnvironment.Platform == SystemPlatform.Linux)
       {
@@ -205,14 +207,14 @@ internal class DesktopClientUpdater(
 
   private async Task<string?> GetFileHash(string path, CancellationToken cancellationToken)
   {
-    if (!_fileSystem.FileExists(path))
-    {
-      _logger.LogInformation("Extracted desktop client ZIP not found. Update required.");
-      return null;
-    }
-
     try
     {
+      if (!_fileSystem.FileExists(path))
+      {
+        _logger.LogInformation("Extracted desktop client ZIP not found. Update required.");
+        return null;
+      }
+      
       await using var fileStream = _fileSystem.OpenFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
       var hashBytes = await SHA256.HashDataAsync(fileStream, cancellationToken);
       var extractedHash = Convert.ToHexString(hashBytes);
@@ -226,7 +228,6 @@ internal class DesktopClientUpdater(
     }
   }
 
-
   private bool IsUpToDate(string? extractedHash, string embeddedHash, string binaryPath)
   {
     return !string.IsNullOrWhiteSpace(extractedHash)
@@ -234,33 +235,40 @@ internal class DesktopClientUpdater(
            && _fileSystem.FileExists(binaryPath);
   }
 
-  private async Task SetDesktopClientPermissions(string desktopDir)
+  private async Task SetDesktopClientFileAttributes(string desktopDir)
   {
-    if (_systemEnvironment.Platform == SystemPlatform.MacOs)
+    try
     {
-      // Ensure the Mac app bundle executable has correct permissions
-      var appBundleExecutablePath = Path.Combine(desktopDir, "ControlR.app", "Contents", "MacOS", "ControlR.DesktopClient");
-      if (_fileSystem.FileExists(appBundleExecutablePath))
+      if (_systemEnvironment.Platform == SystemPlatform.MacOs)
       {
-        var chmodResult = await _processManager.GetProcessOutput("chmod", "+x " + appBundleExecutablePath, 5000);
-        if (!chmodResult.IsSuccess)
+        // Ensure the Mac app bundle executable has correct file attributes.
+        var appBundleExecutablePath = Path.Combine(desktopDir, "ControlR.app", "Contents", "MacOS", "ControlR.DesktopClient");
+        if (_fileSystem.FileExists(appBundleExecutablePath))
         {
-          _logger.LogWarning("Failed to set executable permissions on Mac app bundle: {Error}", chmodResult.Reason);
+          var chmodResult = await _processManager.GetProcessOutput("chmod", "+x " + appBundleExecutablePath, 5000);
+          if (!chmodResult.IsSuccess)
+          {
+            _logger.LogWarning("Failed to set executable permissions on Mac app bundle: {Error}", chmodResult.Reason);
+          }
+        }
+      }
+      else if (_systemEnvironment.Platform == SystemPlatform.Linux)
+      {
+        // Ensure the Linux executable has correct file attributes.
+        var linuxExecutablePath = Path.Combine(desktopDir, AppConstants.DesktopClientFileName);
+        if (_fileSystem.FileExists(linuxExecutablePath))
+        {
+          var chmodResult = await _processManager.GetProcessOutput("chmod", "+x " + linuxExecutablePath, 5000);
+          if (!chmodResult.IsSuccess)
+          {
+            _logger.LogWarning("Failed to set executable file attributes on Linux executable: {Error}", chmodResult.Reason);
+          }
         }
       }
     }
-    else if (_systemEnvironment.Platform == SystemPlatform.Linux)
+    catch (Exception ex)
     {
-      // Ensure the Linux executable has correct permissions
-      var linuxExecutablePath = Path.Combine(desktopDir, AppConstants.DesktopClientFileName);
-      if (_fileSystem.FileExists(linuxExecutablePath))
-      {
-        var chmodResult = await _processManager.GetProcessOutput("chmod", "+x " + linuxExecutablePath, 5000);
-        if (!chmodResult.IsSuccess)
-        {
-          _logger.LogWarning("Failed to set executable permissions on Linux executable: {Error}", chmodResult.Reason);
-        }
-      }
+      _logger.LogError(ex, "Error setting desktop client file attributes.");
     }
   }
 }

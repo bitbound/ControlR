@@ -12,6 +12,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
 		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
 	</ItemGroup>

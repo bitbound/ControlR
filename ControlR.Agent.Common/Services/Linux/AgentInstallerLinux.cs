@@ -70,7 +70,7 @@ internal class AgentInstallerLinux(
         return;
       }
 
-      TryClearDotnetExtractDir();
+      TryClearDotnetExtractDir("/root/.net/ControlR.Agent");
 
       var installDir = GetInstallDirectory();
 
@@ -282,38 +282,6 @@ internal class AgentInstallerLinux(
   private string GetServiceName()
   {
     return Path.GetFileName(GetServiceFilePath());
-  }
-
-  private void TryClearDotnetExtractDir()
-  {
-    try
-    {
-      if (_fileSystem.DirectoryExists("/root/.net/ControlR.Agent"))
-      {
-        var subdirs = _fileSystem
-          .GetDirectories("/root/.net/ControlR.Agent")
-          .Select(x => new DirectoryInfo(x))
-          .OrderByDescending(x => x.CreationTime)
-          .Skip(3)
-          .ToArray();
-
-        foreach (var subdir in subdirs)
-        {
-          try
-          {
-            subdir.Delete(true);
-          }
-          catch (Exception ex)
-          {
-            _logger.LogError(ex, "Failed to delete directory {SubDir}.", subdir);
-          }
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while cleaning up .net extraction directory.");
-    }
   }
 
   private async Task WriteFileIfChanged(string filePath, string content)
