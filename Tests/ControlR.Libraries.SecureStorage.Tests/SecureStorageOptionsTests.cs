@@ -8,10 +8,11 @@ public class SecureStorageOptionsTests
   public void ServiceName_AcceptsValidAlphanumericName()
   {
     // Arrange
-    var options = new SecureStorageOptions();
-
-    // Act
-    options.ServiceName = "MyService123";
+    var options = new SecureStorageOptions
+    {
+      // Act
+      ServiceName = "MyService123"
+    };
 
     // Assert
     Assert.Equal("MyService123", options.ServiceName);

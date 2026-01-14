@@ -1,4 +1,5 @@
 using ControlR.Libraries.SecureStorage;
+using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Libraries.SecureStorage.Tests;
@@ -26,7 +27,7 @@ public class SecureStorageTests : IDisposable
     GC.SuppressFinalize(this);
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task GetAsync_ReturnsNull_WhenKeyDoesNotExist()
   {
     // Arrange
@@ -39,21 +40,21 @@ public class SecureStorageTests : IDisposable
     Assert.Null(result);
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task GetAsync_ThrowsArgumentException_WhenKeyIsEmpty()
   {
     // Act & Assert
     await Assert.ThrowsAsync<ArgumentException>(() => _secureStorage.GetAsync(""));
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task GetAsync_ThrowsArgumentException_WhenKeyIsWhitespace()
   {
     // Act & Assert
     await Assert.ThrowsAsync<ArgumentException>(() => _secureStorage.GetAsync("   "));
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task RemoveAll_RemovesAllKeys()
   {
     // Arrange
@@ -72,7 +73,7 @@ public class SecureStorageTests : IDisposable
     Assert.Null(result2);
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task Remove_RemovesExistingKey()
   {
     // Arrange
@@ -89,7 +90,7 @@ public class SecureStorageTests : IDisposable
     Assert.Null(result);
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task Remove_ReturnsFalse_WhenKeyDoesNotExist()
   {
     // Arrange
@@ -102,7 +103,7 @@ public class SecureStorageTests : IDisposable
     Assert.False(removed);
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_AndGetAsync_HandlesConcurrentOperations()
   {
     // Arrange
@@ -138,7 +139,7 @@ public class SecureStorageTests : IDisposable
     }
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_AndGetAsync_HandlesLargeValues()
   {
     // Arrange
@@ -160,7 +161,7 @@ public class SecureStorageTests : IDisposable
     }
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_AndGetAsync_HandlesSpecialCharacters()
   {
     // Arrange
@@ -182,7 +183,7 @@ public class SecureStorageTests : IDisposable
     }
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_AndGetAsync_StoresAndRetrievesValue()
   {
     // Arrange
@@ -204,28 +205,28 @@ public class SecureStorageTests : IDisposable
     }
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_ThrowsArgumentException_WhenKeyIsEmpty()
   {
     // Act & Assert
     await Assert.ThrowsAsync<ArgumentException>(() => _secureStorage.SetAsync("", "value"));
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_ThrowsArgumentException_WhenKeyIsWhitespace()
   {
     // Act & Assert
     await Assert.ThrowsAsync<ArgumentException>(() => _secureStorage.SetAsync("   ", "value"));
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_ThrowsArgumentNullException_WhenValueIsNull()
   {
     // Act & Assert
     await Assert.ThrowsAsync<ArgumentNullException>(() => _secureStorage.SetAsync("key", null!));
   }
 
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_UpdatesExistingValue()
   {
     // Arrange

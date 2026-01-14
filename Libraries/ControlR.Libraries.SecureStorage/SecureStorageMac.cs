@@ -14,14 +14,19 @@ namespace ControlR.Libraries.SecureStorage;
 [SupportedOSPlatform("macos")]
 internal class SecureStorageMac : ISecureStorage
 {
+  private const uint KSecGenericPasswordItemClass = 0x67656E70; // 'genp'
+  private const uint KSecServiceItemAttr = 0x73766365; // 'svce'
   private const string SystemKeychainPath = "/Library/Keychains/System.keychain";
+
 
   private readonly IntPtr _keychain;
   private readonly ILogger<SecureStorageMac> _logger;
   private readonly SemaphoreSlim _operationLock = new(1, 1);
   private readonly SecureStorageOptions _options;
 
+
   private bool _disposed;
+
 
   public SecureStorageMac(ILogger<SecureStorageMac> logger, IOptions<SecureStorageOptions> options)
   {
@@ -52,11 +57,13 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
+
   public void Dispose()
   {
     Dispose(true);
     GC.SuppressFinalize(this);
   }
+
 
   public async Task<string?> GetAsync(string key)
   {
@@ -116,11 +123,109 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
-  public Task RemoveAllAsync()
+
+  public async Task RemoveAllAsync()
   {
-    _logger.LogWarning("RemoveAll is not fully supported on macOS keychain. Individual items must be enumerated and removed if needed.");
-    return Task.CompletedTask;
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    await _operationLock.WaitAsync(cts.Token);
+
+    try
+    {
+      _logger.LogDebug("Attempting to remove all keys from keychain for service: {ServiceName}", _options.ServiceName);
+
+      var serviceBytes = Encoding.UTF8.GetBytes(_options.ServiceName);
+      var serviceBytesPtr = IntPtr.Zero;
+      var attributesPtr = IntPtr.Zero;
+      var searchRef = IntPtr.Zero;
+
+      try
+      {
+        serviceBytesPtr = Marshal.AllocHGlobal(serviceBytes.Length);
+        Marshal.Copy(serviceBytes, 0, serviceBytesPtr, serviceBytes.Length);
+
+        var attribute = new SecKeychainAttribute
+        {
+          Tag = KSecServiceItemAttr,
+          Length = (uint)serviceBytes.Length,
+          Data = serviceBytesPtr,
+        };
+
+        attributesPtr = Marshal.AllocHGlobal(Marshal.SizeOf<SecKeychainAttribute>());
+        Marshal.StructureToPtr(attribute, attributesPtr, false);
+
+        var attributeList = new SecKeychainAttributeList
+        {
+          Count = 1,
+          Attributes = attributesPtr,
+        };
+
+        var createStatus = SecKeychainSearchCreateFromAttributes(_keychain, KSecGenericPasswordItemClass, ref attributeList, out searchRef);
+        if (createStatus != 0)
+        {
+          _logger.LogError("Failed to create keychain search for service: {ServiceName}, OSStatus: {Status}", _options.ServiceName, createStatus);
+          throw new SecureStorageException($"Failed to create keychain search for service '{_options.ServiceName}'. OSStatus: {createStatus}");
+        }
+
+        while (true)
+        {
+          var copyStatus = SecKeychainSearchCopyNext(searchRef, out var itemRef);
+          if (copyStatus == -25300)
+          {
+            break;
+          }
+
+          if (copyStatus != 0)
+          {
+            _logger.LogError("Failed to enumerate keychain items for service: {ServiceName}, OSStatus: {Status}", _options.ServiceName, copyStatus);
+            throw new SecureStorageException($"Failed to enumerate keychain items for service '{_options.ServiceName}'. OSStatus: {copyStatus}");
+          }
+
+          try
+          {
+            var deleteStatus = SecKeychainItemDelete(itemRef);
+            if (deleteStatus != 0)
+            {
+              _logger.LogError("Failed to delete keychain item for service: {ServiceName}, OSStatus: {Status}", _options.ServiceName, deleteStatus);
+              throw new SecureStorageException($"Failed to delete keychain item for service '{_options.ServiceName}'. OSStatus: {deleteStatus}");
+            }
+          }
+          finally
+          {
+            CFRelease(itemRef);
+          }
+        }
+
+        _logger.LogInformation("Successfully removed all keys for service: {ServiceName}", _options.ServiceName);
+      }
+      finally
+      {
+        if (searchRef != IntPtr.Zero)
+        {
+          CFRelease(searchRef);
+        }
+
+        if (attributesPtr != IntPtr.Zero)
+        {
+          Marshal.FreeHGlobal(attributesPtr);
+        }
+
+        if (serviceBytesPtr != IntPtr.Zero)
+        {
+          Marshal.FreeHGlobal(serviceBytesPtr);
+        }
+      }
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogError(ex, "Timeout waiting for operation lock while removing all keys");
+      throw new SecureStorageException("Timeout waiting for operation lock while removing all keys.", ex);
+    }
+    finally
+    {
+      _operationLock.Release();
+    }
   }
+
 
   public async Task<bool> RemoveAsync(string key)
   {
@@ -186,6 +291,7 @@ internal class SecureStorageMac : ISecureStorage
       _operationLock.Release();
     }
   }
+
 
   public async Task SetAsync(string key, string value)
   {
@@ -274,6 +380,7 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
+
   protected virtual void Dispose(bool disposing)
   {
     if (_disposed)
@@ -289,8 +396,10 @@ internal class SecureStorageMac : ISecureStorage
     _disposed = true;
   }
 
+
   [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
   private static extern void CFRelease(IntPtr cf);
+
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainAddGenericPassword(
@@ -303,6 +412,7 @@ internal class SecureStorageMac : ISecureStorage
       byte[] passwordData,
       out IntPtr itemRef);
 
+
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainFindGenericPassword(
       IntPtr keychain,
@@ -314,13 +424,16 @@ internal class SecureStorageMac : ISecureStorage
       out IntPtr passwordData,
       out IntPtr itemRef);
 
+
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemDelete(IntPtr itemRef);
+
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemFreeContent(
       IntPtr attrList,
       IntPtr data);
+
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemModifyAttributesAndData(
@@ -329,11 +442,42 @@ internal class SecureStorageMac : ISecureStorage
       uint length,
       byte[] data);
 
+
   [DllImport("/System/Library/Frameworks/Security.framework/Security", CharSet = CharSet.Unicode)]
   private static extern int SecKeychainOpen(
       string pathName,
       out IntPtr keychain);
 
+
+  [DllImport("/System/Library/Frameworks/Security.framework/Security")]
+  private static extern int SecKeychainSearchCopyNext(
+    IntPtr searchRef,
+    out IntPtr itemRef);
+
+
+  [DllImport("/System/Library/Frameworks/Security.framework/Security")]
+  private static extern int SecKeychainSearchCreateFromAttributes(
+    IntPtr keychainOrArray,
+    uint itemClass,
+    ref SecKeychainAttributeList attrList,
+    out IntPtr searchRef);
+
+
   [DllImport("libc")]
   private static extern uint geteuid();
+
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct SecKeychainAttribute
+  {
+    public uint Tag;
+    public uint Length;
+    public IntPtr Data;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  private struct SecKeychainAttributeList
+  {
+    public uint Count;
+    public IntPtr Attributes;
+  }
 }
