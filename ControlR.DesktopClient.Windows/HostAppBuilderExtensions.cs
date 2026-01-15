@@ -24,8 +24,10 @@ public static class HostAppBuilderExtensions
       .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
+      .AddSingleton<IAeroPeekProvider, AeroPeekProvider>()
       .AddHostedService(x => x.GetRequiredService<IWindowsMessagePump>())
       .AddHostedService<SystemEventHandler>()
+      .AddHostedService<RemoteControlEnvironmentService>()
       .AddHostedService<InputDesktopReporter>()
       .AddHostedService(x => x.GetRequiredService<InputSimulatorWindows>())
       .AddHostedService<CursorWatcherWindows>();

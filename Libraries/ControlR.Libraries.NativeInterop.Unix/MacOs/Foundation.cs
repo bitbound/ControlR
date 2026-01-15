@@ -6,34 +6,6 @@ public static class Foundation
 {
   private const string FoundationFramework = "/System/Library/Frameworks/Foundation.framework/Foundation";
 
-  [DllImport(FoundationFramework, EntryPoint = "CFBooleanCreate")]
-  public static extern nint CFBooleanCreate(nint allocator, bool value);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFBooleanGetValue")]
-  public static extern bool CFBooleanGetValue(nint boolean);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreate")]
-  public static extern nint CFDictionaryCreate(
-    nint allocator, 
-    nint[] keys, 
-    nint[] values, 
-    nint numValues, 
-    nint keyCallbacks, 
-    nint valueCallbacks);
-
-  // Simplified approach using CFDictionaryCreateMutable
-  [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreateMutable")]
-  public static extern nint CFDictionaryCreateMutable(nint allocator, nint capacity, nint keyCallBacks, nint valueCallBacks);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFDictionarySetValue")]
-  public static extern void CFDictionarySetValue(nint theDict, nint key, nint value);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFRelease")]
-  public static extern void CFRelease(nint cf);
-
-  [DllImport(FoundationFramework, EntryPoint = "CFStringCreateWithCString")]
-  public static extern nint CFStringCreateWithCString(nint allocator, string cStr, uint encoding);
-
   // Create a CFDictionary with the prompt option for accessibility permission
   public static nint CreateAccessibilityPromptDictionary()
   {
@@ -125,4 +97,32 @@ public static class Foundation
     }
     return nint.Zero;
   }
+
+  [DllImport(FoundationFramework, EntryPoint = "CFBooleanCreate")]
+  public static extern nint CFBooleanCreate(nint allocator, bool value);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFBooleanGetValue")]
+  public static extern bool CFBooleanGetValue(nint boolean);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreate")]
+  public static extern nint CFDictionaryCreate(
+    nint allocator, 
+    nint[] keys, 
+    nint[] values, 
+    nint numValues, 
+    nint keyCallbacks, 
+    nint valueCallbacks);
+
+  // Simplified approach using CFDictionaryCreateMutable
+  [DllImport(FoundationFramework, EntryPoint = "CFDictionaryCreateMutable")]
+  public static extern nint CFDictionaryCreateMutable(nint allocator, nint capacity, nint keyCallBacks, nint valueCallBacks);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFDictionarySetValue")]
+  public static extern void CFDictionarySetValue(nint theDict, nint key, nint value);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFRelease")]
+  public static extern void CFRelease(nint cf);
+
+  [DllImport(FoundationFramework, EntryPoint = "CFStringCreateWithCString")]
+  public static extern nint CFStringCreateWithCString(nint allocator, string cStr, uint encoding);
 }

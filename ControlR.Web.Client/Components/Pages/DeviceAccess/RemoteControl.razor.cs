@@ -291,6 +291,9 @@ public partial class RemoteControl : ViewportAwareComponent
         _loadingMessage = "Starting remote control session";
       }
 
+      RemoteControlState.IsBlockUserInputEnabled = false;
+      RemoteControlState.IsPrivacyScreenEnabled = false;
+
       _systemSessions = null;
       
       var session = new RemoteControlSession(

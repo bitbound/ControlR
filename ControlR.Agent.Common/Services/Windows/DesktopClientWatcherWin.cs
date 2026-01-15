@@ -47,8 +47,9 @@ internal class DesktopClientWatcherWin(
       _logger.LogInformation("Skipping DesktopClientWatcher in Debug mode.");
       return;
     }
-    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
 
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
+    
     while (await timer.WaitForNextTick(false, stoppingToken))
     {
       try
@@ -87,11 +88,17 @@ internal class DesktopClientWatcherWin(
           continue;
         }
 
+        _launchFailCount = 0;
+
         _logger.LogWarning(
           "Failed to launch desktop client in one or more sessions.  " +
           "Deleting existing desktop client installation to force a reinstall.");
 
         await DeleteDesktopClient();
+      }
+      catch (OperationCanceledException)
+      {
+        _logger.LogInformation("Stopping DesktopClientWatcher.  Application is shutting down.");
       }
       catch (Exception ex)
       {

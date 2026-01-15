@@ -35,7 +35,6 @@ public interface IWin32Interop
     int targetSessionId,
     bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess);
-
   nint CreatePrivacyScreenWindow(int left, int top, int width, int height);
   void DestroyPrivacyScreenWindow(nint windowHandle);
   bool EnumWindows(Func<nint, bool> windowFunc);
@@ -56,6 +55,7 @@ public interface IWin32Interop
   void InvokeKeyEvent(string key, string? code, bool isPressed);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
+  bool IsCurrentProcessUiAccess();
   void MovePointer(int x, int y, MovePointerType moveType);
   nint OpenInputDesktop();
   void ResetKeyboardState();
@@ -64,12 +64,10 @@ public interface IWin32Interop
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
   bool SetWindowDisplayAffinity(nint windowHandle, WindowDisplayAffinity affinity);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
-
   bool StartProcessInBackgroundSession(
     string commandLine,
     bool hiddenWindow,
     [NotNullWhen(true)] out Process? startedProcess);
-
   bool SwitchToInputDesktop();
   void TypeText(string text);
 }
@@ -86,6 +84,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private const int WM_SAS_INTERNAL = 0x0208;
   private const uint Xbutton1 = 0x0001u;
   private const uint Xbutton2 = 0x0002u;
+  private const uint ZbidUiAccess = 2u;
 
   private static readonly string[] _invalidWindowClassNames =
   [
@@ -114,43 +113,66 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     [NotNullWhen(true)] out Process? startedProcess)
   {
     startedProcess = null;
+
     try
     {
-      uint winLogonPid = 0;
-
       var sessionId = ResolveWindowsSession(targetSessionId);
 
-      var winLogonProcs = Process.GetProcessesByName("winlogon");
-      foreach (var p in winLogonProcs)
+      var winLogonPid = 0u;
+      foreach (var proc in Process.GetProcessesByName("winlogon"))
       {
-        if ((uint)p.SessionId == sessionId)
+        if ((uint)proc.SessionId == sessionId)
         {
-          winLogonPid = (uint)p.Id;
+          winLogonPid = (uint)proc.Id;
+          break;
         }
       }
 
-      // Obtain a handle to the winlogon process;
+      if (winLogonPid == 0)
+      {
+        _logger.LogError("Failed to find winlogon.exe in session {SessionId}.", sessionId);
+        return false;
+      }
+
       var winLogonProcessHandle = PInvoke.OpenProcess(
         (PROCESS_ACCESS_RIGHTS)MaximumAllowedRights,
         true,
         winLogonPid);
 
-      // Obtain a handle to the access token of the winlogon process.
-      using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle, true);
-      if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
+      using var winLogonSafeProcHandle = new SafeProcessHandle(winLogonProcessHandle, ownsHandle: true);
+      if (winLogonSafeProcHandle.IsInvalid)
       {
-        _logger.LogWarning("Failed to open winlogon process.");
-        PInvoke.CloseHandle(winLogonProcessHandle);
+        var lastErr = Marshal.GetLastPInvokeError();
+        var lastMsg = Marshal.GetLastPInvokeErrorMessage();
+        _logger.LogError(
+          "OpenProcess(winlogon) failed. Pid: {WinLogonPid}. SessionId: {SessionId}. Error: {Error} {Message}",
+          winLogonPid,
+          sessionId,
+          lastErr,
+          lastMsg);
         return false;
       }
 
-      // Security attribute structure used in DuplicateTokenEx and CreateProcessAsUser.
+      if (!PInvoke.OpenProcessToken(winLogonSafeProcHandle, TOKEN_ACCESS_MASK.TOKEN_DUPLICATE, out var winLogonToken))
+      {
+        var lastErr = Marshal.GetLastPInvokeError();
+        var lastMsg = Marshal.GetLastPInvokeErrorMessage();
+        _logger.LogError(
+          "OpenProcessToken(winlogon) failed. Pid: {WinLogonPid}. SessionId: {SessionId}. Error: {Error} {Message}",
+          winLogonPid,
+          sessionId,
+          lastErr,
+          lastMsg);
+        return false;
+      }
+
+      using var winlogonDisposable = winLogonToken;
+
       var securityAttributes = new SECURITY_ATTRIBUTES
       {
         nLength = (uint)sizeof(SECURITY_ATTRIBUTES)
       };
 
-      // Copy the access token of the winlogon process; the newly created token will be a primary token.
       if (!PInvoke.DuplicateTokenEx(
             winLogonToken,
             (TOKEN_ACCESS_MASK)MaximumAllowedRights,
@@ -159,12 +181,31 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
             TOKEN_TYPE.TokenPrimary,
             out var duplicatedToken))
       {
-        PInvoke.CloseHandle(winLogonProcessHandle);
+        var lastErr = Marshal.GetLastPInvokeError();
+        var lastMsg = Marshal.GetLastPInvokeErrorMessage();
+        _logger.LogError(
+          "DuplicateTokenEx failed. SessionId: {SessionId}. Error: {Error} {Message}",
+          sessionId,
+          lastErr,
+          lastMsg);
         winLogonToken.Close();
         return false;
       }
 
-      // Target the interactive windows station and desktop.
+      using var duplicatedDisposable = duplicatedToken;
+
+      // Enable SeTcbPrivilege (required to modify TokenUIAccess)
+      if (!EnableTokenPrivilege(duplicatedToken, "SeTcbPrivilege"))
+      {
+        _logger.LogWarning("Failed to enable SeTcbPrivilege. UIAccess may not be granted.");
+      }
+
+      // Set TokenUIAccess=1 to bypass manifest/signature requirements
+      if (!SetTokenUIAccess(duplicatedToken, true))
+      {
+        _logger.LogWarning("Failed to set TokenUIAccess. CreateWindowInBand will likely fail.");
+      }
+
       var startupInfo = new STARTUPINFOW
       {
         cb = (uint)sizeof(STARTUPINFOW)
@@ -173,7 +214,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       var desktopPtr = Marshal.StringToHGlobalAuto("winsta0\\Default\0");
       startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
 
-      // Flags that specify the priority and creation method of the process.
       var dwCreationFlags = PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS |
                             PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT;
 
@@ -189,7 +229,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
 
       var cmdLineSpan = $"{commandLine}\0".ToCharArray().AsSpan();
-      // Create a new process in the current user's logon session.
+
       var createResult = PInvoke.CreateProcessAsUser(
         duplicatedToken,
         null,
@@ -203,16 +243,19 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         in startupInfo,
         out var procInfo);
 
-      // Invalidate the handles.
-      PInvoke.CloseHandle(winLogonProcessHandle);
+      var createErr = createResult ? 0 : Marshal.GetLastPInvokeError();
+      var createMsg = createResult ? string.Empty : Marshal.GetLastPInvokeErrorMessage();
+
       Marshal.FreeHGlobal(desktopPtr);
-      winLogonToken.Close();
-      duplicatedToken.Close();
 
       if (!createResult)
       {
-        var lastWin32 = Marshal.GetLastWin32Error();
-        _logger.LogError("CreateProcessAsUser failed.  Last Win32 error: {LastWin32Error}", lastWin32);
+        _logger.LogError(
+          "CreateProcessAsUser failed. Error: {Error} {Message}. SessionId: {SessionId}. CommandLine: {CommandLine}.",
+          createErr,
+          createMsg,
+          sessionId,
+          commandLine);
         return false;
       }
 
@@ -221,9 +264,13 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      var lastWin32 = Marshal.GetLastWin32Error();
-      _logger.LogError(ex, "Error while starting interactive system process.  Last Win32 error: {LastWin32Error}",
-        lastWin32);
+      var lastErr = Marshal.GetLastPInvokeError();
+      var lastMsg = Marshal.GetLastPInvokeErrorMessage();
+      _logger.LogError(
+        ex,
+        "Error while starting interactive system process. Error: {Error} {Message}",
+        lastErr,
+        lastMsg);
       return false;
     }
   }
@@ -232,23 +279,64 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   {
     EnsurePrivacyWindowClassRegistered();
 
-    var windowHandle = PInvoke.CreateWindowEx(
+    const WINDOW_EX_STYLE exStyle =
       WINDOW_EX_STYLE.WS_EX_TRANSPARENT |
       WINDOW_EX_STYLE.WS_EX_TOPMOST |
       WINDOW_EX_STYLE.WS_EX_TOOLWINDOW |
       WINDOW_EX_STYLE.WS_EX_NOACTIVATE |
-      WINDOW_EX_STYLE.WS_EX_LAYERED,
-      PrivacyWindowClassName,
-      "Privacy Screen",
-      WINDOW_STYLE.WS_POPUP | WINDOW_STYLE.WS_VISIBLE,
-      left,
-      top,
-      width,
-      height,
-      default,
-      default,
-      default,
-      null);
+      WINDOW_EX_STYLE.WS_EX_LAYERED;
+
+    const WINDOW_STYLE style = WINDOW_STYLE.WS_POPUP | WINDOW_STYLE.WS_VISIBLE;
+
+    HWND windowHandle;
+    try
+    {
+      var bandedWindowHandle = CreateWindowInBand(
+        (uint)exStyle,
+        PrivacyWindowClassName,
+        "Privacy Screen",
+        (uint)style,
+        left,
+        top,
+        width,
+        height,
+        0,
+        0,
+        0,
+        0,
+        ZbidUiAccess);
+
+      windowHandle = new HWND(bandedWindowHandle);
+
+      if (windowHandle.IsNull)
+      {
+        var lastWin32 = Marshal.GetLastPInvokeError();
+        _logger.LogWarning("CreateWindowInBand failed.  Last Win32 Error: {LastWin32Error}", lastWin32);
+      }
+    }
+    catch (EntryPointNotFoundException)
+    {
+      _logger.LogWarning("CreateWindowInBand not found. Falling back to CreateWindowEx.");
+      windowHandle = HWND.Null;
+    }
+
+    if (windowHandle.IsNull)
+    {
+      _logger.LogInformation("Falling back to CreateWindowEx for privacy screen window.");
+      windowHandle = PInvoke.CreateWindowEx(
+        exStyle,
+        PrivacyWindowClassName,
+        "Privacy Screen",
+        style,
+        left,
+        top,
+        width,
+        height,
+        default,
+        default,
+        default,
+        null);
+    }
 
     if (windowHandle.IsNull)
     {
@@ -260,6 +348,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     if (!PInvoke.SetLayeredWindowAttributes(windowHandle, new COLORREF(0), 255, LAYERED_WINDOW_ATTRIBUTES_FLAGS.LWA_ALPHA))
     {
       LogWin32Error();
+      _logger.LogError("Failed to set layered window attributes for privacy screen window.");
     }
 
     if (!SetWindowDisplayAffinity(windowHandle, WindowDisplayAffinity.ExcludeFromCapture))
@@ -566,7 +655,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       {
         _logger.LogDebug("Failed to get window info for handle {WindowHandle}. Last Win32 Error: {LastWin32Error}",
           hwnd,
-          Marshal.GetLastWin32Error());
+          Marshal.GetLastPInvokeError());
       }
 
       var windowTextLength = PInvoke.GetWindowTextLength(hwnd);
@@ -624,7 +713,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return GlobalMemoryStatusEx(ref lpBuffer);
   }
 
-  [SupportedOSPlatform("windows6.1")]
   public void InvokeCtrlAltDel()
   {
     try
@@ -773,6 +861,48 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     if (Math.Abs(scrollX) > 0)
     {
       InvokeWheelScroll(x, y, scrollX, false);
+    }
+  }
+
+  public bool IsCurrentProcessUiAccess()
+  {
+    var procHandle = PInvoke.GetCurrentProcess();
+    using var safeProcHandle = new SafeProcessHandle(procHandle, false);
+
+    if (!PInvoke.OpenProcessToken(safeProcHandle, TOKEN_ACCESS_MASK.TOKEN_QUERY, out var token))
+    {
+      _logger.LogWarning(
+        "OpenProcessToken failed. Last Win32 Error: {Error} {Message}", 
+        Marshal.GetLastPInvokeError(), 
+        Marshal.GetLastPInvokeErrorMessage());
+      return false;
+    }
+
+    using (token)
+    {
+      Span<byte> buffer = stackalloc byte[sizeof(uint)];
+
+      if (!PInvoke.GetTokenInformation(
+            token,
+            TOKEN_INFORMATION_CLASS.TokenUIAccess,
+            buffer,
+            out var returnLength))
+      {
+        _logger.LogWarning(
+          "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
+          Marshal.GetLastPInvokeError(), 
+          Marshal.GetLastPInvokeErrorMessage());
+        return false;
+      }
+
+      if (returnLength < sizeof(uint))
+      {
+        _logger.LogWarning("GetTokenInformation(TokenUIAccess) returned unexpected length: {ReturnLength}", returnLength);
+        return false;
+      }
+
+      var uiAccess = MemoryMarshal.Read<uint>(buffer);
+      return uiAccess != 0;
     }
   }
 
@@ -935,7 +1065,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return (nint)PInvoke.SetParent(new HWND(windowHandle), new HWND(parentWindowHandle)).Value;
   }
 
-  [SupportedOSPlatform("windows6.1")]
   public bool SetWindowDisplayAffinity(nint windowHandle, WindowDisplayAffinity affinity)
   {
     var hwnd = new HWND(windowHandle);
@@ -1323,10 +1452,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       : string.Empty;
   }
 
-  [return: MarshalAs(UnmanagedType.Bool)]
-  [LibraryImport("kernel32.dll", SetLastError = true)]
-  private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
-
   private static bool IsExtendedKey(VIRTUAL_KEY vk, string? code = null)
   {
     // Special handling for VK_RETURN: only NumpadEnter should be extended
@@ -1644,6 +1769,61 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return false;
   }
 
+  private bool EnableTokenPrivilege(SafeFileHandle token, string privilegeName)
+  {
+    try
+    {
+      if (!PInvoke.LookupPrivilegeValue(null, privilegeName, out var luid))
+      {
+        _logger.LogError(
+          "LookupPrivilegeValue failed for {PrivilegeName}. Error: {Error}",
+          privilegeName,
+          Marshal.GetLastPInvokeErrorMessage());
+        return false;
+      }
+
+      unsafe
+      {
+        var privilege = new LUID_AND_ATTRIBUTES
+        {
+          Luid = luid,
+          Attributes = TOKEN_PRIVILEGES_ATTRIBUTES.SE_PRIVILEGE_ENABLED
+        };
+
+        var tp = new TOKEN_PRIVILEGES
+        {
+          PrivilegeCount = 1
+        };
+        tp.Privileges[0] = privilege;
+
+        if (!PInvoke.AdjustTokenPrivileges(new HANDLE(token.DangerousGetHandle()), false, &tp, 0, null, null))
+        {
+          _logger.LogError(
+            "AdjustTokenPrivileges failed for {PrivilegeName}. Error: {Error}",
+            privilegeName,
+            Marshal.GetLastPInvokeErrorMessage());
+          return false;
+        }
+
+        var lastError = Marshal.GetLastPInvokeError();
+        if (lastError == 1300) // ERROR_NOT_ALL_ASSIGNED
+        {
+          _logger.LogWarning(
+            "Privilege {PrivilegeName} could not be assigned (not held by token).",
+            privilegeName);
+          return false;
+        }
+
+        return true;
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Exception while enabling token privilege {PrivilegeName}", privilegeName);
+      return false;
+    }
+  }
+
   private void EnsurePrivacyWindowClassRegistered()
   {
     using var lockScope = _windowClassLock.EnterScope();
@@ -1798,6 +1978,33 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return PInvoke.WTSGetActiveConsoleSessionId();
   }
 
+  private bool SetTokenUIAccess(SafeFileHandle token, bool enableUIAccess)
+  {
+    try
+    {
+      var uiAccess = enableUIAccess ? 1u : 0u;
+      var uiAccessBytes = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref uiAccess, 1));
+
+      if (!PInvoke.SetTokenInformation(
+            token,
+            TOKEN_INFORMATION_CLASS.TokenUIAccess,
+            uiAccessBytes))
+      {
+        _logger.LogError(
+          "SetTokenInformation(TokenUIAccess) failed. Error: {Error}",
+          Marshal.GetLastPInvokeErrorMessage());
+        return false;
+      }
+
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Exception while setting TokenUIAccess");
+      return false;
+    }
+  }
+
   private bool TryCloneSystemPrimaryToken([NotNullWhen(true)] out SafeFileHandle? primaryToken)
   {
     primaryToken = null;
@@ -1847,8 +2054,28 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to duplicate Explorer token.  Last Win32 Error: {LastWin32Error}",
-        Marshal.GetLastWin32Error());
+        Marshal.GetLastPInvokeError());
       return false;
     }
   }
+
+  [DllImport("user32.dll", EntryPoint = "CreateWindowInBand", SetLastError = true, CharSet = CharSet.Unicode)]
+  private static extern nint CreateWindowInBand(
+    uint dwExStyle,
+    string lpClassName,
+    string lpWindowName,
+    uint dwStyle,
+    int x,
+    int y,
+    int nWidth,
+    int nHeight,
+    nint hWndParent,
+    nint hMenu,
+    nint hInstance,
+    nint lpParam,
+    uint dwBand);
+
+  [return: MarshalAs(UnmanagedType.Bool)]
+  [LibraryImport("kernel32.dll", SetLastError = true)]
+  private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
 }

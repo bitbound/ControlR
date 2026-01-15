@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.Versioning;
+using ControlR.Libraries.NativeInterop.Windows;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Windows.Win32;
@@ -26,10 +27,13 @@ public interface IWindowsMessagePump : IHostedService
 
 
 [SupportedOSPlatform("windows6.1")]
-internal class WindowsMessagePump(ILogger<WindowsMessagePump> logger)
+internal class WindowsMessagePump(
+  IWin32Interop win32Interop,
+  ILogger<WindowsMessagePump> logger)
   : BackgroundService, IWindowsMessagePump
 {
   private readonly ILogger<WindowsMessagePump> _logger = logger;
+  private readonly IWin32Interop _win32Interop = win32Interop;
   private readonly BlockingCollection<WorkItem> _workQueue = [];
 
   private Thread? _messageThread;
@@ -111,7 +115,10 @@ internal class WindowsMessagePump(ILogger<WindowsMessagePump> logger)
   {
     try
     {
-      _logger.LogInformation("Windows message pump thread started");
+      _logger.LogInformation("Windows message pump thread started.");
+
+      var isUiAccess = _win32Interop.IsCurrentProcessUiAccess();
+      _logger.LogInformation("Current process UIAccess status: {UiAccess}", isUiAccess);
 
       while (!_workQueue.IsCompleted)
       {

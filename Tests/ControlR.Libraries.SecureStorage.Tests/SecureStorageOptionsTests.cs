@@ -1,5 +1,3 @@
-using ControlR.Libraries.SecureStorage;
-
 namespace ControlR.Libraries.SecureStorage.Tests;
 
 public class SecureStorageOptionsTests

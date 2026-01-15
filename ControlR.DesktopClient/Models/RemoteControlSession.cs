@@ -16,7 +16,6 @@ public sealed class RemoteControlSession(
   {
     try
     {
-      await CancellationTokenSource.CancelAsync();
       Disposer.DisposeAll(CancellationTokenSource, Host);
     }
     catch

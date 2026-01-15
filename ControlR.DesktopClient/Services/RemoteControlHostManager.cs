@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Models;
-using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
@@ -48,12 +47,8 @@ public class RemoteControlHostManager(
 
       var builder = CreateRemoteControlHostBuilder(requestDto);
       var app = builder.Build();
-      var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-      appLifetime.ApplicationStopping.Register(async () =>
-      {
-        await HandleApplicationStopping(requestDto);
-      });
       var session = CreateRemoteControlSession(requestDto, app);
+      RegisterHostLifetimeHandlers(app, requestDto, session);
       await app.StartAsync(session.CancellationTokenSource.Token);
       return Result.Ok();
     }
@@ -155,7 +150,7 @@ public class RemoteControlHostManager(
     });
   }
 
-  private async Task HandleApplicationStopping(RemoteControlRequestIpcDto requestDto)
+  private async Task HandleApplicationStopped(RemoteControlRequestIpcDto requestDto)
   {
     try
     {
@@ -180,5 +175,20 @@ public class RemoteControlHostManager(
     {
       _logger.LogError(ex, "Error during remote control session shutdown.");
     }
+  }
+
+  private void RegisterHostLifetimeHandlers(IHost app, RemoteControlRequestIpcDto requestDto, RemoteControlSession session)
+  {
+    var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+    appLifetime.ApplicationStopping.Register(async () =>
+    {
+      await session.CancellationTokenSource.CancelAsync();
+      await app.StopAsync();
+    });
+
+    appLifetime.ApplicationStopped.Register(async () =>
+    {
+      await HandleApplicationStopped(requestDto);
+    });
   }
 }

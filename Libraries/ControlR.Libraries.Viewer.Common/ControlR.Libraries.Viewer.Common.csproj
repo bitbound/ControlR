@@ -4,4 +4,10 @@
     <ProjectReference Include="..\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
     <ProjectReference Include="..\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Bitbound.Analyzers.MemberOrder">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>

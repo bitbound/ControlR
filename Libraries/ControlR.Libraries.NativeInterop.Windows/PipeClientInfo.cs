@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Primitives;
-using Microsoft.Win32.SafeHandles;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 
@@ -43,11 +42,6 @@ public static class PipeClientInfo
     }
   }
 
-  [DllImport("kernel32.dll", SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool GetNamedPipeClientProcessId(
-    SafeHandle pipe,
-    out int clientProcessId);
   private static string GetProcessExecutablePath(int processId)
   {
     try
@@ -60,6 +54,12 @@ public static class PipeClientInfo
       return string.Empty;
     }
   }
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  private static extern bool GetNamedPipeClientProcessId(
+    SafeHandle pipe,
+    out int clientProcessId);
 }
 
 public record ClientCredentials(int ProcessId, string ExecutablePath);

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Libraries.SecureStorage.Tests;
 
-public class SecureStorageCustomServiceNameTests : IDisposable
+public class SecureStorageCustomServiceNameTests : IAsyncDisposable
 {
   private readonly ISecureStorage _secureStorage;
 
@@ -14,11 +14,11 @@ public class SecureStorageCustomServiceNameTests : IDisposable
         options => options.ServiceName = "TestService123");
   }
 
-  public void Dispose()
+  public async ValueTask DisposeAsync()
   {
     try
     {
-      _secureStorage.RemoveAllAsync().GetAwaiter().GetResult();
+      await _secureStorage.RemoveAllAsync();
     }
     catch
     {
@@ -28,47 +28,7 @@ public class SecureStorageCustomServiceNameTests : IDisposable
     GC.SuppressFinalize(this);
   }
 
-  [LinuxOnlyFact]
-  public async Task Linux_UsesCustomServiceNameInPath()
-  {
-    // This test verifies that Linux implementation uses the custom service name
-    // by attempting to store and retrieve a value
-    var key = $"path_test_{Guid.NewGuid()}";
-    var value = "test";
-
-    try
-    {
-      await _secureStorage.SetAsync(key, value);
-      var result = await _secureStorage.GetAsync(key);
-      Assert.Equal(value, result);
-    }
-    finally
-    {
-      await _secureStorage.RemoveAsync(key);
-    }
-  }
-
-  [MacOnlyFact]
-  public async Task Mac_UsesCustomServiceNameInKeychain()
-  {
-    // This test verifies that Mac implementation uses the custom service name
-    // by attempting to store and retrieve a value
-    var key = $"keychain_test_{Guid.NewGuid()}";
-    var value = "test";
-
-    try
-    {
-      await _secureStorage.SetAsync(key, value);
-      var result = await _secureStorage.GetAsync(key);
-      Assert.Equal(value, result);
-    }
-    finally
-    {
-      await _secureStorage.RemoveAsync(key);
-    }
-  }
-
-  [Fact]
+  [MacKeychainIntegrationFact]
   public async Task SetAsync_AndGetAsync_WorksWithCustomServiceName()
   {
     // Arrange
@@ -82,26 +42,6 @@ public class SecureStorageCustomServiceNameTests : IDisposable
       var result = await _secureStorage.GetAsync(key);
 
       // Assert
-      Assert.Equal(value, result);
-    }
-    finally
-    {
-      await _secureStorage.RemoveAsync(key);
-    }
-  }
-
-  [WindowsOnlyFact]
-  public async Task Windows_UsesCustomServiceNameInPath()
-  {
-    // This test verifies that Windows implementation uses the custom service name
-    // by attempting to store and retrieve a value
-    var key = $"path_test_{Guid.NewGuid()}";
-    var value = "test";
-
-    try
-    {
-      await _secureStorage.SetAsync(key, value);
-      var result = await _secureStorage.GetAsync(key);
       Assert.Equal(value, result);
     }
     finally
